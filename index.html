@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OTI du Sud · API – Documentation</title>
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand: #76B097;          /* Main theme color */
+      --brand-700:#5A8B73;
+      --brand-600:#6BA088;
+      --brand-500:#76B097;
+      --brand-400:#8BC2A6;
+      --brand-300:#A0D1B5;
+      --brand-200:#B5E0C4;
+      --brand-100:#CAEFD3;
+      --brand-50:#DFF8E2;
+      --accent:#76B097;          /* Accent color matches main theme */
+      --accent-light:#A0D1B5;
+      --bg:#FAFCFA;
+      --card:#FFFFFF;
+      --text:#1F2937;
+      --muted:#6B7280;
+      --line:#E5E7EB;
+      --code-bg:#0B1020;
+      --code:#EDEFF6;
+      --shadow:0 10px 25px rgba(118,176,151,.08),0 2px 6px rgba(118,176,151,.04);
+      --shadow-hover:0 15px 35px rgba(118,176,151,.12),0 4px 10px rgba(118,176,151,.06);
+      --radius:18px;
+      --gradient:linear-gradient(135deg, var(--brand-400), var(--brand-600));
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0B1117;
+        --card:#0F1722;
+        --text:#E5E7EB;
+        --muted:#A3AAB5;
+        --line:#1F2A37;
+        --shadow:0 10px 25px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.15);
+        --shadow-hover:0 15px 35px rgba(0,0,0,.35),0 4px 10px rgba(0,0,0,.2);
+        --code-bg:#0A0F1A;
+        --code:#DDE1F2;
+        --gradient:linear-gradient(135deg, var(--brand-500), var(--brand-700));
+      }
+    }
+    .dark{
+      --bg:#0B1117;
+      --card:#0F1722;
+      --text:#E5E7EB;
+      --muted:#A3AAB5;
+      --line:#1F2A37;
+      --shadow:0 10px 25px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.15);
+      --shadow-hover:0 15px 35px rgba(0,0,0,.35),0 4px 10px rgba(0,0,0,.2);
+      --code-bg:#0A0F1A;
+      --code:#DDE1F2;
+      --gradient:linear-gradient(135deg, var(--brand-500), var(--brand-700));
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      line-height:1.55;
+    }
+    a{color:var(--brand-400);text-decoration:none}
+    a:hover{text-decoration:underline}
+    /* Header */
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:var(--gradient);
+      color:#fff;border-bottom:1px solid rgba(255,255,255,.15);
+      box-shadow:0 8px 32px rgba(118,176,151,.15), 0 4px 16px rgba(118,176,151,.1);
+      backdrop-filter:blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+    .topbar::before{
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(255,255,255,.05) 0%, transparent 50%, rgba(255,255,255,.03) 100%);
+      pointer-events: none;
+    }
+    .topbar-inner{
+      max-width:1200px;margin:0 auto;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:32px;
+      padding:24px 24px;
+      align-items:center;
+      min-height:100px;
+      position: relative;
+      z-index: 1;
+    }
+    .header-left{
+      display:flex;
+      align-items:center;
+      gap:20px;
+    }
+    .logo{
+      width:70px;height:70px;border-radius:20px;background:#fff;padding:10px;
+      box-shadow:0 6px 20px rgba(118,176,151,.25),inset 0 0 0 2px rgba(118,176,151,.1);
+      transition:all 0.3s ease;
+      flex-shrink:0;
+    }
+    .logo:hover{
+      transform:scale(1.08) rotate(2deg);
+      box-shadow:0 8px 25px rgba(118,176,151,.35),inset 0 0 0 2px rgba(118,176,151,.2);
+    }
+    .title{
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .title strong{
+      font-weight:800;letter-spacing:.4px;font-size:22px;
+      text-shadow:0 2px 4px rgba(0,0,0,.1);
+    }
+    .title small{
+      opacity:.95;font-size:15px;font-weight:500;
+      text-shadow:0 1px 2px rgba(0,0,0,.1);
+    }
+    .header-right{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      align-items:flex-end;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .chip{
+      background:rgba(255,255,255,.18);
+      color:#fff;border:1px solid rgba(255,255,255,.25);
+      border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);
+      transition:all 0.2s ease;
+    }
+    .chip:hover{
+      background:rgba(255,255,255,.25);
+      transform:translateY(-1px);
+    }
+    .btn{
+      border-radius:14px;border:1px solid rgba(255,255,255,.3);
+      background:rgba(255,255,255,.15);color:#fff;padding:10px 14px;
+      display:flex;align-items:center;gap:8px;font-weight:600;
+      transition:all 0.3s ease;
+      backdrop-filter:blur(10px);
+      font-size:13px;
+    }
+    .btn:hover{
+      background:rgba(255,255,255,.25);
+      transform:translateY(-2px);
+      box-shadow:0 6px 16px rgba(255,255,255,.2);
+      border-color:rgba(255,255,255,.4);
+    }
+    .searchbar{
+      width:100%;
+      max-width:420px;
+    }
+    .searchbar input{
+      width:100%;border:none;background:#fff;border-radius:16px;
+      padding:16px 18px 16px 48px;color:#111;outline:none;font-size:15px;
+      box-shadow:0 4px 16px rgba(118,176,151,.15), 0 2px 8px rgba(118,176,151,.1);
+      background:
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2376B097" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') 16px 50% / 24px 24px no-repeat, #fff;
+      transition:all 0.3s ease;
+      font-weight:500;
+    }
+    .searchbar input:focus{
+      box-shadow:0 6px 20px rgba(118,176,151,.2), 0 4px 12px rgba(118,176,151,.15);
+      transform:translateY(-1px);
+    }
+    .searchbar input::placeholder{
+      color:#999;
+      font-weight:400;
+    }
+    @media (prefers-color-scheme: dark){
+      .searchbar input{background:
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23A0D1B5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') 16px 50% / 24px 24px no-repeat, var(--card); color:var(--text)}
+    }
+    .container{
+      max-width:1200px;margin:0 auto;padding:10px 18px 90px;display:grid;
+      grid-template-columns:minmax(260px, 320px) 1fr;gap:24px;
+    }
+    @media (max-width:1024px){
+      .container{
+        grid-template-columns:1fr;
+        gap:20px;
+      }
+    }
+    /* TOC */
+    .toc{
+      position:sticky;top:20px;align-self:start;background:var(--card);
+      border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+      padding:20px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;
+      backdrop-filter:blur(10px);
+      transition:all 0.3s ease;
+    }
+    .toc::-webkit-scrollbar{
+      width:6px;
+    }
+    .toc::-webkit-scrollbar-track{
+      background:transparent;
+      border-radius:3px;
+    }
+    .toc::-webkit-scrollbar-thumb{
+      background:var(--brand-300);
+      border-radius:3px;
+    }
+    .toc::-webkit-scrollbar-thumb:hover{
+      background:var(--brand-400);
+    }
+    .toc::-webkit-scrollbar-corner{
+      background:transparent;
+    }
+    .toc:hover{
+      box-shadow:var(--shadow-hover);
+      transform:translateY(-2px);
+    }
+    .toc h3{
+      margin:0 0 16px 0;font-size:14px;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--brand-600);font-weight:700;border-bottom:2px solid var(--brand-100);
+      padding-bottom:8px;
+    }
+    .toc a{
+      display:block;padding:8px 12px;border-radius:10px;color:var(--text);
+      border-left:4px solid transparent;font-size:14px;font-weight:500;
+      transition:all 0.3s ease;text-decoration:none;margin-bottom:2px;
+      position:relative;word-wrap:break-word;hyphens:auto;
+    }
+    .toc a:hover{
+      background:rgba(118,176,151,.1);
+      transform:translateX(4px);
+      border-left-color:var(--brand-300);
+      color:var(--brand-700);
+      box-shadow:0 2px 8px rgba(118,176,151,.15);
+    }
+    .toc a.active{
+      background:linear-gradient(135deg, rgba(118,176,151,.15), rgba(118,176,151,.08));
+      border-left-color:var(--brand-500);
+      color:var(--brand-700);
+      font-weight:600;
+      transform:translateX(6px);
+      box-shadow:0 2px 8px rgba(118,176,151,.2);
+    }
+    .toc a.active::before{
+      content: '';
+      position: absolute;
+      left: -4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 20px;
+      background: var(--brand-500);
+      border-radius: 0 2px 2px 0;
+    }
+    .toc .sub{
+      padding-left:16px;
+      margin-left:8px;
+      border-left:2px solid var(--brand-100);
+      overflow:hidden;
+    }
+    .toc .sub a{
+      font-size:13px;
+      padding:6px 10px;
+      word-wrap:break-word;
+    }
+    .toc .sub a.active{
+      border-left-color:var(--brand-400);
+    }
+    
+    /* Main */
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:22px;margin-bottom:18px;
+      backdrop-filter:blur(10px);
+      transition:all 0.2s ease;
+    }
+    .card:hover{
+      box-shadow:var(--shadow-hover);
+      transform:translateY(-2px);
+    }
+    h1{font-size:32px;margin:0 0 6px 0}
+    h2{font-size:26px;margin:24px 0 8px}
+    h3{font-size:20px;margin:18px 0 8px}
+    p{margin:8px 0 12px}
+    .lead{color:var(--muted);font-size:15px}
+    .pill{display:inline-flex;align-items:center;gap:8px;font-weight:700;
+      color:var(--brand-700);background:rgba(118,176,151,.14);border:1px solid rgba(118,176,151,.3);
+      padding:6px 10px;border-radius:999px;font-size:12px;
+      transition:all 0.2s ease;
+    }
+    .pill:hover{
+      background:rgba(118,176,151,.20);
+      transform:scale(1.02);
+    }
+    
+    /* Tip card styles */
+    .tip-card{
+      height:fit-content;
+      max-width:100%;
+      background:linear-gradient(135deg, rgba(59,130,246,.08), rgba(59,130,246,.04));
+      border:1px solid rgba(59,130,246,.2);
+    }
+    .tip-pill{
+      background:rgba(59,130,246,.2);
+      border-color:rgba(59,130,246,.4);
+      color:#1e40af;
+    }
+    .tip-pill:hover{
+      background:rgba(59,130,246,.3);
+    }
+    .tip-text{
+      color:#374151;
+      font-weight:500;
+    }
+    @media (prefers-color-scheme: dark){
+      .tip-card{
+        background:linear-gradient(135deg, rgba(59,130,246,.15), rgba(59,130,246,.08));
+        border:1px solid rgba(59,130,246,.3);
+      }
+      .tip-pill{
+        background:rgba(59,130,246,.25);
+        border-color:rgba(59,130,246,.5);
+        color:#60a5fa;
+      }
+      .tip-pill:hover{
+        background:rgba(59,130,246,.35);
+      }
+      .tip-text{
+        color:#d1d5db;
+      }
+    }
+    .dark .tip-card{
+      background:linear-gradient(135deg, rgba(59,130,246,.15), rgba(59,130,246,.08));
+      border:1px solid rgba(59,130,246,.3);
+    }
+    .dark .tip-pill{
+      background:rgba(59,130,246,.25);
+      border-color:rgba(59,130,246,.5);
+      color:#60a5fa;
+    }
+    .dark .tip-pill:hover{
+      background:rgba(59,130,246,.35);
+    }
+    .dark .tip-text{
+      color:#d1d5db;
+    }
+    /* Tables */
+    table{width:100%;border-collapse:separate;border-spacing:0 6px}
+    th,td{padding:10px 12px;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+    tbody tr{background:linear-gradient(var(--card),var(--card)) padding-box, radial-gradient(120% 100% at 0 0,rgba(118,176,151,.13),transparent 40%) border-box;
+      border:1px solid var(--line);border-radius:12px;
+      transition:all 0.2s ease;
+    }
+    tbody tr:hover{
+      background:linear-gradient(var(--card),var(--card)) padding-box, radial-gradient(120% 100% at 0 0,rgba(118,176,151,.18),transparent 40%) border-box;
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(118,176,151,.08);
+    }
+    tbody td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+    tbody td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+    code,.badge{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,Monaco,monospace;
+      font-size:.92em;border-radius:6px;padding:.08em .35em;background:rgba(118,176,151,.08);
+      transition:all 0.2s ease;
+    }
+    code:hover{
+      background:rgba(118,176,151,.12);
+    }
+    .badge{background:rgba(118,176,151,.12);border:1px solid rgba(118,176,151,.25);color:var(--brand-600); font-weight:700}
+    /* Collapsible sections */
+    details{
+      border:1px solid var(--line);border-radius:14px;background:var(--card);margin:12px 0;box-shadow:var(--shadow);
+      transition:all 0.2s ease;
+    }
+    details:hover{
+      box-shadow:var(--shadow-hover);
+    }
+    details>summary{
+      cursor:pointer;list-style:none;padding:14px 16px;font-weight:700;display:flex;align-items:center;gap:10px;
+      transition:all 0.2s ease;
+    }
+    details>summary:hover{
+      background:rgba(118,176,151,.05);
+      border-radius:14px 14px 0 0;
+    }
+    details>summary::before{
+      content:"";width:18px;height:18px;flex:0 0 18px;border-radius:50%;
+      background:conic-gradient(var(--accent) 25%, transparent 0 100%);mask:radial-gradient(circle 8px, transparent 7px,#000 8px);
+      transition:transform .25s ease
+    }
+    details[open]>summary::before{transform:rotate(90deg)}
+    details .content{padding:2px 16px 16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+    @media (max-width:900px){.row{grid-template-columns:1fr}}
+    
+    /* Deck layout for filters */
+    .deck-example{
+      margin-bottom:32px;
+    }
+    .deck-example h4{
+      margin:0 0 16px 0;
+      color:var(--brand-600);
+      font-size:16px;
+      font-weight:700;
+    }
+    .deck-parameters{
+      margin-top:32px;
+    }
+    .deck-parameters h4{
+      margin:0 0 20px 0;
+      color:var(--brand-600);
+      font-size:18px;
+      font-weight:700;
+      border-bottom:2px solid var(--brand-100);
+      padding-bottom:12px;
+    }
+    .filters-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+      gap:24px;
+    }
+    .filter-category{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      box-shadow:0 4px 12px rgba(118,176,151,.08);
+      transition:transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .filter-category:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 24px rgba(118,176,151,.12);
+    }
+    .filter-category h5{
+      margin:0 0 16px 0;
+      color:var(--brand-700);
+      font-size:14px;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      border-bottom:1px solid var(--brand-100);
+      padding-bottom:8px;
+    }
+    .filter-category ul{
+      margin:0;
+      padding:0;
+      list-style:none;
+    }
+    .filter-category li{
+      padding:6px 0;
+      font-size:13px;
+      line-height:1.5;
+      border-bottom:1px solid rgba(118,176,151,.05);
+    }
+    .filter-category li:last-child{
+      border-bottom:none;
+    }
+    .filter-category code{
+      background:rgba(118,176,151,.08);
+      color:var(--brand-700);
+      font-weight:600;
+      padding:2px 6px;
+      border-radius:4px;
+    }
+    @media (max-width:900px){
+      .filters-grid{
+        grid-template-columns:1fr;
+        gap:16px;
+      }
+      .filter-category{
+        padding:16px;
+      }
+    }
+    /* Code blocks */
+    pre{
+      background:var(--code-bg);color:var(--code);border-radius:14px;
+      padding:14px 12px;overflow:auto;border:1px solid #121826;
+      position:relative;
+    }
+    .code-tabs{
+      border:1px solid var(--line); 
+      border-radius:14px; 
+      overflow:hidden; 
+      box-shadow:var(--shadow);
+      position:relative;
+    }
+    .tab-panel{
+      position:relative;
+    }
+    .tab-bar{display:flex;background:linear-gradient(180deg,#ffffff, #f5f7fb);border-bottom:1px solid var(--line)}
+    @media (prefers-color-scheme: dark){.tab-bar{background:linear-gradient(180deg,#0F1722,#0c1421)}}
+    .tab-bar button{
+      all:unset;cursor:pointer;padding:10px 14px;font-weight:700;font-size:13px;
+      color:var(--muted);
+    }
+    .tab-bar button.active{color:var(--text);border-bottom:2px solid var(--accent)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+    .code-actions{
+      display:flex;justify-content:flex-end;gap:8px;
+      margin:-12px 12px 12px 0;
+      position:relative;
+      z-index:10;
+    }
+    .copy{
+      all:unset;cursor:pointer;
+      background:rgba(118,176,151,.12);
+      border:1px solid rgba(118,176,151,.3);
+      padding:8px 12px;border-radius:8px;font-weight:600;
+      font-size:12px;color:#ffffff;
+      transition:all 0.2s ease;
+      position:relative;
+      backdrop-filter:blur(8px);
+      box-shadow:0 2px 8px rgba(118,176,151,.15);
+    }
+    .copy:hover{
+      background:rgba(118,176,151,.18);
+      border-color:var(--brand-400);
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(118,176,151,.2);
+    }
+    .copy.success{
+      border-color:var(--brand-500);
+      color:#ffffff;
+      background:rgba(118,176,151,.15);
+      box-shadow:0 2px 8px rgba(118,176,151,.25);
+    }
+    
+    /* Floating copy button */
+    .copy-floating{
+      position:absolute !important;
+      top:8px;
+      right:8px;
+      z-index:20;
+      margin:0 !important;
+    }
+    
+    /* Special positioning for tab panels */
+    .tab-panel .copy-floating{
+      top:6px;
+      right:6px;
+    }
+    /* Footer */
+    .footer{
+      text-align:center;color:var(--muted);font-size:12px;margin-top:26px
+    }
+    .kdb{border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;padding:.1em .5em;font-weight:700}
+    .hero-badge{
+      display:inline-flex;gap:8px;align-items:center;background:var(--brand-50);color:var(--brand-700);
+      border:1px solid var(--brand-300);padding:6px 10px;border-radius:999px;margin-top:6px;
+      transition:all 0.2s ease;
+    }
+    .hero-badge:hover{
+      background:var(--brand-100);
+      transform:scale(1.02);
+      box-shadow:0 4px 12px rgba(118,176,151,.15);
+    }
+    .inline-help{font-size:13px;color:var(--muted)}
+    .sep{height:1px;background:var(--line);margin:12px 0}
+    
+    /* Additional visual enhancements */
+    .tab-bar button{
+      transition:all 0.2s ease;
+    }
+    .tab-bar button:hover{
+      background:rgba(118,176,151,.08);
+    }
+    
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* Enhanced focus states */
+    a:focus, button:focus, input:focus {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
+    }
+    
+    /* Loading animation for better UX */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .loading {
+      animation: pulse 2s infinite;
+    }
+    
+    /* Enhanced code blocks */
+    pre {
+      position: relative;
+      overflow-x: auto;
+    }
+    
+    /* Better mobile responsiveness */
+    /* Medium screens */
+    @media (max-width: 1200px) and (min-width: 769px) {
+      .container {
+        grid-template-columns: minmax(240px, 280px) 1fr;
+        gap: 20px;
+      }
+      
+      .toc {
+        padding: 18px;
+        max-height: calc(100vh - 40px);
+        top: 20px;
+      }
+      
+      .toc a {
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+    }
+    
+    /* Small screens */
+    @media (max-width: 768px) {
+      .topbar-inner {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 16px 12px;
+      }
+      
+      .header-left {
+        justify-content: center;
+        text-align: center;
+      }
+      
+      .header-right {
+        align-items: center;
+      }
+      
+      .searchbar {
+        max-width: 100%;
+      }
+      
+      .actions {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .logo {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .title strong {
+        font-size: 20px;
+      }
+      
+      .title small {
+        font-size: 13px;
+      }
+      
+      .toc {
+        top: 20px;
+        padding: 16px;
+        max-height: calc(100vh - 40px);
+        position: sticky;
+      }
+      
+      .toc a {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      .toc .sub {
+        padding-left: 12px;
+        margin-left: 6px;
+      }
+      
+      .container {
+        grid-template-columns: 1fr;
+        padding: 8px 12px 60px;
+        gap: 16px;
+      }
+      
+      .card {
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      
+      h1 { font-size: 28px; }
+      h2 { font-size: 22px; }
+      h3 { font-size: 18px; }
+    }
+
+    /* Enhanced section transitions and hover effects */
+    .card, details, section {
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .card:hover, details:hover, section:hover {
+      transform: translateY(-1px);
+    }
+    
+    /* Smooth scroll behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Floating toggle sections button */
+    .floating-toggle {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 16px rgba(118,176,151,.3), 0 2px 8px rgba(118,176,151,.2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.2);
+    }
+
+    .floating-toggle:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 6px 20px rgba(118,176,151,.4), 0 4px 12px rgba(118,176,151,.3);
+      background: var(--brand-600);
+    }
+
+    .floating-toggle:active {
+      transform: translateY(0) scale(0.95);
+    }
+
+    /* Dark mode adjustments */
+    @media (prefers-color-scheme: dark) {
+      .floating-toggle {
+        box-shadow: 0 4px 16px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+        border: 1px solid rgba(255,255,255,.1);
+      }
+      
+      .floating-toggle:hover {
+        box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.4);
+      }
+    }
+
+    .dark .floating-toggle {
+      box-shadow: 0 4px 16px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    
+    .dark .floating-toggle:hover {
+      box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.4);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="header-left">
+      <img class="logo" alt="OTI du Sud" src="https://supabertel.otisud.re/storage/v1/object/public/logo//logo200X200.png">
+      <div class="title">
+        <strong>OTI du SUD · API</strong>
+        <small>Documentation complète & bonnes pratiques</small>
+      </div>
+      </div>
+      <div class="header-right">
+        <div class="searchbar">
+          <input id="globalSearch" type="search" placeholder="Rechercher dans la doc (endpoints, paramètres, champs…)">
+        </div>
+      <div class="actions">
+        <span class="chip" title="Version de la page">v1</span>
+          <button class="btn" id="toggleTheme" title="Basculer mode clair/sombre"><span id="themeText">Light</span> ▾</button>
+          <button class="btn" id="toggleSections" title="Déplier/Replier toutes les sections">▾ Ouvrir tout</button>
+      </div>
+    </div>
+    </div>
+  </header>
+
+  <main class="container" id="container">
+    <!-- TOC -->
+    <nav class="toc" id="toc">
+      <h3>Sommaire</h3>
+      <!-- auto-filled -->
+    </nav>
+
+    <!-- CONTENT -->
+    <div id="content">
+      <section class="card" id="intro">
+        <h1>Documentation de l’API</h1>
+        <p class="lead">Une API structurée autour d'appels <code>/rpc/&lt;nom_fonction&gt;</code> via <b>POST</b>, avec pagination, filtres riches et extraction des tracés KML/GPX pour les itinéraires.</p>
+      </section>
+
+      <!-- 1) Auth & conventions -->
+      <section class="card" id="auth">
+        <h2>1) Authentification & conventions</h2>
+
+        <details open>
+          <summary>1.1 Authentification & en-têtes</summary>
+          <div class="content">
+            <p>Envoyez toujours :</p>
+            <ul>
+              <li><code>Content-Type: application/json</code></li>
+              <li><code>Accept: application/json</code></li>
+              <li>Vos en-têtes d’authentification selon votre plateforme (ex. <code>apikey: …</code>, <code>Authorization: Bearer …</code>).</li>
+            </ul>
+          </div>
+        </details>
+
+        <details open>
+          <summary>1.2 Convention d’appel</summary>
+          <div class="content">
+            <p><b>Méthode</b> : <code>POST</code><br>
+              <b>Chemin</b> : <code>/rpc/&lt;nom_fonction&gt;</code></p>
+            <p>Exemples : <code>/rpc/get_object_resource</code> • <code>/rpc/list_object_resources_page</code> • <code>/rpc/list_object_resources_since_fast</code> • <code>/rpc/list_object_resources_filtered_page</code> • <code>/rpc/list_object_resources_filtered_since_fast</code></p>
+            <p><b>Corps</b> : JSON avec paramètres nommés (voir chaque endpoint).</p>
+          </div>
+        </details>
+
+        <details open>
+          <summary>1.3 Types de base (comment lire les réponses)</summary>
+          <div class="content">
+              <table>
+                <thead><tr><th>Type</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>string</code></td><td>Texte (ex. <code>"Hôtel du Parc"</code>).</td></tr>
+                  <tr><td><code>number</code></td><td>Nombre (ex. <code>12</code>, <code>3.14</code>).</td></tr>
+                  <tr><td><code>boolean</code></td><td><code>true</code> / <code>false</code>.</td></tr>
+                  <tr><td><code>timestamp</code></td><td>Date-heure ISO 8601 en UTC (ex. <code>"2024-03-18T09:30:00Z"</code>).</td></tr>
+                  <tr><td><code>enum</code> (code)</td><td>Valeur codée (ex. <code>"image"</code>, <code>"ITI"</code>, <code>"published"</code>).</td></tr>
+                  <tr><td><code>array</code></td><td>Liste (ex. <code>["fr","en"]</code>).</td></tr>
+                  <tr><td><code>object</code></td><td>Sous-ensemble structuré avec ses propres champs.</td></tr>
+                </tbody>
+              </table>
+            <div class="card tip-card" style="margin-top: 20px;">
+              <div class="pill tip-pill">Astuce</div>
+              <p class="lead tip-text">Les champs absents pour un objet sont renvoyés comme <code>[]</code>, <code>{}</code> ou <code>null</code> selon le bloc : pas d'exception.</p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- 2) Endpoints -->
+      <section class="card" id="endpoints">
+        <h2>2) Endpoints</h2>
+
+        <div class="card" id="postman-collection" style="background: linear-gradient(135deg, rgba(118,176,151,.1), rgba(118,176,151,.05)); border: 1px solid rgba(118,176,151,.2); margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="background: rgba(118,176,151,.15); padding: 8px; border-radius: 12px; color: var(--brand-700); font-size: 20px;">🚀</div>
+            <h3 style="margin: 0; color: var(--brand-700);">Collection Postman disponible</h3>
+          </div>
+          <p style="margin-bottom: 16px; color: var(--text);">Testez l'API directement avec notre collection Postman complète, incluant tous les endpoints, exemples et tests automatiques.</p>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <a href="https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0?action=share&creator=24615556" 
+               target="_blank" 
+               style="background: var(--brand); color: white; padding: 12px 20px; border-radius: 12px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(118,176,151,.3);">
+              <span>📦</span>
+              Ouvrir dans Postman
+            </a>
+            <div style="font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 6px;">
+              <span>✨</span>
+              <span>Collection publique • Tests automatiques • Variables d'environnement</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2.1 get_object_resource -->
+        <details open id="get_object_resource">
+          <summary>2.1 Récupérer une ressource : <code>get_object_resource</code></summary>
+          <div class="content">
+            <p><b>But</b> — Obtenir toutes les données d’un objet (et, si demandé, son tracé <b>KML/GPX</b> pour un itinéraire).</p>
+
+            <h3>Paramètres (JSON)</h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>string</code></td><td>✅</td><td>—</td><td>Identifiant de la ressource à lire.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue (ordre de priorité).</td></tr>
+                <tr><td><code>p_track_format</code></td><td><code>enum</code> <code>"none" | "kml" | "gpx"</code></td><td>❌</td><td><code>"none"</code></td><td>Tracé : par défaut aucun. Mettez <code>"kml"</code> ou <code>"gpx"</code> (type ITI).</td></tr>
+                <tr><td><code>p_options</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Options tracé : <code>{ "include_stages": boolean, "stage_color": string }</code>.</td></tr>
+              </tbody>
+            </table>
+
+            <details>
+              <summary>Important (tracé ITI)</summary>
+              <div class="content">
+                <ul>
+                  <li>Par défaut : <code>p_track_format = "none"</code> → aucun tracé dans la réponse.</li>
+                  <li>Si <code>"kml"</code> ou <code>"gpx"</code> :
+                    <ul>
+                      <li><code>include_stages</code> contrôle l’ajout des étapes.</li>
+                      <li><b>KML</b> : si <code>include_stages=true</code>, vous pouvez régler <code>stage_color</code> (ex. <code>"red"</code>, <code>"blue"</code>, <code>"green"</code>, <code>"orange"</code>, <code>"purple"</code>, <code>"black"</code>, <code>"white"</code>, <code>"yellow"</code>, <code>"cyan"</code>, <code>"magenta"</code>, <code>"gray"</code>, <code>#RRGGBB</code> ou <code>AABBGGRR</code>).</li>
+                      <li><b>GPX</b> : <code>stage_color</code> est ignoré (waypoints “Flag, Red”).</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </details>
+
+            <h3>Exemples d’appel</h3>
+            <div class="code-tabs" data-tabs>
+              <div class="tab-bar">
+                <button class="active" data-tab="curl">cURL</button>
+                <button data-tab="js">JavaScript (fetch)</button>
+              </div>
+              <div class="tab-panel active" data-panel="curl">
+                <button class="copy copy-floating" data-copy="#ex-gor-curl">Copier</button>
+<pre id="ex-gor-curl">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_object_id": "ITI123",
+    "p_lang_prefs": ["fr","en"],
+    "p_track_format": "kml",
+    "p_options": { "include_stages": true, "stage_color": "blue" }
+  }'</pre>
+              </div>
+              <div class="tab-panel" data-panel="js">
+                <button class="copy copy-floating" data-copy="#ex-gor-js">Copier</button>
+<pre id="ex-gor-js">const res = await fetch(`${BASE_URL}/rpc/get_object_resource`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  body: JSON.stringify({
+    p_object_id: "ITI123",
+    p_lang_prefs: ["fr","en"],
+    p_track_format: "none" // pas de tracé par défaut
+  })
+});
+const json = await res.json();</pre>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 2.2 list_object_resources_page -->
+        <details id="list_object_resources_page">
+          <summary>2.2 Lister (pagination page/offset) : <code>list_object_resources_page</code></summary>
+          <div class="content">
+            <p><b>But</b> — Lister des ressources avec pagination simple (offset/page), filtrées par type, statut, recherche. <b class="badge">Par défaut, pas de tracé</b>.</p>
+            <h3>Paramètres (JSON)</h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_cursor</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Curseur opaque renvoyé par l’appel précédent.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_page_size</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>1 à 200.</td></tr>
+                <tr><td><code>p_types</code></td><td><code>array&lt;enum&gt;</code></td><td>❌</td><td><code>null</code></td><td>Restreindre aux types demandés (ex. <code>["ITI"]</code>).</td></tr>
+                <tr><td><code>p_status</code></td><td><code>array&lt;enum&gt;</code></td><td>❌</td><td><code>["published"]</code></td><td>Statuts acceptés.</td></tr>
+                <tr><td><code>p_search</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Terme de recherche (nom normalisé ; insensible aux accents & casse).</td></tr>
+                <tr><td><code>p_track_format</code></td><td><code>"none" | "kml" | "gpx"</code></td><td>❌</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>p_include_stages</code></td><td><code>boolean</code></td><td>❌</td><td><code>null</code></td><td>Si vous demandez un tracé KML/GPX, inclure les étapes ?</td></tr>
+                <tr><td><code>p_stage_color</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Couleur des étapes (KML uniquement) si <code>include_stages=true</code>.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>Réponse</h3>
+<pre>{
+  "info": {
+    "kind": "page",
+    "language": "fr",
+    "language_fallbacks": ["fr","en"],
+    "page_size": 50,
+    "offset": 0,
+    "total": 1234,
+    "cursor": "&lt;opaque&gt;",
+    "next_cursor": "&lt;opaque or null&gt;"
+  },
+  "data": [ /* ressources */ ]
+}</pre>
+
+            <h3>Flux d’usage</h3>
+            <ol>
+              <li>Premier appel sans <code>p_cursor</code>.</li>
+              <li>Lisez <code>info.next_cursor</code>.</li>
+              <li>Rappelez en passant <code>p_cursor</code> pour la page suivante, etc.</li>
+            </ol>
+
+            <h3>Exemple (cURL)</h3>
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-page-curl">Copier</button>
+<pre id="ex-page-curl">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_page_size": 20,
+    "p_types": ["ITI"],
+    "p_status": ["published"],
+    "p_search": "crêtes",
+    "p_track_format": "none"
+  }'</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- 2.3 since keyset -->
+        <details id="list_object_resources_since_fast">
+          <summary>2.3 Lister depuis une date (keyset) : <code>list_object_resources_since_fast</code></summary>
+          <div class="content">
+            <p><b>But</b> — Synchroniser <i>ce qui a changé depuis un instant T</i> (robuste pendant les mises à jour).</p>
+
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_since</code></td><td><code>timestamp</code></td><td>✅</td><td>—</td><td>Point de départ (UTC).</td></tr>
+                <tr><td><code>p_cursor</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Curseur opaque.</td></tr>
+                <tr><td><code>p_use_source</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Utiliser la date de mise à jour source plutôt que technique.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>1 à 200.</td></tr>
+                <tr><td><code>p_types / p_status / p_search</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2.</td></tr>
+                <tr><td><code>p_track_format / p_include_stages / p_stage_color</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2 (par défaut, pas de tracé).</td></tr>
+              </tbody>
+            </table>
+
+            <h3>Réponse</h3>
+<pre>{
+  "info": {
+    "kind": "since",
+    "language": "fr",
+    "language_fallbacks": ["fr"],
+    "since": "2024-04-01T00:00:00Z",
+    "use_source": false,
+    "limit": 50,
+    "cursor": "&lt;opaque&gt;",
+    "next_cursor": "&lt;opaque or null&gt;"
+  },
+  "data": [ /* ressources modifiées/ajoutées depuis p_since */ ]
+}</pre>
+
+            <h3>Flux d’usage (sync incrémentale)</h3>
+            <ol>
+              <li>Appelez avec votre <code>p_since</code> (ex. dernière sync réussie).</li>
+              <li>Tant que <code>next_cursor</code> n’est pas <code>null</code>, chaînez avec <code>p_cursor</code>.</li>
+              <li>Enregistrez ensuite un nouveau “since” (ex. maintenant) pour la prochaine sync.</li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- 2.4 filtered page -->
+        <details id="list_object_resources_filtered_page">
+          <summary>2.4 Lister avec filtres riches (page/offset) : <code>list_object_resources_filtered_page</code></summary>
+          <div class="content">
+            <p><b>But</b> — Même idée que §2.2, mais avec un JSON de filtres riches <code>p_filters</code>.</p>
+
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_cursor / p_lang_prefs / p_page_size</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Filtres riches (voir ci-dessous).</td></tr>
+                <tr><td><code>p_types / p_status / p_search</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2</td></tr>
+                <tr><td><code>p_track_format / p_include_stages / p_stage_color</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2</td></tr>
+              </tbody>
+            </table>
+
+            <details>
+              <summary><b>p_filters</b> — possibilités & exemples</summary>
+              <div class="content">
+                <!-- Example in full width -->
+                <div class="deck-example">
+                  <h4>Exemple d'utilisation</h4>
+                  <div style="position:relative;">
+                    <button class="copy copy-floating" data-copy="#filters-example">Copier</button>
+<pre id="filters-example">{
+  "amenities_any": ["PARKING","WIFI"],
+  "itinerary": { "is_loop": true, "distance_max_km": 15, "practices_any": ["hiking"] },
+  "within_radius": { "lat": 45.76, "lon": 4.84, "radius_m": 20000 },
+  "media_types_any": ["image"],
+  "media_published_only": true,
+  "media_must_have_main": true
+}</pre>
+                  </div>
+                </div>
+                
+                <!-- Parameters on full width -->
+                <div class="deck-parameters">
+                  <h4>Paramètres disponibles</h4>
+                  <div class="filters-grid">
+                    <div class="filter-category">
+                      <h5>Équipements & Services</h5>
+                      <ul>
+                        <li><code>amenities_any: string[]</code> — au moins un équipement</li>
+                        <li><code>amenities_all: string[]</code> — tous ces équipements</li>
+                        <li><code>amenity_families_any: string[]</code> — au moins une famille</li>
+                        <li><code>pet_accepted: boolean</code> — animaux acceptés</li>
+                      <li><code>payment_methods_any: string[]</code></li>
+                      <li><code>environment_tags_any: string[]</code></li>
+                      <li><code>languages_any: string[]</code></li>
+                      </ul>
+                    </div>
+                    
+                    <div class="filter-category">
+                      <h5>Médias</h5>
+                      <ul>
+                      <li><code>media_types_any: string[]</code> — ex. <code>["image","video"]</code></li>
+                      <li><code>media_published_only: boolean</code></li>
+                      <li><code>media_must_have_main: boolean</code></li>
+                      </ul>
+                    </div>
+                    
+                    <div class="filter-category">
+                      <h5>Capacité & Classement</h5>
+                      <ul>
+                      <li><code>capacity_filters: [{ code, min?, max? }]</code></li>
+                      <li><code>classifications_any: [{ scheme_code, value_code }]</code></li>
+                        <li><code>tags_any: string[]</code> — slugs</li>
+                        <li><code>meeting_room</code> : { <i>min_count, min_area_m2, min_cap_theatre, min_cap_u, min_cap_classroom, min_cap_boardroom, equipment_any, equipment_all</i> }</li>
+                      </ul>
+                    </div>
+                    
+                    <div class="filter-category">
+                      <h5>Géolocalisation</h5>
+                      <ul>
+                      <li><code>within_radius</code> : { <i>lat, lon, radius_m</i> }</li>
+                      <li><code>bbox</code> : [minLon, minLat, maxLon, maxLat] (WGS84)</li>
+                    </ul>
+                  </div>
+                    
+                    <div class="filter-category">
+                      <h5>Itinéraires</h5>
+                      <ul>
+                        <li><code>itinerary</code> : { <i>is_loop, difficulty_min/max, distance_min/max_km, duration_min/max_h, practices_any[]</i> }</li>
+                      </ul>
+                    </div>
+                    
+                    <div class="filter-category">
+                      <h5>Disponibilité</h5>
+                      <ul>
+                        <li><code>open_now: boolean</code> — ouvert "maintenant"</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <!-- 2.5 filtered since -->
+        <details id="list_object_resources_filtered_since_fast">
+          <summary>2.5 Filtres + depuis une date (keyset) : <code>list_object_resources_filtered_since_fast</code></summary>
+          <div class="content">
+            <p><b>But</b> — La combinaison de §2.3 (since/keyset) et §2.4 (filtres riches).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Oblig.</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_since</code></td><td><code>timestamp</code></td><td>✅</td><td>—</td><td>Point de départ (UTC).</td></tr>
+                <tr><td><code>p_cursor</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Curseur opaque.</td></tr>
+                <tr><td><code>p_use_source</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Comme §2.3.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>—</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>1 à 200.</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Comme §2.4.</td></tr>
+                <tr><td><code>p_types / p_status / p_search</code></td><td>—</td><td>❌</td><td>—</td><td>—</td></tr>
+                <tr><td><code>p_track_format / p_include_stages / p_stage_color</code></td><td>—</td><td>❌</td><td>—</td><td>—</td></tr>
+              </tbody>
+            </table>
+            <p>Réponse : même forme que §2.3, avec <code>filters</code> propagés dans le curseur.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- 3) Dictionnaire de données -->
+      <section class="card" id="dictionary">
+        <h2>3) Dictionnaire de données : contenu d’une ressource</h2>
+
+        <p>Une ressource (un élément de <code>data[]</code>) est un objet JSON avec des blocs thématiques. Tous les blocs ne sont pas présents pour tous les objets.</p>
+
+        <details open>
+          <summary>3.1 Vue d’ensemble</summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Bloc</th><th>Type</th><th>À quoi ça sert</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique métier</td><td><code>"OBJ_000123"</code></td></tr>
+                <tr><td><code>type</code></td><td><code>enum</code></td><td>Type d’objet (ex. itinéraire)</td><td><code>"ITI"</code></td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td>Statut de publication</td><td><code>"published"</code></td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom affiché</td><td><code>"Boucle des Crêtes"</code></td></tr>
+                <tr><td><code>region_code</code></td><td><code>string</code></td><td>Code région/source métier</td><td><code>"FR-ARA"</code></td></tr>
+                <tr><td><code>created_at / updated_at / updated_at_source / published_at</code></td><td><code>timestamp</code></td><td>Suivi de vie (technique + source amont)</td><td><code>"2024-03-18T09:30:00Z"</code></td></tr>
+                <tr><td><code>address</code></td><td><code>object</code></td><td>Adresse postale (si connue)</td><td><code>{ "street": "...", "city": "..." }</code></td></tr>
+                <tr><td><code>location</code></td><td><code>object</code></td><td>Position WGS84</td><td><code>{ "latitude": 45.76, "longitude": 4.84, "altitude_m": 250 }</code></td></tr>
+                <tr><td><code>descriptions</code></td><td><code>array&lt;object&gt;</code></td><td>Descriptions publiques multilingues</td><td><code>[{ "language":"fr", "text":"..." }]</code></td></tr>
+                <tr><td><code>private_descriptions</code></td><td><code>array&lt;object&gt;</code></td><td>Descriptions privées</td><td>idem</td></tr>
+                <tr><td><code>external_ids</code></td><td><code>array&lt;object&gt;</code></td><td>Identifiants externes (SIT, DMS…)</td><td><code>[{ "system":"X", "value":"1234" }]</code></td></tr>
+                <tr><td><code>contacts</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de contact enrichis</td><td>voir §3.2</td></tr>
+                <tr><td><code>languages</code></td><td><code>array&lt;object&gt;</code></td><td>Langues parlées</td><td><code>[{ "code":"fr", "name":"Français" }]</code></td></tr>
+                <tr><td><code>media</code></td><td><code>array&lt;object&gt;</code></td><td>Médias publiés</td><td>voir §3.4</td></tr>
+                <tr><td><code>capacity</code></td><td><code>array&lt;object&gt;</code></td><td>Capacités</td><td>voir §3.5</td></tr>
+                <tr><td><code>amenities</code></td><td><code>array&lt;object&gt;</code></td><td>Équipements/Services</td><td>voir §3.6</td></tr>
+                <tr><td><code>environment_tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags environnement (éco)</td><td>voir §3.7</td></tr>
+                <tr><td><code>payment_methods</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de paiement</td><td>voir §3.7</td></tr>
+                <tr><td><code>pet_policy</code></td><td><code>object</code></td><td>Politique animaux</td><td><code>{ "accepted": true, ... }</code></td></tr>
+                <tr><td><code>prices</code></td><td><code>array&lt;object&gt;</code></td><td>Tarifs (+ périodes)</td><td>voir §3.8</td></tr>
+                <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements</td><td>voir §3.9</td></tr>
+                <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td><code>[{ "slug":"famille", "name":"Famille" }]</code></td></tr>
+                <tr><td><code>discounts / group_policies / origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
+                <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.10</td></tr>
+                <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d’événements/activités</td><td>—</td></tr>
+                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.12</td></tr>
+                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.13</td></tr>
+                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.14</td></tr>
+                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.15</td></tr>
+                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.15</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.2 <code>contacts[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>kind_code</code></td><td><code>enum</code></td><td>Type de contact</td><td><code>"email"</code>, <code>"phone"</code>, <code>"website"</code>…</td></tr>
+                <tr><td><code>kind_name</code></td><td><code>string</code></td><td>Libellé humain</td><td><code>"E-mail"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône du type</td><td><code>"https://…/email.svg"</code></td></tr>
+                <tr><td><code>value</code></td><td><code>string</code></td><td>Adresse/numéro/URL</td><td><code>"contact@exemple.fr"</code></td></tr>
+                <tr><td><code>is_public</code></td><td><code>boolean</code></td><td>Visible publiquement ?</td><td><code>true</code></td></tr>
+                <tr><td><code>is_primary</code></td><td><code>boolean</code></td><td>Canal prioritaire ?</td><td><code>true</code></td></tr>
+                <tr><td><code>role</code></td><td><code>enum</code></td><td>Rôle (ex. “booking”)</td><td><code>"booking"</code></td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d’affichage conseillé</td><td><code>1</code></td></tr>
+              </tbody>
+            </table>
+            <p class="inline-help">Affichez d’abord <code>is_primary</code>, puis les autres canaux.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.3 <code>languages[]</code></summary>
+          <div class="content">
+            <table><thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody><tr><td><code>code</code></td><td><code>enum</code></td><td>Code langue ("fr","en", …)</td></tr>
+              <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé</td></tr></tbody></table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.4 <code>media[]</code> (publiés uniquement)</summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant média</td></tr>
+                <tr><td><code>type_code / type_name</code></td><td><code>enum + string</code></td><td>Type (<code>"image"</code>, <code>"video"</code>, …)</td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string</code></td><td>Icône</td></tr>
+                <tr><td><code>title / credit</code></td><td><code>string</code></td><td>Légende & crédit</td></tr>
+                <tr><td><code>url</code></td><td><code>string (URL)</code></td><td>Lien direct</td></tr>
+                <tr><td><code>is_main</code></td><td><code>boolean</code></td><td>Média principal ?</td></tr>
+                <tr><td><code>visibility</code></td><td><code>enum</code></td><td>Niveau de visibilité</td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre</td></tr>
+                <tr><td><code>width / height</code></td><td><code>number</code></td><td>Dimensions (si connues)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.5 <code>capacity[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>metric_code / metric_name</code></td><td><code>enum + string</code></td><td>Métrique (lits, couverts…)</td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string</code></td><td>Icône</td></tr>
+                <tr><td><code>value</code></td><td><code>number</code></td><td>Valeur entière</td></tr>
+                <tr><td><code>unit</code></td><td><code>string</code></td><td>Unité (si applicable)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.6 <code>amenities[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>code / name / icon_url</code></td><td>—</td><td>Équipement</td></tr>
+                <tr><td><code>family</code></td><td><code>object</code></td><td>{ code, name, icon_url } (famille d’équipements)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.7 <code>environment_tags[]</code> & <code>payment_methods[]</code></summary>
+          <div class="content">
+            <p>Structure identique : <code>{ code, name, icon_url }</code>.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.8 <code>prices[]</code> (+ <code>periods[]</code>)</summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>kind</code></td><td><code>enum</code></td><td>Type de tarif (<code>"adult"</code>, <code>"child"</code>, <code>"package"</code>, …)</td></tr>
+                <tr><td><code>unit</code></td><td><code>enum</code></td><td>Unité (<code>"night"</code>, <code>"day"</code>, <code>"person"</code>, …)</td></tr>
+                <tr><td><code>amount / amount_max</code></td><td><code>number</code></td><td>Montant (ou fourchette)</td></tr>
+                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217, ex. <code>EUR</code>)</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Validité</td></tr>
+                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions, notes</td></tr>
+              </tbody>
+            </table>
+            <p><b>Périodes</b> (<code>periods[]</code>) : structure transparente (ex. <code>start_date</code>, <code>end_date</code>…).</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.9 <code>classifications[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>scheme</code></td><td><code>enum</code></td><td>Schéma/organisme</td></tr>
+                <tr><td><code>value</code></td><td><code>enum</code></td><td>Valeur/grade</td></tr>
+                <tr><td><code>awarded_at / valid_until</code></td><td><code>date</code></td><td>Délivré / validité</td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td>Statut</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.10 <code>tags[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>slug</code></td><td><code>string</code></td><td>Identifiant lisible</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé</td></tr>
+                <tr><td><code>color</code></td><td><code>string</code></td><td>Couleur (CSS/hex)</td></tr>
+                <tr><td><code>icon / icon_url</code></td><td><code>string</code></td><td>Icône (nom/code) + URL</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.11 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
+          <div class="content">
+            <p>Colonnes de salle (nom, surface, capacités <code>cap_theatre</code>, <code>cap_u</code>, <code>cap_classroom</code>, <code>cap_boardroom</code>, …).</p>
+            <p><code>equipment[]</code> : <code>{ code, name, icon_url }</code>.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.12 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
+          <div class="content">
+            <p>Colonnes du lieu (id, nom, position, …).</p>
+            <p><code>descriptions[]</code> : multilingue — structure transparente (ex. <code>language</code>, <code>text</code>, <code>position</code>, …).</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.13 <code>sustainability_action_labels[]</code></summary>
+          <div class="content">
+            <p>Associe les actions de durabilité et les labels obtenus.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>object_action_id</code></td><td><code>string</code></td><td>Identifiant de l’action</td></tr>
+                <tr><td><code>action</code></td><td><code>object</code></td><td>{ code, label, description, icon_url, category{…}, position }</td></tr>
+                <tr><td><code>label</code></td><td><code>object</code></td><td>{ scheme_code, scheme_name, value_code, value_name, awarded_at, valid_until, status }</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.14 <code>relations { out[], in[] }</code></summary>
+          <div class="content">
+            <p><b>out[]</b> : cette ressource → autres (<code>target: { id, type, name }</code>)<br>
+               <b>in[]</b> : autres → cette ressource (<code>source: { id, type, name }</code>)</p>
+            <p>Chaque relation conserve ses champs utiles (type de lien, rôle, …), nettoyés des IDs redondants.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.15 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
+          <div class="content">
+            <h3><code>itinerary_details</code></h3>
+            <ul>
+              <li><code>info</code> : méta (ex. conseils, profils altimétriques détaillés…)</li>
+              <li><code>profiles[]</code> : variantes / tronçons alternatifs</li>
+              <li><code>practices[]</code> : { code, name, icon_url } (ex. "hiking", "mtb")</li>
+              <li><code>sections[]</code> : segments/tronçons</li>
+              <li><code>stages[]</code> : étapes (avec leur propre <code>media[]</code>)</li>
+              <li><code>associated_objects[]</code> : liens vers d’autres objets (<code>target { id, type, name }</code>)</li>
+            </ul>
+            <h3><code>itinerary</code></h3>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>distance_km</code></td><td><code>number</code></td><td>Distance totale (km)</td></tr>
+                <tr><td><code>duration_hours</code></td><td><code>number</code></td><td>Durée moyenne (h)</td></tr>
+                <tr><td><code>difficulty_level</code></td><td><code>number</code></td><td>Niveau (échelle interne)</td></tr>
+                <tr><td><code>elevation_gain</code></td><td><code>number</code></td><td>Dénivelé + (m)</td></tr>
+                <tr><td><code>is_loop</code></td><td><code>boolean</code></td><td>Boucle ?</td></tr>
+                <tr><td><code>track</code></td><td><code>string | null</code></td><td>KML/GPX (XML texte) — uniquement si demandé</td></tr>
+                <tr><td><code>track_format</code></td><td><code>"kml" | "gpx" | null</code></td><td>Format du tracé si présent</td></tr>
+              </tbody>
+            </table>
+            <p class="inline-help"><b>Rappels tracé</b> — Par défaut <code>track=null</code>. Pour obtenir un tracé, définissez <code>p_track_format</code> à <code>"kml"</code> ou <code>"gpx"</code>. <b>KML</b> : utilisez <code>p_options.stage_color</code> si vous incluez des étapes. <b>GPX</b> : <code>stage_color</code> ignorée.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- 4) Exemples pratiques -->
+      <section class="card" id="examples">
+        <h2>4) Exemples pratiques (HTTP)</h2>
+
+        <details open>
+          <summary>4.1 Un objet ITI sans tracé (léger)</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-41">Copier</button>
+<pre id="ex-41">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{ "p_object_id": "ITI123", "p_track_format": "none" }'</pre>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.2 Le même objet ITI avec KML, étapes en bleu</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-42">Copier</button>
+<pre id="ex-42">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_object_id": "ITI123",
+    "p_track_format": "kml",
+    "p_options": { "include_stages": true, "stage_color": "blue" }
+  }'</pre>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.3 Liste paginée d’itinéraires publiés, 20 par page</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-43a">Copier</button>
+<pre id="ex-43a">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{ "p_page_size": 20, "p_types": ["ITI"], "p_status": ["published"] }'</pre>
+            <p class="inline-help">Puis, pour la page suivante, reprenez <code>info.next_cursor</code> :</p>
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-43b">Copier</button>
+<pre id="ex-43b">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{ "p_cursor": "&lt;valeur de next_cursor&gt;" }'</pre>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.4 Sync incrémentale depuis une date (keyset)</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-44">Copier</button>
+<pre id="ex-44">curl -X POST "{BASE_URL}/rpc/list_object_resources_since_fast" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_since": "2024-04-01T00:00:00Z",
+    "p_types": ["ITI"], "p_status": ["published"]
+  }'</pre>
+            <p class="inline-help">Bouclez avec <code>p_cursor</code> tant que <code>next_cursor</code> n’est pas <code>null</code>.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.5 Liste filtrée (ITI boucles ≤ 15 km, à 20 km de 45.76/4.84, avec image principale)</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-45">Copier</button>
+<pre id="ex-45">curl -X POST "{BASE_URL}/rpc/list_object_resources_filtered_page" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_page_size": 24,
+    "p_types": ["ITI"],
+    "p_filters": {
+      "itinerary": { "is_loop": true, "distance_max_km": 15, "practices_any": ["hiking"] },
+      "within_radius": { "lat": 45.76, "lon": 4.84, "radius_m": 20000 },
+      "media_types_any": ["image"],
+      "media_published_only": true,
+      "media_must_have_main": true
+    }
+  }'</pre>
+          </div>
+        </details>
+      </section>
+
+      <!-- 5) Conseils -->
+      <section class="card" id="tips">
+        <h2>5) Conseils & bonnes pratiques</h2>
+        <div class="row">
+          <div>
+            <h3>Tracé ITI</h3>
+            <ul>
+              <li>En listing, laissez <code>p_track_format: "none"</code> (plus rapide).</li>
+              <li>Pour le détail, demandez le tracé en <code>"kml"</code> ou <code>"gpx"</code>.</li>
+              <li><b>KML + étapes</b> : fixez <code>stage_color</code> pour un rendu homogène (ex. <code>"blue"</code>).</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Pagination</h3>
+            <ul>
+              <li><b>Page/offset</b> (<code>list_object_resources_page</code>) : simple pour UI.</li>
+              <li><b>Keyset</b> (<code>list_object_resources_since_fast</code>) : idéal pour synchroniser des données modifiées.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Filtres</h3>
+            <ul>
+              <li>N’envoyez que les filtres utiles : les autres sont ignorés.</li>
+              <li>Combiner plusieurs clés applique un <b>ET</b> logique.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Langues & robustesse</h3>
+            <ul>
+              <li><code>p_lang_prefs</code> prend un ordre de préférence (ex. <code>["en","fr"]</code>).</li>
+              <li>Si un champ n’existe pas, attendez-vous à <code>[]</code>, <code>{}</code> ou <code>null</code> suivant le bloc.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <p class="footer">© OTI du Sud · API</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- Floating toggle sections button -->
+  <button id="floatingToggleSections" class="floating-toggle" title="Déplier/Replier toutes les sections">
+    <span id="floatingToggleIcon">▾</span>
+  </button>
+
+  <script>
+    // THEME
+    const root = document.documentElement;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    const saved = localStorage.getItem('oti:theme');
+    if(saved === 'dark' || (saved === null && prefersDark.matches)){ document.body.classList.add('dark'); }
+    
+    // Update theme button text and arrow on load
+    function updateThemeButtonText() {
+      const themeText = document.getElementById('themeText');
+      const isDark = document.body.classList.contains('dark');
+      themeText.textContent = isDark ? 'Dark' : 'Light';
+      
+      // Update arrow direction
+      const button = document.getElementById('toggleTheme');
+      const currentText = button.innerHTML;
+      if (currentText.includes('▾') || currentText.includes('▴')) {
+        button.innerHTML = currentText.replace(/[▾▴]/, isDark ? '▴' : '▾');
+      }
+    }
+    
+    // Update button text on load
+    updateThemeButtonText();
+    
+    document.getElementById('toggleTheme').addEventListener('click', ()=>{
+      document.body.classList.toggle('dark');
+      localStorage.setItem('oti:theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+      updateThemeButtonText();
+    });
+
+    // TOGGLE SECTIONS
+    const toggleSectionsBtn = document.getElementById('toggleSections');
+    const floatingToggleBtn = document.getElementById('floatingToggleSections');
+    const floatingToggleIcon = document.getElementById('floatingToggleIcon');
+    let sectionsExpanded = false;
+    
+    function toggleAllSections() {
+      // Get current scroll position before toggling
+      const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const currentSection = getCurrentVisibleSection();
+      
+      const details = document.querySelectorAll('details');
+      sectionsExpanded = !sectionsExpanded;
+      
+      details.forEach(d => d.open = sectionsExpanded);
+      
+      // Update header button text and icon
+      toggleSectionsBtn.innerHTML = sectionsExpanded ? '▸ Fermer tout' : '▾ Ouvrir tout';
+      toggleSectionsBtn.title = sectionsExpanded ? 'Replier toutes les sections' : 'Déplier toutes les sections';
+      
+      // Update floating button icon
+      floatingToggleIcon.textContent = sectionsExpanded ? '▸' : '▾';
+      floatingToggleBtn.title = sectionsExpanded ? 'Replier toutes les sections' : 'Déplier toutes les sections';
+      
+      // Restore scroll position after DOM updates
+      requestAnimationFrame(() => {
+        if (currentSection) {
+          // Scroll to the same section that was visible
+          currentSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        } else {
+          // Fallback to previous scroll position
+          window.scrollTo({
+            top: currentScrollTop,
+            behavior: 'smooth'
+          });
+        }
+      });
+    }
+    
+    function getCurrentVisibleSection() {
+      const sections = document.querySelectorAll('section[id], details[id], div[id]');
+      let currentSection = null;
+      let closestDistance = Infinity;
+      
+      sections.forEach(section => {
+        if (section.id) {
+          const rect = section.getBoundingClientRect();
+          const distanceFromTop = Math.abs(rect.top);
+          
+          // Check if section is in viewport (at least partially visible)
+          if (rect.top <= window.innerHeight / 2 && rect.bottom > 0) {
+            if (distanceFromTop < closestDistance) {
+              closestDistance = distanceFromTop;
+              currentSection = section;
+            }
+          }
+        }
+      });
+      
+      return currentSection;
+    }
+    
+    toggleSectionsBtn.addEventListener('click', toggleAllSections);
+    floatingToggleBtn.addEventListener('click', toggleAllSections);
+
+    // COPY buttons
+    function copyFromSelector(sel, btn){
+      const el = document.querySelector(sel);
+      if(!el) return;
+      const text = el.innerText;
+      navigator.clipboard.writeText(text).then(()=>{
+        btn.classList.add('success'); btn.textContent='Copié ✓';
+        setTimeout(()=>{ btn.classList.remove('success'); btn.textContent='Copier'; }, 1200);
+      });
+    }
+    document.querySelectorAll('.copy').forEach(btn=>{
+      const sel = btn.getAttribute('data-copy');
+      btn.addEventListener('click', ()=> copyFromSelector(sel, btn));
+    });
+
+    // TABS
+    document.querySelectorAll('[data-tabs]').forEach(box=>{
+      const buttons = box.querySelectorAll('.tab-bar button');
+      const panels = box.querySelectorAll('.tab-panel');
+      buttons.forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const tab = b.getAttribute('data-tab');
+          buttons.forEach(x=>x.classList.toggle('active', x===b));
+          panels.forEach(p=>p.classList.toggle('active', p.getAttribute('data-panel')===tab));
+        });
+      });
+    });
+
+    // TOC build + ScrollSpy
+    const tocEl = document.getElementById('toc');
+    const headings = [...document.querySelectorAll('#content h2, #content details > summary')];
+    const tocLinks = [];
+    
+    headings.forEach(h=>{
+      // Ensure id
+      const base = (h.textContent||'section').toLowerCase()
+        .replace(/[^\w]+/g,'-').replace(/(^-|-$)/g,'');
+      let id = base, i=1;
+      while(document.getElementById(id)){ id = base + '-' + (i++); }
+      if(!h.id) h.id = id;
+
+      const a = document.createElement('a');
+      a.href = '#' + id;
+      a.textContent = h.tagName.toLowerCase()==='summary' ? h.textContent : '• ' + h.textContent;
+      if(h.tagName.toLowerCase()==='summary') a.classList.add('sub');
+      
+      // Add click handler for manual navigation
+      a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const targetId = a.getAttribute('href').slice(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if(targetElement){
+          // Remove all active classes
+          tocLinks.forEach(link=>link.classList.remove('active'));
+          
+          // Add active class to clicked link
+          a.classList.add('active');
+          
+          // Smooth scroll to target
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+          
+          // Update URL without jumping
+          history.pushState(null, null, '#' + targetId);
+        }
+      });
+      
+      tocLinks.push(a); 
+      tocEl.appendChild(a);
+    });
+
+    // Remove the old observer - we'll use the enhanced one below
+
+    // Handle URL hash changes and initial page load
+    function updateActiveFromHash() {
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        tocLinks.forEach(a => a.classList.remove('active'));
+        const targetLink = tocLinks.find(a => a.getAttribute('href').slice(1) === hash);
+        if (targetLink) {
+          targetLink.classList.add('active');
+          // Scroll to the section if it exists
+          const targetElement = document.getElementById(hash);
+          if (targetElement) {
+            setTimeout(() => {
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+        }
+      }
+    }
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', updateActiveFromHash);
+    
+    // Handle initial page load with hash
+    window.addEventListener('load', updateActiveFromHash);
+    
+    // Handle hash changes
+    window.addEventListener('hashchange', updateActiveFromHash);
+
+    // Simple and reliable scroll synchronization
+    let scrollTimeout;
+    let isUserScrollingTOC = false;
+    
+    // Main scroll handler
+    window.addEventListener('scroll', () => {
+      if (isUserScrollingTOC) return;
+      
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        syncTOCWithMainContent();
+      }, 50);
+    });
+    
+    function syncTOCWithMainContent() {
+      const tocContainer = document.getElementById('toc');
+      const tocLinks = Array.from(tocContainer.querySelectorAll('a'));
+      
+      if (tocLinks.length === 0) return;
+      
+      // Proportional scroll of TOC based on main content scroll position
+      const contentEl = document.getElementById('content');
+      const contentStart = contentEl.offsetTop;
+      const contentEnd = contentStart + contentEl.scrollHeight - window.innerHeight;
+      const pageY = window.pageYOffset || document.documentElement.scrollTop || 0;
+      const clampedY = Math.max(contentStart, Math.min(pageY, contentEnd));
+      const progress = contentEnd > contentStart ? (clampedY - contentStart) / (contentEnd - contentStart) : 0;
+      const maxTOCScroll = Math.max(0, tocContainer.scrollHeight - tocContainer.clientHeight);
+      tocContainer.scrollTop = progress * maxTOCScroll;
+      
+      // Determine current heading (the headings used to build the TOC)
+      const allHeadings = (typeof headings !== 'undefined' && Array.isArray(headings) && headings.length)
+        ? headings
+        : [...document.querySelectorAll('#content h2, #content details > summary')];
+      
+      let currentHeading = allHeadings[0];
+      const anchorY = 110; // approx sticky header height
+      for (let i = 0; i < allHeadings.length; i++) {
+        const rect = allHeadings[i].getBoundingClientRect();
+        if (rect.top <= anchorY) {
+          currentHeading = allHeadings[i];
+        } else {
+          break;
+        }
+      }
+      
+      // Update active link in TOC
+      tocLinks.forEach(link => link.classList.remove('active'));
+      const activeLink = tocLinks.find(link => link.getAttribute('href').slice(1) === currentHeading.id);
+      if (activeLink) {
+        activeLink.classList.add('active');
+      }
+    }
+
+    // Simple hover effects for TOC links (no scrolling)
+    tocLinks.forEach(link => {
+      link.addEventListener('mouseenter', () => {
+        const targetId = link.getAttribute('href').slice(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          // Temporarily highlight the section
+          targetElement.style.transition = 'all 0.3s ease';
+          targetElement.style.boxShadow = '0 0 0 3px rgba(118,176,151,.3)';
+          
+          // Remove highlight after a delay
+          setTimeout(() => {
+            targetElement.style.boxShadow = '';
+          }, 2000);
+        }
+      });
+      
+      link.addEventListener('mouseleave', () => {
+        const targetId = link.getAttribute('href').slice(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          // Remove highlight immediately on mouse leave
+          targetElement.style.boxShadow = '';
+        }
+      });
+    });
+
+    // Handle manual TOC scrolling to prevent conflicts
+    const tocContainer = document.getElementById('toc');
+    let tocScrollTimeout;
+    
+    tocContainer.addEventListener('scroll', () => {
+      // Temporarily disable main scroll sync when user scrolls TOC manually
+      isUserScrollingTOC = true;
+      
+      clearTimeout(tocScrollTimeout);
+      tocScrollTimeout = setTimeout(() => {
+        isUserScrollingTOC = false;
+      }, 500); // Re-enable after 500ms of no TOC scrolling
+    });
+
+    // Initialize TOC scroll position on page load
+    window.addEventListener('load', () => {
+      setTimeout(syncTOCWithMainContent, 100);
+    });
+
+    // GLOBAL SEARCH: filter cards/sections by text
+    const q = document.getElementById('globalSearch');
+    const searchable = [...document.querySelectorAll('#content .card, #content details, #content table, #content pre')];
+    q.addEventListener('input', ()=>{
+      const v = q.value.trim().toLowerCase();
+      searchable.forEach(s=>{
+        const text = s.innerText.toLowerCase();
+        const match = !v || text.includes(v);
+        s.style.display = match ? '' : 'none';
+      });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='k'){
+        e.preventDefault(); q.focus();
+      }
+    });
+  </script>
+</body>
+</html>

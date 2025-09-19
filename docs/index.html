@@ -1207,12 +1207,14 @@ const json = await res.json();</pre>
                 <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td><code>[{ "slug":"famille", "name":"Famille" }]</code></td></tr>
                 <tr><td><code>discounts / group_policies / origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
                 <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.10</td></tr>
-                <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d’événements/activités</td><td>—</td></tr>
-                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.12</td></tr>
-                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.13</td></tr>
-                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.14</td></tr>
-                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.15</td></tr>
-                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.15</td></tr>
+                <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d'événements/activités</td><td>—</td></tr>
+                <tr><td><code>opening_times</code></td><td><code>array&lt;object&gt;</code></td><td>Horaires d'ouverture</td><td>voir §3.12</td></tr>
+                <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.13</td></tr>
+                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.14</td></tr>
+                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.15</td></tr>
+                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.16</td></tr>
+                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.17</td></tr>
+                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.17</td></tr>
               </tbody>
             </table>
           </div>
@@ -1359,7 +1361,58 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.12 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
+          <summary>3.12 <code>opening_times[]</code></summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>schedule_type_code / schedule_type_name</code></td><td><code>enum + string</code></td><td>Type d'horaire (ex. "standard", "seasonal")</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom du créneau (ex. "Ouverture été")</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité</td></tr>
+                <tr><td><code>periods[]</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes d'ouverture détaillées</td></tr>
+              </tbody>
+            </table>
+            <p><b>Périodes</b> : <code>{ day_of_week, start_time, end_time, is_closed }</code></p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.13 <code>menus[]</code> (restaurants/événements)</summary>
+          <div class="content">
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant du menu</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom du menu (ex. "Menu déjeuner")</td></tr>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description du menu</td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage</td></tr>
+                <tr><td><code>is_active</code></td><td><code>boolean</code></td><td>Menu actif ?</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité</td></tr>
+                <tr><td><code>items[]</code></td><td><code>array&lt;object&gt;</code></td><td>Articles du menu</td></tr>
+              </tbody>
+            </table>
+            <h4>Articles de menu (<code>items[]</code>)</h4>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant de l'article</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom du plat</td></tr>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description du plat</td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre dans le menu</td></tr>
+                <tr><td><code>price_amount / price_amount_max</code></td><td><code>number</code></td><td>Prix (ou fourchette)</td></tr>
+                <tr><td><code>price_currency</code></td><td><code>string</code></td><td>Devise (ex. "EUR")</td></tr>
+                <tr><td><code>category</code></td><td><code>object</code></td><td>{ id, code, name } (ex. "Entrée", "Plat principal")</td></tr>
+                <tr><td><code>unit</code></td><td><code>object</code></td><td>{ id, code, name } (ex. "par personne", "par portion")</td></tr>
+                <tr><td><code>dietary_tags[]</code></td><td><code>array&lt;object&gt;</code></td><td>Tags alimentaires (végétarien, vegan, halal...)</td></tr>
+                <tr><td><code>allergens[]</code></td><td><code>array&lt;object&gt;</code></td><td>Allergènes (gluten, arachides, lait...)</td></tr>
+              </tbody>
+            </table>
+            <p><b>Tags & Allergènes</b> : structure <code>{ id, code, name, icon_url }</code></p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.14 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
           <div class="content">
             <p>Colonnes du lieu (id, nom, position, …).</p>
             <p><code>descriptions[]</code> : multilingue — structure transparente (ex. <code>language</code>, <code>text</code>, <code>position</code>, …).</p>
@@ -1367,7 +1420,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.13 <code>sustainability_action_labels[]</code></summary>
+          <summary>3.15 <code>sustainability_action_labels[]</code></summary>
           <div class="content">
             <p>Associe les actions de durabilité et les labels obtenus.</p>
             <table>
@@ -1382,7 +1435,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.14 <code>relations { out[], in[] }</code></summary>
+          <summary>3.16 <code>relations { out[], in[] }</code></summary>
           <div class="content">
             <p><b>out[]</b> : cette ressource → autres (<code>target: { id, type, name }</code>)<br>
                <b>in[]</b> : autres → cette ressource (<code>source: { id, type, name }</code>)</p>
@@ -1391,7 +1444,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.15 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
+          <summary>3.17 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
           <div class="content">
             <h3><code>itinerary_details</code></h3>
             <ul>
@@ -1500,6 +1553,38 @@ const json = await res.json();</pre>
       "media_must_have_main": true
     }
   }'</pre>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.6 Restaurant avec menu complet</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-46">Copier</button>
+<pre id="ex-46">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_object_id": "RESTAURANT-001",
+    "p_lang_prefs": ["fr", "en"]
+  }'</pre>
+            </div>
+            <p class="inline-help">La réponse inclura les <code>menus[]</code> avec leurs <code>items[]</code>, catégories, prix, tags alimentaires et allergènes.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.7 Événement avec menu (FMA)</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
+<pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_object_id": "FMA-FESTIVAL-2024",
+    "p_lang_prefs": ["fr"]
+  }'</pre>
+            </div>
+            <p class="inline-help">Les événements peuvent aussi avoir des menus pour les repas/boissons proposés.</p>
           </div>
         </details>
       </section>

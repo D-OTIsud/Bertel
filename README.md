@@ -1,53 +1,53 @@
-# Documentation API Bertel v3.0
+# Bertel
 
-Documentation complète de l'API Bertel v3.0 avec interface moderne et collection Postman.
+Espace de développement pour le projet Bertel - API de gestion touristique.
 
-## 🚀 Déploiement
+## 📁 Structure du projet
 
-### Avec Coolify
+```
+Bertel/
+├── docs/                    # Documentation API
+│   ├── index.html          # Documentation principale
+│   ├── Dockerfile          # Configuration déploiement
+│   ├── *.json              # Collections Postman
+│   └── README.md           # Guide documentation
+├── api/                    # Code source de l'API (à venir)
+├── frontend/               # Interface utilisateur (à venir)
+└── README.md              # Ce fichier
+```
 
-1. **Cloner le repository**
-2. **Configurer dans Coolify** :
-   - Type : Dockerfile
-   - Port : 80
-   - Domaine : Votre domaine personnalisé
+## 🚀 Documentation API
 
-3. **Déploiement automatique** à chaque push
+La documentation complète de l'API Bertel v3.0 est disponible dans le dossier [`docs/`](./docs/).
 
-### Avec Docker local
+### 📖 Accès rapide
+
+- **Documentation web** : [docs/index.html](./docs/index.html)
+- **Collection Postman** : [docs/Bertel_API_v3.postman_collection.json](./docs/Bertel_API_v3.postman_environment.json)
+- **Guide Postman** : [docs/README_Postman.md](./docs/README_Postman.md)
+
+### 🌐 Déploiement
+
+La documentation peut être déployée via Coolify en utilisant les fichiers dans le dossier `docs/` :
 
 ```bash
-# Build
+cd docs/
 docker build -t bertel-api-docs .
-
-# Run
 docker run -p 8080:80 bertel-api-docs
 ```
 
-## 📁 Structure
-
-- `index.html` - Documentation principale
-- `Bertel_API_v3.postman_collection.json` - Collection Postman
-- `Bertel_API_v3.postman_environment.json` - Environnement Postman
-- `README_Postman.md` - Guide d'utilisation Postman
-
-## ✨ Fonctionnalités
-
-- **Interface moderne** avec thème #76B097
-- **Navigation latérale** synchronisée
-- **Mode sombre/clair** avec persistance
-- **Recherche globale** dans la documentation
-- **Collection Postman** intégrée
-- **Bouton flottant** pour toggle des sections
-- **Responsive design** pour tous les écrans
-
 ## 🔗 Liens utiles
 
+- [Documentation API complète](./docs/)
 - [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0)
-- Documentation déployée : [Votre domaine]
 
-## 📝 Maintenance
+## 📝 Développement
 
-- Mise à jour de la documentation : Modifier `index.html`
-- Redéploiement automatique via Coolify
-- Collection Postman : Mettre à jour les fichiers JSON
+Ce repository contient :
+- **Documentation** : Interface moderne avec navigation synchronisée
+- **API** : Endpoints REST avec authentification
+- **Collection Postman** : Tests et exemples d'utilisation
+
+## 🏢 Organisation
+
+Projet développé par **OTI du Sud** - Office de Tourisme Intercommunal du Sud.

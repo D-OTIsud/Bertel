@@ -206,6 +206,7 @@ class RawEstablishmentPayload(BaseModel):
                 "status": main_record.get("Status"),
                 "amenities": _split_values(main_record.get("Prestations sur place")),
                 "nearby_services": _split_values(main_record.get("Prestations à proximité")),
+                "environment_tags": _split_values(main_record.get("Localisations")),
                 "payment_methods": _split_values(main_record.get("Mode de paiement")),
                 "languages": _split_values(main_record.get("Langues")),
                 "email": main_record.get("E-Mail"),
@@ -536,6 +537,106 @@ class AmenityLinkRecord(BaseModel):
 
 class AmenityTransformation(BaseModel):
     amenities: List[AmenityLinkRecord]
+
+
+class LanguageLinkRecord(BaseModel):
+    """Representation of the `object_language` relation."""
+
+    object_id: Optional[str]
+    language_code: str
+    language_name: Optional[str] = None
+    proficiency_code: Optional[str] = None
+
+    def to_supabase(self, *, language_id: Optional[str], level_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if language_id:
+            payload["language_id"] = language_id
+        if level_id:
+            payload["level_id"] = level_id
+        extra: Dict[str, Any] = {}
+        if not language_id:
+            extra["language_code"] = self.language_code
+        if self.language_name:
+            extra["language_name"] = self.language_name
+        if self.proficiency_code and not level_id:
+            extra["proficiency_code"] = self.proficiency_code
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class LanguageTransformation(BaseModel):
+    languages: List[LanguageLinkRecord]
+
+
+class PaymentMethodRecord(BaseModel):
+    """Representation of the `object_payment_method` relation."""
+
+    object_id: Optional[str]
+    payment_code: str
+    payment_name: Optional[str] = None
+
+    def to_supabase(self, *, payment_method_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if payment_method_id:
+            payload["payment_method_id"] = payment_method_id
+        extra: Dict[str, Any] = {}
+        if not payment_method_id:
+            extra["payment_code"] = self.payment_code
+        if self.payment_name:
+            extra["payment_name"] = self.payment_name
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class PaymentMethodTransformation(BaseModel):
+    payment_methods: List[PaymentMethodRecord]
+
+
+class EnvironmentTagRecord(BaseModel):
+    """Representation of the `object_environment_tag` relation."""
+
+    object_id: Optional[str]
+    environment_code: str
+    environment_name: Optional[str] = None
+
+    def to_supabase(self, *, environment_tag_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if environment_tag_id:
+            payload["environment_tag_id"] = environment_tag_id
+        extra: Dict[str, Any] = {}
+        if not environment_tag_id:
+            extra["environment_code"] = self.environment_code
+        if self.environment_name:
+            extra["environment_name"] = self.environment_name
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class EnvironmentTagTransformation(BaseModel):
+    environment_tags: List[EnvironmentTagRecord]
+
+
+class PetPolicyRecord(BaseModel):
+    """Representation of the `object_pet_policy` table."""
+
+    object_id: Optional[str]
+    accepted: Optional[bool]
+    conditions: Optional[str] = None
+
+    def to_supabase(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if self.accepted is not None:
+            payload["accepted"] = self.accepted
+        if self.conditions:
+            payload["conditions"] = self.conditions
+        return payload
+
+
+class PetPolicyTransformation(BaseModel):
+    pet_policy: Optional[PetPolicyRecord] = None
 
 
 class MediaRecord(BaseModel):

@@ -17,9 +17,13 @@ from ..webhook import WebhookNotifier
 from .amenities import AmenitiesAgent
 from .base import Agent
 from .contact import ContactAgent
+from .environment import EnvironmentAgent
 from .identity import IdentityAgent
+from .languages import LanguageAgent
 from .location import LocationAgent
 from .media import MediaAgent
+from .payments import PaymentMethodAgent
+from .pet_policy import PetPolicyAgent
 from .providers import ProviderAgent
 from .schedule import ScheduleAgent
 
@@ -33,6 +37,10 @@ class Coordinator:
         location_agent: LocationAgent,
         contact_agent: ContactAgent,
         amenities_agent: AmenitiesAgent,
+        language_agent: LanguageAgent,
+        payment_agent: PaymentMethodAgent,
+        environment_agent: EnvironmentAgent,
+        pet_policy_agent: PetPolicyAgent,
         media_agent: MediaAgent,
         provider_agent: ProviderAgent,
         schedule_agent: ScheduleAgent,
@@ -45,6 +53,10 @@ class Coordinator:
             "location": location_agent,
             "contact": contact_agent,
             "amenities": amenities_agent,
+            "languages": language_agent,
+            "payments": payment_agent,
+            "environment": environment_agent,
+            "pet_policy": pet_policy_agent,
             "media": media_agent,
             "providers": provider_agent,
             "schedule": schedule_agent,
@@ -230,9 +242,13 @@ RECOGNISED_FIELDS: Dict[str, List[str]] = {
     ],
     "contact": ["phone", "email", "website"],
     "amenities": ["amenities"],
+    "languages": ["languages"],
+    "payments": ["payment_methods"],
+    "environment": ["environment_tags"],
+    "pet_policy": ["pets_allowed"],
     "media": ["media"],
     "providers": ["providers"],
-    "schedule": ["schedule", "horaires"],
+    "schedule": ["schedule", "horaires"]
 }
 
 

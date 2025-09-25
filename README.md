@@ -14,12 +14,11 @@ Bertel/
 │   └── README.md                  # Guide documentation
 ├── Base de donnée DLL et API/     # Schéma de base de données unifié
 │   ├── schema_unified.sql         # Schéma complet avec système unifié
-│   ├── api_views_functions.sql    # Vues et fonctions API
+│   ├── api_views_functions.sql    # Vues et fonctions API (RPC)
 │   ├── seeds_data.sql             # Données de test
 │   ├── rls_policies.sql           # Politiques de sécurité
 │   ├── README.md                  # Documentation technique complète
 │   └── erd_diagram.md             # Diagramme ER en Mermaid
-├── api/                           # Code source de l'API (à venir)
 ├── frontend/                      # Interface utilisateur (à venir)
 └── README.md                     # Ce fichier
 ```
@@ -106,9 +105,9 @@ SELECT api.submit_pending_change(
 
 Ce repository contient :
 - **🗄️ Base de données** : Schéma PostgreSQL unifié avec fonctionnalités avancées
+- **🔌 API RPC** : Fonctions PostgreSQL dans le schéma `api` avec authentification et workflow de modération
 - **📚 Documentation** : Interface moderne avec navigation synchronisée
-- **🔌 API** : Endpoints REST avec authentification et workflow de modération
-- **🧪 Collection Postman** : Tests et exemples d'utilisation
+- **🧪 Collection Postman** : Tests et exemples d'utilisation des fonctions RPC
 - **📹 Vidéos** : Explications techniques du système unifié
 
 ## 🏢 Organisation

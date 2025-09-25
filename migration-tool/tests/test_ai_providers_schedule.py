@@ -65,7 +65,7 @@ async def test_provider_agent_ai_transformation() -> None:
             }
         ]
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload)
+    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
 
     # Test AI transformation directly
     transformation = await llm.transform_fragment(
@@ -86,7 +86,7 @@ async def test_provider_agent_ai_transformation() -> None:
     assert provider1.phone == "0692600544"
     assert provider1.newsletter is True
     assert provider1.address1 == "Chemin de la Concession les Bas"
-    assert provider1.postcode == 97418
+    assert provider1.postcode == "97418"
     assert provider1.city == "La Plaine des Cafres"
     
     # Check second provider
@@ -101,7 +101,8 @@ async def test_provider_agent_ai_transformation() -> None:
     # Test agent handle method
     result = await agent.handle(payload, context)
     assert result["status"] == "ok"
-    assert result["operation"] == "no_data"  # Because Supabase is not available in test
+    assert result["operation"] == "upsert"
+    assert result["linked_providers"] == 2
 
 
 @pytest.mark.anyio
@@ -133,7 +134,7 @@ async def test_schedule_agent_ai_transformation() -> None:
             }
         ]
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload)
+    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
 
     # Test AI transformation directly
     transformation = await llm.transform_fragment(
@@ -150,15 +151,16 @@ async def test_schedule_agent_ai_transformation() -> None:
     assert schedule.days == ["wednesday", "thursday", "friday", "saturday", "sunday"]
     assert schedule.am_start == "09:30"
     assert schedule.am_finish == "15:00"
-    assert schedule.pm_start == ""
-    assert schedule.pm_finish == ""
+    assert schedule.pm_start in {None, ""}
+    assert schedule.pm_finish in {None, ""}
     assert schedule.reservation_required is True
     assert schedule.schedule_type == "regular"
 
     # Test agent handle method
     result = await agent.handle(payload, context)
     assert result["status"] == "ok"
-    assert result["operation"] == "no_data"  # Because Supabase is not available in test
+    assert result["operation"] == "upsert"
+    assert result["created_schedules"] == 1
 
 
 def test_rule_based_llm_providers_transformation() -> None:

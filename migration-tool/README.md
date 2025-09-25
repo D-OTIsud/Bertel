@@ -46,6 +46,25 @@ The dashboard is exposed on [http://localhost:8090/](http://localhost:8090/). Th
 pytest
 ```
 
+### 5. Containerised usage
+
+You can run the ingestion stack through Docker without installing any local Python dependencies.
+
+1. Create a `.env` file next to `docker-compose.yml` (reuse the variables from step 2).
+2. Build and start the stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   The API will be available on [http://localhost:8090](http://localhost:8090). The same container serves the dashboard UI.
+
+3. To stop the services:
+
+   ```bash
+   docker compose down
+   ```
+
 ## API overview
 
 - `POST /ingest`: submit a raw establishment payload (JSON). Returns the actions performed by each agent and the list of unresolved fragments.

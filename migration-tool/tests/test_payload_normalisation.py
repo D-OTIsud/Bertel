@@ -181,3 +181,28 @@ def test_payload_from_plain_text() -> None:
         assert "0262275287" in phone_field
     else:
         assert "0262275287" in str(phone_field)
+
+
+def test_payload_with_body_envelope() -> None:
+    payload = {
+        "body": {
+            "SubmitingOrgId": "ORG-123",
+            "data": {
+                "data": [
+                    {
+                        "Nom_OTI": "Le Relais Commerson",
+                        "Nom catégorie": "Restaurant",
+                        "Coordonnées GPS": "-21.204197, 55.577417",
+                        "E-Mail": "info@example.com",
+                    }
+                ]
+            },
+        }
+    }
+
+    normalised = RawEstablishmentPayload.model_validate(payload)
+
+    assert normalised.establishment_name == "Le Relais Commerson"
+    assert normalised.establishment_category == "Restaurant"
+    assert normalised.source_organization_id == "ORG-123"
+    assert normalised.data["email"] == "info@example.com"

@@ -110,7 +110,6 @@ class Coordinator:
                 initial_object_id=context.object_id,
                 section=decision.sections.get("identity"),
             )
-
             if identity_payload:
                 section_payload = self._prepare_section_payload(
                     identity_payload,
@@ -209,78 +208,6 @@ class Coordinator:
         if payload.source_organization_id:
             enriched.setdefault("source_organization_id", payload.source_organization_id)
         return enriched
-      
-    def _build_identity_payload(
-        self,
-        *,
-        base_payload: Dict[str, Any],
-        raw_payload: RawEstablishmentPayload,
-        initial_object_id: Optional[str],
-        section: Optional[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Compose the payload passed to the identity agent.
-
-        The router may fail to assign fields to the identity section when payloads
-        are highly irregular. This helper hydrates a minimal fragment so the
-        identity agent can always attempt to create or reuse the canonical object
-        and return the Supabase-generated identifier for downstream agents.
-        """
-
-        identity_payload: Dict[str, Any] = {}
-        if section:
-            identity_payload.update(section)
-
-        def _set_default(key: str, value: Any) -> None:
-            if value in (None, "", [], {}):
-                return
-            identity_payload.setdefault(key, value)
-
-        _set_default("establishment_name", base_payload.get("establishment_name") or base_payload.get("name"))
-        if raw_payload.establishment_name:
-            identity_payload["establishment_name"] = raw_payload.establishment_name
-
-        _set_default("category", base_payload.get("category"))
-        if raw_payload.establishment_category:
-            identity_payload["category"] = raw_payload.establishment_category
-
-        _set_default("subcategory", base_payload.get("subcategory"))
-        if raw_payload.establishment_subcategory:
-            identity_payload["subcategory"] = raw_payload.establishment_subcategory
-
-        description = (
-            identity_payload.get("description")
-            or base_payload.get("description")
-            or base_payload.get("summary")
-            or base_payload.get("descriptif")
-        )
-        _set_default("description", description)
-
-        existing_legacy = identity_payload.get("legacy_ids") or []
-        if isinstance(existing_legacy, str):
-            existing_legacy = [existing_legacy]
-        legacy_candidates = list(existing_legacy)
-        payload_legacy = raw_payload.legacy_ids or base_payload.get("legacy_ids") or []
-        if isinstance(payload_legacy, str):
-            payload_legacy = [payload_legacy]
-        for candidate in payload_legacy:
-            if candidate and candidate not in legacy_candidates:
-                legacy_candidates.append(candidate)
-        identity_payload["legacy_ids"] = legacy_candidates
-
-        candidate_object_id = (
-            identity_payload.get("establishment_id")
-            or identity_payload.get("object_id")
-            or base_payload.get("establishment_id")
-            or base_payload.get("object_id")
-            or initial_object_id
-        )
-        if candidate_object_id:
-            identity_payload.setdefault("establishment_id", candidate_object_id)
-
-        if base_payload:
-            _set_default("source_payload", base_payload)
-
-        return identity_payload if identity_payload.get("establishment_name") else {}
 
     def _build_identity_payload(
         self,

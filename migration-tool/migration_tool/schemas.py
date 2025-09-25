@@ -48,6 +48,56 @@ class RawEstablishmentPayload(BaseModel):
         elif not isinstance(value, dict):
             value = {"data": {}}
 
+        # Unwrap common envelope keys often injected by workflow orchestrators
+        # (for example n8n) so the remainder of the normalisation logic always
+        # receives the actual establishment payload instead of an opaque wrapper.
+        def _unwrap_envelopes(obj: Any) -> Any:
+            if not isinstance(obj, dict):
+                return obj
+
+            envelope_keys = ("body", "payload", "record", "message", "event")
+            unwrapped = dict(obj)
+
+            changed = True
+            while changed and isinstance(unwrapped, dict):
+                changed = False
+                for key in envelope_keys:
+                    inner = unwrapped.get(key)
+                    if isinstance(inner, dict):
+                        # Preserve sibling metadata while promoting the payload
+                        # fields to the top level.
+                        siblings = {k: v for k, v in unwrapped.items() if k != key}
+                        unwrapped = {**siblings, **inner}
+                        changed = True
+                        break
+                    if isinstance(inner, list):
+                        siblings = {k: v for k, v in unwrapped.items() if k != key}
+                        if siblings:
+                            merged_list = []
+                            for item in inner:
+                                if isinstance(item, dict):
+                                    merged_list.append({**siblings, **item})
+                                else:
+                                    merged_list.append(item)
+                            unwrapped = merged_list
+                        else:
+                            unwrapped = inner
+                        changed = True
+                        break
+            return unwrapped
+
+        value = _unwrap_envelopes(value)
+
+        if isinstance(value, list):
+            pass
+        elif not isinstance(value, dict):
+            value = {"data": {}}
+
+        if isinstance(value, dict):
+            for key in ("SubmitingOrgId", "SubmittingOrgId", "SubmittingOrgID", "submitingOrgId"):
+                if key in value and "dataProvidingOrg" not in value:
+                    value["dataProvidingOrg"] = value[key]
+
         def _as_list(obj: Any) -> List[Dict[str, Any]]:
             if isinstance(obj, list):
                 return [item for item in obj if isinstance(item, dict)]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import json
 import re
+import warnings
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from pydantic import BaseModel
@@ -880,7 +881,17 @@ def build_llm(
     if provider == "openai":  # pragma: no cover - requires network access
         if not api_key:
             raise RuntimeError("OpenAI provider selected but no API key was provided.")
-        return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+        try:
+            return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "openai" not in message.lower():
+                raise
+            warnings.warn(
+                "OpenAI provider unavailable (missing dependency); falling back to rule-based heuristics.",
+                RuntimeWarning,
+            )
+            return RuleBasedLLM()
 
     if provider in {"auto", "default"}:
         if api_key:

@@ -1,7 +1,12 @@
 import pytest
+import pytest
 
 from migration_tool.ai import FieldRouter, RuleBasedLLM
+from migration_tool.agents.environment import EnvironmentAgent
 from migration_tool.agents.identity import IdentityAgent
+from migration_tool.agents.languages import LanguageAgent
+from migration_tool.agents.payments import PaymentMethodAgent
+from migration_tool.agents.pet_policy import PetPolicyAgent
 from migration_tool.schemas import AgentContext, AgentDescriptor
 from migration_tool.supabase_client import SupabaseService
 from migration_tool.telemetry import EventLog
@@ -56,4 +61,72 @@ async def test_identity_agent_rule_based_transformation() -> None:
 
     assert result["status"] == "ok"
     assert result["table"] == "object"
+    assert result["response"]["status"] == "skipped"
+
+
+@pytest.mark.anyio
+async def test_language_agent_rule_based_transformation() -> None:
+    telemetry = EventLog(retention=10)
+    supabase = SupabaseService(url=None, key=None, telemetry=telemetry)
+    llm = RuleBasedLLM()
+    agent = LanguageAgent(supabase, telemetry, llm)
+
+    payload = {"establishment_id": "OBJ1", "languages": ["Français", "Anglais"]}
+    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+
+    result = await agent.handle(payload, context)
+
+    assert result["status"] == "ok"
+    assert result["table"] == "object_language"
+    assert len(result["responses"]) == 2
+
+
+@pytest.mark.anyio
+async def test_payment_agent_rule_based_transformation() -> None:
+    telemetry = EventLog(retention=10)
+    supabase = SupabaseService(url=None, key=None, telemetry=telemetry)
+    llm = RuleBasedLLM()
+    agent = PaymentMethodAgent(supabase, telemetry, llm)
+
+    payload = {"establishment_id": "OBJ1", "payment_methods": ["Carte Bancaire", "Espèces"]}
+    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+
+    result = await agent.handle(payload, context)
+
+    assert result["status"] == "ok"
+    assert result["table"] == "object_payment_method"
+    assert len(result["responses"]) == 2
+
+
+@pytest.mark.anyio
+async def test_environment_agent_rule_based_transformation() -> None:
+    telemetry = EventLog(retention=10)
+    supabase = SupabaseService(url=None, key=None, telemetry=telemetry)
+    llm = RuleBasedLLM()
+    agent = EnvironmentAgent(supabase, telemetry, llm)
+
+    payload = {"establishment_id": "OBJ1", "environment_tags": ["Village", "Milieu rural"]}
+    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+
+    result = await agent.handle(payload, context)
+
+    assert result["status"] == "ok"
+    assert result["table"] == "object_environment_tag"
+    assert len(result["responses"]) == 2
+
+
+@pytest.mark.anyio
+async def test_pet_policy_agent_rule_based_transformation() -> None:
+    telemetry = EventLog(retention=10)
+    supabase = SupabaseService(url=None, key=None, telemetry=telemetry)
+    llm = RuleBasedLLM()
+    agent = PetPolicyAgent(supabase, telemetry, llm)
+
+    payload = {"establishment_id": "OBJ1", "pets_allowed": "oui"}
+    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+
+    result = await agent.handle(payload, context)
+
+    assert result["status"] == "ok"
+    assert result["table"] == "object_pet_policy"
     assert result["response"]["status"] == "skipped"

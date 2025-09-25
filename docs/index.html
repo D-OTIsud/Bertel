@@ -1207,7 +1207,7 @@ const json = await res.json();</pre>
                 <tr><td><code>discounts / group_policies / origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
                 <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.10</td></tr>
                 <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d'événements/activités</td><td>—</td></tr>
-                <tr><td><code>opening_times</code></td><td><code>array&lt;object&gt;</code></td><td>Horaires d'ouverture</td><td>voir §3.12</td></tr>
+                <tr><td><code>opening_times</code></td><td><code>object</code></td><td>Horaires d'ouverture (structure temporelle)</td><td>voir §3.12</td></tr>
                 <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.13</td></tr>
                 <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.14</td></tr>
                 <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.15</td></tr>
@@ -1304,20 +1304,89 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.8 <code>prices[]</code> (+ <code>periods[]</code>)</summary>
+          <summary>3.8 <code>prices[]</code> (+ <code>periods[]</code> imbriquées)</summary>
           <div class="content">
+            <p>Structure de tarification avec périodes détaillées imbriquées :</p>
+            
+            <h4>Structure principale d'un tarif</h4>
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
               <tbody>
-                <tr><td><code>kind</code></td><td><code>enum</code></td><td>Type de tarif (<code>"adult"</code>, <code>"child"</code>, <code>"package"</code>, …)</td></tr>
-                <tr><td><code>unit</code></td><td><code>enum</code></td><td>Unité (<code>"night"</code>, <code>"day"</code>, <code>"person"</code>, …)</td></tr>
-                <tr><td><code>amount / amount_max</code></td><td><code>number</code></td><td>Montant (ou fourchette)</td></tr>
-                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217, ex. <code>EUR</code>)</td></tr>
-                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Validité</td></tr>
-                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions, notes</td></tr>
+                <tr><td><code>kind</code></td><td><code>object</code></td><td>Type de tarif enrichi : <code>{ id, code, name, position, icon_url }</code></td></tr>
+                <tr><td><code>unit</code></td><td><code>object</code></td><td>Unité enrichie : <code>{ id, code, name, position, icon_url }</code></td></tr>
+                <tr><td><code>amount</code></td><td><code>number</code></td><td>Montant de base (optionnel si fourchette)</td></tr>
+                <tr><td><code>amount_max</code></td><td><code>number</code></td><td>Montant maximum (pour fourchettes de prix)</td></tr>
+                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217, ex. <code>"EUR"</code>)</td></tr>
+                <tr><td><code>valid_from</code></td><td><code>date</code></td><td>Date de début de validité du tarif</td></tr>
+                <tr><td><code>valid_to</code></td><td><code>date</code></td><td>Date de fin de validité du tarif</td></tr>
+                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions, notes, restrictions</td></tr>
+                <tr><td><code>periods</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes détaillées imbriquées (voir ci-dessous)</td></tr>
               </tbody>
             </table>
-            <p><b>Périodes</b> (<code>periods[]</code>) : structure transparente (ex. <code>start_date</code>, <code>end_date</code>…).</p>
+            
+            <h4>Périodes imbriquées (<code>periods[]</code>)</h4>
+            <p>Chaque tarif peut avoir des périodes spécifiques avec des créneaux horaires :</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la période</td></tr>
+                <tr><td><code>start_date</code></td><td><code>date</code></td><td>Date de début de la période</td></tr>
+                <tr><td><code>end_date</code></td><td><code>date</code></td><td>Date de fin de la période</td></tr>
+                <tr><td><code>start_time</code></td><td><code>time</code></td><td>Heure de début (format HH:MM)</td></tr>
+                <tr><td><code>end_time</code></td><td><code>time</code></td><td>Heure de fin (format HH:MM)</td></tr>
+                <tr><td><code>note</code></td><td><code>string</code></td><td>Note spécifique à la période</td></tr>
+              </tbody>
+            </table>
+            
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "prices": [
+    {
+      "kind": {
+        "id": "uuid-kind-1",
+        "code": "adult",
+        "name": "Adulte",
+        "position": 1,
+        "icon_url": "https://.../adult.svg"
+      },
+      "unit": {
+        "id": "uuid-unit-1", 
+        "code": "per_night",
+        "name": "Par nuit",
+        "position": 1,
+        "icon_url": "https://.../night.svg"
+      },
+      "amount": 120.00,
+      "amount_max": null,
+      "currency": "EUR",
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "conditions": "Petit-déjeuner inclus",
+      "periods": [
+        {
+          "id": "uuid-period-1",
+          "start_date": "2024-07-01",
+          "end_date": "2024-08-31",
+          "start_time": "15:00",
+          "end_time": "11:00",
+          "note": "Haute saison"
+        },
+        {
+          "id": "uuid-period-2",
+          "start_date": "2024-09-01",
+          "end_date": "2024-10-31",
+          "start_time": "16:00",
+          "end_time": "10:00",
+          "note": "Saison intermédiaire"
+        }
+      ]
+    }
+  ]
+}</code></pre>
+            </div>
+            
+            <p class="inline-help"><b>Types de tarifs courants</b> : <code>adult</code>, <code>child</code>, <code>senior</code>, <code>group</code>, <code>package</code> • <b>Unités courantes</b> : <code>per_night</code>, <code>per_person</code>, <code>per_group</code>, <code>per_entry</code></p>
           </div>
         </details>
 
@@ -1360,18 +1429,65 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.12 <code>opening_times[]</code></summary>
+          <summary>3.12 <code>opening_times</code></summary>
           <div class="content">
+            <p>Structure d'horaires d'ouverture organisée en deux groupes temporels :</p>
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
               <tbody>
-                <tr><td><code>schedule_type_code / schedule_type_name</code></td><td><code>enum + string</code></td><td>Type d'horaire (ex. "standard", "seasonal")</td></tr>
-                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom du créneau (ex. "Ouverture été")</td></tr>
-                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité</td></tr>
-                <tr><td><code>periods[]</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes d'ouverture détaillées</td></tr>
+                <tr><td><code>PeriodeOuvertures</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes d'ouverture pour l'année courante et suivante</td></tr>
+                <tr><td><code>PeriodeOuverturesAnneeSuivantes</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes d'ouverture pour les années suivantes</td></tr>
               </tbody>
             </table>
-            <p><b>Périodes</b> : <code>{ day_of_week, start_time, end_time, is_closed }</code></p>
+            
+            <h4>Structure d'une période d'ouverture</h4>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>ID</code></td><td><code>string</code></td><td>Identifiant unique de la période</td></tr>
+                <tr><td><code>Ordre</code></td><td><code>number</code></td><td>Ordre d'affichage</td></tr>
+                <tr><td><code>SyndicObjectId</code></td><td><code>string</code></td><td>Identifiant de l'objet</td></tr>
+                <tr><td><code>Datedebut</code></td><td><code>date</code></td><td>Date de début de la période</td></tr>
+                <tr><td><code>Datefin</code></td><td><code>date</code></td><td>Date de fin de la période</td></tr>
+                <tr><td><code>Joursfermeture</code></td><td><code>array&lt;string&gt;</code></td><td>Jours de fermeture (codes des jours)</td></tr>
+                <tr><td><code>[jour]heuredebut1/2</code></td><td><code>string</code></td><td>Heures de début des créneaux (ex. "lundiheuredebut1")</td></tr>
+                <tr><td><code>[jour]heurefin1/2</code></td><td><code>string</code></td><td>Heures de fin des créneaux (ex. "lundiheurefin1")</td></tr>
+              </tbody>
+            </table>
+            
+            <h4>Jours de la semaine</h4>
+            <p>Pour chaque jour (lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche), jusqu'à 2 créneaux horaires peuvent être définis :</p>
+            <ul>
+              <li><code>[jour]heuredebut1</code> / <code>[jour]heurefin1</code> : Premier créneau</li>
+              <li><code>[jour]heuredebut2</code> / <code>[jour]heurefin2</code> : Deuxième créneau (optionnel)</li>
+            </ul>
+            
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "PeriodeOuvertures": [
+    {
+      "ID": "uuid-period-1",
+      "Ordre": 1,
+      "SyndicObjectId": "OBJ_001",
+      "Datedebut": "2024-01-01",
+      "Datefin": "2024-12-31",
+      "Joursfermeture": [],
+      "lundiheuredebut1": "09:00",
+      "lundiheurefin1": "18:00",
+      "mardiheuredebut1": "09:00",
+      "mardiheurefin1": "18:00",
+      "mercrediheuredebut1": "09:00",
+      "mercrediheurefin1": "12:00",
+      "mercrediheuredebut2": "14:00",
+      "mercrediheurefin2": "18:00",
+      "dimancheheuredebut1": null,
+      "dimancheheurefin1": null
+    }
+  ],
+  "PeriodeOuverturesAnneeSuivantes": []
+}</code></pre>
+            </div>
           </div>
         </details>
 

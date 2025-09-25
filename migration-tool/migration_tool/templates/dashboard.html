@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bertel Migration Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Bertel Migration Dashboard</h1>
+      <p>Visualise incoming payloads, agent routing and unresolved fragments in real-time.</p>
+    </header>
+    <main>
+      <section class="panel" id="agents-panel">
+        <h2>Registered agents</h2>
+        <div id="agents"></div>
+      </section>
+      <section class="panel" id="events-panel">
+        <h2>Telemetry</h2>
+        <div id="events"></div>
+      </section>
+    </main>
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>

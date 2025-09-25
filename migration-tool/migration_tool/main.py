@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 from typing import Dict
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -98,6 +98,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/agents")
     async def agents() -> Dict[str, object]:
         return {"agents": list(coordinator.descriptors())}
+
+    @app.post("/llm-test")
+    async def llm_test() -> Dict[str, object]:
+        """Quick LLM connectivity check (bypasses agents)."""
+        provider = getattr(llm, "name", "unknown")
+        try:
+            decision = await router.llm.classify_fields(payload={"ping": "hi"}, agent_descriptors=[])
+            payload = {"ok": True, "provider": provider, "decision": decision.model_dump()}
+            telemetry.record("llm.ping.ok", payload)
+            return payload
+        except Exception as exc:
+            telemetry.record("llm.ping.error", {"provider": provider, "error": str(exc)})
+            raise HTTPException(status_code=500, detail={"ok": False, "provider": provider, "error": str(exc)})
 
     @app.post("/ingest", response_model=IngestionResponse)
     async def ingest(payload: RawEstablishmentPayload) -> IngestionResponse:

@@ -18,7 +18,7 @@ COPY pyproject.toml README.md ./
 COPY migration_tool ./migration_tool
 
 RUN pip install --upgrade pip \
-    && pip install .
+    && pip install '.[ai]'
 
 EXPOSE 8090
 

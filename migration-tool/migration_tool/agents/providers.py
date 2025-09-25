@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Dict, List, Optional
 
 from ..ai import LLMClient
@@ -60,10 +61,10 @@ class ProviderAgent(AIEnabledAgent):
 
             # Check if provider already exists
             existing_provider = await self._find_existing_provider(provider_record)
-            
+
             if existing_provider:
                 # Provider exists, just create the link
-                provider_id = existing_provider["id"]
+                provider_id = str(existing_provider["id"])
                 self.telemetry.record(
                     "agent.providers.link_existing",
                     {
@@ -72,6 +73,15 @@ class ProviderAgent(AIEnabledAgent):
                         "establishment_id": establishment_id,
                         "provider_data": provider_record.to_supabase(),
                     },
+                )
+                legacy_ids = provider_record.legacy_ids or self._coerce_legacy_ids(
+                    existing_provider.get("legacy_ids")
+                )
+                context.register_provider(
+                    provider_id=provider_id,
+                    email=existing_provider.get("email") or provider_record.email,
+                    phone=existing_provider.get("phone") or provider_record.phone,
+                    legacy_ids=legacy_ids,
                 )
             else:
                 # Provider doesn't exist, create it
@@ -86,6 +96,12 @@ class ProviderAgent(AIEnabledAgent):
                             "establishment_id": establishment_id,
                             "provider_data": provider_record.to_supabase(),
                         },
+                    )
+                    context.register_provider(
+                        provider_id=provider_id,
+                        email=provider_record.email,
+                        phone=provider_record.phone,
+                        legacy_ids=provider_record.legacy_ids,
                     )
 
             if provider_id:
@@ -164,13 +180,31 @@ class ProviderAgent(AIEnabledAgent):
     async def _create_provider(self, provider_record: ProviderRecord, context: AgentContext) -> Optional[str]:
         """Create a new provider in the database."""
         try:
-            # Generate a new UUID for the provider if not provided
-            if not provider_record.provider_id:
-                import uuid
-                provider_record.provider_id = str(uuid.uuid4())
+            payload = provider_record.to_supabase()
 
-            result = await self.supabase.upsert("provider", provider_record.to_supabase(), on_conflict="id")
-            return provider_record.provider_id
+            if not provider_record.provider_id:
+                payload = {key: value for key, value in payload.items() if key != "id" or value is not None}
+
+            response = await self.supabase.upsert(
+                "provider",
+                payload,
+                on_conflict="id" if provider_record.provider_id else None,
+            )
+
+            provider_id = provider_record.provider_id or self._extract_provider_id(response)
+            if not provider_id:
+                provider_id = str(uuid.uuid4())
+                self.telemetry.record(
+                    "agent.providers.generated_local_id",
+                    {
+                        "context": context.model_dump(),
+                        "provider_record": provider_record.to_supabase(),
+                        "reason": "missing returned id",
+                    },
+                )
+
+            provider_record.provider_id = provider_id
+            return provider_id
         except Exception as e:
             self.telemetry.record(
                 "agent.providers.create_error",
@@ -181,6 +215,28 @@ class ProviderAgent(AIEnabledAgent):
                 },
             )
             return None
+
+    def _extract_provider_id(self, response: Dict[str, Any]) -> Optional[str]:
+        if not isinstance(response, dict):
+            return None
+
+        data = response.get("data")
+        if isinstance(data, list) and data:
+            first = data[0]
+            if isinstance(first, dict) and first.get("id"):
+                return str(first["id"])
+
+        if response.get("id"):
+            return str(response["id"])
+
+        return None
+
+    def _coerce_legacy_ids(self, value: Optional[Any]) -> List[str]:
+        if not value:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            return [str(item) for item in value if item]
+        return [str(value)]
 
 
 __all__ = ["ProviderAgent"]

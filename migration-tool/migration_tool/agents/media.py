@@ -40,7 +40,16 @@ class MediaAgent(AIEnabledAgent):
         for item in media:
             if not item.url:
                 continue
-            media_type_id = await self.supabase.lookup("ref_code_media_type", code=item.media_type_code)
+            original_media_type = item.media_type_code or "image"
+            normalized_media_type = self.supabase.normalize_code(original_media_type)
+            media_type_id = await self.supabase.lookup("ref_code_media_type", code=normalized_media_type)
+            if not media_type_id:
+                media_type_id = await self.supabase.ensure_code(
+                    domain="media_type",
+                    code=normalized_media_type,
+                    name=original_media_type.replace("_", " ").title(),
+                )
+            item.media_type_code = normalized_media_type
             responses.append(
                 await self.supabase.upsert(
                     "media",

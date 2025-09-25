@@ -9,6 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from pydantic import BaseModel
 
+import unicodedata
+
 from .schemas import (
     AgentDescriptor,
     AmenityLinkRecord,
@@ -65,12 +67,60 @@ class RuleBasedLLM(LLMClient):
     name = "rule-based"
 
     FIELD_KEYWORDS: Dict[str, Iterable[str]] = {
-        "identity": ("name", "title", "category", "sub_category", "legacy", "description", "type"),
-        "location": ("address", "postal", "zip", "city", "country", "latitude", "longitude", "gps", "insee"),
-        "contact": ("phone", "email", "website", "url", "booking", "contact", "social"),
-        "amenities": ("amenitie", "equipment", "service", "facility"),
-        "media": ("photo", "image", "video", "media", "picture", "logo"),
-        "providers": ("prestataire", "provider", "presta", "nom", "prenom", "gerant", "fonction"),
+        "identity": (
+            "name",
+            "nom",
+            "title",
+            "category",
+            "categorie",
+            "sub_category",
+            "sous_categorie",
+            "legacy",
+            "description",
+            "type",
+            "status",
+        ),
+        "location": (
+            "address",
+            "adresse",
+            "postal",
+            "code_postal",
+            "zip",
+            "city",
+            "ville",
+            "country",
+            "latitude",
+            "longitude",
+            "gps",
+            "insee",
+        ),
+        "contact": (
+            "phone",
+            "telephone",
+            "tel",
+            "mobile",
+            "email",
+            "mail",
+            "website",
+            "site",
+            "url",
+            "booking",
+            "reservation",
+            "contact",
+            "social",
+        ),
+        "amenities": ("amenitie", "amenity", "equipment", "service", "facility", "prestations", "equipement"),
+        "media": ("photo", "image", "video", "media", "picture", "logo", "galerie"),
+        "providers": (
+            "prestataire",
+            "providers",
+            "provider",
+            "presta",
+            "nom",
+            "prenom",
+            "gerant",
+            "fonction",
+        ),
         "schedule": ("horaires", "schedule", "jours", "ouverture", "fermeture", "reservation"),
     }
 
@@ -95,7 +145,10 @@ class RuleBasedLLM(LLMClient):
     CONTACT_KIND_DEFAULTS: Dict[str, str] = {
         "phone": "phone",
         "mobile": "phone",
+        "portable": "phone",
         "téléphone": "phone",
+        "telephone": "phone",
+        "numero": "phone",
         "email": "email",
         "mail": "email",
         "website": "website",
@@ -177,13 +230,16 @@ class RuleBasedLLM(LLMClient):
             return data
         return response_model.model_validate(data)
 
+    def _strip_accents(self, value: str) -> str:
+        return "".join(ch for ch in unicodedata.normalize("NFKD", value) if not unicodedata.combining(ch))
+
     def _guess_agent(
         self,
         key: str,
         value: Any,
         available_agents: Iterable[str],
     ) -> Optional[str]:
-        lowered = key.lower()
+        lowered = self._strip_accents(key).lower()
         for agent_name, keywords in self.FIELD_KEYWORDS.items():
             if agent_name not in available_agents:
                 continue
@@ -275,10 +331,13 @@ class RuleBasedLLM(LLMClient):
         channels: List[ContactChannelRecord] = []
 
         for key, value in payload.items():
-            normalized_key = key.lower()
+            normalized_key = self._strip_accents(key).lower()
             if isinstance(value, dict):
                 for nested_key, nested_value in value.items():
-                    channels.extend(self._create_contact_channels(object_id, nested_key, nested_value))
+                    nested_normalized = self._strip_accents(str(nested_key)).lower()
+                    channels.extend(
+                        self._create_contact_channels(object_id, nested_normalized, nested_value)
+                    )
             else:
                 channels.extend(self._create_contact_channels(object_id, normalized_key, value))
 
@@ -286,16 +345,28 @@ class RuleBasedLLM(LLMClient):
 
     def _transform_amenities(self, payload: Dict[str, Any]) -> AmenityTransformation:
         object_id = payload.get("establishment_id") or payload.get("object_id")
-        amenities = payload.get("amenities") or payload.get("equipment") or payload.get("services") or []
+        amenities = (
+            payload.get("amenities")
+            or payload.get("equipment")
+            or payload.get("services")
+            or payload.get("prestations")
+            or []
+        )
         if isinstance(amenities, str):
             amenities = re.split(r",|;|/", amenities)
         links = []
         for amenity in amenities:
             if not amenity:
                 continue
-            code = _normalize(str(amenity))
+            label = str(amenity).strip()
+            code = _normalize(label)
             links.append(
-                AmenityLinkRecord(object_id=object_id, amenity_code=code, raw_label=str(amenity).strip())
+                AmenityLinkRecord(
+                    object_id=object_id,
+                    amenity_code=code,
+                    amenity_name=label or None,
+                    raw_label=label or None,
+                )
             )
         return AmenityTransformation(amenities=links)
 
@@ -360,6 +431,12 @@ class RuleBasedLLM(LLMClient):
             return entries
 
         kind_code = self._infer_contact_kind(key)
+        if isinstance(value, str):
+            trimmed = value.strip()
+            if "@" in trimmed and not trimmed.startswith("http"):
+                kind_code = "email"
+            elif re.search(r"\d{2}", trimmed):
+                kind_code = "phone" if kind_code == "other" else kind_code
         if isinstance(value, (list, tuple)):
             for item in value:
                 if item:

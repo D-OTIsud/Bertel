@@ -910,15 +910,16 @@ def build_llm(
     provider = provider.lower()
     if provider == "openai":  # pragma: no cover - requires network access
         if not api_key:
-            raise RuntimeError("OpenAI provider selected but no API key was provided.")
+            warnings.warn(
+                "OpenAI provider selected but no API key was provided; falling back to rule-based heuristics.",
+                RuntimeWarning,
+            )
+            return RuleBasedLLM()
         try:
             return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
-        except RuntimeError as exc:
-            message = str(exc)
-            if "openai" not in message.lower():
-                raise
+        except Exception:
             warnings.warn(
-                "OpenAI provider unavailable (missing dependency); falling back to rule-based heuristics.",
+                "OpenAI provider unavailable (missing dependency or client error); falling back to rule-based heuristics.",
                 RuntimeWarning,
             )
             return RuleBasedLLM()

@@ -17,13 +17,21 @@ from .schemas import (
     AmenityTransformation,
     ContactChannelRecord,
     ContactTransformation,
+    EnvironmentTagRecord,
+    EnvironmentTagTransformation,
     FieldAssignment,
     FieldRoutingDecision,
     IdentityRecord,
+    LanguageLinkRecord,
+    LanguageTransformation,
     LocationRecord,
     LocationTransformation,
     MediaRecord,
     MediaTransformation,
+    PaymentMethodRecord,
+    PaymentMethodTransformation,
+    PetPolicyRecord,
+    PetPolicyTransformation,
 )
 
 try:  # pragma: no cover - optional dependency
@@ -122,6 +130,10 @@ class RuleBasedLLM(LLMClient):
             "fonction",
         ),
         "schedule": ("horaires", "schedule", "jours", "ouverture", "fermeture", "reservation"),
+        "languages": ("langue", "language", "spoken_language", "idiome"),
+        "payments": ("paiement", "payment", "carte", "cheque", "espèce", "cb", "mode_de_paiement"),
+        "environment": ("environnement", "environment", "localisation", "milieu", "quartier", "village"),
+        "pet_policy": ("animal", "pet", "animaux", "chiens", "chats"),
     }
 
     CATEGORY_TO_OBJECT_TYPE: Dict[str, str] = {
@@ -172,6 +184,41 @@ class RuleBasedLLM(LLMClient):
         "video": "video",
     }
 
+    LANGUAGE_ALIASES: Dict[str, str] = {
+        "fr": "fr",
+        "francais": "fr",
+        "français": "fr",
+        "french": "fr",
+        "en": "en",
+        "anglais": "en",
+        "english": "en",
+        "es": "es",
+        "espagnol": "es",
+        "spanish": "es",
+        "de": "de",
+        "allemand": "de",
+        "german": "de",
+        "it": "it",
+        "italien": "it",
+        "italian": "it",
+        "pt": "pt",
+        "portugais": "pt",
+        "portuguese": "pt",
+        "nl": "nl",
+        "neerlandais": "nl",
+        "dutch": "nl",
+        "zh": "zh",
+        "chinois": "zh",
+        "mandarin": "zh",
+        "ru": "ru",
+        "russe": "ru",
+        "ar": "ar",
+        "arabe": "ar",
+        "cr": "cr",
+        "creole": "cr",
+        "créole": "cr",
+    }
+
     async def classify_fields(
         self,
         *,
@@ -219,6 +266,14 @@ class RuleBasedLLM(LLMClient):
             data = self._transform_amenities(payload)
         elif agent_name == "media":
             data = self._transform_media(payload)
+        elif agent_name == "languages":
+            data = self._transform_languages(payload)
+        elif agent_name == "payments":
+            data = self._transform_payments(payload)
+        elif agent_name == "environment":
+            data = self._transform_environment(payload)
+        elif agent_name == "pet_policy":
+            data = self._transform_pet_policy(payload)
         elif agent_name == "providers":
             data = self._transform_providers(payload)
         elif agent_name == "schedule":
@@ -398,6 +453,136 @@ class RuleBasedLLM(LLMClient):
                 )
         return MediaTransformation(media=records)
 
+    def _transform_languages(self, payload: Dict[str, Any]) -> LanguageTransformation:
+        object_id = payload.get("establishment_id") or payload.get("object_id")
+        languages_raw = payload.get("languages") or payload.get("langues") or []
+        if isinstance(languages_raw, dict):
+            languages_iterable = languages_raw.values()
+        else:
+            languages_iterable = self._split_items(languages_raw)
+
+        records = []
+        for language in languages_iterable:
+            label = str(language).strip()
+            if not label:
+                continue
+            code = self._guess_language_code(label)
+            records.append(
+                LanguageLinkRecord(
+                    object_id=object_id,
+                    language_code=code,
+                    language_name=label,
+                )
+            )
+        return LanguageTransformation(languages=records)
+
+    def _guess_language_code(self, label: str) -> str:
+        normalized = self._strip_accents(label).lower().strip()
+        normalized = normalized.replace("-", "_").replace(" ", "_")
+        if normalized in self.LANGUAGE_ALIASES:
+            return self.LANGUAGE_ALIASES[normalized]
+        if len(normalized) == 2 and normalized.isalpha():
+            return normalized
+        if "_" in normalized:
+            prefix = normalized.split("_", 1)[0]
+            if len(prefix) == 2 and prefix.isalpha():
+                return prefix
+        if len(normalized) >= 3 and normalized[:2].isalpha():
+            return normalized[:2]
+        return normalized or "und"
+
+    def _transform_payments(self, payload: Dict[str, Any]) -> PaymentMethodTransformation:
+        object_id = payload.get("establishment_id") or payload.get("object_id")
+        payments_raw = payload.get("payment_methods") or payload.get("mode_de_paiement") or []
+        records = []
+        for item in self._split_items(payments_raw):
+            label = str(item).strip()
+            if not label:
+                continue
+            code = _normalize(label)
+            records.append(
+                PaymentMethodRecord(
+                    object_id=object_id,
+                    payment_code=code,
+                    payment_name=label,
+                )
+            )
+        return PaymentMethodTransformation(payment_methods=records)
+
+    def _transform_environment(self, payload: Dict[str, Any]) -> EnvironmentTagTransformation:
+        object_id = payload.get("establishment_id") or payload.get("object_id")
+        environment_raw = (
+            payload.get("environment_tags")
+            or payload.get("localisations")
+            or payload.get("environment")
+            or []
+        )
+        records = []
+        for item in self._split_items(environment_raw):
+            label = str(item).strip()
+            if not label:
+                continue
+            code = _normalize(label)
+            records.append(
+                EnvironmentTagRecord(
+                    object_id=object_id,
+                    environment_code=code,
+                    environment_name=label,
+                )
+            )
+        return EnvironmentTagTransformation(environment_tags=records)
+
+    def _transform_pet_policy(self, payload: Dict[str, Any]) -> PetPolicyTransformation:
+        object_id = payload.get("establishment_id") or payload.get("object_id")
+        pet_payload = payload.get("pet_policy") if isinstance(payload.get("pet_policy"), dict) else {}
+        accepted_raw = pet_payload.get("accepted")
+        if accepted_raw is None:
+            accepted_raw = payload.get("pets_allowed")
+        if accepted_raw is None:
+            accepted_raw = payload.get("animaux")
+        conditions = pet_payload.get("conditions") or payload.get("pet_policy_notes")
+        accepted = self._coerce_bool(accepted_raw)
+        if accepted is None and conditions is None:
+            return PetPolicyTransformation(pet_policy=None)
+        record = PetPolicyRecord(
+            object_id=object_id,
+            accepted=accepted,
+            conditions=conditions,
+        )
+        return PetPolicyTransformation(pet_policy=record)
+
+    def _split_items(self, value: Any) -> List[Any]:
+        if value in (None, "", []):
+            return []
+        if isinstance(value, list):
+            return [item for item in value if item not in (None, "")]
+        if isinstance(value, tuple):
+            return [item for item in value if item not in (None, "")]
+        if isinstance(value, set):
+            return [item for item in value if item not in (None, "")]
+        if isinstance(value, dict):
+            return [item for item in value.values() if item not in (None, "")]
+        if isinstance(value, str):
+            parts = re.split(r"[,;/|]", value)
+            return [part.strip() for part in parts if part.strip()]
+        return [value]
+
+    def _coerce_bool(self, value: Any) -> Optional[bool]:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            if value == 1:
+                return True
+            if value == 0:
+                return False
+        if isinstance(value, str):
+            normalized = self._strip_accents(value).strip().lower()
+            if normalized in {"oui", "yes", "true", "1", "allowed", "autorise"}:
+                return True
+            if normalized in {"non", "no", "false", "0", "forbidden", "interdit"}:
+                return False
+        return None
+
     def _guess_object_type(self, category: str) -> str:
         if not category:
             return "ORG"
@@ -481,11 +666,14 @@ class RuleBasedLLM(LLMClient):
         
         providers = []
         object_provider_links = []
-        
+
         for provider_data in providers_data:
             if not isinstance(provider_data, dict):
                 continue
-                
+
+            postcode_raw = provider_data.get("Code Postal") or provider_data.get("postcode")
+            postcode_value = str(postcode_raw) if postcode_raw not in (None, "") else None
+
             provider_record = ProviderRecord(
                 provider_id=provider_data.get("Presta ID") or provider_data.get("provider_id"),
                 last_name=provider_data.get("Nom") or provider_data.get("last_name") or "",
@@ -496,7 +684,7 @@ class RuleBasedLLM(LLMClient):
                 function=provider_data.get("Fonction") or provider_data.get("function"),
                 newsletter=provider_data.get("Newsletter", False),
                 address1=provider_data.get("rue") or provider_data.get("address1"),
-                postcode=provider_data.get("Code Postal") or provider_data.get("postcode"),
+                postcode=postcode_value,
                 city=provider_data.get("ville") or provider_data.get("city"),
                 lieu_dit=provider_data.get("Lieux-dits") or provider_data.get("lieu_dit"),
                 date_of_birth=provider_data.get("DOB") or provider_data.get("date_of_birth"),

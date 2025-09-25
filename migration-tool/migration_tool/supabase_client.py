@@ -200,6 +200,26 @@ class SupabaseService:
         self._lookup_cache.pop(cache_key, None)
         return await self.lookup("ref_amenity", code=normalized_code)
 
+    async def ensure_language(self, *, code: str, name: Optional[str] = None) -> Optional[str]:
+        """Ensure a language exists in the reference table."""
+
+        normalized_code = str(code).strip().lower()
+        if not normalized_code:
+            return None
+        existing = await self.lookup("ref_language", code=normalized_code)
+        if existing:
+            return existing
+
+        payload = {
+            "code": normalized_code,
+            "name": name or normalized_code.upper(),
+        }
+
+        await self.upsert("ref_language", payload, on_conflict="code")
+        cache_key = ("ref_language", "code", normalized_code)
+        self._lookup_cache.pop(cache_key, None)
+        return await self.lookup("ref_language", code=normalized_code)
+
     async def find_existing_object(
         self,
         *,

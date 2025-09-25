@@ -21,12 +21,15 @@ def _sample_payload() -> list[dict[str, object]]:
                     "rue": "rue Boisjoly Potier",
                     "Code Postal": 97418,
                     "ville": "Le Tampon",
+                    "Localisations": "Village,Milieu rural",
                     "Coordonnées GPS": "-21.204197, 55.577417",
                     "E-Mail": "info@example.com",
                     "Contact principale": "0262275287",
                     "Autre téléphone": "0692600544",
                     "Web": "https://example.com",
                     "Prestations sur place": "parking, wifi",
+                    "Mode de paiement": "Carte Bancaire,Espèces",
+                    "Langues": "français,anglais",
                     "Descriptif OTI": "Description",
                     "Accroche OTI": "Summary",
                     "Status": "Ouvert",
@@ -92,6 +95,10 @@ def test_raw_payload_is_normalised() -> None:
     assert data["city"] == "Le Tampon"
     assert pytest.approx(data["latitude"], rel=1e-3) == -21.204
     assert "parking" in data["amenities"]
+    assert any("village" in tag.lower() for tag in data["environment_tags"])
+    assert any("carte" in method.lower() for method in data["payment_methods"])
+    assert any(lang.lower().startswith("fr") for lang in data["languages"])
+    assert data["pets_allowed"] is False
     assert any(media_item["url"].startswith("https://example.com") for media_item in data["media"])
     assert data["providers"][0]["Presta ID"] == "P001"
     assert data["schedule"][0]["Horaires_id"] == "H001"

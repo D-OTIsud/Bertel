@@ -388,6 +388,31 @@ class AgentContext(BaseModel):
     object_id: Optional[str] = None
     duplicate_of: Optional[str] = None
     source_organization_id: Optional[str] = None
+    provider_registry: Dict[str, str] = Field(default_factory=dict)
+
+    def register_provider(
+        self,
+        *,
+        provider_id: str,
+        email: Optional[str] = None,
+        phone: Optional[str] = None,
+        legacy_ids: Optional[Sequence[str]] = None,
+    ) -> None:
+        """Store provider identifiers so other agents can reuse them."""
+
+        registry = self.provider_registry
+        registry.setdefault(str(provider_id), str(provider_id))
+
+        if email:
+            registry.setdefault(email.strip().lower(), str(provider_id))
+
+        if phone:
+            registry.setdefault(str(phone).strip(), str(provider_id))
+
+        if legacy_ids:
+            for legacy in legacy_ids:
+                if legacy:
+                    registry.setdefault(str(legacy).strip(), str(provider_id))
 
 
 class FieldAssignment(BaseModel):

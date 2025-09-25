@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-import pytest
-
 from migration_tool.schemas import RawEstablishmentPayload
 
 

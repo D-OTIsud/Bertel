@@ -110,6 +110,7 @@ class Coordinator:
                 initial_object_id=context.object_id,
                 section=decision.sections.get("identity"),
             )
+
             if identity_payload:
                 section_payload = self._prepare_section_payload(
                     identity_payload,
@@ -208,7 +209,7 @@ class Coordinator:
         if payload.source_organization_id:
             enriched.setdefault("source_organization_id", payload.source_organization_id)
         return enriched
-
+      
     def _build_identity_payload(
         self,
         *,
@@ -325,7 +326,7 @@ RECOGNISED_FIELDS: Dict[str, List[str]] = {
     "pet_policy": ["pets_allowed"],
     "media": ["media"],
     "providers": ["providers"],
-    "schedule": ["schedule", "horaires"],
+    "schedule": ["schedule", "horaires"]
 }
 
 

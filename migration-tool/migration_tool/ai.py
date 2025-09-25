@@ -863,18 +863,32 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
         response_model: type[BaseModel],
     ) -> BaseModel:
         schema = response_model.model_json_schema()
-        response = await self._client.responses.create(
+        payload = dict(
             model=self.model,
             temperature=self.temperature,
             input=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": response_model.__name__, "schema": schema},
-            },
         )
+
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {"name": response_model.__name__, "schema": schema},
+        }
+
+        try:
+            response = await self._client.responses.create(
+                response_format=response_format,
+                **payload,
+            )
+        except TypeError:
+            # Older versions of the OpenAI SDK did not support ``response_format``.
+            warnings.warn(
+                "Installed openai client does not support response_format; falling back to free-form output.",
+                RuntimeWarning,
+            )
+            response = await self._client.responses.create(**payload)
 
         text = self._extract_text(response)
         data = json.loads(text)

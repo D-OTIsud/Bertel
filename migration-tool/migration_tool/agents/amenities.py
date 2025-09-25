@@ -38,7 +38,11 @@ class AmenitiesAgent(AIEnabledAgent):
         )
         responses = []
         for amenity in amenities:
-            amenity_id = await self.supabase.lookup("ref_amenity", code=amenity.amenity_code)
+            amenity_id = await self.supabase.ensure_amenity(
+                code=amenity.amenity_code,
+                name=amenity.amenity_name or amenity.raw_label,
+                family_code=amenity.amenity_family_code,
+            )
             data = amenity.to_supabase(amenity_id=amenity_id)
             responses.append(
                 await self.supabase.upsert(

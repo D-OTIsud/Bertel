@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from ..ai import FieldRouter
 from ..schemas import (
@@ -60,33 +60,86 @@ class Coordinator:
     async def handle(self, payload: RawEstablishmentPayload) -> tuple[List[RoutedFragment], Dict[str, Any]]:
         coordinator_id = str(uuid.uuid4())
         payload_dict = payload.model_dump(by_alias=True)
-        combined_payload = {**payload_dict, **payload.data}
+        data_section = payload_dict.pop("data", {})
+        if isinstance(data_section, dict):
+            combined_payload = {**payload_dict, **data_section}
+        else:
+            combined_payload = {**payload_dict, "raw_data": data_section}
+        if payload.source_organization_id:
+            combined_payload.setdefault("source_organization_id", payload.source_organization_id)
         decision: FieldRoutingDecision = await self.router.route(
             payload=combined_payload,
             agent_descriptors=[agent.descriptor() for agent in self.agents.values()],
         )
-        context = AgentContext(coordinator_id=coordinator_id, source_payload=payload_dict)
+        context = AgentContext(
+            coordinator_id=coordinator_id,
+            source_payload=combined_payload,
+            object_id=self._extract_initial_object_id(combined_payload, payload.legacy_ids),
+            source_organization_id=payload.source_organization_id,
+        )
         fragments: List[RoutedFragment] = []
 
         self.telemetry.record(
             "coordinator.received",
             {
                 "coordinator_id": coordinator_id,
-                "payload": payload_dict,
+                "payload": combined_payload,
                 "decision": decision.model_dump(),
             },
         )
 
+        processed_agents: set[str] = set()
+
+        identity_agent = self.agents.get("identity")
+        if identity_agent:
+            identity_payload = dict(decision.sections.get("identity", {}))
+            if identity_payload:
+                section_payload = self._prepare_section_payload(
+                    identity_payload,
+                    payload,
+                    context.object_id,
+                )
+                try:
+                    result = await identity_agent.handle(section_payload, context)
+                    context.object_id = result.get("object_id") or context.object_id
+                    context.duplicate_of = result.get("duplicate_of") or context.duplicate_of
+                    fragments.append(
+                        RoutedFragment(agent="identity", status="processed", payload=section_payload, message=None)
+                    )
+                    self.telemetry.record(
+                        "coordinator.agent.identity",
+                        {
+                            "coordinator_id": coordinator_id,
+                            "payload": section_payload,
+                            "result": result,
+                        },
+                    )
+                except Exception as exc:
+                    fragments.append(
+                        RoutedFragment(agent="identity", status="error", payload=section_payload, message=str(exc))
+                    )
+                    self.telemetry.record(
+                        "coordinator.agent_error.identity",
+                        {
+                            "coordinator_id": coordinator_id,
+                            "payload": section_payload,
+                            "error": str(exc),
+                        },
+                    )
+                processed_agents.add("identity")
+
         for name, agent in self.agents.items():
+            if name in processed_agents:
+                continue
             section_payload = dict(decision.sections.get(name, {}))
             if not section_payload:
                 continue
 
-            section_payload.setdefault("establishment_id", payload_dict.get("legacy_ids", [None])[0])
-            section_payload.setdefault("establishment_name", payload.establishment_name)
-            section_payload.setdefault("category", payload.establishment_category)
-            section_payload.setdefault("subcategory", payload.establishment_subcategory)
-            section_payload.setdefault("legacy_ids", payload.legacy_ids)
+            section_payload = self._prepare_section_payload(
+                section_payload,
+                payload,
+                context.object_id,
+            )
 
             try:
                 result = await agent.handle(section_payload, context)
@@ -116,5 +169,89 @@ class Coordinator:
 
         return fragments, leftovers
 
+    def _prepare_section_payload(
+        self,
+        section_payload: Dict[str, Any],
+        payload: RawEstablishmentPayload,
+        object_id: Optional[str],
+    ) -> Dict[str, Any]:
+        enriched = dict(section_payload)
+        if object_id:
+            enriched.setdefault("establishment_id", object_id)
+            enriched.setdefault("object_id", object_id)
+        else:
+            enriched.setdefault("establishment_id", None)
+        enriched.setdefault("establishment_name", payload.establishment_name)
+        enriched.setdefault("category", payload.establishment_category)
+        enriched.setdefault("subcategory", payload.establishment_subcategory)
+        if payload.legacy_ids is not None:
+            enriched.setdefault("legacy_ids", payload.legacy_ids)
+        else:
+            enriched.setdefault("legacy_ids", [])
+        if payload.source_organization_id:
+            enriched.setdefault("source_organization_id", payload.source_organization_id)
+        return enriched
 
-__all__ = ["Coordinator"]
+    @staticmethod
+    def _extract_initial_object_id(
+        payload: Dict[str, Any],
+        legacy_ids: Optional[Sequence[str]],
+    ) -> Optional[str]:
+        for key in ("object_id", "establishment_id", "id"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value
+        if legacy_ids:
+            for candidate in legacy_ids:
+                if candidate:
+                    return str(candidate)
+        return None
+
+
+RECOGNISED_FIELDS: Dict[str, List[str]] = {
+    "identity": [
+        "establishment_name",
+        "establishment_id",
+        "object_id",
+        "category",
+        "subcategory",
+        "legacy_ids",
+        "description",
+    ],
+    "location": [
+        "address_line1",
+        "address_line2",
+        "postcode",
+        "postal_code",
+        "city",
+        "latitude",
+        "longitude",
+        "code_insee",
+    ],
+    "contact": ["phone", "email", "website"],
+    "amenities": ["amenities"],
+    "media": ["media"],
+    "providers": ["providers"],
+    "schedule": ["schedule", "horaires"],
+}
+
+
+def partition_payload(payload: Dict[str, Any]) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+    sections: Dict[str, Dict[str, Any]] = {agent: {} for agent in RECOGNISED_FIELDS}
+    leftovers: Dict[str, Any] = {}
+
+    for key, value in payload.items():
+        assigned = False
+        for agent, fields in RECOGNISED_FIELDS.items():
+            if key in fields:
+                sections[agent][key] = value
+                assigned = True
+                break
+        if not assigned:
+            leftovers[key] = value
+
+    sections = {agent: data for agent, data in sections.items() if data}
+    return sections, leftovers
+
+
+__all__ = ["Coordinator", "partition_payload", "RECOGNISED_FIELDS"]

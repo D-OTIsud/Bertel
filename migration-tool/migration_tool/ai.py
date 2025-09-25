@@ -896,6 +896,10 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
         except json.JSONDecodeError as exc:
             snippet = text[:200]
             raise RuntimeError(f"LLM response was not valid JSON (got: {snippet!r})") from exc
+        if response_model is FieldRoutingDecision:
+            data.setdefault("assignments", [])
+            data.setdefault("leftovers", {})
+            data.setdefault("sections", {})
         return response_model.model_validate(data)
 
     def _normalise_json_payload(self, raw: str) -> str:

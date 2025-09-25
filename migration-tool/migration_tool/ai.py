@@ -890,13 +890,20 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
             )
             response = await self._client.responses.create(**payload)
 
-        text = self._extract_text(response)
+        text = self._normalise_json_payload(self._extract_text(response))
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
             snippet = text[:200]
             raise RuntimeError(f"LLM response was not valid JSON (got: {snippet!r})") from exc
         return response_model.model_validate(data)
+
+    def _normalise_json_payload(self, raw: str) -> str:
+        stripped = raw.strip()
+        fenced = re.match(r"```[a-zA-Z0-9_-]*\s*(.*?)\s*```$", stripped, re.DOTALL)
+        if fenced:
+            return fenced.group(1).strip()
+        return stripped
 
     def _extract_text(self, response: Any) -> str:
         if hasattr(response, "output"):

@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Documentation sources
+doc_api_bertel_v3.html
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp

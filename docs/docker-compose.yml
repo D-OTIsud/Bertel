@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  bertel-api-docs:
+    build: .
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bertel-docs.rule=Host(`docs.bertel.local`)"
+      - "traefik.http.services.bertel-docs.loadbalancer.server.port=80"

@@ -13,9 +13,13 @@ from fastapi.templating import Jinja2Templates
 from .agents.amenities import AmenitiesAgent
 from .agents.contact import ContactAgent
 from .agents.coordinator import Coordinator
+from .agents.environment import EnvironmentAgent
 from .agents.identity import IdentityAgent
+from .agents.languages import LanguageAgent
 from .agents.location import LocationAgent
 from .agents.media import MediaAgent
+from .agents.payments import PaymentMethodAgent
+from .agents.pet_policy import PetPolicyAgent
 from .agents.providers import ProviderAgent
 from .agents.schedule import ScheduleAgent
 from .ai import FieldRouter, build_llm
@@ -46,6 +50,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         location_agent=LocationAgent(supabase, telemetry, llm),
         contact_agent=ContactAgent(supabase, telemetry, llm),
         amenities_agent=AmenitiesAgent(supabase, telemetry, llm),
+        language_agent=LanguageAgent(supabase, telemetry, llm),
+        payment_agent=PaymentMethodAgent(supabase, telemetry, llm),
+        environment_agent=EnvironmentAgent(supabase, telemetry, llm),
+        pet_policy_agent=PetPolicyAgent(supabase, telemetry, llm),
         media_agent=MediaAgent(supabase, telemetry, llm),
         provider_agent=ProviderAgent(supabase, telemetry, llm),
         schedule_agent=ScheduleAgent(supabase, telemetry, llm),

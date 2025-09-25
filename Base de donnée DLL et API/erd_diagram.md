@@ -518,6 +518,11 @@ erDiagram
         uuid allergen_id PK,FK "Allergène"
     }
 
+    OBJECT_MENU_ITEM_CUISINE_TYPE {
+        uuid menu_item_id PK,FK "Élément de menu"
+        uuid cuisine_type_id PK,FK "Type de cuisine"
+    }
+
     %% Référentiels pour menus
     REF_CODE_MENU_CATEGORY {
         uuid id PK "Identifiant unique"
@@ -546,6 +551,16 @@ erDiagram
         text name "Nom allergène"
         integer position "Position"
         text icon_url "Icône"
+        boolean is_active "Actif"
+    }
+
+    REF_CODE_CUISINE_TYPE {
+        uuid id PK "Identifiant unique"
+        text domain "cuisine_type"
+        text code UK "Code type de cuisine"
+        text name "Nom du type"
+        text description "Description"
+        integer position "Position"
         boolean is_active "Actif"
     }
 
@@ -734,6 +749,8 @@ erDiagram
     OBJECT_MENU_ITEM ||--o{ OBJECT_MENU_ITEM_DIETARY_TAG : "a des tags"
     REF_CODE_ALLERGEN ||--o{ OBJECT_MENU_ITEM_ALLERGEN : "allergènes"
     OBJECT_MENU_ITEM ||--o{ OBJECT_MENU_ITEM_ALLERGEN : "contient des allergènes"
+    REF_CODE_CUISINE_TYPE ||--o{ OBJECT_MENU_ITEM_CUISINE_TYPE : "types de cuisine"
+    OBJECT_MENU_ITEM ||--o{ OBJECT_MENU_ITEM_CUISINE_TYPE : "a des types de cuisine"
     %% L'audit est indépendant et alimenté par triggers
 
     %% CRM

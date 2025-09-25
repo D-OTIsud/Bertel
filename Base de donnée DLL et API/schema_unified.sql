@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS ref_code_mood PARTITION OF ref_code FOR VALUES IN ('m
 CREATE TABLE IF NOT EXISTS ref_code_menu_category PARTITION OF ref_code FOR VALUES IN ('menu_category');
 CREATE TABLE IF NOT EXISTS ref_code_dietary_tag PARTITION OF ref_code FOR VALUES IN ('dietary_tag');
 CREATE TABLE IF NOT EXISTS ref_code_allergen PARTITION OF ref_code FOR VALUES IN ('allergen');
+CREATE TABLE IF NOT EXISTS ref_code_cuisine_type PARTITION OF ref_code FOR VALUES IN ('cuisine_type');
 
 -- Index d'unicité nécessaires sur chaque partition (id & code)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_id ON ref_code_contact_kind (id);
@@ -196,6 +197,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_mood_id ON ref_code_mood (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_id ON ref_code_menu_category (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_id ON ref_code_dietary_tag (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_id ON ref_code_allergen (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_id ON ref_code_cuisine_type (id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_code ON ref_code_contact_kind(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_code ON ref_code_media_type(code);
@@ -216,6 +218,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_mood_code ON ref_code_mood(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_code ON ref_code_menu_category(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_code ON ref_code_dietary_tag(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_code ON ref_code_allergen(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_code ON ref_code_cuisine_type(code);
 
 -- =====================================================
 -- Référentiels et i18n
@@ -1880,9 +1883,19 @@ CREATE TABLE IF NOT EXISTS object_menu_item_allergen (
   PRIMARY KEY (menu_item_id, allergen_id)
 );
 
+-- Menu item cuisine types (creole, metropolitan, chinese, traditional, etc.)
+CREATE TABLE IF NOT EXISTS object_menu_item_cuisine_type (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  cuisine_type_id UUID NOT NULL REFERENCES ref_code_cuisine_type(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, cuisine_type_id)
+);
+
 -- Indexes for menu item tags
 CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_item ON object_menu_item_dietary_tag(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_tag ON object_menu_item_dietary_tag(dietary_tag_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_item ON object_menu_item_allergen(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_allergen ON object_menu_item_allergen(allergen_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_item ON object_menu_item_cuisine_type(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_type ON object_menu_item_cuisine_type(cuisine_type_id);
 

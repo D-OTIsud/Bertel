@@ -77,6 +77,55 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','volcan', 'Au pied du volcan', 'Situé au pied du Piton de la Fournaise'),
 ('environment_tag','plage', 'Plage', 'Proche d''une plage'),
+
+-- Types de cuisine
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('cuisine_type','creole', 'Créole', 'Cuisine créole réunionnaise traditionnelle'),
+('cuisine_type','metropolitan', 'Métropolitaine', 'Cuisine française métropolitaine'),
+('cuisine_type','chinese', 'Chinoise', 'Cuisine chinoise traditionnelle'),
+('cuisine_type','indian', 'Indienne', 'Cuisine indienne et tamoule'),
+('cuisine_type','traditional', 'Traditionnelle', 'Cuisine traditionnelle réunionnaise'),
+('cuisine_type','international', 'Internationale', 'Cuisine internationale'),
+('cuisine_type','fusion', 'Fusion', 'Cuisine fusion créole-moderne'),
+('cuisine_type','fast_food', 'Fast Food', 'Restauration rapide'),
+('cuisine_type','street_food', 'Street Food', 'Cuisine de rue'),
+('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité')
+ON CONFLICT DO NOTHING;
+
+-- Catégories de menu
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('menu_category','entree', 'Entrées', 'Entrées et apéritifs'),
+('menu_category','main', 'Plats principaux', 'Plats principaux et spécialités'),
+('menu_category','dessert', 'Desserts', 'Desserts et douceurs'),
+('menu_category','drinks', 'Boissons', 'Boissons et cocktails'),
+('menu_category','snacks', 'En-cas', 'En-cas et collations')
+ON CONFLICT DO NOTHING;
+
+-- Tags alimentaires
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('dietary_tag','vegetarian', 'Végétarien', 'Sans viande ni poisson'),
+('dietary_tag','vegan', 'Végan', 'Sans produits d''origine animale'),
+('dietary_tag','halal', 'Halal', 'Conforme aux règles alimentaires islamiques'),
+('dietary_tag','kosher', 'Casher', 'Conforme aux règles alimentaires juives'),
+('dietary_tag','gluten_free', 'Sans gluten', 'Sans gluten'),
+('dietary_tag','organic', 'Bio', 'Produits biologiques'),
+('dietary_tag','local', 'Local', 'Produits locaux de La Réunion')
+ON CONFLICT DO NOTHING;
+
+-- Allergènes
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('allergen','gluten', 'Gluten', 'Contient du gluten'),
+('allergen','nuts', 'Fruits à coque', 'Contient des fruits à coque'),
+('allergen','dairy', 'Lait', 'Contient du lait'),
+('allergen','eggs', 'Œufs', 'Contient des œufs'),
+('allergen','fish', 'Poisson', 'Contient du poisson'),
+('allergen','shellfish', 'Crustacés', 'Contient des crustacés'),
+('allergen','soy', 'Soja', 'Contient du soja'),
+('allergen','sesame', 'Sésame', 'Contient du sésame')
+ON CONFLICT DO NOTHING;
+
+-- Tags d'environnement supplémentaires (suite)
+INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','lagon', 'Lagon', 'Proche du lagon'),
 ('environment_tag','cascade', 'Cascade', 'Proche d''une cascade'),
 ('environment_tag','jardin', 'Jardin', 'Avec jardin'),
@@ -604,6 +653,78 @@ BEGIN
     ELSE
         RAISE NOTICE '✗ Seed échoué: seulement % objets créés', object_count;
     END IF;
+END $$;
+
+-- =====================================================
+-- 7. EXEMPLES DE MENUS AVEC TYPES DE CUISINE
+-- =====================================================
+
+DO $$
+DECLARE
+    restaurant_id TEXT;
+    menu_id UUID;
+    menu_item_id UUID;
+    category_id UUID;
+    unit_id UUID;
+    creole_type_id UUID;
+    metropolitan_type_id UUID;
+    chinese_type_id UUID;
+    vegetarian_tag_id UUID;
+    vegan_tag_id UUID;
+    gluten_allergen_id UUID;
+    dairy_allergen_id UUID;
+BEGIN
+    -- Créer un restaurant pour les exemples de menu
+    SELECT api.generate_object_id('RES', 'RUN') INTO restaurant_id;
+    
+    INSERT INTO object (id, object_type, name, status, region_code)
+    VALUES (restaurant_id, 'RES', 'Restaurant Test Cuisine', 'published', 'RUN')
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+    
+    -- Créer un menu principal
+    INSERT INTO object_menu (object_id, name, description, position, is_active)
+    VALUES (restaurant_id, 'Menu Principal', 'Menu traditionnel créole et métropolitain', 1, TRUE)
+    RETURNING id INTO menu_id;
+    
+    -- Récupérer les IDs des références
+    SELECT id INTO category_id FROM ref_code_menu_category WHERE code = 'main';
+    SELECT id INTO unit_id FROM ref_code_price_unit WHERE code = 'per_person';
+    SELECT id INTO creole_type_id FROM ref_code_cuisine_type WHERE code = 'creole';
+    SELECT id INTO metropolitan_type_id FROM ref_code_cuisine_type WHERE code = 'metropolitan';
+    SELECT id INTO vegetarian_tag_id FROM ref_code_dietary_tag WHERE code = 'vegetarian';
+    SELECT id INTO gluten_allergen_id FROM ref_code_allergen WHERE code = 'gluten';
+    
+    -- Plat 1: Rougail saucisse (créole)
+    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
+    VALUES (menu_id, 'Rougail saucisse', 'Saucisse créole avec rougail de tomates et épices', category_id, 15.50, 'EUR', unit_id, 1, TRUE)
+    RETURNING id INTO menu_item_id;
+    
+    -- Associer le type de cuisine créole
+    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
+    VALUES (menu_item_id, creole_type_id);
+    
+    -- Plat 2: Magret de canard (métropolitain)
+    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
+    VALUES (menu_id, 'Magret de canard aux fruits', 'Magret de canard aux fruits de saison', category_id, 24.00, 'EUR', unit_id, 2, TRUE)
+    RETURNING id INTO menu_item_id;
+    
+    -- Associer le type de cuisine métropolitaine
+    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
+    VALUES (menu_item_id, metropolitan_type_id);
+    
+    -- Plat 3: Curry de légumes (végétarien, créole)
+    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
+    VALUES (menu_id, 'Curry de légumes créole', 'Curry de légumes du jardin aux épices créoles', category_id, 14.00, 'EUR', unit_id, 3, TRUE)
+    RETURNING id INTO menu_item_id;
+    
+    -- Associer le type de cuisine créole et le tag végétarien
+    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
+    VALUES (menu_item_id, creole_type_id);
+    
+    INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id)
+    VALUES (menu_item_id, vegetarian_tag_id);
+    
+    RAISE NOTICE '✓ Menus créés avec types de cuisine pour restaurant %', restaurant_id;
 END $$;
 
 -- =====================================================

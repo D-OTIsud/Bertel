@@ -1132,6 +1132,45 @@ BEGIN
                  )
                  ||
                  jsonb_build_object(
+                   'cuisine_types', COALESCE((
+                     SELECT jsonb_agg(
+                       jsonb_build_object('id', ct.id, 'code', ct.code, 'name', ct.name, 'description', ct.description, 'position', ct.position)
+                       ORDER BY ct.position, ct.name, ct.code
+                     )
+                     FROM (
+                       SELECT DISTINCT ct.id, ct.code, ct.name, ct.description, ct.position
+                       FROM object_menu_item mi2
+                       JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
+                       JOIN ref_code_cuisine_type ct ON ct.id = mct2.cuisine_type_id
+                       WHERE mi2.menu_id = m.id AND mi2.is_available = TRUE
+                     ) ct
+                   ), '[]'::jsonb),
+                   'dietary_tags', COALESCE((
+                     SELECT jsonb_agg(
+                       jsonb_build_object('id', dt.id, 'code', dt.code, 'name', dt.name, 'description', dt.description, 'icon_url', dt.icon_url)
+                       ORDER BY dt.name, dt.code
+                     )
+                     FROM (
+                       SELECT DISTINCT dt.id, dt.code, dt.name, dt.description, dt.icon_url
+                       FROM object_menu_item mi2
+                       JOIN object_menu_item_dietary_tag mdt2 ON mdt2.menu_item_id = mi2.id
+                       JOIN ref_code_dietary_tag dt ON dt.id = mdt2.dietary_tag_id
+                       WHERE mi2.menu_id = m.id AND mi2.is_available = TRUE
+                     ) dt
+                   ), '[]'::jsonb),
+                   'allergens', COALESCE((
+                     SELECT jsonb_agg(
+                       jsonb_build_object('id', al.id, 'code', al.code, 'name', al.name, 'description', al.description, 'icon_url', al.icon_url)
+                       ORDER BY al.name, al.code
+                     )
+                     FROM (
+                       SELECT DISTINCT al.id, al.code, al.name, al.description, al.icon_url
+                       FROM object_menu_item mi2
+                       JOIN object_menu_item_allergen mia2 ON mia2.menu_item_id = mi2.id
+                       JOIN ref_code_allergen al ON al.id = mia2.allergen_id
+                       WHERE mi2.menu_id = m.id AND mi2.is_available = TRUE
+                     ) al
+                   ), '[]'::jsonb),
                    'items', COALESCE((
                      SELECT jsonb_agg(
                               (
@@ -1159,6 +1198,13 @@ BEGIN
                                      FROM object_menu_item_allergen mia
                                      JOIN ref_code_allergen al ON al.id = mia.allergen_id
                                      WHERE mia.menu_item_id = mi.id
+                                   ), '[]'::jsonb),
+                                   'cuisine_types', COALESCE((
+                                     SELECT jsonb_agg(jsonb_build_object('id', ct.id, 'code', ct.code, 'name', ct.name, 'description', ct.description, 'position', ct.position)
+                                                      ORDER BY ct.position, ct.name, ct.code)
+                                     FROM object_menu_item_cuisine_type mct
+                                     JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
+                                     WHERE mct.menu_item_id = mi.id
                                    ), '[]'::jsonb)
                               )
                               ORDER BY
@@ -1184,6 +1230,75 @@ BEGIN
                )
         FROM object_menu m
         WHERE m.object_id = obj.id
+      ), '[]'::jsonb)
+    );
+
+    -- Types de cuisine au niveau de l'objet (tous les menus de cet objet)
+    js := js || jsonb_build_object(
+      'cuisine_types', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object('id', ct.id, 'code', ct.code, 'name', ct.name, 'description', ct.description, 'position', ct.position)
+          ORDER BY ct.position, ct.name, ct.code
+        )
+        FROM (
+          SELECT DISTINCT ct.id, ct.code, ct.name, ct.description, ct.position
+          FROM object_menu m2
+          JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
+          JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
+          JOIN ref_code_cuisine_type ct ON ct.id = mct2.cuisine_type_id
+          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+        ) ct
+      ), '[]'::jsonb),
+      'dietary_tags', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object('id', dt.id, 'code', dt.code, 'name', dt.name, 'description', dt.description, 'icon_url', dt.icon_url)
+          ORDER BY dt.name, dt.code
+        )
+        FROM (
+          SELECT DISTINCT dt.id, dt.code, dt.name, dt.description, dt.icon_url
+          FROM object_menu m2
+          JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
+          JOIN object_menu_item_dietary_tag mdt2 ON mdt2.menu_item_id = mi2.id
+          JOIN ref_code_dietary_tag dt ON dt.id = mdt2.dietary_tag_id
+          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+        ) dt
+      ), '[]'::jsonb),
+      'allergens', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object('id', al.id, 'code', al.code, 'name', al.name, 'description', al.description, 'icon_url', al.icon_url)
+          ORDER BY al.name, al.code
+        )
+        FROM (
+          SELECT DISTINCT al.id, al.code, al.name, al.description, al.icon_url
+          FROM object_menu m2
+          JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
+          JOIN object_menu_item_allergen mia2 ON mia2.menu_item_id = mi2.id
+          JOIN ref_code_allergen al ON al.id = mia2.allergen_id
+          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+        ) al
+      ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- Pour les événements (FMA), ajouter les types de cuisine des restaurants associés
+  IF obj.object_type = 'FMA' THEN
+    js := js || jsonb_build_object(
+      'associated_restaurants_cuisine_types', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object('id', ct.id, 'code', ct.code, 'name', ct.name, 'description', ct.description, 'position', ct.position)
+          ORDER BY ct.position, ct.name, ct.code
+        )
+        FROM (
+          SELECT DISTINCT ct.id, ct.code, ct.name, ct.description, ct.position
+          FROM object_relation r
+          JOIN object o_restaurant ON o_restaurant.id = r.target_object_id AND o_restaurant.object_type = 'RES'
+          JOIN object_menu m ON m.object_id = o_restaurant.id AND m.is_active = TRUE
+          JOIN object_menu_item mi ON mi.menu_id = m.id AND mi.is_available = TRUE
+          JOIN object_menu_item_cuisine_type mct ON mct.menu_item_id = mi.id
+          JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
+          WHERE r.source_object_id = obj.id
+            AND r.relation_type = 'has_restaurant'  -- ou le type de relation approprié
+        ) ct
       ), '[]'::jsonb)
     );
   END IF;
@@ -2304,5 +2419,248 @@ BEGIN
     ),
     'data', v_data
   );
+END;
+$$;
+
+-- =====================================================
+-- Recherche de restaurants par type de cuisine
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION api.search_restaurants_by_cuisine(
+  p_cuisine_types TEXT[],
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr'],
+  p_limit INTEGER DEFAULT 20,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_data JSON;
+  v_total INTEGER;
+BEGIN
+  -- Rechercher les restaurants qui proposent les types de cuisine demandés
+  WITH restaurant_cuisine AS (
+    SELECT DISTINCT 
+      o.id,
+      o.name,
+      o.object_type,
+      o.status,
+      o.region_code,
+      o.created_at,
+      o.updated_at,
+      o.published_at,
+      o.is_editing,
+      -- Informations de localisation
+      ol.address1,
+      ol.city,
+      ol.latitude,
+      ol.longitude,
+      -- Types de cuisine proposés par ce restaurant
+      jsonb_agg(
+        jsonb_build_object(
+          'id', ct.id,
+          'code', ct.code,
+          'name', ct.name,
+          'description', ct.description
+        ) ORDER BY ct.position, ct.name
+      ) as cuisine_types,
+      -- Nombre de plats par type de cuisine
+      jsonb_object_agg(ct.code, item_counts.count) as cuisine_counts
+    FROM object o
+    JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location = TRUE
+    JOIN object_menu m ON m.object_id = o.id AND m.is_active = TRUE
+    JOIN object_menu_item mi ON mi.menu_id = m.id AND mi.is_available = TRUE
+    JOIN object_menu_item_cuisine_type mct ON mct.menu_item_id = mi.id
+    JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) as count
+      FROM object_menu_item mi2
+      JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
+      WHERE mi2.menu_id = m.id 
+        AND mct2.cuisine_type_id = ct.id
+        AND mi2.is_available = TRUE
+    ) item_counts ON TRUE
+    WHERE o.object_type = 'RES'
+      AND o.status = 'published'
+      AND ct.code = ANY(p_cuisine_types)
+    GROUP BY o.id, o.name, o.object_type, o.status, o.region_code, 
+             o.created_at, o.updated_at, o.published_at, o.is_editing,
+             ol.address1, ol.city, ol.latitude, ol.longitude
+  ),
+  paginated AS (
+    SELECT rc.*,
+           ROW_NUMBER() OVER (ORDER BY rc.name) as row_num
+    FROM restaurant_cuisine rc
+    ORDER BY rc.name
+    LIMIT p_limit OFFSET p_offset
+  )
+  SELECT 
+    json_build_object(
+      'total', (SELECT COUNT(*) FROM restaurant_cuisine),
+      'restaurants', json_agg(
+        json_build_object(
+          'id', p.id,
+          'name', p.name,
+          'type', p.object_type,
+          'status', p.status,
+          'region_code', p.region_code,
+          'created_at', p.created_at,
+          'updated_at', p.updated_at,
+          'published_at', p.published_at,
+          'is_editing', p.is_editing,
+          'address', json_build_object(
+            'address1', p.address1,
+            'city', p.city,
+            'latitude', p.latitude,
+            'longitude', p.longitude
+          ),
+          'cuisine_types', p.cuisine_types,
+          'cuisine_counts', p.cuisine_counts,
+          'menu_summary', json_build_object(
+            'total_menus', (SELECT COUNT(*) FROM object_menu WHERE object_id = p.id AND is_active = TRUE),
+            'total_items', (SELECT COUNT(*) FROM object_menu m JOIN object_menu_item mi ON mi.menu_id = m.id WHERE m.object_id = p.id AND m.is_active = TRUE AND mi.is_available = TRUE)
+          )
+        ) ORDER BY p.name
+      )
+    )
+  INTO v_data
+  FROM paginated p;
+
+  RETURN COALESCE(v_data, json_build_object('total', 0, 'restaurants', '[]'::json));
+END;
+$$;
+
+-- =====================================================
+-- Recherche d'événements par types de cuisine des restaurants associés
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION api.search_events_by_restaurant_cuisine(
+  p_cuisine_types TEXT[],
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr'],
+  p_limit INTEGER DEFAULT 20,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_data JSON;
+BEGIN
+  -- Rechercher les événements qui ont des restaurants proposant les types de cuisine demandés
+  WITH event_cuisine AS (
+    SELECT DISTINCT 
+      o.id,
+      o.name,
+      o.object_type,
+      o.status,
+      o.region_code,
+      o.created_at,
+      o.updated_at,
+      o.published_at,
+      o.is_editing,
+      -- Informations de localisation
+      ol.address1,
+      ol.city,
+      ol.latitude,
+      ol.longitude,
+      -- Types de cuisine des restaurants associés
+      jsonb_agg(
+        jsonb_build_object(
+          'id', ct.id,
+          'code', ct.code,
+          'name', ct.name,
+          'description', ct.description,
+          'restaurant_name', o_restaurant.name,
+          'restaurant_id', o_restaurant.id
+        ) ORDER BY ct.position, ct.name
+      ) as cuisine_types,
+      -- Nombre de restaurants par type de cuisine
+      jsonb_object_agg(ct.code, restaurant_counts.count) as cuisine_counts,
+      -- Liste des restaurants associés
+      jsonb_agg(
+        DISTINCT jsonb_build_object(
+          'id', o_restaurant.id,
+          'name', o_restaurant.name,
+          'cuisine_types', restaurant_cuisines.cuisine_types
+        )
+      ) as associated_restaurants
+    FROM object o
+    JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location = TRUE
+    JOIN object_relation r ON r.source_object_id = o.id
+    JOIN object o_restaurant ON o_restaurant.id = r.target_object_id AND o_restaurant.object_type = 'RES'
+    JOIN object_menu m ON m.object_id = o_restaurant.id AND m.is_active = TRUE
+    JOIN object_menu_item mi ON mi.menu_id = m.id AND mi.is_available = TRUE
+    JOIN object_menu_item_cuisine_type mct ON mct.menu_item_id = mi.id
+    JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
+    LEFT JOIN LATERAL (
+      SELECT COUNT(DISTINCT o_restaurant2.id) as count
+      FROM object_relation r2
+      JOIN object o_restaurant2 ON o_restaurant2.id = r2.target_object_id AND o_restaurant2.object_type = 'RES'
+      JOIN object_menu m2 ON m2.object_id = o_restaurant2.id AND m2.is_active = TRUE
+      JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
+      JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
+      WHERE r2.source_object_id = o.id 
+        AND mct2.cuisine_type_id = ct.id
+    ) restaurant_counts ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(
+        jsonb_build_object('id', ct2.id, 'code', ct2.code, 'name', ct2.name)
+        ORDER BY ct2.position, ct2.name
+      ) as cuisine_types
+      FROM object_menu m3
+      JOIN object_menu_item mi3 ON mi3.menu_id = m3.id AND mi3.is_available = TRUE
+      JOIN object_menu_item_cuisine_type mct3 ON mct3.menu_item_id = mi3.id
+      JOIN ref_code_cuisine_type ct2 ON ct2.id = mct3.cuisine_type_id
+      WHERE m3.object_id = o_restaurant.id AND m3.is_active = TRUE
+    ) restaurant_cuisines ON TRUE
+    WHERE o.object_type = 'FMA'
+      AND o.status = 'published'
+      AND ct.code = ANY(p_cuisine_types)
+    GROUP BY o.id, o.name, o.object_type, o.status, o.region_code, 
+             o.created_at, o.updated_at, o.published_at, o.is_editing,
+             ol.address1, ol.city, ol.latitude, ol.longitude
+  ),
+  paginated AS (
+    SELECT ec.*,
+           ROW_NUMBER() OVER (ORDER BY ec.name) as row_num
+    FROM event_cuisine ec
+    ORDER BY ec.name
+    LIMIT p_limit OFFSET p_offset
+  )
+  SELECT 
+    json_build_object(
+      'total', (SELECT COUNT(*) FROM event_cuisine),
+      'events', json_agg(
+        json_build_object(
+          'id', p.id,
+          'name', p.name,
+          'type', p.object_type,
+          'status', p.status,
+          'region_code', p.region_code,
+          'created_at', p.created_at,
+          'updated_at', p.updated_at,
+          'published_at', p.published_at,
+          'is_editing', p.is_editing,
+          'address', json_build_object(
+            'address1', p.address1,
+            'city', p.city,
+            'latitude', p.latitude,
+            'longitude', p.longitude
+          ),
+          'cuisine_types', p.cuisine_types,
+          'cuisine_counts', p.cuisine_counts,
+          'associated_restaurants', p.associated_restaurants
+        ) ORDER BY p.name
+      )
+    )
+  INTO v_data
+  FROM paginated p;
+
+  RETURN COALESCE(v_data, json_build_object('total', 0, 'events', '[]'::json));
 END;
 $$;

@@ -248,7 +248,7 @@ RECOGNISED_FIELDS: Dict[str, List[str]] = {
     "pet_policy": ["pets_allowed"],
     "media": ["media"],
     "providers": ["providers"],
-    "schedule": ["schedule", "horaires"],
+    "schedule": ["schedule", "horaires"]
 }
 
 

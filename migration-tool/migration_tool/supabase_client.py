@@ -59,13 +59,10 @@ class SupabaseService:
         )
 
         def _execute() -> Dict[str, Any]:
-            query = self._client.table(table).upsert(data)
+            upsert_kwargs: Dict[str, Any] = {"returning": "representation"}
             if on_conflict:
-                query = query.on_conflict(on_conflict)
-            # Ensure we get the representation of the affected rows so agents can
-            # extract generated identifiers without issuing a follow-up query.
-            if hasattr(query, "select"):
-                query = query.select("*")
+                upsert_kwargs["on_conflict"] = on_conflict
+            query = self._client.table(table).upsert(data, **upsert_kwargs)
             response = query.execute()
             return getattr(response, "model_dump", lambda: response.__dict__)()
 
@@ -396,8 +393,11 @@ class SupabaseService:
         def _execute() -> Dict[str, Any]:
             response = (
                 self._client.table("object_external_id")
-                .upsert(payload)
-                .on_conflict("organization_object_id,external_id")
+                .upsert(
+                    payload,
+                    returning="representation",
+                    on_conflict="organization_object_id,external_id",
+                )
                 .execute()
             )
             return getattr(response, "model_dump", lambda: response.__dict__)()

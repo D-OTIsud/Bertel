@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import json
+import re
+import xml.etree.ElementTree as ET
+from typing import Any, Dict, List, Optional, Sequence
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RawEstablishmentPayload(BaseModel):
@@ -13,6 +16,7 @@ class RawEstablishmentPayload(BaseModel):
     establishment_name: str = Field(..., alias="name")
     establishment_category: Optional[str] = Field(None, alias="category")
     establishment_subcategory: Optional[str] = Field(None, alias="subcategory")
+    source_organization_id: Optional[str] = Field(None, alias="dataProvidingOrg")
     legacy_ids: Optional[List[str]] = None
     data: Dict[str, Any] = Field(default_factory=dict)
 
@@ -20,6 +24,335 @@ class RawEstablishmentPayload(BaseModel):
         "populate_by_name": True,
         "extra": "allow",
     }
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_payload(cls, value: Any) -> Any:
+        """Normalise legacy list-based payloads into a dictionary."""
+
+        raw_text: Optional[str] = None
+
+        if isinstance(value, (bytes, bytearray)):
+            try:
+                value = value.decode("utf-8")
+            except UnicodeDecodeError:
+                value = value.decode("latin-1", errors="ignore")
+
+        if isinstance(value, str):
+            raw_text = value
+            parsed = cls._parse_string_payload(value)
+            value = parsed
+
+        if isinstance(value, list):
+            pass
+        elif not isinstance(value, dict):
+            value = {"data": {}}
+
+        def _as_list(obj: Any) -> List[Dict[str, Any]]:
+            if isinstance(obj, list):
+                return [item for item in obj if isinstance(item, dict)]
+            if isinstance(obj, dict):
+                return [obj]
+            return []
+
+        def _split_values(raw: Optional[str]) -> List[str]:
+            if not raw:
+                return []
+            if isinstance(raw, str):
+                parts = [item.strip() for item in re.split(r"[,;/]", raw) if item.strip()]
+                return parts
+            if isinstance(raw, (list, tuple)):
+                return [str(item).strip() for item in raw if str(item).strip()]
+            return []
+
+        def _coerce_float(raw_value: Any) -> Optional[float]:
+            if raw_value is None:
+                return None
+            try:
+                text = str(raw_value).strip().replace(",", ".")
+                if not text:
+                    return None
+                return float(text)
+            except (TypeError, ValueError):
+                return None
+
+        def _parse_coordinates(raw: Optional[str]) -> tuple[Optional[float], Optional[float]]:
+            if not raw:
+                return None, None
+            try:
+                parts = re.findall(r"-?\d+(?:[\.,]\d+)?", str(raw))
+                if len(parts) >= 2:
+                    lat = float(parts[0].replace(",", "."))
+                    lon = float(parts[1].replace(",", "."))
+                    return lat, lon
+            except (TypeError, ValueError):
+                return None, None
+            return None, None
+
+        raw_blocks: List[Dict[str, Any]] = []
+
+        if isinstance(value, list):
+            if not value:
+                return {}
+            raw_batch = value
+            primary = value[0]
+            extras = value[1:]
+            if isinstance(primary, dict):
+                value = dict(primary)
+                value.setdefault("data", {})
+                if not isinstance(value["data"], dict):
+                    value["data"] = {}
+                value["data"].setdefault("raw_batch", raw_batch)
+                raw_blocks = _as_list(raw_batch)
+            else:
+                value = {"data": {}}
+            if extras:
+                value.setdefault("data", {})
+                value["data"]["additional_batches"] = extras
+
+        if not isinstance(value, dict):
+            return value
+
+        if "data" in value and not isinstance(value["data"], dict):
+            value["data"] = {}
+
+        if raw_text:
+            value.setdefault("data", {})
+            if isinstance(value["data"], dict) and "raw_payload" not in value["data"]:
+                value["data"]["raw_payload"] = raw_text
+
+        payload_data = value.get("data")
+        queue: List[Dict[str, Any]] = list(raw_blocks) if raw_blocks else _as_list(payload_data)
+        if isinstance(value, dict):
+            top_level = {
+                key: entry
+                for key, entry in value.items()
+                if key not in {"data", "legacy_ids"}
+            }
+            if top_level:
+                queue.insert(0, top_level)
+        main_record: Dict[str, Any] = {}
+        additional_sections: Dict[str, Any] = {}
+
+        while queue:
+            block = queue.pop(0)
+            if not isinstance(block, dict):
+                continue
+            if "data" in block and isinstance(block["data"], list):
+                additional_sections.setdefault("raw_blocks", []).append(block["data"])
+                queue.extend(_as_list(block["data"]))
+                continue
+            if "Presta ID" in block:
+                additional_sections.setdefault("providers", []).append(block)
+                continue
+            if "Horaires_id" in block:
+                additional_sections.setdefault("schedule", []).append(block)
+                continue
+            if "id_multimedia" in block:
+                media_item = {
+                    "url": block.get("lien") or block.get("url"),
+                    "description": block.get("description"),
+                    "title": block.get("description"),
+                    "is_main": block.get("principale"),
+                    "media_type": (block.get("type") or "").split("/")[0],
+                    "metadata": block,
+                }
+                additional_sections.setdefault("media", []).append(media_item)
+                continue
+            if "Id_Tarifs" in block:
+                additional_sections.setdefault("tariffs", []).append(block)
+                continue
+            if "Type_R_S" in block:
+                social_item = {
+                    "network": block.get("Type_R_S"),
+                    "url": block.get("URL"),
+                }
+                additional_sections.setdefault("socials", []).append(social_item)
+                continue
+            main_record.update(block)
+
+        value.setdefault("legacy_ids", [])
+        legacy_candidates = []
+        for key in ("id OTI", "ID_IRT", "Num taxe de séjour", "temp_ID_Presta"):
+            candidate = main_record.get(key)
+            if candidate:
+                legacy_candidates.append(str(candidate))
+        existing_legacy = cls._ensure_sequence(value.get("legacy_ids"))
+        value["legacy_ids"] = list(dict.fromkeys([*existing_legacy, *legacy_candidates]))
+
+        if main_record:
+            value["name"] = value.get("name") or main_record.get("Nom_OTI") or main_record.get("Nom") or main_record.get("Nom établissement")
+            value["category"] = value.get("category") or main_record.get("Nom catégorie") or main_record.get("Groupe catégorie")
+            value["subcategory"] = value.get("subcategory") or main_record.get("Nom sous catégorie")
+
+            address_parts = [str(main_record.get("Numéro")) if main_record.get("Numéro") else None, main_record.get("rue")]
+            address_line1 = " ".join(part for part in address_parts if part).strip() or None
+            latitude, longitude = _parse_coordinates(main_record.get("Coordonnées GPS"))
+            latitude = latitude if latitude is not None else _coerce_float(main_record.get("latitude"))
+            longitude = longitude if longitude is not None else _coerce_float(main_record.get("longitude"))
+
+            description = main_record.get("Descriptif OTI") or main_record.get("Descriptif du plan d'accès")
+            summary = main_record.get("Accroche OTI")
+
+            structured = {
+                "address_line1": address_line1,
+                "address_line2": main_record.get("Lieux-dits"),
+                "postcode": str(main_record.get("Code Postal")) if main_record.get("Code Postal") else None,
+                "city": main_record.get("ville"),
+                "latitude": latitude,
+                "longitude": longitude,
+                "description": description,
+                "summary": summary,
+                "status": main_record.get("Status"),
+                "amenities": _split_values(main_record.get("Prestations sur place")),
+                "nearby_services": _split_values(main_record.get("Prestations à proximité")),
+                "environment_tags": _split_values(main_record.get("Localisations")),
+                "payment_methods": _split_values(main_record.get("Mode de paiement")),
+                "languages": _split_values(main_record.get("Langues")),
+                "email": main_record.get("E-Mail"),
+                "phone": [
+                    phone
+                    for phone in [
+                        main_record.get("Contact principale"),
+                        main_record.get("Autre téléphone"),
+                    ]
+                    if phone
+                ],
+                "website": main_record.get("Web"),
+                "raw_main_record": main_record,
+                "main_media": main_record.get("Main_Img"),
+                "accessibility": main_record.get("Handicap"),
+                "pets_allowed": main_record.get("Animaux"),
+                "source_status": main_record.get("SIT"),
+            }
+
+            value.setdefault("data", {})
+            for key, entry in structured.items():
+                if entry not in (None, [], ""):
+                    value["data"][key] = entry
+
+        if additional_sections:
+            value.setdefault("data", {})
+            for key, entry in additional_sections.items():
+                value["data"][key] = entry
+
+        return value
+
+    @staticmethod
+    def _parse_string_payload(raw: str) -> Any:
+        stripped = raw.strip()
+        if not stripped:
+            return {"data": {"raw_payload": raw}}
+
+        # JSON payloads
+        try:
+            parsed = json.loads(stripped)
+            return parsed
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # XML payloads
+        try:
+            root = ET.fromstring(stripped)
+        except ET.ParseError:
+            root = None
+
+        if root is not None:
+            parsed_xml = RawEstablishmentPayload._collapse_single_key(
+                RawEstablishmentPayload._etree_to_object(root)
+            )
+            if isinstance(parsed_xml, dict):
+                parsed_xml.setdefault("data", {})
+                if isinstance(parsed_xml["data"], dict):
+                    parsed_xml["data"].setdefault("raw_xml_tag", root.tag)
+                return parsed_xml
+            return {"data": {"raw_payload": raw, "raw_xml_tag": root.tag}}
+
+        # Key-value style text payloads
+        kv_pairs: Dict[str, Any] = {}
+        for line in re.split(r"[\r\n;]+", stripped):
+            if not line.strip():
+                continue
+            if ":" in line:
+                key, value = line.split(":", 1)
+            elif "=" in line:
+                key, value = line.split("=", 1)
+            else:
+                continue
+            key = key.strip()
+            value = value.strip()
+            if key:
+                kv_pairs[key] = value
+
+        if kv_pairs:
+            return kv_pairs
+
+        return {"data": {"raw_payload": raw}}
+
+    @staticmethod
+    def _etree_to_object(element: ET.Element) -> Dict[str, Any]:
+        def convert(node: ET.Element) -> Any:
+            children = list(node)
+            attribs = {f"@{k}": v for k, v in node.attrib.items()}
+            text = (node.text or "").strip()
+
+            if not children:
+                if attribs and text:
+                    attribs["#text"] = text
+                    return attribs
+                if attribs:
+                    return attribs
+                return text or None
+
+            result: Dict[str, Any] = dict(attribs)
+            for child in children:
+                child_value = convert(child)
+                if child.tag in result:
+                    existing = result[child.tag]
+                    if not isinstance(existing, list):
+                        result[child.tag] = [existing]
+                    result[child.tag].append(child_value)
+                else:
+                    result[child.tag] = child_value
+            if text:
+                result.setdefault("#text", text)
+            return result
+
+        return {element.tag: convert(element)}
+
+    @staticmethod
+    def _collapse_single_key(value: Any) -> Any:
+        if isinstance(value, dict) and len(value) == 1:
+            inner_value = next(iter(value.values()))
+            if isinstance(inner_value, dict):
+                return RawEstablishmentPayload._collapse_single_key(inner_value)
+            return inner_value
+        return value
+
+    @staticmethod
+    def _ensure_sequence(value: Any) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple, set)):
+            return [str(item) for item in value if str(item).strip()]
+        if isinstance(value, dict):
+            collected: List[str] = []
+            for item in value.values():
+                if isinstance(item, (list, tuple, set)):
+                    collected.extend(str(child) for child in item if str(child).strip())
+                elif isinstance(item, dict):
+                    collected.extend(RawEstablishmentPayload._ensure_sequence(item))
+                else:
+                    text = str(item).strip()
+                    if text:
+                        collected.append(text)
+            return collected
+        if isinstance(value, Sequence):
+            return [str(item) for item in value if str(item).strip()]
+        text = str(value).strip()
+        return [text] if text else []
 
 
 class RoutedFragment(BaseModel):
@@ -52,6 +385,9 @@ class AgentContext(BaseModel):
 
     coordinator_id: str
     source_payload: Dict[str, Any]
+    object_id: Optional[str] = None
+    duplicate_of: Optional[str] = None
+    source_organization_id: Optional[str] = None
 
 
 class FieldAssignment(BaseModel):
@@ -98,11 +434,12 @@ class IdentityRecord(BaseModel):
             extra["source_payload"] = self.source_extra
 
         payload = {
-            "id": self.object_id,
             "object_type": self.object_type,
             "name": self.name,
             "status": self.status,
         }
+        if self.object_id:
+            payload["id"] = self.object_id
         if self.region_code:
             payload["region_code"] = self.region_code
         cleaned_extra = {k: v for k, v in extra.items() if v not in (None, [], {}, "")}
@@ -179,6 +516,8 @@ class AmenityLinkRecord(BaseModel):
 
     object_id: Optional[str]
     amenity_code: str
+    amenity_name: Optional[str] = None
+    amenity_family_code: Optional[str] = None
     raw_label: Optional[str] = None
 
     def to_supabase(self, *, amenity_id: Optional[str]) -> Dict[str, Any]:
@@ -191,11 +530,113 @@ class AmenityLinkRecord(BaseModel):
         if not amenity_id:
             payload.setdefault("extra", {})
             payload["extra"]["amenity_code"] = self.amenity_code
+            if self.amenity_name:
+                payload["extra"]["amenity_name"] = self.amenity_name
         return payload
 
 
 class AmenityTransformation(BaseModel):
     amenities: List[AmenityLinkRecord]
+
+
+class LanguageLinkRecord(BaseModel):
+    """Representation of the `object_language` relation."""
+
+    object_id: Optional[str]
+    language_code: str
+    language_name: Optional[str] = None
+    proficiency_code: Optional[str] = None
+
+    def to_supabase(self, *, language_id: Optional[str], level_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if language_id:
+            payload["language_id"] = language_id
+        if level_id:
+            payload["level_id"] = level_id
+        extra: Dict[str, Any] = {}
+        if not language_id:
+            extra["language_code"] = self.language_code
+        if self.language_name:
+            extra["language_name"] = self.language_name
+        if self.proficiency_code and not level_id:
+            extra["proficiency_code"] = self.proficiency_code
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class LanguageTransformation(BaseModel):
+    languages: List[LanguageLinkRecord]
+
+
+class PaymentMethodRecord(BaseModel):
+    """Representation of the `object_payment_method` relation."""
+
+    object_id: Optional[str]
+    payment_code: str
+    payment_name: Optional[str] = None
+
+    def to_supabase(self, *, payment_method_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if payment_method_id:
+            payload["payment_method_id"] = payment_method_id
+        extra: Dict[str, Any] = {}
+        if not payment_method_id:
+            extra["payment_code"] = self.payment_code
+        if self.payment_name:
+            extra["payment_name"] = self.payment_name
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class PaymentMethodTransformation(BaseModel):
+    payment_methods: List[PaymentMethodRecord]
+
+
+class EnvironmentTagRecord(BaseModel):
+    """Representation of the `object_environment_tag` relation."""
+
+    object_id: Optional[str]
+    environment_code: str
+    environment_name: Optional[str] = None
+
+    def to_supabase(self, *, environment_tag_id: Optional[str]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if environment_tag_id:
+            payload["environment_tag_id"] = environment_tag_id
+        extra: Dict[str, Any] = {}
+        if not environment_tag_id:
+            extra["environment_code"] = self.environment_code
+        if self.environment_name:
+            extra["environment_name"] = self.environment_name
+        if extra:
+            payload["extra"] = extra
+        return payload
+
+
+class EnvironmentTagTransformation(BaseModel):
+    environment_tags: List[EnvironmentTagRecord]
+
+
+class PetPolicyRecord(BaseModel):
+    """Representation of the `object_pet_policy` table."""
+
+    object_id: Optional[str]
+    accepted: Optional[bool]
+    conditions: Optional[str] = None
+
+    def to_supabase(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"object_id": self.object_id}
+        if self.accepted is not None:
+            payload["accepted"] = self.accepted
+        if self.conditions:
+            payload["conditions"] = self.conditions
+        return payload
+
+
+class PetPolicyTransformation(BaseModel):
+    pet_policy: Optional[PetPolicyRecord] = None
 
 
 class MediaRecord(BaseModel):

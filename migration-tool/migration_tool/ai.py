@@ -891,7 +891,11 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
             response = await self._client.responses.create(**payload)
 
         text = self._extract_text(response)
-        data = json.loads(text)
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            snippet = text[:200]
+            raise RuntimeError(f"LLM response was not valid JSON (got: {snippet!r})") from exc
         return response_model.model_validate(data)
 
     def _extract_text(self, response: Any) -> str:

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import pathlib
-from typing import Dict
+from typing import Dict, Iterable
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -94,6 +96,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/events")
     async def events() -> Dict[str, object]:
         return {"events": telemetry.snapshot()}
+
+    def _format_sse(payload: Dict[str, object]) -> str:
+        return "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+
+    @app.get("/events/stream")
+    async def events_stream(request: Request) -> StreamingResponse:
+        queue = telemetry.subscribe()
+
+        async def iterator() -> Iterable[str]:
+            try:
+                snapshot = telemetry.snapshot()
+                yield _format_sse({"type": "snapshot", "events": snapshot})
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        event = await asyncio.wait_for(queue.get(), timeout=15)
+                        yield _format_sse({"type": "event", "event": event})
+                    except asyncio.TimeoutError:
+                        yield ": keep-alive\n\n"
+            finally:
+                telemetry.unsubscribe(queue)
+
+        return StreamingResponse(iterator(), media_type="text/event-stream")
 
     @app.get("/agents")
     async def agents() -> Dict[str, object]:

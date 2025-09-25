@@ -53,6 +53,11 @@ class SupabaseService:
             self.telemetry.record("supabase.skipped", payload)
             return {"status": "skipped", "reason": "no credentials", "payload": payload}
 
+        self.telemetry.record(
+            "supabase.upsert.start",
+            {"table": table, "data": data, "on_conflict": on_conflict},
+        )
+
         def _execute() -> Dict[str, Any]:
             query = self._client.table(table).upsert(data)
             if on_conflict:
@@ -97,6 +102,11 @@ class SupabaseService:
                 {"table": table, "code": code, "reason": "no credentials"},
             )
             return None
+
+        self.telemetry.record(
+            "supabase.lookup.start",
+            {"table": table, "code": code, "code_field": code_field},
+        )
 
         def _execute() -> Optional[str]:
             response = (

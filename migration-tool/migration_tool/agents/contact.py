@@ -46,10 +46,31 @@ class ContactAgent(AIEnabledAgent):
         for channel in channels:
             if not channel.value:
                 continue
-            kind_id = await self.supabase.lookup("ref_code_contact_kind", code=channel.kind_code)
+            original_kind = channel.kind_code or "other"
+            normalized_kind = self.supabase.normalize_code(original_kind)
+            kind_id = await self.supabase.lookup("ref_code_contact_kind", code=normalized_kind)
+            if not kind_id:
+                kind_id = await self.supabase.ensure_code(
+                    domain="contact_kind",
+                    code=normalized_kind,
+                    name=original_kind.replace("_", " ").title(),
+                )
             role_id = None
             if channel.role_code:
-                role_id = await self.supabase.lookup("ref_contact_role", code=channel.role_code)
+                normalized_role = self.supabase.normalize_code(channel.role_code)
+                role_id = await self.supabase.lookup("ref_contact_role", code=normalized_role)
+                if not role_id:
+                    await self.supabase.upsert(
+                        "ref_contact_role",
+                        {
+                            "code": normalized_role,
+                            "name": channel.role_code.replace("_", " ").title(),
+                        },
+                        on_conflict="code",
+                    )
+                    role_id = await self.supabase.lookup("ref_contact_role", code=normalized_role)
+                channel.role_code = normalized_role
+            channel.kind_code = normalized_kind
             data = channel.to_supabase(kind_id=kind_id, role_id=role_id)
             responses.append(await self.supabase.upsert("contact_channel", data))
         return {

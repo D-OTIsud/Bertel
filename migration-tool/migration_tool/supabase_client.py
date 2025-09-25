@@ -57,6 +57,10 @@ class SupabaseService:
             query = self._client.table(table).upsert(data)
             if on_conflict:
                 query = query.on_conflict(on_conflict)
+            # Ensure we get the representation of the affected rows so agents can
+            # extract generated identifiers without issuing a follow-up query.
+            if hasattr(query, "select"):
+                query = query.select("*")
             response = query.execute()
             return getattr(response, "model_dump", lambda: response.__dict__)()
 

@@ -16,6 +16,8 @@ from .agents.coordinator import Coordinator
 from .agents.identity import IdentityAgent
 from .agents.location import LocationAgent
 from .agents.media import MediaAgent
+from .agents.providers import ProviderAgent
+from .agents.schedule import ScheduleAgent
 from .ai import FieldRouter, build_llm
 from .config import Settings, get_settings
 from .schemas import IngestionResponse, RawEstablishmentPayload
@@ -45,6 +47,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         contact_agent=ContactAgent(supabase, telemetry, llm),
         amenities_agent=AmenitiesAgent(supabase, telemetry, llm),
         media_agent=MediaAgent(supabase, telemetry, llm),
+        provider_agent=ProviderAgent(supabase, telemetry),
+        schedule_agent=ScheduleAgent(supabase, telemetry),
         webhook=webhook,
         telemetry=telemetry,
         router=router,

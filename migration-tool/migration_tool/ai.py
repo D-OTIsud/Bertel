@@ -70,6 +70,8 @@ class RuleBasedLLM(LLMClient):
         "contact": ("phone", "email", "website", "url", "booking", "contact", "social"),
         "amenities": ("amenitie", "equipment", "service", "facility"),
         "media": ("photo", "image", "video", "media", "picture", "logo"),
+        "providers": ("prestataire", "provider", "presta", "nom", "prenom", "gerant", "fonction"),
+        "schedule": ("horaires", "schedule", "jours", "ouverture", "fermeture", "reservation"),
     }
 
     CATEGORY_TO_OBJECT_TYPE: Dict[str, str] = {
@@ -164,6 +166,10 @@ class RuleBasedLLM(LLMClient):
             data = self._transform_amenities(payload)
         elif agent_name == "media":
             data = self._transform_media(payload)
+        elif agent_name == "providers":
+            data = self._transform_providers(payload)
+        elif agent_name == "schedule":
+            data = self._transform_schedule(payload)
         else:
             raise ValueError(f"Unknown agent '{agent_name}' for rule based transformation")
 
@@ -380,6 +386,121 @@ class RuleBasedLLM(LLMClient):
         if any(lowered.endswith(ext) for ext in (".mp4", ".mov", ".avi", ".mkv")):
             return "video"
         return "image"
+
+    def _transform_providers(self, payload: Dict[str, Any]) -> "ProviderTransformation":
+        """Transform provider data."""
+        from .schemas import ProviderTransformation, ProviderRecord
+        
+        establishment_id = payload.get("establishment_id") or payload.get("object_id")
+        providers_data = payload.get("prestataires") or payload.get("providers") or []
+        
+        # Handle nested data structure
+        if isinstance(providers_data, list) and len(providers_data) > 0:
+            if isinstance(providers_data[0], dict) and "data" in providers_data[0]:
+                providers_data = providers_data[0]["data"]
+        
+        if isinstance(providers_data, dict):
+            providers_data = [providers_data]
+        
+        providers = []
+        object_provider_links = []
+        
+        for provider_data in providers_data:
+            if not isinstance(provider_data, dict):
+                continue
+                
+            provider_record = ProviderRecord(
+                provider_id=provider_data.get("Presta ID") or provider_data.get("provider_id"),
+                last_name=provider_data.get("Nom") or provider_data.get("last_name") or "",
+                first_name=provider_data.get("Prénom") or provider_data.get("first_name") or "",
+                gender=provider_data.get("Genre") or provider_data.get("gender"),
+                email=provider_data.get("Email") or provider_data.get("email"),
+                phone=provider_data.get("Numéro de telephone") or provider_data.get("phone"),
+                function=provider_data.get("Fonction") or provider_data.get("function"),
+                newsletter=provider_data.get("Newsletter", False),
+                address1=provider_data.get("rue") or provider_data.get("address1"),
+                postcode=provider_data.get("Code Postal") or provider_data.get("postcode"),
+                city=provider_data.get("ville") or provider_data.get("city"),
+                lieu_dit=provider_data.get("Lieux-dits") or provider_data.get("lieu_dit"),
+                date_of_birth=provider_data.get("DOB") or provider_data.get("date_of_birth"),
+                revenue=provider_data.get("Revenus") or provider_data.get("revenue"),
+                legacy_ids=[provider_data.get("Presta ID")] if provider_data.get("Presta ID") else [],
+            )
+            
+            if provider_record.last_name and provider_record.first_name:
+                providers.append(provider_record)
+                if establishment_id and provider_record.provider_id:
+                    object_provider_links.append({
+                        "object_id": establishment_id,
+                        "provider_id": provider_record.provider_id,
+                    })
+        
+        return ProviderTransformation(providers=providers, object_provider_links=object_provider_links)
+
+    def _transform_schedule(self, payload: Dict[str, Any]) -> "ScheduleTransformation":
+        """Transform schedule data."""
+        from .schemas import ScheduleTransformation, ScheduleRecord
+        
+        establishment_id = payload.get("establishment_id") or payload.get("object_id")
+        schedule_data = payload.get("horaires") or payload.get("schedule") or []
+        
+        # Handle nested data structure
+        if isinstance(schedule_data, list) and len(schedule_data) > 0:
+            if isinstance(schedule_data[0], dict) and "data" in schedule_data[0]:
+                schedule_data = schedule_data[0]["data"]
+        
+        if isinstance(schedule_data, dict):
+            schedule_data = [schedule_data]
+        
+        schedules = []
+        
+        for schedule_item in schedule_data:
+            if not isinstance(schedule_item, dict):
+                continue
+                
+            jours_str = schedule_item.get("jours") or ""
+            days = self._parse_schedule_days(jours_str)
+            
+            if not days:
+                continue
+                
+            schedule_record = ScheduleRecord(
+                object_id=establishment_id,
+                days=days,
+                am_start=schedule_item.get("AM_Start") or schedule_item.get("am_start"),
+                am_finish=schedule_item.get("AM_Finish") or schedule_item.get("am_finish"),
+                pm_start=schedule_item.get("PM_Start") or schedule_item.get("pm_start"),
+                pm_finish=schedule_item.get("PM_Finish") or schedule_item.get("pm_finish"),
+                reservation_required=schedule_item.get("Révervation") or schedule_item.get("reservation_required") or False,
+                schedule_type="regular",
+            )
+            
+            schedules.append(schedule_record)
+        
+        return ScheduleTransformation(schedules=schedules)
+
+    def _parse_schedule_days(self, jours_str: str) -> List[str]:
+        """Parse French day names to English day codes."""
+        if not jours_str:
+            return []
+
+        day_mapping = {
+            "lundi": "monday",
+            "mardi": "tuesday", 
+            "mercredi": "wednesday",
+            "jeudi": "thursday",
+            "vendredi": "friday",
+            "samedi": "saturday",
+            "dimanche": "sunday",
+        }
+
+        days = []
+        for day_part in jours_str.split(","):
+            day_clean = day_part.strip().lower()
+            if day_clean in day_mapping:
+                days.append(day_mapping[day_clean])
+        
+        return days
 
 
 class OpenAILLM(LLMClient):  # pragma: no cover - network dependency

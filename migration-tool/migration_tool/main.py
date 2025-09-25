@@ -16,6 +16,7 @@ from .agents.coordinator import Coordinator
 from .agents.identity import IdentityAgent
 from .agents.location import LocationAgent
 from .agents.media import MediaAgent
+from .ai import FieldRouter, build_llm
 from .config import Settings, get_settings
 from .schemas import IngestionResponse, RawEstablishmentPayload
 from .supabase_client import SupabaseService
@@ -29,15 +30,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     telemetry = EventLog(retention=settings.dashboard_retention)
     supabase = SupabaseService(settings.supabase_url, settings.supabase_service_key, telemetry)
     webhook = WebhookNotifier(settings.webhook_url, telemetry)
+    llm = build_llm(
+        provider=settings.ai_provider,
+        api_key=settings.openai_api_key,
+        model=settings.ai_model,
+        temperature=settings.ai_temperature,
+    )
+    telemetry.record("ai.initialised", {"provider": getattr(llm, "name", "unknown")})
+    router = FieldRouter(llm)
 
     coordinator = Coordinator(
-        identity_agent=IdentityAgent(supabase, telemetry),
-        location_agent=LocationAgent(supabase, telemetry),
-        contact_agent=ContactAgent(supabase, telemetry),
-        amenities_agent=AmenitiesAgent(supabase, telemetry),
-        media_agent=MediaAgent(supabase, telemetry),
+        identity_agent=IdentityAgent(supabase, telemetry, llm),
+        location_agent=LocationAgent(supabase, telemetry, llm),
+        contact_agent=ContactAgent(supabase, telemetry, llm),
+        amenities_agent=AmenitiesAgent(supabase, telemetry, llm),
+        media_agent=MediaAgent(supabase, telemetry, llm),
         webhook=webhook,
         telemetry=telemetry,
+        router=router,
     )
 
     app = FastAPI(title="Bertel Migration Tool", version="0.1.0")

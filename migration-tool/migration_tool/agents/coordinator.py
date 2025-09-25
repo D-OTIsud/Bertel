@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List
 
-from ..schemas import AgentContext, RawEstablishmentPayload, RoutedFragment
+from ..ai import FieldRouter
+from ..schemas import (
+    AgentContext,
+    FieldRoutingDecision,
+    RawEstablishmentPayload,
+    RoutedFragment,
+)
 from ..telemetry import EventLog
 from ..webhook import WebhookNotifier
 from .amenities import AmenitiesAgent
@@ -14,57 +20,6 @@ from .contact import ContactAgent
 from .identity import IdentityAgent
 from .location import LocationAgent
 from .media import MediaAgent
-
-
-RECOGNISED_FIELDS = {
-    "identity": {
-        "establishment_id",
-        "establishment_name",
-        "category",
-        "subcategory",
-        "description",
-        "legacy_ids",
-    },
-    "location": {
-        "address_line1",
-        "address_line2",
-        "postal_code",
-        "city",
-        "country",
-        "latitude",
-        "longitude",
-        "coordinates",
-        "meeting_point",
-    },
-    "contact": {
-        "phone",
-        "email",
-        "website",
-        "booking_url",
-        "socials",
-    },
-    "amenities": {"amenities", "equipment", "services"},
-    "media": {"media", "photos", "videos"},
-}
-
-
-def partition_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
-    """Partition the payload into recognised sections and leftovers."""
-
-    sections: Dict[str, Dict[str, Any]] = {key: {} for key in RECOGNISED_FIELDS}
-    leftovers: Dict[str, Any] = {}
-
-    for key, value in payload.items():
-        matched = False
-        for section, expected in RECOGNISED_FIELDS.items():
-            if key in expected:
-                sections[section][key] = value
-                matched = True
-                break
-        if not matched:
-            leftovers[key] = value
-
-    return sections, leftovers
 
 
 class Coordinator:
@@ -79,6 +34,7 @@ class Coordinator:
         media_agent: MediaAgent,
         webhook: WebhookNotifier,
         telemetry: EventLog,
+        router: FieldRouter,
     ) -> None:
         self.agents: Dict[str, Agent] = {
             "identity": identity_agent,
@@ -89,25 +45,34 @@ class Coordinator:
         }
         self.webhook = webhook
         self.telemetry = telemetry
+        self.router = router
 
     def descriptors(self) -> Iterable[Dict[str, Any]]:
         for name, agent in self.agents.items():
             yield agent.descriptor().model_dump()
 
-    async def handle(self, payload: RawEstablishmentPayload) -> Tuple[List[RoutedFragment], Dict[str, Any]]:
+    async def handle(self, payload: RawEstablishmentPayload) -> tuple[List[RoutedFragment], Dict[str, Any]]:
         coordinator_id = str(uuid.uuid4())
         payload_dict = payload.model_dump(by_alias=True)
-        sections, leftovers = partition_payload({**payload_dict, **payload.data})
+        combined_payload = {**payload_dict, **payload.data}
+        decision: FieldRoutingDecision = await self.router.route(
+            payload=combined_payload,
+            agent_descriptors=[agent.descriptor() for agent in self.agents.values()],
+        )
         context = AgentContext(coordinator_id=coordinator_id, source_payload=payload_dict)
         fragments: List[RoutedFragment] = []
 
         self.telemetry.record(
             "coordinator.received",
-            {"coordinator_id": coordinator_id, "payload": payload_dict, "sections": sections, "leftovers": leftovers},
+            {
+                "coordinator_id": coordinator_id,
+                "payload": payload_dict,
+                "decision": decision.model_dump(),
+            },
         )
 
         for name, agent in self.agents.items():
-            section_payload = sections.get(name, {})
+            section_payload = dict(decision.sections.get(name, {}))
             if not section_payload:
                 continue
 
@@ -135,6 +100,7 @@ class Coordinator:
                     {"coordinator_id": coordinator_id, "payload": section_payload, "error": str(exc)},
                 )
 
+        leftovers = decision.leftovers
         if leftovers:
             await self.webhook.notify({
                 "coordinator_id": coordinator_id,
@@ -145,4 +111,4 @@ class Coordinator:
         return fragments, leftovers
 
 
-__all__ = ["Coordinator", "partition_payload"]
+__all__ = ["Coordinator"]

@@ -6,6 +6,7 @@ import abc
 from typing import Any, Dict, Iterable
 
 from ..schemas import AgentContext, AgentDescriptor
+from ..ai import LLMClient
 
 
 class Agent(abc.ABC):
@@ -29,4 +30,12 @@ class Agent(abc.ABC):
         )
 
 
-__all__ = ["Agent"]
+class AIEnabledAgent(Agent):
+    """Agent variant enriched with an LLM client."""
+
+    def __init__(self, llm: LLMClient) -> None:
+        super().__init__()
+        self.llm = llm
+
+
+__all__ = ["Agent", "AIEnabledAgent"]

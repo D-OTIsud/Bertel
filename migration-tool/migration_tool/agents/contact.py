@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from ..schemas import AgentContext
+from ..ai import LLMClient
+from ..schemas import AgentContext, ContactChannelRecord, ContactTransformation
 from ..supabase_client import SupabaseService
 from ..telemetry import EventLog
-from .base import Agent
+from .base import AIEnabledAgent
 
 
-class ContactAgent(Agent):
+class ContactAgent(AIEnabledAgent):
     name = "contact"
     description = "Formats contact information (phone, mail, website, social links)."
 
-    def __init__(self, supabase: SupabaseService, telemetry: EventLog) -> None:
-        super().__init__()
+    def __init__(self, supabase: SupabaseService, telemetry: EventLog, llm: LLMClient) -> None:
+        super().__init__(llm)
         self.supabase = supabase
         self.telemetry = telemetry
         self.expected_fields = [
@@ -27,23 +28,36 @@ class ContactAgent(Agent):
         ]
 
     async def handle(self, payload: Dict[str, Any], context: AgentContext) -> Dict[str, Any]:
-        socials = payload.get("socials", {})
-        data = {
-            "object_id": payload.get("establishment_id"),
-            "phone": payload.get("phone"),
-            "email": payload.get("email"),
-            "website": payload.get("website"),
-            "booking_url": payload.get("booking_url"),
-            "facebook": socials.get("facebook"),
-            "instagram": socials.get("instagram"),
-            "twitter": socials.get("twitter"),
-        }
+        transformation = await self.llm.transform_fragment(
+            agent_name=self.name,
+            payload=payload,
+            response_model=ContactTransformation,
+        )
+        channels: List[ContactChannelRecord] = transformation.channels
         self.telemetry.record(
             "agent.contact.transform",
-            {"context": context.model_dump(), "payload": payload, "data": data},
+            {
+                "context": context.model_dump(),
+                "payload": payload,
+                "channels": [channel.model_dump() for channel in channels],
+            },
         )
-        response = await self.supabase.upsert("object_contact", data, on_conflict="object_id")
-        return {"status": "ok", "operation": "upsert", "table": "object_contact", "response": response}
+        responses = []
+        for channel in channels:
+            if not channel.value:
+                continue
+            kind_id = await self.supabase.lookup("ref_code_contact_kind", code=channel.kind_code)
+            role_id = None
+            if channel.role_code:
+                role_id = await self.supabase.lookup("ref_contact_role", code=channel.role_code)
+            data = channel.to_supabase(kind_id=kind_id, role_id=role_id)
+            responses.append(await self.supabase.upsert("contact_channel", data))
+        return {
+            "status": "ok",
+            "operation": "upsert",
+            "table": "contact_channel",
+            "responses": responses,
+        }
 
 
 __all__ = ["ContactAgent"]

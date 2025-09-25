@@ -79,7 +79,7 @@ async def test_provider_agent_ai_transformation() -> None:
     
     # Check first provider
     provider1 = transformation.providers[0]
-    assert provider1.provider_id == "AdJe0544bj"
+    assert provider1.provider_id is None
     assert provider1.last_name == "Adenor"
     assert provider1.first_name == "Jean-Luc"
     assert provider1.email == "loc.amarysreunion@orange.fr"
@@ -88,15 +88,17 @@ async def test_provider_agent_ai_transformation() -> None:
     assert provider1.address1 == "Chemin de la Concession les Bas"
     assert provider1.postcode == "97418"
     assert provider1.city == "La Plaine des Cafres"
-    
+    assert provider1.legacy_ids == ["AdJe0544bj"]
+
     # Check second provider
     provider2 = transformation.providers[1]
-    assert provider2.provider_id == "AdMa0544yT"
+    assert provider2.provider_id is None
     assert provider2.last_name == "Adenor"
     assert provider2.first_name == "Maryse"
     assert provider2.function == "Gérant"
     assert provider2.date_of_birth == "01/04/1972"
     assert provider2.revenue == "Principale"
+    assert provider2.legacy_ids == ["AdMa0544yT"]
 
     # Test agent handle method
     result = await agent.handle(payload, context)
@@ -190,13 +192,14 @@ def test_rule_based_llm_providers_transformation() -> None:
     
     assert len(transformation.providers) == 1
     provider = transformation.providers[0]
-    assert provider.provider_id == "test_provider"
+    assert provider.provider_id is None
     assert provider.last_name == "Dupont"
     assert provider.first_name == "Jean"
     assert provider.email == "jean.dupont@test.com"
     assert provider.phone == "0123456789"
     assert provider.function == "Manager"
     assert provider.newsletter is True
+    assert provider.legacy_ids == ["test_provider"]
 
 
 def test_rule_based_llm_schedule_transformation() -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import json
 import re
+import warnings
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from pydantic import BaseModel
@@ -674,8 +675,38 @@ class RuleBasedLLM(LLMClient):
             postcode_raw = provider_data.get("Code Postal") or provider_data.get("postcode")
             postcode_value = str(postcode_raw) if postcode_raw not in (None, "") else None
 
+            provider_identifier_candidates = [
+                provider_data.get("provider_id"),
+                provider_data.get("providerId"),
+                provider_data.get("id"),
+                provider_data.get("provider_uuid"),
+            ]
+            provider_identifier = next(
+                (
+                    str(candidate)
+                    for candidate in provider_identifier_candidates
+                    if candidate not in (None, "")
+                ),
+                None,
+            )
+
+            legacy_identifiers: List[str] = []
+            for key in ("Presta ID", "Temp_form_ID"):
+                value = provider_data.get(key)
+                if value:
+                    legacy_identifiers.append(str(value))
+            existing_legacy = provider_data.get("legacy_ids")
+            if isinstance(existing_legacy, (list, tuple)):
+                for item in existing_legacy:
+                    if item:
+                        legacy_identifiers.append(str(item))
+            elif isinstance(existing_legacy, str) and existing_legacy.strip():
+                legacy_identifiers.append(existing_legacy.strip())
+
+            legacy_identifiers = list(dict.fromkeys(legacy_identifiers))
+
             provider_record = ProviderRecord(
-                provider_id=provider_data.get("Presta ID") or provider_data.get("provider_id"),
+                provider_id=provider_identifier,
                 last_name=provider_data.get("Nom") or provider_data.get("last_name") or "",
                 first_name=provider_data.get("Prénom") or provider_data.get("first_name") or "",
                 gender=provider_data.get("Genre") or provider_data.get("gender"),
@@ -689,9 +720,9 @@ class RuleBasedLLM(LLMClient):
                 lieu_dit=provider_data.get("Lieux-dits") or provider_data.get("lieu_dit"),
                 date_of_birth=provider_data.get("DOB") or provider_data.get("date_of_birth"),
                 revenue=provider_data.get("Revenus") or provider_data.get("revenue"),
-                legacy_ids=[provider_data.get("Presta ID")] if provider_data.get("Presta ID") else [],
+                legacy_ids=legacy_identifiers,
             )
-            
+
             if provider_record.last_name and provider_record.first_name:
                 providers.append(provider_record)
                 if establishment_id and provider_record.provider_id:
@@ -880,7 +911,17 @@ def build_llm(
     if provider == "openai":  # pragma: no cover - requires network access
         if not api_key:
             raise RuntimeError("OpenAI provider selected but no API key was provided.")
-        return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+        try:
+            return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "openai" not in message.lower():
+                raise
+            warnings.warn(
+                "OpenAI provider unavailable (missing dependency); falling back to rule-based heuristics.",
+                RuntimeWarning,
+            )
+            return RuleBasedLLM()
 
     if provider in {"auto", "default"}:
         if api_key:

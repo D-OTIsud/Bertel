@@ -1,3 +1,5 @@
+import types
+
 import pytest
 
 from migration_tool.ai import RuleBasedLLM
@@ -50,6 +52,55 @@ async def test_provider_agent_processes_nested_payload() -> None:
     assert result["status"] == "ok"
     assert result["table"] == "object_provider"
     assert result["linked_providers"] == 2
+
+    jean_identifier = context.provider_registry.get("jean@example.com")
+    maryse_identifier = context.provider_registry.get("maryse@example.com")
+
+    assert jean_identifier is not None
+    assert maryse_identifier is not None
+    assert jean_identifier == context.provider_registry.get("AdJe0544bj")
+    assert maryse_identifier == context.provider_registry.get("AdMa0544yT")
+
+
+@pytest.mark.anyio
+async def test_provider_agent_uses_returned_identifier() -> None:
+    telemetry = EventLog(retention=10)
+    supabase = SupabaseService(url=None, key=None, telemetry=telemetry)
+
+    async def fake_upsert(self, table, data, on_conflict=None):
+        if table == "provider":
+            assert "id" not in data
+            return {"data": [{"id": "prov-123", "email": data.get("email")}]}  # type: ignore[return-value]
+        if table == "object_provider":
+            assert data.get("provider_id") == "prov-123"
+            return {"data": [data]}  # type: ignore[return-value]
+        return {"data": []}  # type: ignore[return-value]
+
+    supabase.upsert = types.MethodType(fake_upsert, supabase)  # type: ignore[assignment]
+
+    llm = RuleBasedLLM()
+    agent = ProviderAgent(supabase, telemetry, llm)
+
+    payload = {
+        "establishment_id": "obj-1",
+        "providers": [
+            {
+                "Nom": "Doe",
+                "Prénom": "Jane",
+                "Email": "jane@example.com",
+                "Numéro de telephone": "0123456789",
+                "Presta ID": "legacy-123",
+            }
+        ],
+    }
+    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="obj-1")
+
+    result = await agent.handle(payload, context)
+
+    assert result["status"] == "ok"
+    assert result["created_providers"] == ["prov-123"]
+    assert context.provider_registry["jane@example.com"] == "prov-123"
+    assert context.provider_registry["legacy-123"] == "prov-123"
 
 
 @pytest.mark.anyio

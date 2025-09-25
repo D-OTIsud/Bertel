@@ -20,6 +20,8 @@ from .contact import ContactAgent
 from .identity import IdentityAgent
 from .location import LocationAgent
 from .media import MediaAgent
+from .providers import ProviderAgent
+from .schedule import ScheduleAgent
 
 
 class Coordinator:
@@ -32,6 +34,8 @@ class Coordinator:
         contact_agent: ContactAgent,
         amenities_agent: AmenitiesAgent,
         media_agent: MediaAgent,
+        provider_agent: ProviderAgent,
+        schedule_agent: ScheduleAgent,
         webhook: WebhookNotifier,
         telemetry: EventLog,
         router: FieldRouter,
@@ -42,6 +46,8 @@ class Coordinator:
             "contact": contact_agent,
             "amenities": amenities_agent,
             "media": media_agent,
+            "providers": provider_agent,
+            "schedule": schedule_agent,
         }
         self.webhook = webhook
         self.telemetry = telemetry

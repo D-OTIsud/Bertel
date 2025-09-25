@@ -229,6 +229,83 @@ class MediaTransformation(BaseModel):
     media: List[MediaRecord]
 
 
+class ProviderRecord(BaseModel):
+    """Structured representation of a provider (prestataire)."""
+    
+    provider_id: Optional[str] = None
+    last_name: str
+    first_name: str
+    gender: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    function: Optional[str] = None
+    newsletter: bool = False
+    address1: Optional[str] = None
+    postcode: Optional[str] = None
+    city: Optional[str] = None
+    lieu_dit: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    revenue: Optional[str] = None
+    legacy_ids: List[str] = Field(default_factory=list)
+    
+    def to_supabase(self) -> Dict[str, Any]:
+        return {
+            "id": self.provider_id,
+            "last_name": self.last_name,
+            "first_name": self.first_name,
+            "gender": self.gender,
+            "email": self.email,
+            "phone": self.phone,
+            "function": self.function,
+            "newsletter": self.newsletter,
+            "address1": self.address1,
+            "postcode": self.postcode,
+            "city": self.city,
+            "lieu_dit": self.lieu_dit,
+            "date_of_birth": self.date_of_birth,
+            "revenue": self.revenue,
+            "legacy_ids": self.legacy_ids,
+        }
+
+
+class ProviderTransformation(BaseModel):
+    """Transformation result for provider data."""
+    
+    providers: List[ProviderRecord]
+    object_provider_links: List[Dict[str, str]] = Field(default_factory=list)  # [{"object_id": "...", "provider_id": "..."}]
+
+
+class ScheduleRecord(BaseModel):
+    """Structured representation of opening hours."""
+    
+    object_id: Optional[str] = None
+    days: List[str] = Field(default_factory=list)  # ["monday", "tuesday", ...]
+    am_start: Optional[str] = None  # "09:30"
+    am_finish: Optional[str] = None  # "15:00"
+    pm_start: Optional[str] = None
+    pm_finish: Optional[str] = None
+    reservation_required: bool = False
+    schedule_type: str = "regular"  # "regular", "seasonal", "exception"
+    
+    def to_supabase(self) -> Dict[str, Any]:
+        return {
+            "object_id": self.object_id,
+            "days": self.days,
+            "am_start": self.am_start,
+            "am_finish": self.am_finish,
+            "pm_start": self.pm_start,
+            "pm_finish": self.pm_finish,
+            "reservation_required": self.reservation_required,
+            "schedule_type": self.schedule_type,
+        }
+
+
+class ScheduleTransformation(BaseModel):
+    """Transformation result for schedule data."""
+    
+    schedules: List[ScheduleRecord]
+
+
 __all__ = [
     "RawEstablishmentPayload",
     "RoutedFragment",
@@ -246,4 +323,8 @@ __all__ = [
     "AmenityTransformation",
     "MediaRecord",
     "MediaTransformation",
+    "ProviderRecord",
+    "ProviderTransformation",
+    "ScheduleRecord",
+    "ScheduleTransformation",
 ]

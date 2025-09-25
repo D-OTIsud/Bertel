@@ -116,6 +116,13 @@ class Coordinator:
                     payload,
                     context.object_id,
                 )
+                self.telemetry.record(
+                    "coordinator.agent_start.identity",
+                    {
+                        "coordinator_id": coordinator_id,
+                        "payload": section_payload,
+                    },
+                )
                 try:
                     result = await identity_agent.handle(section_payload, context)
                     context.object_id = result.get("object_id") or context.object_id
@@ -156,6 +163,14 @@ class Coordinator:
                 section_payload,
                 payload,
                 context.object_id,
+            )
+
+            self.telemetry.record(
+                f"coordinator.agent_start.{name}",
+                {
+                    "coordinator_id": coordinator_id,
+                    "payload": section_payload,
+                },
             )
 
             try:

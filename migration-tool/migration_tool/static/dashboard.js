@@ -36,22 +36,52 @@ function renderEvents(container, events) {
   });
 }
 
-async function refresh() {
-  try {
-    const [agents, events] = await Promise.all([
-      fetchJSON("/agents"),
-      fetchJSON("/events"),
-    ]);
+const eventState = [];
 
-    renderAgents(document.getElementById("agents"), agents.agents);
-    renderEvents(document.getElementById("events"), events.events);
-  } catch (error) {
-    console.error(error);
+function maintainBuffer(event) {
+  eventState.unshift(event);
+  if (eventState.length > 400) {
+    eventState.length = 400;
   }
+  renderEvents(document.getElementById("events"), eventState);
 }
 
-refresh();
-setInterval(refresh, 4000);
+function connectEventStream() {
+  const source = new EventSource("/events/stream");
+
+  source.onmessage = (evt) => {
+    try {
+      const payload = JSON.parse(evt.data);
+      if (payload.type === "snapshot") {
+        eventState.length = 0;
+        if (Array.isArray(payload.events)) {
+          eventState.push(...payload.events);
+        }
+        renderEvents(document.getElementById("events"), eventState);
+      } else if (payload.type === "event" && payload.event) {
+        maintainBuffer(payload.event);
+      }
+    } catch (error) {
+      console.error("Failed to process event stream message", error);
+    }
+  };
+
+  source.onerror = () => {
+    console.warn("Event stream disconnected. Retrying in 2s...");
+    source.close();
+    setTimeout(connectEventStream, 2000);
+  };
+}
+
+async function initialiseDashboard() {
+  try {
+    const agents = await fetchJSON("/agents");
+    renderAgents(document.getElementById("agents"), agents.agents);
+  } catch (error) {
+    console.error("Failed to load agents", error);
+  }
+  connectEventStream();
+}
 
 // LLM connectivity test
 async function testLLM() {
@@ -67,6 +97,7 @@ async function testLLM() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initialiseDashboard();
   const btn = document.getElementById("llm-test-btn");
   if (btn) btn.addEventListener("click", testLLM);
 });

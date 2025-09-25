@@ -7,8 +7,8 @@ The tool exposes an HTTP API as well as a monitoring dashboard that lets operato
 ## Features
 
 - **FastAPI ingestion endpoint** receiving raw JSON payloads.
-- **Coordinator agent** that partitions payloads into semantic sections (identity, localisation, contact, amenities, schedule, media and legacy identifiers).
-- **Specialised agents** that transform their respective section and write to Supabase/PostgreSQL using the existing unified schema.
+- **LLM-aware coordinator** that analyses each incoming JSON document and dynamically assigns fields to the right specialised agent (identity, localisation, contact, amenities, media, etc.).
+- **AI-enabled specialised agents** that reshape their respective fragment with the help of the configured language model (or the built-in rule-based fallback) before writing to Supabase/PostgreSQL using the DLL schema published in `Base de donnée DLL et API/`.
 - **In-memory telemetry log** that records every routing step and feeds the dashboard UI.
 - **Webhook notifications** whenever a fragment cannot be routed to a specialised agent.
 - **Dashboard UI** (available at `/`) with live updates of processed payloads, emitted records and potential failures.
@@ -29,7 +29,10 @@ Create a `.env` file (or export the variables) with the credentials of your Supa
 MIGRATION_SUPABASE_URL=<https://your-project.supabase.co>
 MIGRATION_SUPABASE_SERVICE_KEY=<service_role_key>
 MIGRATION_WEBHOOK_URL=<https://your.webhook/endpoint>
-MIGRATION_DASHBOARD_RETENTION=200  # optional, number of events kept in memory
+MIGRATION_DASHBOARD_RETENTION=200          # optional, number of events kept in memory
+MIGRATION_AI_PROVIDER=auto                 # "auto" (default), "rule" or "openai"
+MIGRATION_AI_MODEL=gpt-4o-mini             # model name when using OpenAI
+MIGRATION_OPENAI_API_KEY=sk-...            # required if MIGRATION_AI_PROVIDER=openai
 ```
 
 ### 3. Launch the API server
@@ -79,12 +82,13 @@ You can run the ingestion stack through Docker without installing any local Pyth
 migration_tool/
 ├── agents/
 │   ├── base.py              # shared agent protocol
-│   ├── coordinator.py       # coordinator + partition logic
+│   ├── coordinator.py       # coordinator + semantic routing
 │   ├── identity.py          # writes canonical establishment entries
 │   ├── location.py          # handles addresses & geospatial data
 │   ├── contact.py           # handles phone/mail/web & access info
 │   ├── amenities.py         # handles equipment/services tags
 │   └── media.py             # handles media galleries
+├── ai.py                    # LLM abstractions, rule-based fallback & router
 ├── config.py                # settings sourced from env vars
 ├── main.py                  # FastAPI application factory
 ├── schemas.py               # pydantic models for I/O & context

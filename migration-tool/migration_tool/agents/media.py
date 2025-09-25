@@ -4,43 +4,55 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..schemas import AgentContext
+from ..ai import LLMClient
+from ..schemas import AgentContext, MediaRecord, MediaTransformation
 from ..supabase_client import SupabaseService
 from ..telemetry import EventLog
-from .base import Agent
+from .base import AIEnabledAgent
 
 
-class MediaAgent(Agent):
+class MediaAgent(AIEnabledAgent):
     name = "media"
     description = "Normalises media galleries and associated metadata."
 
-    def __init__(self, supabase: SupabaseService, telemetry: EventLog) -> None:
-        super().__init__()
+    def __init__(self, supabase: SupabaseService, telemetry: EventLog, llm: LLMClient) -> None:
+        super().__init__(llm)
         self.supabase = supabase
         self.telemetry = telemetry
         self.expected_fields = ["media", "photos", "videos"]
 
     async def handle(self, payload: Dict[str, Any], context: AgentContext) -> Dict[str, Any]:
-        media_items: List[Dict[str, Any]] = []
-        for key in ("media", "photos", "videos"):
-            value = payload.get(key)
-            if isinstance(value, list):
-                for item in value:
-                    if isinstance(item, dict):
-                        media_items.append(item)
-                    elif isinstance(item, str):
-                        media_items.append({"url": item})
-
-        data = {
-            "object_id": payload.get("establishment_id"),
-            "items": media_items,
-        }
+        transformation = await self.llm.transform_fragment(
+            agent_name=self.name,
+            payload=payload,
+            response_model=MediaTransformation,
+        )
+        media: List[MediaRecord] = transformation.media
         self.telemetry.record(
             "agent.media.transform",
-            {"context": context.model_dump(), "payload": payload, "items": media_items},
+            {
+                "context": context.model_dump(),
+                "payload": payload,
+                "media": [item.model_dump() for item in media],
+            },
         )
-        response = await self.supabase.upsert("object_media", data, on_conflict="object_id")
-        return {"status": "ok", "operation": "upsert", "table": "object_media", "response": response}
+        responses = []
+        for item in media:
+            if not item.url:
+                continue
+            media_type_id = await self.supabase.lookup("ref_code_media_type", code=item.media_type_code)
+            responses.append(
+                await self.supabase.upsert(
+                    "media",
+                    item.to_supabase(media_type_id=media_type_id),
+                )
+            )
+        return {
+            "status": "ok",
+            "operation": "upsert",
+            "table": "media",
+            "responses": responses,
+        }
 
 
 __all__ = ["MediaAgent"]

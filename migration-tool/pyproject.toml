@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.2.0"]
+ai = ["openai>=1.30.0"]
 
 [project.scripts]
 bertel-migration-api = "migration_tool.main:run"

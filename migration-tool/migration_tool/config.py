@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     webhook_url: Optional[str] = None
     dashboard_retention: int = 200
 
+    ai_provider: str = "auto"
+    ai_model: str = "gpt-4o-mini"
+    ai_temperature: float = 0.0
+    openai_api_key: Optional[str] = None
+
     model_config = SettingsConfigDict(
         env_prefix="MIGRATION_",
         env_file=".env",

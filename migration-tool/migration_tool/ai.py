@@ -8,7 +8,7 @@ import re
 import warnings
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import unicodedata
 
@@ -809,6 +809,7 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
         self.model = model
         self.temperature = temperature
         self.name = "openai"
+        self._fallback = RuleBasedLLM()
 
     async def classify_fields(
         self,
@@ -828,11 +829,21 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
             f"{agents_description}.\nPayload keys: "
             f"{json.dumps(payload, ensure_ascii=False)}"
         )
-        return await self._structured_response(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            response_model=FieldRoutingDecision,
-        )
+        try:
+            return await self._structured_response(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=FieldRoutingDecision,
+            )
+        except (ValidationError, RuntimeError) as exc:
+            warnings.warn(
+                f"OpenAI classify_fields failed ({exc}); falling back to rule-based heuristics.",
+                RuntimeWarning,
+            )
+            return await self._fallback.classify_fields(
+                payload=payload,
+                agent_descriptors=agent_descriptors,
+            )
 
     async def transform_fragment(
         self,
@@ -849,11 +860,22 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
             f"Agent: {agent_name}. Payload: {json.dumps(payload, ensure_ascii=False)}."
             " Return only JSON that matches the expected schema."
         )
-        return await self._structured_response(
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            response_model=response_model,
-        )
+        try:
+            return await self._structured_response(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=response_model,
+            )
+        except (ValidationError, RuntimeError) as exc:
+            warnings.warn(
+                f"OpenAI transform_fragment failed for agent '{agent_name}' ({exc}); using rule-based fallback.",
+                RuntimeWarning,
+            )
+            return await self._fallback.transform_fragment(
+                agent_name=agent_name,
+                payload=payload,
+                response_model=response_model,
+            )
 
     async def _structured_response(
         self,

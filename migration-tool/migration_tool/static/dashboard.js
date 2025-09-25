@@ -52,3 +52,21 @@ async function refresh() {
 
 refresh();
 setInterval(refresh, 4000);
+
+// LLM connectivity test
+async function testLLM() {
+  const out = document.getElementById("llm-test-output");
+  out.textContent = "Testing...";
+  try {
+    const res = await fetch("/llm-test", { method: "POST" });
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = `Error: ${err}`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("llm-test-btn");
+  if (btn) btn.addEventListener("click", testLLM);
+});

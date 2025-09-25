@@ -12,6 +12,9 @@ from ..telemetry import EventLog
 from .base import AIEnabledAgent
 
 
+OBJECT_ID_PATTERN = re.compile(r"^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$")
+
+
 class IdentityAgent(AIEnabledAgent):
     name = "identity"
     description = "Creates or updates the canonical establishment entry."
@@ -35,6 +38,18 @@ class IdentityAgent(AIEnabledAgent):
             payload=payload,
             response_model=IdentityRecord,
         )
+
+        if record.object_id and not OBJECT_ID_PATTERN.match(record.object_id):
+            self.telemetry.record(
+                "agent.identity.object_id.reset",
+                {
+                    "context": context.model_dump(),
+                    "provided_id": record.object_id,
+                },
+            )
+            record.object_id = None
+            context.object_id = None
+
         data = record.to_supabase()
 
         matched_existing = None

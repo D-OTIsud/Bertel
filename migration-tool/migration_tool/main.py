@@ -13,12 +13,16 @@ from fastapi.templating import Jinja2Templates
 from .agents.amenities import AmenitiesAgent
 from .agents.contact import ContactAgent
 from .agents.coordinator import Coordinator
+from .agents.environment import EnvironmentAgent
 from .agents.identity import IdentityAgent
+from .agents.languages import LanguageAgent
 from .agents.location import LocationAgent
 from .agents.media import MediaAgent
+from .agents.payments import PaymentMethodAgent
+from .agents.pet_policy import PetPolicyAgent
 from .agents.providers import ProviderAgent
 from .agents.schedule import ScheduleAgent
-from .ai import FieldRouter, build_llm
+from .ai import FieldRouter, RuleBasedLLM, build_llm
 from .config import Settings, get_settings
 from .schemas import IngestionResponse, RawEstablishmentPayload
 from .supabase_client import SupabaseService
@@ -32,12 +36,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     telemetry = EventLog(retention=settings.dashboard_retention)
     supabase = SupabaseService(settings.supabase_url, settings.supabase_service_key, telemetry)
     webhook = WebhookNotifier(settings.webhook_url, telemetry)
-    llm = build_llm(
-        provider=settings.ai_provider,
-        api_key=settings.openai_api_key,
-        model=settings.ai_model,
-        temperature=settings.ai_temperature,
-    )
+    try:
+        llm = build_llm(
+            provider=settings.ai_provider,
+            api_key=settings.openai_api_key,
+            model=settings.ai_model,
+            temperature=settings.ai_temperature,
+        )
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        telemetry.record("ai.initialisation_failed", {"provider": settings.ai_provider, "error": str(exc)})
+        llm = RuleBasedLLM()
     telemetry.record("ai.initialised", {"provider": getattr(llm, "name", "unknown")})
     router = FieldRouter(llm)
 
@@ -46,6 +54,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         location_agent=LocationAgent(supabase, telemetry, llm),
         contact_agent=ContactAgent(supabase, telemetry, llm),
         amenities_agent=AmenitiesAgent(supabase, telemetry, llm),
+        language_agent=LanguageAgent(supabase, telemetry, llm),
+        payment_agent=PaymentMethodAgent(supabase, telemetry, llm),
+        environment_agent=EnvironmentAgent(supabase, telemetry, llm),
+        pet_policy_agent=PetPolicyAgent(supabase, telemetry, llm),
         media_agent=MediaAgent(supabase, telemetry, llm),
         provider_agent=ProviderAgent(supabase, telemetry, llm),
         schedule_agent=ScheduleAgent(supabase, telemetry, llm),

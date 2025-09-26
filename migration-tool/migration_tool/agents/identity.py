@@ -37,6 +37,7 @@ class IdentityAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=IdentityRecord,
+            context=context.snapshot(),
         )
 
         if record.object_id and not OBJECT_ID_PATTERN.match(record.object_id):
@@ -79,6 +80,15 @@ class IdentityAgent(AIEnabledAgent):
         if object_id:
             record.object_id = object_id
             context.object_id = object_id
+        else:
+            self.telemetry.record(
+                "agent.identity.missing_object_id",
+                {
+                    "context": context.model_dump(),
+                    "payload": payload,
+                    "response": response,
+                },
+            )
 
         organization_id = context.source_organization_id or self._extract_organization_id(
             context.source_payload
@@ -102,6 +112,17 @@ class IdentityAgent(AIEnabledAgent):
                 },
             )
 
+        context.share(
+            self.name,
+            {
+                "record": record.model_dump(),
+                "object_id": context.object_id,
+                "duplicate_of": context.duplicate_of,
+                "matched_existing": matched_existing,
+            },
+            overwrite=True,
+        )
+
         return {
             "status": "ok",
             "operation": "upsert",
@@ -120,6 +141,8 @@ class IdentityAgent(AIEnabledAgent):
             first = data[0]
             if isinstance(first, dict) and first.get("id"):
                 return str(first["id"])
+        if isinstance(data, dict) and data.get("id"):
+            return str(data["id"])
         if response.get("id"):
             return str(response["id"])
         return None

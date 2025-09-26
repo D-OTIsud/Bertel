@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from ..ai import LLMClient
 from ..schemas import AgentContext, PaymentMethodTransformation
@@ -26,20 +26,67 @@ class PaymentMethodAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=PaymentMethodTransformation,
+            context=context.snapshot(),
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for record in transformation.payment_methods:
             payment_code = (record.payment_code or "").strip()
             if not payment_code and record.payment_name:
                 payment_code = self.supabase.normalize_code(record.payment_name)
             if not payment_code:
+                skipped.append(
+                    {
+                        "payment": record.model_dump(),
+                        "reason": "missing_payment_code",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.payments.skip_missing_code",
+                    {
+                        "context": context.model_dump(),
+                        "payment": record.model_dump(),
+                    },
+                )
                 continue
 
-            method_id = await self.supabase.ensure_code(
+            record.object_id = record.object_id or context.object_id
+            if not record.object_id:
+                skipped.append(
+                    {
+                        "payment": record.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.payments.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "payment": record.model_dump(),
+                    },
+                )
+                continue
+
+            method_id = await context.ensure_reference_code(
                 domain="payment_method",
                 code=payment_code,
                 name=record.payment_name or payment_code.replace("_", " ").title(),
             )
+            if not method_id:
+                skipped.append(
+                    {
+                        "payment": record.model_dump(),
+                        "reason": "unresolved_payment_method",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.payments.skip_unresolved_method",
+                    {
+                        "context": context.model_dump(),
+                        "payment": record.model_dump(),
+                    },
+                )
+                continue
             data = record.to_supabase(payment_method_id=method_id)
             responses.append(
                 await self.supabase.upsert(
@@ -58,11 +105,24 @@ class PaymentMethodAgent(AIEnabledAgent):
             },
         )
 
+        context.share(
+            self.name,
+            {
+                "payment_methods": [
+                    record.model_dump() for record in transformation.payment_methods
+                ],
+                "responses": responses,
+                "skipped": skipped,
+            },
+            overwrite=True,
+        )
+
         return {
             "status": "ok",
             "operation": "upsert",
             "table": "object_payment_method",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

@@ -6,6 +6,7 @@ import abc
 import json
 import re
 import warnings
+from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from pydantic import BaseModel, ValidationError
@@ -45,6 +46,92 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
+class PromptLibrary:
+    """Central registry storing adjustable prompts and error telemetry."""
+
+    DEFAULT_ROUTER_PROMPT = (
+        "You are the field routing orchestrator for a Supabase-based migration pipeline."
+        " Map each incoming key to the dedicated agent responsible for that part of the schema"
+        " so that data lands in the correct table instead of an unstructured blob."
+        " Honour the expected_fields for every agent, preserve canonical identity information,"
+        " and place only unknown or out-of-scope values in leftovers."
+        " Return JSON that strictly conforms to the response schema."
+    )
+
+    DEFAULT_AGENT_PROMPT = (
+        "You are an ingestion specialist collaborating with other agents to populate the Supabase DLL schema."
+        " Honour relationships (object, contact, location, providers, amenities, schedule) and only emit attributes that"
+        " belong to your table. If another agent shared identifiers in the context, reuse them instead of inventing new ones."
+    )
+
+    def __init__(
+        self,
+        *,
+        router_system_prompt: Optional[str] = None,
+        agent_system_prompt: Optional[str] = None,
+    ) -> None:
+        self._router_system_prompt = router_system_prompt or self.DEFAULT_ROUTER_PROMPT
+        self._agent_prompts: Dict[str, str] = {}
+        self._agent_guidance: Dict[str, str] = {}
+        self._default_agent_prompt = agent_system_prompt or self.DEFAULT_AGENT_PROMPT
+        self._error_stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"count": 0, "messages": []})
+
+    def router_prompt(self) -> str:
+        return self._router_system_prompt
+
+    def set_router_prompt(self, prompt: str) -> None:
+        self._router_system_prompt = prompt.strip() if prompt else self.DEFAULT_ROUTER_PROMPT
+
+    def set_agent_prompt(self, agent_name: str, prompt: str) -> None:
+        if agent_name:
+            self._agent_prompts[agent_name] = prompt.strip()
+
+    def agent_prompt(self, agent_name: str) -> str:
+        base = self._agent_prompts.get(agent_name) or self._default_agent_prompt
+        guidance = self._agent_guidance.get(agent_name)
+        if guidance:
+            return f"{base} {guidance}".strip()
+        return base
+
+    def set_guidance(self, agent_name: str, guidance: Optional[str]) -> None:
+        if not agent_name:
+            return
+        if guidance and guidance.strip():
+            self._agent_guidance[agent_name] = guidance.strip()
+        else:
+            self._agent_guidance.pop(agent_name, None)
+
+    def record_error(self, agent_name: str, error: Optional[str]) -> None:
+        if not agent_name:
+            return
+        stats = self._error_stats[agent_name]
+        stats["count"] += 1
+        if error:
+            trimmed = error.strip()
+            if trimmed and trimmed not in stats["messages"]:
+                stats["messages"].append(trimmed)
+
+    def error_summary(self, agent_name: str) -> Dict[str, Any]:
+        stats = self._error_stats.get(agent_name)
+        if not stats:
+            return {"count": 0, "messages": []}
+        return {"count": stats["count"], "messages": list(stats["messages"])}
+
+    def reset_errors(self, agent_name: str) -> None:
+        self._error_stats.pop(agent_name, None)
+
+    def snapshot(self) -> Dict[str, Any]:
+        return {
+            "router_prompt": self._router_system_prompt,
+            "agent_prompts": dict(self._agent_prompts),
+            "guidance": dict(self._agent_guidance),
+            "error_counters": {
+                name: {"count": stats["count"], "messages": list(stats["messages"])}
+                for name, stats in self._error_stats.items()
+            },
+        }
+
+
 class LLMClient(abc.ABC):
     """Abstract interface for semantic helpers."""
 
@@ -66,6 +153,7 @@ class LLMClient(abc.ABC):
         agent_name: str,
         payload: Dict[str, Any],
         response_model: type[BaseModel],
+        context: Optional[Dict[str, Any]] = None,
     ) -> BaseModel:
         """Return a structured representation for a fragment."""
 
@@ -74,6 +162,9 @@ class RuleBasedLLM(LLMClient):
     """Heuristic backed fallback when no external model is configured."""
 
     name = "rule-based"
+
+    def __init__(self, prompts: Optional[PromptLibrary] = None) -> None:
+        self.prompts = prompts or PromptLibrary()
 
     FIELD_KEYWORDS: Dict[str, Iterable[str]] = {
         "identity": (
@@ -256,6 +347,7 @@ class RuleBasedLLM(LLMClient):
         agent_name: str,
         payload: Dict[str, Any],
         response_model: type[BaseModel],
+        context: Optional[Dict[str, Any]] = None,
     ) -> BaseModel:
         if agent_name == "identity":
             data = self._transform_identity(payload)
@@ -802,14 +894,22 @@ class RuleBasedLLM(LLMClient):
 class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
     """LLM client backed by OpenAI Responses API."""
 
-    def __init__(self, *, api_key: str, model: str, temperature: float = 0.0):
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        temperature: float = 0.0,
+        prompts: Optional[PromptLibrary] = None,
+    ):
         if AsyncOpenAI is None:
             raise RuntimeError("The 'openai' package is required for the OpenAI provider.")
         self._client = AsyncOpenAI(api_key=api_key)
         self.model = model
         self.temperature = temperature
         self.name = "openai"
-        self._fallback = RuleBasedLLM()
+        self.prompts = prompts or PromptLibrary()
+        self._fallback = RuleBasedLLM(prompts=self.prompts)
 
     async def classify_fields(
         self,
@@ -817,17 +917,22 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
         payload: Dict[str, Any],
         agent_descriptors: Sequence[AgentDescriptor],
     ) -> FieldRoutingDecision:
-        system_prompt = (
-            "You classify establishment payload keys into specialised agents that prepare data for the DLL schema."
-            " Output a JSON object strictly matching the provided schema."
-        )
-        agents_description = ", ".join(
-            f"{descriptor.name}: {descriptor.description}" for descriptor in agent_descriptors
-        )
+        system_prompt = self.prompts.router_prompt()
+        agents_description = [
+            {
+                "name": descriptor.name,
+                "description": descriptor.description,
+                "expected_fields": descriptor.expected_fields,
+            }
+            for descriptor in agent_descriptors
+        ]
         user_prompt = (
-            "Agents available: "
-            f"{agents_description}.\nPayload keys: "
-            f"{json.dumps(payload, ensure_ascii=False)}"
+            "Agent catalogue: "
+            f"{json.dumps(agents_description, ensure_ascii=False)}.\n"
+            "Payload to analyse: "
+            f"{json.dumps(payload, ensure_ascii=False)}.\n"
+            "Populate the 'sections' map with the keys each agent should receive and reserve 'leftovers'"
+            " exclusively for values that no agent can reasonably process."
         )
         try:
             return await self._structured_response(
@@ -851,14 +956,14 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
         agent_name: str,
         payload: Dict[str, Any],
         response_model: type[BaseModel],
+        context: Optional[Dict[str, Any]] = None,
     ) -> BaseModel:
-        system_prompt = (
-            "You are an ingestion agent that converts noisy establishment information into the Supabase DLL structure."
-            " Follow the schema strictly and avoid fabricating values."
-        )
+        system_prompt = self.prompts.agent_prompt(agent_name)
+        prompt_context = json.dumps(context or {}, ensure_ascii=False)
         user_prompt = (
-            f"Agent: {agent_name}. Payload: {json.dumps(payload, ensure_ascii=False)}."
-            " Return only JSON that matches the expected schema."
+            f"Agent: {agent_name}. Shared context: {prompt_context}."
+            f" Fragment to normalise: {json.dumps(payload, ensure_ascii=False)}."
+            " Produce JSON that matches the schema exactly, leaving absent fields null or empty without guessing."
         )
         try:
             return await self._structured_response(
@@ -875,6 +980,7 @@ class OpenAILLM(LLMClient):  # pragma: no cover - network dependency
                 agent_name=agent_name,
                 payload=payload,
                 response_model=response_model,
+                context=context,
             )
 
     async def _structured_response(
@@ -957,7 +1063,9 @@ def build_llm(
     api_key: Optional[str],
     model: str,
     temperature: float,
+    prompts: Optional[PromptLibrary] = None,
 ) -> LLMClient:
+    prompts = prompts or PromptLibrary()
     provider = provider.lower()
     if provider == "openai":  # pragma: no cover - requires network access
         if not api_key:
@@ -965,26 +1073,26 @@ def build_llm(
                 "OpenAI provider selected but no API key was provided; falling back to rule-based heuristics.",
                 RuntimeWarning,
             )
-            return RuleBasedLLM()
+            return RuleBasedLLM(prompts=prompts)
         try:
-            return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+            return OpenAILLM(api_key=api_key, model=model, temperature=temperature, prompts=prompts)
         except Exception:
             warnings.warn(
                 "OpenAI provider unavailable (missing dependency or client error); falling back to rule-based heuristics.",
                 RuntimeWarning,
             )
-            return RuleBasedLLM()
+            return RuleBasedLLM(prompts=prompts)
 
     if provider in {"auto", "default"}:
         if api_key:
             try:
-                return OpenAILLM(api_key=api_key, model=model, temperature=temperature)
+                return OpenAILLM(api_key=api_key, model=model, temperature=temperature, prompts=prompts)
             except Exception:  # pragma: no cover - fallback if OpenAI not available
                 pass
-        return RuleBasedLLM()
+        return RuleBasedLLM(prompts=prompts)
 
     if provider == "rule" or provider == "rule-based":
-        return RuleBasedLLM()
+        return RuleBasedLLM(prompts=prompts)
 
     raise ValueError(f"Unknown AI provider '{provider}'")
 
@@ -1020,6 +1128,7 @@ class FieldRouter:
 
 
 __all__ = [
+    "PromptLibrary",
     "LLMClient",
     "RuleBasedLLM",
     "OpenAILLM",

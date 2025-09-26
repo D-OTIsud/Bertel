@@ -26,6 +26,7 @@ class MediaAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=MediaTransformation,
+            context=context.snapshot(),
         )
         media: List[MediaRecord] = transformation.media
         self.telemetry.record(
@@ -42,9 +43,12 @@ class MediaAgent(AIEnabledAgent):
                 continue
             original_media_type = item.media_type_code or "image"
             normalized_media_type = self.supabase.normalize_code(original_media_type)
-            media_type_id = await self.supabase.lookup("ref_code_media_type", code=normalized_media_type)
+            media_type_id = await context.lookup_reference_code(
+                domain="media_type",
+                code=normalized_media_type,
+            )
             if not media_type_id:
-                media_type_id = await self.supabase.ensure_code(
+                media_type_id = await context.ensure_reference_code(
                     domain="media_type",
                     code=normalized_media_type,
                     name=original_media_type.replace("_", " ").title(),
@@ -56,6 +60,14 @@ class MediaAgent(AIEnabledAgent):
                     item.to_supabase(media_type_id=media_type_id),
                 )
             )
+        context.share(
+            self.name,
+            {
+                "media": [item.model_dump() for item in media],
+                "responses": responses,
+            },
+            overwrite=True,
+        )
         return {
             "status": "ok",
             "operation": "upsert",

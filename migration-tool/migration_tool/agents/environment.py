@@ -26,6 +26,7 @@ class EnvironmentAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=EnvironmentTagTransformation,
+            context=context.snapshot(),
         )
         responses = []
         for record in transformation.environment_tags:
@@ -35,7 +36,7 @@ class EnvironmentAgent(AIEnabledAgent):
             if not environment_code:
                 continue
 
-            tag_id = await self.supabase.ensure_code(
+            tag_id = await context.ensure_reference_code(
                 domain="environment_tag",
                 code=environment_code,
                 name=record.environment_name or environment_code.replace("_", " ").title(),
@@ -56,6 +57,17 @@ class EnvironmentAgent(AIEnabledAgent):
                 "payload": payload,
                 "environment_tags": [record.model_dump() for record in transformation.environment_tags],
             },
+        )
+
+        context.share(
+            self.name,
+            {
+                "environment_tags": [
+                    record.model_dump() for record in transformation.environment_tags
+                ],
+                "responses": responses,
+            },
+            overwrite=True,
         )
 
         return {

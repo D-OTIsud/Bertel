@@ -26,9 +26,15 @@ class PetPolicyAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=PetPolicyTransformation,
+            context=context.snapshot(),
         )
         record = transformation.pet_policy
         if not record or record.accepted is None and not record.conditions:
+            context.share(
+                self.name,
+                {"pet_policy": None, "status": "no_data"},
+                overwrite=True,
+            )
             return {
                 "status": "ok",
                 "operation": "no_data",
@@ -49,6 +55,15 @@ class PetPolicyAgent(AIEnabledAgent):
                 "payload": payload,
                 "pet_policy": record.model_dump() if record else None,
             },
+        )
+
+        context.share(
+            self.name,
+            {
+                "pet_policy": record.model_dump(),
+                "response": response,
+            },
+            overwrite=True,
         )
 
         return {

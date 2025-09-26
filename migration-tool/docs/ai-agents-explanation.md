@@ -39,6 +39,7 @@ transformation = await self.llm.transform_fragment(
     agent_name="providers",
     payload=payload,
     response_model=ProviderTransformation,
+    context=context.snapshot(),
 )
 ```
 
@@ -51,9 +52,10 @@ def _parse_days(self, jours_str):
 
 # MAINTENANT (IA) :
 transformation = await self.llm.transform_fragment(
-    agent_name="schedule", 
+    agent_name="schedule",
     payload=payload,
     response_model=ScheduleTransformation,
+    context=context.snapshot(),
 )
 ```
 
@@ -84,25 +86,30 @@ for agent_name, agent_payload in routed_data.items():
         agent_name=agent_name,
         payload=agent_payload,
         response_model=AgentSpecificModel,
+        context=context.snapshot(),
     )
 ```
 
 ## 🎯 Prompts IA Utilisés
 
-### **Prompt de Routage :**
+Les prompts système sont centralisés dans un `PromptLibrary`. Cette bibliothèque est partagée entre
+le routeur, les agents spécialisés et le nouvel **VerificationAgent**. Elle permet d'ajuster les
+instructions sans modifier le code grâce à un historique d'erreurs observées.
+
+### **Prompt de Routage (modifiable) :**
 ```
-"You classify establishment payload keys into specialised agents that prepare data for the DLL schema. Output a JSON object strictly matching the provided schema."
+"You are the field routing orchestrator for a Supabase-based migration pipeline. Map each incoming key to the dedicated agent responsible for that part of the schema so that data lands in the correct table instead of an unstructured blob. Honour the expected_fields for every agent, preserve canonical identity information, and place only unknown or out-of-scope values in leftovers. Return JSON that strictly conforms to the response schema."
 
-Agents available: identity: Creates or updates the canonical establishment entry., location: Handles address and geographic data., contact: Manages contact channels., amenities: Links establishment amenities., media: Processes media files., providers: Handles provider (prestataire) data with database lookup and creation., schedule: Handles opening hours and schedule data.
+Agent catalogue: [{"name": "identity", "description": "Creates or updates the canonical establishment entry.", "expected_fields": ["establishment_name", ...]}, ...]
 
-Payload keys: {"Nom_OTI": "Le Relais Commerson", "Coordonnées GPS": "-21.204197, 55.577417", ...}
+Payload to analyse: {"Nom_OTI": "Le Relais Commerson", "Coordonnées GPS": "-21.204197, 55.577417", ...}
 ```
 
-### **Prompt de Transformation :**
+### **Prompt de Transformation (modifiable par agent) :**
 ```
-"You are an ingestion agent that converts noisy establishment information into the Supabase DLL structure. Follow the schema strictly and avoid fabricating values."
+"You are an ingestion specialist collaborating with other agents to populate the Supabase DLL schema. Honour relationships (object, contact, location, providers, amenities, schedule) and only emit attributes that belong to your table. If another agent shared identifiers in the context, reuse them instead of inventing new ones."
 
-Agent: providers. Payload: {"Prestataires": [{"data": [{"Presta ID": "AdJe0544bj", "Nom": "Adenor", ...}]}]}. Return only JSON that matches the expected schema.
+Agent: providers. Shared context: {"object_id": "OBJ-123", "shared_state": {"identity": {"object_id": "OBJ-123"}}}. Fragment to normalise: {"Prestataires": [{"data": [{"Presta ID": "AdJe0544bj", "Nom": "Adenor", ...}]}]}. Produce JSON that matches the schema exactly, leaving absent fields null or empty without guessing.
 ```
 
 ## 🚀 Avantages de l'IA
@@ -116,11 +123,26 @@ Agent: providers. Payload: {"Prestataires": [{"data": [{"Presta ID": "AdJe0544bj
 - Fallback sur règles heuristiques (RuleBasedLLM)
 - Gestion d'erreurs intelligente
 - Validation de schéma automatique
+- Ajustement automatique des prompts lors d'erreurs répétées
 
 ### **3. Extensibilité**
 - Ajout facile de nouveaux agents
-- Prompts configurables
+- Prompts configurables et persistants
 - Support multi-modèles (OpenAI, règles, etc.)
+
+## 🛡️ Agent de Vérification
+
+- Observe toutes les insertions via la mémoire partagée (`AgentContext.shared_state` et `agent_events`).
+- Identifie les erreurs récurrentes et ajoute des consignes ciblées dans `PromptLibrary` pour l'agent concerné.
+- Publie ses décisions dans la mémoire partagée afin que les agents suivants disposent des mêmes ajustements.
+- Émet des événements de télémétrie (`agent.verification.prompt_adjusted`) pour suivre les corrections appliquées.
+
+## 🗂️ Agent des Codes de Référence
+
+- Centralise les créations et recherches dans `ref_code_*` pour éviter que chaque agent interroge Supabase directement.
+- Maintient un cache mémoire partagé afin de réutiliser instantanément les codes les plus demandés sans requête réseau.
+- Expose des helpers (`context.ensure_reference_code` / `context.lookup_reference_code`) afin que chaque agent récupère uniquement les identifiants nécessaires à son domaine.
+- Le coordinateur filtre désormais les fragments pour ne laisser passer que les champs listés dans `expected_fields`, réduisant ainsi le bruit envoyé aux agents spécialisés.
 
 ## 🔧 Configuration IA
 

@@ -32,6 +32,7 @@ class ContactAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=ContactTransformation,
+            context=context.snapshot(),
         )
         channels: List[ContactChannelRecord] = transformation.channels
         self.telemetry.record(
@@ -48,9 +49,12 @@ class ContactAgent(AIEnabledAgent):
                 continue
             original_kind = channel.kind_code or "other"
             normalized_kind = self.supabase.normalize_code(original_kind)
-            kind_id = await self.supabase.lookup("ref_code_contact_kind", code=normalized_kind)
+            kind_id = await context.lookup_reference_code(
+                domain="contact_kind",
+                code=normalized_kind,
+            )
             if not kind_id:
-                kind_id = await self.supabase.ensure_code(
+                kind_id = await context.ensure_reference_code(
                     domain="contact_kind",
                     code=normalized_kind,
                     name=original_kind.replace("_", " ").title(),
@@ -73,6 +77,15 @@ class ContactAgent(AIEnabledAgent):
             channel.kind_code = normalized_kind
             data = channel.to_supabase(kind_id=kind_id, role_id=role_id)
             responses.append(await self.supabase.upsert("contact_channel", data))
+
+        context.share(
+            self.name,
+            {
+                "channels": [channel.model_dump() for channel in channels],
+                "responses": responses,
+            },
+            overwrite=True,
+        )
         return {
             "status": "ok",
             "operation": "upsert",

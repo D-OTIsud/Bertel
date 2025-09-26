@@ -24,7 +24,9 @@ from .agents.payments import PaymentMethodAgent
 from .agents.pet_policy import PetPolicyAgent
 from .agents.providers import ProviderAgent
 from .agents.schedule import ScheduleAgent
-from .ai import FieldRouter, RuleBasedLLM, build_llm
+from .agents.verification import VerificationAgent
+from .agents.reference_codes import ReferenceCodeAgent
+from .ai import FieldRouter, PromptLibrary, RuleBasedLLM, build_llm
 from .config import Settings, get_settings
 from .schemas import IngestionResponse, RawEstablishmentPayload
 from .supabase_client import SupabaseService
@@ -38,18 +40,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     telemetry = EventLog(retention=settings.dashboard_retention)
     supabase = SupabaseService(settings.supabase_url, settings.supabase_service_key, telemetry)
     webhook = WebhookNotifier(settings.webhook_url, telemetry)
+    prompt_library = PromptLibrary()
     try:
         llm = build_llm(
             provider=settings.ai_provider,
             api_key=settings.openai_api_key,
             model=settings.ai_model,
             temperature=settings.ai_temperature,
+            prompts=prompt_library,
         )
     except Exception as exc:  # pragma: no cover - defensive fallback
         telemetry.record("ai.initialisation_failed", {"provider": settings.ai_provider, "error": str(exc)})
-        llm = RuleBasedLLM()
+        llm = RuleBasedLLM(prompts=prompt_library)
     telemetry.record("ai.initialised", {"provider": getattr(llm, "name", "unknown")})
     router = FieldRouter(llm)
+    verification_agent = VerificationAgent(telemetry, prompt_library)
+
+    reference_agent = ReferenceCodeAgent(supabase, telemetry)
 
     coordinator = Coordinator(
         identity_agent=IdentityAgent(supabase, telemetry, llm),
@@ -66,6 +73,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         webhook=webhook,
         telemetry=telemetry,
         router=router,
+        verification_agent=verification_agent,
+        prompt_library=prompt_library,
+        reference_agent=reference_agent,
     )
 
     app = FastAPI(title="Bertel Migration Tool", version="0.1.0")

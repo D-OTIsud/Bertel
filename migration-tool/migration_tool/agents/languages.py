@@ -26,6 +26,7 @@ class LanguageAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=LanguageTransformation,
+            context=context.snapshot(),
         )
         responses = []
         for record in transformation.languages:
@@ -41,7 +42,7 @@ class LanguageAgent(AIEnabledAgent):
             )
             level_id: Optional[str] = None
             if record.proficiency_code:
-                level_id = await self.supabase.ensure_code(
+                level_id = await context.ensure_reference_code(
                     domain="language_level",
                     code=record.proficiency_code,
                     name=record.proficiency_code.replace("_", " ").title(),
@@ -63,6 +64,15 @@ class LanguageAgent(AIEnabledAgent):
                 "payload": payload,
                 "languages": [record.model_dump() for record in transformation.languages],
             },
+        )
+
+        context.share(
+            self.name,
+            {
+                "languages": [record.model_dump() for record in transformation.languages],
+                "responses": responses,
+            },
+            overwrite=True,
         )
 
         return {

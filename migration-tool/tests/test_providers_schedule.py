@@ -2,7 +2,7 @@ import types
 
 import pytest
 
-from migration_tool.ai import RuleBasedLLM
+from migration_tool.ai import PromptLibrary, RuleBasedLLM
 from migration_tool.agents.providers import ProviderAgent
 from migration_tool.agents.schedule import ScheduleAgent
 from migration_tool.schemas import AgentContext
@@ -45,7 +45,12 @@ async def test_provider_agent_processes_nested_payload() -> None:
             }
         ],
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
+    context = AgentContext(
+        coordinator_id="test",
+        source_payload=payload,
+        object_id="reccZJ9INTTb7Mxtg",
+        prompt_library=PromptLibrary(),
+    )
 
     result = await agent.handle(payload, context)
 
@@ -93,7 +98,12 @@ async def test_provider_agent_uses_returned_identifier() -> None:
             }
         ],
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="obj-1")
+    context = AgentContext(
+        coordinator_id="test",
+        source_payload=payload,
+        object_id="obj-1",
+        prompt_library=PromptLibrary(),
+    )
 
     result = await agent.handle(payload, context)
 
@@ -126,7 +136,12 @@ async def test_schedule_agent_processes_nested_payload() -> None:
             }
         ],
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
+    context = AgentContext(
+        coordinator_id="test",
+        source_payload=payload,
+        object_id="reccZJ9INTTb7Mxtg",
+        prompt_library=PromptLibrary(),
+    )
 
     result = await agent.handle(payload, context)
 

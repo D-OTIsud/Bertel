@@ -26,6 +26,7 @@ class PaymentMethodAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=PaymentMethodTransformation,
+            context=context.snapshot(),
         )
         responses = []
         for record in transformation.payment_methods:
@@ -35,7 +36,7 @@ class PaymentMethodAgent(AIEnabledAgent):
             if not payment_code:
                 continue
 
-            method_id = await self.supabase.ensure_code(
+            method_id = await context.ensure_reference_code(
                 domain="payment_method",
                 code=payment_code,
                 name=record.payment_name or payment_code.replace("_", " ").title(),
@@ -56,6 +57,17 @@ class PaymentMethodAgent(AIEnabledAgent):
                 "payload": payload,
                 "payment_methods": [record.model_dump() for record in transformation.payment_methods],
             },
+        )
+
+        context.share(
+            self.name,
+            {
+                "payment_methods": [
+                    record.model_dump() for record in transformation.payment_methods
+                ],
+                "responses": responses,
+            },
+            overwrite=True,
         )
 
         return {

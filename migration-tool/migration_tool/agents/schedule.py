@@ -31,8 +31,17 @@ class ScheduleAgent(AIEnabledAgent):
         ]
 
     async def handle(self, payload: Dict[str, Any], context: AgentContext) -> Dict[str, Any]:
-        establishment_id = payload.get("establishment_id") or payload.get("object_id")
+        establishment_id = (
+            payload.get("establishment_id")
+            or payload.get("object_id")
+            or context.object_id
+        )
         if not establishment_id:
+            context.share(
+                self.name,
+                {"error": "missing_establishment_id", "payload": payload},
+                overwrite=True,
+            )
             return {"status": "error", "message": "Missing establishment_id"}
 
         # Use AI to transform the payload into structured schedule data
@@ -40,6 +49,7 @@ class ScheduleAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=ScheduleTransformation,
+            context=context.snapshot(),
         )
         
         self.telemetry.record(
@@ -65,7 +75,16 @@ class ScheduleAgent(AIEnabledAgent):
             if schedule_id:
                 created_schedules.append(schedule_id)
 
+        payload_summary = {
+            "schedules": [record.model_dump() for record in transformation.schedules],
+            "created_schedules": created_schedules,
+        }
         if created_schedules:
+            context.share(
+                self.name,
+                payload_summary | {"status": "upsert"},
+                overwrite=True,
+            )
             return {
                 "status": "ok",
                 "operation": "upsert",
@@ -73,13 +92,17 @@ class ScheduleAgent(AIEnabledAgent):
                 "created_schedules": len(created_schedules),
                 "response": created_schedules,
             }
-        else:
-            return {
-                "status": "ok",
-                "operation": "no_data",
-                "message": "No valid schedule data found",
-                "created_schedules": 0,
-            }
+        context.share(
+            self.name,
+            payload_summary | {"status": "no_data"},
+            overwrite=True,
+        )
+        return {
+            "status": "ok",
+            "operation": "no_data",
+            "message": "No valid schedule data found",
+            "created_schedules": 0,
+        }
 
 
     async def _create_schedule(self, schedule_record: ScheduleRecord, context: AgentContext) -> Optional[str]:

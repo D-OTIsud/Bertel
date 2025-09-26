@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import re
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:  # pragma: no cover - type checking helper
+    from .ai import PromptLibrary
 
 
 class RawEstablishmentPayload(BaseModel):
@@ -439,6 +442,13 @@ class AgentContext(BaseModel):
     duplicate_of: Optional[str] = None
     source_organization_id: Optional[str] = None
     provider_registry: Dict[str, str] = Field(default_factory=dict)
+    shared_state: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    agent_events: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
+    prompt_library: Any
+    reference_agent: Any = None
+    reference_cache: Dict[Tuple[str, str], Optional[str]] = Field(default_factory=dict)
+
+    model_config = {"arbitrary_types_allowed": True}
 
     def register_provider(
         self,
@@ -464,6 +474,116 @@ class AgentContext(BaseModel):
                 if legacy:
                     registry.setdefault(str(legacy).strip(), str(provider_id))
 
+    def attach_reference_agent(self, agent: Any) -> None:
+        self.reference_agent = agent
+
+    def share(
+        self,
+        agent: str,
+        data: Dict[str, Any],
+        *,
+        overwrite: bool = False,
+    ) -> None:
+        """Publish intermediary data so downstream agents can reuse it."""
+
+        if not agent or not data:
+            return
+
+        shared = self.shared_state.setdefault(agent, {})
+        if overwrite:
+            shared.clear()
+        for key, value in data.items():
+            if overwrite or key not in shared:
+                shared[key] = value
+
+    def recall(self, agent: str) -> Dict[str, Any]:
+        """Retrieve state that another agent shared earlier in the flow."""
+
+        if not agent:
+            return {}
+        return dict(self.shared_state.get(agent, {}))
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Serialize public context for prompt construction."""
+
+        return {
+            "object_id": self.object_id,
+            "duplicate_of": self.duplicate_of,
+            "source_organization_id": self.source_organization_id,
+            "providers": dict(self.provider_registry),
+            "shared_state": {
+                name: dict(payload) for name, payload in self.shared_state.items()
+            },
+            "agent_events": {
+                name: [dict(entry) for entry in history]
+                for name, history in self.agent_events.items()
+            },
+            "prompts": self.prompt_library.snapshot(),
+        }
+
+    async def ensure_reference_code(
+        self,
+        *,
+        domain: str,
+        code: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        if not self.reference_agent or not domain or not code:
+            return None
+
+        normalized = str(code).strip().lower()
+        cache_key = (domain, normalized)
+        if cache_key in self.reference_cache:
+            return self.reference_cache[cache_key]
+
+        identifier = await self.reference_agent.ensure(
+            domain=domain,
+            code=code,
+            name=name,
+            description=description,
+            metadata=metadata,
+        )
+        self.reference_cache[cache_key] = identifier
+        return identifier
+
+    async def lookup_reference_code(self, *, domain: str, code: str) -> Optional[str]:
+        if not self.reference_agent or not domain or not code:
+            return None
+
+        normalized = str(code).strip().lower()
+        cache_key = (domain, normalized)
+        if cache_key in self.reference_cache:
+            return self.reference_cache[cache_key]
+
+        identifier = await self.reference_agent.lookup(domain=domain, code=code)
+        self.reference_cache[cache_key] = identifier
+        return identifier
+
+    def log_event(
+        self,
+        agent: str,
+        *,
+        status: str,
+        payload: Optional[Dict[str, Any]] = None,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        if not agent:
+            return
+        timeline = self.agent_events.setdefault(agent, [])
+        entry: Dict[str, Any] = {"status": status}
+        if payload is not None:
+            entry["payload"] = dict(payload) if isinstance(payload, dict) else payload
+        if result is not None:
+            entry["result"] = dict(result) if isinstance(result, dict) else result
+        if error:
+            entry["error"] = error
+        timeline.append(entry)
+        if error:
+            self.prompt_library.record_error(agent, error)
+
 
 class FieldAssignment(BaseModel):
     """Assignment produced by the semantic router."""
@@ -480,7 +600,6 @@ class FieldRoutingDecision(BaseModel):
     assignments: List[FieldAssignment]
     leftovers: Dict[str, Any] = Field(default_factory=dict)
     sections: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-
 
 class IdentityRecord(BaseModel):
     """Structured representation of the `object` table."""

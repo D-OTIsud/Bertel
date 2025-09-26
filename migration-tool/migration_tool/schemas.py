@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import re
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:  # pragma: no cover - type checking helper
+    from .ai import PromptLibrary
 
 
 class RawEstablishmentPayload(BaseModel):
@@ -439,6 +442,13 @@ class AgentContext(BaseModel):
     duplicate_of: Optional[str] = None
     source_organization_id: Optional[str] = None
     provider_registry: Dict[str, str] = Field(default_factory=dict)
+    shared_state: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    agent_events: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
+    prompt_library: Any
+    reference_agent: Any = None
+    reference_cache: Dict[Tuple[str, str], Optional[str]] = Field(default_factory=dict)
+
+    model_config = {"arbitrary_types_allowed": True}
 
     def register_provider(
         self,
@@ -464,6 +474,116 @@ class AgentContext(BaseModel):
                 if legacy:
                     registry.setdefault(str(legacy).strip(), str(provider_id))
 
+    def attach_reference_agent(self, agent: Any) -> None:
+        self.reference_agent = agent
+
+    def share(
+        self,
+        agent: str,
+        data: Dict[str, Any],
+        *,
+        overwrite: bool = False,
+    ) -> None:
+        """Publish intermediary data so downstream agents can reuse it."""
+
+        if not agent or not data:
+            return
+
+        shared = self.shared_state.setdefault(agent, {})
+        if overwrite:
+            shared.clear()
+        for key, value in data.items():
+            if overwrite or key not in shared:
+                shared[key] = value
+
+    def recall(self, agent: str) -> Dict[str, Any]:
+        """Retrieve state that another agent shared earlier in the flow."""
+
+        if not agent:
+            return {}
+        return dict(self.shared_state.get(agent, {}))
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Serialize public context for prompt construction."""
+
+        return {
+            "object_id": self.object_id,
+            "duplicate_of": self.duplicate_of,
+            "source_organization_id": self.source_organization_id,
+            "providers": dict(self.provider_registry),
+            "shared_state": {
+                name: dict(payload) for name, payload in self.shared_state.items()
+            },
+            "agent_events": {
+                name: [dict(entry) for entry in history]
+                for name, history in self.agent_events.items()
+            },
+            "prompts": self.prompt_library.snapshot(),
+        }
+
+    async def ensure_reference_code(
+        self,
+        *,
+        domain: str,
+        code: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        if not self.reference_agent or not domain or not code:
+            return None
+
+        normalized = str(code).strip().lower()
+        cache_key = (domain, normalized)
+        if cache_key in self.reference_cache:
+            return self.reference_cache[cache_key]
+
+        identifier = await self.reference_agent.ensure(
+            domain=domain,
+            code=code,
+            name=name,
+            description=description,
+            metadata=metadata,
+        )
+        self.reference_cache[cache_key] = identifier
+        return identifier
+
+    async def lookup_reference_code(self, *, domain: str, code: str) -> Optional[str]:
+        if not self.reference_agent or not domain or not code:
+            return None
+
+        normalized = str(code).strip().lower()
+        cache_key = (domain, normalized)
+        if cache_key in self.reference_cache:
+            return self.reference_cache[cache_key]
+
+        identifier = await self.reference_agent.lookup(domain=domain, code=code)
+        self.reference_cache[cache_key] = identifier
+        return identifier
+
+    def log_event(
+        self,
+        agent: str,
+        *,
+        status: str,
+        payload: Optional[Dict[str, Any]] = None,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        if not agent:
+            return
+        timeline = self.agent_events.setdefault(agent, [])
+        entry: Dict[str, Any] = {"status": status}
+        if payload is not None:
+            entry["payload"] = dict(payload) if isinstance(payload, dict) else payload
+        if result is not None:
+            entry["result"] = dict(result) if isinstance(result, dict) else result
+        if error:
+            entry["error"] = error
+        timeline.append(entry)
+        if error:
+            self.prompt_library.record_error(agent, error)
+
 
 class FieldAssignment(BaseModel):
     """Assignment produced by the semantic router."""
@@ -480,7 +600,6 @@ class FieldRoutingDecision(BaseModel):
     assignments: List[FieldAssignment]
     leftovers: Dict[str, Any] = Field(default_factory=dict)
     sections: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-
 
 class IdentityRecord(BaseModel):
     """Structured representation of the `object` table."""
@@ -573,12 +692,6 @@ class ContactChannelRecord(BaseModel):
             payload["kind_id"] = kind_id
         if role_id:
             payload["role_id"] = role_id
-        metadata: Dict[str, Any] = {"kind_code": self.kind_code}
-        if self.role_code:
-            metadata["role_code"] = self.role_code
-        if metadata:
-            payload.setdefault("extra", {})
-            payload["extra"].update(metadata)
         return payload
 
 
@@ -596,18 +709,10 @@ class AmenityLinkRecord(BaseModel):
     raw_label: Optional[str] = None
 
     def to_supabase(self, *, amenity_id: Optional[str]) -> Dict[str, Any]:
-        payload = {
+        return {
             "object_id": self.object_id,
             "amenity_id": amenity_id,
         }
-        if self.raw_label:
-            payload["extra"] = {"raw_label": self.raw_label}
-        if not amenity_id:
-            payload.setdefault("extra", {})
-            payload["extra"]["amenity_code"] = self.amenity_code
-            if self.amenity_name:
-                payload["extra"]["amenity_name"] = self.amenity_name
-        return payload
 
 
 class AmenityTransformation(BaseModel):
@@ -628,15 +733,6 @@ class LanguageLinkRecord(BaseModel):
             payload["language_id"] = language_id
         if level_id:
             payload["level_id"] = level_id
-        extra: Dict[str, Any] = {}
-        if not language_id:
-            extra["language_code"] = self.language_code
-        if self.language_name:
-            extra["language_name"] = self.language_name
-        if self.proficiency_code and not level_id:
-            extra["proficiency_code"] = self.proficiency_code
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -655,13 +751,6 @@ class PaymentMethodRecord(BaseModel):
         payload: Dict[str, Any] = {"object_id": self.object_id}
         if payment_method_id:
             payload["payment_method_id"] = payment_method_id
-        extra: Dict[str, Any] = {}
-        if not payment_method_id:
-            extra["payment_code"] = self.payment_code
-        if self.payment_name:
-            extra["payment_name"] = self.payment_name
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -680,13 +769,6 @@ class EnvironmentTagRecord(BaseModel):
         payload: Dict[str, Any] = {"object_id": self.object_id}
         if environment_tag_id:
             payload["environment_tag_id"] = environment_tag_id
-        extra: Dict[str, Any] = {}
-        if not environment_tag_id:
-            extra["environment_code"] = self.environment_code
-        if self.environment_name:
-            extra["environment_name"] = self.environment_name
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -726,7 +808,7 @@ class MediaRecord(BaseModel):
     is_main: Optional[bool] = None
 
     def to_supabase(self, *, media_type_id: Optional[str]) -> Dict[str, Any]:
-        payload = {
+        return {
             "object_id": self.object_id,
             "url": self.url,
             "media_type_id": media_type_id,
@@ -735,10 +817,6 @@ class MediaRecord(BaseModel):
             "credit": self.credit,
             "is_main": self.is_main,
         }
-        if not media_type_id:
-            payload.setdefault("extra", {})
-            payload["extra"]["media_type_code"] = self.media_type_code
-        return payload
 
 
 class MediaTransformation(BaseModel):

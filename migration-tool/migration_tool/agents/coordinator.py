@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from ..ai import FieldRouter
+from ..ai import FieldRouter, PromptLibrary
 from ..schemas import (
     AgentContext,
     FieldRoutingDecision,
@@ -26,6 +26,8 @@ from .payments import PaymentMethodAgent
 from .pet_policy import PetPolicyAgent
 from .providers import ProviderAgent
 from .schedule import ScheduleAgent
+from .verification import VerificationAgent
+from .reference_codes import ReferenceCodeAgent
 
 
 class Coordinator:
@@ -47,6 +49,9 @@ class Coordinator:
         webhook: WebhookNotifier,
         telemetry: EventLog,
         router: FieldRouter,
+        verification_agent: VerificationAgent,
+        prompt_library: PromptLibrary,
+        reference_agent: ReferenceCodeAgent,
     ) -> None:
         self.agents: Dict[str, Agent] = {
             "identity": identity_agent,
@@ -64,10 +69,15 @@ class Coordinator:
         self.webhook = webhook
         self.telemetry = telemetry
         self.router = router
+        self.verification_agent = verification_agent
+        self.prompt_library = prompt_library
+        self.reference_agent = reference_agent
 
     def descriptors(self) -> Iterable[Dict[str, Any]]:
         for name, agent in self.agents.items():
             yield agent.descriptor().model_dump()
+        yield self.verification_agent.descriptor().model_dump()
+        yield self.reference_agent.descriptor().model_dump()
 
     async def handle(self, payload: RawEstablishmentPayload) -> tuple[List[RoutedFragment], Dict[str, Any]]:
         coordinator_id = str(uuid.uuid4())
@@ -83,12 +93,50 @@ class Coordinator:
             payload=combined_payload,
             agent_descriptors=[agent.descriptor() for agent in self.agents.values()],
         )
+
+        fallback_sections, fallback_leftovers = partition_payload(combined_payload)
+
+        merged_sections: Dict[str, Dict[str, Any]] = {}
+        for name, section in decision.sections.items():
+            if section:
+                merged_sections[name] = dict(section)
+
+        for agent_name, fallback_section in fallback_sections.items():
+            target_section = merged_sections.setdefault(agent_name, {})
+            for field_name, value in fallback_section.items():
+                target_section.setdefault(field_name, value)
+
+        leftovers: Dict[str, Any] = dict(decision.leftovers)
+        ignored_leftover_keys = {
+            "name",
+            "dataProvidingOrg",
+            "source_organization_id",
+            "raw_batch",
+            "raw_blocks",
+            "raw_main_record",
+            "raw_additional_sections",
+            "raw_payload",
+        }
+        for key, value in fallback_leftovers.items():
+            if key in ignored_leftover_keys:
+                continue
+            leftovers.setdefault(key, value)
+
+        recognised_keys = {key for section in merged_sections.values() for key in section.keys()}
+        for key in list(leftovers.keys()):
+            if key in recognised_keys:
+                leftovers.pop(key)
+
+        decision.sections = merged_sections
+        decision.leftovers = leftovers
         context = AgentContext(
             coordinator_id=coordinator_id,
             source_payload=combined_payload,
             object_id=self._extract_initial_object_id(combined_payload, payload.legacy_ids),
             source_organization_id=payload.source_organization_id,
+            prompt_library=self.prompt_library,
         )
+        context.attach_reference_agent(self.reference_agent)
         fragments: List[RoutedFragment] = []
 
         self.telemetry.record(
@@ -112,9 +160,10 @@ class Coordinator:
             )
             if identity_payload:
                 section_payload = self._prepare_section_payload(
+                    identity_agent,
                     identity_payload,
                     payload,
-                    context.object_id,
+                    context,
                 )
                 self.telemetry.record(
                     "coordinator.agent_start.identity",
@@ -127,6 +176,22 @@ class Coordinator:
                     result = await identity_agent.handle(section_payload, context)
                     context.object_id = result.get("object_id") or context.object_id
                     context.duplicate_of = result.get("duplicate_of") or context.duplicate_of
+                    identity_state = context.recall("identity")
+                    identity_state.update(
+                        {
+                            "payload": section_payload,
+                            "result": result,
+                            "object_id": context.object_id,
+                            "duplicate_of": context.duplicate_of,
+                        }
+                    )
+                    context.share("identity", identity_state, overwrite=True)
+                    context.log_event(
+                        "identity",
+                        status="processed",
+                        payload=section_payload,
+                        result=result,
+                    )
                     fragments.append(
                         RoutedFragment(agent="identity", status="processed", payload=section_payload, message=None)
                     )
@@ -139,6 +204,15 @@ class Coordinator:
                         },
                     )
                 except Exception as exc:
+                    identity_state = context.recall("identity")
+                    identity_state.update({"payload": section_payload, "error": str(exc)})
+                    context.share("identity", identity_state, overwrite=True)
+                    context.log_event(
+                        "identity",
+                        status="error",
+                        payload=section_payload,
+                        error=str(exc),
+                    )
                     fragments.append(
                         RoutedFragment(agent="identity", status="error", payload=section_payload, message=str(exc))
                     )
@@ -160,9 +234,10 @@ class Coordinator:
                 continue
 
             section_payload = self._prepare_section_payload(
+                agent,
                 section_payload,
                 payload,
-                context.object_id,
+                context,
             )
 
             self.telemetry.record(
@@ -175,6 +250,21 @@ class Coordinator:
 
             try:
                 result = await agent.handle(section_payload, context)
+                agent_state = context.recall(name)
+                agent_state.update(
+                    {
+                        "payload": section_payload,
+                        "result": result,
+                        "object_id": context.object_id,
+                    }
+                )
+                context.share(name, agent_state, overwrite=True)
+                context.log_event(
+                    name,
+                    status="processed",
+                    payload=section_payload,
+                    result=result,
+                )
                 fragments.append(
                     RoutedFragment(agent=name, status="processed", payload=section_payload, message=None)
                 )
@@ -183,6 +273,15 @@ class Coordinator:
                     {"coordinator_id": coordinator_id, "payload": section_payload, "result": result},
                 )
             except Exception as exc:
+                agent_state = context.recall(name)
+                agent_state.update({"payload": section_payload, "error": str(exc)})
+                context.share(name, agent_state, overwrite=True)
+                context.log_event(
+                    name,
+                    status="error",
+                    payload=section_payload,
+                    error=str(exc),
+                )
                 fragments.append(
                     RoutedFragment(agent=name, status="error", payload=section_payload, message=str(exc))
                 )
@@ -199,29 +298,96 @@ class Coordinator:
                 "unresolved": leftovers,
             })
 
+        unhandled: Dict[str, Any] = {}
+        for agent_name, state in context.shared_state.items():
+            skipped_entries = state.get("skipped") or state.get("skipped_links")
+            if skipped_entries:
+                unhandled[agent_name] = skipped_entries
+
+        verification_payload = {
+            "fragments": [fragment.model_dump() for fragment in fragments],
+            "leftovers": leftovers,
+            "unhandled": unhandled,
+        }
+        self.telemetry.record(
+            "coordinator.agent_start.verification",
+            {"coordinator_id": coordinator_id, "payload": verification_payload},
+        )
+        try:
+            verification_result = await self.verification_agent.handle(verification_payload, context)
+            context.log_event(
+                "verification",
+                status="processed",
+                payload=verification_payload,
+                result=verification_result,
+            )
+            fragments.append(
+                RoutedFragment(agent="verification", status="processed", payload=verification_payload, message=None)
+            )
+            self.telemetry.record(
+                "coordinator.agent.verification",
+                {
+                    "coordinator_id": coordinator_id,
+                    "payload": verification_payload,
+                    "result": verification_result,
+                },
+            )
+        except Exception as exc:
+            context.log_event(
+                "verification",
+                status="error",
+                payload=verification_payload,
+                error=str(exc),
+            )
+            fragments.append(
+                RoutedFragment(agent="verification", status="error", payload=verification_payload, message=str(exc))
+            )
+            self.telemetry.record(
+                "coordinator.agent_error.verification",
+                {
+                    "coordinator_id": coordinator_id,
+                    "payload": verification_payload,
+                    "error": str(exc),
+                },
+            )
+
         return fragments, leftovers
 
     def _prepare_section_payload(
         self,
+        agent: Agent,
         section_payload: Dict[str, Any],
         payload: RawEstablishmentPayload,
-        object_id: Optional[str],
+        context: AgentContext,
     ) -> Dict[str, Any]:
-        enriched = dict(section_payload)
-        if object_id:
-            enriched.setdefault("establishment_id", object_id)
-            enriched.setdefault("object_id", object_id)
+        allowed_keys = set(agent.expected_fields or [])
+        enriched = {
+            key: value
+            for key, value in section_payload.items()
+            if not allowed_keys or key in allowed_keys
+        }
+
+        if agent.name == "identity":
+            defaults: Dict[str, Any] = {}
+            if payload.establishment_name:
+                defaults["establishment_name"] = payload.establishment_name
+            if payload.establishment_category:
+                defaults["category"] = payload.establishment_category
+            if payload.establishment_subcategory:
+                defaults["subcategory"] = payload.establishment_subcategory
+            if payload.legacy_ids is not None:
+                defaults["legacy_ids"] = payload.legacy_ids
+            if payload.source_organization_id:
+                defaults["source_organization_id"] = payload.source_organization_id
+            for key, value in defaults.items():
+                enriched.setdefault(key, value)
         else:
-            enriched.setdefault("establishment_id", None)
-        enriched.setdefault("establishment_name", payload.establishment_name)
-        enriched.setdefault("category", payload.establishment_category)
-        enriched.setdefault("subcategory", payload.establishment_subcategory)
-        if payload.legacy_ids is not None:
-            enriched.setdefault("legacy_ids", payload.legacy_ids)
-        else:
-            enriched.setdefault("legacy_ids", [])
-        if payload.source_organization_id:
-            enriched.setdefault("source_organization_id", payload.source_organization_id)
+            if context.object_id:
+                if "establishment_id" in allowed_keys:
+                    enriched.setdefault("establishment_id", context.object_id)
+                if "object_id" in allowed_keys:
+                    enriched.setdefault("object_id", context.object_id)
+
         return enriched
 
     def _build_identity_payload(

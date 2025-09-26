@@ -1,7 +1,6 @@
 import pytest
-import pytest
 
-from migration_tool.ai import FieldRouter, RuleBasedLLM
+from migration_tool.ai import FieldRouter, PromptLibrary, RuleBasedLLM
 from migration_tool.agents.environment import EnvironmentAgent
 from migration_tool.agents.identity import IdentityAgent
 from migration_tool.agents.languages import LanguageAgent
@@ -10,6 +9,22 @@ from migration_tool.agents.pet_policy import PetPolicyAgent
 from migration_tool.schemas import AgentContext, AgentDescriptor
 from migration_tool.supabase_client import SupabaseService
 from migration_tool.telemetry import EventLog
+
+
+class ReferenceAgentStub:
+    async def ensure(
+        self,
+        *,
+        domain: str,
+        code: str,
+        name: str | None = None,
+        description: str | None = None,
+        metadata: dict | None = None,
+    ) -> str:
+        return f"{domain}:{code}"
+
+    async def lookup(self, *, domain: str, code: str) -> str | None:
+        return f"{domain}:{code}"
 
 
 @pytest.fixture
@@ -55,7 +70,12 @@ async def test_identity_agent_rule_based_transformation() -> None:
         "legacy_ids": ["LEGACY-1"],
         "description": "Bel établissement au centre-ville",
     }
-    context = AgentContext(coordinator_id="coord", source_payload=payload)
+    context = AgentContext(
+        coordinator_id="coord",
+        source_payload=payload,
+        prompt_library=PromptLibrary(),
+    )
+    context.attach_reference_agent(ReferenceAgentStub())
 
     result = await agent.handle(payload, context)
 
@@ -72,7 +92,13 @@ async def test_language_agent_rule_based_transformation() -> None:
     agent = LanguageAgent(supabase, telemetry, llm)
 
     payload = {"establishment_id": "OBJ1", "languages": ["Français", "Anglais"]}
-    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+    context = AgentContext(
+        coordinator_id="coord",
+        source_payload=payload,
+        object_id="OBJ1",
+        prompt_library=PromptLibrary(),
+    )
+    context.attach_reference_agent(ReferenceAgentStub())
 
     result = await agent.handle(payload, context)
 
@@ -89,7 +115,13 @@ async def test_payment_agent_rule_based_transformation() -> None:
     agent = PaymentMethodAgent(supabase, telemetry, llm)
 
     payload = {"establishment_id": "OBJ1", "payment_methods": ["Carte Bancaire", "Espèces"]}
-    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+    context = AgentContext(
+        coordinator_id="coord",
+        source_payload=payload,
+        object_id="OBJ1",
+        prompt_library=PromptLibrary(),
+    )
+    context.attach_reference_agent(ReferenceAgentStub())
 
     result = await agent.handle(payload, context)
 
@@ -106,7 +138,13 @@ async def test_environment_agent_rule_based_transformation() -> None:
     agent = EnvironmentAgent(supabase, telemetry, llm)
 
     payload = {"establishment_id": "OBJ1", "environment_tags": ["Village", "Milieu rural"]}
-    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+    context = AgentContext(
+        coordinator_id="coord",
+        source_payload=payload,
+        object_id="OBJ1",
+        prompt_library=PromptLibrary(),
+    )
+    context.attach_reference_agent(ReferenceAgentStub())
 
     result = await agent.handle(payload, context)
 
@@ -123,7 +161,12 @@ async def test_pet_policy_agent_rule_based_transformation() -> None:
     agent = PetPolicyAgent(supabase, telemetry, llm)
 
     payload = {"establishment_id": "OBJ1", "pets_allowed": "oui"}
-    context = AgentContext(coordinator_id="coord", source_payload=payload, object_id="OBJ1")
+    context = AgentContext(
+        coordinator_id="coord",
+        source_payload=payload,
+        object_id="OBJ1",
+        prompt_library=PromptLibrary(),
+    )
 
     result = await agent.handle(payload, context)
 

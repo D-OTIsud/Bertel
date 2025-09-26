@@ -1,6 +1,6 @@
 import pytest
 
-from migration_tool.ai import RuleBasedLLM
+from migration_tool.ai import PromptLibrary, RuleBasedLLM
 from migration_tool.agents.providers import ProviderAgent
 from migration_tool.agents.schedule import ScheduleAgent
 from migration_tool.schemas import AgentContext, ProviderTransformation, ScheduleTransformation
@@ -65,13 +65,19 @@ async def test_provider_agent_ai_transformation() -> None:
             }
         ]
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
+    context = AgentContext(
+        coordinator_id="test",
+        source_payload=payload,
+        object_id="reccZJ9INTTb7Mxtg",
+        prompt_library=PromptLibrary(),
+    )
 
     # Test AI transformation directly
     transformation = await llm.transform_fragment(
         agent_name="providers",
         payload=payload,
         response_model=ProviderTransformation,
+        context={},
     )
 
     assert isinstance(transformation, ProviderTransformation)
@@ -136,13 +142,19 @@ async def test_schedule_agent_ai_transformation() -> None:
             }
         ]
     }
-    context = AgentContext(coordinator_id="test", source_payload=payload, object_id="reccZJ9INTTb7Mxtg")
+    context = AgentContext(
+        coordinator_id="test",
+        source_payload=payload,
+        object_id="reccZJ9INTTb7Mxtg",
+        prompt_library=PromptLibrary(),
+    )
 
     # Test AI transformation directly
     transformation = await llm.transform_fragment(
         agent_name="schedule",
         payload=payload,
         response_model=ScheduleTransformation,
+        context={},
     )
 
     assert isinstance(transformation, ScheduleTransformation)

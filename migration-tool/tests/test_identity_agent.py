@@ -3,7 +3,7 @@ import pytest
 from migration_tool.agents.identity import IdentityAgent
 from migration_tool.schemas import AgentContext, IdentityRecord
 from migration_tool.telemetry import EventLog
-from migration_tool.ai import LLMClient
+from migration_tool.ai import LLMClient, PromptLibrary
 
 
 pytestmark = pytest.mark.anyio("asyncio")
@@ -15,7 +15,7 @@ class DummyLLM(LLMClient):
     async def classify_fields(self, *, payload, agent_descriptors):  # pragma: no cover - unused in tests
         raise NotImplementedError
 
-    async def transform_fragment(self, *, agent_name, payload, response_model):
+    async def transform_fragment(self, *, agent_name, payload, response_model, context=None):
         return IdentityRecord(
             object_id=payload.get("establishment_id"),
             object_type="HOT",
@@ -77,6 +77,7 @@ async def test_identity_agent_reuses_existing_object():
             "longitude": 56.78,
             "provider_id": "ORG-777",
         },
+        prompt_library=PromptLibrary(),
     )
 
     result = await agent.handle(payload, context)
@@ -110,6 +111,7 @@ async def test_identity_agent_inserts_new_object_when_no_match():
     context = AgentContext(
         coordinator_id="coord",
         source_payload={"provider_organization_id": "ORG-123"},
+        prompt_library=PromptLibrary(),
     )
 
     result = await agent.handle(payload, context)

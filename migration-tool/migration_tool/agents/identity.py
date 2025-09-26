@@ -37,6 +37,7 @@ class IdentityAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=IdentityRecord,
+            context=context.snapshot(),
         )
 
         if record.object_id and not OBJECT_ID_PATTERN.match(record.object_id):
@@ -101,6 +102,17 @@ class IdentityAgent(AIEnabledAgent):
                     "longitude": longitude,
                 },
             )
+
+        context.share(
+            self.name,
+            {
+                "record": record.model_dump(),
+                "object_id": context.object_id,
+                "duplicate_of": context.duplicate_of,
+                "matched_existing": matched_existing,
+            },
+            overwrite=True,
+        )
 
         return {
             "status": "ok",

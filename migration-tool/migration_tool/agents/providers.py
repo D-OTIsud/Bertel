@@ -32,7 +32,11 @@ class ProviderAgent(AIEnabledAgent):
         ]
 
     async def handle(self, payload: Dict[str, Any], context: AgentContext) -> Dict[str, Any]:
-        establishment_id = payload.get("establishment_id") or payload.get("object_id")
+        establishment_id = (
+            payload.get("establishment_id")
+            or payload.get("object_id")
+            or context.object_id
+        )
         if not establishment_id:
             return {"status": "error", "message": "Missing establishment_id"}
 
@@ -41,6 +45,7 @@ class ProviderAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=ProviderTransformation,
+            context=context.snapshot(),
         )
         
         self.telemetry.record(
@@ -120,12 +125,21 @@ class ProviderAgent(AIEnabledAgent):
             link_results = []
             for link in provider_links:
                 result = await self.supabase.upsert(
-                    "object_provider", 
-                    link, 
+                    "object_provider",
+                    link,
                     on_conflict="object_id,provider_id"
                 )
                 link_results.append(result)
-            
+
+            context.share(
+                self.name,
+                {
+                    "providers": [record.model_dump() for record in transformation.providers],
+                    "links": provider_links,
+                    "responses": link_results,
+                },
+                overwrite=True,
+            )
             return {
                 "status": "ok",
                 "operation": "upsert",

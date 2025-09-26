@@ -35,6 +35,7 @@ class LocationAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=LocationTransformation,
+            context=context.snapshot(),
         )
         locations: List[LocationRecord] = transformation.locations
         self.telemetry.record(
@@ -52,6 +53,15 @@ class LocationAgent(AIEnabledAgent):
             responses.append(
                 await self.supabase.upsert("object_location", record.to_supabase())
             )
+
+        context.share(
+            self.name,
+            {
+                "locations": [record.model_dump() for record in locations],
+                "responses": responses,
+            },
+            overwrite=True,
+        )
         return {
             "status": "ok",
             "operation": "upsert",

@@ -26,6 +26,7 @@ class AmenitiesAgent(AIEnabledAgent):
             agent_name=self.name,
             payload=payload,
             response_model=AmenityTransformation,
+            context=context.snapshot(),
         )
         amenities: List[AmenityLinkRecord] = transformation.amenities
         self.telemetry.record(
@@ -51,6 +52,14 @@ class AmenitiesAgent(AIEnabledAgent):
                     on_conflict="object_id,amenity_id",
                 )
             )
+        context.share(
+            self.name,
+            {
+                "amenities": [amenity.model_dump() for amenity in amenities],
+                "responses": responses,
+            },
+            overwrite=True,
+        )
         return {
             "status": "ok",
             "operation": "upsert",

@@ -1613,9 +1613,13 @@ const json = await res.json();</pre>
         <details>
           <summary>3.17 <code>relations { out[], in[] }</code></summary>
           <div class="content">
-            <p><b>out[]</b> : cette ressource → autres (<code>target: { id, type, name }</code>)<br>
-               <b>in[]</b> : autres → cette ressource (<code>source: { id, type, name }</code>)</p>
-            <p>Chaque relation conserve ses champs utiles (type de lien, rôle, …), nettoyés des IDs redondants.</p>
+            <p>La structure <code>relations</code> représente les liens entre l'objet courant et le reste du graphe (parent, enfants, liaisons éditoriales, etc.). Chaque entrée décrit le sens du lien, le type de relation et les métadonnées nécessaires à l'affichage ou au filtrage.</p>
+            <ul>
+              <li><b>out[]</b> : relations <em>sortantes</em>. L'objet courant pointe vers une autre ressource exposée sous <code>target: { id, type, name }</code>.</li>
+              <li><b>in[]</b> : relations <em>entrantes</em>. Une autre ressource référence l'objet courant et apparaît via <code>source: { id, type, name }</code>.</li>
+            </ul>
+            <p>Les deux tableaux partagent la même structure (<code>{ id, relation_type, role, ... }</code>) à laquelle on a simplement supprimé les identifiants dupliqués. Ils ne chargent pas automatiquement les fiches complètes des objets liés ; interrogez-les séparément si vous avez besoin de leurs contacts, adresses ou médias.</p>
+            <p class="inline-help"><b>Exemple :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
           </div>
         </details>
 

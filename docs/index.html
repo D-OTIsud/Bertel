@@ -1177,6 +1177,25 @@ const json = await res.json();</pre>
 
         <p>Une ressource (un élément de <code>data[]</code>) est un objet JSON avec des blocs thématiques. Tous les blocs ne sont pas présents pour tous les objets.</p>
 
+        <details open id="data-architecture">
+          <summary>3.0 Architecture des données (coulisses PostgreSQL)</summary>
+          <div class="content">
+            <p>Chaque réponse de l’API provient d’un modèle relationnel unifié. Les blocs ci-dessous sont assemblés à partir des tables et vues principales&nbsp;:</p>
+            <ul>
+              <li><strong>Objets touristiques</strong> <code>object</code> — entité cœur pour tous les types (hébergements, itinéraires, événements, etc.) avec les métadonnées communes (statut, dates de publication, indicateurs d’édition en cours).</li>
+              <li><strong>Localisation unifiée</strong> <code>object_location</code> — regroupe adresse postale, coordonnées géographiques et rattachements territoriaux via <code>object_zone</code>.</li>
+              <li><strong>Contenus multilingues</strong> <code>object_description</code> et colonnes <code>*_i18n</code> — textes publics, chapôs, infos mobiles stockés soit en JSONB, soit via la table générique <code>i18n_translation</code> exposée dans les vues <code>api.*</code>.</li>
+              <li><strong>Contacts &amp; médias</strong> <code>object_contact</code>, <code>media</code> — téléphones, e-mails, réseaux sociaux et ressources médias, y compris les médias spécifiques à un lieu via <code>media.place_id</code>.</li>
+              <li><strong>Référentiels</strong> <code>ref_code</code>, <code>ref_classification_scheme</code>, <code>ref_classification_value</code> — types, labels, classements et tags reliés aux objets par <code>object_classification</code> et <code>object_capacity</code>.</li>
+              <li><strong>Accessibilité &amp; labels handicap</strong> — entrées <code>object_classification</code> avec <code>scheme_code = "HANDICAP_LABEL"</code>, valeurs et sous-valeurs (<code>subvalue_ids</code>) pour chaque handicap couvert (moteur, visuel, auditif, mental), justificatifs optionnels via <code>ref_document</code>.</li>
+              <li><strong>Horaires d’ouverture</strong> <code>opening_period</code>, <code>opening_schedule</code>, <code>opening_time_period</code> — structure hiérarchique permettant de décrire des plages complexes et leurs exceptions.</li>
+              <li><strong>Modération</strong> <code>pending_change</code>, <code>object_version</code> — suivi des propositions de modification et historisation avant/après pour audit.</li>
+              <li><strong>API JSON</strong> — vues et fonctions du schéma <code>api</code> (ex. <code>api.v_hot</code>, <code>api.v_objects</code>, <code>api.v_needed</code>, <code>api.get_object_resource</code>) qui orchestrent les blocs ci-dessus.</li>
+            </ul>
+            <p>Les sections du dictionnaire (§3.x) décrivent comment ces blocs sont agrégés pour produire chaque champ. Pour une vision exhaustive, consultez le schéma SQL&nbsp;: <a href="../Base%20de%20donn%C3%A9e%20DLL%20et%20API/schema_unified.sql">schema_unified.sql</a>.</p>
+          </div>
+        </details>
+
         <details open>
           <summary>3.1 Vue d’ensemble</summary>
           <div class="content">
@@ -1203,17 +1222,18 @@ const json = await res.json();</pre>
                 <tr><td><code>pet_policy</code></td><td><code>object</code></td><td>Politique animaux</td><td><code>{ "accepted": true, ... }</code></td></tr>
                 <tr><td><code>prices</code></td><td><code>array&lt;object&gt;</code></td><td>Tarifs (+ périodes)</td><td>voir §3.8</td></tr>
                 <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements</td><td>voir §3.9</td></tr>
-                <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td><code>[{ "slug":"famille", "name":"Famille" }]</code></td></tr>
+                <tr><td><code>handicap_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Labellisation Tourisme &amp; Handicap</td><td>voir §3.10</td></tr>
+                <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td>voir §3.11</td></tr>
                 <tr><td><code>discounts / group_policies / origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
-                <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.10</td></tr>
+                <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.12</td></tr>
                 <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d'événements/activités</td><td>—</td></tr>
-                <tr><td><code>opening_times</code></td><td><code>object</code></td><td>Horaires d'ouverture (structure temporelle)</td><td>voir §3.12</td></tr>
-                <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.13</td></tr>
-                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.14</td></tr>
-                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.15</td></tr>
-                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.16</td></tr>
-                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.17</td></tr>
-                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.17</td></tr>
+                <tr><td><code>opening_times</code></td><td><code>object</code></td><td>Horaires d'ouverture (structure temporelle)</td><td>voir §3.13</td></tr>
+                <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.14</td></tr>
+                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.15</td></tr>
+                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.16</td></tr>
+                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.17</td></tr>
+                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.18</td></tr>
+                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.18</td></tr>
               </tbody>
             </table>
           </div>
@@ -1406,7 +1426,48 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.10 <code>tags[]</code></summary>
+          <summary>3.10 <code>handicap_labels[]</code> (accessibilité)</summary>
+          <div class="content">
+            <p>Expose la labellisation «&nbsp;Tourisme &amp; Handicap&nbsp;» pour chaque objet. Les entrées sont issues de <code>object_classification</code> avec le schéma <code>HANDICAP_LABEL</code>, les sous-valeurs (<code>subvalue_ids</code>) représentant les handicaps couverts.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>scheme</code></td><td><code>object</code></td><td>{ code, name } — devrait valoir <code>HANDICAP_LABEL</code> / «&nbsp;Tourisme &amp; Handicap&nbsp;».</td></tr>
+                <tr><td><code>value</code></td><td><code>object</code></td><td>Niveau obtenu { code, name, position } (ex. «&nbsp;Labellisé 4 handicaps&nbsp;»).</td></tr>
+                <tr><td><code>dimensions[]</code></td><td><code>array&lt;object&gt;</code></td><td>Handicaps couverts (moteur, visuel, auditif, mental) résolus depuis <code>subvalue_ids</code>.</td></tr>
+                <tr><td><code>awarded_at / valid_until</code></td><td><code>date</code></td><td>Dates d’obtention et d’échéance.</td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td>requested, granted, suspended, expired (suivi cycle de vie).</td></tr>
+                <tr><td><code>document</code></td><td><code>object | null</code></td><td>Justificatif { id, title, url } référencé via <code>ref_document</code>.</td></tr>
+                <tr><td><code>source / note</code></td><td><code>string | null</code></td><td>Métadonnées internes optionnelles.</td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top:16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "handicap_labels": [
+    {
+      "scheme": { "code": "HANDICAP_LABEL", "name": "Tourisme & Handicap" },
+      "value": { "code": "th_level_4", "name": "Labellisé 4 handicaps", "position": 4 },
+      "dimensions": [
+        { "code": "HANDICAP_MOTOR", "name": "Moteur" },
+        { "code": "HANDICAP_VISUAL", "name": "Visuel" },
+        { "code": "HANDICAP_AUDITORY", "name": "Auditif" },
+        { "code": "HANDICAP_MENTAL", "name": "Mental" }
+      ],
+      "awarded_at": "2023-06-15",
+      "valid_until": "2026-06-14",
+      "status": "granted",
+      "document": { "id": "uuid-doc-1", "title": "Attestation 2023", "url": "https://…/attestation.pdf" },
+      "note": "Renouvellement 2023"
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.11 <code>tags[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1421,7 +1482,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.11 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
+          <summary>3.12 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
           <div class="content">
             <p>Colonnes de salle (nom, surface, capacités <code>cap_theatre</code>, <code>cap_u</code>, <code>cap_classroom</code>, <code>cap_boardroom</code>, …).</p>
             <p><code>equipment[]</code> : <code>{ code, name, icon_url }</code>.</p>
@@ -1429,7 +1490,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.12 <code>opening_times</code></summary>
+          <summary>3.13 <code>opening_times</code></summary>
           <div class="content">
             <p>Structure d'horaires d'ouverture organisée en deux groupes temporels :</p>
             <table>
@@ -1492,7 +1553,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.13 <code>menus[]</code> (restaurants/événements)</summary>
+          <summary>3.14 <code>menus[]</code> (restaurants/événements)</summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1527,7 +1588,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.14 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
+          <summary>3.15 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
           <div class="content">
             <p>Colonnes du lieu (id, nom, position, …).</p>
             <p><code>descriptions[]</code> : multilingue — structure transparente (ex. <code>language</code>, <code>text</code>, <code>position</code>, …).</p>
@@ -1535,7 +1596,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.15 <code>sustainability_action_labels[]</code></summary>
+          <summary>3.16 <code>sustainability_action_labels[]</code></summary>
           <div class="content">
             <p>Associe les actions de durabilité et les labels obtenus.</p>
             <table>
@@ -1550,7 +1611,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.16 <code>relations { out[], in[] }</code></summary>
+          <summary>3.17 <code>relations { out[], in[] }</code></summary>
           <div class="content">
             <p><b>out[]</b> : cette ressource → autres (<code>target: { id, type, name }</code>)<br>
                <b>in[]</b> : autres → cette ressource (<code>source: { id, type, name }</code>)</p>
@@ -1559,7 +1620,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.17 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
+          <summary>3.18 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
           <div class="content">
             <h3><code>itinerary_details</code></h3>
             <ul>

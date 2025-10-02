@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from ..ai import LLMClient
 from ..schemas import AgentContext, EnvironmentTagTransformation
@@ -28,19 +28,64 @@ class EnvironmentAgent(AIEnabledAgent):
             response_model=EnvironmentTagTransformation,
             context=context.snapshot(),
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for record in transformation.environment_tags:
             environment_code = (record.environment_code or "").strip()
             if not environment_code and record.environment_name:
                 environment_code = self.supabase.normalize_code(record.environment_name)
             if not environment_code:
+                skipped.append(
+                    {
+                        "tag": record.model_dump(),
+                        "reason": "missing_environment_code",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.environment.skip_missing_code",
+                    {
+                        "context": context.model_dump(),
+                        "tag": record.model_dump(),
+                    },
+                )
                 continue
 
+            record.object_id = record.object_id or context.object_id
+            if not record.object_id:
+                skipped.append(
+                    {
+                        "tag": record.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.environment.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "tag": record.model_dump(),
+                    },
+                )
+                continue
             tag_id = await context.ensure_reference_code(
                 domain="environment_tag",
                 code=environment_code,
                 name=record.environment_name or environment_code.replace("_", " ").title(),
             )
+            if not tag_id:
+                skipped.append(
+                    {
+                        "tag": record.model_dump(),
+                        "reason": "unresolved_environment_tag",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.environment.skip_unresolved_tag",
+                    {
+                        "context": context.model_dump(),
+                        "tag": record.model_dump(),
+                    },
+                )
+                continue
             data = record.to_supabase(environment_tag_id=tag_id)
             responses.append(
                 await self.supabase.upsert(
@@ -66,6 +111,7 @@ class EnvironmentAgent(AIEnabledAgent):
                     record.model_dump() for record in transformation.environment_tags
                 ],
                 "responses": responses,
+                "skipped": skipped,
             },
             overwrite=True,
         )
@@ -75,6 +121,7 @@ class EnvironmentAgent(AIEnabledAgent):
             "operation": "upsert",
             "table": "object_environment_tag",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

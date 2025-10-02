@@ -37,13 +37,45 @@ class AmenitiesAgent(AIEnabledAgent):
                 "amenities": [amenity.model_dump() for amenity in amenities],
             },
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for amenity in amenities:
+            amenity.object_id = amenity.object_id or context.object_id
+            if not amenity.object_id:
+                skipped.append(
+                    {
+                        "amenity": amenity.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.amenities.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "amenity": amenity.model_dump(),
+                    },
+                )
+                continue
             amenity_id = await self.supabase.ensure_amenity(
                 code=amenity.amenity_code,
                 name=amenity.amenity_name or amenity.raw_label,
                 family_code=amenity.amenity_family_code,
             )
+            if not amenity_id:
+                skipped.append(
+                    {
+                        "amenity": amenity.model_dump(),
+                        "reason": "unresolved_amenity",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.amenities.skip_unresolved_amenity",
+                    {
+                        "context": context.model_dump(),
+                        "amenity": amenity.model_dump(),
+                    },
+                )
+                continue
             data = amenity.to_supabase(amenity_id=amenity_id)
             responses.append(
                 await self.supabase.upsert(
@@ -57,6 +89,7 @@ class AmenitiesAgent(AIEnabledAgent):
             {
                 "amenities": [amenity.model_dump() for amenity in amenities],
                 "responses": responses,
+                "skipped": skipped,
             },
             overwrite=True,
         )
@@ -65,6 +98,7 @@ class AmenitiesAgent(AIEnabledAgent):
             "operation": "upsert",
             "table": "object_amenity",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

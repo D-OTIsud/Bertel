@@ -80,6 +80,15 @@ class IdentityAgent(AIEnabledAgent):
         if object_id:
             record.object_id = object_id
             context.object_id = object_id
+        else:
+            self.telemetry.record(
+                "agent.identity.missing_object_id",
+                {
+                    "context": context.model_dump(),
+                    "payload": payload,
+                    "response": response,
+                },
+            )
 
         organization_id = context.source_organization_id or self._extract_organization_id(
             context.source_payload
@@ -132,6 +141,8 @@ class IdentityAgent(AIEnabledAgent):
             first = data[0]
             if isinstance(first, dict) and first.get("id"):
                 return str(first["id"])
+        if isinstance(data, dict) and data.get("id"):
+            return str(data["id"])
         if response.get("id"):
             return str(response["id"])
         return None

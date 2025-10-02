@@ -35,6 +35,7 @@ class VerificationAgent(Agent):
     async def handle(self, payload: Dict[str, Any], context: AgentContext) -> Dict[str, Any]:
         fragments: List[Dict[str, Any]] = payload.get("fragments", [])
         leftovers: Dict[str, Any] = payload.get("leftovers", {})
+        unhandled: Dict[str, Any] = payload.get("unhandled", {})
         observed_agents = list(context.agent_events.keys())
         adjustments: List[Dict[str, Any]] = []
 
@@ -70,6 +71,7 @@ class VerificationAgent(Agent):
             "observed_agents": observed_agents,
             "fragments_reviewed": fragments,
             "leftovers": leftovers,
+            "unhandled": unhandled,
             "adjustments": adjustments,
         }
         context.share(self.name, review, overwrite=True)

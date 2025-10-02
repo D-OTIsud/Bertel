@@ -1640,6 +1640,8 @@ const json = await res.json();</pre>
             </div>
             <p class="inline-help">Les objets liés ne sont pas étendus : interrogez séparément l'identifiant fourni si vous avez besoin de leurs contacts, adresses ou médias.</p>
             <p class="inline-help"><b>Cas d'usage :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
+            <p>Les deux tableaux partagent la même structure (<code>{ id, relation_type, role, ... }</code>) à laquelle on a simplement supprimé les identifiants dupliqués. Ils ne chargent pas automatiquement les fiches complètes des objets liés ; interrogez-les séparément si vous avez besoin de leurs contacts, adresses ou médias.</p>
+            <p class="inline-help"><b>Exemple :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
           </div>
         </details>
 

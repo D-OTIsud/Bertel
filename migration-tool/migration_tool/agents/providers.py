@@ -57,8 +57,9 @@ class ProviderAgent(AIEnabledAgent):
             },
         )
 
-        created_providers = []
-        provider_links = []
+        created_providers: List[str] = []
+        provider_links: List[Dict[str, str]] = []
+        skipped_links: List[Dict[str, Any]] = []
 
         for provider_record in transformation.providers:
             if not provider_record.last_name or not provider_record.first_name:
@@ -117,8 +118,26 @@ class ProviderAgent(AIEnabledAgent):
 
         # Also process any pre-defined links from the AI transformation
         for link in transformation.object_provider_links:
-            if link not in provider_links:
-                provider_links.append(link)
+            link_object_id = link.get("object_id") or establishment_id
+            link_provider_id = link.get("provider_id")
+            if not link_object_id or not link_provider_id:
+                skipped_links.append(
+                    {
+                        "link": dict(link),
+                        "reason": "missing_object_or_provider",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.providers.skip_link_missing_ids",
+                    {
+                        "context": context.model_dump(),
+                        "link": link,
+                    },
+                )
+                continue
+            candidate = {"object_id": link_object_id, "provider_id": link_provider_id}
+            if candidate not in provider_links:
+                provider_links.append(candidate)
 
         # Create object-provider links
         if provider_links:
@@ -137,6 +156,7 @@ class ProviderAgent(AIEnabledAgent):
                     "providers": [record.model_dump() for record in transformation.providers],
                     "links": provider_links,
                     "responses": link_results,
+                    "skipped_links": skipped_links,
                 },
                 overwrite=True,
             )
@@ -147,14 +167,26 @@ class ProviderAgent(AIEnabledAgent):
                 "created_providers": created_providers,
                 "linked_providers": len(provider_links),
                 "response": link_results,
+                "skipped_links": skipped_links,
             }
         else:
+            context.share(
+                self.name,
+                {
+                    "providers": [record.model_dump() for record in transformation.providers],
+                    "links": provider_links,
+                    "responses": [],
+                    "skipped_links": skipped_links,
+                },
+                overwrite=True,
+            )
             return {
                 "status": "ok",
                 "operation": "no_data",
                 "message": "No valid provider data found",
-                "created_providers": [],
+                "created_providers": created_providers,
                 "linked_providers": 0,
+                "skipped_links": skipped_links,
             }
 
 

@@ -41,6 +41,31 @@ class PetPolicyAgent(AIEnabledAgent):
                 "message": "No pet policy information provided",
             }
 
+        record.object_id = record.object_id or context.object_id
+        if not record.object_id:
+            self.telemetry.record(
+                "agent.pet_policy.skip_missing_object_id",
+                {
+                    "context": context.model_dump(),
+                    "payload": payload,
+                    "record": record.model_dump(),
+                },
+            )
+            context.share(
+                self.name,
+                {
+                    "pet_policy": record.model_dump(),
+                    "status": "skipped",
+                    "reason": "missing_object_id",
+                },
+                overwrite=True,
+            )
+            return {
+                "status": "ok",
+                "operation": "skipped",
+                "message": "Pet policy skipped due to missing object identifier",
+            }
+
         data = record.to_supabase()
         response = await self.supabase.upsert(
             "object_pet_policy",

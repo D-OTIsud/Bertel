@@ -46,9 +46,24 @@ class LocationAgent(AIEnabledAgent):
                 "locations": [record.model_dump() for record in locations],
             },
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for record in locations:
+            record.object_id = record.object_id or context.object_id
             if not record.object_id:
+                skipped.append(
+                    {
+                        "location": record.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.location.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "location": record.model_dump(),
+                    },
+                )
                 continue
             responses.append(
                 await self.supabase.upsert("object_location", record.to_supabase())
@@ -59,6 +74,7 @@ class LocationAgent(AIEnabledAgent):
             {
                 "locations": [record.model_dump() for record in locations],
                 "responses": responses,
+                "skipped": skipped,
             },
             overwrite=True,
         )
@@ -67,6 +83,7 @@ class LocationAgent(AIEnabledAgent):
             "operation": "upsert",
             "table": "object_location",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

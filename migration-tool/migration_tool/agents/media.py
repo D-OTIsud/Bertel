@@ -37,9 +37,39 @@ class MediaAgent(AIEnabledAgent):
                 "media": [item.model_dump() for item in media],
             },
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for item in media:
             if not item.url:
+                skipped.append(
+                    {
+                        "media": item.model_dump(),
+                        "reason": "missing_url",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.media.skip_missing_url",
+                    {
+                        "context": context.model_dump(),
+                        "media": item.model_dump(),
+                    },
+                )
+                continue
+            item.object_id = item.object_id or context.object_id
+            if not item.object_id:
+                skipped.append(
+                    {
+                        "media": item.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.media.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "media": item.model_dump(),
+                    },
+                )
                 continue
             original_media_type = item.media_type_code or "image"
             normalized_media_type = self.supabase.normalize_code(original_media_type)
@@ -53,6 +83,21 @@ class MediaAgent(AIEnabledAgent):
                     code=normalized_media_type,
                     name=original_media_type.replace("_", " ").title(),
                 )
+            if not media_type_id:
+                skipped.append(
+                    {
+                        "media": item.model_dump(),
+                        "reason": "unresolved_media_type",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.media.skip_unresolved_type",
+                    {
+                        "context": context.model_dump(),
+                        "media": item.model_dump(),
+                    },
+                )
+                continue
             item.media_type_code = normalized_media_type
             responses.append(
                 await self.supabase.upsert(
@@ -65,6 +110,7 @@ class MediaAgent(AIEnabledAgent):
             {
                 "media": [item.model_dump() for item in media],
                 "responses": responses,
+                "skipped": skipped,
             },
             overwrite=True,
         )
@@ -73,6 +119,7 @@ class MediaAgent(AIEnabledAgent):
             "operation": "upsert",
             "table": "media",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

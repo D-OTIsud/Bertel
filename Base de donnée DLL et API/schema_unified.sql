@@ -1899,3 +1899,174 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_allergen ON object_menu_item_a
 CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_item ON object_menu_item_cuisine_type(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_type ON object_menu_item_cuisine_type(cuisine_type_id);
 
+-- =====================================================
+-- UNIFIED LEGAL SYSTEM
+-- =====================================================
+
+-- =====================================================
+-- 1. Create legal validity mode enum
+-- =====================================================
+CREATE TYPE legal_validity_mode AS ENUM (
+  'forever',           -- Open ended, valid_to must be null
+  'tacit_renewal',     -- Considered valid unless revoked, valid_to can be null
+  'fixed_end_date'     -- Requires a non-null valid_to
+);
+
+-- =====================================================
+-- 2. Create reference table for legal record types
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ref_legal_type (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT, -- e.g., 'business', 'accommodation', 'tax', 'insurance'
+  is_required BOOLEAN DEFAULT FALSE,
+  is_public BOOLEAN DEFAULT FALSE, -- Whether the document can be public or only for parent org
+  review_interval_days INTEGER, -- For tacit_renewal types, how often to review
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Insert common legal types
+INSERT INTO ref_legal_type (code, name, description, category, is_required, is_public, review_interval_days) VALUES
+  -- Business legal types
+  ('siret', 'SIRET', 'Système d''identification du répertoire des établissements', 'business', true, true, NULL),
+  ('siren', 'SIREN', 'Système d''identification du répertoire des entreprises', 'business', true, true, NULL),
+  ('vat_number', 'Numéro TVA', 'Numéro de TVA intracommunautaire', 'business', false, false, NULL),
+  ('business_license', 'Licence commerciale', 'Licence d''exploitation commerciale', 'business', false, true, 365),
+  
+  -- Accommodation legal types
+  ('tourist_tax', 'Taxe de séjour', 'Autorisation de collecte de la taxe de séjour', 'accommodation', true, true, 365),
+  ('accommodation_license', 'Licence d''hébergement', 'Licence d''exploitation d''hébergement', 'accommodation', true, true, 1095), -- 3 years
+  ('safety_certificate', 'Certificat de sécurité', 'Certificat de conformité sécurité', 'accommodation', true, true, 365),
+  ('fire_safety', 'Sécurité incendie', 'Attestation de sécurité incendie', 'accommodation', true, true, 365),
+  ('accessibility', 'Accessibilité', 'Attestation d''accessibilité', 'accommodation', false, true, 1095),
+  
+  -- Insurance types
+  ('liability_insurance', 'Assurance responsabilité civile', 'Assurance responsabilité civile professionnelle', 'insurance', true, false, 365),
+  ('property_insurance', 'Assurance biens', 'Assurance des biens et équipements', 'insurance', true, false, 365),
+  ('cyber_insurance', 'Assurance cyber', 'Assurance cybersécurité', 'insurance', false, false, 365),
+  
+  -- Environmental types
+  ('environmental_permit', 'Permis environnemental', 'Autorisation environnementale', 'environment', false, true, 1095),
+  ('waste_management', 'Gestion des déchets', 'Autorisation de gestion des déchets', 'environment', false, true, 365),
+  
+  -- Tourism specific
+  ('tourism_license', 'Licence tourisme', 'Licence d''exploitation touristique', 'tourism', false, true, 1095),
+  ('guide_license', 'Licence guide', 'Licence de guide touristique', 'tourism', false, true, 365)
+ON CONFLICT (code) DO NOTHING;
+
+-- =====================================================
+-- 3. Create unified object_legal table
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_legal (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  type_id UUID NOT NULL REFERENCES ref_legal_type(id) ON DELETE RESTRICT,
+  value JSONB NOT NULL, -- Flexible storage for different value types
+  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  valid_from DATE NOT NULL DEFAULT CURRENT_DATE,
+  valid_to DATE,
+  validity_mode legal_validity_mode NOT NULL DEFAULT 'fixed_end_date',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'suspended', 'revoked', 'requested')),
+  document_requested_at TIMESTAMPTZ,
+  document_delivered_at TIMESTAMPTZ,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- Constraints
+  CONSTRAINT chk_forever_validity CHECK (
+    (validity_mode = 'forever' AND valid_to IS NULL) OR
+    (validity_mode != 'forever')
+  ),
+  CONSTRAINT chk_fixed_end_date_validity CHECK (
+    (validity_mode = 'fixed_end_date' AND valid_to IS NOT NULL) OR
+    (validity_mode != 'fixed_end_date')
+  ),
+  CONSTRAINT chk_valid_date_range CHECK (valid_to IS NULL OR valid_to >= valid_from),
+  CONSTRAINT chk_document_delivery_date CHECK (document_delivered_at IS NULL OR document_delivered_at >= document_requested_at),
+  CONSTRAINT chk_requested_status CHECK (
+    (status = 'requested' AND document_requested_at IS NOT NULL) OR
+    (status != 'requested')
+  ),
+  
+  -- Optional uniqueness to avoid duplicates
+  UNIQUE(object_id, type_id, valid_from)
+);
+
+-- =====================================================
+-- 4. Create indexes for performance
+-- =====================================================
+CREATE INDEX IF NOT EXISTS idx_object_legal_object_type ON object_legal(object_id, type_id);
+CREATE INDEX IF NOT EXISTS idx_object_legal_valid_to ON object_legal(valid_to) WHERE valid_to IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_object_legal_validity_mode ON object_legal(validity_mode);
+CREATE INDEX IF NOT EXISTS idx_object_legal_status ON object_legal(status);
+CREATE INDEX IF NOT EXISTS idx_object_legal_expiring ON object_legal(valid_to, status) 
+  WHERE valid_to IS NOT NULL AND status = 'active';
+CREATE INDEX IF NOT EXISTS idx_object_legal_requested ON object_legal(status, document_requested_at) 
+  WHERE status = 'requested';
+CREATE INDEX IF NOT EXISTS idx_object_legal_document_dates ON object_legal(document_requested_at, document_delivered_at);
+
+-- =====================================================
+-- 5. Create trigger for updated_at
+-- =====================================================
+CREATE TRIGGER update_object_legal_updated_at 
+  BEFORE UPDATE ON object_legal 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 6. Create views for easy querying
+-- =====================================================
+
+-- View for active legal records
+CREATE OR REPLACE VIEW v_active_legal_records AS
+SELECT 
+  ol.id,
+  ol.object_id,
+  o.name as object_name,
+  o.object_type,
+  rlt.code as type_code,
+  rlt.name as type_name,
+  rlt.category,
+  ol.value,
+  ol.document_id,
+  ol.valid_from,
+  ol.valid_to,
+  ol.validity_mode,
+  ol.status,
+  ol.document_requested_at,
+  ol.document_delivered_at,
+  ol.note,
+  CASE 
+    WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+    ELSE NULL
+  END as days_until_expiry
+FROM object_legal ol
+JOIN object o ON o.id = ol.object_id
+JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+WHERE ol.status = 'active';
+
+-- View for expiring legal records (next 30 days)
+CREATE OR REPLACE VIEW v_expiring_legal_records AS
+SELECT *
+FROM v_active_legal_records
+WHERE valid_to IS NOT NULL 
+  AND valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
+ORDER BY valid_to ASC;
+
+-- =====================================================
+-- 7. Comments and documentation
+-- =====================================================
+
+COMMENT ON TABLE object_legal IS 'Unified legal records for all object types. Each record represents one legal aspect (permit, license, etc.) for one object.';
+COMMENT ON COLUMN object_legal.value IS 'Flexible JSONB storage for different value types (numbers, text, structured data)';
+COMMENT ON COLUMN object_legal.validity_mode IS 'How the validity period is managed: forever (no expiry), tacit_renewal (renewed unless revoked), fixed_end_date (specific end date)';
+COMMENT ON COLUMN object_legal.status IS 'Current status: active, expired, suspended, revoked, requested';
+COMMENT ON COLUMN object_legal.document_requested_at IS 'Timestamp when the supporting document was requested';
+COMMENT ON COLUMN object_legal.document_delivered_at IS 'Timestamp when the supporting document was delivered';
+
+COMMENT ON TABLE ref_legal_type IS 'Reference table for legal record types. Defines what types of legal documents can be stored for objects.';
+COMMENT ON COLUMN ref_legal_type.is_public IS 'Whether documents of this type can be public (true) or should only be visible to parent organization (false)';
+

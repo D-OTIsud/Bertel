@@ -813,7 +813,7 @@ SELECT
     NOW()
 FROM object o
 WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
-  AND NOT EXISTS (
+      AND NOT EXISTS (
     SELECT 1 FROM object_description d
     WHERE d.object_id = o.id AND d.org_object_id IS NOT DISTINCT FROM o.id
   );
@@ -1031,8 +1031,8 @@ SELECT h.id, l.id, NOW()
 FROM object h JOIN ref_language l ON l.code IN ('fr','en','de')
 WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
   AND NOT EXISTS (SELECT 1 FROM object_language ol WHERE ol.object_id=h.id AND ol.language_id=l.id);
-
--- Moyens de paiement
+    
+    -- Moyens de paiement
 INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
 SELECT h.id, pm.id, NOW()
 FROM object h JOIN ref_code_payment_method pm ON pm.code IN ('visa','mastercard','american_express','paypal','virement')
@@ -1061,8 +1061,8 @@ WHERE t.slug IN ('eco_friendly','business_ready')
   AND NOT EXISTS (
     SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=h.id
   );
-
--- Équipements
+    
+    -- Équipements
 INSERT INTO object_amenity (object_id, amenity_id, created_at)
 SELECT h.id, a.id, NOW()
 FROM object h JOIN ref_amenity a ON a.code IN (
@@ -1124,7 +1124,7 @@ FROM opening_schedule os
 JOIN opening_period op ON op.id=os.period_id AND op.name='Haute saison'
 WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=FALSE);
 
-INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
 SELECT tp.id, w.id
 FROM opening_time_period tp
 JOIN opening_schedule os ON os.id=tp.schedule_id
@@ -1207,7 +1207,7 @@ SELECT h.id, pk.id, pu.id, 120.00, 'EUR', DATE '2025-09-01', DATE '2026-06-30', 
 FROM object h, ref_code_price_kind pk, ref_code_price_unit pu
 WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
   AND pk.code='adulte' AND pu.code='par_nuit'
-  AND NOT EXISTS (
+      AND NOT EXISTS (
     SELECT 1 FROM object_price p WHERE p.object_id=h.id AND p.kind_id=pk.id AND p.unit_id=pu.id AND p.valid_from=DATE '2025-09-01'
   );
 
@@ -1233,7 +1233,7 @@ FROM object res, object hot, ref_object_relation_type rt
 WHERE res.object_type='RES' AND res.name='Restaurant Test Océan' AND res.region_code='TST'
   AND hot.object_type='HOT' AND hot.name='Hôtel Test Océan' AND hot.region_code='TST'
   AND rt.code='part_of'
-  AND NOT EXISTS (
+      AND NOT EXISTS (
     SELECT 1 FROM object_relation r WHERE r.source_object_id=res.id AND r.target_object_id=hot.id AND r.relation_type_id=rt.id
   );
 
@@ -1298,7 +1298,7 @@ FROM opening_schedule os
 JOIN opening_period op ON op.id=os.period_id AND op.name='Fermeture juin-juillet'
 WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=TRUE);
 
-INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
 SELECT tp.id, w.id
 FROM opening_time_period tp
 JOIN opening_schedule os ON os.id=tp.schedule_id
@@ -1368,8 +1368,8 @@ FROM object o, ref_code_media_type mt
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
   AND mt.code='photo'
   AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id=o.id AND m.title='Photo Restaurant Fermeture');
-
--- Langues
+    
+    -- Langues
 INSERT INTO object_language (object_id, language_id, created_at)
 SELECT o.id, l.id, NOW()
 FROM object o, ref_language l
@@ -1392,8 +1392,8 @@ FROM object o, ref_code_environment_tag et
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
   AND et.code IN ('mer', 'tropical', 'urbain')
   AND NOT EXISTS (SELECT 1 FROM object_environment_tag oet WHERE oet.object_id=o.id AND oet.environment_tag_id=et.id);
-
--- Équipements
+    
+    -- Équipements
 INSERT INTO object_amenity (object_id, amenity_id, created_at)
 SELECT o.id, a.id, NOW()
 FROM object o, ref_amenity a
@@ -1477,6 +1477,303 @@ SELECT m.id, 'Ti punch', 8.00, 'EUR', 3, NOW(), NOW()
 FROM object_menu m
 JOIN object o ON o.id=m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
 WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Ti punch');
+
+-- =====================================================
+-- ENHANCEMENTS: COMPREHENSIVE DATA FOR ALL OBJECTS
+-- =====================================================
+
+-- =====================================================
+-- OTI TEST - MISSING LOCATION DATA
+-- =====================================================
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, '15 Avenue du Général de Gaulle', '97430', 'Le Tampon', -21.2800, 55.5200, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Office de Tourisme Intercommunal TEST'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+-- =====================================================
+-- CRT TEST - MISSING LOCATION DATA
+-- =====================================================
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, '8 Rue Pasteur', '97400', 'Saint-Denis', -20.8789, 55.4481, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Comité Régional de Tourisme TEST'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+-- =====================================================
+-- ORGANIZATIONS - CONTACTS & SOCIAL MEDIA
+-- =====================================================
+
+-- OTI TEST - Website contact
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.oti-test.re', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Office de Tourisme Intercommunal TEST'
+  AND ck.code='website'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- OTI TEST - Facebook
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.facebook.com/oti.test', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Office de Tourisme Intercommunal TEST'
+  AND ck.code='facebook'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- CRT TEST - Website contact
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.crt-test.re', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Comité Régional de Tourisme TEST'
+  AND ck.code='website'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- CRT TEST - Instagram
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.instagram.com/crt.test', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Comité Régional de Tourisme TEST'
+  AND ck.code='instagram'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- =====================================================
+-- ORGANIZATIONS - CLASSIFICATIONS & SUSTAINABILITY
+-- =====================================================
+
+-- OTI TEST - Classification (Tourisme & Handicap)
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Office de Tourisme Intercommunal TEST'
+  AND cs.code='tourisme_handicap'
+  AND cv.code='auditif'
+  AND NOT EXISTS (SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id);
+
+-- CRT TEST - Sustainability action (energy)
+INSERT INTO object_sustainability_action (object_id, action_id, created_at, updated_at)
+SELECT o.id, sa.id, NOW(), NOW()
+FROM object o, ref_sustainability_action sa
+JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
+WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Comité Régional de Tourisme TEST'
+  AND sac.code='energy'
+  AND sa.code='solar_panels'
+  AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
+
+-- =====================================================
+-- HOTEL TEST OCÉAN - COMPREHENSIVE ENHANCEMENTS
+-- =====================================================
+
+-- Hotel - Contacts & Social Media
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.hotel-test-ocean.re', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND ck.code='website'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.facebook.com/hotel.test.ocean', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND ck.code='facebook'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.instagram.com/hotel.test.ocean', FALSE, 3, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND ck.code='instagram'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- Hotel - Labels (ref_tag)
+INSERT INTO ref_tag (slug, name, description, color, created_at, updated_at)
+VALUES ('luxury', 'Luxury', 'Établissement de luxe', '#FFD700', NOW(), NOW())
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO ref_tag (slug, name, description, color, created_at, updated_at)
+VALUES ('family_friendly', 'Family Friendly', 'Établissement adapté aux familles', '#4CAF50', NOW(), NOW())
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', o.id, NOW()
+FROM object o, ref_tag t
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND t.slug IN ('luxury', 'family_friendly', 'eco_friendly', 'business_ready')
+  AND NOT EXISTS (SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=o.id);
+
+-- Hotel - Group Policies
+INSERT INTO object_group_policy (object_id, min_size, max_size, group_only, notes, created_at, updated_at)
+SELECT o.id, 10, 50, TRUE, 'Politique pour groupes d''entreprise: 15% de réduction', NOW(), NOW()
+FROM object o
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_group_policy ogp WHERE ogp.object_id=o.id);
+
+-- Hotel - Discounts
+INSERT INTO object_discount (object_id, conditions, discount_percent, min_group_size, valid_from, valid_to, source, created_at, updated_at)
+SELECT o.id, 'Réduction longue durée - séjour de 7 nuits minimum', 10.00, 1, CURRENT_DATE, CURRENT_DATE + INTERVAL '6 months', 'promotion', NOW(), NOW()
+FROM object o
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_discount od WHERE od.object_id=o.id AND od.conditions='Réduction longue durée - séjour de 7 nuits minimum');
+
+-- Hotel - Classifications (Green Key, Tourisme & Handicap)
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND cs.code='green_key'
+  AND cv.code='green_key'
+  AND NOT EXISTS (SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id);
+
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND cs.code='tourisme_handicap'
+  AND cv.code='moteur'
+  AND NOT EXISTS (SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id);
+
+-- Hotel - Sustainability Actions
+INSERT INTO object_sustainability_action (object_id, action_id, created_at, updated_at)
+SELECT o.id, sa.id, NOW(), NOW()
+FROM object o, ref_sustainability_action sa
+JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND sac.code='energy'
+  AND sa.code='led_lighting'
+  AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
+
+INSERT INTO object_sustainability_action (object_id, action_id, created_at, updated_at)
+SELECT o.id, sa.id, NOW(), NOW()
+FROM object o, ref_sustainability_action sa
+JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND sac.code='waste'
+  AND sa.code='recycling_program'
+  AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
+
+-- =====================================================
+-- RESTAURANT TEST OCÉAN - COMPREHENSIVE ENHANCEMENTS
+-- =====================================================
+
+-- Restaurant Test Océan - Contacts & Social Media
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.restaurant-test-ocean.re', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND ck.code='website'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.facebook.com/restaurant.test.ocean', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND ck.code='facebook'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- Restaurant Test Océan - Labels
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', o.id, NOW()
+FROM object o, ref_tag t
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND t.slug IN ('eco_friendly', 'business_ready')
+  AND NOT EXISTS (SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=o.id);
+
+-- Restaurant Test Océan - Group Policies
+INSERT INTO object_group_policy (object_id, min_size, max_size, group_only, notes, created_at, updated_at)
+SELECT o.id, 8, 30, TRUE, 'Politique pour groupes d''entreprise: 12% de réduction', NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_group_policy ogp WHERE ogp.object_id=o.id);
+
+-- Restaurant Test Océan - Discounts
+INSERT INTO object_discount (object_id, conditions, discount_percent, min_group_size, valid_from, valid_to, source, created_at, updated_at)
+SELECT o.id, 'Menu déjeuner groupe - minimum 8 personnes', 15.00, 8, CURRENT_DATE, CURRENT_DATE + INTERVAL '3 months', 'promotion', NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_discount od WHERE od.object_id=o.id AND od.conditions='Menu déjeuner groupe - minimum 8 personnes');
+
+-- Restaurant Test Océan - Classifications
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND cs.code='green_key'
+  AND cv.code='green_key'
+  AND NOT EXISTS (SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id);
+
+-- Restaurant Test Océan - Sustainability Actions
+INSERT INTO object_sustainability_action (object_id, action_id, created_at, updated_at)
+SELECT o.id, sa.id, NOW(), NOW()
+FROM object o, ref_sustainability_action sa
+JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+  AND sac.code='waste'
+  AND sa.code='food_waste_reduction'
+  AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
+
+-- =====================================================
+-- RESTAURANT FERMETURE SAISONNIÈRE - COMPREHENSIVE ENHANCEMENTS
+-- =====================================================
+
+-- Restaurant Fermeture Saisonnière - Contacts & Social Media
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.restaurant-fermeture.re', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND ck.code='website'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT o.id, ck.id, 'https://www.instagram.com/restaurant.fermeture', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_contact_kind ck
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND ck.code='instagram'
+  AND NOT EXISTS (SELECT 1 FROM contact_channel cc WHERE cc.object_id=o.id AND cc.kind_id=ck.id);
+
+-- Restaurant Fermeture Saisonnière - Labels
+INSERT INTO ref_tag (slug, name, description, color, created_at, updated_at)
+VALUES ('traditional', 'Traditional', 'Cuisine traditionnelle', '#8B4513', NOW(), NOW())
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', o.id, NOW()
+FROM object o, ref_tag t
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND t.slug IN ('traditional', 'eco_friendly')
+  AND NOT EXISTS (SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=o.id);
+
+-- Restaurant Fermeture Saisonnière - Group Policies
+INSERT INTO object_group_policy (object_id, min_size, max_size, group_only, notes, created_at, updated_at)
+SELECT o.id, 6, 20, TRUE, 'Politique pour groupes familiaux: 10% de réduction', NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (SELECT 1 FROM object_group_policy ogp WHERE ogp.object_id=o.id);
+
+-- Restaurant Fermeture Saisonnière - Discounts
+INSERT INTO object_discount (object_id, conditions, discount_percent, min_group_size, valid_from, valid_to, source, created_at, updated_at)
+SELECT o.id, 'Réduction fidélité - clients réguliers', 5.00, 1, CURRENT_DATE, CURRENT_DATE + INTERVAL '1 year', 'loyalty', NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (SELECT 1 FROM object_discount od WHERE od.object_id=o.id AND od.conditions='Réduction fidélité - clients réguliers');
+
+-- Restaurant Fermeture Saisonnière - Classifications
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND cs.code='tourisme_handicap'
+  AND cv.code='moteur'
+  AND NOT EXISTS (SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id);
+
+-- Restaurant Fermeture Saisonnière - Sustainability Actions
+INSERT INTO object_sustainability_action (object_id, action_id, created_at, updated_at)
+SELECT o.id, sa.id, NOW(), NOW()
+FROM object o, ref_sustainability_action sa
+JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND sac.code='water'
+  AND sa.code='water_saving_devices'
+  AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
 
 -- Add sample media for menu items demonstration
 INSERT INTO media (object_id, media_type_id, title, url, description, is_main, is_published, position, created_at, updated_at)

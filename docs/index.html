@@ -1232,6 +1232,11 @@ const json = await res.json();</pre>
                 <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.15</td></tr>
                 <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.16</td></tr>
                 <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.17</td></tr>
+                <tr><td><code>legal</code></td><td><code>object|null</code></td><td>Identité légale consolidée (SIRET/SIREN, TVA, justificatif)</td><td>voir §3.20</td></tr>
+                <tr><td><code>accommodation_legal</code> (hébergements)</td><td><code>object|null</code></td><td>Cadastre taxe de séjour &amp; licences spécifiques</td><td>voir §3.21</td></tr>
+                <tr><td><code>documents</code></td><td><code>array&lt;object&gt;</code></td><td>Pièces justificatives publiables (référentiel commun)</td><td>voir §3.22</td></tr>
+                <tr><td><code>document_requests</code></td><td><code>array&lt;object&gt;</code></td><td>Suivi des demandes/remises de documents</td><td>voir §3.23</td></tr>
+                <tr><td><code>associated_restaurants_cuisine_types</code> (si <code>type="FMA"</code>)</td><td><code>array&lt;object&gt;</code></td><td>Types de cuisine agrégés via les restaurants liés</td><td>voir §3.19</td></tr>
                 <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.18</td></tr>
                 <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.18</td></tr>
               </tbody>
@@ -1618,6 +1623,23 @@ const json = await res.json();</pre>
               <li><b>out[]</b> : relations <em>sortantes</em>. L'objet courant pointe vers une autre ressource exposée sous <code>target: { id, type, name }</code>.</li>
               <li><b>in[]</b> : relations <em>entrantes</em>. Une autre ressource référence l'objet courant et apparaît via <code>source: { id, type, name }</code>.</li>
             </ul>
+            <p>Chaque enregistrement conserve les métadonnées du lien (<code>id</code>, <code>relation_type_id</code>, <code>distance_m</code>, <code>note</code>, <code>position</code>, <code>created_at</code>, <code>updated_at</code>) et ajoute le nœud opposé déjà résolu (<code>target</code> ou <code>source</code>).</p>
+            <p>Pour interpréter le type de relation, mappez <code>relation_type_id</code> avec la table de référence <code>ref_object_relation_type</code> (code, libellé, description). Les champs <code>distance_m</code> et <code>note</code> restent optionnels et peuvent être utilisés pour afficher une distance ou un commentaire éditorial.</p>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "id": "uuid-relation-1",
+  "relation_type_id": "uuid-type-restaurant",
+  "position": 1,
+  "note": null,
+  "distance_m": 120.0,
+  "created_at": "2024-03-12T09:15:00Z",
+  "updated_at": "2024-03-12T09:15:00Z",
+  "target": { "id": "RES-001", "type": "RES", "name": "Restaurant Chez Léon" }
+}</code></pre>
+            </div>
+            <p class="inline-help">Les objets liés ne sont pas étendus : interrogez séparément l'identifiant fourni si vous avez besoin de leurs contacts, adresses ou médias.</p>
+            <p class="inline-help"><b>Cas d'usage :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
             <p>Les deux tableaux partagent la même structure (<code>{ id, relation_type, role, ... }</code>) à laquelle on a simplement supprimé les identifiants dupliqués. Ils ne chargent pas automatiquement les fiches complètes des objets liés ; interrogez-les séparément si vous avez besoin de leurs contacts, adresses ou médias.</p>
             <p class="inline-help"><b>Exemple :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
           </div>
@@ -1633,8 +1655,37 @@ const json = await res.json();</pre>
               <li><code>practices[]</code> : { code, name, icon_url } (ex. "hiking", "mtb")</li>
               <li><code>sections[]</code> : segments/tronçons</li>
               <li><code>stages[]</code> : étapes (avec leur propre <code>media[]</code>)</li>
-              <li><code>associated_objects[]</code> : liens vers d’autres objets (<code>target { id, type, name }</code>)</li>
+              <li><code>associated_objects[]</code> : voir ci-dessous pour la structure détaillée</li>
             </ul>
+
+            <h4 style="margin-top: 18px;"><code>associated_objects[]</code></h4>
+            <p>Liste les ressources liées à l’itinéraire (hébergements, points d’intérêt, services…) avec le rôle attribué dans l’étape de production.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>associated_object_id</code></td><td><code>string</code></td><td>Identifiant de l’objet lié (identique à <code>target.id</code>, conservé pour compatibilité)</td></tr>
+                <tr><td><code>target</code></td><td><code>object | null</code></td><td>{ <code>id</code>, <code>type</code>, <code>name</code> } résolu automatiquement ; peut être <code>null</code> si l’objet n’est plus publié</td></tr>
+                <tr><td><code>role_id</code></td><td><code>uuid</code></td><td>Rôle éditorial attribué (mapper via <code>ref_iti_assoc_role</code> pour récupérer code/libellé)</td></tr>
+                <tr><td><code>note</code></td><td><code>string | null</code></td><td>Commentaire libre (ex. conseil d’étape)</td></tr>
+                <tr><td><code>created_at</code></td><td><code>timestamp</code></td><td>Date de création du lien</td></tr>
+                <tr><td><code>updated_at</code></td><td><code>timestamp</code></td><td>Dernière mise à jour du lien</td></tr>
+              </tbody>
+            </table>
+            <p class="inline-help">Les éléments sont triés par nom d’objet puis date de création. Si l’objet cible a été supprimé, <code>target</code> vaut <code>null</code> mais l’identifiant brut reste disponible pour diagnostic.</p>
+            <p class="inline-help">Le référentiel <code>ref_iti_assoc_role</code> expose les colonnes <code>{ id, code, name, description, position }</code> : utilisez-le pour afficher un libellé utilisateur.</p>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"associated_objects": [
+  {
+    "associated_object_id": "LODGE-42",
+    "role_id": "0ab5d76a-55f9-4bdc-9219-6a962fbf9c5d",
+    "note": "Hébergement recommandé pour la nuit 2",
+    "created_at": "2024-05-06T08:12:11Z",
+    "updated_at": "2024-05-14T10:33:02Z",
+    "target": { "id": "LODGE-42", "type": "HOT", "name": "Lodge des Cimes" }
+  }
+]</code></pre>
+            </div>
             <h3><code>itinerary</code></h3>
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1649,6 +1700,220 @@ const json = await res.json();</pre>
               </tbody>
             </table>
             <p class="inline-help"><b>Rappels tracé</b> — Par défaut <code>track=null</code>. Pour obtenir un tracé, définissez <code>p_track_format</code> à <code>"kml"</code> ou <code>"gpx"</code>. <b>KML</b> : utilisez <code>p_options.stage_color</code> si vous incluez des étapes. <b>GPX</b> : <code>stage_color</code> ignorée.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.19 Spécifique Événement (<code>type="FMA"</code>)</summary>
+          <div class="content">
+            <p>Les événements peuvent agréger les types de cuisine proposés par leurs restaurants partenaires via le bloc <code>associated_restaurants_cuisine_types[]</code>.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant du type de cuisine</td></tr>
+                <tr><td><code>code</code></td><td><code>string</code></td><td>Code fonctionnel (ex. <code>"veggie"</code>)</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé affiché</td></tr>
+                <tr><td><code>description</code></td><td><code>string | null</code></td><td>Description optionnelle</td></tr>
+                <tr><td><code>position</code></td><td><code>number | null</code></td><td>Ordre conseillé du référentiel</td></tr>
+              </tbody>
+            </table>
+            <p>Le tableau est dédupliqué et ne contient que les types présents dans au moins un menu actif d'un restaurant lié via la relation <code>has_restaurant</code>. Les éléments sont triés selon le référentiel (position puis nom/code).</p>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"associated_restaurants_cuisine_types": [
+  { "id": "uuid-ct-1", "code": "local", "name": "Cuisine locale", "description": null, "position": 10 },
+  { "id": "uuid-ct-2", "code": "veggie", "name": "Option végétarienne", "description": null, "position": 40 }
+]</code></pre>
+            </div>
+            <p class="inline-help">Si aucun restaurant associé ne publie de menu actif, le tableau est vide.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.20 <code>legal</code> (socle unifié)</summary>
+          <div class="content">
+            <p>Bloc présent sur toutes les réponses quand l’objet dispose d’une fiche légale dans la table <code>legal</code>. Il expose les identifiants officiels ainsi que le justificatif associé via <code>ref_document</code> (fichiers fiscaux, extrait KBIS, etc.).</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>siret</code></td><td><code>string</code></td><td>SIRET à 14 chiffres (contrôle de forme appliqué côté base)</td></tr>
+                <tr><td><code>siren</code></td><td><code>string|null</code></td><td>SIREN dérivé (9 chiffres) si stocké distinctement</td></tr>
+                <tr><td><code>vat_number</code></td><td><code>string|null</code></td><td>Numéro de TVA intracommunautaire déclaré</td></tr>
+                <tr><td><code>document</code></td><td><code>object|null</code></td><td>Pièce justificative enrichie (voir structure ci-dessous)</td></tr>
+                <tr><td><code>updated_at</code></td><td><code>timestamp</code></td><td>Date de dernière mise à jour connue de la fiche légale</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Structure du champ <code>document</code></h4>
+            <p>Les documents légaux sont normalisés depuis <code>ref_document</code> et comportent des métadonnées communes.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant du document dans le référentiel</td></tr>
+                <tr><td><code>url</code></td><td><code>string</code></td><td>URL sécurisée du justificatif (presignée côté API)</td></tr>
+                <tr><td><code>title</code></td><td><code>string|null</code></td><td>Titre libre (ex. «&nbsp;KBIS 2024&nbsp;»)</td></tr>
+                <tr><td><code>issuer</code></td><td><code>string|null</code></td><td>Organisme émetteur</td></tr>
+                <tr><td><code>description</code></td><td><code>string|null</code></td><td>Description courte ou notes métiers</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date|null</code></td><td>Période de validité de la pièce (si connu)</td></tr>
+                <tr><td><code>visibility</code></td><td><code>enum</code></td><td><code>"public"</code> ou <code>"private"</code> pour contrôler l’exposition</td></tr>
+              </tbody>
+            </table>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"legal": {
+  "siret": "12345678901234",
+  "siren": "123456789",
+  "vat_number": "FR45123456789",
+  "updated_at": "2025-01-15T10:42:27Z",
+  "document": {
+    "id": "9d9f6f4c-4b8f-4c48-b8c2-2474b61f5a31",
+    "url": "https://cdn.example.tld/legal/kbis-2025.pdf",
+    "title": "Extrait KBIS",
+    "issuer": "Greffe du Tribunal de Commerce",
+    "description": "KBIS mis à jour après fusion",
+    "valid_from": "2024-12-01",
+    "valid_to": "2025-12-01",
+    "visibility": "private"
+  }
+}</code></pre>
+            </div>
+
+            <div class="card info-card" style="margin-top: 12px;">
+              <div class="pill info-pill">Bon à savoir</div>
+              <p>Les contrôles de cohérence (longueur SIRET/SIREN) sont exécutés côté base ; l’API relaie telle quelle la valeur enregistrée. La visibilité du document permet de filtrer côté portail si seuls les justificatifs publics doivent être exposés.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.21 <code>accommodation_legal</code> (hébergements uniquement)</summary>
+          <div class="content">
+            <p>Présent pour les objets de type <code>HOT</code>, <code>HLO</code>, <code>HPA</code>, <code>VIL</code> ou <code>CAMP</code> disposant d’un enregistrement dans <code>accommodation_legal</code>. Permet de suivre les obligations spécifiques des hébergeurs.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>tourist_tax_number</code></td><td><code>string|null</code></td><td>Numéro de taxe de séjour ou identifiant fiscal local</td></tr>
+                <tr><td><code>tourist_tax_issued_date</code></td><td><code>date|null</code></td><td>Date d’émission du justificatif de taxe de séjour</td></tr>
+                <tr><td><code>tourist_tax_valid_until</code></td><td><code>date|null</code></td><td>Date d’expiration de l’attestation</td></tr>
+                <tr><td><code>accommodation_license_number</code></td><td><code>string|null</code></td><td>Licence d’exploitation (meublé, camping, etc.)</td></tr>
+                <tr><td><code>accommodation_license_issued_date</code></td><td><code>date|null</code></td><td>Date de délivrance de la licence</td></tr>
+                <tr><td><code>accommodation_license_valid_until</code></td><td><code>date|null</code></td><td>Fin de validité de la licence</td></tr>
+                <tr><td><code>document</code></td><td><code>object|null</code></td><td>Justificatif principal (structure identique à §3.20)</td></tr>
+                <tr><td><code>updated_at</code></td><td><code>timestamp</code></td><td>Horodatage de la dernière modification</td></tr>
+              </tbody>
+            </table>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"accommodation_legal": {
+  "tourist_tax_number": "TS-2025-001",
+  "tourist_tax_issued_date": "2025-01-01",
+  "tourist_tax_valid_until": "2025-12-31",
+  "accommodation_license_number": "LIC-HOT-98765",
+  "accommodation_license_issued_date": "2024-11-15",
+  "accommodation_license_valid_until": "2027-11-14",
+  "updated_at": "2025-02-02T09:10:03Z",
+  "document": {
+    "id": "7c4ae51f-6a95-4e75-8fbf-f7688b87df2e",
+    "url": "https://cdn.example.tld/legal/licence-hotel.pdf",
+    "title": "Licence d'exploitation",
+    "visibility": "public"
+  }
+}</code></pre>
+            </div>
+
+            <div class="card info-card" style="margin-top: 12px;">
+              <div class="pill info-pill">Règle métier</div>
+              <p>Le back-end applique un trigger pour empêcher la création de données <code>accommodation_legal</code> sur d’autres types d’objets. Les clients peuvent donc se baser sur la présence du bloc pour déterminer si l’objet est soumis aux obligations d’hébergement.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.22 <code>documents[]</code> (référentiel partagé)</summary>
+          <div class="content">
+            <p>Ce tableau regroupe l’ensemble des pièces justificatives exposées par l’API (qu’elles soient liées à la fiche légale, à une classification ou à une action RSE). Chaque entrée correspond à un enregistrement de <code>ref_document</code> relié à l’objet.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique du document</td></tr>
+                <tr><td><code>url</code></td><td><code>string</code></td><td>URL de téléchargement (soumise aux contrôles de visibilité)</td></tr>
+                <tr><td><code>title</code></td><td><code>string|null</code></td><td>Titre humain affichable</td></tr>
+                <tr><td><code>issuer</code></td><td><code>string|null</code></td><td>Source officielle</td></tr>
+                <tr><td><code>description</code></td><td><code>string|null</code></td><td>Notes complémentaires</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date|null</code></td><td>Période de validité</td></tr>
+                <tr><td><code>visibility</code></td><td><code>enum</code></td><td><code>"public"</code> ou <code>"private"</code></td></tr>
+                <tr><td><code>position</code></td><td><code>number|null</code></td><td>Ordre d’affichage suggéré</td></tr>
+                <tr><td><code>tags</code></td><td><code>array&lt;string&gt;</code></td><td>Raccourcis métiers (ex. <code>["legal", "rse"]</code>)</td></tr>
+              </tbody>
+            </table>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"documents": [
+  {
+    "id": "0518c3c1-6f35-40f0-bd26-19ccaf7bc93a",
+    "url": "https://cdn.example.tld/docs/certificat-accessibilite.pdf",
+    "title": "Certificat accessibilité 2025",
+    "issuer": "Préfecture",
+    "description": "Valable jusqu'au 31/12/2025",
+    "valid_from": "2024-01-01",
+    "valid_to": "2025-12-31",
+    "visibility": "public",
+    "position": 1,
+    "tags": ["legal", "handicap"]
+  }
+]</code></pre>
+            </div>
+
+            <div class="card info-card" style="margin-top: 12px;">
+              <div class="pill info-pill">Agrégation</div>
+              <p>Le tableau est dédupliqué côté SQL afin d’éviter d’exposer plusieurs fois la même ressource lorsqu’elle est utilisée à la fois pour un classement et pour la fiche légale. Les doublons sont fusionnés sur l’identifiant de document.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.23 <code>document_requests[]</code> (suivi des pièces)</summary>
+          <div class="content">
+            <p>Ce bloc retrace la vie des demandes de documents métiers : qui a demandé quoi, quand l’objet a fourni la pièce et si la visibilité est publique ou réservée. Les informations proviennent du module de suivi <code>document_request</code>.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la demande</td></tr>
+                <tr><td><code>document_id</code></td><td><code>string</code></td><td>Référence vers <code>documents[]</code> / <code>ref_document</code></td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td><code>"requested"</code>, <code>"received"</code>, <code>"expired"</code>, <code>"rejected"</code>…</td></tr>
+                <tr><td><code>requested_at</code></td><td><code>timestamp</code></td><td>Date/heure de la demande</td></tr>
+                <tr><td><code>due_at</code></td><td><code>timestamp|null</code></td><td>Échéance attendue (optionnelle)</td></tr>
+                <tr><td><code>delivered_at</code></td><td><code>timestamp|null</code></td><td>Date de réception de la pièce</td></tr>
+                <tr><td><code>visibility</code></td><td><code>enum</code></td><td>Alignée sur la visibilité du document remis</td></tr>
+                <tr><td><code>requested_by</code></td><td><code>string|null</code></td><td>Identité (email ou service) à l’origine de la demande</td></tr>
+                <tr><td><code>notes</code></td><td><code>string|null</code></td><td>Commentaire interne sur la demande</td></tr>
+              </tbody>
+            </table>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"document_requests": [
+  {
+    "id": "dreq-2025-04",
+    "document_id": "0518c3c1-6f35-40f0-bd26-19ccaf7bc93a",
+    "status": "received",
+    "requested_at": "2025-02-01T08:15:00Z",
+    "due_at": "2025-03-01T00:00:00Z",
+    "delivered_at": "2025-02-10T14:22:11Z",
+    "visibility": "public",
+    "requested_by": "legal@oti-sud.fr",
+    "notes": "Document contrôlé et validé"
+  }
+]</code></pre>
+            </div>
+
+            <div class="card info-card" style="margin-top: 12px;">
+              <div class="pill info-pill">Usage</div>
+              <p>Les applications clientes peuvent exploiter ce flux pour relancer automatiquement les partenaires ou afficher l’historique des justificatifs attendus. Les statuts et horodatages sont mis à jour par les fonctions SQL dédiées au module documentaire.</p>
+            </div>
           </div>
         </details>
       </section>

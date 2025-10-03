@@ -413,6 +413,7 @@ DECLARE
   v_color TEXT := COALESCE(p_options->>'stage_color','red');
   v_opening_times JSON;
   v_prefer_org TEXT;
+  v_inc_private BOOLEAN := COALESCE((p_options->>'include_private')::boolean, FALSE);
 BEGIN
   SELECT o.* INTO obj
   FROM object o
@@ -468,6 +469,38 @@ BEGIN
     ORDER BY ol.created_at
     LIMIT 1
   ), '{}'::jsonb);
+
+  -- Private notes (by preferred organization, optional)
+  IF v_inc_private THEN
+    -- Primary private note
+    js := js || COALESCE((
+      SELECT jsonb_build_object('private_note', to_jsonb(pn) - 'object_id')
+      FROM object_private_description pn
+      WHERE pn.object_id = obj.id
+        AND pn.audience = 'private'
+        AND (
+          (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
+          OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
+        )
+      ORDER BY pn.created_at DESC, pn.id
+      LIMIT 1
+    ), '{}'::jsonb);
+
+    -- All private notes
+    js := js || jsonb_build_object(
+      'private_notes',
+      COALESCE((
+        SELECT jsonb_agg(to_jsonb(pn) - 'object_id'
+               ORDER BY
+                 NULLIF((to_jsonb(pn)->>'created_at'),'')::timestamptz NULLS LAST,
+                 NULLIF((to_jsonb(pn)->>'id'),'') NULLS LAST,
+                 pn.ctid)
+        FROM object_private_description pn
+        WHERE pn.object_id = obj.id
+          AND pn.audience = 'private'
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Location (from object_location main)
   js := js || COALESCE((

@@ -366,9 +366,9 @@ CREATE TABLE IF NOT EXISTS ref_document (
 );
 
 -- Link documents to a ref_code document_type when present
-ALTER TABLE IF EXISTS ref_document
-  ADD COLUMN IF NOT EXISTS type_id UUID REFERENCES ref_code_document_type(id) ON DELETE SET NULL;
-CREATE INDEX IF NOT EXISTS idx_ref_document_type_id ON ref_document(type_id);
+-- Revert prior attempt to link documents to ref_code document_type; legal types are handled by ref_legal_type via object_legal
+ALTER TABLE IF EXISTS ref_document DROP COLUMN IF EXISTS type_id;
+DROP INDEX IF EXISTS idx_ref_document_type_id;
 
 -- Tags libres + liaisons génériques
 CREATE TABLE IF NOT EXISTS ref_tag (

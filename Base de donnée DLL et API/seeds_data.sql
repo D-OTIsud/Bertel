@@ -345,7 +345,6 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('menu_category','main', 'Plats principaux', 'Plats principaux et spécialités'),
 ('menu_category','dessert', 'Desserts', 'Desserts et douceurs'),
 ('menu_category','drinks', 'Boissons', 'Boissons et cocktails'),
-<<<<<<< HEAD
 ('menu_category','snacks', 'En-cas', 'En-cas et collations'),
 ('menu_category','petit_dejeuner','Petit-déjeuner','Formules petit-déjeuner'),
 ('menu_category','brunch','Brunch','Offres brunch'),
@@ -646,18 +645,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('promotion_type', 'senior', 'Senior', 'Promotion seniors', 9),
 ('promotion_type', 'family', 'Famille', 'Promotion famille', 10);
 
--- Types de documents
-INSERT INTO ref_code (domain, code, name, description, position) VALUES
-('document_type', 'passport', 'Passeport', 'Passeport', 1),
-('document_type', 'visa', 'Visa', 'Visa', 2),
-('document_type', 'id_card', 'Carte d''identité', 'Carte d''identité', 3),
-('document_type', 'driving_license', 'Permis de conduire', 'Permis de conduire', 4),
-('document_type', 'insurance', 'Assurance', 'Document d''assurance', 5),
-('document_type', 'booking_confirmation', 'Confirmation de réservation', 'Confirmation de réservation', 6),
-('document_type', 'ticket', 'Billet', 'Billet de transport', 7),
-('document_type', 'voucher', 'Bon', 'Bon de service', 8),
-('document_type', 'medical_certificate', 'Certificat médical', 'Certificat médical', 9),
-('document_type', 'vaccination', 'Carnet de vaccination', 'Carnet de vaccination', 10);
+-- Types de documents: retiré au profit de ref_legal_type et de documents associés via object_legal
 
 -- Types d'assurance
 INSERT INTO ref_code (domain, code, name, description, position) VALUES

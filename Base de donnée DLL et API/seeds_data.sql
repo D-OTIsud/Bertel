@@ -682,7 +682,7 @@ INSERT INTO object_private_description (
 SELECT 
     o.id,
     o.id,
-    'Note privée de test associée à l\'organisation OTI TEST. Utilisée pour valider la gestion des notes privées multi-organisation.',
+    'Note privée de test associée à l''organisation OTI TEST. Utilisée pour valider la gestion des notes privées multi-organisation.',
     'private',
     (SELECT id FROM ref_language WHERE code = 'fr' LIMIT 1),
     NOW(),

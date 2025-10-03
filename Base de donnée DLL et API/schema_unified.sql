@@ -827,6 +827,7 @@ CREATE TABLE IF NOT EXISTS object_place_description (
 CREATE TABLE IF NOT EXISTS object_private_description (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL,
   body TEXT NOT NULL,
   audience TEXT NOT NULL DEFAULT 'private' CHECK (audience IN ('private','partners')),
   language_id UUID REFERENCES ref_language(id) ON DELETE SET NULL,
@@ -1759,6 +1760,7 @@ CREATE INDEX IF NOT EXISTS idx_object_description_object_id ON object_descriptio
 CREATE INDEX IF NOT EXISTS idx_object_description_normalized_trgm ON object_description USING GIN (description_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_description_chapo_normalized_trgm ON object_description USING GIN (description_chapo_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_private_description(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);

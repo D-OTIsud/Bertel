@@ -675,7 +675,25 @@ WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
     WHERE d.object_id = o.id AND d.org_object_id IS NOT DISTINCT FROM o.id
   );
 
--- (supprimé) doublon évité: la description ci-dessus est déjà fournie par l'organisation
+-- Note privée de test associée à l'organisation (org_object_id)
+INSERT INTO object_private_description (
+    object_id, org_object_id, body, audience, language_id, created_at, updated_at
+)
+SELECT 
+    o.id,
+    o.id,
+    'Note privée de test associée à l\'organisation OTI TEST. Utilisée pour valider la gestion des notes privées multi-organisation.',
+    'private',
+    (SELECT id FROM ref_language WHERE code = 'fr' LIMIT 1),
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_private_description opd
+    WHERE opd.object_id = o.id AND opd.org_object_id IS NOT DISTINCT FROM o.id AND opd.audience = 'private'
+  );
+
 
 -- Localisation de l'organisation
 INSERT INTO object_location (

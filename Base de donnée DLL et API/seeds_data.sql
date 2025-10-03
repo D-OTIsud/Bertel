@@ -17,12 +17,36 @@ INSERT INTO ref_language (code, name, native_name) VALUES
 ('zh', 'Chinois', '中文')
 ON CONFLICT (code) DO NOTHING;
 
--- Kinds de contact
-INSERT INTO ref_code (domain, code, name) VALUES
- ('contact_kind','phone','Téléphone'),
- ('contact_kind','mobile','Mobile'),
- ('contact_kind','email','Email'),
- ('contact_kind','website','Site web')
+-- Types de contact
+INSERT INTO ref_code (domain, code, name, description) VALUES
+ ('contact_kind','phone','Téléphone','Numéro de téléphone fixe de l''accueil'),
+ ('contact_kind','mobile','Mobile','Numéro de portable pour joindre l''établissement'),
+ ('contact_kind','fax','Fax','Numéro de fax de réception'),
+ ('contact_kind','email','Email','Adresse électronique principale'),
+ ('contact_kind','website','Site web','URL du site officiel'),
+ ('contact_kind','booking_engine','Plateforme de réservation','Lien vers un moteur de réservation en ligne'),
+ ('contact_kind','whatsapp','WhatsApp','Contact WhatsApp Business'),
+ ('contact_kind','messenger','Messenger','Lien Facebook Messenger'),
+ ('contact_kind','sms','SMS','Numéro dédié aux SMS'),
+ ('contact_kind','skype','Skype','Identifiant Skype'),
+ ('contact_kind','wechat','WeChat','Identifiant WeChat pour la clientèle asiatique'),
+ ('contact_kind','line','LINE','Identifiant LINE'),
+ ('contact_kind','viber','Viber','Contact Viber'),
+ ('contact_kind','telegram','Telegram','Compte Telegram pour les notifications')
+ON CONFLICT DO NOTHING;
+
+-- Réseaux sociaux clés pour la promotion touristique
+INSERT INTO ref_code (domain, code, name, description) VALUES
+ ('social_network','facebook','Facebook','Page officielle Facebook'),
+ ('social_network','instagram','Instagram','Profil Instagram'),
+ ('social_network','youtube','YouTube','Chaîne YouTube de destination'),
+ ('social_network','tiktok','TikTok','Compte TikTok pour contenus courts'),
+ ('social_network','pinterest','Pinterest','Tableaux d''inspiration Pinterest'),
+ ('social_network','linkedin','LinkedIn','Page professionnelle LinkedIn'),
+ ('social_network','twitter','X (Twitter)','Compte X / Twitter'),
+ ('social_network','tripadvisor','Tripadvisor','Fiche Tripadvisor'),
+ ('social_network','booking','Booking.com','Profil Booking.com'),
+ ('social_network','google_business','Google Business Profile','Fiche Google Business Profile')
 ON CONFLICT DO NOTHING;
 
 -- Jours de semaine (pour ouvertures riches)
@@ -36,31 +60,67 @@ INSERT INTO ref_code (domain, code, name, position) VALUES
  ('weekday','sunday','Dimanche',7)
 ON CONFLICT DO NOTHING;
 
--- Type de planning d'ouverture
+-- Types de planning d'ouverture
 INSERT INTO ref_code (domain, code, name) VALUES
- ('opening_schedule_type','regular','Régulier')
+ ('opening_schedule_type','regular','Régulier'),
+ ('opening_schedule_type','seasonal','Saisonnier'),
+ ('opening_schedule_type','exceptional','Exceptionnel'),
+ ('opening_schedule_type','by_appointment','Sur rendez-vous'),
+ ('opening_schedule_type','continuous_service','Service continu')
 ON CONFLICT DO NOTHING;
 
--- Types de média
-INSERT INTO ref_code (domain, code, name) VALUES
- ('media_type','photo','Photo'),
- ('media_type','video','Vidéo')
-ON CONFLICT DO NOTHING;
-
--- Familles d'équipements
-INSERT INTO ref_code (domain, code, name) VALUES
- ('amenity_family','comforts','Conforts'),
- ('amenity_family','services','Services'),
- ('amenity_family','equipment','Équipements')
-ON CONFLICT DO NOTHING;
-
--- Moyens de paiement supplémentaires
 INSERT INTO ref_code (domain, code, name, description) VALUES
+ ('media_type','photo','Photo','Photographies officielles'),
+ ('media_type','video','Vidéo','Vidéos de présentation'),
+ ('media_type','audio','Audio','Fichiers audio et podcasts'),
+ ('media_type','brochure_pdf','Brochure PDF','Brochures téléchargeables'),
+ ('media_type','brochure_print','Brochure imprimée','Brochures physiques numérisées'),
+ ('media_type','plan','Plan','Plan ou carte statique'),
+ ('media_type','virtual_tour','Visite virtuelle','Visites 360° ou immersives'),
+ ('media_type','webcam','Webcam','Flux webcam en direct'),
+ ('media_type','logo','Logo','Logotypes officiels'),
+ ('media_type','press_kit','Dossier de presse','Dossiers médias et communiqués')
+ON CONFLICT DO NOTHING;
+
+-- Niveaux de langue (CECRL)
+INSERT INTO ref_code (domain, code, name, description) VALUES
+ ('language_level','a1','A1 - Débutant','Notions élémentaires'),
+ ('language_level','a2','A2 - Pré-intermédiaire','Communication simple'),
+ ('language_level','b1','B1 - Intermédiaire','Interaction quotidienne'),
+ ('language_level','b2','B2 - Intermédiaire avancé','Communication professionnelle courante'),
+ ('language_level','c1','C1 - Avancé','Maîtrise opérationnelle complète'),
+ ('language_level','c2','C2 - Maîtrise','Maîtrise experte de la langue'),
+ ('language_level','native','Langue maternelle','Langue parlée couramment par l''équipe')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ref_code (domain, code, name, description) VALUES
+ ('amenity_family','comforts','Conforts','Éléments de confort dans les chambres et parties communes'),
+ ('amenity_family','services','Services','Services généraux offerts aux clients'),
+ ('amenity_family','equipment','Équipements','Équipements matériels disponibles'),
+ ('amenity_family','wellness','Bien-être','Installations de bien-être et spa'),
+ ('amenity_family','business','Affaires','Services dédiés à la clientèle affaires'),
+ ('amenity_family','family','Famille','Services et équipements famille & enfants'),
+ ('amenity_family','outdoor','Plein air','Équipements et activités extérieurs'),
+ ('amenity_family','gastronomy','Gastronomie','Prestations de restauration et bar'),
+ ('amenity_family','accessibility','Accessibilité','Dispositifs facilitant l''accès PMR'),
+ ('amenity_family','sustainable','Développement durable','Initiatives et équipements responsables')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('payment_method','especes', 'Espèces', 'Paiement en liquide'),
+('payment_method','cheque', 'Chèque', 'Chèques bancaires'),
 ('payment_method','cheque_vacances', 'Chèques vacances', 'Chèques vacances ANCV'),
-('payment_method','carte_bleue', 'Carte Bleue', 'Carte Bleue française'),
-('payment_method','mastercard', 'Mastercard', 'Carte Mastercard'),
+('payment_method','carte_bleue', 'Carte Bleue', 'Carte bancaire française'),
 ('payment_method','visa', 'Visa', 'Carte Visa'),
-('payment_method','american_express', 'American Express', 'Carte American Express')
+('payment_method','mastercard', 'Mastercard', 'Carte Mastercard'),
+('payment_method','american_express', 'American Express', 'Carte American Express'),
+('payment_method','maestro', 'Maestro', 'Carte Maestro / Débit'),
+('payment_method','virement', 'Virement bancaire', 'Transfert bancaire'),
+('payment_method','paypal', 'PayPal', 'Paiement via PayPal'),
+('payment_method','apple_pay', 'Apple Pay', 'Paiement sans contact Apple Pay'),
+('payment_method','google_pay', 'Google Pay', 'Paiement sans contact Google Pay'),
+('payment_method','vacaf', 'VACAF', 'Aide VACAF acceptée'),
+('payment_method','crypto', 'Cryptomonnaie', 'Paiement en cryptomonnaies acceptées')
 ON CONFLICT DO NOTHING;
 
 -- Rôles de contact de base
@@ -73,23 +133,187 @@ INSERT INTO ref_contact_role (code, name, description) VALUES
 ('info', 'Information', 'Informations générales')
 ON CONFLICT (code) DO NOTHING;
 
--- Tags d'environnement supplémentaires
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','volcan', 'Au pied du volcan', 'Situé au pied du Piton de la Fournaise'),
 ('environment_tag','plage', 'Plage', 'Proche d''une plage'),
+('environment_tag','lagon', 'Lagon', 'Proche du lagon'),
+('environment_tag','cascade', 'Cascade', 'Proche d''une cascade'),
+('environment_tag','jardin', 'Jardin', 'Avec jardin paysager'),
+('environment_tag','terrasse', 'Terrasse', 'Avec terrasse aménagée'),
+('environment_tag','vue_panoramique', 'Vue panoramique', 'Vue panoramique exceptionnelle'),
+('environment_tag','calme', 'Calme', 'Environnement calme'),
+('environment_tag','anime', 'Animé', 'Quartier animé'),
+('environment_tag','bord_mer', 'Bord de mer', 'Face au littoral'),
+('environment_tag','front_de_mer', 'Front de mer', 'Sur le front de mer'),
+('environment_tag','ville', 'En ville', 'Coeur de ville'),
+('environment_tag','centre_ville', 'Centre-ville', 'Hyper-centre urbain'),
+('environment_tag','montagne', 'Montagne', 'Zone de montagne'),
+('environment_tag','campagne', 'Campagne', 'Cadre campagnard'),
+('environment_tag','foret', 'Forêt', 'En lisière de forêt'),
+('environment_tag','parc_national', 'Parc national', 'Au sein d''un parc national'),
+('environment_tag','parc_marin', 'Parc marin', 'Zone protégée marine'),
+('environment_tag','rural', 'Rural', 'Village ou hameau rural'),
+('environment_tag','vignoble', 'Vignoble', 'Au cœur d''un vignoble'),
+('environment_tag','thermal', 'Station thermale', 'À proximité d''un établissement thermal'),
+('environment_tag','port', 'Port', 'Vue ou accès portuaire'),
+('environment_tag','ile', 'Île', 'Situé sur une île'),
+('environment_tag','patrimoine', 'Site patrimonial', 'Quartier ou site classé UNESCO'),
+('environment_tag','quartier_historique', 'Quartier historique', 'Centre ancien préservé'),
+('environment_tag','urbain_creatif', 'Quartier créatif', 'Quartier artistique / créatif'),
+('environment_tag','desert', 'Désert', 'Paysage désertique'),
+('environment_tag','neige', 'Neige', 'Destination enneigée en hiver'),
+('environment_tag','littoral_sauvage', 'Littoral sauvage', 'Côte sauvage et préservée')
+ON CONFLICT DO NOTHING;
+
+-- Types de tarifs (price_kind)
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('price_kind','adulte', 'Adulte', 'Tarif adulte plein'),
+('price_kind','enfant', 'Enfant', 'Tarif enfant'),
+('price_kind','senior', 'Senior', 'Tarif senior'),
+('price_kind','etudiant', 'Étudiant', 'Tarif étudiant'),
+('price_kind','famille', 'Famille', 'Forfait famille'),
+('price_kind','groupe', 'Groupe', 'Tarif groupe'),
+('price_kind','couple', 'Couple', 'Tarif duo / couple'),
+('price_kind','personne_handicapee', 'Personne en situation de handicap', 'Tarif PMR'),
+('price_kind','resident', 'Résident', 'Tarif résident / local'),
+('price_kind','gratuit', 'Gratuit', 'Accès gratuit')
+ON CONFLICT DO NOTHING;
+
+-- Unités tarifaires (price_unit)
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('price_unit','par_personne', 'Par personne', 'Tarif exprimé par personne'),
+('price_unit','par_nuit', 'Par nuit', 'Tarif par nuitée'),
+('price_unit','par_jour', 'Par jour', 'Tarif journalier'),
+('price_unit','par_semaine', 'Par semaine', 'Forfait hebdomadaire'),
+('price_unit','par_mois', 'Par mois', 'Forfait mensuel'),
+('price_unit','par_sejour', 'Par séjour', 'Montant pour l''ensemble du séjour'),
+('price_unit','par_groupe', 'Par groupe', 'Tarif pour un groupe défini'),
+('price_unit','par_forfait', 'Par forfait', 'Forfait global'),
+('price_unit','par_heure', 'Par heure', 'Tarif horaire'),
+('price_unit','par_personne_nuit', 'Par personne et par nuit', 'Tarif combiné personne/nuit')
+ON CONFLICT DO NOTHING;
+
+-- Équipements de réunion
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('meeting_equipment','paperboard', 'Paperboard', 'Paperboard et marqueurs'),
+('meeting_equipment','ecran', 'Écran', 'Écran de projection'),
+('meeting_equipment','videoprojecteur', 'Vidéoprojecteur', 'Projecteur multimédia'),
+('meeting_equipment','sonorisation', 'Sonorisation', 'Système de sonorisation'),
+('meeting_equipment','micro', 'Micro', 'Micros HF / filaires'),
+('meeting_equipment','wifi', 'Wi-Fi', 'Connexion Wi-Fi haut débit'),
+('meeting_equipment','visioconference', 'Visioconférence', 'Système de visioconférence'),
+('meeting_equipment','scene', 'Scène', 'Estrade / scène'),
+('meeting_equipment','lumieres', 'Lumières', 'Éclairage scénique'),
+('meeting_equipment','pupitre', 'Pupitre', 'Pupitre pour orateur'),
+('meeting_equipment','traduction', 'Cabine de traduction', 'Cabine d''interprétation simultanée')
+ON CONFLICT DO NOTHING;
+
+-- Pratiques d'itinéraires touristiques
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('iti_practice','randonnee_pedestre', 'Randonnée pédestre', 'Itinéraire de randonnée classique'),
+('iti_practice','trail', 'Trail', 'Parcours de trail running'),
+('iti_practice','velo_route', 'Vélo route', 'Itinéraire cyclable sur route'),
+('iti_practice','velo_vtt', 'VTT', 'Itinéraire VTT'),
+('iti_practice','cyclotourisme', 'Cyclotourisme', 'Balade à vélo touristique'),
+('iti_practice','equestre', 'Équestre', 'Parcours à cheval'),
+('iti_practice','kayak', 'Kayak / canoë', 'Parcours nautique'),
+('iti_practice','plongee', 'Plongée', 'Site de plongée sous-marine'),
+('iti_practice','snorkeling', 'Snorkeling', 'Randonnée palmée'),
+('iti_practice','voile', 'Voile', 'Navigation à la voile'),
+('iti_practice','raquette', 'Raquettes', 'Itinéraire hivernal en raquettes'),
+('iti_practice','ski', 'Ski', 'Domaine skiable'),
+('iti_practice','escalade', 'Escalade', 'Site d''escalade'),
+('iti_practice','canyoning', 'Canyoning', 'Descente de canyons'),
+('iti_practice','parapente', 'Parapente', 'Zone de vol libre'),
+('iti_practice','patrimoine', 'Découverte patrimoniale', 'Circuit patrimoine & culture')
+ON CONFLICT DO NOTHING;
+
+-- Thématiques de demandes clients
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('demand_topic','information','Information touristique','Demande d''information générale'),
+('demand_topic','reservation','Réservation','Demande de réservation ou disponibilité'),
+('demand_topic','groupe','Groupes','Organisation de groupes'),
+('demand_topic','evenement','Événementiel','Organisation ou participation à un événement'),
+('demand_topic','accessibilite','Accessibilité','Questions d''accessibilité et PMR'),
+('demand_topic','reclamation','Réclamation','Réclamation ou insatisfaction'),
+('demand_topic','presse','Presse / influence','Demande presse ou influenceurs'),
+('demand_topic','partenariat','Partenariat','Proposition de partenariat'),
+('demand_topic','marketing','Marketing','Campagnes marketing et promotion'),
+('demand_topic','logistique','Logistique','Transport, transferts, bagagerie'),
+('demand_topic','urgence','Urgence','Assistance urgente sur place')
+ON CONFLICT DO NOTHING;
+
+-- Sous-thématiques détaillées
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('demand_subtopic','information_hebergement','Hébergement', 'Infos hébergement (topic information)'),
+('demand_subtopic','information_restaurants','Restauration', 'Infos restauration (topic information)'),
+('demand_subtopic','information_activites','Activités', 'Infos activités & loisirs (topic information)'),
+('demand_subtopic','reservation_directe','Réservation directe', 'Demande de réservation directe (topic reservation)'),
+('demand_subtopic','reservation_agence','Agence / OTA', 'Réservation via agence (topic reservation)'),
+('demand_subtopic','groupe_scolaire','Groupe scolaire', 'Accueil groupes scolaires (topic groupe)'),
+('demand_subtopic','groupe_affaires','Séminaire / affaires', 'Groupes affaires (topic groupe)'),
+('demand_subtopic','evenement_prive','Événement privé', 'Mariage, baptême... (topic evenement)'),
+('demand_subtopic','evenement_corporate','Événement corporate', 'Séminaire, incentive (topic evenement)'),
+('demand_subtopic','accessibilite_moteur','Mobilité réduite', 'Accessibilité PMR (topic accessibilite)'),
+('demand_subtopic','accessibilite_sensoriel','Handicap sensoriel', 'Accessibilité sensorielle (topic accessibilite)'),
+('demand_subtopic','reclamation_service','Service', 'Plainte sur la qualité de service (topic reclamation)'),
+('demand_subtopic','reclamation_facturation','Facturation', 'Problème de facturation (topic reclamation)'),
+('demand_subtopic','presse_reportage','Reportage', 'Demande de reportage presse (topic presse)'),
+('demand_subtopic','presse_influence','Influenceur', 'Collaboration influenceur (topic presse)'),
+('demand_subtopic','partenariat_office','Partenariat institutionnel', 'Partenariat office de tourisme (topic partenariat)'),
+('demand_subtopic','marketing_package','Package / offre', 'Création d''offre marketing (topic marketing)'),
+('demand_subtopic','marketing_contenu','Contenu', 'Demande de visuels, textes (topic marketing)'),
+('demand_subtopic','logistique_transport','Transport', 'Navette, transfert (topic logistique)'),
+('demand_subtopic','logistique_bagagerie','Bagagerie', 'Gestion des bagages (topic logistique)'),
+('demand_subtopic','urgence_perte','Objet perdu', 'Perte de document ou objet (topic urgence)'),
+('demand_subtopic','urgence_sante','Urgence santé', 'Assistance médicale (topic urgence)')
+ON CONFLICT DO NOTHING;
+
+-- Ambiances recherchées (mood)
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('mood','detente', 'Détente', 'Ambiance détente & bien-être'),
+('mood','aventure', 'Aventure', 'Ambiance aventure & sensations'),
+('mood','romantique', 'Romantique', 'Ambiance romantique'),
+('mood','famille', 'Famille', 'Ambiance familiale'),
+('mood','festif', 'Festif', 'Ambiance festive / nocturne'),
+('mood','gourmand', 'Gourmand', 'Ambiance gastronomique'),
+('mood','culturel', 'Culturel', 'Ambiance culturelle et patrimoniale'),
+('mood','bien_etre', 'Bien-être', 'Ambiance détente & spa'),
+('mood','sportif', 'Sportif', 'Ambiance sportive et active'),
+('mood','nature', 'Nature', 'Ambiance nature & grand air')
+ON CONFLICT DO NOTHING;
 
 -- Types de cuisine
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('cuisine_type','creole', 'Créole', 'Cuisine créole réunionnaise traditionnelle'),
 ('cuisine_type','metropolitan', 'Métropolitaine', 'Cuisine française métropolitaine'),
-('cuisine_type','chinese', 'Chinoise', 'Cuisine chinoise traditionnelle'),
-('cuisine_type','indian', 'Indienne', 'Cuisine indienne et tamoule'),
-('cuisine_type','traditional', 'Traditionnelle', 'Cuisine traditionnelle réunionnaise'),
-('cuisine_type','international', 'Internationale', 'Cuisine internationale'),
+('cuisine_type','traditional', 'Traditionnelle', 'Cuisine terroir et traditionnelle'),
+('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité'),
 ('cuisine_type','fusion', 'Fusion', 'Cuisine fusion créole-moderne'),
+('cuisine_type','international', 'Internationale', 'Cuisine internationale'),
 ('cuisine_type','fast_food', 'Fast Food', 'Restauration rapide'),
 ('cuisine_type','street_food', 'Street Food', 'Cuisine de rue'),
-('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité')
+('cuisine_type','brasserie', 'Brasserie', 'Cuisine brasserie et bistronomique'),
+('cuisine_type','vegetarienne', 'Végétarienne', 'Cuisine végétarienne'),
+('cuisine_type','vegan', 'Végan', 'Cuisine végane'),
+('cuisine_type','italienne', 'Italienne', 'Cuisine italienne'),
+('cuisine_type','espagnole', 'Espagnole', 'Tapas et cuisine espagnole'),
+('cuisine_type','portugaise', 'Portugaise', 'Cuisine portugaise'),
+('cuisine_type','mediterraneenne', 'Méditerranéenne', 'Cuisine méditerranéenne'),
+('cuisine_type','japonaise', 'Japonaise', 'Cuisine japonaise et sushi'),
+('cuisine_type','thai', 'Thaïlandaise', 'Cuisine thaïlandaise'),
+('cuisine_type','libanaise', 'Libanaise', 'Cuisine libanaise et moyen-orientale'),
+('cuisine_type','marocaine', 'Marocaine', 'Cuisine du Maghreb'),
+('cuisine_type','africaine', 'Africaine', 'Cuisine africaine'),
+('cuisine_type','antillaise', 'Antillaise', 'Cuisine des Antilles'),
+('cuisine_type','amerique_latine', 'Amérique latine', 'Cuisine latino-américaine'),
+('cuisine_type','bbq', 'Barbecue', 'Cuisine grillades & barbecue'),
+('cuisine_type','burger', 'Burger', 'Spécialités de burgers'),
+('cuisine_type','patisserie', 'Pâtisserie', 'Salon de thé et pâtisseries'),
+('cuisine_type','glacier', 'Glacier', 'Glaces artisanales'),
+('cuisine_type','seafood', 'Fruits de mer', 'Cuisine fruits de mer et poisson'),
+('cuisine_type','indian', 'Indienne', 'Cuisine indienne et tamoule'),
+('cuisine_type','chinese', 'Chinoise', 'Cuisine chinoise traditionnelle')
 ON CONFLICT DO NOTHING;
 
 -- Catégories de menu
@@ -98,7 +322,12 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('menu_category','main', 'Plats principaux', 'Plats principaux et spécialités'),
 ('menu_category','dessert', 'Desserts', 'Desserts et douceurs'),
 ('menu_category','drinks', 'Boissons', 'Boissons et cocktails'),
-('menu_category','snacks', 'En-cas', 'En-cas et collations')
+('menu_category','snacks', 'En-cas', 'En-cas et collations'),
+('menu_category','petit_dejeuner', 'Petit-déjeuner', 'Formules petit-déjeuner'),
+('menu_category','brunch', 'Brunch', 'Offres brunch'),
+('menu_category','menu_enfant', 'Menu enfant', 'Menus dédiés aux enfants'),
+('menu_category','menu_groupe', 'Menu groupe', 'Menus pour groupes'),
+('menu_category','menu_degustation', 'Menu dégustation', 'Menus gastronomiques dégustation')
 ON CONFLICT DO NOTHING;
 
 -- Tags alimentaires
@@ -108,6 +337,11 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('dietary_tag','halal', 'Halal', 'Conforme aux règles alimentaires islamiques'),
 ('dietary_tag','kosher', 'Casher', 'Conforme aux règles alimentaires juives'),
 ('dietary_tag','gluten_free', 'Sans gluten', 'Sans gluten'),
+('dietary_tag','lactose_free', 'Sans lactose', 'Sans produits laitiers'),
+('dietary_tag','sugar_free', 'Sans sucre ajouté', 'Faible en sucres'),
+('dietary_tag','low_carb', 'Faible en glucides', 'Réduit en glucides'),
+('dietary_tag','pescatarian', 'Pescétarien', 'Avec poisson mais sans viande'),
+('dietary_tag','flexitarian', 'Flexitarien', 'Consommation modérée de viande'),
 ('dietary_tag','organic', 'Bio', 'Produits biologiques'),
 ('dietary_tag','local', 'Local', 'Produits locaux de La Réunion')
 ON CONFLICT DO NOTHING;
@@ -115,28 +349,22 @@ ON CONFLICT DO NOTHING;
 -- Allergènes
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('allergen','gluten', 'Gluten', 'Contient du gluten'),
-('allergen','nuts', 'Fruits à coque', 'Contient des fruits à coque'),
-('allergen','dairy', 'Lait', 'Contient du lait'),
+('allergen','crustaceans', 'Crustacés', 'Contient des crustacés'),
 ('allergen','eggs', 'Œufs', 'Contient des œufs'),
 ('allergen','fish', 'Poisson', 'Contient du poisson'),
-('allergen','shellfish', 'Crustacés', 'Contient des crustacés'),
+('allergen','peanuts', 'Arachides', 'Contient des arachides'),
 ('allergen','soy', 'Soja', 'Contient du soja'),
-('allergen','sesame', 'Sésame', 'Contient du sésame')
+('allergen','dairy', 'Lait', 'Contient du lait'),
+('allergen','nuts', 'Fruits à coque', 'Contient des fruits à coque'),
+('allergen','celery', 'Céleri', 'Contient du céleri'),
+('allergen','mustard', 'Moutarde', 'Contient de la moutarde'),
+('allergen','sesame', 'Sésame', 'Contient du sésame'),
+('allergen','sulphites', 'Sulfites', 'Contient des sulfites'),
+('allergen','lupin', 'Lupin', 'Contient du lupin'),
+('allergen','molluscs', 'Mollusques', 'Contient des mollusques')
 ON CONFLICT DO NOTHING;
 
--- Tags d'environnement supplémentaires (suite)
-INSERT INTO ref_code (domain, code, name, description) VALUES
-('environment_tag','lagon', 'Lagon', 'Proche du lagon'),
-('environment_tag','cascade', 'Cascade', 'Proche d''une cascade'),
-('environment_tag','jardin', 'Jardin', 'Avec jardin'),
-('environment_tag','terrasse', 'Terrasse', 'Avec terrasse'),
-('environment_tag','vue_panoramique', 'Vue panoramique', 'Vue panoramique'),
-('environment_tag','calme', 'Calme', 'Endroit calme'),
-('environment_tag','anime', 'Animé', 'Endroit animé'),
-('environment_tag','bord_mer', 'Bord de mer', NULL),
-('environment_tag','ville', 'En ville', NULL),
-('environment_tag','montagne', 'Montagne', NULL)
-ON CONFLICT DO NOTHING;
+-- (Les tags d'environnement ont été complétés ci-dessus)
 
 -- Équipements utilisés par les seeds (via family_id)
 INSERT INTO ref_amenity (code, name, family_id, description)

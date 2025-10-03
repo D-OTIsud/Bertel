@@ -1355,6 +1355,33 @@ BEGIN
                                      FROM object_menu_item_cuisine_type mct
                                      JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
                                      WHERE mct.menu_item_id = mi.id
+                                   ), '[]'::jsonb),
+                                   'media', COALESCE((
+                                     SELECT jsonb_agg(
+                                       jsonb_build_object(
+                                         'id', m.id,
+                                         'title', m.title,
+                                         'description', m.description,
+                                         'url', m.url,
+                                         'credit', m.credit,
+                                         'width', m.width,
+                                         'height', m.height,
+                                         'is_main', m.is_main,
+                                         'is_published', m.is_published,
+                                         'media_type', jsonb_build_object(
+                                           'id', mt.id,
+                                           'code', mt.code,
+                                           'name', mt.name
+                                         ),
+                                         'position', mim.position
+                                       )
+                                       ORDER BY mim.position, m.position, m.created_at
+                                     )
+                                     FROM object_menu_item_media mim
+                                     JOIN media m ON m.id = mim.media_id
+                                     JOIN ref_code_media_type mt ON mt.id = m.media_type_id
+                                     WHERE mim.menu_item_id = mi.id
+                                       AND m.is_published = TRUE
                                    ), '[]'::jsonb)
                               )
                               ORDER BY

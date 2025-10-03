@@ -1847,18 +1847,6 @@ CREATE TRIGGER update_opening_time_frame_updated_at BEFORE UPDATE ON opening_tim
 -- =====================================================
 
 
--- =====================================================
--- Menus (for RES / FMA etc.)
--- =====================================================
-
-
-
-
--- =====================================================
--- MENUS (for RES/PCU/FMA etc.)
--- =====================================================
-
-
 
 -- Indexes for object_classification (idempotent)
 CREATE INDEX IF NOT EXISTS idx_object_classification_object_id ON object_classification(object_id);
@@ -1902,6 +1890,7 @@ CREATE TABLE IF NOT EXISTS object_menu_item (
   currency CHAR(3) NOT NULL DEFAULT 'EUR',
   kind_id UUID REFERENCES ref_code_price_kind(id) ON DELETE RESTRICT,
   unit_id UUID REFERENCES ref_code_price_unit(id) ON DELETE RESTRICT,
+  media_id UUID REFERENCES media(id) ON DELETE SET NULL,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   position INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1939,6 +1928,16 @@ CREATE TABLE IF NOT EXISTS object_menu_item_cuisine_type (
   PRIMARY KEY (menu_item_id, cuisine_type_id)
 );
 
+-- Menu item media (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS object_menu_item_media (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, media_id)
+);
+
 -- Indexes for menu item tags
 CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_item ON object_menu_item_dietary_tag(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_tag ON object_menu_item_dietary_tag(dietary_tag_id);
@@ -1946,6 +1945,15 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_item ON object_menu_item_aller
 CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_allergen ON object_menu_item_allergen(allergen_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_item ON object_menu_item_cuisine_type(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_type ON object_menu_item_cuisine_type(cuisine_type_id);
+
+-- Indexes for menu item media
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_item ON object_menu_item_media(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_media ON object_menu_item_media(media_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_position ON object_menu_item_media(position);
+
+CREATE TRIGGER update_object_menu_item_media_updated_at
+BEFORE UPDATE ON object_menu_item_media
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- UNIFIED LEGAL SYSTEM

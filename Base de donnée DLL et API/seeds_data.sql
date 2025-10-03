@@ -106,6 +106,11 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
  ('media_type','press_kit','Dossier de presse','Dossiers médias et communiqués')
 ON CONFLICT DO NOTHING;
 
+-- Type média vectoriel (pour logos SVG/PDF)
+INSERT INTO ref_code (domain, code, name, description)
+VALUES ('media_type','vector','Vectoriel','Fichiers vectoriels (SVG, PDF)')
+ON CONFLICT DO NOTHING;
+
 -- Niveaux de langue (CECRL)
 INSERT INTO ref_code (domain, code, name, description) VALUES
  ('language_level','a1','A1 - Débutant','Notions élémentaires'),
@@ -854,6 +859,827 @@ SELECT
 FROM object o
 WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST';
 
+-- Organisation de test : Comité Régional de Tourisme TEST (CRT)
+INSERT INTO object (
+    object_type, name, region_code, status,
+    created_at, updated_at
+)
+SELECT
+    'ORG',
+    'Comité Régional de Tourisme TEST',
+    'TST',
+    'published',
+    NOW(),
+    NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM object o
+    WHERE o.object_type = 'ORG' AND o.region_code = 'TST' AND o.name = 'Comité Régional de Tourisme TEST'
+);
+
+-- Périodes d'ouverture régulières 9h-17h du lundi au vendredi pour OTI et CRT (idempotent)
+-- 1) Créer la période annuelle "Horaires réguliers"
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Horaires réguliers', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.region_code = 'TST' AND o.object_type = 'ORG'
+  AND o.name IN ('Office de Tourisme Intercommunal TEST','Comité Régional de Tourisme TEST')
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_period op
+    WHERE op.object_id = o.id AND op.all_years IS TRUE AND COALESCE(op.name,'') = 'Horaires réguliers'
+  );
+
+-- 2) Ajouter le schedule de type "regular"
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Semaine ouvrée 9h-17h', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code = 'regular'
+WHERE o.region_code = 'TST' AND o.object_type = 'ORG'
+  AND o.name IN ('Office de Tourisme Intercommunal TEST','Comité Régional de Tourisme TEST')
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_schedule os
+    WHERE os.period_id = op.id AND os.schedule_type_id = rst.id
+  );
+
+-- 3) Créer un time_period (ouvert) pour le schedule
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_type_id AND rst.code = 'regular'
+WHERE o.region_code = 'TST' AND o.object_type = 'ORG'
+  AND o.name IN ('Office de Tourisme Intercommunal TEST','Comité Régional de Tourisme TEST')
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id = os.id AND tp.closed = FALSE
+  );
+
+-- 4) Associer les weekdays (lundi → vendredi) au time_period
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id = tp.schedule_id
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday')
+WHERE o.region_code = 'TST' AND o.object_type = 'ORG'
+  AND o.name IN ('Office de Tourisme Intercommunal TEST','Comité Régional de Tourisme TEST')
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period_weekday tw
+    WHERE tw.time_period_id = tp.id AND tw.weekday_id = w.id
+  );
+
+-- 5) Ajouter la plage horaire 09:00 → 17:00
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '09:00', TIME '17:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id = tp.schedule_id
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_type_id AND rst.code = 'regular'
+WHERE o.region_code = 'TST' AND o.object_type = 'ORG'
+  AND o.name IN ('Office de Tourisme Intercommunal TEST','Comité Régional de Tourisme TEST')
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_frame tf
+    WHERE tf.time_period_id = tp.id AND tf.start_time = TIME '09:00' AND tf.end_time = TIME '17:00'
+  );
+
+-- =====================================================
+-- HÔTEL COMPLET DE TEST (parents: OTI [primary], CRT)
+-- =====================================================
+
+-- Créer l'hôtel
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'HOT','Hôtel Test Océan','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+);
+
+-- Localisation principale
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, '10 Rue des Plages', '97430', 'Le Tampon', -21.2800, 55.5200, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE
+  );
+
+-- Lien organisations (OTI primary, CRT secondary)
+-- OTI primary manager
+INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, note, created_at)
+SELECT h.id, oti.id, r.id, TRUE, 'Gestion principale', NOW()
+FROM object h
+JOIN object oti ON oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+JOIN ref_org_role r ON r.code='manager'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_org_link x WHERE x.object_id=h.id AND x.org_object_id=oti.id
+  );
+
+-- CRT publisher
+INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, note, created_at)
+SELECT h.id, crt.id, r.id, FALSE, 'Partenaire régional', NOW()
+FROM object h
+JOIN object crt ON crt.object_type='ORG' AND crt.region_code='TST' AND crt.name='Comité Régional de Tourisme TEST'
+JOIN ref_org_role r ON r.code='publisher'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_org_link x WHERE x.object_id=h.id AND x.org_object_id=crt.id
+  );
+
+-- Descriptions spécifiques par organisation
+INSERT INTO object_description (object_id, org_object_id, description, description_chapo, visibility, created_at, updated_at)
+SELECT h.id, oti.id,
+  'Hôtel 4* avec piscine et spa, proche du littoral. Chambres modernes, salles de réunion, restaurant intégré.',
+  'Hôtel 4* – piscine, spa, restaurant',
+  'public', NOW(), NOW()
+FROM object h
+JOIN object oti ON oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d WHERE d.object_id=h.id AND d.org_object_id=oti.id
+  );
+
+INSERT INTO object_description (object_id, org_object_id, description, description_chapo, visibility, created_at, updated_at)
+SELECT h.id, crt.id,
+  'Établissement recommandé par le CRT : accueil multilingue, accès facile, services affaires.',
+  'Recommandé par le CRT – services affaires',
+  'public', NOW(), NOW()
+FROM object h
+JOIN object crt ON crt.object_type='ORG' AND crt.region_code='TST' AND crt.name='Comité Régional de Tourisme TEST'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d WHERE d.object_id=h.id AND d.org_object_id=crt.id
+  );
+
+-- Médias (logo vectoriel + photo principale)
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, created_at, updated_at)
+SELECT h.id, mt.id, 'Logo Hôtel Test Océan', 'https://static.example.com/logos/hotel-test-ocean.svg', 'logo', TRUE, TRUE, NOW(), NOW()
+FROM object h JOIN ref_code_media_type mt ON mt.code='vector'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id=h.id AND m.kind='logo');
+
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, created_at, updated_at)
+SELECT h.id, mt.id, 'Façade & piscine', 'https://images.example.com/hotels/test-ocean/piscine.jpg', 'illustration', TRUE, TRUE, NOW(), NOW()
+FROM object h JOIN ref_code_media_type mt ON mt.code='photo'
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id=h.id AND m.media_type_id=mt.id AND m.is_main IS TRUE);
+
+-- Langues (FR/EN/DE)
+INSERT INTO object_language (object_id, language_id, created_at)
+SELECT h.id, l.id, NOW()
+FROM object h JOIN ref_language l ON l.code IN ('fr','en','de')
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_language ol WHERE ol.object_id=h.id AND ol.language_id=l.id);
+
+-- Moyens de paiement
+INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
+SELECT h.id, pm.id, NOW()
+FROM object h JOIN ref_code_payment_method pm ON pm.code IN ('visa','mastercard','american_express','paypal','virement')
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_payment_method x WHERE x.object_id=h.id AND x.payment_method_id=pm.id);
+
+-- Environnement & tags
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT h.id, et.id, NOW()
+FROM object h JOIN ref_code_environment_tag et ON et.code IN ('plage','vue_panoramique','jardin')
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_environment_tag x WHERE x.object_id=h.id AND x.environment_tag_id=et.id);
+
+-- Tags libres
+INSERT INTO ref_tag (slug, name, description, position)
+VALUES ('eco_friendly','Éco‑responsable','Politique environnementale active',1)
+ON CONFLICT (slug) DO NOTHING;
+INSERT INTO ref_tag (slug, name, description, position)
+VALUES ('business_ready','Business ready','Services entreprises & séminaires',2)
+ON CONFLICT (slug) DO NOTHING;
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', h.id, NOW()
+FROM ref_tag t, object h
+WHERE t.slug IN ('eco_friendly','business_ready')
+  AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=h.id
+  );
+
+-- Équipements
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT h.id, a.id, NOW()
+FROM object h JOIN ref_amenity a ON a.code IN (
+  'wifi','air_conditioning','heating','safe','elevator',
+  'swimming_pool','spa','parking','restaurant','breakfast'
+)
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=h.id AND oa.amenity_id=a.id);
+
+-- Capacités
+INSERT INTO object_capacity (object_id, metric_id, value_integer)
+SELECT h.id, m.id, v.val
+FROM object h
+JOIN (
+  SELECT 'bedrooms'::text code, 80 val UNION ALL
+  SELECT 'max_capacity', 200 UNION ALL
+  SELECT 'meeting_rooms', 3 UNION ALL
+  SELECT 'floor_area_m2', 4500
+) v(code,val) ON TRUE
+JOIN ref_capacity_metric m ON m.code = v.code
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_capacity oc WHERE oc.object_id=h.id AND oc.metric_id=m.id);
+
+-- Salles de réunion + équipements
+INSERT INTO object_meeting_room (object_id, name, area_m2, cap_theatre, cap_u, cap_classroom, created_at, updated_at)
+SELECT h.id, 'Salle Conférence Océan', 120, 120, 45, 60, NOW(), NOW()
+FROM object h
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM object_meeting_room r WHERE r.object_id=h.id AND r.name='Salle Conférence Océan');
+
+INSERT INTO meeting_room_equipment (room_id, equipment_id, position, created_at)
+SELECT r.id, e.id, ROW_NUMBER() OVER (), NOW()
+FROM object_meeting_room r
+JOIN object h ON h.id=r.object_id AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+JOIN ref_code_meeting_equipment e ON e.code IN ('wifi','videoprojecteur','ecran','paperboard','sonorisation','micro')
+WHERE NOT EXISTS (
+  SELECT 1 FROM meeting_room_equipment me WHERE me.room_id=r.id AND me.equipment_id=e.id
+);
+
+-- Ouvertures: Haute saison (tous les jours 08:00–20:00) / Basse saison (lun–ven 09:00–17:00)
+-- Haute saison
+INSERT INTO opening_period (object_id, name, date_start, date_end, created_at, updated_at)
+SELECT h.id, 'Haute saison', DATE '2025-07-01', DATE '2025-08-31', NOW(), NOW()
+FROM object h
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM opening_period op WHERE op.object_id=h.id AND op.name='Haute saison');
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Ouvert tous les jours 8h-20h', NOW(), NOW()
+FROM opening_period op
+JOIN object h ON h.id=op.object_id AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+JOIN ref_code_opening_schedule_type rst ON rst.code='regular'
+WHERE op.name='Haute saison'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id);
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id AND op.name='Haute saison'
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=FALSE);
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Haute saison'
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id=tp.id AND tw.weekday_id=w.id);
+
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '08:00', TIME '20:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Haute saison'
+WHERE NOT EXISTS (
+  SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id=tp.id AND tf.start_time=TIME '08:00' AND tf.end_time=TIME '20:00'
+);
+
+-- Basse saison
+INSERT INTO opening_period (object_id, name, date_start, date_end, created_at, updated_at)
+SELECT h.id, 'Basse saison', DATE '2025-09-01', DATE '2026-06-30', NOW(), NOW()
+FROM object h
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM opening_period op WHERE op.object_id=h.id AND op.name='Basse saison');
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Semaine ouvrée 9h-17h', NOW(), NOW()
+FROM opening_period op
+JOIN object h ON h.id=op.object_id AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+JOIN ref_code_opening_schedule_type rst ON rst.code='regular'
+WHERE op.name='Basse saison'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id);
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id AND op.name='Basse saison'
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=FALSE);
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Basse saison'
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday')
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id=tp.id AND tw.weekday_id=w.id);
+
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '09:00', TIME '17:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Basse saison'
+WHERE NOT EXISTS (
+  SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id=tp.id AND tf.start_time=TIME '09:00' AND tf.end_time=TIME '17:00'
+);
+
+-- Acteurs de l'hôtel (Directeur + Réception)
+INSERT INTO actor (id, display_name, first_name, last_name, created_at, updated_at)
+VALUES (gen_random_uuid(),'Alice MARTIN','Alice','MARTIN',NOW(),NOW())
+ON CONFLICT DO NOTHING;
+INSERT INTO actor (id, display_name, first_name, last_name, created_at, updated_at)
+VALUES (gen_random_uuid(),'Marc PETIT','Marc','PETIT',NOW(),NOW())
+ON CONFLICT DO NOTHING;
+
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+SELECT a.id, h.id, r.id, TRUE, 'public'
+FROM actor a, object h, ref_actor_role r
+WHERE a.display_name='Alice MARTIN' AND r.code='director'
+  AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM actor_object_role x WHERE x.actor_id=a.id AND x.object_id=h.id AND x.role_id=r.id);
+
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+SELECT a.id, h.id, r.id, TRUE, 'public'
+FROM actor a, object h, ref_actor_role r
+WHERE a.display_name='Marc PETIT' AND r.code='receptionist'
+  AND h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM actor_object_role x WHERE x.actor_id=a.id AND x.object_id=h.id AND x.role_id=r.id);
+
+-- Tarifs (basse & haute saison)
+INSERT INTO object_price (object_id, kind_id, unit_id, amount, currency, valid_from, valid_to, conditions, created_at, updated_at)
+SELECT h.id, pk.id, pu.id, 120.00, 'EUR', DATE '2025-09-01', DATE '2026-06-30', 'Tarif basse saison – chambre double', NOW(), NOW()
+FROM object h, ref_code_price_kind pk, ref_code_price_unit pu
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND pk.code='adulte' AND pu.code='par_nuit'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_price p WHERE p.object_id=h.id AND p.kind_id=pk.id AND p.unit_id=pu.id AND p.valid_from=DATE '2025-09-01'
+  );
+
+INSERT INTO object_price (object_id, kind_id, unit_id, amount, currency, valid_from, valid_to, conditions, created_at, updated_at)
+SELECT h.id, pk.id, pu.id, 180.00, 'EUR', DATE '2025-07-01', DATE '2025-08-31', 'Tarif haute saison – chambre double', NOW(), NOW()
+FROM object h, ref_code_price_kind pk, ref_code_price_unit pu
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND pk.code='adulte' AND pu.code='par_nuit'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_price p WHERE p.object_id=h.id AND p.kind_id=pk.id AND p.unit_id=pu.id AND p.valid_from=DATE '2025-07-01'
+  );
+
+-- Restaurant associé (objet RES) + relation
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'RES','Restaurant Test Océan','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+);
+
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, created_at)
+SELECT res.id, hot.id, rt.id, NOW()
+FROM object res, object hot, ref_object_relation_type rt
+WHERE res.object_type='RES' AND res.name='Restaurant Test Océan' AND res.region_code='TST'
+  AND hot.object_type='HOT' AND hot.name='Hôtel Test Océan' AND hot.region_code='TST'
+  AND rt.code='part_of'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation r WHERE r.source_object_id=res.id AND r.target_object_id=hot.id AND r.relation_type_id=rt.id
+  );
+
+-- Menus du restaurant
+INSERT INTO object_menu (object_id, name, created_at, updated_at)
+SELECT res.id, 'Menu Déjeuner', NOW(), NOW()
+FROM object res WHERE res.object_type='RES' AND res.name='Restaurant Test Océan' AND res.region_code='TST'
+  AND NOT EXISTS (SELECT 1 FROM object_menu m WHERE m.object_id=res.id AND m.name='Menu Déjeuner');
+
+INSERT INTO object_menu_item (menu_id, name, price, currency, position, created_at, updated_at)
+SELECT m.id, 'Curry de poisson', 22.00, 'EUR', 1, NOW(), NOW()
+FROM object_menu m
+JOIN object res ON res.id=m.object_id AND res.object_type='RES' AND res.name='Restaurant Test Océan' AND res.region_code='TST'
+WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Curry de poisson');
+
+INSERT INTO object_menu_item (menu_id, name, price, currency, position, created_at, updated_at)
+SELECT m.id, 'Salade créole', 12.00, 'EUR', 2, NOW(), NOW()
+FROM object_menu m
+JOIN object res ON res.id=m.object_id AND res.object_type='RES' AND res.name='Restaurant Test Océan' AND res.region_code='TST'
+WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Salade créole');
+
+-- =====================================================
+-- RESTAURANT AVEC FERMETURES SAISONNIÈRES & EXCEPTIONNELLES
+-- =====================================================
+
+-- Création du restaurant
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'RES','Restaurant Fermeture Saisonnière','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+);
+
+-- Localisation
+INSERT INTO object_location (object_id, address1, postcode, city, is_main_location, position, created_at, updated_at)
+SELECT o.id, '25 Rue des Palmiers', '97410', 'Saint-Pierre', TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE
+  );
+
+-- Fermeture récurrente: juin-juillet (période 2025 comme exemple) – aucune plage horaire -> fermé
+INSERT INTO opening_period (object_id, name, date_start, date_end, all_years, created_at, updated_at)
+SELECT o.id, 'Fermeture juin-juillet', DATE '2025-06-01', DATE '2025-07-31', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND op.name='Fermeture juin-juillet'
+  );
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Fermeture saisonnière', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+JOIN ref_code_opening_schedule_type rst ON rst.code='seasonal'
+WHERE op.name='Fermeture juin-juillet'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id);
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, TRUE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id AND op.name='Fermeture juin-juillet'
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=TRUE);
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Fermeture juin-juillet'
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id=tp.id AND tw.weekday_id=w.id);
+
+-- Fermeture exceptionnelle: 10→21 octobre 2025
+INSERT INTO opening_period (object_id, name, date_start, date_end, all_years, created_at, updated_at)
+SELECT o.id, 'Fermeture exceptionnelle octobre', DATE '2025-10-10', DATE '2025-10-21', FALSE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND op.name='Fermeture exceptionnelle octobre'
+  );
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Fermeture exceptionnelle', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+JOIN ref_code_opening_schedule_type rst ON rst.code='exceptional'
+WHERE op.name='Fermeture exceptionnelle octobre'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id);
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, TRUE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id AND op.name='Fermeture exceptionnelle octobre'
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=TRUE);
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id AND op.name='Fermeture exceptionnelle octobre'
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+WHERE NOT EXISTS (SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id=tp.id AND tw.weekday_id=w.id);
+
+-- Description du restaurant
+INSERT INTO object_description (object_id, org_object_id, description, description_mobile, description_edition, created_at, updated_at)
+SELECT o.id, oti.id, 'Restaurant spécialisé dans la cuisine créole traditionnelle avec fermetures saisonnières.', 'Restaurant créole avec fermetures saisonnières.', 'Restaurant créole traditionnel fermé en juin-juillet et exceptionnellement en octobre.', NOW(), NOW()
+FROM object o, object oti
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+  AND NOT EXISTS (SELECT 1 FROM object_description od WHERE od.object_id=o.id AND od.org_object_id=oti.id);
+
+-- Lien avec l'OTI (parent)
+INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, created_at, updated_at)
+SELECT o.id, oti.id, ror.id, TRUE, NOW(), NOW()
+FROM object o, object oti, ref_org_role ror
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+  AND ror.code='manager'
+  AND NOT EXISTS (SELECT 1 FROM object_org_link ool WHERE ool.object_id=o.id AND ool.org_object_id=oti.id);
+
+-- Médias
+INSERT INTO media (object_id, media_type_id, title, url, is_main, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Logo Restaurant Fermeture', 'https://example.com/logo-restaurant-fermeture.svg', TRUE, 1, NOW(), NOW()
+FROM object o, ref_code_media_type mt
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND mt.code='vector'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id=o.id AND m.title='Logo Restaurant Fermeture');
+
+INSERT INTO media (object_id, media_type_id, title, url, is_main, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Photo Restaurant Fermeture', 'https://example.com/photo-restaurant-fermeture.jpg', FALSE, 2, NOW(), NOW()
+FROM object o, ref_code_media_type mt
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND mt.code='photo'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id=o.id AND m.title='Photo Restaurant Fermeture');
+
+-- Langues
+INSERT INTO object_language (object_id, language_id, created_at)
+SELECT o.id, l.id, NOW()
+FROM object o, ref_language l
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND l.code IN ('fr', 'en', 'de')
+  AND NOT EXISTS (SELECT 1 FROM object_language ol WHERE ol.object_id=o.id AND ol.language_id=l.id);
+
+-- Méthodes de paiement
+INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
+SELECT o.id, pm.id, NOW()
+FROM object o, ref_code_payment_method pm
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND pm.code IN ('card', 'cash', 'paypal')
+  AND NOT EXISTS (SELECT 1 FROM object_payment_method opm WHERE opm.object_id=o.id AND opm.payment_method_id=pm.id);
+
+-- Tags environnementaux
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT o.id, et.id, NOW()
+FROM object o, ref_code_environment_tag et
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND et.code IN ('mer', 'tropical', 'urbain')
+  AND NOT EXISTS (SELECT 1 FROM object_environment_tag oet WHERE oet.object_id=o.id AND oet.environment_tag_id=et.id);
+
+-- Équipements
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o, ref_amenity a
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND a.code IN ('wifi', 'air_conditioning', 'parking', 'terrace', 'accessibility')
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
+
+-- Capacité
+INSERT INTO object_capacity (object_id, metric_id, value_integer, created_at, updated_at)
+SELECT o.id, cm.id, 50, NOW(), NOW()
+FROM object o, ref_capacity_metric cm
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND cm.code='seats'
+  AND NOT EXISTS (SELECT 1 FROM object_capacity oc WHERE oc.object_id=o.id AND oc.metric_id=cm.id);
+
+-- Acteurs
+INSERT INTO actor (id, display_name, first_name, last_name, created_at, updated_at)
+VALUES (gen_random_uuid(), 'Sophie LEROUX', 'Sophie', 'LEROUX', NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
+INSERT INTO actor (id, display_name, first_name, last_name, created_at, updated_at)
+VALUES (gen_random_uuid(), 'Marc DUBOIS', 'Marc', 'DUBOIS', NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
+-- Contacts des acteurs
+INSERT INTO actor_channel (actor_id, kind_id, value, is_primary, created_at, updated_at)
+SELECT a.id, ck.id, 'sophie.leroux@restaurant-fermeture.re', TRUE, NOW(), NOW()
+FROM actor a, ref_code_contact_kind ck
+WHERE a.display_name='Sophie LEROUX' AND ck.code='email'
+  AND NOT EXISTS (SELECT 1 FROM actor_channel ac WHERE ac.actor_id=a.id AND ac.kind_id=ck.id);
+
+INSERT INTO actor_channel (actor_id, kind_id, value, is_primary, created_at, updated_at)
+SELECT a.id, ck.id, 'marc.dubois@restaurant-fermeture.re', TRUE, NOW(), NOW()
+FROM actor a, ref_code_contact_kind ck
+WHERE a.display_name='Marc DUBOIS' AND ck.code='email'
+  AND NOT EXISTS (SELECT 1 FROM actor_channel ac WHERE ac.actor_id=a.id AND ac.kind_id=ck.id);
+
+-- Rôles des acteurs
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility, created_at, updated_at)
+SELECT a.id, o.id, r.id, TRUE, 'public', NOW(), NOW()
+FROM actor a, object o, ref_actor_role r
+WHERE a.display_name='Sophie LEROUX' AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière' AND r.code='manager'
+  AND NOT EXISTS (SELECT 1 FROM actor_object_role aor WHERE aor.actor_id=a.id AND aor.object_id=o.id AND aor.role_id=r.id);
+
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility, created_at, updated_at)
+SELECT a.id, o.id, r.id, FALSE, 'public', NOW(), NOW()
+FROM actor a, object o, ref_actor_role r
+WHERE a.display_name='Marc DUBOIS' AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière' AND r.code='chef'
+  AND NOT EXISTS (SELECT 1 FROM actor_object_role aor WHERE aor.actor_id=a.id AND aor.object_id=o.id AND aor.role_id=r.id);
+
+-- Prix
+INSERT INTO object_price (object_id, kind_id, amount, currency, unit_id, created_at, updated_at)
+SELECT o.id, pk.id, 25.00, 'EUR', pu.id, NOW(), NOW()
+FROM object o, ref_code_price_kind pk, ref_code_price_unit pu
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND pk.code='unique'
+  AND pu.code='per_person'
+  AND NOT EXISTS (SELECT 1 FROM object_price op WHERE op.object_id=o.id AND op.kind_id=pk.id AND op.unit_id=pu.id);
+
+-- Menus du restaurant
+INSERT INTO object_menu (object_id, name, created_at, updated_at)
+SELECT o.id, 'Menu Créole Traditionnel', NOW(), NOW()
+FROM object o
+WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+  AND NOT EXISTS (SELECT 1 FROM object_menu m WHERE m.object_id=o.id AND m.name='Menu Créole Traditionnel');
+
+INSERT INTO object_menu_item (menu_id, name, price, currency, position, created_at, updated_at)
+SELECT m.id, 'Rougail saucisse', 18.00, 'EUR', 1, NOW(), NOW()
+FROM object_menu m
+JOIN object o ON o.id=m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Rougail saucisse');
+
+INSERT INTO object_menu_item (menu_id, name, price, currency, position, created_at, updated_at)
+SELECT m.id, 'Cari poulet', 20.00, 'EUR', 2, NOW(), NOW()
+FROM object_menu m
+JOIN object o ON o.id=m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Cari poulet');
+
+INSERT INTO object_menu_item (menu_id, name, price, currency, position, created_at, updated_at)
+SELECT m.id, 'Ti punch', 8.00, 'EUR', 3, NOW(), NOW()
+FROM object_menu m
+JOIN object o ON o.id=m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
+WHERE NOT EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id=m.id AND mi.name='Ti punch');
+
+-- Add sample media for menu items demonstration
+INSERT INTO media (object_id, media_type_id, title, url, description, is_main, is_published, position, created_at, updated_at)
+SELECT 
+  res.id,
+  mt.id,
+  'Curry de poisson - Photo du plat',
+  'https://images.example.com/restaurants/curry-poisson.jpg',
+  'Photo du curry de poisson servi dans notre restaurant',
+  FALSE,
+  TRUE,
+  1,
+  NOW(),
+  NOW()
+FROM object res
+JOIN ref_code_media_type mt ON mt.code = 'photo'
+WHERE res.object_type = 'RES' AND res.region_code = 'TST' AND res.name = 'Restaurant Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id = res.id AND m.title = 'Curry de poisson - Photo du plat');
+
+INSERT INTO media (object_id, media_type_id, title, url, description, is_main, is_published, position, created_at, updated_at)
+SELECT 
+  res.id,
+  mt.id,
+  'Salade créole - Photo du plat',
+  'https://images.example.com/restaurants/salade-creole.jpg',
+  'Photo de la salade créole fraîche et colorée',
+  FALSE,
+  TRUE,
+  2,
+  NOW(),
+  NOW()
+FROM object res
+JOIN ref_code_media_type mt ON mt.code = 'photo'
+WHERE res.object_type = 'RES' AND res.region_code = 'TST' AND res.name = 'Restaurant Test Océan'
+  AND NOT EXISTS (SELECT 1 FROM media m WHERE m.object_id = res.id AND m.title = 'Salade créole - Photo du plat');
+
+-- Link media to menu items
+INSERT INTO object_menu_item_media (menu_item_id, media_id, position, created_at, updated_at)
+SELECT 
+  mi.id,
+  m.id,
+  1,
+  NOW(),
+  NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id
+JOIN media m ON m.object_id = res.id
+WHERE res.object_type = 'RES' AND res.region_code = 'TST' AND res.name = 'Restaurant Test Océan'
+  AND mi.name = 'Curry de poisson'
+  AND m.title = 'Curry de poisson - Photo du plat'
+  AND NOT EXISTS (SELECT 1 FROM object_menu_item_media mim WHERE mim.menu_item_id = mi.id AND mim.media_id = m.id);
+
+INSERT INTO object_menu_item_media (menu_item_id, media_id, position, created_at, updated_at)
+SELECT 
+  mi.id,
+  m.id,
+  1,
+  NOW(),
+  NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id
+JOIN media m ON m.object_id = res.id
+WHERE res.object_type = 'RES' AND res.region_code = 'TST' AND res.name = 'Restaurant Test Océan'
+  AND mi.name = 'Salade créole'
+  AND m.title = 'Salade créole - Photo du plat'
+  AND NOT EXISTS (SELECT 1 FROM object_menu_item_media mim WHERE mim.menu_item_id = mi.id AND mim.media_id = m.id);
+
+-- ============================
+-- ACTEURS CRT + CONTACTS
+-- ============================
+-- Directeur CRT
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Camille DURAND',
+    'Camille',
+    'DURAND',
+    NOW(),
+    NOW()
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+SELECT a.id, o.id, r.id, TRUE, 'public'
+FROM actor a, object o, ref_actor_role r
+WHERE a.display_name = 'Camille DURAND'
+  AND o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND r.code = 'director'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_object_role x WHERE x.actor_id = a.id AND x.object_id = o.id AND x.role_id = r.id
+  );
+
+INSERT INTO actor_channel (actor_id, kind_id, value, is_primary, position)
+SELECT a.id, k.id, 'camille.durand@crt-test.re', TRUE, 1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Camille DURAND' AND k.code = 'email'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_channel ac WHERE ac.actor_id = a.id AND ac.kind_id = k.id AND ac.value = 'camille.durand@crt-test.re'
+  );
+
+-- Resp. Communication CRT
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Sophie LEROY',
+    'Sophie',
+    'LEROY',
+    NOW(),
+    NOW()
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+SELECT a.id, o.id, r.id, TRUE, 'public'
+FROM actor a, object o, ref_actor_role r
+WHERE a.display_name = 'Sophie LEROY'
+  AND o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND r.code = 'communication_manager'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_object_role x WHERE x.actor_id = a.id AND x.object_id = o.id AND x.role_id = r.id
+  );
+
+INSERT INTO actor_channel (actor_id, kind_id, value, is_primary, position)
+SELECT a.id, k.id, 'sophie.leroy@crt-test.re', TRUE, 1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Sophie LEROY' AND k.code = 'email'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_channel ac WHERE ac.actor_id = a.id AND ac.kind_id = k.id AND ac.value = 'sophie.leroy@crt-test.re'
+  );
+
+-- ============================
+-- LÉGAL (SIRET/SIREN/TVA) OTI + CRT
+-- ============================
+-- OTI
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','13002526500017'), 'forever', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'siret'
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','512345678'), 'forever', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'siren'
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','FR76 1234 5678 90'), 'tacit_renewal', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'vat_number'
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+
+-- CRT
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','13009999900021'), 'forever', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'siret'
+WHERE o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','598765432'), 'forever', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'siren'
+WHERE o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','FR76 0000 1111 22'), 'tacit_renewal', 'active', NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code = 'vat_number'
+WHERE o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_legal ol WHERE ol.object_id = o.id AND ol.type_id = t.id
+  );
+
+-- ============================
+-- LOGOS (média vectoriel)
+-- ============================
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, created_at, updated_at)
+SELECT o.id, mt.id, 'Logo OTI TEST', 'https://static.example.com/logos/oti-test.svg', 'logo', TRUE, TRUE, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code = 'vector'
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id = o.id AND m.kind = 'logo'
+  );
+
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, created_at, updated_at)
+SELECT o.id, mt.id, 'Logo CRT TEST', 'https://static.example.com/logos/crt-test.svg', 'logo', TRUE, TRUE, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code = 'vector'
+WHERE o.name = 'Comité Régional de Tourisme TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id = o.id AND m.kind = 'logo'
+  );
+
+
 -- Acteurs associés à l'OTI TEST
 -- Directeur de l'OTI
 INSERT INTO actor (
@@ -1030,7 +1856,7 @@ END $$;
 INSERT INTO ref_capacity_metric (code, name, unit, description, position) VALUES
 ('beds','Lits','bed','Nombre de lits',1),
 ('bedrooms','Chambres','room','Nombre de chambres',2),
-('max_capacity','Capacité max.','pax','Capacité d\'accueil maximale (personnes)',3),
+('max_capacity','Capacité max.','pax','Capacité d''accueil maximale (personnes)',3),
 ('seats','Places assises','seat','Nombre de sièges assis',4),
 ('standing_places','Places debout','place','Nombre de places debout',5),
 ('pitches','Emplacements','pitch','Emplacements de camping',6),
@@ -1135,7 +1961,7 @@ WHERE s.code = 'tourisme_handicap'
 -- Développement durable: catégories
 INSERT INTO ref_sustainability_action_category (code, name, description, position) VALUES
 ('energy','Énergie','Réduction et maîtrise des consommations énergétiques',1),
-('water','Eau','Gestion responsable de l\'eau',2),
+('water','Eau','Gestion responsable de l''eau',2),
 ('waste','Déchets','Réduction, tri et valorisation des déchets',3),
 ('mobility','Mobilité douce','Transports doux et écomobilité',4),
 ('biodiversity','Biodiversité','Préservation de la biodiversité',5)
@@ -1159,7 +1985,7 @@ JOIN (
     -- Déchets
     ('waste','sorting_points','Points de tri à disposition',1),
     ('waste','composting','Compostage des biodéchets',2),
-    ('waste','bulk_amenities','Produits d\'accueil en vrac',3),
+    ('waste','bulk_amenities','Produits d''accueil en vrac',3),
     -- Mobilité
     ('mobility','bike_parking','Parking vélos sécurisé',1),
     ('mobility','ev_charging','Bornes de recharge électrique',2),

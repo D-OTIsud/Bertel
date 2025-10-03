@@ -692,12 +692,6 @@ class ContactChannelRecord(BaseModel):
             payload["kind_id"] = kind_id
         if role_id:
             payload["role_id"] = role_id
-        metadata: Dict[str, Any] = {"kind_code": self.kind_code}
-        if self.role_code:
-            metadata["role_code"] = self.role_code
-        if metadata:
-            payload.setdefault("extra", {})
-            payload["extra"].update(metadata)
         return payload
 
 
@@ -715,18 +709,10 @@ class AmenityLinkRecord(BaseModel):
     raw_label: Optional[str] = None
 
     def to_supabase(self, *, amenity_id: Optional[str]) -> Dict[str, Any]:
-        payload = {
+        return {
             "object_id": self.object_id,
             "amenity_id": amenity_id,
         }
-        if self.raw_label:
-            payload["extra"] = {"raw_label": self.raw_label}
-        if not amenity_id:
-            payload.setdefault("extra", {})
-            payload["extra"]["amenity_code"] = self.amenity_code
-            if self.amenity_name:
-                payload["extra"]["amenity_name"] = self.amenity_name
-        return payload
 
 
 class AmenityTransformation(BaseModel):
@@ -747,15 +733,6 @@ class LanguageLinkRecord(BaseModel):
             payload["language_id"] = language_id
         if level_id:
             payload["level_id"] = level_id
-        extra: Dict[str, Any] = {}
-        if not language_id:
-            extra["language_code"] = self.language_code
-        if self.language_name:
-            extra["language_name"] = self.language_name
-        if self.proficiency_code and not level_id:
-            extra["proficiency_code"] = self.proficiency_code
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -774,13 +751,6 @@ class PaymentMethodRecord(BaseModel):
         payload: Dict[str, Any] = {"object_id": self.object_id}
         if payment_method_id:
             payload["payment_method_id"] = payment_method_id
-        extra: Dict[str, Any] = {}
-        if not payment_method_id:
-            extra["payment_code"] = self.payment_code
-        if self.payment_name:
-            extra["payment_name"] = self.payment_name
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -799,13 +769,6 @@ class EnvironmentTagRecord(BaseModel):
         payload: Dict[str, Any] = {"object_id": self.object_id}
         if environment_tag_id:
             payload["environment_tag_id"] = environment_tag_id
-        extra: Dict[str, Any] = {}
-        if not environment_tag_id:
-            extra["environment_code"] = self.environment_code
-        if self.environment_name:
-            extra["environment_name"] = self.environment_name
-        if extra:
-            payload["extra"] = extra
         return payload
 
 
@@ -845,7 +808,7 @@ class MediaRecord(BaseModel):
     is_main: Optional[bool] = None
 
     def to_supabase(self, *, media_type_id: Optional[str]) -> Dict[str, Any]:
-        payload = {
+        return {
             "object_id": self.object_id,
             "url": self.url,
             "media_type_id": media_type_id,
@@ -854,10 +817,6 @@ class MediaRecord(BaseModel):
             "credit": self.credit,
             "is_main": self.is_main,
         }
-        if not media_type_id:
-            payload.setdefault("extra", {})
-            payload["extra"]["media_type_code"] = self.media_type_code
-        return payload
 
 
 class MediaTransformation(BaseModel):

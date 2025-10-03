@@ -8,13 +8,37 @@
 -- 1. SEED DES TABLES DE RÉFÉRENCE
 -- =====================================================
 
--- Langues (déjà peuplées dans migration_plan.sql)
--- Ajout de langues supplémentaires
+-- =====================================================
+-- LANGUES - SUPPORT MULTILINGUE COMPLET
+-- =====================================================
+
+-- Langues principales du tourisme international
 INSERT INTO ref_language (code, name, native_name) VALUES
+-- Langues officielles de La Réunion
+('fr', 'Français', 'Français'),
 ('rcf', 'Créole réunionnais', 'Kréol réyoné'),
+-- Langues européennes majeures
+('en', 'Anglais', 'English'),
+('de', 'Allemand', 'Deutsch'),
+('es', 'Espagnol', 'Español'),
+('it', 'Italien', 'Italiano'),
+('pt', 'Portugais', 'Português'),
+('nl', 'Néerlandais', 'Nederlands'),
+-- Langues asiatiques importantes
+('zh', 'Chinois', '中文'),
+('ja', 'Japonais', '日本語'),
+('ko', 'Coréen', '한국어'),
 ('hi', 'Hindi', 'हिन्दी'),
 ('ta', 'Tamoul', 'தமிழ்'),
-('zh', 'Chinois', '中文')
+('th', 'Thaï', 'ไทย'),
+-- Langues africaines et océaniennes
+('ar', 'Arabe', 'العربية'),
+('sw', 'Swahili', 'Kiswahili'),
+('mg', 'Malgache', 'Malagasy'),
+('zu', 'Zoulou', 'IsiZulu'),
+-- Langues océaniennes
+('ty', 'Tahitien', 'Reo Tahiti'),
+('haw', 'Hawaïen', 'ʻŌlelo Hawaiʻi')
 ON CONFLICT (code) DO NOTHING;
 
 -- Types de contact
@@ -130,8 +154,7 @@ INSERT INTO ref_contact_role (code, name, description) VALUES
 ('press', 'Presse', 'Relations presse'),
 ('technical', 'Technique', 'Support technique / IT'),
 ('sales', 'Commercial', 'Ventes / commercial'),
-('info', 'Information', 'Informations générales')
-ON CONFLICT (code) DO NOTHING;
+('info', 'Information', 'Informations générales');
 
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','volcan', 'Au pied du volcan', 'Situé au pied du Piton de la Fournaise'),
@@ -343,8 +366,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('dietary_tag','pescatarian', 'Pescétarien', 'Avec poisson mais sans viande'),
 ('dietary_tag','flexitarian', 'Flexitarien', 'Consommation modérée de viande'),
 ('dietary_tag','organic', 'Bio', 'Produits biologiques'),
-('dietary_tag','local', 'Local', 'Produits locaux de La Réunion')
-ON CONFLICT DO NOTHING;
+('dietary_tag','local', 'Local', 'Produits locaux de La Réunion');
 
 -- Allergènes
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -371,23 +393,119 @@ INSERT INTO ref_amenity (code, name, family_id, description)
 SELECT v.code, v.name, fam.id, v.description
 FROM (
   VALUES
-    ('tv','Télévision','equipment','Télévision dans les chambres'),
-    ('wifi','Wi-Fi','equipment','Accès Wi‑Fi'),
-    ('piscine','Piscine','equipment','Piscine'),
+    -- Équipements généraux
+    ('wifi','Wi-Fi','general','Accès Wi‑Fi gratuit'),
+    ('tv','Télévision','general','Télévision dans les chambres'),
+    ('air_conditioning','Climatisation','climate_control','Climatisation'),
+    ('heating','Chauffage','climate_control','Système de chauffage'),
+    ('safe','Coffre-fort','general','Coffre-fort sécurisé'),
+    ('elevator','Ascenseur','general','Ascenseur'),
+    ('laundry','Laverie','services','Service de blanchisserie'),
+    ('luggage_storage','Consigne bagages','services','Consigne à bagages'),
+    ('business_center','Centre d''affaires','services','Centre d''affaires'),
+    ('concierge','Conciergerie','services','Service de conciergerie'),
+    
+    -- Services de restauration
     ('restaurant','Restaurant','services','Restaurant sur place'),
-    ('coffre','Coffre-fort','equipment','Coffre-fort'),
-    ('materiel_bebe','Matériel bébé','services','Lit bébé / chaise haute'),
     ('bar','Bar','services','Bar'),
-    ('location_velo','Location de vélo','services','Location de vélos'),
-    ('snorkeling','Snorkeling','equipment','Matériel de snorkeling'),
-    ('barbecue','Barbecue','equipment','Barbecue à disposition')
+    ('room_service','Service en chambre','services','Service en chambre'),
+    ('minibar','Minibar','general','Minibar dans les chambres'),
+    ('breakfast','Petit-déjeuner','general','Petit-déjeuner inclus'),
+    ('kitchenette','Kitchenette','kitchen','Kitchenette équipée'),
+    ('coffee_machine','Machine à café','kitchen','Machine à café'),
+    ('microwave','Micro-ondes','kitchen','Micro-ondes'),
+    ('refrigerator','Réfrigérateur','kitchen','Réfrigérateur'),
+    
+    -- Équipements pour enfants
+    ('baby_crib','Lit bébé','kids','Lit bébé disponible'),
+    ('high_chair','Chaise haute','kids','Chaise haute'),
+    ('baby_sitting','Garde d''enfants','services','Service de garde d''enfants'),
+    ('kids_club','Club enfants','kids','Club enfants'),
+    ('playground','Aire de jeux','kids','Aire de jeux pour enfants'),
+    
+    -- Équipements pour animaux
+    ('pet_friendly','Animaux acceptés','pets','Animaux de compagnie acceptés'),
+    ('pet_bowls','Gamelles animaux','pets','Gamelles pour animaux'),
+    ('pet_bed','Panier animaux','pets','Panier pour animaux'),
+    
+    -- Équipements de salle de bain
+    ('hairdryer','Sèche-cheveux','bathroom','Sèche-cheveux'),
+    ('bathrobes','Peignoirs','bathroom','Peignoirs fournis'),
+    ('toiletries','Articles de toilette','bathroom','Articles de toilette'),
+    ('jacuzzi','Jacuzzi','bathroom','Jacuzzi privé'),
+    ('bathtub','Baignoire','bathroom','Baignoire'),
+    ('shower','Douche','bathroom','Douche'),
+    
+    -- Équipements de chambre
+    ('blackout_curtains','Rideaux occultants','bedroom','Rideaux occultants'),
+    ('extra_pillows','Oreillers supplémentaires','bedroom','Oreillers supplémentaires'),
+    ('iron','Fer à repasser','bedroom','Fer à repasser'),
+    ('desk','Bureau','bedroom','Bureau de travail'),
+    ('sofa','Canapé','bedroom','Canapé'),
+    ('balcony','Balcon','bedroom','Balcon privé'),
+    ('private_terrace','Terrasse privée','bedroom','Terrasse privée'),
+    
+    -- Divertissement
+    ('pool_table','Billard','entertainment','Table de billard'),
+    ('games_room','Salle de jeux','entertainment','Salle de jeux'),
+    ('library','Bibliothèque','entertainment','Bibliothèque'),
+    ('dvd_player','Lecteur DVD','entertainment','Lecteur DVD'),
+    ('board_games','Jeux de société','entertainment','Jeux de société'),
+    
+    -- Équipements extérieurs
+    ('swimming_pool','Piscine','outdoor','Piscine'),
+    ('hot_tub','Spa extérieur','outdoor','Spa extérieur'),
+    ('garden','Jardin','outdoor','Jardin'),
+    ('bbq','Barbecue','outdoor','Barbecue à disposition'),
+    ('sunbeds','Transats','outdoor','Transats et parasols'),
+    ('beach_access','Accès plage','outdoor','Accès direct à la plage'),
+    ('common_terrace','Terrasse commune','outdoor','Terrasse commune'),
+    
+    -- Accessibilité
+    ('wheelchair_access','Accès fauteuil roulant','accessibility','Accès fauteuil roulant'),
+    ('accessible_bathroom','Salle de bain accessible','accessibility','Salle de bain accessible'),
+    ('accessible_parking','Parking accessible','accessibility','Parking accessible'),
+    ('hearing_impaired','Personnes malentendantes','accessibility','Équipements pour malentendants'),
+    
+    -- Sécurité
+    ('security_24h','Sécurité 24h/24','security','Sécurité 24 heures sur 24'),
+    ('cctv','Vidéosurveillance','security','Système de vidéosurveillance'),
+    ('fire_safety','Sécurité incendie','security','Système de sécurité incendie'),
+    ('emergency_exit','Sortie de secours','security','Sortie de secours'),
+    
+    -- Parking
+    ('parking','Parking','parking','Parking disponible'),
+    ('valet_parking','Parking voiturier','parking','Service de parking voiturier'),
+    ('garage','Garage','parking','Garage couvert'),
+    ('electric_charging','Recharge électrique','parking','Station de recharge véhicule électrique'),
+    
+    -- Services spécialisés
+    ('spa','Spa','services','Centre de spa'),
+    ('car_rental','Location voiture','services','Service de location de voiture'),
+    ('airport_shuttle','Navette aéroport','services','Navette aéroport'),
+    ('tour_desk','Bureau d''excursions','services','Bureau d''excursions et activités'),
+    
+    -- Équipements sportifs
+    ('fitness_center','Salle de sport','sports','Salle de fitness'),
+    ('tennis_court','Court de tennis','sports','Court de tennis'),
+    ('golf_course','Golf','sports','Terrains de golf'),
+    ('bike_rental','Location vélo','sports','Location de vélos'),
+    ('snorkeling_gear','Équipement snorkeling','sports','Équipement de snorkeling'),
+    ('diving_center','Centre de plongée','sports','Centre de plongée'),
+    ('surf_rental','Location surf','sports','Location de planches de surf'),
+    ('kayak_rental','Location kayak','sports','Location de kayaks'),
+    ('hiking_gear','Équipement randonnée','sports','Équipement de randonnée pédestre'),
+    ('climbing_gear','Équipement escalade','sports','Équipement d''escalade'),
+    ('sailing_equipment','Équipement voile','sports','Équipement de voile'),
+    ('fishing_gear','Équipement pêche','sports','Équipement de pêche'),
+    ('yoga_mats','Tapis de yoga','sports','Tapis de yoga disponibles'),
+    ('gym_equipment','Équipement gym','sports','Équipement de musculation'),
+    ('swimming_equipment','Équipement natation','sports','Équipement de natation')
 ) AS v(code,name,fam_code,description)
-JOIN ref_code_amenity_family fam ON fam.code = v.fam_code
-ON CONFLICT (code) DO NOTHING;
+JOIN ref_code_amenity_family fam ON fam.code = v.fam_code;
 
 -- Types HOT via ref_classification_scheme/value
-INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel')
-ON CONFLICT (code) DO NOTHING;
+INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel');
 INSERT INTO ref_classification_value (scheme_id, code, name)
 SELECT rcs.id, v.code, v.name
 FROM ref_classification_scheme rcs,
@@ -403,561 +521,514 @@ FROM ref_classification_scheme rcs,
        ('hotel_romantique','Hôtel romantique'),
        ('hotel_affaires','Hôtel d''affaires')
      ) AS v(code,name)
-WHERE rcs.code='type_hot'
-ON CONFLICT (scheme_id, code) DO NOTHING;
+WHERE rcs.code='type_hot';
+
 
 -- =====================================================
--- 2. SEED D'OBJETS D'EXEMPLE
+-- 27. NOUVEAUX DOMAINES TOURISTIQUES - DONNÉES COMPLÈTES
 -- =====================================================
 
--- Hôtel 1: Hôtel de test générique
-DO $$
-DECLARE
-  hotel_id TEXT;
-  v_period UUID;
-  v_schedule UUID;
-  v_tp UUID;
-BEGIN
-    -- Objet principal (ID auto-généré via trigger)
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('HOT', 'Hôtel de Test 1', 'RUN', 'published')
-    RETURNING id INTO hotel_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (hotel_id, '123 Rue de la Plage', '97400', 'Saint-Denis', '97400', -20.8789, 55.4481, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 262 12 34 56', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'https://www.hoteltest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Type HOT via object_classification (upsert without unique constraint)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel'
-    WHERE rcs.code = 'type_hot'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
+-- Types d'hébergement
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('accommodation_type', 'hotel', 'Hôtel', 'Hôtel classique', 1),
+('accommodation_type', 'boutique_hotel', 'Hôtel boutique', 'Hôtel boutique de charme', 2),
+('accommodation_type', 'luxury_hotel', 'Hôtel de luxe', 'Hôtel haut de gamme', 3),
+('accommodation_type', 'resort', 'Résort', 'Complexe hôtelier', 4),
+('accommodation_type', 'guesthouse', 'Chambre d''hôtes', 'Chambre d''hôtes', 5),
+('accommodation_type', 'gite', 'Gîte', 'Gîte rural ou urbain', 6),
+('accommodation_type', 'camping', 'Camping', 'Camping', 7),
+('accommodation_type', 'glamping', 'Glamping', 'Camping de luxe', 8),
+('accommodation_type', 'villa', 'Villa', 'Villa de location', 9),
+('accommodation_type', 'apartment', 'Appartement', 'Appartement de tourisme', 10);
 
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel'
-    WHERE rcs.code = 'type_hot'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Capacités (extensibles)
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('total_rooms','Nombre total de chambres','rooms')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('total_beds','Nombre total de lits','beds')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 25 FROM ref_capacity_metric WHERE code='total_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 50 FROM ref_capacity_metric WHERE code='total_beds'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    
-    -- Classification already ensured above
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT hotel_id, id FROM ref_language WHERE code IN ('fr', 'en')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT hotel_id, id FROM ref_code_payment_method WHERE code IN ('carte_bleue','visa','mastercard')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT hotel_id, id FROM ref_amenity WHERE code IN ('tv', 'wifi', 'piscine', 'restaurant')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT hotel_id, id FROM ref_code_environment_tag WHERE code IN ('bord_mer','ville')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    -- Médias
-    INSERT INTO media (object_id, media_type_id, title, credit, url, is_main, position)
-    SELECT hotel_id, mt.id, 'Photo hôtel test 1', 'Hôtel Test', 'https://example.com/photo1.jpg', TRUE, 1
-    FROM ref_code_media_type mt WHERE mt.code='photo'
-    ON CONFLICT DO NOTHING;
-    
-    -- Informations légales
-    INSERT INTO legal (object_id, siret)
-    VALUES (hotel_id, '12345678901234')
-    ON CONFLICT (object_id) DO UPDATE SET
-        siret = EXCLUDED.siret;
-    
-    -- Ouvertures riches: Lun-Sam 09:00-18:00 toute l'année courante
-    INSERT INTO opening_period (object_id, name, date_start, date_end)
-    VALUES (hotel_id, 'Horaires annuels', DATE_TRUNC('year', CURRENT_DATE), (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 day')::date)
-    RETURNING id INTO v_period;
+-- Types de tourisme
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('tourism_type', 'leisure', 'Tourisme de loisirs', 'Tourisme de détente et loisirs', 1),
+('tourism_type', 'cultural', 'Tourisme culturel', 'Tourisme axé sur la culture', 2),
+('tourism_type', 'business', 'Tourisme d''affaires', 'Tourisme professionnel', 3),
+('tourism_type', 'eco', 'Écotourisme', 'Tourisme respectueux de l''environnement', 4),
+('tourism_type', 'adventure', 'Tourisme d''aventure', 'Tourisme d''aventure et sports extrêmes', 5),
+('tourism_type', 'gastronomy', 'Tourisme gastronomique', 'Tourisme gastronomique', 6),
+('tourism_type', 'wellness', 'Tourisme de bien-être', 'Tourisme spa et bien-être', 7),
+('tourism_type', 'nature', 'Tourisme de nature', 'Tourisme axé sur la nature', 8),
+('tourism_type', 'sports', 'Tourisme sportif', 'Tourisme sportif', 9),
+('tourism_type', 'rural', 'Tourisme rural', 'Tourisme rural', 10);
 
-    INSERT INTO opening_schedule (period_id, schedule_type_id, name)
-    SELECT v_period, t.id, 'Horaires réguliers' FROM ref_code_opening_schedule_type t WHERE t.code='regular'
-    RETURNING id INTO v_schedule;
+-- Types de transport
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('transport_type', 'airplane', 'Avion', 'Transport aérien', 1),
+('transport_type', 'train', 'Train', 'Transport ferroviaire', 2),
+('transport_type', 'bus', 'Bus', 'Transport par bus', 3),
+('transport_type', 'car', 'Voiture', 'Transport automobile', 4),
+('transport_type', 'ferry', 'Ferry', 'Transport par ferry', 5),
+('transport_type', 'cruise', 'Croisière', 'Transport par croisière', 6),
+('transport_type', 'bicycle', 'Vélo', 'Transport à vélo', 7),
+('transport_type', 'taxi', 'Taxi', 'Transport par taxi', 8),
+('transport_type', 'helicopter', 'Hélicoptère', 'Transport par hélicoptère', 9),
+('transport_type', 'walking', 'Marche à pied', 'Transport à pied', 10);
 
-    INSERT INTO opening_time_period (schedule_id, closed, note)
-    VALUES (v_schedule, FALSE, NULL)
-    RETURNING id INTO v_tp;
+-- Types d'activités
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('activity_type', 'hiking', 'Randonnée', 'Randonnée pédestre', 1),
+('activity_type', 'diving', 'Plongée', 'Plongée sous-marine', 2),
+('activity_type', 'surfing', 'Surf', 'Surf', 3),
+('activity_type', 'museum_visit', 'Visite de musée', 'Visite de musée', 4),
+('activity_type', 'guided_tour', 'Visite guidée', 'Visite guidée', 5),
+('activity_type', 'cooking_class', 'Cours de cuisine', 'Cours de cuisine', 6),
+('activity_type', 'wine_tasting', 'Dégustation de vin', 'Dégustation de vin', 7),
+('activity_type', 'spa_treatment', 'Soin spa', 'Soin spa', 8),
+('activity_type', 'paragliding', 'Parapente', 'Parapente', 9),
+('activity_type', 'bird_watching', 'Observation d''oiseaux', 'Observation d''oiseaux', 10);
 
-    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
-    SELECT v_tp, w.id FROM ref_code_weekday w WHERE w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday');
-    INSERT INTO opening_time_frame (time_period_id, start_time, end_time) VALUES (v_tp, TIME '09:00', TIME '18:00');
+-- Types de saisons
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('season_type', 'high_season', 'Haute saison', 'Période de haute affluence', 1),
+('season_type', 'low_season', 'Basse saison', 'Période de faible affluence', 2),
+('season_type', 'summer', 'Été', 'Saison estivale', 3),
+('season_type', 'winter', 'Hiver', 'Saison hivernale', 4),
+('season_type', 'cyclone_season', 'Saison cyclonique', 'Période cyclonique à La Réunion', 5),
+('season_type', 'sugar_cane_harvest', 'Récolte canne à sucre', 'Période de récolte de la canne à sucre', 6),
+('season_type', 'vanilla_harvest', 'Récolte vanille', 'Période de récolte de la vanille', 7),
+('season_type', 'lychee_season', 'Saison des litchis', 'Période des litchis', 8),
+('season_type', 'festival_season', 'Saison des festivals', 'Période des festivals', 9),
+('season_type', 'holiday_season', 'Saison des vacances', 'Période des vacances', 10);
 
-    RAISE NOTICE 'Hôtel de test 1 créé avec ID: %', hotel_id;
-END $$;
+-- Types de clients
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('client_type', 'individual', 'Touriste individuel', 'Voyageur seul', 1),
+('client_type', 'couple', 'Couple', 'Couple en voyage', 2),
+('client_type', 'family', 'Famille', 'Famille avec enfants', 3),
+('client_type', 'group', 'Groupe', 'Groupe de voyageurs', 4),
+('client_type', 'business_traveler', 'Voyageur d''affaires', 'Voyageur professionnel', 5),
+('client_type', 'senior', 'Senior', 'Voyageur senior', 6),
+('client_type', 'student', 'Étudiant', 'Voyageur étudiant', 7),
+('client_type', 'luxury_traveler', 'Voyageur de luxe', 'Voyageur haut de gamme', 8),
+('client_type', 'budget_traveler', 'Voyageur économique', 'Voyageur économique', 9),
+('client_type', 'accessible', 'Personne à mobilité réduite', 'Client avec handicap', 10);
 
--- Hôtel 2: Hôtel de test générique
-DO $$
-DECLARE
-    hotel_id TEXT;
-    v_period UUID;
-    v_schedule UUID;
-    v_tp UUID;
-BEGIN
-    -- Objet principal (ID auto-généré via trigger)
-    INSERT INTO object (object_type, name, region_code, status, updated_at_source, created_at, updated_at)
-    VALUES ('HOT', 'Hôtel de Test 2', 'RUN', 'published', NOW(), NOW(), NOW())
-    RETURNING id INTO hotel_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (hotel_id, '456 Avenue de la République', '97400', 'Saint-Denis', '97400', -20.9000, 55.4500, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 262 98 76 54', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 692 12 34 56', FALSE, 2 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'contact@hoteltest2.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'https://www.hoteltest2.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Classification préfectorale (2 étoiles)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = '2e'
-    WHERE rcs.code = 'prefectoral'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
+-- Types de services
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('service_type', 'accommodation', 'Hébergement', 'Service d''hébergement', 1),
+('service_type', 'restaurant', 'Restaurant', 'Service de restauration', 2),
+('service_type', 'transport', 'Transport', 'Service de transport', 3),
+('service_type', 'tour_guide', 'Guide touristique', 'Service de guide touristique', 4),
+('service_type', 'spa', 'Spa', 'Service de spa', 5),
+('service_type', 'concierge', 'Conciergerie', 'Service de conciergerie', 6),
+('service_type', 'event_planning', 'Organisation d''événements', 'Service d''organisation d''événements', 7),
+('service_type', 'translation', 'Traduction', 'Service de traduction', 8),
+('service_type', 'insurance', 'Assurance', 'Service d''assurance', 9),
+('service_type', 'security', 'Sécurité', 'Service de sécurité', 10);
 
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = '2e'
-    WHERE rcs.code = 'prefectoral'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Capacités (extensibles)
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('family_rooms','Chambres familiales','rooms')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 15 FROM ref_capacity_metric WHERE code='total_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 30 FROM ref_capacity_metric WHERE code='total_beds'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 2 FROM ref_capacity_metric WHERE code='family_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    
-    -- Type HOT via object_classification (upsert without unique constraint)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel_restaurant'
-    WHERE rcs.code = 'type_hot'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
+-- Statuts de réservation
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('booking_status', 'pending', 'En attente', 'Réservation en attente', 1),
+('booking_status', 'confirmed', 'Confirmée', 'Réservation confirmée', 2),
+('booking_status', 'cancelled', 'Annulée', 'Réservation annulée', 3),
+('booking_status', 'completed', 'Terminée', 'Réservation terminée', 4),
+('booking_status', 'no_show', 'No-show', 'Client ne s''est pas présenté', 5),
+('booking_status', 'payment_pending', 'Paiement en attente', 'En attente de paiement', 6),
+('booking_status', 'payment_confirmed', 'Paiement confirmé', 'Paiement confirmé', 7),
+('booking_status', 'modified', 'Modifiée', 'Réservation modifiée', 8),
+('booking_status', 'checked_in', 'Enregistré', 'Client enregistré', 9),
+('booking_status', 'checked_out', 'Départ', 'Client parti', 10);
 
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel_restaurant'
-    WHERE rcs.code = 'type_hot'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT hotel_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT hotel_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'cheque', 'especes')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT hotel_id, id FROM ref_amenity WHERE code IN ('wifi', 'coffre', 'materiel_bebe', 'bar', 'piscine')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT hotel_id, id FROM ref_code_environment_tag WHERE code IN ('ville', 'calme')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    -- Médias
-    INSERT INTO media (object_id, media_type_id, title, credit, url, is_main, position)
-    SELECT hotel_id, mt.id, 'Photo hôtel test 2 - Vue extérieure', 'Hôtel Test', 'https://example.com/photo2-1.jpg', TRUE, 1 FROM ref_code_media_type mt WHERE mt.code='photo'
-    UNION ALL
-    SELECT hotel_id, mt.id, 'Photo hôtel test 2 - Chambre', 'Hôtel Test', 'https://example.com/photo2-2.jpg', FALSE, 2 FROM ref_code_media_type mt WHERE mt.code='photo'
-    ON CONFLICT DO NOTHING;
-    
-    -- Informations légales
-    INSERT INTO legal (object_id, siret)
-    VALUES (hotel_id, '23456789012345')
-    ON CONFLICT (object_id) DO UPDATE SET
-        siret = EXCLUDED.siret;
-    
-    -- Ouvertures riches: toute l'année 24/7 (pas de créneaux)
-    INSERT INTO opening_period (object_id, name, all_years)
-    VALUES (hotel_id, 'Ouvert en continu', TRUE)
-    RETURNING id INTO v_period;
-    INSERT INTO opening_schedule (period_id, schedule_type_id, name)
-    SELECT v_period, t.id, '24/7' FROM ref_code_opening_schedule_type t WHERE t.code='regular'
-    RETURNING id INTO v_schedule;
-    INSERT INTO opening_time_period (schedule_id, closed, note) VALUES (v_schedule, FALSE, 'Ouvert en continu') RETURNING id INTO v_tp;
-    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
-    SELECT v_tp, w.id FROM ref_code_weekday w; -- tous les jours
-    
-    RAISE NOTICE 'Hôtel de test 2 créé avec l''ID: %', hotel_id;
-END $$;
+-- Types de promotions
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('promotion_type', 'early_booking', 'Réservation anticipée', 'Réduction pour réservation anticipée', 1),
+('promotion_type', 'last_minute', 'Dernière minute', 'Offre de dernière minute', 2),
+('promotion_type', 'seasonal', 'Saisonnière', 'Promotion saisonnière', 3),
+('promotion_type', 'group_discount', 'Réduction groupe', 'Réduction pour groupes', 4),
+('promotion_type', 'loyalty', 'Fidélité', 'Promotion fidélité', 5),
+('promotion_type', 'package', 'Forfait', 'Promotion forfaitaire', 6),
+('promotion_type', 'flash_sale', 'Vente flash', 'Vente flash', 7),
+('promotion_type', 'student', 'Étudiant', 'Promotion étudiants', 8),
+('promotion_type', 'senior', 'Senior', 'Promotion seniors', 9),
+('promotion_type', 'family', 'Famille', 'Promotion famille', 10);
+
+-- Types de documents
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('document_type', 'passport', 'Passeport', 'Passeport', 1),
+('document_type', 'visa', 'Visa', 'Visa', 2),
+('document_type', 'id_card', 'Carte d''identité', 'Carte d''identité', 3),
+('document_type', 'driving_license', 'Permis de conduire', 'Permis de conduire', 4),
+('document_type', 'insurance', 'Assurance', 'Document d''assurance', 5),
+('document_type', 'booking_confirmation', 'Confirmation de réservation', 'Confirmation de réservation', 6),
+('document_type', 'ticket', 'Billet', 'Billet de transport', 7),
+('document_type', 'voucher', 'Bon', 'Bon de service', 8),
+('document_type', 'medical_certificate', 'Certificat médical', 'Certificat médical', 9),
+('document_type', 'vaccination', 'Carnet de vaccination', 'Carnet de vaccination', 10);
+
+-- Types d'assurance
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('insurance_type', 'travel', 'Assurance voyage', 'Assurance voyage', 1),
+('insurance_type', 'medical', 'Assurance médicale', 'Assurance médicale', 2),
+('insurance_type', 'cancellation', 'Assurance annulation', 'Assurance annulation', 3),
+('insurance_type', 'luggage', 'Assurance bagages', 'Assurance bagages', 4),
+('insurance_type', 'liability', 'Assurance responsabilité civile', 'Assurance responsabilité civile', 5),
+('insurance_type', 'repatriation', 'Assurance rapatriement', 'Assurance rapatriement', 6),
+('insurance_type', 'multi_risk', 'Assurance multirisque', 'Assurance multirisque', 7),
+('insurance_type', 'adventure', 'Assurance aventure', 'Assurance pour sports d''aventure', 8),
+('insurance_type', 'business', 'Assurance business', 'Assurance voyage d''affaires', 9),
+('insurance_type', 'group', 'Assurance groupe', 'Assurance pour groupes', 10);
+
+-- Types de feedback
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('feedback_type', 'online_review', 'Avis en ligne', 'Avis en ligne', 1),
+('feedback_type', 'satisfaction_survey', 'Enquête de satisfaction', 'Enquête de satisfaction', 2),
+('feedback_type', 'verbal_feedback', 'Commentaire verbal', 'Commentaire verbal', 3),
+('feedback_type', 'complaint', 'Réclamation', 'Réclamation', 4),
+('feedback_type', 'compliment', 'Compliment', 'Compliment', 5),
+('feedback_type', 'suggestion', 'Suggestion', 'Suggestion d''amélioration', 6),
+('feedback_type', 'rating', 'Note', 'Note d''évaluation', 7),
+('feedback_type', 'testimonial', 'Témoignage', 'Témoignage client', 8),
+('feedback_type', 'social_media', 'Réseaux sociaux', 'Retour via réseaux sociaux', 9),
+('feedback_type', 'email', 'Email', 'Retour par email', 10);
+
+-- Types de partenariats
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('partnership_type', 'hotel', 'Partenariat hôtelier', 'Partenariat avec hôtels', 1),
+('partnership_type', 'airline', 'Compagnie aérienne', 'Partenariat avec compagnies aériennes', 2),
+('partnership_type', 'travel_agency', 'Agence de voyage', 'Partenariat avec agences de voyage', 3),
+('partnership_type', 'tourist_office', 'Office de tourisme', 'Partenariat avec offices de tourisme', 4),
+('partnership_type', 'local_business', 'Entreprise locale', 'Partenariat avec entreprises locales', 5),
+('partnership_type', 'online_platform', 'Plateforme en ligne', 'Partenariat avec plateformes en ligne', 6),
+('partnership_type', 'restaurant', 'Restaurant', 'Partenariat avec restaurants', 7),
+('partnership_type', 'transport', 'Transport', 'Partenariat avec entreprises de transport', 8),
+('partnership_type', 'activity_provider', 'Prestataire d''activités', 'Partenariat avec prestataires d''activités', 9),
+('partnership_type', 'supplier', 'Fournisseur', 'Partenariat avec fournisseurs', 10);
+
+-- Types d'assistance
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('assistance_type', 'customer_service', 'Service client', 'Service client', 1),
+('assistance_type', 'medical', 'Assistance médicale', 'Assistance médicale', 2),
+('assistance_type', 'emergency', 'Urgence', 'Assistance d''urgence', 3),
+('assistance_type', 'technical', 'Assistance technique', 'Assistance technique', 4),
+('assistance_type', 'language', 'Assistance linguistique', 'Assistance linguistique', 5),
+('assistance_type', 'legal', 'Assistance juridique', 'Assistance juridique', 6),
+('assistance_type', 'travel', 'Assistance voyage', 'Assistance voyage', 7),
+('assistance_type', 'lost_documents', 'Documents perdus', 'Assistance en cas de perte de documents', 8),
+('assistance_type', 'theft', 'Vol', 'Assistance en cas de vol', 9),
+('assistance_type', 'natural_disaster', 'Catastrophe naturelle', 'Assistance en cas de catastrophe naturelle', 10);
+
+-- Types de destinations
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('destination_type', 'urban', 'Destination urbaine', 'Destination urbaine', 1),
+('destination_type', 'coastal', 'Destination balnéaire', 'Destination balnéaire', 2),
+('destination_type', 'mountain', 'Destination montagneuse', 'Destination montagneuse', 3),
+('destination_type', 'rural', 'Destination rurale', 'Destination rurale', 4),
+('destination_type', 'tropical', 'Destination tropicale', 'Destination tropicale', 5),
+('destination_type', 'cultural', 'Destination culturelle', 'Destination culturelle', 6),
+('destination_type', 'adventure', 'Destination aventure', 'Destination aventure', 7),
+('destination_type', 'wellness', 'Destination bien-être', 'Destination bien-être', 8),
+('destination_type', 'business', 'Destination d''affaires', 'Destination d''affaires', 9),
+('destination_type', 'family', 'Destination familiale', 'Destination familiale', 10);
+
+-- Types d'événements
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('event_type', 'conference', 'Conférence', 'Conférence', 1),
+('event_type', 'seminar', 'Séminaire', 'Séminaire', 2),
+('event_type', 'workshop', 'Atelier', 'Atelier', 3),
+('event_type', 'exhibition', 'Exposition', 'Exposition', 4),
+('event_type', 'festival', 'Festival', 'Festival', 5),
+('event_type', 'concert', 'Concert', 'Concert', 6),
+('event_type', 'wedding', 'Mariage', 'Mariage', 7),
+('event_type', 'corporate_event', 'Événement d''entreprise', 'Événement d''entreprise', 8),
+('event_type', 'sporting_event', 'Événement sportif', 'Événement sportif', 9),
+('event_type', 'cultural_event', 'Événement culturel', 'Événement culturel', 10);
+
+-- Types de forfaits
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('package_type', 'all_inclusive', 'Tout inclus', 'Forfait tout inclus', 1),
+('package_type', 'half_board', 'Demi-pension', 'Forfait demi-pension', 2),
+('package_type', 'full_board', 'Pension complète', 'Forfait pension complète', 3),
+('package_type', 'bed_breakfast', 'Petit-déjeuner', 'Forfait petit-déjeuner', 4),
+('package_type', 'flight_hotel', 'Vol + Hôtel', 'Forfait vol + hôtel', 5),
+('package_type', 'circuit', 'Circuit', 'Forfait circuit', 6),
+('package_type', 'cruise', 'Croisière', 'Forfait croisière', 7),
+('package_type', 'wellness', 'Bien-être', 'Forfait bien-être', 8),
+('package_type', 'adventure', 'Aventure', 'Forfait aventure', 9),
+('package_type', 'family', 'Famille', 'Forfait famille', 10);
+
+-- Types de chambres
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('room_type', 'single', 'Chambre simple', 'Chambre simple', 1),
+('room_type', 'double', 'Chambre double', 'Chambre double', 2),
+('room_type', 'twin', 'Chambre à lits jumeaux', 'Chambre à lits jumeaux', 3),
+('room_type', 'triple', 'Chambre triple', 'Chambre triple', 4),
+('room_type', 'family', 'Chambre familiale', 'Chambre familiale', 5),
+('room_type', 'suite', 'Suite', 'Suite', 6),
+('room_type', 'presidential', 'Suite présidentielle', 'Suite présidentielle', 7),
+('room_type', 'junior_suite', 'Suite junior', 'Suite junior', 8),
+('room_type', 'accessible', 'Chambre accessible', 'Chambre accessible PMR', 9),
+('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10);
+
 
 -- =====================================================
--- 3. SEED D'ACTIVITÉS (ASC)
+-- 2. STATISTIQUES FINALES COMPLÈTES
 -- =====================================================
 
 DO $$
 DECLARE
-    activity_id TEXT;
+    total_ref_codes INTEGER;
+    new_domains_count INTEGER;
 BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('ASC', 'Activité de Test 1', 'RUN', 'published')
-    RETURNING id INTO activity_id;
+    -- Compter tous les ref_codes
+    SELECT COUNT(*) INTO total_ref_codes FROM ref_code;
     
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (activity_id, '789 Chemin des Hauts', '97400', 'Saint-Denis', '97400', -20.8500, 55.5000, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
+    -- Compter les nouveaux domaines
+    SELECT COUNT(DISTINCT domain) INTO new_domains_count FROM ref_code;
     
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, '+262 262 11 22 33', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, 'info@activitetest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, 'https://www.activitetest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT activity_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT activity_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT activity_id, id FROM ref_amenity WHERE code IN ('location_velo', 'snorkeling', 'barbecue')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT activity_id, id FROM ref_code_environment_tag WHERE code IN ('montagne', 'calme', 'vue_panoramique')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Activité de test créée avec l''ID: %', activity_id;
+    RAISE NOTICE '=== DONNÉES DE SEED TOURISTIQUES COMPLÈTES ===';
+    RAISE NOTICE 'Total des codes de référence: %', total_ref_codes;
+    RAISE NOTICE 'Nombre de domaines: %', new_domains_count;
+    RAISE NOTICE 'Domaines ajoutés: accommodation_type, tourism_type, transport_type, activity_type, season_type, client_type, service_type, booking_status, promotion_type, document_type, insurance_type, feedback_type, partnership_type, assistance_type, destination_type, event_type, package_type, room_type, amenity_type';
+    RAISE NOTICE '✓ Seed touristique complet réussi avec % références au total', total_ref_codes;
 END $$;
 
 -- =====================================================
--- 4. SEED DE MANIFESTATIONS (FMA)
+-- SECTION TEST OBJECTS - region_code = 'TEST'
 -- =====================================================
 
+-- Organisation de test : Office de Tourisme Intercommunal TEST
+INSERT INTO object (
+    object_type, name, region_code, status,
+    created_at, updated_at
+) VALUES (
+    'ORG',
+    'Office de Tourisme Intercommunal TEST',
+    'TST',
+    'published',
+    NOW(),
+    NOW()
+);
+
+-- Description de l'organisation
+INSERT INTO object_description (
+    object_id, org_object_id, description, description_chapo, description_mobile, description_edition, visibility,
+    created_at, updated_at
+)
+SELECT 
+    o.id,
+    o.id,
+    'Office de tourisme de test pour valider les fonctionnalités du système Bertel 3.0. Cette organisation sert de parent pour tous les objets de test et permet de tester l''ensemble des fonctionnalités du système unifié.',
+    'Office de tourisme de test',
+    'OTI TEST — informations essentielles et contacts. Le Tampon (97430).',
+    'Fiche d''édition: organisation de test servant aux scénarios de validation, contenus et workflows.',
+    'public',
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d
+    WHERE d.object_id = o.id AND d.org_object_id IS NOT DISTINCT FROM o.id
+  );
+
+-- Note privée de test associée à l'organisation (org_object_id)
+INSERT INTO object_private_description (
+    object_id, org_object_id, body, audience, language_id, created_at, updated_at
+)
+SELECT 
+    o.id,
+    o.id,
+    'Note privée de test associée à l''organisation OTI TEST. Utilisée pour valider la gestion des notes privées multi-organisation.',
+    'private',
+    (SELECT id FROM ref_language WHERE code = 'fr' LIMIT 1),
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_private_description opd
+    WHERE opd.object_id = o.id AND opd.org_object_id IS NOT DISTINCT FROM o.id AND opd.audience = 'private'
+  );
+
+
+-- Localisation de l'organisation
+INSERT INTO object_location (
+    object_id, address1, address2, postcode, city, 
+    latitude, longitude, is_main_location, position,
+    created_at, updated_at
+)
+SELECT 
+    o.id,
+    '1 Rue de la Test',
+    'Bâtiment Test',
+    '97430',
+    'Le Tampon',
+    -21.2833,
+    55.5167,
+    TRUE,
+    1,
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST';
+
+-- Acteurs associés à l'OTI TEST
+-- Directeur de l'OTI
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Jean-Pierre DUPONT',
+    'Jean-Pierre',
+    'DUPONT',
+    NOW(),
+    NOW()
+);
+
+-- Responsable Communication
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Marie MARTIN',
+    'Marie',
+    'MARTIN',
+    NOW(),
+    NOW()
+);
+
+-- Chargé de mission Tourisme
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Paul BERNARD',
+    'Paul',
+    'BERNARD',
+    NOW(),
+    NOW()
+);
+
+-- Ajout des rôles d'acteurs de référence nécessaires
+INSERT INTO ref_actor_role (code, name, description, position) VALUES
+('director', 'Directeur', 'Directeur de l''organisation', 1),
+('communication_manager', 'Responsable Communication', 'Responsable de la communication', 2),
+('tourism_officer', 'Chargé de mission Tourisme', 'Chargé de mission tourisme', 3)
+ON CONFLICT (code) DO NOTHING;
+
+-- Ajout des rôles d'organisation de référence et flags
+INSERT INTO ref_org_role (code, name, description, position) VALUES
+('owner', 'Propriétaire', 'Organisation propriétaire principale de l''objet', 1),
+('manager', 'Gestionnaire', 'Organisation qui gère l''objet au quotidien', 2),
+('publisher', 'Diffuseur', 'Organisation qui diffuse les informations de l''objet', 3)
+ON CONFLICT (code) DO NOTHING;
+
+-- Canaux de contact pour les acteurs (simplifiés)
+-- Directeur - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'jp.dupont@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Jean-Pierre DUPONT'
+  AND k.code = 'email';
+
+-- Responsable Communication - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'm.martin@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Marie MARTIN'
+  AND k.code = 'email';
+
+-- Chargé de mission - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'p.bernard@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Paul BERNARD'
+  AND k.code = 'email';
+
+-- Rôles des acteurs dans l'organisation
+-- Directeur
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Jean-Pierre DUPONT'
+  AND r.code = 'director'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Responsable Communication
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Marie MARTIN'
+  AND r.code = 'communication_manager'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Chargé de mission
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Paul BERNARD'
+  AND r.code = 'tourism_officer'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Affichage des résultats
 DO $$
 DECLARE
-    event_id TEXT := 'FMATEST001';
+    test_org_count INTEGER;
+    test_actors_count INTEGER;
+    test_roles_count INTEGER;
 BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('FMA', 'Manifestation de Test 1', 'RUN', 'published')
-    RETURNING id INTO event_id;
+    SELECT COUNT(*) INTO test_org_count FROM object WHERE region_code = 'TST' AND object_type = 'ORG';
+    SELECT COUNT(*) INTO test_actors_count FROM actor WHERE display_name IN ('Jean-Pierre DUPONT', 'Marie MARTIN', 'Paul BERNARD');
+    SELECT COUNT(*) INTO test_roles_count FROM actor_object_role aor
+    JOIN object o ON aor.object_id = o.id 
+    WHERE o.region_code = 'TST';
     
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (event_id, 'Place de la Mairie', '97400', 'Saint-Denis', '97400', -20.8789, 55.4481, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Objet FMA spécifique
-    INSERT INTO object_fma (object_id, event_start_date, event_end_date, event_start_time, event_end_time, is_recurring)
-    VALUES (event_id, '2025-07-15'::date, '2025-07-20'::date, '18:00'::time, '23:00'::time, true)
-    ON CONFLICT (object_id) DO UPDATE SET
-        event_start_date = EXCLUDED.event_start_date,
-        event_end_date = EXCLUDED.event_end_date,
-        event_start_time = EXCLUDED.event_start_time,
-        event_end_time = EXCLUDED.event_end_time;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, '+262 262 33 44 55', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, 'contact@manifestationtest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, 'https://www.manifestationtest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT event_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf', 'hi', 'ta')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT event_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT event_id, id FROM ref_code_environment_tag WHERE code IN ('ville', 'anime', 'jardin')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Manifestation créée avec l''ID: %', event_id;
+    RAISE NOTICE '=== OBJETS DE TEST CRÉÉS ===';
+    RAISE NOTICE 'Organisations de test: %', test_org_count;
+    RAISE NOTICE 'Acteurs de test: %', test_actors_count;
+    RAISE NOTICE 'Rôles assignés: %', test_roles_count;
+    RAISE NOTICE '✓ OTI TEST créée avec ses acteurs et rôles';
 END $$;
 
--- =====================================================
--- 5. SEED D'ITINÉRAIRES (ITI)
--- =====================================================
-
-DO $$
-DECLARE
-    itinerary_id TEXT;
-BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('ITI', 'Itinéraire de Test 1', 'RUN', 'published')
-    RETURNING id INTO itinerary_id;
-    
-    -- Adresse de départ
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (itinerary_id, 'Point de départ test', '97400', 'Saint-Denis', '97400', -20.9000, 55.5000, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Objet ITI spécifique
-    INSERT INTO object_iti (object_id, distance_km, duration_hours, difficulty_level, elevation_gain, is_loop)
-    VALUES (itinerary_id, 8.5, 4.0, 3, 500, true)
-    ON CONFLICT (object_id) DO UPDATE SET
-        distance_km = EXCLUDED.distance_km,
-        duration_hours = EXCLUDED.duration_hours,
-        difficulty_level = EXCLUDED.difficulty_level,
-        elevation_gain = EXCLUDED.elevation_gain;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, '+262 262 55 66 77', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, 'info@itinerarytest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, 'https://www.itinerarytest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT itinerary_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT itinerary_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT itinerary_id, id FROM ref_amenity WHERE code IN ('location_velo', 'snorkeling', 'barbecue')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT itinerary_id, id FROM ref_code_environment_tag WHERE code IN ('montagne', 'volcan', 'calme', 'vue_panoramique')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Itinéraire créé avec l''ID: %', itinerary_id;
-END $$;
-
--- =====================================================
--- 7. VÉRIFICATIONS POST-SEED
--- =====================================================
-
--- Vérifier que les données ont été créées
-DO $$
-DECLARE
-    object_count INTEGER;
-    address_count INTEGER;
-    contact_count INTEGER;
-    legacy_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM object;
-    SELECT COUNT(*) INTO address_count FROM address;
-    SELECT COUNT(*) INTO contact_count FROM contact_channel;
-    legacy_count := 0;
-    
-    RAISE NOTICE '=== VÉRIFICATION POST-SEED ===';
-    RAISE NOTICE 'Objets créés: %', object_count;
-    RAISE NOTICE 'Adresses créées: %', address_count;
-    RAISE NOTICE 'Canaux de contact créés: %', contact_count;
-    RAISE NOTICE 'Enregistrements legacy: %', legacy_count;
-    
-    IF object_count >= 5 THEN
-        RAISE NOTICE '✓ Seed réussi: % objets créés', object_count;
-    ELSE
-        RAISE NOTICE '✗ Seed échoué: seulement % objets créés', object_count;
-    END IF;
-END $$;
-
--- =====================================================
--- 7. EXEMPLES DE MENUS AVEC TYPES DE CUISINE
--- =====================================================
-
-DO $$
-DECLARE
-    restaurant_id TEXT;
-    menu_id UUID;
-    menu_item_id UUID;
-    category_id UUID;
-    unit_id UUID;
-    creole_type_id UUID;
-    metropolitan_type_id UUID;
-    chinese_type_id UUID;
-    vegetarian_tag_id UUID;
-    vegan_tag_id UUID;
-    gluten_allergen_id UUID;
-    dairy_allergen_id UUID;
-BEGIN
-    -- Créer un restaurant pour les exemples de menu
-    SELECT api.generate_object_id('RES', 'RUN') INTO restaurant_id;
-    
-    INSERT INTO object (id, object_type, name, status, region_code)
-    VALUES (restaurant_id, 'RES', 'Restaurant Test Cuisine', 'published', 'RUN')
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
-    
-    -- Créer un menu principal
-    INSERT INTO object_menu (object_id, name, description, position, is_active)
-    VALUES (restaurant_id, 'Menu Principal', 'Menu traditionnel créole et métropolitain', 1, TRUE)
-    RETURNING id INTO menu_id;
-    
-    -- Récupérer les IDs des références
-    SELECT id INTO category_id FROM ref_code_menu_category WHERE code = 'main';
-    SELECT id INTO unit_id FROM ref_code_price_unit WHERE code = 'per_person';
-    SELECT id INTO creole_type_id FROM ref_code_cuisine_type WHERE code = 'creole';
-    SELECT id INTO metropolitan_type_id FROM ref_code_cuisine_type WHERE code = 'metropolitan';
-    SELECT id INTO vegetarian_tag_id FROM ref_code_dietary_tag WHERE code = 'vegetarian';
-    SELECT id INTO gluten_allergen_id FROM ref_code_allergen WHERE code = 'gluten';
-    
-    -- Plat 1: Rougail saucisse (créole)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Rougail saucisse', 'Saucisse créole avec rougail de tomates et épices', category_id, 15.50, 'EUR', unit_id, 1, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine créole
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, creole_type_id);
-    
-    -- Plat 2: Magret de canard (métropolitain)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Magret de canard aux fruits', 'Magret de canard aux fruits de saison', category_id, 24.00, 'EUR', unit_id, 2, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine métropolitaine
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, metropolitan_type_id);
-    
-    -- Plat 3: Curry de légumes (végétarien, créole)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Curry de légumes créole', 'Curry de légumes du jardin aux épices créoles', category_id, 14.00, 'EUR', unit_id, 3, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine créole et le tag végétarien
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, creole_type_id);
-    
-    INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id)
-    VALUES (menu_item_id, vegetarian_tag_id);
-    
-    RAISE NOTICE '✓ Menus créés avec types de cuisine pour restaurant %', restaurant_id;
-END $$;
-
--- =====================================================
--- 8. COMMENTAIRES POUR DOCUMENTATION
--- =====================================================
-
-COMMENT ON TABLE object IS 'Table maître contenant tous les objets de la nomenclature avec données de seed réalistes';
 -- Section legacy retirée dans ce seed pour rester compatible avec le schéma courant

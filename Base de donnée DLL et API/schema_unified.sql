@@ -511,24 +511,7 @@ CREATE TABLE IF NOT EXISTS object_zone (
   UNIQUE(object_id, insee_commune)
 );
 
-CREATE TABLE IF NOT EXISTS location (
-  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
-  latitude DECIMAL(10,8),
-  longitude DECIMAL(11,8),
-  altitude_m INTEGER,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  geog2 GEOGRAPHY(POINT,4326) GENERATED ALWAYS AS (
-    CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL
-         THEN ST_SetSRID(ST_MakePoint(longitude::float8, latitude::float8),4326)::geography
-    END
-  ) STORED,
-  extra JSONB,
-  CONSTRAINT chk_latitude_range CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
-  CONSTRAINT chk_longitude_range CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180)),
-  CONSTRAINT chk_latlon_both_or_none CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)),
-  CONSTRAINT chk_reunion_bbox CHECK (latitude IS NULL OR longitude IS NULL OR (latitude BETWEEN -22.0 AND -20.5 AND longitude BETWEEN 55.0 AND 56.0))
-);
+-- Legacy simple location table removed (using unified object_location)
 
 CREATE TABLE IF NOT EXISTS object_place (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -865,41 +848,7 @@ CREATE TABLE IF NOT EXISTS object_origin (
 );
 
 -- Légal
-CREATE TABLE IF NOT EXISTS legal (
-  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
-  siret VARCHAR(14) CHECK (LENGTH(siret) = 14 AND siret ~ '^[0-9]+$'),
-  siren VARCHAR(9),
-  vat_number VARCHAR(20),
-  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT chk_siren_shape CHECK (siren IS NULL OR (LENGTH(siren) = 9 AND siren ~ '^[0-9]+$'))
-);
-CREATE TABLE IF NOT EXISTS accommodation_legal (
-  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
-  tourist_tax_number VARCHAR(50),
-  tourist_tax_issued_date DATE,
-  tourist_tax_valid_until DATE,
-  accommodation_license_number VARCHAR(50),
-  accommodation_license_issued_date DATE,
-  accommodation_license_valid_until DATE,
-  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
--- Applicabilité aux hébergements
-CREATE OR REPLACE FUNCTION api.ensure_accommodation_legal_applicable()
-RETURNS TRIGGER AS $$
-DECLARE v_type object_type;
-BEGIN
-  SELECT object_type INTO v_type FROM object WHERE id = NEW.object_id;
-  IF v_type NOT IN ('HOT','HLO','HPA','VIL','CAMP') THEN
-    RAISE EXCEPTION 'accommodation_legal applicable uniquement aux objets HOT/HLO/HPA/VIL/CAMP (id=%)', NEW.object_id;
-  END IF;
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_accommodation_legal_applicable ON accommodation_legal;
-CREATE TRIGGER trg_accommodation_legal_applicable BEFORE INSERT OR UPDATE ON accommodation_legal FOR EACH ROW EXECUTE FUNCTION api.ensure_accommodation_legal_applicable();
+-- Legacy specific legal tables removed in favor of unified object_legal
 
 -- Simple opening tables removed - using rich opening system instead
 
@@ -1739,8 +1688,7 @@ CREATE INDEX IF NOT EXISTS idx_object_name_normalized_trgm ON object USING GIN (
 CREATE INDEX IF NOT EXISTS idx_object_name_normalized_btree ON object (name_normalized);
 CREATE INDEX IF NOT EXISTS idx_object_updated_at_source ON object(updated_at_source);
 -- Address indexes removed; see object_location indexes below
-CREATE INDEX IF NOT EXISTS idx_location_object_id ON location(object_id);
-CREATE INDEX IF NOT EXISTS idx_location_geog2 ON location USING GIST (geog2);
+-- Legacy location indexes removed (using object_location)
 CREATE INDEX IF NOT EXISTS idx_object_place_object ON object_place(object_id);
 -- geog2 removed from object_place; spatial index resides on object_location
 -- altitude index removed with simplified object_place (use object_location if needed)
@@ -1769,10 +1717,7 @@ CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_p
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);
-CREATE INDEX IF NOT EXISTS idx_legal_object_id ON legal(object_id);
-CREATE INDEX IF NOT EXISTS idx_legal_document_id ON legal(document_id);
-CREATE INDEX IF NOT EXISTS idx_accommodation_legal_object_id ON accommodation_legal(object_id);
-CREATE INDEX IF NOT EXISTS idx_accommodation_legal_document_id ON accommodation_legal(document_id);
+-- Legacy legal indexes removed (using object_legal only)
 -- Simple opening table indexes removed
 CREATE INDEX IF NOT EXISTS idx_object_language_object_id ON object_language(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_language_language_id ON object_language(language_id);
@@ -1858,15 +1803,14 @@ CREATE TRIGGER update_ref_object_relation_type_updated_at BEFORE UPDATE ON ref_o
 
 CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 -- Address trigger removed with table drop
-CREATE TRIGGER update_location_updated_at BEFORE UPDATE ON location FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Legacy location trigger removed (using object_location)
 CREATE TRIGGER update_object_place_updated_at BEFORE UPDATE ON object_place FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_contact_channel_updated_at BEFORE UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_media_updated_at BEFORE UPDATE ON media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_object_place_description_updated_at BEFORE UPDATE ON object_place_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_object_private_description_updated_at BEFORE UPDATE ON object_private_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_object_classification_updated_at BEFORE UPDATE ON object_classification FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_legal_updated_at BEFORE UPDATE ON legal FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_accommodation_legal_updated_at BEFORE UPDATE ON accommodation_legal FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Legacy legal triggers removed (using object_legal only)
 -- Simple opening table triggers removed
 CREATE TRIGGER update_object_fma_updated_at BEFORE UPDATE ON object_fma FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_object_fma_occurrence_updated_at BEFORE UPDATE ON object_fma_occurrence FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

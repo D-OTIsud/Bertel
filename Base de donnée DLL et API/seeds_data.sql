@@ -636,4 +636,229 @@ BEGIN
     RAISE NOTICE '✓ Seed touristique complet réussi avec % références au total', total_ref_codes;
 END $$;
 
+-- =====================================================
+-- SECTION TEST OBJECTS - region_code = 'TEST'
+-- =====================================================
+
+-- Organisation de test : Office de Tourisme Intercommunal TEST
+INSERT INTO object (
+    object_type, name, region_code, status,
+    created_at, updated_at
+) VALUES (
+    'ORG',
+    'Office de Tourisme Intercommunal TEST',
+    'TST',
+    'published',
+    NOW(),
+    NOW()
+);
+
+-- Description de l'organisation
+INSERT INTO object_description (
+    object_id, description, description_chapo, description_mobile, description_edition, visibility,
+    created_at, updated_at
+)
+SELECT 
+    o.id,
+    'Office de tourisme de test pour valider les fonctionnalités du système Bertel 3.0. Cette organisation sert de parent pour tous les objets de test et permet de tester l''ensemble des fonctionnalités du système unifié.',
+    'Office de tourisme de test',
+    'OTI TEST — informations essentielles et contacts. Le Tampon (97430).',
+    'Fiche d''édition: organisation de test servant aux scénarios de validation, contenus et workflows.',
+    'public',
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d
+    WHERE d.object_id = o.id AND d.org_object_id IS NULL
+  );
+
+-- Localisation de l'organisation
+INSERT INTO object_location (
+    object_id, address1, address2, postcode, city, 
+    latitude, longitude, is_main_location, position,
+    created_at, updated_at
+)
+SELECT 
+    o.id,
+    '1 Rue de la Test',
+    'Bâtiment Test',
+    '97430',
+    'Le Tampon',
+    -21.2833,
+    55.5167,
+    TRUE,
+    1,
+    NOW(),
+    NOW()
+FROM object o
+WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST';
+
+-- Acteurs associés à l'OTI TEST
+-- Directeur de l'OTI
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Jean-Pierre DUPONT',
+    'Jean-Pierre',
+    'DUPONT',
+    NOW(),
+    NOW()
+);
+
+-- Responsable Communication
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Marie MARTIN',
+    'Marie',
+    'MARTIN',
+    NOW(),
+    NOW()
+);
+
+-- Chargé de mission Tourisme
+INSERT INTO actor (
+    id, display_name, first_name, last_name,
+    created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'Paul BERNARD',
+    'Paul',
+    'BERNARD',
+    NOW(),
+    NOW()
+);
+
+-- Ajout des rôles d'acteurs de référence nécessaires
+INSERT INTO ref_actor_role (code, name, description, position) VALUES
+('director', 'Directeur', 'Directeur de l''organisation', 1),
+('communication_manager', 'Responsable Communication', 'Responsable de la communication', 2),
+('tourism_officer', 'Chargé de mission Tourisme', 'Chargé de mission tourisme', 3)
+ON CONFLICT (code) DO NOTHING;
+
+-- Ajout des rôles d'organisation de référence et flags
+INSERT INTO ref_org_role (code, name, description, position) VALUES
+('owner', 'Propriétaire', 'Organisation propriétaire principale de l''objet', 1),
+('manager', 'Gestionnaire', 'Organisation qui gère l''objet au quotidien', 2),
+('publisher', 'Diffuseur', 'Organisation qui diffuse les informations de l''objet', 3)
+ON CONFLICT (code) DO NOTHING;
+
+-- Canaux de contact pour les acteurs (simplifiés)
+-- Directeur - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'jp.dupont@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Jean-Pierre DUPONT'
+  AND k.code = 'email';
+
+-- Responsable Communication - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'm.martin@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Marie MARTIN'
+  AND k.code = 'email';
+
+-- Chargé de mission - Email
+INSERT INTO actor_channel (
+    actor_id, kind_id, value, is_primary, position
+)
+SELECT 
+    a.id,
+    k.id,
+    'p.bernard@oti-test.re',
+    TRUE,
+    1
+FROM actor a, ref_code_contact_kind k
+WHERE a.display_name = 'Paul BERNARD'
+  AND k.code = 'email';
+
+-- Rôles des acteurs dans l'organisation
+-- Directeur
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Jean-Pierre DUPONT'
+  AND r.code = 'director'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Responsable Communication
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Marie MARTIN'
+  AND r.code = 'communication_manager'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Chargé de mission
+INSERT INTO actor_object_role (
+    actor_id, object_id, role_id, is_primary, visibility
+)
+SELECT 
+    a.id,
+    o.id,
+    r.id,
+    TRUE,
+    'public'
+FROM actor a, ref_actor_role r, object o
+WHERE a.display_name = 'Paul BERNARD'
+  AND r.code = 'tourism_officer'
+  AND o.name = 'Office de Tourisme Intercommunal TEST'
+  AND o.region_code = 'TST';
+
+-- Affichage des résultats
+DO $$
+DECLARE
+    test_org_count INTEGER;
+    test_actors_count INTEGER;
+    test_roles_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO test_org_count FROM object WHERE region_code = 'TST' AND object_type = 'ORG';
+    SELECT COUNT(*) INTO test_actors_count FROM actor WHERE display_name IN ('Jean-Pierre DUPONT', 'Marie MARTIN', 'Paul BERNARD');
+    SELECT COUNT(*) INTO test_roles_count FROM actor_object_role aor
+    JOIN object o ON aor.object_id = o.id 
+    WHERE o.region_code = 'TST';
+    
+    RAISE NOTICE '=== OBJETS DE TEST CRÉÉS ===';
+    RAISE NOTICE 'Organisations de test: %', test_org_count;
+    RAISE NOTICE 'Acteurs de test: %', test_actors_count;
+    RAISE NOTICE 'Rôles assignés: %', test_roles_count;
+    RAISE NOTICE '✓ OTI TEST créée avec ses acteurs et rôles';
+END $$;
+
 -- Section legacy retirée dans ce seed pour rester compatible avec le schéma courant

@@ -412,6 +412,7 @@ DECLARE
   v_inc   BOOLEAN := COALESCE((p_options->>'include_stages')::boolean, TRUE);
   v_color TEXT := COALESCE(p_options->>'stage_color','red');
   v_opening_times JSON;
+  v_prefer_org TEXT;
 BEGIN
   SELECT o.* INTO obj
   FROM object o
@@ -420,6 +421,16 @@ BEGIN
   IF NOT FOUND THEN
     RETURN NULL;
   END IF;
+  -- Preferred organization for descriptions: explicit option overrides primary org link
+  SELECT COALESCE(NULLIF(p_options->>'org_object_id',''), (
+           SELECT ool.org_object_id
+           FROM object_org_link ool
+           WHERE ool.object_id = obj.id AND ool.is_primary IS TRUE
+           ORDER BY ool.updated_at DESC
+           LIMIT 1
+         ))
+  INTO v_prefer_org;
+
 
   -- Base
   js := jsonb_build_object(
@@ -475,7 +486,20 @@ BEGIN
     LIMIT 1
   ), '{}'::jsonb);
 
-  -- Descriptions (public)
+  -- Primary description (by preferred organization or canonical)
+  js := js || COALESCE((
+    SELECT jsonb_build_object('description', to_jsonb(d) - 'object_id')
+    FROM object_description d
+    WHERE d.object_id = obj.id
+      AND (
+        (v_prefer_org IS NOT NULL AND d.org_object_id IS NOT DISTINCT FROM v_prefer_org)
+        OR (v_prefer_org IS NULL AND d.org_object_id IS NULL)
+      )
+    ORDER BY d.created_at DESC, d.id
+    LIMIT 1
+  ), '{}'::jsonb);
+
+  -- All descriptions (public)
   js := js || jsonb_build_object(
     'descriptions',
     COALESCE((

@@ -176,6 +176,25 @@ CREATE TABLE IF NOT EXISTS ref_code_menu_category PARTITION OF ref_code FOR VALU
 CREATE TABLE IF NOT EXISTS ref_code_dietary_tag PARTITION OF ref_code FOR VALUES IN ('dietary_tag');
 CREATE TABLE IF NOT EXISTS ref_code_allergen PARTITION OF ref_code FOR VALUES IN ('allergen');
 CREATE TABLE IF NOT EXISTS ref_code_cuisine_type PARTITION OF ref_code FOR VALUES IN ('cuisine_type');
+CREATE TABLE IF NOT EXISTS ref_code_accommodation_type PARTITION OF ref_code FOR VALUES IN ('accommodation_type');
+CREATE TABLE IF NOT EXISTS ref_code_tourism_type PARTITION OF ref_code FOR VALUES IN ('tourism_type');
+CREATE TABLE IF NOT EXISTS ref_code_transport_type PARTITION OF ref_code FOR VALUES IN ('transport_type');
+CREATE TABLE IF NOT EXISTS ref_code_activity_type PARTITION OF ref_code FOR VALUES IN ('activity_type');
+CREATE TABLE IF NOT EXISTS ref_code_season_type PARTITION OF ref_code FOR VALUES IN ('season_type');
+CREATE TABLE IF NOT EXISTS ref_code_client_type PARTITION OF ref_code FOR VALUES IN ('client_type');
+CREATE TABLE IF NOT EXISTS ref_code_service_type PARTITION OF ref_code FOR VALUES IN ('service_type');
+CREATE TABLE IF NOT EXISTS ref_code_booking_status PARTITION OF ref_code FOR VALUES IN ('booking_status');
+CREATE TABLE IF NOT EXISTS ref_code_promotion_type PARTITION OF ref_code FOR VALUES IN ('promotion_type');
+CREATE TABLE IF NOT EXISTS ref_code_document_type PARTITION OF ref_code FOR VALUES IN ('document_type');
+CREATE TABLE IF NOT EXISTS ref_code_insurance_type PARTITION OF ref_code FOR VALUES IN ('insurance_type');
+CREATE TABLE IF NOT EXISTS ref_code_feedback_type PARTITION OF ref_code FOR VALUES IN ('feedback_type');
+CREATE TABLE IF NOT EXISTS ref_code_partnership_type PARTITION OF ref_code FOR VALUES IN ('partnership_type');
+CREATE TABLE IF NOT EXISTS ref_code_assistance_type PARTITION OF ref_code FOR VALUES IN ('assistance_type');
+CREATE TABLE IF NOT EXISTS ref_code_destination_type PARTITION OF ref_code FOR VALUES IN ('destination_type');
+CREATE TABLE IF NOT EXISTS ref_code_event_type PARTITION OF ref_code FOR VALUES IN ('event_type');
+CREATE TABLE IF NOT EXISTS ref_code_package_type PARTITION OF ref_code FOR VALUES IN ('package_type');
+CREATE TABLE IF NOT EXISTS ref_code_room_type PARTITION OF ref_code FOR VALUES IN ('room_type');
+CREATE TABLE IF NOT EXISTS ref_code_amenity_type PARTITION OF ref_code FOR VALUES IN ('amenity_type');
 
 -- Index d'unicité nécessaires sur chaque partition (id & code)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_id ON ref_code_contact_kind (id);
@@ -198,6 +217,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_id ON ref_code_menu_
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_id ON ref_code_dietary_tag (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_id ON ref_code_allergen (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_id ON ref_code_cuisine_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_type_id ON ref_code_accommodation_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_tourism_type_id ON ref_code_tourism_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_transport_type_id ON ref_code_transport_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_activity_type_id ON ref_code_activity_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_season_type_id ON ref_code_season_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_client_type_id ON ref_code_client_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_service_type_id ON ref_code_service_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_booking_status_id ON ref_code_booking_status (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_promotion_type_id ON ref_code_promotion_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_document_type_id ON ref_code_document_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_insurance_type_id ON ref_code_insurance_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_feedback_type_id ON ref_code_feedback_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_partnership_type_id ON ref_code_partnership_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_assistance_type_id ON ref_code_assistance_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_id ON ref_code_destination_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_id ON ref_code_event_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_id ON ref_code_package_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_id ON ref_code_room_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_id ON ref_code_amenity_type (id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_code ON ref_code_contact_kind(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_code ON ref_code_media_type(code);
@@ -219,6 +257,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_code ON ref_code_men
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_code ON ref_code_dietary_tag(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_code ON ref_code_allergen(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_code ON ref_code_cuisine_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_type_code ON ref_code_accommodation_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_tourism_type_code ON ref_code_tourism_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_transport_type_code ON ref_code_transport_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_activity_type_code ON ref_code_activity_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_season_type_code ON ref_code_season_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_client_type_code ON ref_code_client_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_service_type_code ON ref_code_service_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_booking_status_code ON ref_code_booking_status(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_promotion_type_code ON ref_code_promotion_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_document_type_code ON ref_code_document_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_insurance_type_code ON ref_code_insurance_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_feedback_type_code ON ref_code_feedback_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_partnership_type_code ON ref_code_partnership_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_assistance_type_code ON ref_code_assistance_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_code ON ref_code_destination_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_code ON ref_code_event_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_code ON ref_code_package_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_code ON ref_code_room_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_code ON ref_code_amenity_type(code);
 
 -- =====================================================
 -- Référentiels et i18n

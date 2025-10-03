@@ -655,33 +655,12 @@ INSERT INTO object (
 
 -- Description de l'organisation
 INSERT INTO object_description (
-    object_id, description, description_chapo, description_mobile, description_edition, visibility,
-    created_at, updated_at
-)
-SELECT 
-    o.id,
-    'Office de tourisme de test pour valider les fonctionnalités du système Bertel 3.0. Cette organisation sert de parent pour tous les objets de test et permet de tester l''ensemble des fonctionnalités du système unifié.',
-    'Office de tourisme de test',
-    'OTI TEST — informations essentielles et contacts. Le Tampon (97430).',
-    'Fiche d''édition: organisation de test servant aux scénarios de validation, contenus et workflows.',
-    'public',
-    NOW(),
-    NOW()
-FROM object o
-WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
-  AND NOT EXISTS (
-    SELECT 1 FROM object_description d
-    WHERE d.object_id = o.id AND d.org_object_id IS NULL
-  );
-
--- Description spécifique fournie par l'organisation (org_object_id)
-INSERT INTO object_description (
     object_id, org_object_id, description, description_chapo, description_mobile, description_edition, visibility,
     created_at, updated_at
 )
 SELECT 
     o.id,
-    o.id, -- l'organisation OTI TEST fournit sa propre description
+    o.id,
     'Office de tourisme de test pour valider les fonctionnalités du système Bertel 3.0. Cette organisation sert de parent pour tous les objets de test et permet de tester l''ensemble des fonctionnalités du système unifié.',
     'Office de tourisme de test',
     'OTI TEST — informations essentielles et contacts. Le Tampon (97430).',
@@ -695,6 +674,8 @@ WHERE o.name = 'Office de Tourisme Intercommunal TEST' AND o.region_code = 'TST'
     SELECT 1 FROM object_description d
     WHERE d.object_id = o.id AND d.org_object_id IS NOT DISTINCT FROM o.id
   );
+
+-- (supprimé) doublon évité: la description ci-dessus est déjà fournie par l'organisation
 
 -- Localisation de l'organisation
 INSERT INTO object_location (

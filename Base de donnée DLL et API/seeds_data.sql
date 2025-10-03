@@ -54,8 +54,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('contact_kind','video_call','Appel vidéo','Visioconférence (Zoom, Teams…)',8),
   ('contact_kind','in_person','Contact en personne','Accueil physique dans les locaux',9),
   ('contact_kind','knowledge_base','Base de connaissances','Consultation d''une foire aux questions ou centre d''aide',10),
-  ('contact_kind','community','Communauté en ligne','Forums et groupes communautaires',11)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('contact_kind','community','Communauté en ligne','Forums et groupes communautaires',11);
 
 -- Domaine : weekday
 -- Jours de la semaine en français
@@ -66,8 +65,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('weekday','thursday','Jeudi','Quatrième jour de la semaine',4),
   ('weekday','friday','Vendredi','Cinquième jour de la semaine',5),
   ('weekday','saturday','Samedi','Sixième jour de la semaine',6),
-  ('weekday','sunday','Dimanche','Septième jour de la semaine',7)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('weekday','sunday','Dimanche','Septième jour de la semaine',7);
 
 -- =====================================================
 -- Domaine : opening_schedule_type
@@ -83,8 +81,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('opening_schedule_type','sur_reservation','Sur réservation','Ouverture uniquement sur demande ou réservation',7),
 ('opening_schedule_type','weekend','Week-end','Horaires spécifiques au week-end',8),
 ('opening_schedule_type','continuous','Toute l''année','Ouvert en continu toute l''année',9),
-('opening_schedule_type','reduced','Horaires réduits','Horaires réduits pour travaux ou maintenance',10)
-ON CONFLICT (domain, code) DO NOTHING;
+('opening_schedule_type','reduced','Horaires réduits','Horaires réduits pour travaux ou maintenance',10);
 
 -- Domaine : media_type
 -- Types de contenus multimédias
@@ -95,8 +92,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('media_type','audio','Audio','Enregistrements audio ou podcasts',4),
   ('media_type','3d_model','Contenu 3D','Modèle 3D ou visite virtuelle',5),
   ('media_type','document','Document','Fichier PDF, brochure ou guide',6),
-  ('media_type','gpx','GPX','Fichier GPS pour itinéraires et points d''intérêt',7)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('media_type','gpx','GPX','Fichier GPS pour itinéraires et points d''intérêt',7);
 
 -- Domaine : amenity_family
 -- Catégories d'équipements / commodités
@@ -114,8 +110,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('amenity_family','climate_control','Climatisation/Chauffage','Systèmes de climatisation ou de chauffage',11),
   ('amenity_family','accessibility','Accessibilité','Équipements pour personnes à mobilité réduite',12),
   ('amenity_family','security','Sécurité','Alarmes, détecteurs de fumée, extincteurs',13),
-  ('amenity_family','parking','Parking','Emplacements de stationnement ou garage',14)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('amenity_family','parking','Parking','Emplacements de stationnement ou garage',14);
 
 -- Moyens de paiement supplémentaires
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -123,8 +118,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('payment_method','carte_bleue', 'Carte Bleue', 'Carte Bleue française'),
 ('payment_method','mastercard', 'Mastercard', 'Carte Mastercard'),
 ('payment_method','visa', 'Visa', 'Carte Visa'),
-('payment_method','american_express', 'American Express', 'Carte American Express')
-ON CONFLICT DO NOTHING;
+('payment_method','american_express', 'American Express', 'Carte American Express');
 
 -- =====================================================
 -- Domaine : social_network
@@ -139,20 +133,18 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('social_network','tiktok','TikTok','Plateforme de vidéos courtes',7),
   ('social_network','tripadvisor','TripAdvisor','Site d''avis et recommandations de voyages',8),
   ('social_network','whatsapp','WhatsApp','Application de messagerie mobile',9),
-  ('social_network','snapchat','Snapchat','Application de partage de photos et vidéos éphémères',10)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('social_network','snapchat','Snapchat','Application de partage de photos et vidéos éphémères',10);
 
 -- =====================================================
 -- Domaine : language_level
 -- Niveaux de compétence linguistique CECRL
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
-  ('language_level','A1','Débutant','Peut comprendre et utiliser des expressions familières et quotidiennes',1),
-  ('language_level','A2','Élémentaire','Peut communiquer dans des situations simples et habituelles',2),
-  ('language_level','B1','Intermédiaire','Peut comprendre les points essentiels d''un discours clair et standard',3),
-  ('language_level','B2','Indépendant','Peut communiquer avec aisance et spontanéité avec des locuteurs natifs',4),
-  ('language_level','C1','Avancé','Peut utiliser la langue de façon efficace et fluide',5),
-  ('language_level','C2','Maîtrise','Peut comprendre pratiquement tout avec aisance et précision',6)
-ON CONFLICT (domain, code) DO NOTHING;
+  ('language_level','a1','Débutant','Peut comprendre et utiliser des expressions familières et quotidiennes',1),
+  ('language_level','a2','Élémentaire','Peut communiquer dans des situations simples et habituelles',2),
+  ('language_level','b1','Intermédiaire','Peut comprendre les points essentiels d''un discours clair et standard',3),
+  ('language_level','b2','Indépendant','Peut communiquer avec aisance et spontanéité avec des locuteurs natifs',4),
+  ('language_level','c1','Avancé','Peut utiliser la langue de façon efficace et fluide',5),
+  ('language_level','c2','Maîtrise','Peut comprendre pratiquement tout avec aisance et précision',6);
 
 -- Rôles de contact de base
 INSERT INTO ref_contact_role (code, name, description) VALUES
@@ -161,8 +153,7 @@ INSERT INTO ref_contact_role (code, name, description) VALUES
 ('press', 'Presse', 'Relations presse'),
 ('technical', 'Technique', 'Support technique / IT'),
 ('sales', 'Commercial', 'Ventes / commercial'),
-('info', 'Information', 'Informations générales')
-ON CONFLICT (code) DO NOTHING;
+('info', 'Information', 'Informations générales');
 
 -- =====================================================
 -- Domaine : environment_tag
@@ -201,8 +192,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 -- Environnements culturels
 ('environment_tag','historique','Historique','Sites historiques et patrimoniaux',23),
 ('environment_tag','culturel','Culturel','Zones d''activités culturelles',24),
-('environment_tag','artisanal','Artisanal','Zones d''artisanat traditionnel',25)
-ON CONFLICT (domain, code) DO NOTHING;
+('environment_tag','artisanal','Artisanal','Zones d''artisanat traditionnel',25);
 
 -- Types de cuisine
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -215,8 +205,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('cuisine_type','fusion', 'Fusion', 'Cuisine fusion créole-moderne'),
 ('cuisine_type','fast_food', 'Fast Food', 'Restauration rapide'),
 ('cuisine_type','street_food', 'Street Food', 'Cuisine de rue'),
-('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité')
-ON CONFLICT DO NOTHING;
+('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité');
 
 -- Catégories de menu
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -224,8 +213,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('menu_category','main', 'Plats principaux', 'Plats principaux et spécialités'),
 ('menu_category','dessert', 'Desserts', 'Desserts et douceurs'),
 ('menu_category','drinks', 'Boissons', 'Boissons et cocktails'),
-('menu_category','snacks', 'En-cas', 'En-cas et collations')
-ON CONFLICT DO NOTHING;
+('menu_category','snacks', 'En-cas', 'En-cas et collations');
 
 -- Tags alimentaires
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -235,8 +223,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('dietary_tag','kosher', 'Casher', 'Conforme aux règles alimentaires juives'),
 ('dietary_tag','gluten_free', 'Sans gluten', 'Sans gluten'),
 ('dietary_tag','organic', 'Bio', 'Produits biologiques'),
-('dietary_tag','local', 'Local', 'Produits locaux de La Réunion')
-ON CONFLICT DO NOTHING;
+('dietary_tag','local', 'Local', 'Produits locaux de La Réunion');
 
 -- Allergènes
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -247,8 +234,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('allergen','fish', 'Poisson', 'Contient du poisson'),
 ('allergen','shellfish', 'Crustacés', 'Contient des crustacés'),
 ('allergen','soy', 'Soja', 'Contient du soja'),
-('allergen','sesame', 'Sésame', 'Contient du sésame')
-ON CONFLICT DO NOTHING;
+('allergen','sesame', 'Sésame', 'Contient du sésame');
 
 
 -- =====================================================
@@ -308,7 +294,7 @@ FROM (
     ('desk','Bureau','bedroom','Bureau de travail'),
     ('sofa','Canapé','bedroom','Canapé'),
     ('balcony','Balcon','bedroom','Balcon privé'),
-    ('terrace','Terrasse','bedroom','Terrasse privée'),
+    ('private_terrace','Terrasse privée','bedroom','Terrasse privée'),
     
     -- Divertissement
     ('pool_table','Billard','entertainment','Table de billard'),
@@ -324,7 +310,7 @@ FROM (
     ('bbq','Barbecue','outdoor','Barbecue à disposition'),
     ('sunbeds','Transats','outdoor','Transats et parasols'),
     ('beach_access','Accès plage','outdoor','Accès direct à la plage'),
-    ('terrace','Terrasse','outdoor','Terrasse commune'),
+    ('common_terrace','Terrasse commune','outdoor','Terrasse commune'),
     
     -- Accessibilité
     ('wheelchair_access','Accès fauteuil roulant','accessibility','Accès fauteuil roulant'),
@@ -367,12 +353,10 @@ FROM (
     ('gym_equipment','Équipement gym','sports','Équipement de musculation'),
     ('swimming_equipment','Équipement natation','sports','Équipement de natation')
 ) AS v(code,name,fam_code,description)
-JOIN ref_code_amenity_family fam ON fam.code = v.fam_code
-ON CONFLICT (code) DO NOTHING;
+JOIN ref_code_amenity_family fam ON fam.code = v.fam_code;
 
 -- Types HOT via ref_classification_scheme/value
-INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel')
-ON CONFLICT (code) DO NOTHING;
+INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel');
 INSERT INTO ref_classification_value (scheme_id, code, name)
 SELECT rcs.id, v.code, v.name
 FROM ref_classification_scheme rcs,
@@ -388,563 +372,8 @@ FROM ref_classification_scheme rcs,
        ('hotel_romantique','Hôtel romantique'),
        ('hotel_affaires','Hôtel d''affaires')
      ) AS v(code,name)
-WHERE rcs.code='type_hot'
-ON CONFLICT (scheme_id, code) DO NOTHING;
+WHERE rcs.code='type_hot';
 
--- =====================================================
--- 2. SEED D'OBJETS D'EXEMPLE
--- =====================================================
-
--- Hôtel 1: Hôtel de test générique
-DO $$
-DECLARE
-  hotel_id TEXT;
-  v_period UUID;
-  v_schedule UUID;
-  v_tp UUID;
-BEGIN
-    -- Objet principal (ID auto-généré via trigger)
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('HOT', 'Hôtel de Test 1', 'RUN', 'published')
-    RETURNING id INTO hotel_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (hotel_id, '123 Rue de la Plage', '97400', 'Saint-Denis', '97400', -20.8789, 55.4481, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 262 12 34 56', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'https://www.hoteltest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Type HOT via object_classification (upsert without unique constraint)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel'
-    WHERE rcs.code = 'type_hot'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
-
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel'
-    WHERE rcs.code = 'type_hot'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Capacités (extensibles)
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('total_rooms','Nombre total de chambres','rooms')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('total_beds','Nombre total de lits','beds')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 25 FROM ref_capacity_metric WHERE code='total_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 50 FROM ref_capacity_metric WHERE code='total_beds'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    
-    -- Classification already ensured above
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT hotel_id, id FROM ref_language WHERE code IN ('fr', 'en')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT hotel_id, id FROM ref_code_payment_method WHERE code IN ('carte_bleue','visa','mastercard')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT hotel_id, id FROM ref_amenity WHERE code IN ('tv', 'wifi', 'piscine', 'restaurant')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT hotel_id, id FROM ref_code_environment_tag WHERE code IN ('bord_mer','ville')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    -- Médias
-    INSERT INTO media (object_id, media_type_id, title, credit, url, is_main, position)
-    SELECT hotel_id, mt.id, 'Photo hôtel test 1', 'Hôtel Test', 'https://example.com/photo1.jpg', TRUE, 1
-    FROM ref_code_media_type mt WHERE mt.code='photo'
-    ON CONFLICT DO NOTHING;
-    
-    -- Informations légales
-    INSERT INTO legal (object_id, siret)
-    VALUES (hotel_id, '12345678901234')
-    ON CONFLICT (object_id) DO UPDATE SET
-        siret = EXCLUDED.siret;
-    
-    -- Ouvertures riches: Lun-Sam 09:00-18:00 toute l'année courante
-    INSERT INTO opening_period (object_id, name, date_start, date_end)
-    VALUES (hotel_id, 'Horaires annuels', DATE_TRUNC('year', CURRENT_DATE), (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year' - INTERVAL '1 day')::date)
-    RETURNING id INTO v_period;
-
-    INSERT INTO opening_schedule (period_id, schedule_type_id, name)
-    SELECT v_period, t.id, 'Horaires réguliers' FROM ref_code_opening_schedule_type t WHERE t.code='regular'
-    RETURNING id INTO v_schedule;
-
-    INSERT INTO opening_time_period (schedule_id, closed, note)
-    VALUES (v_schedule, FALSE, NULL)
-    RETURNING id INTO v_tp;
-
-    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
-    SELECT v_tp, w.id FROM ref_code_weekday w WHERE w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday');
-    INSERT INTO opening_time_frame (time_period_id, start_time, end_time) VALUES (v_tp, TIME '09:00', TIME '18:00');
-
-    RAISE NOTICE 'Hôtel de test 1 créé avec ID: %', hotel_id;
-END $$;
-
--- Hôtel 2: Hôtel de test générique
-DO $$
-DECLARE
-    hotel_id TEXT;
-    v_period UUID;
-    v_schedule UUID;
-    v_tp UUID;
-BEGIN
-    -- Objet principal (ID auto-généré via trigger)
-    INSERT INTO object (object_type, name, region_code, status, updated_at_source, created_at, updated_at)
-    VALUES ('HOT', 'Hôtel de Test 2', 'RUN', 'published', NOW(), NOW(), NOW())
-    RETURNING id INTO hotel_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (hotel_id, '456 Avenue de la République', '97400', 'Saint-Denis', '97400', -20.9000, 55.4500, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 262 98 76 54', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, '+262 692 12 34 56', FALSE, 2 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'contact@hoteltest2.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT hotel_id, k.id, 'https://www.hoteltest2.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Classification préfectorale (2 étoiles)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = '2e'
-    WHERE rcs.code = 'prefectoral'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
-
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = '2e'
-    WHERE rcs.code = 'prefectoral'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Capacités (extensibles)
-    INSERT INTO ref_capacity_metric (code, name, unit) VALUES
-      ('family_rooms','Chambres familiales','rooms')
-    ON CONFLICT (code) DO NOTHING;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 15 FROM ref_capacity_metric WHERE code='total_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 30 FROM ref_capacity_metric WHERE code='total_beds'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    INSERT INTO object_capacity (object_id, metric_id, value_integer)
-    SELECT hotel_id, id, 2 FROM ref_capacity_metric WHERE code='family_rooms'
-    ON CONFLICT (object_id, metric_id) DO UPDATE SET value_integer = EXCLUDED.value_integer;
-    
-    -- Type HOT via object_classification (upsert without unique constraint)
-    UPDATE object_classification oc
-    SET value_id = rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel_restaurant'
-    WHERE rcs.code = 'type_hot'
-      AND oc.object_id = hotel_id
-      AND oc.scheme_id = rcs.id;
-
-    INSERT INTO object_classification (object_id, scheme_id, value_id)
-    SELECT hotel_id, rcs.id, rcv.id
-    FROM ref_classification_scheme rcs
-    JOIN ref_classification_value rcv ON rcv.scheme_id = rcs.id AND rcv.code = 'hotel_restaurant'
-    WHERE rcs.code = 'type_hot'
-      AND NOT EXISTS (
-        SELECT 1 FROM object_classification oc
-        WHERE oc.object_id = hotel_id AND oc.scheme_id = rcs.id
-      );
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT hotel_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT hotel_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'cheque', 'especes')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT hotel_id, id FROM ref_amenity WHERE code IN ('wifi', 'coffre', 'materiel_bebe', 'bar', 'piscine')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT hotel_id, id FROM ref_code_environment_tag WHERE code IN ('ville', 'calme')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    -- Médias
-    INSERT INTO media (object_id, media_type_id, title, credit, url, is_main, position)
-    SELECT hotel_id, mt.id, 'Photo hôtel test 2 - Vue extérieure', 'Hôtel Test', 'https://example.com/photo2-1.jpg', TRUE, 1 FROM ref_code_media_type mt WHERE mt.code='photo'
-    UNION ALL
-    SELECT hotel_id, mt.id, 'Photo hôtel test 2 - Chambre', 'Hôtel Test', 'https://example.com/photo2-2.jpg', FALSE, 2 FROM ref_code_media_type mt WHERE mt.code='photo'
-    ON CONFLICT DO NOTHING;
-    
-    -- Informations légales
-    INSERT INTO legal (object_id, siret)
-    VALUES (hotel_id, '23456789012345')
-    ON CONFLICT (object_id) DO UPDATE SET
-        siret = EXCLUDED.siret;
-    
-    -- Ouvertures riches: toute l'année 24/7 (pas de créneaux)
-    INSERT INTO opening_period (object_id, name, all_years)
-    VALUES (hotel_id, 'Ouvert en continu', TRUE)
-    RETURNING id INTO v_period;
-    INSERT INTO opening_schedule (period_id, schedule_type_id, name)
-    SELECT v_period, t.id, '24/7' FROM ref_code_opening_schedule_type t WHERE t.code='regular'
-    RETURNING id INTO v_schedule;
-    INSERT INTO opening_time_period (schedule_id, closed, note) VALUES (v_schedule, FALSE, 'Ouvert en continu') RETURNING id INTO v_tp;
-    INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
-    SELECT v_tp, w.id FROM ref_code_weekday w; -- tous les jours
-    
-    RAISE NOTICE 'Hôtel de test 2 créé avec l''ID: %', hotel_id;
-END $$;
-
--- =====================================================
--- 3. SEED D'ACTIVITÉS (ASC)
--- =====================================================
-
-DO $$
-DECLARE
-    activity_id TEXT;
-BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('ASC', 'Activité de Test 1', 'RUN', 'published')
-    RETURNING id INTO activity_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (activity_id, '789 Chemin des Hauts', '97400', 'Saint-Denis', '97400', -20.8500, 55.5000, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, '+262 262 11 22 33', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, 'info@activitetest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT activity_id, k.id, 'https://www.activitetest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT activity_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT activity_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT activity_id, id FROM ref_amenity WHERE code IN ('location_velo', 'snorkeling', 'barbecue')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT activity_id, id FROM ref_code_environment_tag WHERE code IN ('montagne', 'calme', 'vue_panoramique')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Activité de test créée avec l''ID: %', activity_id;
-END $$;
-
--- =====================================================
--- 4. SEED DE MANIFESTATIONS (FMA)
--- =====================================================
-
-DO $$
-DECLARE
-    event_id TEXT := 'FMATEST001';
-BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('FMA', 'Manifestation de Test 1', 'RUN', 'published')
-    RETURNING id INTO event_id;
-    
-    -- Localisation/Adresse unifiée (principale)
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (event_id, 'Place de la Mairie', '97400', 'Saint-Denis', '97400', -20.8789, 55.4481, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Objet FMA spécifique
-    INSERT INTO object_fma (object_id, event_start_date, event_end_date, event_start_time, event_end_time, is_recurring)
-    VALUES (event_id, '2025-07-15'::date, '2025-07-20'::date, '18:00'::time, '23:00'::time, true)
-    ON CONFLICT (object_id) DO UPDATE SET
-        event_start_date = EXCLUDED.event_start_date,
-        event_end_date = EXCLUDED.event_end_date,
-        event_start_time = EXCLUDED.event_start_time,
-        event_end_time = EXCLUDED.event_end_time;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, '+262 262 33 44 55', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, 'contact@manifestationtest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT event_id, k.id, 'https://www.manifestationtest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT event_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf', 'hi', 'ta')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT event_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT event_id, id FROM ref_code_environment_tag WHERE code IN ('ville', 'anime', 'jardin')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Manifestation créée avec l''ID: %', event_id;
-END $$;
-
--- =====================================================
--- 5. SEED D'ITINÉRAIRES (ITI)
--- =====================================================
-
-DO $$
-DECLARE
-    itinerary_id TEXT;
-BEGIN
-    -- Objet principal
-    INSERT INTO object (object_type, name, region_code, status)
-    VALUES ('ITI', 'Itinéraire de Test 1', 'RUN', 'published')
-    RETURNING id INTO itinerary_id;
-    
-    -- Adresse de départ
-    INSERT INTO object_location (object_id, address1, postcode, city, code_insee, latitude, longitude, is_main_location)
-    VALUES (itinerary_id, 'Point de départ test', '97400', 'Saint-Denis', '97400', -20.9000, 55.5000, TRUE)
-    ON CONFLICT ON CONSTRAINT uq_object_location_main DO UPDATE SET
-        address1 = EXCLUDED.address1,
-        postcode = EXCLUDED.postcode,
-        city = EXCLUDED.city,
-        code_insee = EXCLUDED.code_insee,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude;
-    
-    -- Objet ITI spécifique
-    INSERT INTO object_iti (object_id, distance_km, duration_hours, difficulty_level, elevation_gain, is_loop)
-    VALUES (itinerary_id, 8.5, 4.0, 3, 500, true)
-    ON CONFLICT (object_id) DO UPDATE SET
-        distance_km = EXCLUDED.distance_km,
-        duration_hours = EXCLUDED.duration_hours,
-        difficulty_level = EXCLUDED.difficulty_level,
-        elevation_gain = EXCLUDED.elevation_gain;
-    
-    -- Canaux de contact
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, '+262 262 55 66 77', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='phone'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, 'info@itinerarytest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='email'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position)
-    SELECT itinerary_id, k.id, 'https://www.itinerarytest1.re', TRUE, 1 FROM ref_code_contact_kind k WHERE k.code='website'
-    ON CONFLICT (object_id, kind_id, value) DO NOTHING;
-    
-    -- Langues
-    INSERT INTO object_language (object_id, language_id)
-    SELECT itinerary_id, id FROM ref_language WHERE code IN ('fr', 'en', 'rcf')
-    ON CONFLICT (object_id, language_id) DO NOTHING;
-    
-    -- Moyens de paiement
-    INSERT INTO object_payment_method (object_id, payment_method_id)
-    SELECT itinerary_id, id FROM ref_code_payment_method WHERE code IN ('carte_paiement', 'especes', 'cheque_vacances')
-    ON CONFLICT (object_id, payment_method_id) DO NOTHING;
-    
-    -- Équipements
-    INSERT INTO object_amenity (object_id, amenity_id)
-    SELECT itinerary_id, id FROM ref_amenity WHERE code IN ('location_velo', 'snorkeling', 'barbecue')
-    ON CONFLICT (object_id, amenity_id) DO NOTHING;
-    
-    -- Tags d'environnement
-    INSERT INTO object_environment_tag (object_id, environment_tag_id)
-    SELECT itinerary_id, id FROM ref_code_environment_tag WHERE code IN ('montagne', 'volcan', 'calme', 'vue_panoramique')
-    ON CONFLICT (object_id, environment_tag_id) DO NOTHING;
-    
-    RAISE NOTICE 'Itinéraire créé avec l''ID: %', itinerary_id;
-END $$;
-
--- =====================================================
--- 7. VÉRIFICATIONS POST-SEED
--- =====================================================
-
--- Vérifier que les données ont été créées
-DO $$
-DECLARE
-    object_count INTEGER;
-    address_count INTEGER;
-    contact_count INTEGER;
-    legacy_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM object;
-    SELECT COUNT(*) INTO address_count FROM address;
-    SELECT COUNT(*) INTO contact_count FROM contact_channel;
-    legacy_count := 0;
-    
-    RAISE NOTICE '=== VÉRIFICATION POST-SEED ===';
-    RAISE NOTICE 'Objets créés: %', object_count;
-    RAISE NOTICE 'Adresses créées: %', address_count;
-    RAISE NOTICE 'Canaux de contact créés: %', contact_count;
-    RAISE NOTICE 'Enregistrements legacy: %', legacy_count;
-    
-    IF object_count >= 5 THEN
-        RAISE NOTICE '✓ Seed réussi: % objets créés', object_count;
-    ELSE
-        RAISE NOTICE '✗ Seed échoué: seulement % objets créés', object_count;
-    END IF;
-END $$;
-
--- =====================================================
--- 7. EXEMPLES DE MENUS AVEC TYPES DE CUISINE
--- =====================================================
-
-DO $$
-DECLARE
-    restaurant_id TEXT;
-    menu_id UUID;
-    menu_item_id UUID;
-    category_id UUID;
-    unit_id UUID;
-    creole_type_id UUID;
-    metropolitan_type_id UUID;
-    chinese_type_id UUID;
-    vegetarian_tag_id UUID;
-    vegan_tag_id UUID;
-    gluten_allergen_id UUID;
-    dairy_allergen_id UUID;
-BEGIN
-    -- Créer un restaurant pour les exemples de menu
-    SELECT api.generate_object_id('RES', 'RUN') INTO restaurant_id;
-    
-    INSERT INTO object (id, object_type, name, status, region_code)
-    VALUES (restaurant_id, 'RES', 'Restaurant Test Cuisine', 'published', 'RUN')
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
-    
-    -- Créer un menu principal
-    INSERT INTO object_menu (object_id, name, description, position, is_active)
-    VALUES (restaurant_id, 'Menu Principal', 'Menu traditionnel créole et métropolitain', 1, TRUE)
-    RETURNING id INTO menu_id;
-    
-    -- Récupérer les IDs des références
-    SELECT id INTO category_id FROM ref_code_menu_category WHERE code = 'main';
-    SELECT id INTO unit_id FROM ref_code_price_unit WHERE code = 'per_person';
-    SELECT id INTO creole_type_id FROM ref_code_cuisine_type WHERE code = 'creole';
-    SELECT id INTO metropolitan_type_id FROM ref_code_cuisine_type WHERE code = 'metropolitan';
-    SELECT id INTO vegetarian_tag_id FROM ref_code_dietary_tag WHERE code = 'vegetarian';
-    SELECT id INTO gluten_allergen_id FROM ref_code_allergen WHERE code = 'gluten';
-    
-    -- Plat 1: Rougail saucisse (créole)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Rougail saucisse', 'Saucisse créole avec rougail de tomates et épices', category_id, 15.50, 'EUR', unit_id, 1, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine créole
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, creole_type_id);
-    
-    -- Plat 2: Magret de canard (métropolitain)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Magret de canard aux fruits', 'Magret de canard aux fruits de saison', category_id, 24.00, 'EUR', unit_id, 2, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine métropolitaine
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, metropolitan_type_id);
-    
-    -- Plat 3: Curry de légumes (végétarien, créole)
-    INSERT INTO object_menu_item (menu_id, name, description, category_id, price_amount, currency, unit_id, position, is_available)
-    VALUES (menu_id, 'Curry de légumes créole', 'Curry de légumes du jardin aux épices créoles', category_id, 14.00, 'EUR', unit_id, 3, TRUE)
-    RETURNING id INTO menu_item_id;
-    
-    -- Associer le type de cuisine créole et le tag végétarien
-    INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
-    VALUES (menu_item_id, creole_type_id);
-    
-    INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id)
-    VALUES (menu_item_id, vegetarian_tag_id);
-    
-    RAISE NOTICE '✓ Menus créés avec types de cuisine pour restaurant %', restaurant_id;
-END $$;
-
--- =====================================================
--- 8. COMMENTAIRES POUR DOCUMENTATION
--- =====================================================
-
-COMMENT ON TABLE object IS 'Table maître contenant tous les objets de la nomenclature avec données de seed réalistes';
 
 -- =====================================================
 -- 27. NOUVEAUX DOMAINES TOURISTIQUES - DONNÉES COMPLÈTES
@@ -961,8 +390,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('accommodation_type', 'camping', 'Camping', 'Camping', 7),
 ('accommodation_type', 'glamping', 'Glamping', 'Camping de luxe', 8),
 ('accommodation_type', 'villa', 'Villa', 'Villa de location', 9),
-('accommodation_type', 'apartment', 'Appartement', 'Appartement de tourisme', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('accommodation_type', 'apartment', 'Appartement', 'Appartement de tourisme', 10);
 
 -- Types de tourisme
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -975,8 +403,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('tourism_type', 'wellness', 'Tourisme de bien-être', 'Tourisme spa et bien-être', 7),
 ('tourism_type', 'nature', 'Tourisme de nature', 'Tourisme axé sur la nature', 8),
 ('tourism_type', 'sports', 'Tourisme sportif', 'Tourisme sportif', 9),
-('tourism_type', 'rural', 'Tourisme rural', 'Tourisme rural', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('tourism_type', 'rural', 'Tourisme rural', 'Tourisme rural', 10);
 
 -- Types de transport
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -989,8 +416,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('transport_type', 'bicycle', 'Vélo', 'Transport à vélo', 7),
 ('transport_type', 'taxi', 'Taxi', 'Transport par taxi', 8),
 ('transport_type', 'helicopter', 'Hélicoptère', 'Transport par hélicoptère', 9),
-('transport_type', 'walking', 'Marche à pied', 'Transport à pied', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('transport_type', 'walking', 'Marche à pied', 'Transport à pied', 10);
 
 -- Types d'activités
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1003,8 +429,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('activity_type', 'wine_tasting', 'Dégustation de vin', 'Dégustation de vin', 7),
 ('activity_type', 'spa_treatment', 'Soin spa', 'Soin spa', 8),
 ('activity_type', 'paragliding', 'Parapente', 'Parapente', 9),
-('activity_type', 'bird_watching', 'Observation d\'oiseaux', 'Observation d\'oiseaux', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('activity_type', 'bird_watching', 'Observation d''oiseaux', 'Observation d''oiseaux', 10);
 
 -- Types de saisons
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1017,8 +442,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('season_type', 'vanilla_harvest', 'Récolte vanille', 'Période de récolte de la vanille', 7),
 ('season_type', 'lychee_season', 'Saison des litchis', 'Période des litchis', 8),
 ('season_type', 'festival_season', 'Saison des festivals', 'Période des festivals', 9),
-('season_type', 'holiday_season', 'Saison des vacances', 'Période des vacances', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('season_type', 'holiday_season', 'Saison des vacances', 'Période des vacances', 10);
 
 -- Types de clients
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1031,8 +455,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('client_type', 'student', 'Étudiant', 'Voyageur étudiant', 7),
 ('client_type', 'luxury_traveler', 'Voyageur de luxe', 'Voyageur haut de gamme', 8),
 ('client_type', 'budget_traveler', 'Voyageur économique', 'Voyageur économique', 9),
-('client_type', 'accessible', 'Personne à mobilité réduite', 'Client avec handicap', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('client_type', 'accessible', 'Personne à mobilité réduite', 'Client avec handicap', 10);
 
 -- Types de services
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1045,8 +468,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('service_type', 'event_planning', 'Organisation d''événements', 'Service d''organisation d''événements', 7),
 ('service_type', 'translation', 'Traduction', 'Service de traduction', 8),
 ('service_type', 'insurance', 'Assurance', 'Service d''assurance', 9),
-('service_type', 'security', 'Sécurité', 'Service de sécurité', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('service_type', 'security', 'Sécurité', 'Service de sécurité', 10);
 
 -- Statuts de réservation
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1059,8 +481,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('booking_status', 'payment_confirmed', 'Paiement confirmé', 'Paiement confirmé', 7),
 ('booking_status', 'modified', 'Modifiée', 'Réservation modifiée', 8),
 ('booking_status', 'checked_in', 'Enregistré', 'Client enregistré', 9),
-('booking_status', 'checked_out', 'Départ', 'Client parti', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('booking_status', 'checked_out', 'Départ', 'Client parti', 10);
 
 -- Types de promotions
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1073,8 +494,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('promotion_type', 'flash_sale', 'Vente flash', 'Vente flash', 7),
 ('promotion_type', 'student', 'Étudiant', 'Promotion étudiants', 8),
 ('promotion_type', 'senior', 'Senior', 'Promotion seniors', 9),
-('promotion_type', 'family', 'Famille', 'Promotion famille', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('promotion_type', 'family', 'Famille', 'Promotion famille', 10);
 
 -- Types de documents
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1087,8 +507,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('document_type', 'ticket', 'Billet', 'Billet de transport', 7),
 ('document_type', 'voucher', 'Bon', 'Bon de service', 8),
 ('document_type', 'medical_certificate', 'Certificat médical', 'Certificat médical', 9),
-('document_type', 'vaccination', 'Carnet de vaccination', 'Carnet de vaccination', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('document_type', 'vaccination', 'Carnet de vaccination', 'Carnet de vaccination', 10);
 
 -- Types d'assurance
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1101,8 +520,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('insurance_type', 'multi_risk', 'Assurance multirisque', 'Assurance multirisque', 7),
 ('insurance_type', 'adventure', 'Assurance aventure', 'Assurance pour sports d''aventure', 8),
 ('insurance_type', 'business', 'Assurance business', 'Assurance voyage d''affaires', 9),
-('insurance_type', 'group', 'Assurance groupe', 'Assurance pour groupes', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('insurance_type', 'group', 'Assurance groupe', 'Assurance pour groupes', 10);
 
 -- Types de feedback
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1115,8 +533,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('feedback_type', 'rating', 'Note', 'Note d''évaluation', 7),
 ('feedback_type', 'testimonial', 'Témoignage', 'Témoignage client', 8),
 ('feedback_type', 'social_media', 'Réseaux sociaux', 'Retour via réseaux sociaux', 9),
-('feedback_type', 'email', 'Email', 'Retour par email', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('feedback_type', 'email', 'Email', 'Retour par email', 10);
 
 -- Types de partenariats
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1129,8 +546,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('partnership_type', 'restaurant', 'Restaurant', 'Partenariat avec restaurants', 7),
 ('partnership_type', 'transport', 'Transport', 'Partenariat avec entreprises de transport', 8),
 ('partnership_type', 'activity_provider', 'Prestataire d''activités', 'Partenariat avec prestataires d''activités', 9),
-('partnership_type', 'supplier', 'Fournisseur', 'Partenariat avec fournisseurs', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('partnership_type', 'supplier', 'Fournisseur', 'Partenariat avec fournisseurs', 10);
 
 -- Types d'assistance
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1143,8 +559,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('assistance_type', 'travel', 'Assistance voyage', 'Assistance voyage', 7),
 ('assistance_type', 'lost_documents', 'Documents perdus', 'Assistance en cas de perte de documents', 8),
 ('assistance_type', 'theft', 'Vol', 'Assistance en cas de vol', 9),
-('assistance_type', 'natural_disaster', 'Catastrophe naturelle', 'Assistance en cas de catastrophe naturelle', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('assistance_type', 'natural_disaster', 'Catastrophe naturelle', 'Assistance en cas de catastrophe naturelle', 10);
 
 -- Types de destinations
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1157,8 +572,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('destination_type', 'adventure', 'Destination aventure', 'Destination aventure', 7),
 ('destination_type', 'wellness', 'Destination bien-être', 'Destination bien-être', 8),
 ('destination_type', 'business', 'Destination d''affaires', 'Destination d''affaires', 9),
-('destination_type', 'family', 'Destination familiale', 'Destination familiale', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('destination_type', 'family', 'Destination familiale', 'Destination familiale', 10);
 
 -- Types d'événements
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1171,8 +585,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('event_type', 'wedding', 'Mariage', 'Mariage', 7),
 ('event_type', 'corporate_event', 'Événement d''entreprise', 'Événement d''entreprise', 8),
 ('event_type', 'sporting_event', 'Événement sportif', 'Événement sportif', 9),
-('event_type', 'cultural_event', 'Événement culturel', 'Événement culturel', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('event_type', 'cultural_event', 'Événement culturel', 'Événement culturel', 10);
 
 -- Types de forfaits
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1185,8 +598,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('package_type', 'cruise', 'Croisière', 'Forfait croisière', 7),
 ('package_type', 'wellness', 'Bien-être', 'Forfait bien-être', 8),
 ('package_type', 'adventure', 'Aventure', 'Forfait aventure', 9),
-('package_type', 'family', 'Famille', 'Forfait famille', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('package_type', 'family', 'Famille', 'Forfait famille', 10);
 
 -- Types de chambres
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -1199,30 +611,11 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('room_type', 'presidential', 'Suite présidentielle', 'Suite présidentielle', 7),
 ('room_type', 'junior_suite', 'Suite junior', 'Suite junior', 8),
 ('room_type', 'accessible', 'Chambre accessible', 'Chambre accessible PMR', 9),
-('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10)
-ON CONFLICT (domain, code) DO NOTHING;
+('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10);
 
 
 -- =====================================================
--- 29. DOMAINES COMPLÉMENTAIRES - VERSION ENRICHIE
--- =====================================================
-
--- Domaine : opening_schedule_type (version enrichie)
-INSERT INTO ref_code (domain, code, name, description, position) VALUES
-  ('opening_schedule_type','standard','Horaires standard','Horaires habituels appliqués toute l''année',1),
-  ('opening_schedule_type','high_season','Haute saison','Horaires en période de forte affluence',2),
-  ('opening_schedule_type','low_season','Basse saison','Horaires en période creuse',3),
-  ('opening_schedule_type','vacation','Vacances scolaires','Horaires pendant les vacances scolaires',4),
-  ('opening_schedule_type','holiday','Jours fériés','Horaires spécifiques aux jours fériés',5),
-  ('opening_schedule_type','nocturne','Nocturne','Ouverture en soirée ou nocturne',6),
-  ('opening_schedule_type','sur_reservation','Sur réservation','Ouverture uniquement sur demande ou réservation',7),
-  ('opening_schedule_type','weekend','Week‑end','Horaires spécifiques au week‑end',8),
-  ('opening_schedule_type','continuous','Toute l''année','Ouvert en continu toute l''année',9),
-  ('opening_schedule_type','reduced','Horaires réduits','Horaires réduits pour travaux ou maintenance',10)
-ON CONFLICT (domain, code) DO NOTHING;
-
--- =====================================================
--- 30. STATISTIQUES FINALES COMPLÈTES
+-- 2. STATISTIQUES FINALES COMPLÈTES
 -- =====================================================
 
 DO $$

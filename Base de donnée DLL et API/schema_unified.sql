@@ -778,7 +778,8 @@ CREATE TABLE IF NOT EXISTS object_description (
 ALTER TABLE IF EXISTS object_description
   ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
 
--- Backfill duplicates: keep most recent canonical row per object and attach others to primary org (or self)
+-- Backfill duplicates: keep most recent canonical row per object and attach others to the object itself
+-- (safe at this stage without needing object_org_link to exist yet)
 DO $$
 BEGIN
   IF EXISTS (
@@ -792,10 +793,7 @@ BEGIN
       WHERE org_object_id IS NULL
     )
     UPDATE object_description d
-    SET org_object_id = COALESCE(
-      (SELECT ool.org_object_id FROM object_org_link ool WHERE ool.object_id = d.object_id AND ool.is_primary IS TRUE LIMIT 1),
-      d.object_id
-    )
+    SET org_object_id = d.object_id
     FROM dups
     WHERE d.id = dups.id AND dups.rn > 1;
   END IF;

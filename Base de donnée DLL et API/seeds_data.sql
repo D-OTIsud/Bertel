@@ -345,12 +345,13 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('menu_category','main', 'Plats principaux', 'Plats principaux et spécialités'),
 ('menu_category','dessert', 'Desserts', 'Desserts et douceurs'),
 ('menu_category','drinks', 'Boissons', 'Boissons et cocktails'),
+<<<<<<< HEAD
 ('menu_category','snacks', 'En-cas', 'En-cas et collations'),
-('menu_category','petit_dejeuner', 'Petit-déjeuner', 'Formules petit-déjeuner'),
-('menu_category','brunch', 'Brunch', 'Offres brunch'),
-('menu_category','menu_enfant', 'Menu enfant', 'Menus dédiés aux enfants'),
-('menu_category','menu_groupe', 'Menu groupe', 'Menus pour groupes'),
-('menu_category','menu_degustation', 'Menu dégustation', 'Menus gastronomiques dégustation')
+('menu_category','petit_dejeuner','Petit-déjeuner','Formules petit-déjeuner'),
+('menu_category','brunch','Brunch','Offres brunch'),
+('menu_category','menu_enfant','Menu enfant','Menus dédiés aux enfants'),
+('menu_category','menu_groupe','Menu groupe','Menus pour groupes'),
+('menu_category','menu_degustation','Menu dégustation','Menus gastronomiques dégustation')
 ON CONFLICT DO NOTHING;
 
 -- Tags alimentaires
@@ -1032,3 +1033,157 @@ BEGIN
 END $$;
 
 -- Section legacy retirée dans ce seed pour rester compatible avec le schéma courant
+
+-- =====================================================
+-- SEED COMPLÉMENTAIRES (idempotents)
+-- =====================================================
+
+-- Capacités: métriques standard
+INSERT INTO ref_capacity_metric (code, name, unit, description, position) VALUES
+('beds','Lits','bed','Nombre de lits',1),
+('bedrooms','Chambres','room','Nombre de chambres',2),
+('max_capacity','Capacité max.','pax','Capacité d\'accueil maximale (personnes)',3),
+('seats','Places assises','seat','Nombre de sièges assis',4),
+('standing_places','Places debout','place','Nombre de places debout',5),
+('pitches','Emplacements','pitch','Emplacements de camping',6),
+('campers','Camping‑cars','campervan','Capacité en camping‑cars',7),
+('tents','Tentes','tent','Capacité en tentes',8),
+('vehicles','Véhicules','vehicle','Capacité véhicules (parking)',9),
+('bikes','Vélos','bike','Capacité vélos (parking/locations)',10),
+('meeting_rooms','Salles de réunion','room','Nombre de salles de réunion',11),
+('floor_area_m2','Surface (m²)','m2','Surface utile en mètres carrés',12)
+ON CONFLICT (code) DO NOTHING;
+
+-- Rôles d\'acteur complémentaires
+INSERT INTO ref_actor_role (code, name, description, position) VALUES
+('guide','Guide','Guide conférencier ou accompagnateur',10),
+('sales_manager','Responsable commercial','Responsable des ventes/partenariats',11),
+('receptionist','Réceptionniste','Accueil et réception',12),
+('content_editor','Éditeur de contenu','Rédaction et mise à jour des contenus',13)
+ON CONFLICT (code) DO NOTHING;
+
+-- Réseaux sociaux additionnels (idempotent via LEFT JOIN)
+INSERT INTO ref_code (domain, code, name, description, position)
+SELECT v.domain, v.code, v.name, v.description, v.position
+FROM (
+  VALUES
+    ('social_network','wechat','WeChat','Messagerie et réseau social',11),
+    ('social_network','line','LINE','Messagerie et réseau social Asie',12)
+) AS v(domain,code,name,description,position)
+LEFT JOIN ref_code rc ON rc.domain = v.domain AND rc.code = v.code
+WHERE rc.id IS NULL;
+
+-- Types de relation entre objets
+INSERT INTO ref_object_relation_type (code, name, description, position) VALUES
+('parent_of','Parent de','Relation hiérarchique: A est parent de B',1),
+('part_of','Fait partie de','Relation de composition: A fait partie de B',2),
+('nearby','À proximité de','Objets proches géographiquement',3),
+('managed_by','Géré par','Objet géré par une organisation',4),
+('partner_of','Partenaire de','Relation de partenariat',5),
+('sister','Objet associé','Objets de même famille',6),
+('recommended_with','Recommandé avec','Suggestion de co‑consommation',7)
+ON CONFLICT (code) DO NOTHING;
+
+-- Schémas de classification (étoiles/labels)
+INSERT INTO ref_classification_scheme (code, name, description, selection, position) VALUES
+('hot_stars','Classement hôtelier','Classement officiel hôtels (étoiles)','single',1),
+('camp_stars','Classement camping','Classement officiel campings (étoiles)','single',2),
+('meuble_stars','Classement meublés','Classement officiel meublés de tourisme','single',3),
+('gites_epics','Gîtes de France (épis)','Niveau Gîtes de France (épis)','single',4),
+('clevacances_keys','Clévacances (clés)','Niveau Clévacances (clés)','single',5),
+('green_key','La Clef Verte','Label environnemental La Clef Verte','single',6),
+('eu_ecolabel','Écolabel Européen','Label environnemental européen','single',7),
+('tourisme_handicap','Tourisme & Handicap','Handicaps reconnus (multi‑sélection)','multiple',8)
+ON CONFLICT (code) DO NOTHING;
+
+-- Valeurs: étoiles 1→5 (hôtel/camping/meublés)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (
+  VALUES
+    ('1','1 étoile',1),
+    ('2','2 étoiles',2),
+    ('3','3 étoiles',3),
+    ('4','4 étoiles',4),
+    ('5','5 étoiles',5)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code IN ('hot_stars','camp_stars','meuble_stars')
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_classification_value cv
+    WHERE cv.scheme_id = s.id AND cv.code = v.code
+  );
+
+-- Valeurs: Gîtes (1–5 épis)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (
+  VALUES ('1','1 épi',1),('2','2 épis',2),('3','3 épis',3),('4','4 épis',4),('5','5 épis',5)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'gites_epics'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+-- Valeurs: Clévacances (1–5 clés)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (
+  VALUES ('1','1 clé',1),('2','2 clés',2),('3','3 clés',3),('4','4 clés',4),('5','5 clés',5)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'clevacances_keys'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+-- Valeurs: Tourisme & Handicap (multi)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (
+  VALUES ('auditive','Handicap auditif',1),('mental','Handicap mental',2),('motor','Handicap moteur',3),('visual','Handicap visuel',4)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'tourisme_handicap'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+-- Développement durable: catégories
+INSERT INTO ref_sustainability_action_category (code, name, description, position) VALUES
+('energy','Énergie','Réduction et maîtrise des consommations énergétiques',1),
+('water','Eau','Gestion responsable de l\'eau',2),
+('waste','Déchets','Réduction, tri et valorisation des déchets',3),
+('mobility','Mobilité douce','Transports doux et écomobilité',4),
+('biodiversity','Biodiversité','Préservation de la biodiversité',5)
+ON CONFLICT (code) DO NOTHING;
+
+-- Développement durable: actions (idempotent)
+INSERT INTO ref_sustainability_action (category_id, code, label, position)
+SELECT c.id, v.code, v.label, v.position
+FROM ref_sustainability_action_category c
+JOIN (
+  VALUES
+    -- Énergie
+    ('energy','led_lighting','Éclairage LED',1),
+    ('energy','smart_thermostats','Thermostats intelligents',2),
+    ('energy','solar_water_heating','Chauffe‑eau solaire',3),
+    ('energy','renewable_electricity','Électricité verte souscrite',4),
+    -- Eau
+    ('water','low_flow_devices','Mousseurs/robinets à faible débit',1),
+    ('water','rainwater_harvesting','Récupération des eaux de pluie',2),
+    ('water','greywater_reuse','Réutilisation des eaux grises',3),
+    -- Déchets
+    ('waste','sorting_points','Points de tri à disposition',1),
+    ('waste','composting','Compostage des biodéchets',2),
+    ('waste','bulk_amenities','Produits d\'accueil en vrac',3),
+    -- Mobilité
+    ('mobility','bike_parking','Parking vélos sécurisé',1),
+    ('mobility','ev_charging','Bornes de recharge électrique',2),
+    ('mobility','public_transport_info','Infos transports en commun',3),
+    -- Biodiversité
+    ('biodiversity','native_plants','Plantes locales et adaptées',1),
+    ('biodiversity','no_pesticides','Zéro pesticide',2),
+    ('biodiversity','wildlife_corridors','Aménagements favorables à la faune',3)
+) AS v(cat_code,code,label,position) ON TRUE
+WHERE c.code = v.cat_code
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_sustainability_action a
+    WHERE a.category_id = c.id AND a.code = v.code
+  );
+

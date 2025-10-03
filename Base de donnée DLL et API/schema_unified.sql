@@ -774,6 +774,42 @@ CREATE TABLE IF NOT EXISTS object_description (
   description_chapo_normalized TEXT GENERATED ALWAYS AS (CASE WHEN description_chapo IS NOT NULL THEN immutable_unaccent(lower(description_chapo)) END) STORED,
   CONSTRAINT chk_object_description_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners'))
 );
+-- Add organization context to descriptions
+ALTER TABLE IF EXISTS object_description
+  ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
+
+-- Backfill duplicates: keep most recent canonical row per object and attach others to primary org (or self)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'object_description' AND column_name = 'org_object_id'
+  ) THEN
+    WITH dups AS (
+      SELECT id, object_id,
+             ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY created_at DESC, id) AS rn
+      FROM object_description
+      WHERE org_object_id IS NULL
+    )
+    UPDATE object_description d
+    SET org_object_id = COALESCE(
+      (SELECT ool.org_object_id FROM object_org_link ool WHERE ool.object_id = d.object_id AND ool.is_primary IS TRUE LIMIT 1),
+      d.object_id
+    )
+    FROM dups
+    WHERE d.id = dups.id AND dups.rn > 1;
+  END IF;
+END $$;
+
+-- Uniqueness: one canonical description per object (org_object_id IS NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_description_canonical_one
+  ON object_description(object_id)
+  WHERE org_object_id IS NULL;
+
+-- Uniqueness: at most one description per organization for a given object
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_description_per_org
+  ON object_description(object_id, org_object_id)
+  WHERE org_object_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS object_place_description (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   place_id UUID NOT NULL REFERENCES object_place(id) ON DELETE CASCADE,
@@ -965,11 +1001,17 @@ CREATE TABLE IF NOT EXISTS object_org_link (
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   org_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   role_id UUID NOT NULL REFERENCES ref_org_role(id) ON DELETE RESTRICT,
+  is_primary BOOLEAN DEFAULT FALSE,
   note TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (object_id, org_object_id, role_id)
 );
+
+-- A single primary organization per object
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_primary_org
+  ON object_org_link(object_id)
+  WHERE is_primary;
 
 -- Actor model
 CREATE TABLE IF NOT EXISTS ref_actor_role (

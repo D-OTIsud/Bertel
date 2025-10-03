@@ -298,9 +298,16 @@ class Coordinator:
                 "unresolved": leftovers,
             })
 
+        unhandled: Dict[str, Any] = {}
+        for agent_name, state in context.shared_state.items():
+            skipped_entries = state.get("skipped") or state.get("skipped_links")
+            if skipped_entries:
+                unhandled[agent_name] = skipped_entries
+
         verification_payload = {
             "fragments": [fragment.model_dump() for fragment in fragments],
             "leftovers": leftovers,
+            "unhandled": unhandled,
         }
         self.telemetry.record(
             "coordinator.agent_start.verification",

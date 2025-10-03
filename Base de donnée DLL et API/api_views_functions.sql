@@ -412,6 +412,8 @@ DECLARE
   v_inc   BOOLEAN := COALESCE((p_options->>'include_stages')::boolean, TRUE);
   v_color TEXT := COALESCE(p_options->>'stage_color','red');
   v_opening_times JSON;
+  v_prefer_org TEXT;
+  v_inc_private BOOLEAN := COALESCE((p_options->>'include_private')::boolean, FALSE);
 BEGIN
   SELECT o.* INTO obj
   FROM object o
@@ -420,6 +422,16 @@ BEGIN
   IF NOT FOUND THEN
     RETURN NULL;
   END IF;
+  -- Preferred organization for descriptions: explicit option overrides primary org link
+  SELECT COALESCE(NULLIF(p_options->>'org_object_id',''), (
+           SELECT ool.org_object_id
+           FROM object_org_link ool
+           WHERE ool.object_id = obj.id AND ool.is_primary IS TRUE
+           ORDER BY ool.updated_at DESC
+           LIMIT 1
+         ))
+  INTO v_prefer_org;
+
 
   -- Base
   js := jsonb_build_object(
@@ -458,6 +470,38 @@ BEGIN
     LIMIT 1
   ), '{}'::jsonb);
 
+  -- Private notes (by preferred organization, optional)
+  IF v_inc_private THEN
+    -- Primary private note
+    js := js || COALESCE((
+      SELECT jsonb_build_object('private_note', to_jsonb(pn) - 'object_id')
+      FROM object_private_description pn
+      WHERE pn.object_id = obj.id
+        AND pn.audience = 'private'
+        AND (
+          (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
+          OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
+        )
+      ORDER BY pn.created_at DESC, pn.id
+      LIMIT 1
+    ), '{}'::jsonb);
+
+    -- All private notes
+    js := js || jsonb_build_object(
+      'private_notes',
+      COALESCE((
+        SELECT jsonb_agg(to_jsonb(pn) - 'object_id'
+               ORDER BY
+                 NULLIF((to_jsonb(pn)->>'created_at'),'')::timestamptz NULLS LAST,
+                 NULLIF((to_jsonb(pn)->>'id'),'') NULLS LAST,
+                 pn.ctid)
+        FROM object_private_description pn
+        WHERE pn.object_id = obj.id
+          AND pn.audience = 'private'
+      ), '[]'::jsonb)
+    );
+  END IF;
+
   -- Location (from object_location main)
   js := js || COALESCE((
     SELECT jsonb_build_object(
@@ -475,7 +519,20 @@ BEGIN
     LIMIT 1
   ), '{}'::jsonb);
 
-  -- Descriptions (public)
+  -- Primary description (by preferred organization or canonical)
+  js := js || COALESCE((
+    SELECT jsonb_build_object('description', to_jsonb(d) - 'object_id')
+    FROM object_description d
+    WHERE d.object_id = obj.id
+      AND (
+        (v_prefer_org IS NOT NULL AND d.org_object_id IS NOT DISTINCT FROM v_prefer_org)
+        OR (v_prefer_org IS NULL AND d.org_object_id IS NULL)
+      )
+    ORDER BY d.created_at DESC, d.id
+    LIMIT 1
+  ), '{}'::jsonb);
+
+  -- All descriptions (public)
   js := js || jsonb_build_object(
     'descriptions',
     COALESCE((
@@ -801,6 +858,99 @@ BEGIN
                NULLIF((to_jsonb(ol)->>'id'),'') NULLS LAST,
                ol.ctid)
       FROM object_org_link ol
+      WHERE ol.object_id = obj.id
+    ), '[]'::jsonb)
+  );
+
+  -- Actors (enriched with contacts)
+  js := js || jsonb_build_object(
+    'actors',
+    COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', a.id,
+          'display_name', a.display_name,
+          'first_name', a.first_name,
+          'last_name', a.last_name,
+          'gender', a.gender,
+          'role', jsonb_build_object(
+            'id', aor.role_id,
+            'code', rar.code,
+            'name', rar.name
+          ),
+          'is_primary', aor.is_primary,
+          'valid_from', aor.valid_from,
+          'valid_to', aor.valid_to,
+          'visibility', aor.visibility,
+          'note', aor.note,
+          'contacts', COALESCE((
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'id', ac.id,
+                'kind', jsonb_build_object(
+                  'code', rck.code,
+                  'name', rck.name,
+                  'description', rck.description,
+                  'icon_url', rck.icon_url
+                ),
+                'value', ac.value,
+                'is_primary', ac.is_primary,
+                'role', jsonb_build_object(
+                  'code', rcr.code,
+                  'name', rcr.name
+                ),
+                'position', ac.position,
+                'extra', ac.extra
+              )
+              ORDER BY ac.is_primary DESC, ac.position NULLS LAST, ac.created_at
+            )
+            FROM actor_channel ac
+            JOIN ref_code_contact_kind rck ON rck.id = ac.kind_id
+            LEFT JOIN ref_contact_role rcr ON rcr.id = ac.role_id
+            WHERE ac.actor_id = a.id
+          ), '[]'::jsonb)
+        )
+        ORDER BY aor.is_primary DESC, aor.valid_from DESC, a.display_name
+      )
+      FROM actor a
+      JOIN actor_object_role aor ON aor.actor_id = a.id
+      LEFT JOIN ref_actor_role rar ON rar.id = aor.role_id
+      WHERE aor.object_id = obj.id
+    ), '[]'::jsonb)
+  );
+
+  -- Legal records (enriched)
+  js := js || jsonb_build_object(
+    'legal_records',
+    COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', ol.id,
+          'type', jsonb_build_object(
+            'code', rlt.code,
+            'name', rlt.name,
+            'category', rlt.category,
+            'is_public', rlt.is_public,
+            'is_required', rlt.is_required
+          ),
+          'value', ol.value,
+          'document_id', ol.document_id,
+          'valid_from', ol.valid_from,
+          'valid_to', ol.valid_to,
+          'validity_mode', ol.validity_mode::text,
+          'status', ol.status,
+          'document_requested_at', ol.document_requested_at,
+          'document_delivered_at', ol.document_delivered_at,
+          'note', ol.note,
+          'days_until_expiry', CASE 
+            WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+            ELSE NULL
+          END
+        )
+        ORDER BY rlt.category, rlt.name, ol.valid_from DESC
+      )
+      FROM object_legal ol
+      JOIN ref_legal_type rlt ON rlt.id = ol.type_id
       WHERE ol.object_id = obj.id
     ), '[]'::jsonb)
   );
@@ -1357,6 +1507,8 @@ BEGIN
     'group_policies',       (js->'group_policies')::json,
     'origins',              (js->'origins')::json,
     'org_links',            (js->'org_links')::json,
+    'actors',               (js->'actors')::json,
+    'legal_records',        (js->'legal_records')::json, -- NEWLY ADDED
     'meeting_rooms',        (js->'meeting_rooms')::json,
     'fma',                  (js->'fma')::json,
     'fma_occurrences',      (js->'fma_occurrences')::json,
@@ -2662,5 +2814,1326 @@ BEGIN
   FROM paginated p;
 
   RETURN COALESCE(v_data, json_build_object('total', 0, 'events', '[]'::json));
+END;
+$$;
+
+-- =====================================================
+-- API EXTENSIONS: Deep data inclusion for parent objects, actors, and contacts
+-- =====================================================
+
+-- =====================================================
+-- Helper: Get enriched parent object data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_parent_object_data(p_object_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_parent_data JSONB := '[]'::jsonb;
+  v_relation RECORD;
+BEGIN
+  -- Get parent objects through relations
+  FOR v_relation IN
+    SELECT 
+      r.target_object_id,
+      o.object_type,
+      o.name,
+      o.status,
+      r.relation_type_id,
+      rt.name as relation_type_name,
+      r.distance_m,
+      r.note
+    FROM object_relation r
+    JOIN object o ON o.id = r.target_object_id
+    LEFT JOIN ref_object_relation_type rt ON rt.id = r.relation_type_id
+    WHERE r.source_object_id = p_object_id
+  LOOP
+    v_parent_data := v_parent_data || jsonb_build_object(
+      'id', v_relation.target_object_id,
+      'type', v_relation.object_type::text,
+      'name', v_relation.name,
+      'status', v_relation.status::text,
+      'relation_type', jsonb_build_object(
+        'id', v_relation.relation_type_id,
+        'name', v_relation.relation_type_name
+      ),
+      'distance_m', v_relation.distance_m,
+      'note', v_relation.note,
+      'basic_info', jsonb_build_object(
+        'id', v_relation.target_object_id,
+        'type', v_relation.object_type::text,
+        'name', v_relation.name,
+        'status', v_relation.status::text
+      )
+    );
+  END LOOP;
+
+  RETURN v_parent_data;
+END;
+$$;
+
+-- =====================================================
+-- Helper: Get enriched actor data with contacts
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_actor_data(p_object_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_actor_data JSONB := '[]'::jsonb;
+  v_actor RECORD;
+  v_actor_contacts JSONB;
+  v_contact RECORD;
+BEGIN
+  -- Get actors associated with the object
+  FOR v_actor IN
+    SELECT 
+      a.id,
+      a.display_name,
+      a.first_name,
+      a.last_name,
+      a.gender,
+      aor.role_id,
+      rar.name as role_name,
+      rar.code as role_code,
+      aor.is_primary,
+      aor.valid_from,
+      aor.valid_to,
+      aor.visibility,
+      aor.note
+    FROM actor a
+    JOIN actor_object_role aor ON aor.actor_id = a.id
+    LEFT JOIN ref_actor_role rar ON rar.id = aor.role_id
+    WHERE aor.object_id = p_object_id
+  LOOP
+    -- Get actor contacts
+    v_actor_contacts := '[]'::jsonb;
+    FOR v_contact IN
+      SELECT 
+        ac.id,
+        rck.code as kind_code,
+        rck.name as kind_name,
+        rck.description as kind_description,
+        rck.icon_url as kind_icon_url,
+        ac.value,
+        ac.is_primary,
+        rcr.code as role_code,
+        rcr.name as role_name,
+        ac.position,
+        ac.extra
+      FROM actor_channel ac
+      JOIN ref_code_contact_kind rck ON rck.id = ac.kind_id
+      LEFT JOIN ref_contact_role rcr ON rcr.id = ac.role_id
+      WHERE ac.actor_id = v_actor.id
+      ORDER BY ac.is_primary DESC, ac.position NULLS LAST, ac.created_at
+    LOOP
+      v_actor_contacts := v_actor_contacts || jsonb_build_object(
+        'id', v_contact.id,
+        'kind', jsonb_build_object(
+          'code', v_contact.kind_code,
+          'name', v_contact.kind_name,
+          'description', v_contact.kind_description,
+          'icon_url', v_contact.kind_icon_url
+        ),
+        'value', v_contact.value,
+        'is_primary', v_contact.is_primary,
+        'role', jsonb_build_object(
+          'code', v_contact.role_code,
+          'name', v_contact.role_name
+        ),
+        'position', v_contact.position,
+        'extra', v_contact.extra
+      );
+    END LOOP;
+
+    v_actor_data := v_actor_data || jsonb_build_object(
+      'id', v_actor.id,
+      'display_name', v_actor.display_name,
+      'first_name', v_actor.first_name,
+      'last_name', v_actor.last_name,
+      'gender', v_actor.gender,
+      'role', jsonb_build_object(
+        'id', v_actor.role_id,
+        'code', v_actor.role_code,
+        'name', v_actor.role_name
+      ),
+      'is_primary', v_actor.is_primary,
+      'valid_from', v_actor.valid_from,
+      'valid_to', v_actor.valid_to,
+      'visibility', v_actor.visibility,
+      'note', v_actor.note,
+      'contacts', v_actor_contacts
+    );
+  END LOOP;
+
+  RETURN v_actor_data;
+END;
+$$;
+
+-- =====================================================
+-- Helper: Get enriched organization data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_organization_data(p_object_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_org_data JSONB := '[]'::jsonb;
+  v_org RECORD;
+  v_org_contacts JSONB;
+  v_contact RECORD;
+BEGIN
+  -- Get organizations linked to the object
+  FOR v_org IN
+    SELECT 
+      o.id,
+      o.object_type,
+      o.name,
+      o.status,
+      ool.role_id,
+      ror.name as role_name,
+      ror.code as role_code,
+      ool.note
+    FROM object_org_link ool
+    JOIN object o ON o.id = ool.org_object_id
+    LEFT JOIN ref_org_role ror ON ror.id = ool.role_id
+    WHERE ool.object_id = p_object_id
+  LOOP
+    -- Get organization contacts
+    v_org_contacts := '[]'::jsonb;
+    FOR v_contact IN
+      SELECT 
+        cc.id,
+        rck.code as kind_code,
+        rck.name as kind_name,
+        rck.description as kind_description,
+        rck.icon_url as kind_icon_url,
+        cc.value,
+        cc.is_public,
+        cc.is_primary,
+        rcr.code as role_code,
+        rcr.name as role_name,
+        cc.position
+      FROM contact_channel cc
+      JOIN ref_code_contact_kind rck ON rck.id = cc.kind_id
+      LEFT JOIN ref_contact_role rcr ON rcr.id = cc.role_id
+      WHERE cc.object_id = v_org.id
+      ORDER BY cc.is_primary DESC, cc.position NULLS LAST, cc.created_at
+    LOOP
+      v_org_contacts := v_org_contacts || jsonb_build_object(
+        'id', v_contact.id,
+        'kind', jsonb_build_object(
+          'code', v_contact.kind_code,
+          'name', v_contact.kind_name,
+          'description', v_contact.kind_description,
+          'icon_url', v_contact.kind_icon_url
+        ),
+        'value', v_contact.value,
+        'is_public', v_contact.is_public,
+        'is_primary', v_contact.is_primary,
+        'role', jsonb_build_object(
+          'code', v_contact.role_code,
+          'name', v_contact.role_name
+        ),
+        'position', v_contact.position
+      );
+    END LOOP;
+
+    v_org_data := v_org_data || jsonb_build_object(
+      'id', v_org.id,
+      'type', v_org.object_type::text,
+      'name', v_org.name,
+      'status', v_org.status::text,
+      'role', jsonb_build_object(
+        'id', v_org.role_id,
+        'code', v_org.role_code,
+        'name', v_org.role_name
+      ),
+      'note', v_org.note,
+      'contacts', v_org_contacts
+    );
+  END LOOP;
+
+  RETURN v_org_data;
+END;
+$$;
+
+-- =====================================================
+-- Enhanced API function: Get object with deep parent, actor, and organization data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(p_object_id TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_object_data JSONB;
+  v_parent_objects JSONB;
+  v_actors JSONB;
+  v_organizations JSONB;
+  v_result JSON;
+BEGIN
+  -- Get basic object data using existing function
+  SELECT api.get_object_resource(p_object_id, ARRAY['fr'], 'none', '{}'::jsonb)::jsonb INTO v_object_data;
+  
+  -- Get parent objects data
+  SELECT api.get_parent_object_data(p_object_id) INTO v_parent_objects;
+  
+  -- Get actors data
+  SELECT api.get_actor_data(p_object_id) INTO v_actors;
+  
+  -- Get organizations data
+  SELECT api.get_organization_data(p_object_id) INTO v_organizations;
+  
+  -- Build enhanced result
+  v_result := json_build_object(
+    'object', v_object_data,
+    'parent_objects', v_parent_objects,
+    'actors', v_actors,
+    'organizations', v_organizations
+  );
+  
+  RETURN v_result;
+END;
+$$;
+
+-- =====================================================
+-- Enhanced API function: Get multiple objects with deep data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_objects_with_deep_data(
+  p_object_ids TEXT[],
+  p_languages TEXT[] DEFAULT ARRAY['fr'],
+  p_include_media TEXT DEFAULT 'none',
+  p_filters JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_result JSONB := '[]'::jsonb;
+  v_object_id TEXT;
+  v_object_data JSONB;
+BEGIN
+  -- Process each object ID
+  FOREACH v_object_id IN ARRAY p_object_ids
+  LOOP
+    -- Get deep data for each object
+    SELECT api.get_object_with_deep_data(v_object_id)::jsonb INTO v_object_data;
+    v_result := v_result || v_object_data;
+  END LOOP;
+  
+  RETURN v_result::json;
+END;
+$$;
+
+-- =====================================================
+-- Enhanced API function: Get objects by type with deep data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_objects_by_type_with_deep_data(
+  p_object_type TEXT,
+  p_languages TEXT[] DEFAULT ARRAY['fr'],
+  p_include_media TEXT DEFAULT 'none',
+  p_filters JSONB DEFAULT '{}'::jsonb,
+  p_limit INTEGER DEFAULT 100,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_object_ids TEXT[];
+  v_result JSON;
+BEGIN
+  -- Get object IDs by type
+  SELECT ARRAY_AGG(id ORDER BY name)
+  INTO v_object_ids
+  FROM object
+  WHERE object_type::text = p_object_type
+    AND status = 'published'
+  LIMIT p_limit
+  OFFSET p_offset;
+  
+  -- Get deep data for all objects
+  SELECT api.get_objects_with_deep_data(v_object_ids, p_languages, p_include_media, p_filters)
+  INTO v_result;
+  
+  RETURN v_result;
+END;
+$$;
+
+-- =====================================================
+-- Enhanced API function: Search objects with deep data
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.search_objects_with_deep_data(
+  p_search_term TEXT,
+  p_object_types TEXT[] DEFAULT NULL,
+  p_languages TEXT[] DEFAULT ARRAY['fr'],
+  p_include_media TEXT DEFAULT 'none',
+  p_filters JSONB DEFAULT '{}'::jsonb,
+  p_limit INTEGER DEFAULT 50,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_object_ids TEXT[];
+  v_result JSON;
+BEGIN
+  -- Search for objects
+  SELECT ARRAY_AGG(o.id ORDER BY o.name)
+  INTO v_object_ids
+  FROM object o
+  WHERE o.status = 'published'
+    AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
+    AND (
+      o.name ILIKE '%' || p_search_term || '%'
+      OR EXISTS (
+        SELECT 1 FROM object_location ol
+        WHERE ol.object_id = o.id
+          AND ol.is_main_location = TRUE
+          AND (ol.city ILIKE '%' || p_search_term || '%'
+               OR ol.address1 ILIKE '%' || p_search_term || '%')
+      )
+    )
+  LIMIT p_limit
+  OFFSET p_offset;
+  
+  -- Get deep data for found objects
+  SELECT api.get_objects_with_deep_data(v_object_ids, p_languages, p_include_media, p_filters)
+  INTO v_result;
+  
+  RETURN v_result;
+END;
+$$;
+
+-- =====================================================
+-- UNIFIED LEGAL SYSTEM API FUNCTIONS
+-- =====================================================
+
+-- =====================================================
+-- Function to get expiring legal records
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_expiring_legal_records(
+  p_days_ahead INTEGER DEFAULT 30,
+  p_object_id TEXT DEFAULT NULL,
+  p_type_codes TEXT[] DEFAULT NULL
+)
+RETURNS TABLE(
+  legal_id UUID,
+  object_id TEXT,
+  object_name TEXT,
+  object_type TEXT,
+  legal_type_code TEXT,
+  legal_type_name TEXT,
+  value JSONB,
+  valid_to DATE,
+  days_until_expiry INTEGER,
+  status TEXT
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    ol.id,
+    ol.object_id,
+    o.name,
+    o.object_type::TEXT,
+    rlt.code,
+    rlt.name,
+    ol.value,
+    ol.valid_to,
+    (ol.valid_to - CURRENT_DATE)::INTEGER,
+    ol.status
+  FROM object_legal ol
+  JOIN object o ON o.id = ol.object_id
+  JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+  WHERE ol.valid_to IS NOT NULL
+    AND ol.valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '1 day' * p_days_ahead
+    AND ol.status = 'active'
+    AND (p_object_id IS NULL OR ol.object_id = p_object_id)
+    AND (p_type_codes IS NULL OR rlt.code = ANY(p_type_codes))
+  ORDER BY ol.valid_to ASC, o.name;
+END;
+$$;
+
+-- =====================================================
+-- Function to get all legal records for an object
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_legal_records(p_object_id TEXT)
+RETURNS TABLE(
+  legal_id UUID,
+  type_code TEXT,
+  type_name TEXT,
+  type_category TEXT,
+  type_is_public BOOLEAN,
+  value JSONB,
+  document_id UUID,
+  valid_from DATE,
+  valid_to DATE,
+  validity_mode TEXT,
+  status TEXT,
+  document_requested_at TIMESTAMPTZ,
+  document_delivered_at TIMESTAMPTZ,
+  note TEXT,
+  days_until_expiry INTEGER
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    ol.id,
+    rlt.code,
+    rlt.name,
+    rlt.category,
+    rlt.is_public,
+    ol.value,
+    ol.document_id,
+    ol.valid_from,
+    ol.valid_to,
+    ol.validity_mode::TEXT,
+    ol.status,
+    ol.document_requested_at,
+    ol.document_delivered_at,
+    ol.note,
+    CASE 
+      WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+      ELSE NULL
+    END
+  FROM object_legal ol
+  JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+  WHERE ol.object_id = p_object_id
+  ORDER BY rlt.category, rlt.name, ol.valid_from DESC;
+END;
+$$;
+
+-- =====================================================
+-- Function to check if an object has all required legal records
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.check_object_legal_compliance(p_object_id TEXT)
+RETURNS TABLE(
+  type_code TEXT,
+  type_name TEXT,
+  is_required BOOLEAN,
+  has_record BOOLEAN,
+  is_valid BOOLEAN,
+  status TEXT,
+  valid_to DATE,
+  days_until_expiry INTEGER
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rlt.code,
+    rlt.name,
+    rlt.is_required,
+    (ol.id IS NOT NULL) as has_record,
+    (ol.id IS NOT NULL AND ol.status = 'active' AND 
+     (ol.valid_to IS NULL OR ol.valid_to >= CURRENT_DATE)) as is_valid,
+    COALESCE(ol.status, 'missing'),
+    ol.valid_to,
+    CASE 
+      WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+      ELSE NULL
+    END
+  FROM ref_legal_type rlt
+  LEFT JOIN object_legal ol ON ol.object_id = p_object_id 
+    AND ol.type_id = rlt.id 
+    AND ol.status = 'active'
+  ORDER BY rlt.is_required DESC, rlt.category, rlt.name;
+END;
+$$;
+
+-- =====================================================
+-- Function to add a legal record
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.add_legal_record(
+  p_object_id TEXT,
+  p_type_code TEXT,
+  p_value JSONB,
+  p_document_id UUID DEFAULT NULL,
+  p_valid_from DATE DEFAULT CURRENT_DATE,
+  p_valid_to DATE DEFAULT NULL,
+  p_validity_mode legal_validity_mode DEFAULT 'fixed_end_date',
+  p_status TEXT DEFAULT 'active',
+  p_document_requested_at TIMESTAMPTZ DEFAULT NULL,
+  p_document_delivered_at TIMESTAMPTZ DEFAULT NULL,
+  p_note TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_type_id UUID;
+  v_legal_id UUID;
+BEGIN
+  -- Get type_id from code
+  SELECT id INTO v_type_id 
+  FROM ref_legal_type 
+  WHERE code = p_type_code;
+  
+  IF v_type_id IS NULL THEN
+    RAISE EXCEPTION 'Legal type with code % not found', p_type_code;
+  END IF;
+  
+  -- Validate constraints
+  IF p_validity_mode = 'forever' AND p_valid_to IS NOT NULL THEN
+    RAISE EXCEPTION 'validity_mode forever requires valid_to to be NULL';
+  END IF;
+  
+  IF p_validity_mode = 'fixed_end_date' AND p_valid_to IS NULL THEN
+    RAISE EXCEPTION 'validity_mode fixed_end_date requires valid_to to be NOT NULL';
+  END IF;
+  
+  IF p_valid_to IS NOT NULL AND p_valid_to < p_valid_from THEN
+    RAISE EXCEPTION 'valid_to cannot be before valid_from';
+  END IF;
+  
+  IF p_status = 'requested' AND p_document_requested_at IS NULL THEN
+    RAISE EXCEPTION 'status requested requires document_requested_at to be NOT NULL';
+  END IF;
+  
+  IF p_document_delivered_at IS NOT NULL AND p_document_requested_at IS NOT NULL AND p_document_delivered_at < p_document_requested_at THEN
+    RAISE EXCEPTION 'document_delivered_at cannot be before document_requested_at';
+  END IF;
+  
+  -- Insert the legal record
+  INSERT INTO object_legal (
+    object_id, type_id, value, document_id, 
+    valid_from, valid_to, validity_mode, status,
+    document_requested_at, document_delivered_at, note
+  ) VALUES (
+    p_object_id, v_type_id, p_value, p_document_id,
+    p_valid_from, p_valid_to, p_validity_mode, p_status,
+    p_document_requested_at, p_document_delivered_at, p_note
+  ) RETURNING id INTO v_legal_id;
+  
+  RETURN v_legal_id;
+END;
+$$;
+
+-- =====================================================
+-- Function to update a legal record
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.update_legal_record(
+  p_legal_id UUID,
+  p_value JSONB DEFAULT NULL,
+  p_document_id UUID DEFAULT NULL,
+  p_valid_from DATE DEFAULT NULL,
+  p_valid_to DATE DEFAULT NULL,
+  p_validity_mode legal_validity_mode DEFAULT NULL,
+  p_status TEXT DEFAULT NULL,
+  p_document_requested_at TIMESTAMPTZ DEFAULT NULL,
+  p_document_delivered_at TIMESTAMPTZ DEFAULT NULL,
+  p_note TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_updated BOOLEAN := FALSE;
+BEGIN
+  -- Validate constraints
+  IF p_validity_mode = 'forever' AND p_valid_to IS NOT NULL THEN
+    RAISE EXCEPTION 'validity_mode forever requires valid_to to be NULL';
+  END IF;
+  
+  IF p_validity_mode = 'fixed_end_date' AND p_valid_to IS NULL THEN
+    RAISE EXCEPTION 'validity_mode fixed_end_date requires valid_to to be NOT NULL';
+  END IF;
+  
+  IF p_status = 'requested' AND p_document_requested_at IS NULL THEN
+    RAISE EXCEPTION 'status requested requires document_requested_at to be NOT NULL';
+  END IF;
+  
+  IF p_document_delivered_at IS NOT NULL AND p_document_requested_at IS NOT NULL AND p_document_delivered_at < p_document_requested_at THEN
+    RAISE EXCEPTION 'document_delivered_at cannot be before document_requested_at';
+  END IF;
+  
+  -- Update the legal record
+  UPDATE object_legal SET
+    value = COALESCE(p_value, value),
+    document_id = COALESCE(p_document_id, document_id),
+    valid_from = COALESCE(p_valid_from, valid_from),
+    valid_to = COALESCE(p_valid_to, valid_to),
+    validity_mode = COALESCE(p_validity_mode, validity_mode),
+    status = COALESCE(p_status, status),
+    document_requested_at = COALESCE(p_document_requested_at, document_requested_at),
+    document_delivered_at = COALESCE(p_document_delivered_at, document_delivered_at),
+    note = COALESCE(p_note, note),
+    updated_at = NOW()
+  WHERE id = p_legal_id;
+  
+  v_updated := FOUND;
+  RETURN v_updated;
+END;
+$$;
+
+-- =====================================================
+-- Function to get legal data in API format
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_legal_data(p_object_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_legal_data JSONB := '[]'::jsonb;
+  v_legal_record RECORD;
+BEGIN
+  -- Get all legal records for the object
+  FOR v_legal_record IN
+    SELECT 
+      ol.id,
+      rlt.code as type_code,
+      rlt.name as type_name,
+      rlt.category,
+      rlt.is_public as type_is_public,
+      ol.value,
+      ol.document_id,
+      ol.valid_from,
+      ol.valid_to,
+      ol.validity_mode::text,
+      ol.status,
+      ol.document_requested_at,
+      ol.document_delivered_at,
+      ol.note,
+      CASE 
+        WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+        ELSE NULL
+      END as days_until_expiry
+    FROM object_legal ol
+    JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+    WHERE ol.object_id = p_object_id
+    ORDER BY rlt.category, rlt.name, ol.valid_from DESC
+  LOOP
+    v_legal_data := v_legal_data || jsonb_build_object(
+      'id', v_legal_record.id,
+      'type', jsonb_build_object(
+        'code', v_legal_record.type_code,
+        'name', v_legal_record.type_name,
+        'category', v_legal_record.category,
+        'is_public', v_legal_record.type_is_public
+      ),
+      'value', v_legal_record.value,
+      'document_id', v_legal_record.document_id,
+      'valid_from', v_legal_record.valid_from,
+      'valid_to', v_legal_record.valid_to,
+      'validity_mode', v_legal_record.validity_mode,
+      'status', v_legal_record.status,
+      'document_requested_at', v_legal_record.document_requested_at,
+      'document_delivered_at', v_legal_record.document_delivered_at,
+      'note', v_legal_record.note,
+      'days_until_expiry', v_legal_record.days_until_expiry
+    );
+  END LOOP;
+
+  RETURN v_legal_data;
+END;
+$$;
+
+-- =====================================================
+-- Function to get legal compliance in API format
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_legal_compliance(p_object_id TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_compliance_data JSONB;
+  v_required_count INTEGER;
+  v_valid_count INTEGER;
+  v_expiring_count INTEGER;
+  v_missing_count INTEGER;
+BEGIN
+  -- Get compliance data
+  SELECT 
+    COUNT(*) FILTER (WHERE rlt.is_required = true) as required_count,
+    COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                     (ol.valid_to IS NULL OR ol.valid_to >= CURRENT_DATE)) as valid_count,
+    COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                     ol.valid_to IS NOT NULL AND ol.valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days') as expiring_count,
+    COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.id IS NULL) as missing_count
+  INTO v_required_count, v_valid_count, v_expiring_count, v_missing_count
+  FROM ref_legal_type rlt
+  LEFT JOIN object_legal ol ON ol.object_id = p_object_id 
+    AND ol.type_id = rlt.id 
+    AND ol.status = 'active'
+  WHERE rlt.is_required = true;
+
+  -- Build compliance summary
+  v_compliance_data := jsonb_build_object(
+    'object_id', p_object_id,
+    'compliance_status', CASE 
+      WHEN v_missing_count = 0 AND v_expiring_count = 0 THEN 'compliant'
+      WHEN v_missing_count = 0 AND v_expiring_count > 0 THEN 'expiring'
+      WHEN v_missing_count > 0 THEN 'non_compliant'
+      ELSE 'unknown'
+    END,
+    'summary', jsonb_build_object(
+      'required_count', v_required_count,
+      'valid_count', v_valid_count,
+      'expiring_count', v_expiring_count,
+      'missing_count', v_missing_count,
+      'compliance_percentage', CASE 
+        WHEN v_required_count > 0 THEN ROUND((v_valid_count::DECIMAL / v_required_count) * 100, 2)
+        ELSE 0
+      END
+    ),
+    'details', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'type_code', rlt.code,
+          'type_name', rlt.name,
+          'is_required', rlt.is_required,
+          'has_record', (ol.id IS NOT NULL),
+          'is_valid', (ol.id IS NOT NULL AND ol.status = 'active' AND 
+                      (ol.valid_to IS NULL OR ol.valid_to >= CURRENT_DATE)),
+          'status', COALESCE(ol.status, 'missing'),
+          'valid_to', ol.valid_to,
+          'days_until_expiry', CASE 
+            WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+            ELSE NULL
+          END
+        )
+        ORDER BY rlt.is_required DESC, rlt.category, rlt.name
+      )
+      FROM ref_legal_type rlt
+      LEFT JOIN object_legal ol ON ol.object_id = p_object_id 
+        AND ol.type_id = rlt.id 
+        AND ol.status = 'active'
+    )
+  );
+
+  RETURN v_compliance_data::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to get expiring legal records in API format
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_expiring_legal_records_api(
+  p_days_ahead INTEGER DEFAULT 30,
+  p_object_types TEXT[] DEFAULT NULL,
+  p_legal_types TEXT[] DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_result JSONB;
+BEGIN
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'legal_id', legal_id,
+      'object_id', object_id,
+      'object_name', object_name,
+      'object_type', object_type,
+      'legal_type_code', legal_type_code,
+      'legal_type_name', legal_type_name,
+      'value', value,
+      'valid_to', valid_to,
+      'days_until_expiry', days_until_expiry,
+      'status', status
+    )
+    ORDER BY valid_to ASC, object_name
+  )
+  INTO v_result
+  FROM api.get_expiring_legal_records(p_days_ahead, NULL, p_legal_types) er
+  JOIN object o ON o.id = er.object_id
+  WHERE p_object_types IS NULL OR o.object_type::text = ANY(p_object_types);
+
+  RETURN COALESCE(v_result, '[]'::jsonb)::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to generate legal expiry notifications
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.generate_legal_expiry_notifications(
+  p_days_ahead INTEGER DEFAULT 30,
+  p_object_types TEXT[] DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_notifications JSONB;
+BEGIN
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'notification_type', 'legal_expiry',
+      'priority', CASE 
+        WHEN days_until_expiry <= 7 THEN 'high'
+        WHEN days_until_expiry <= 14 THEN 'medium'
+        ELSE 'low'
+      END,
+      'object_id', object_id,
+      'object_name', object_name,
+      'object_type', object_type,
+      'legal_type', legal_type_name,
+      'expiry_date', valid_to,
+      'days_until_expiry', days_until_expiry,
+      'action_required', 'Renew or update legal record',
+      'created_at', NOW()
+    )
+    ORDER BY days_until_expiry ASC, object_name
+  )
+  INTO v_notifications
+  FROM api.get_expiring_legal_records(p_days_ahead, NULL, NULL) er
+  JOIN object o ON o.id = er.object_id
+  WHERE p_object_types IS NULL OR o.object_type::text = ANY(p_object_types);
+
+  RETURN COALESCE(v_notifications, '[]'::jsonb)::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to audit legal compliance across all objects
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.audit_legal_compliance(
+  p_object_types TEXT[] DEFAULT NULL,
+  p_include_expired BOOLEAN DEFAULT FALSE
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_audit_data JSONB;
+  v_total_objects INTEGER;
+  v_compliant_objects INTEGER;
+  v_non_compliant_objects INTEGER;
+  v_expiring_objects INTEGER;
+BEGIN
+  -- Get object counts
+  SELECT 
+    COUNT(DISTINCT o.id) as total,
+    COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'compliant') as compliant,
+    COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'non_compliant') as non_compliant,
+    COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'expiring') as expiring
+  INTO v_total_objects, v_compliant_objects, v_non_compliant_objects, v_expiring_objects
+  FROM object o
+  LEFT JOIN LATERAL (
+    SELECT 
+      CASE 
+        WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.id IS NULL) > 0 THEN 'non_compliant'
+        WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                              ol.valid_to IS NOT NULL AND ol.valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days') > 0 THEN 'expiring'
+        WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                              (ol.valid_to IS NULL OR ol.valid_to >= CURRENT_DATE)) = 
+             COUNT(*) FILTER (WHERE rlt.is_required = true) THEN 'compliant'
+        ELSE 'unknown'
+      END as compliance_status
+    FROM ref_legal_type rlt
+    LEFT JOIN object_legal ol ON ol.object_id = o.id 
+      AND ol.type_id = rlt.id 
+      AND (p_include_expired OR ol.status = 'active')
+    WHERE rlt.is_required = true
+  ) compliance ON true
+  WHERE o.status = 'published'
+    AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types));
+
+  -- Build audit summary
+  v_audit_data := jsonb_build_object(
+    'audit_date', CURRENT_DATE,
+    'summary', jsonb_build_object(
+      'total_objects', v_total_objects,
+      'compliant_objects', v_compliant_objects,
+      'non_compliant_objects', v_non_compliant_objects,
+      'expiring_objects', v_expiring_objects,
+      'compliance_rate', CASE 
+        WHEN v_total_objects > 0 THEN ROUND((v_compliant_objects::DECIMAL / v_total_objects) * 100, 2)
+        ELSE 0
+      END
+    ),
+    'object_types', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'object_type', ot.object_type,
+          'total_count', ot.total_count,
+          'compliant_count', ot.compliant_count,
+          'non_compliant_count', ot.non_compliant_count,
+          'expiring_count', ot.expiring_count,
+          'compliance_rate', CASE 
+            WHEN ot.total_count > 0 THEN ROUND((ot.compliant_count::DECIMAL / ot.total_count) * 100, 2)
+            ELSE 0
+          END
+        )
+        ORDER BY ot.object_type
+      )
+      FROM (
+        SELECT 
+          o.object_type::text as object_type,
+          COUNT(DISTINCT o.id) as total_count,
+          COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'compliant') as compliant_count,
+          COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'non_compliant') as non_compliant_count,
+          COUNT(DISTINCT o.id) FILTER (WHERE compliance_status = 'expiring') as expiring_count
+        FROM object o
+        LEFT JOIN LATERAL (
+          SELECT 
+            CASE 
+              WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.id IS NULL) > 0 THEN 'non_compliant'
+              WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                                    ol.valid_to IS NOT NULL AND ol.valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days') > 0 THEN 'expiring'
+              WHEN COUNT(*) FILTER (WHERE rlt.is_required = true AND ol.status = 'active' AND 
+                                    (ol.valid_to IS NULL OR ol.valid_to >= CURRENT_DATE)) = 
+                   COUNT(*) FILTER (WHERE rlt.is_required = true) THEN 'compliant'
+              ELSE 'unknown'
+            END as compliance_status
+          FROM ref_legal_type rlt
+          LEFT JOIN object_legal ol ON ol.object_id = o.id 
+            AND ol.type_id = rlt.id 
+            AND (p_include_expired OR ol.status = 'active')
+          WHERE rlt.is_required = true
+        ) compliance ON true
+        WHERE o.status = 'published'
+          AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
+        GROUP BY o.object_type
+      ) ot
+    )
+  );
+
+  RETURN v_audit_data::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to request a document for a legal record
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.request_legal_document(
+  p_legal_id UUID,
+  p_requested_at TIMESTAMPTZ DEFAULT NOW()
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_updated BOOLEAN := FALSE;
+BEGIN
+  -- Update the legal record to requested status
+  UPDATE object_legal SET
+    status = 'requested',
+    document_requested_at = p_requested_at,
+    document_delivered_at = NULL, -- Clear delivery date when requesting
+    updated_at = NOW()
+  WHERE id = p_legal_id;
+  
+  v_updated := FOUND;
+  RETURN v_updated;
+END;
+$$;
+
+-- =====================================================
+-- Function to mark a document as delivered
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.deliver_legal_document(
+  p_legal_id UUID,
+  p_document_id UUID,
+  p_delivered_at TIMESTAMPTZ DEFAULT NOW(),
+  p_new_status TEXT DEFAULT 'active'
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_updated BOOLEAN := FALSE;
+BEGIN
+  -- Validate new status
+  IF p_new_status NOT IN ('active', 'expired', 'suspended', 'revoked') THEN
+    RAISE EXCEPTION 'Invalid status: %. Must be one of: active, expired, suspended, revoked', p_new_status;
+  END IF;
+  
+  -- Update the legal record to mark document as delivered
+  UPDATE object_legal SET
+    status = p_new_status,
+    document_id = p_document_id,
+    document_delivered_at = p_delivered_at,
+    updated_at = NOW()
+  WHERE id = p_legal_id;
+  
+  v_updated := FOUND;
+  RETURN v_updated;
+END;
+$$;
+
+-- =====================================================
+-- Function to get pending document requests
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_pending_document_requests(
+  p_object_id TEXT DEFAULT NULL,
+  p_type_codes TEXT[] DEFAULT NULL
+)
+RETURNS TABLE(
+  legal_id UUID,
+  object_id TEXT,
+  object_name TEXT,
+  object_type TEXT,
+  legal_type_code TEXT,
+  legal_type_name TEXT,
+  value JSONB,
+  document_requested_at TIMESTAMPTZ,
+  days_since_requested INTEGER,
+  note TEXT
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    ol.id,
+    ol.object_id,
+    o.name,
+    o.object_type::TEXT,
+    rlt.code,
+    rlt.name,
+    ol.value,
+    ol.document_requested_at,
+    (CURRENT_DATE - ol.document_requested_at::DATE)::INTEGER,
+    ol.note
+  FROM object_legal ol
+  JOIN object o ON o.id = ol.object_id
+  JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+  WHERE ol.status = 'requested'
+    AND (p_object_id IS NULL OR ol.object_id = p_object_id)
+    AND (p_type_codes IS NULL OR rlt.code = ANY(p_type_codes))
+  ORDER BY ol.document_requested_at ASC, o.name;
+END;
+$$;
+
+-- =====================================================
+-- Function to get pending document requests in API format
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_pending_document_requests_api(
+  p_object_id TEXT DEFAULT NULL,
+  p_type_codes TEXT[] DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_result JSONB;
+BEGIN
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'legal_id', legal_id,
+      'object_id', object_id,
+      'object_name', object_name,
+      'object_type', object_type,
+      'legal_type_code', legal_type_code,
+      'legal_type_name', legal_type_name,
+      'value', value,
+      'document_requested_at', document_requested_at,
+      'days_since_requested', days_since_requested,
+      'note', note
+    )
+    ORDER BY document_requested_at ASC, object_name
+  )
+  INTO v_result
+  FROM api.get_pending_document_requests(p_object_id, p_type_codes);
+
+  RETURN COALESCE(v_result, '[]'::jsonb)::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to get legal records filtered by visibility
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_legal_records_by_visibility(
+  p_object_id TEXT,
+  p_is_public BOOLEAN DEFAULT NULL
+)
+RETURNS TABLE(
+  legal_id UUID,
+  type_code TEXT,
+  type_name TEXT,
+  type_category TEXT,
+  type_is_public BOOLEAN,
+  value JSONB,
+  document_id UUID,
+  valid_from DATE,
+  valid_to DATE,
+  validity_mode TEXT,
+  status TEXT,
+  document_requested_at TIMESTAMPTZ,
+  document_delivered_at TIMESTAMPTZ,
+  note TEXT,
+  days_until_expiry INTEGER
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    ol.id,
+    rlt.code,
+    rlt.name,
+    rlt.category,
+    rlt.is_public,
+    ol.value,
+    ol.document_id,
+    ol.valid_from,
+    ol.valid_to,
+    ol.validity_mode::TEXT,
+    ol.status,
+    ol.document_requested_at,
+    ol.document_delivered_at,
+    ol.note,
+    CASE 
+      WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+      ELSE NULL
+    END
+  FROM object_legal ol
+  JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+  WHERE ol.object_id = p_object_id
+    AND (p_is_public IS NULL OR rlt.is_public = p_is_public)
+  ORDER BY rlt.category, rlt.name, ol.valid_from DESC;
+END;
+$$;
+
+-- =====================================================
+-- Function to get public legal records only
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_public_legal_records(p_object_id TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_legal_data JSONB := '[]'::jsonb;
+  v_legal_record RECORD;
+BEGIN
+  -- Get only public legal records for the object
+  FOR v_legal_record IN
+    SELECT 
+      ol.id,
+      rlt.code as type_code,
+      rlt.name as type_name,
+      rlt.category,
+      rlt.is_public as type_is_public,
+      ol.value,
+      ol.document_id,
+      ol.valid_from,
+      ol.valid_to,
+      ol.validity_mode::text,
+      ol.status,
+      ol.document_requested_at,
+      ol.document_delivered_at,
+      ol.note,
+      CASE 
+        WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+        ELSE NULL
+      END as days_until_expiry
+    FROM object_legal ol
+    JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+    WHERE ol.object_id = p_object_id
+      AND rlt.is_public = true
+    ORDER BY rlt.category, rlt.name, ol.valid_from DESC
+  LOOP
+    v_legal_data := v_legal_data || jsonb_build_object(
+      'id', v_legal_record.id,
+      'type', jsonb_build_object(
+        'code', v_legal_record.type_code,
+        'name', v_legal_record.type_name,
+        'category', v_legal_record.category,
+        'is_public', v_legal_record.type_is_public
+      ),
+      'value', v_legal_record.value,
+      'document_id', v_legal_record.document_id,
+      'valid_from', v_legal_record.valid_from,
+      'valid_to', v_legal_record.valid_to,
+      'validity_mode', v_legal_record.validity_mode,
+      'status', v_legal_record.status,
+      'document_requested_at', v_legal_record.document_requested_at,
+      'document_delivered_at', v_legal_record.document_delivered_at,
+      'note', v_legal_record.note,
+      'days_until_expiry', v_legal_record.days_until_expiry
+    );
+  END LOOP;
+
+  RETURN v_legal_data::json;
+END;
+$$;
+
+-- =====================================================
+-- Function to get private legal records only (for parent org)
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_private_legal_records(p_object_id TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_legal_data JSONB := '[]'::jsonb;
+  v_legal_record RECORD;
+BEGIN
+  -- Get only private legal records for the object
+  FOR v_legal_record IN
+    SELECT 
+      ol.id,
+      rlt.code as type_code,
+      rlt.name as type_name,
+      rlt.category,
+      rlt.is_public as type_is_public,
+      ol.value,
+      ol.document_id,
+      ol.valid_from,
+      ol.valid_to,
+      ol.validity_mode::text,
+      ol.status,
+      ol.document_requested_at,
+      ol.document_delivered_at,
+      ol.note,
+      CASE 
+        WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+        ELSE NULL
+      END as days_until_expiry
+    FROM object_legal ol
+    JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+    WHERE ol.object_id = p_object_id
+      AND rlt.is_public = false
+    ORDER BY rlt.category, rlt.name, ol.valid_from DESC
+  LOOP
+    v_legal_data := v_legal_data || jsonb_build_object(
+      'id', v_legal_record.id,
+      'type', jsonb_build_object(
+        'code', v_legal_record.type_code,
+        'name', v_legal_record.type_name,
+        'category', v_legal_record.category,
+        'is_public', v_legal_record.type_is_public
+      ),
+      'value', v_legal_record.value,
+      'document_id', v_legal_record.document_id,
+      'valid_from', v_legal_record.valid_from,
+      'valid_to', v_legal_record.valid_to,
+      'validity_mode', v_legal_record.validity_mode,
+      'status', v_legal_record.status,
+      'document_requested_at', v_legal_record.document_requested_at,
+      'document_delivered_at', v_legal_record.document_delivered_at,
+      'note', v_legal_record.note,
+      'days_until_expiry', v_legal_record.days_until_expiry
+    );
+  END LOOP;
+
+  RETURN v_legal_data::json;
 END;
 $$;

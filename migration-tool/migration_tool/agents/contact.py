@@ -43,12 +43,46 @@ class ContactAgent(AIEnabledAgent):
                 "channels": [channel.model_dump() for channel in channels],
             },
         )
-        responses = []
+        responses: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
         for channel in channels:
             if not channel.value:
                 continue
             original_kind = channel.kind_code or "other"
             normalized_kind = self.supabase.normalize_code(original_kind)
+
+            channel.object_id = channel.object_id or context.object_id
+            if not channel.object_id:
+                skipped.append(
+                    {
+                        "channel": channel.model_dump(),
+                        "reason": "missing_object_id",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.contact.skip_missing_object_id",
+                    {
+                        "context": context.model_dump(),
+                        "channel": channel.model_dump(),
+                    },
+                )
+                continue
+            if normalized_kind.startswith("social_"):
+                skipped.append(
+                    {
+                        "channel": channel.model_dump(),
+                        "reason": "unsupported_social_channel",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.contact.skip_social_channel",
+                    {
+                        "context": context.model_dump(),
+                        "channel": channel.model_dump(),
+                    },
+                )
+                continue
+
             kind_id = await context.lookup_reference_code(
                 domain="contact_kind",
                 code=normalized_kind,
@@ -59,6 +93,21 @@ class ContactAgent(AIEnabledAgent):
                     code=normalized_kind,
                     name=original_kind.replace("_", " ").title(),
                 )
+            if not kind_id:
+                skipped.append(
+                    {
+                        "channel": channel.model_dump(),
+                        "reason": "unresolved_kind",
+                    }
+                )
+                self.telemetry.record(
+                    "agent.contact.skip_unresolved_kind",
+                    {
+                        "context": context.model_dump(),
+                        "channel": channel.model_dump(),
+                    },
+                )
+                continue
             role_id = None
             if channel.role_code:
                 normalized_role = self.supabase.normalize_code(channel.role_code)
@@ -83,6 +132,7 @@ class ContactAgent(AIEnabledAgent):
             {
                 "channels": [channel.model_dump() for channel in channels],
                 "responses": responses,
+                "skipped": skipped,
             },
             overwrite=True,
         )
@@ -91,6 +141,7 @@ class ContactAgent(AIEnabledAgent):
             "operation": "upsert",
             "table": "contact_channel",
             "responses": responses,
+            "skipped": skipped,
         }
 
 

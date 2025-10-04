@@ -812,14 +812,136 @@
         <h2>1) Authentification & conventions</h2>
 
         <details open>
-          <summary>1.1 Authentification & en-têtes</summary>
+          <summary>1.1 Méthodes d'authentification</summary>
           <div class="content">
-            <p>Envoyez toujours :</p>
+            <p>L'API Bertel v3 supporte plusieurs méthodes d'authentification selon votre contexte d'utilisation :</p>
+            
+            <h3>JWT (Recommandée pour les applications)</h3>
+            <p>Pour les applications web/mobile avec utilisateurs connectés :</p>
+            <div class="code-block">
+              <pre><code>Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</code></pre>
+            </div>
+            <p><strong>Avantages :</strong> Accès aux données étendues selon les rôles utilisateur, sécurité maximale.</p>
+            
+            <h3>Clé API (Service-to-Service)</h3>
+            <p>Pour les intégrations serveur-à-serveur :</p>
+            <div class="code-block">
+              <pre><code>apikey: bertel_sk_1234567890abcdef</code></pre>
+            </div>
+            <p><strong>Avantages :</strong> Accès complet aux données publiques, idéal pour les synchronisations automatiques.</p>
+            
+            <h3>Accès anonyme (Lecture seule)</h3>
+            <p>Pour les données publiques uniquement :</p>
+            <div class="code-block">
+              <pre><code># Aucun en-tête d'authentification requis</code></pre>
+            </div>
+            <p><strong>Limitations :</strong> Seules les données publiques (<code>status = 'published'</code>) sont accessibles.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>1.2 En-têtes HTTP requis</summary>
+          <div class="content">
+            <p>Chaque requête doit inclure :</p>
             <ul>
               <li><code>Content-Type: application/json</code></li>
               <li><code>Accept: application/json</code></li>
-              <li>Vos en-têtes d’authentification selon votre plateforme (ex. <code>apikey: …</code>, <code>Authorization: Bearer …</code>).</li>
+              <li>Vos en-têtes d'authentification selon votre méthode choisie (voir ci-dessus)</li>
             </ul>
+            
+            <h3>Exemple complet de requête</h3>
+            <div class="code-block">
+              <pre><code>curl -X POST "https://api.bertel.re/rpc/get_object_resource" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"p_object_id": "HOTTST0000000001"}'</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>1.3 Niveaux d'accès aux données</summary>
+          <div class="content">
+            <p>Selon votre méthode d'authentification, vous avez accès à différents niveaux de données :</p>
+            
+            <table>
+              <thead>
+                <tr><th>Méthode</th><th>Données publiques</th><th>Données étendues</th><th>Données privées</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Anonyme</strong></td>
+                  <td>✅ Objets publiés uniquement</td>
+                  <td>❌ Non</td>
+                  <td>❌ Non</td>
+                </tr>
+                <tr>
+                  <td><strong>Clé API</strong></td>
+                  <td>✅ Tous les objets</td>
+                  <td>✅ Selon les rôles</td>
+                  <td>❌ Non</td>
+                </tr>
+                <tr>
+                  <td><strong>JWT (Utilisateur)</td>
+                  <td>✅ Tous les objets</td>
+                  <td>✅ Si acteur de l'organisation</td>
+                  <td>✅ Si acteur de l'organisation</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Données étendues</div>
+              <p>Les <strong>données étendues</strong> incluent : descriptions privées, contacts non-publics, médias non-publiés, informations légales, réductions, politiques de groupe.</p>
+            </div>
+            
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Sécurité</div>
+              <p>L'accès aux données étendues/privées nécessite que l'utilisateur soit lié à l'organisation propriétaire de l'objet via son adresse email dans <code>actor_channel</code>.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>1.4 Gestion des erreurs d'authentification</summary>
+          <div class="content">
+            <p>L'API retourne des codes d'erreur spécifiques pour les problèmes d'authentification :</p>
+            
+            <table>
+              <thead>
+                <tr><th>Code HTTP</th><th>Message</th><th>Cause</th><th>Solution</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>401</code></td>
+                  <td>Unauthorized</td>
+                  <td>Token JWT invalide ou expiré</td>
+                  <td>Renouveler le token ou se reconnecter</td>
+                </tr>
+                <tr>
+                  <td><code>403</code></td>
+                  <td>Forbidden</td>
+                  <td>Clé API invalide ou droits insuffisants</td>
+                  <td>Vérifier la clé API ou les permissions</td>
+                </tr>
+                <tr>
+                  <td><code>429</code></td>
+                  <td>Too Many Requests</td>
+                  <td>Limite de taux dépassée</td>
+                  <td>Attendre ou implémenter un backoff</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <h3>Exemple de réponse d'erreur</h3>
+            <div class="code-block">
+              <pre><code>{
+  "code": "PGRST301",
+  "message": "JWT expired",
+  "hint": "Refresh your token and try again"
+}</code></pre>
+            </div>
           </div>
         </details>
         <details id="traveler-tips">

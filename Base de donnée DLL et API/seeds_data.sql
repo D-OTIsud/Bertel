@@ -4408,6 +4408,273 @@ ON CONFLICT (target_table, target_pk, target_column, language_id) DO UPDATE
 SET value_text = EXCLUDED.value_text;
 
 -- =====================================================
+-- FURTHER ENHANCEMENTS FOR REMAINING OBJECT TYPES
+-- =====================================================
+
+-- =====================================================
+-- RES – attach cuisine types to menu items (enables cuisine search)
+-- =====================================================
+INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id)
+SELECT mi.id, ct.id
+FROM object_menu_item mi
+JOIN object_menu m ON m.id = mi.menu_id
+JOIN object o ON o.id = m.object_id AND o.object_type = 'RES' AND o.region_code = 'TST' AND o.name = 'Restaurant Test Océan'
+JOIN ref_code_cuisine_type ct ON ct.code IN (
+  CASE WHEN mi.name = 'Curry de poisson' THEN 'seafood' ELSE NULL END,
+  CASE WHEN mi.name = 'Curry de poisson' THEN 'creole' ELSE NULL END,
+  CASE WHEN mi.name = 'Salade créole' THEN 'creole' ELSE NULL END,
+  CASE WHEN mi.name = 'Salade créole' THEN 'vegetarienne' ELSE NULL END
+)
+WHERE mi.is_available IS TRUE
+  AND NOT EXISTS (
+    SELECT 1 FROM object_menu_item_cuisine_type x WHERE x.menu_item_id = mi.id AND x.cuisine_type_id = ct.id
+  );
+
+-- =====================================================
+-- FMA – link events to a partner restaurant (for cuisine-based event queries)
+-- =====================================================
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, created_at)
+SELECT fma.id, res.id, rt.id, NOW()
+FROM object fma, object res, ref_object_relation_type rt
+WHERE fma.object_type = 'FMA' AND fma.region_code = 'TST' AND fma.name = 'Festival Créole Test'
+  AND res.object_type = 'RES' AND res.region_code = 'TST' AND res.name = 'Restaurant Test Océan'
+  AND rt.code = 'partner_of'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation r WHERE r.source_object_id = fma.id AND r.target_object_id = res.id AND r.relation_type_id = rt.id
+  );
+
+-- =====================================================
+-- CAMP – classification and capacities
+-- =====================================================
+-- Camp stars = 4
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type = 'CAMP' AND o.region_code = 'TST' AND o.name = 'Camping Nature Test'
+  AND cs.code = 'camp_stars' AND cv.scheme_id = cs.id AND cv.code = '4'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_classification oc WHERE oc.object_id = o.id AND oc.scheme_id = cs.id AND oc.value_id = cv.id
+  );
+
+-- Capacities: pitches, tents, campers
+INSERT INTO object_capacity (object_id, metric_id, value_integer)
+SELECT o.id, m.id, v.val
+FROM object o
+JOIN (
+  VALUES
+    ('pitches'::text, 80),
+    ('tents',         50),
+    ('campers',       20)
+) v(code, val) ON TRUE
+JOIN ref_capacity_metric m ON m.code = v.code
+WHERE o.object_type = 'CAMP' AND o.region_code = 'TST' AND o.name = 'Camping Nature Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_capacity oc WHERE oc.object_id = o.id AND oc.metric_id = m.id
+  );
+
+-- =====================================================
+-- HPA (gîte) – classification and capacities
+-- =====================================================
+-- Gîtes de France: 3 épis
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type = 'HPA' AND o.region_code = 'TST' AND o.name = 'Gîte Particulier Test'
+  AND cs.code = 'gites_epics' AND cv.scheme_id = cs.id AND cv.code = '3'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_classification oc WHERE oc.object_id = o.id AND oc.scheme_id = cs.id AND oc.value_id = cv.id
+  );
+
+-- Capacity: bedrooms, max_capacity
+INSERT INTO object_capacity (object_id, metric_id, value_integer)
+SELECT o.id, m.id, v.val
+FROM object o
+JOIN (
+  VALUES
+    ('bedrooms'::text,   3),
+    ('max_capacity',     6)
+) v(code, val) ON TRUE
+JOIN ref_capacity_metric m ON m.code = v.code
+WHERE o.object_type = 'HPA' AND o.region_code = 'TST' AND o.name = 'Gîte Particulier Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_capacity oc WHERE oc.object_id = o.id AND oc.metric_id = m.id
+  );
+
+-- =====================================================
+-- HLO (hébergement loisir) – eco label & amenities
+-- =====================================================
+-- Label green_key
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type = 'HLO' AND o.region_code = 'TST' AND o.name = 'Résidence Loisir Test'
+  AND cs.code = 'green_key' AND cv.scheme_id = cs.id AND cv.code = 'green_key'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_classification oc WHERE oc.object_id = o.id AND oc.scheme_id = cs.id AND oc.value_id = cv.id
+  );
+
+-- Amenities: swimming_pool, spa
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o
+JOIN ref_amenity a ON a.code IN ('swimming_pool','spa')
+WHERE o.object_type = 'HLO' AND o.region_code = 'TST' AND o.name = 'Résidence Loisir Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_amenity oa WHERE oa.object_id = o.id AND oa.amenity_id = a.id
+  );
+
+-- =====================================================
+-- LOI (loisir) – weekend opening hours and capacity
+-- =====================================================
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Week-ends uniquement', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_period op WHERE op.object_id = o.id AND COALESCE(op.name,'') = 'Week-ends uniquement'
+  );
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Samedi & dimanche', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code = 'regular'
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_schedule os WHERE os.period_id = op.id AND os.schedule_type_id = rst.id
+  );
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_type_id AND rst.code = 'regular'
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id = os.id AND tp.closed = FALSE
+  );
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id = tp.schedule_id
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_weekday w ON w.code IN ('saturday','sunday')
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id = tp.id AND tw.weekday_id = w.id
+  );
+
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '09:00', TIME '18:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id = tp.schedule_id
+JOIN opening_period op ON op.id = os.period_id
+JOIN object o ON o.id = op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_id AND rst.code = 'regular'
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id AND tf.start_time = TIME '09:00' AND tf.end_time = TIME '18:00'
+  );
+
+-- Capacity: seats
+INSERT INTO object_capacity (object_id, metric_id, value_integer)
+SELECT o.id, m.id, 120
+FROM object o
+JOIN ref_capacity_metric m ON m.code = 'seats'
+WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_capacity oc WHERE oc.object_id = o.id AND oc.metric_id = m.id
+  );
+
+-- =====================================================
+-- PCU, PNA, VIL, ASC – add environment tags and basic media
+-- =====================================================
+-- PCU tags & media
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT o.id, et.id, NOW()
+FROM object o JOIN ref_code_environment_tag et ON et.code IN ('urbain_creatif','centre_ville')
+WHERE o.object_type = 'PCU' AND o.region_code = 'TST' AND o.name = 'Point Culture Urbaine Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_environment_tag x WHERE x.object_id = o.id AND x.environment_tag_id = et.id
+  );
+
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Photo culture urbaine', 'https://images.example.com/pcu/point-culture-urbaine.jpg', 'illustration', TRUE, TRUE, 1, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code = 'photo'
+WHERE o.object_type = 'PCU' AND o.region_code = 'TST' AND o.name = 'Point Culture Urbaine Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id = o.id AND m.media_type_id = mt.id AND m.is_main IS TRUE
+  );
+
+-- PNA tags
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT o.id, et.id, NOW()
+FROM object o JOIN ref_code_environment_tag et ON et.code IN ('montagne','foret','parc_national')
+WHERE o.object_type = 'PNA' AND o.region_code = 'TST' AND o.name = 'Point Nature Aventure Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_environment_tag x WHERE x.object_id = o.id AND x.environment_tag_id = et.id
+  );
+
+-- VIL tags
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT o.id, et.id, NOW()
+FROM object o JOIN ref_code_environment_tag et ON et.code IN ('patrimoine','quartier_historique')
+WHERE o.object_type = 'VIL' AND o.region_code = 'TST' AND o.name = 'Village Test Authentique'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_environment_tag x WHERE x.object_id = o.id AND x.environment_tag_id = et.id
+  );
+
+-- ASC tags (use ref_tag)
+INSERT INTO ref_tag (slug, name, description, position)
+VALUES ('association','Association','Association locale',30)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', o.id, NOW()
+FROM object o, ref_tag t
+WHERE o.object_type = 'ASC' AND o.region_code = 'TST' AND o.name = 'Association Culturelle Test'
+  AND t.slug = 'association'
+  AND NOT EXISTS (
+    SELECT 1 FROM tag_link tl WHERE tl.tag_id = t.id AND tl.target_table = 'object' AND tl.target_pk = o.id
+  );
+
+-- =====================================================
+-- ITI – sections and stages with basic geometry (enables KML/GPX)
+-- =====================================================
+-- Sections (simple line)
+INSERT INTO object_iti_section (parent_object_id, name, position, geom, created_at, updated_at)
+SELECT o.id, 'Tronçon principal', 1,
+       ST_GeogFromText('SRID=4326;LINESTRING(55.4700 -21.1300, 55.4900 -21.1400, 55.5100 -21.1550)'),
+       NOW(), NOW()
+FROM object o
+WHERE o.object_type = 'ITI' AND o.region_code = 'TST' AND o.name = 'Randonnée Piton des Neiges'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_section s WHERE s.parent_object_id = o.id
+  );
+
+-- Stages (start & summit points)
+INSERT INTO object_iti_stage (object_id, name, description, position, geom, created_at, updated_at)
+SELECT o.id, 'Départ Cilaos', 'Point de départ', 1,
+       ST_GeogFromText('SRID=4326;POINT(55.4700 -21.1300)'), NOW(), NOW()
+FROM object o
+WHERE o.object_type = 'ITI' AND o.region_code = 'TST' AND o.name = 'Randonnée Piton des Neiges'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_stage st WHERE st.object_id = o.id AND st.position = 1
+  );
+
+INSERT INTO object_iti_stage (object_id, name, description, position, geom, created_at, updated_at)
+SELECT o.id, 'Sommet', 'Point sommital', 2,
+       ST_GeogFromText('SRID=4326;POINT(55.5100 -21.1550)'), NOW(), NOW()
+FROM object o
+WHERE o.object_type = 'ITI' AND o.region_code = 'TST' AND o.name = 'Randonnée Piton des Neiges'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_stage st WHERE st.object_id = o.id AND st.position = 2
+  );
+
+-- =====================================================
 -- ENHANCEMENTS: COM (Commerce) – richer shop scenarios
 -- =====================================================
 

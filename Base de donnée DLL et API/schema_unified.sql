@@ -133,6 +133,9 @@ CREATE TABLE IF NOT EXISTS ref_code (
   metadata JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for reference data
+  name_i18n JSONB,
+  description_i18n JSONB,
   name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
   PRIMARY KEY (id, domain)
 ) PARTITION BY LIST (domain);
@@ -321,7 +324,11 @@ CREATE TABLE IF NOT EXISTS ref_amenity (
   position INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  name_i18n JSONB
+  name_i18n JSONB,
+  -- I18n support for description
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 
 CREATE TABLE IF NOT EXISTS ref_sustainability_action_category (
@@ -333,7 +340,11 @@ CREATE TABLE IF NOT EXISTS ref_sustainability_action_category (
   position INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  name_i18n JSONB
+  name_i18n JSONB,
+  -- I18n support for description
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 
 CREATE TABLE IF NOT EXISTS ref_sustainability_action (
@@ -348,6 +359,8 @@ CREATE TABLE IF NOT EXISTS ref_sustainability_action (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   label_i18n JSONB,
   description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB,
   UNIQUE(category_id, code)
 );
 
@@ -362,7 +375,13 @@ CREATE TABLE IF NOT EXISTS ref_document (
   valid_from DATE,
   valid_to DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for document content
+  title_i18n JSONB,
+  issuer_i18n JSONB,
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 
 -- Link documents to a ref_code document_type when present
@@ -766,6 +785,19 @@ CREATE TABLE IF NOT EXISTS object_description (
 ALTER TABLE IF EXISTS object_description
   ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
 
+-- Add i18n JSONB columns for description translations
+-- These columns store translations in JSONB format: {"fr": "French text", "en": "English text", "es": "Spanish text"}
+-- Use api.i18n_pick() helper function to extract translations with fallback support
+-- Example: UPDATE object_description SET description_i18n = '{"fr": "Description en français", "en": "Description in English"}' WHERE id = 'desc-uuid';
+ALTER TABLE IF EXISTS object_description
+  ADD COLUMN IF NOT EXISTS description_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_chapo_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_mobile_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_edition_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_offre_hors_zone_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS sanitary_measures_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS extra JSONB;
+
 -- Backfill duplicates: keep most recent canonical row per object and attach others to the object itself
 -- (safe at this stage without needing object_org_link to exist yet)
 DO $$
@@ -810,6 +842,13 @@ CREATE TABLE IF NOT EXISTS object_place_description (
   extra JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for place descriptions
+  description_i18n JSONB,
+  description_chapo_i18n JSONB,
+  description_mobile_i18n JSONB,
+  description_edition_i18n JSONB,
+  description_offre_hors_zone_i18n JSONB,
+  sanitary_measures_i18n JSONB,
   CONSTRAINT chk_object_place_description_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners'))
 );
 CREATE TABLE IF NOT EXISTS object_private_description (
@@ -1284,7 +1323,11 @@ CREATE TABLE IF NOT EXISTS object_meeting_room (
   cap_classroom INTEGER CHECK (cap_classroom IS NULL OR cap_classroom >= 0),
   cap_boardroom INTEGER CHECK (cap_boardroom IS NULL OR cap_boardroom >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for meeting room names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 CREATE TABLE IF NOT EXISTS meeting_room_equipment (
   room_id UUID NOT NULL REFERENCES object_meeting_room(id) ON DELETE CASCADE,
@@ -1306,6 +1349,10 @@ CREATE TABLE IF NOT EXISTS opening_period (
   all_years BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for opening period names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB,
   CONSTRAINT chk_opening_period_dates CHECK (date_end IS NULL OR date_start IS NULL OR date_end >= date_start)
 );
 CREATE TABLE IF NOT EXISTS opening_schedule (
@@ -1315,7 +1362,12 @@ CREATE TABLE IF NOT EXISTS opening_schedule (
   name TEXT,
   note TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for schedule names and notes
+  name_i18n JSONB,
+  note_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 CREATE TABLE IF NOT EXISTS opening_time_period (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1438,7 +1490,12 @@ CREATE TABLE IF NOT EXISTS object_iti_stage (
   position INTEGER NOT NULL DEFAULT 0,
   geom GEOGRAPHY(POINT, 4326),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for stage names and descriptions
+  name_i18n JSONB,
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 
 CREATE TABLE IF NOT EXISTS object_iti_stage_media (
@@ -1458,7 +1515,11 @@ CREATE TABLE IF NOT EXISTS object_iti_section (
   position INTEGER NOT NULL DEFAULT 0,
   geom GEOGRAPHY(LINESTRING, 4326),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for section names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
 );
 
 CREATE TABLE IF NOT EXISTS object_iti_info (

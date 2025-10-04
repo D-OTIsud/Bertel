@@ -944,28 +944,6 @@
             </div>
           </div>
         </details>
-        <details id="traveler-tips">
-          <summary>1.5 Infos utiles pour un voyageur (par type)</summary>
-          <div class="content">
-            <ul>
-              <li><b>ORG</b> — <code>contacts</code> (tél, email, site), <code>opening_times</code>, <code>location</code>, <code>descriptions</code>, <code>media</code>.</li>
-              <li><b>HOT</b> — <code>prices</code> (gammes et périodes), <code>amenities</code> (wifi, parking, breakfast, pet_friendly…), <code>capacity</code> (bedrooms, max_capacity), <code>location</code>/<code>media</code>, <code>classifications</code> (étoiles, éco‑labels).</li>
-              <li><b>HPA</b> — <code>prices</code>, <code>amenities</code> (kitchen, laundry, parking, family), <code>capacity</code>, <code>location</code>/<code>media</code>, <code>descriptions</code>.</li>
-              <li><b>HLO</b> — <code>amenities</code> (pool, spa, kids_club), <code>prices</code>, <code>capacity</code>, <code>location</code>/<code>media</code>, <code>classifications</code>.</li>
-              <li><b>CAMP</b> — <code>capacity</code> (pitches, tents, campers), <code>amenities</code> (sanitaires, electric_charging, drinking_water), <code>prices</code>, <code>opening_times</code>, <code>location</code>/<code>media</code>.</li>
-              <li><b>RES</b> — <code>opening_times</code> (service midi/soir), <code>menus</code> (plats/prix), <code>cuisine_types</code>/<code>dietary_tags</code>/<code>allergens</code>, <code>location</code>/<code>media</code>, <code>contacts</code> (réservation).</li>
-              <li><b>FMA</b> — <code>fma</code> & <code>fma_occurrences</code> (dates/horaires), <code>location</code>, ticket/prix si applicable, <code>descriptions</code>/<code>media</code>.</li>
-              <li><b>ITI</b> — <code>itinerary</code> (distance_km, duration_hours, difficulty_level, elevation_gain, is_loop), <code>itinerary_details</code> (info, parking, equipment), <code>track</code> (KML/GPX), étapes/sections, <code>media</code>.</li>
-              <li><b>VIL</b> — <code>location</code>/<code>descriptions</code> (pourquoi visiter), <code>environment_tags</code> (plage, montagne, patrimoine), <code>media</code>, <code>relations</code> (POI proches).</li>
-              <li><b>PCU</b> — <code>location</code>, <code>descriptions</code> (expo/thème), <code>opening_times</code> si présent, <code>media</code>.</li>
-              <li><b>PNA</b> — <code>location</code> (départ/spot), <code>descriptions</code> (activité, consignes), <code>opening_times</code> si réglementé, <code>media</code>, <code>amenities</code> (parking, drinking_water) si présent.</li>
-              <li><b>ASC</b> — <code>contacts</code> (participation/adhésion), <code>descriptions</code>, <code>opening_times</code> (accueil), <code>media</code>, <code>location</code>.</li>
-              <li><b>COM</b> — <code>opening_times</code>, <code>amenities</code> (accessibility, parking), <code>classifications</code>/<code>tags</code> retail, <code>location</code>/<code>media</code>, <code>payment_methods</code>.</li>
-              <li><b>PSV</b> — <code>opening_times</code> (24/7 ou horaires), type (<code>public_toilets</code> / <code>drinking_water</code> / <code>electric_charging</code>), <code>location</code>, accessibilité, coût (si payant).</li>
-              <li><b>RVA</b> — <code>capacity</code> (vehicles, campers, pitches), <code>amenities</code> (electric_charging, drinking_water), <code>opening_times</code>/<code>stay_limits</code>, tarifs, <code>location</code>/<code>media</code>.</li>
-            </ul>
-          </div>
-        </details>
 
         <details open>
           <summary>1.2 Convention d’appel</summary>
@@ -1004,23 +982,23 @@
           <div class="content">
             <p>Les endpoints d’énumération et de recherche acceptent un ou plusieurs codes de type d’objet via <code>p_types</code> (ou <code>p_object_type</code> selon la fonction). Liste des codes disponibles :</p>
             <table>
-              <thead><tr><th>Code</th><th>Libellé</th><th>Usage principal</th><th>Blocs clés</th></tr></thead>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Usage principal</th><th>Informations clés pour le voyageur</th></tr></thead>
               <tbody>
-                <tr><td><code>ORG</code></td><td>Organisation</td><td>OTI/CRT, gestion et publication</td><td><code>contacts</code>, <code>media</code>, <code>classifications</code></td></tr>
-                <tr><td><code>HOT</code></td><td>Hôtel</td><td>Hébergement hôtelier</td><td><code>amenities</code>, <code>capacity</code>, <code>prices</code>, <code>meeting_rooms</code></td></tr>
-                <tr><td><code>HPA</code></td><td>Hébergement particulier</td><td>Gîte / meublé</td><td><code>amenities</code>, <code>capacity</code>, <code>classifications</code></td></tr>
-                <tr><td><code>HLO</code></td><td>Hébergement loisir</td><td>Résidences / villages</td><td><code>amenities</code>, <code>capacity</code>, <code>classifications</code></td></tr>
-                <tr><td><code>CAMP</code></td><td>Camping</td><td>Terrain de camping</td><td><code>capacity</code> (pitches, tents, campers), <code>amenities</code></td></tr>
-                <tr><td><code>RES</code></td><td>Restaurant</td><td>Restauration</td><td><code>menus</code>, <code>media</code>, <code>prices</code>, <code>amenities</code></td></tr>
-                <tr><td><code>FMA</code></td><td>Festival / Manifestation</td><td>Événements</td><td><code>fma</code>, <code>fma_occurrences</code>, <code>relations</code></td></tr>
-                <tr><td><code>ITI</code></td><td>Itinéraire</td><td>Parcours & tracés</td><td><code>itinerary</code>, <code>itinerary_details</code>, <code>track</code> (KML/GPX)</td></tr>
-                <tr><td><code>VIL</code></td><td>Village</td><td>Entité territoriale</td><td><code>environment_tags</code>, <code>relations</code></td></tr>
-                <tr><td><code>PCU</code></td><td>Point culture urbaine</td><td>Arts, expositions</td><td><code>location</code>, <code>descriptions</code>, <code>media</code></td></tr>
-                <tr><td><code>PNA</code></td><td>Point nature aventure</td><td>Randonnée, outdoor</td><td><code>location</code>, <code>descriptions</code>, <code>media</code></td></tr>
-                <tr><td><code>ASC</code></td><td>Association</td><td>Structure associative</td><td><code>contacts</code>, <code>media</code></td></tr>
-                <tr><td><code>COM</code></td><td>Commerce</td><td>Boutique / retail</td><td><code>opening_times</code>, <code>amenities</code>, <code>classifications</code></td></tr>
-                <tr><td><code>PSV</code></td><td>Service public</td><td>Toilettes publiques, eau potable, bornes EV</td><td><code>opening_times</code>, <code>amenities</code> (public_toilets, drinking_water, electric_charging)</td></tr>
-                <tr><td><code>RVA</code></td><td>Aire camping‑car</td><td>Aire de stationnement vans/camping‑cars</td><td><code>capacity</code> (vehicles, campers, pitches), <code>amenities</code></td></tr>
+                <tr><td><code>ORG</code></td><td>Organisation</td><td>OTI/CRT, gestion et publication</td><td><code>contacts</code> (tél, email, site), <code>opening_times</code>, <code>location</code>, <code>descriptions</code>, <code>media</code></td></tr>
+                <tr><td><code>HOT</code></td><td>Hôtel</td><td>Hébergement hôtelier</td><td><code>prices</code> (gammes/périodes), <code>amenities</code> (wifi, parking, breakfast), <code>capacity</code> (chambres), <code>classifications</code> (étoiles, éco-labels)</td></tr>
+                <tr><td><code>HPA</code></td><td>Hébergement particulier</td><td>Gîte / meublé</td><td><code>prices</code>, <code>amenities</code> (cuisine, lave-linge, parking), <code>capacity</code>, <code>classifications</code> (épis Gîtes de France)</td></tr>
+                <tr><td><code>HLO</code></td><td>Hébergement loisir</td><td>Résidences / villages</td><td><code>amenities</code> (piscine, spa, kids_club), <code>prices</code>, <code>capacity</code>, <code>classifications</code> (étoiles, labels)</td></tr>
+                <tr><td><code>CAMP</code></td><td>Camping</td><td>Terrain de camping</td><td><code>capacity</code> (emplacements, tentes, camping-cars), <code>amenities</code> (sanitaires, électricité, eau), <code>prices</code>, <code>opening_times</code></td></tr>
+                <tr><td><code>RES</code></td><td>Restaurant</td><td>Restauration</td><td><code>opening_times</code> (service midi/soir), <code>menus</code> (plats/prix), <code>cuisine_types</code>/<code>dietary_tags</code>/<code>allergens</code>, <code>contacts</code> (réservation)</td></tr>
+                <tr><td><code>FMA</code></td><td>Festival / Manifestation</td><td>Événements</td><td><code>fma</code> & <code>fma_occurrences</code> (dates/horaires), <code>location</code>, ticket/prix, <code>descriptions</code>/<code>media</code></td></tr>
+                <tr><td><code>ITI</code></td><td>Itinéraire</td><td>Parcours & tracés</td><td><code>itinerary</code> (distance, durée, difficulté, dénivelé), <code>itinerary_details</code> (info, parking, équipement), <code>track</code> (KML/GPX), étapes</td></tr>
+                <tr><td><code>VIL</code></td><td>Village</td><td>Entité territoriale</td><td><code>location</code>/<code>descriptions</code> (pourquoi visiter), <code>environment_tags</code> (plage, montagne, patrimoine), <code>relations</code> (POI proches)</td></tr>
+                <tr><td><code>PCU</code></td><td>Point culture urbaine</td><td>Arts, expositions</td><td><code>location</code>, <code>descriptions</code> (expo/thème), <code>opening_times</code>, <code>media</code></td></tr>
+                <tr><td><code>PNA</code></td><td>Point nature aventure</td><td>Randonnée, outdoor</td><td><code>location</code> (départ/spot), <code>descriptions</code> (activité, consignes), <code>opening_times</code>, <code>amenities</code> (parking, eau)</td></tr>
+                <tr><td><code>ASC</code></td><td>Association</td><td>Structure associative</td><td><code>contacts</code> (participation/adhésion), <code>descriptions</code>, <code>opening_times</code> (accueil), <code>location</code></td></tr>
+                <tr><td><code>COM</code></td><td>Commerce</td><td>Boutique / retail</td><td><code>opening_times</code>, <code>amenities</code> (accessibilité, parking), <code>classifications</code>/<code>tags</code> (retail), <code>payment_methods</code></td></tr>
+                <tr><td><code>PSV</code></td><td>Service public</td><td>Toilettes publiques, eau potable, bornes EV</td><td><code>opening_times</code> (24/7 ou horaires), type (<code>public_toilets</code>/<code>drinking_water</code>/<code>electric_charging</code>), accessibilité, coût</td></tr>
+                <tr><td><code>RVA</code></td><td>Aire camping‑car</td><td>Aire de stationnement vans/camping‑cars</td><td><code>capacity</code> (véhicules, camping-cars, emplacements), <code>amenities</code> (électricité, eau, vidange), <code>opening_times</code>/<code>stay_limits</code>, tarifs</td></tr>
               </tbody>
             </table>
             <p class="inline-help">Exemples : <code>"p_types": ["PSV"]</code> pour lister uniquement les services publics • <code>"p_types": ["RVA","CAMP"]</code> pour aires et campings.</p>

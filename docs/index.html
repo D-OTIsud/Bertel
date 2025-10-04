@@ -854,6 +854,34 @@
             </div>
           </div>
         </details>
+
+        <details open id="object-types-codes">
+          <summary>1.4 Codes de types d'objets (p_types / p_object_type)</summary>
+          <div class="content">
+            <p>Les endpoints d’énumération et de recherche acceptent un ou plusieurs codes de type d’objet via <code>p_types</code> (ou <code>p_object_type</code> selon la fonction). Liste des codes disponibles :</p>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Usage principal</th><th>Blocs clés</th></tr></thead>
+              <tbody>
+                <tr><td><code>ORG</code></td><td>Organisation</td><td>OTI/CRT, gestion et publication</td><td><code>contacts</code>, <code>media</code>, <code>classifications</code></td></tr>
+                <tr><td><code>HOT</code></td><td>Hôtel</td><td>Hébergement hôtelier</td><td><code>amenities</code>, <code>capacity</code>, <code>prices</code>, <code>meeting_rooms</code></td></tr>
+                <tr><td><code>HPA</code></td><td>Hébergement particulier</td><td>Gîte / meublé</td><td><code>amenities</code>, <code>capacity</code>, <code>classifications</code></td></tr>
+                <tr><td><code>HLO</code></td><td>Hébergement loisir</td><td>Résidences / villages</td><td><code>amenities</code>, <code>capacity</code>, <code>classifications</code></td></tr>
+                <tr><td><code>CAMP</code></td><td>Camping</td><td>Terrain de camping</td><td><code>capacity</code> (pitches, tents, campers), <code>amenities</code></td></tr>
+                <tr><td><code>RES</code></td><td>Restaurant</td><td>Restauration</td><td><code>menus</code>, <code>media</code>, <code>prices</code>, <code>amenities</code></td></tr>
+                <tr><td><code>FMA</code></td><td>Festival / Manifestation</td><td>Événements</td><td><code>fma</code>, <code>fma_occurrences</code>, <code>relations</code></td></tr>
+                <tr><td><code>ITI</code></td><td>Itinéraire</td><td>Parcours & tracés</td><td><code>itinerary</code>, <code>itinerary_details</code>, <code>track</code> (KML/GPX)</td></tr>
+                <tr><td><code>VIL</code></td><td>Village</td><td>Entité territoriale</td><td><code>environment_tags</code>, <code>relations</code></td></tr>
+                <tr><td><code>PCU</code></td><td>Point culture urbaine</td><td>Arts, expositions</td><td><code>media</code>, <code>amenities</code></td></tr>
+                <tr><td><code>PNA</code></td><td>Point nature aventure</td><td>Randonnée, outdoor</td><td><code>media</code>, <code>amenities</code></td></tr>
+                <tr><td><code>ASC</code></td><td>Association</td><td>Structure associative</td><td><code>contacts</code>, <code>media</code></td></tr>
+                <tr><td><code>COM</code></td><td>Commerce</td><td>Boutique / retail</td><td><code>opening_times</code>, <code>amenities</code>, <code>classifications</code></td></tr>
+                <tr><td><code>PSV</code></td><td>Service public</td><td>Toilettes publiques, eau potable, bornes EV</td><td><code>opening_times</code>, <code>amenities</code> (public_toilets, drinking_water, electric_charging)</td></tr>
+                <tr><td><code>RVA</code></td><td>Aire camping‑car</td><td>Aire de stationnement vans/camping‑cars</td><td><code>capacity</code> (vehicles, campers, pitches), <code>amenities</code></td></tr>
+              </tbody>
+            </table>
+            <p class="inline-help">Exemples : <code>"p_types": ["PSV"]</code> pour lister uniquement les services publics • <code>"p_types": ["RVA","CAMP"]</code> pour aires et campings.</p>
+          </div>
+        </details>
       </section>
 
       <!-- 2) Endpoints -->

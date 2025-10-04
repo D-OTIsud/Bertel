@@ -297,21 +297,30 @@ CREATE POLICY "Lecture restreinte identifiants externes" ON object_external_id F
     auth.role() IN ('service_role','admin')
 );
 
--- Descriptions publiques/privées
-CREATE POLICY IF NOT EXISTS "pub_descriptions_public" ON object_description
+-- Drop if exists then (re)create, as CREATE POLICY lacks IF NOT EXISTS in PG versions
+DO $$ BEGIN
+  BEGIN DROP POLICY IF EXISTS "pub_descriptions_public" ON object_description; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "ext_descriptions_org_actor" ON object_description; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "ext_private_descriptions_org_actor" ON object_private_description; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "ext_legal_org_actor" ON object_legal; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "ext_discounts_org_actor" ON object_discount; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "ext_group_policies_org_actor" ON object_group_policy; EXCEPTION WHEN others THEN NULL; END;
+END $$;
+
+CREATE POLICY "pub_descriptions_public" ON object_description
   FOR SELECT USING (visibility = 'public');
-CREATE POLICY IF NOT EXISTS "ext_descriptions_org_actor" ON object_description
+CREATE POLICY "ext_descriptions_org_actor" ON object_description
   FOR SELECT USING (api.can_read_extended(object_id));
 
-CREATE POLICY IF NOT EXISTS "ext_private_descriptions_org_actor" ON object_private_description
+CREATE POLICY "ext_private_descriptions_org_actor" ON object_private_description
   FOR SELECT USING (api.can_read_extended(object_id));
 
 -- Légal, réductions & politiques groupe: accès étendu uniquement
-CREATE POLICY IF NOT EXISTS "ext_legal_org_actor" ON object_legal
+CREATE POLICY "ext_legal_org_actor" ON object_legal
   FOR SELECT USING (api.can_read_extended(object_id));
-CREATE POLICY IF NOT EXISTS "ext_discounts_org_actor" ON object_discount
+CREATE POLICY "ext_discounts_org_actor" ON object_discount
   FOR SELECT USING (api.can_read_extended(object_id));
-CREATE POLICY IF NOT EXISTS "ext_group_policies_org_actor" ON object_group_policy
+CREATE POLICY "ext_group_policies_org_actor" ON object_group_policy
   FOR SELECT USING (api.can_read_extended(object_id));
 
 -- Écriture par propriétaire
@@ -319,9 +328,19 @@ CREATE POLICY "Écriture par propriétaire (object)" ON object
     FOR ALL USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by);
 
 -- Accès admin/service_role
+DO $$ BEGIN
+  BEGIN DROP POLICY IF EXISTS "Accès admin/service_role (object)" ON object; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "Accès admin/service_role (object_external_id)" ON object_external_id; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "Accès admin/service_role (object_sustainability_action)" ON object_sustainability_action; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "Accès admin/service_role (object_sustainability_action_label)" ON object_sustainability_action_label; EXCEPTION WHEN others THEN NULL; END;
+END $$;
+
 CREATE POLICY "Accès admin/service_role (object)" ON object
--- Accès admin/service_role aux identifiants externes
+  FOR ALL USING (auth.role() IN ('service_role','admin'));
+
 CREATE POLICY "Accès admin/service_role (object_external_id)" ON object_external_id
+  FOR ALL USING (auth.role() IN ('service_role','admin'));
+
 -- Accès admin/service_role aux actions DD et leurs labels
 CREATE POLICY "Accès admin/service_role (object_sustainability_action)" ON object_sustainability_action
     FOR ALL USING (
@@ -333,14 +352,6 @@ CREATE POLICY "Accès admin/service_role (object_sustainability_action)" ON obje
         )
     );
 CREATE POLICY "Accès admin/service_role (object_sustainability_action_label)" ON object_sustainability_action_label
-    FOR ALL USING (
-        auth.role() = 'service_role' OR 
-        auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
-    );
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR

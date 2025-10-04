@@ -1002,6 +1002,7 @@ const json = await res.json();</pre>
                 <tr><td><code>p_track_format</code></td><td><code>"none" | "kml" | "gpx"</code></td><td>❌</td><td><code>"none"</code></td><td></td></tr>
                 <tr><td><code>p_include_stages</code></td><td><code>boolean</code></td><td>❌</td><td><code>null</code></td><td>Si vous demandez un tracé KML/GPX, inclure les étapes ?</td></tr>
                 <tr><td><code>p_stage_color</code></td><td><code>string</code></td><td>❌</td><td><code>null</code></td><td>Couleur des étapes (KML uniquement) si <code>include_stages=true</code>.</td></tr>
+                <tr><td><code>p_omit_empty</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Supprimer les tableaux/objets vides du niveau supérieur (ex. <code>actors</code>, <code>legal_records</code>, <code>meeting_rooms</code>).</td></tr>
               </tbody>
             </table>
 
@@ -1040,6 +1041,35 @@ const json = await res.json();</pre>
     "p_track_format": "none"
   }'</pre>
             </div>
+
+            <h3>Mode de nettoyage (omit_empty)</h3>
+            <p>Le paramètre <code>p_omit_empty</code> permet de réduire la taille des réponses en supprimant automatiquement les blocs de données vides au niveau supérieur de chaque ressource.</p>
+            
+            <h4>Comment l'utiliser</h4>
+            <p>Passez <code>p_omit_empty: true</code> dans l'endpoint de pagination :</p>
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-omit-empty">Copier</button>
+<pre id="ex-omit-empty">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_page_size": 2,
+    "p_omit_empty": true
+  }'</pre>
+            </div>
+            
+            <p>Le paramètre est également préservé dans le curseur et propagé automatiquement aux appels suivants.</p>
+
+            <h4>Ce qui est supprimé</h4>
+            <p>Quand <code>omit_empty</code> est activé, les blocs suivants sont supprimés s'ils sont vides :</p>
+            <ul>
+              <li><code>actors[]</code> — Personnes liées à l'objet</li>
+              <li><code>legal_records[]</code> — Documents légaux</li>
+              <li><code>meeting_rooms[]</code> — Salles de réunion</li>
+              <li><code>fma[]</code> — Événements FMA</li>
+              <li><code>fma_occurrences[]</code> — Occurrences d'événements</li>
+            </ul>
+            
+            <p><strong>Note :</strong> Les blocs <code>opening_times</code> et <code>render</code> sont toujours conservés, même s'ils sont vides.</p>
           </div>
         </details>
 
@@ -1059,6 +1089,7 @@ const json = await res.json();</pre>
                 <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>1 à 200.</td></tr>
                 <tr><td><code>p_types / p_status / p_search</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2.</td></tr>
                 <tr><td><code>p_track_format / p_include_stages / p_stage_color</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2 (par défaut, pas de tracé).</td></tr>
+                <tr><td><code>p_omit_empty</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Supprimer les tableaux/objets vides du niveau supérieur (ex. <code>actors</code>, <code>legal_records</code>, <code>meeting_rooms</code>).</td></tr>
               </tbody>
             </table>
 
@@ -1099,6 +1130,7 @@ const json = await res.json();</pre>
                 <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Filtres riches (voir ci-dessous).</td></tr>
                 <tr><td><code>p_types / p_status / p_search</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2</td></tr>
                 <tr><td><code>p_track_format / p_include_stages / p_stage_color</code></td><td>—</td><td>❌</td><td>—</td><td>Comme §2.2</td></tr>
+                <tr><td><code>p_omit_empty</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Supprimer les tableaux/objets vides du niveau supérieur (ex. <code>actors</code>, <code>legal_records</code>, <code>meeting_rooms</code>).</td></tr>
               </tbody>
             </table>
 

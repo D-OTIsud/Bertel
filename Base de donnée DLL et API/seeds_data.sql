@@ -1382,7 +1382,7 @@ INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
 SELECT o.id, pm.id, NOW()
 FROM object o, ref_code_payment_method pm
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
-  AND pm.code IN ('card', 'cash', 'paypal')
+  AND pm.code IN ('carte_bleue', 'especes', 'paypal')
   AND NOT EXISTS (SELECT 1 FROM object_payment_method opm WHERE opm.object_id=o.id AND opm.payment_method_id=pm.id);
 
 -- Tags environnementaux
@@ -1390,7 +1390,7 @@ INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
 SELECT o.id, et.id, NOW()
 FROM object o, ref_code_environment_tag et
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
-  AND et.code IN ('mer', 'tropical', 'urbain')
+  AND et.code IN ('plage', 'lagon', 'ville')
   AND NOT EXISTS (SELECT 1 FROM object_environment_tag oet WHERE oet.object_id=o.id AND oet.environment_tag_id=et.id);
     
     -- Équipements
@@ -1398,7 +1398,7 @@ INSERT INTO object_amenity (object_id, amenity_id, created_at)
 SELECT o.id, a.id, NOW()
 FROM object o, ref_amenity a
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
-  AND a.code IN ('wifi', 'air_conditioning', 'parking', 'terrace', 'accessibility')
+  AND a.code IN ('wifi', 'air_conditioning', 'parking', 'common_terrace', 'wheelchair_access')
   AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
 
 -- Capacité
@@ -1556,7 +1556,7 @@ FROM object o, ref_sustainability_action sa
 JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
 WHERE o.object_type='ORG' AND o.region_code='TST' AND o.name='Comité Régional de Tourisme TEST'
   AND sac.code='energy'
-  AND sa.code='solar_panels'
+  AND sa.code='renewable_electricity'
   AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
 
 -- =====================================================
@@ -1648,7 +1648,7 @@ FROM object o, ref_sustainability_action sa
 JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
 WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
   AND sac.code='waste'
-  AND sa.code='recycling_program'
+  AND sa.code='sorting_points'
   AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
 
 -- =====================================================
@@ -1708,7 +1708,7 @@ FROM object o, ref_sustainability_action sa
 JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
   AND sac.code='waste'
-  AND sa.code='food_waste_reduction'
+  AND sa.code='composting'
   AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
 
 -- =====================================================
@@ -1772,7 +1772,7 @@ FROM object o, ref_sustainability_action sa
 JOIN ref_sustainability_action_category sac ON sac.id=sa.category_id
 WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Fermeture Saisonnière'
   AND sac.code='water'
-  AND sa.code='water_saving_devices'
+  AND sa.code='low_flow_devices'
   AND NOT EXISTS (SELECT 1 FROM object_sustainability_action osa WHERE osa.object_id=o.id AND osa.action_id=sa.id);
 
 -- Add sample media for menu items demonstration
@@ -2297,4 +2297,590 @@ WHERE c.code = v.cat_code
     SELECT 1 FROM ref_sustainability_action a
     WHERE a.category_id = c.id AND a.code = v.code
   );
+
+-- =====================================================
+-- 360° USE CASE COVERAGE ADDITIONS
+-- =====================================================
+
+-- Rôles d'association pour les itinéraires (points d'intérêt reliés)
+INSERT INTO ref_iti_assoc_role (code, name, description, position) VALUES
+('start_point','Point de départ','Point de départ officiel de l''itinéraire',1),
+('viewpoint','Point de vue','Panorama remarquable sur le parcours',2),
+('accommodation','Hébergement associé','Hébergement recommandé sur le parcours',3)
+ON CONFLICT (code) DO NOTHING;
+
+-- Communes associées aux objets stratégiques pour couverture géographique
+INSERT INTO object_zone (object_id, insee_commune, position)
+SELECT o.id, v.insee_commune, v.position
+FROM object o
+JOIN (VALUES
+  ('Office de Tourisme Intercommunal TEST','97422',1),
+  ('Comité Régional de Tourisme TEST','97411',1),
+  ('Hôtel Test Océan','97410',1),
+  ('Restaurant Test Océan','97410',2),
+  ('Restaurant Fermeture Saisonnière','97415',1)
+) AS v(name,insee_commune,position) ON v.name = o.name
+WHERE o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_zone oz
+    WHERE oz.object_id = o.id AND oz.insee_commune = v.insee_commune
+  );
+
+-- Places nommées pour illustrer la nouvelle table object_place
+INSERT INTO object_place (object_id, label, slug, is_primary, position, effective_from)
+SELECT o.id, v.label, v.slug, v.is_primary, v.position, CURRENT_DATE
+FROM object o
+JOIN (VALUES
+  ('Hôtel Test Océan','Front de mer de Saint-Pierre','front-mer-saint-pierre',TRUE,1),
+  ('Restaurant Test Océan','Marché forain de Saint-Pierre','marche-saint-pierre',FALSE,1),
+  ('Restaurant Fermeture Saisonnière','Rue du Lagon','rue-du-lagon',TRUE,1)
+) AS v(name,label,slug,is_primary,position) ON v.name = o.name
+WHERE o.region_code = 'TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_place op
+    WHERE op.object_id = o.id AND op.slug = v.slug
+  );
+
+-- Localisations détaillées liées aux places nouvellement créées
+INSERT INTO object_location (place_id, address1, postcode, city, latitude, longitude, is_main_location, position)
+SELECT op.id, v.address1, v.postcode, v.city, v.lat, v.lng, v.is_main, v.position
+FROM object_place op
+JOIN (
+  VALUES
+    ('front-mer-saint-pierre','3 Rue du Port', '97410','Saint-Pierre',-21.337500,55.478600,TRUE,1),
+    ('marche-saint-pierre','Boulevard du Front de Mer','97410','Saint-Pierre',-21.338900,55.475100,FALSE,2),
+    ('rue-du-lagon','12 Rue du Lagon','97434','Saint-Gilles-les-Bains',-21.049800,55.226400,TRUE,1)
+) AS v(slug,address1,postcode,city,lat,lng,is_main,position) ON op.slug = v.slug
+WHERE NOT EXISTS (
+  SELECT 1 FROM object_location ol WHERE ol.place_id = op.id
+);
+
+-- =====================================================
+-- ITINÉRAIRE DE TEST (OBJET ITI) + GÉODONNÉES COMPLÈTES
+-- =====================================================
+
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'ITI', 'Sentier Mafate Aventure', 'TST', 'published', NOW(), NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object WHERE object_type='ITI' AND region_code='TST' AND name='Sentier Mafate Aventure'
+);
+
+-- Description publique + éditoriale pour l''itinéraire
+INSERT INTO object_description (object_id, org_object_id, description, description_chapo, description_mobile, visibility, created_at, updated_at)
+SELECT iti.id, org.id,
+  'Itinéraire en boucle au cœur du cirque de Mafate mêlant panoramas et passages forestiers.',
+  'Boucle immersive dans Mafate',
+  'Randonnée sportive - 12,5 km - 800 m D+.',
+  'public', NOW(), NOW()
+FROM object iti
+JOIN object org ON org.object_type='ORG' AND org.region_code='TST' AND org.name='Office de Tourisme Intercommunal TEST'
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description od
+    WHERE od.object_id = iti.id AND od.org_object_id = org.id
+  );
+
+-- Note privée pour l''itinéraire
+INSERT INTO object_private_description (object_id, org_object_id, body, audience, language_id, created_at, updated_at)
+SELECT iti.id, org.id,
+  'Prévoir contrôle annuel du tracé suite aux éboulis saisonniers.',
+  'private', lang.id, NOW(), NOW()
+FROM object iti
+JOIN object org ON org.object_type='ORG' AND org.region_code='TST' AND org.name='Office de Tourisme Intercommunal TEST'
+JOIN ref_language lang ON lang.code='fr'
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_private_description opd
+    WHERE opd.object_id = iti.id AND opd.org_object_id = org.id
+  );
+
+-- Zone et localisation principale pour l''itinéraire
+INSERT INTO object_zone (object_id, insee_commune, position)
+SELECT iti.id, '97433', 1
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_zone oz WHERE oz.object_id = iti.id AND oz.insee_commune='97433'
+  );
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position)
+SELECT iti.id, 'Parking du Col des Bœufs', '97433', 'Salazie', -21.051200, 55.454800, TRUE, 1
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id = iti.id AND ol.is_main_location IS TRUE
+  );
+
+-- Média principal (photo) pour l''itinéraire
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT iti.id, mt.id, 'Crête de Mafate', 'https://images.example.com/iti/mafate-panorama.jpg', 'photo', TRUE, TRUE, 1, NOW(), NOW()
+FROM object iti
+JOIN ref_code_media_type mt ON mt.code='photo'
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id = iti.id AND m.is_main IS TRUE
+  );
+
+-- Modèle itinéraire (distance, durée, difficulté + géométrie)
+INSERT INTO object_iti (object_id, distance_km, duration_hours, difficulty_level, elevation_gain, is_loop, geom, created_at, updated_at)
+SELECT iti.id, 12.5, 5.5, 3, 800, TRUE,
+       ST_GeogFromText('LINESTRING(55.4548 -21.0512, 55.4620 -21.0650, 55.4705 -21.0550, 55.4548 -21.0512)'),
+       NOW(), NOW()
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti oi WHERE oi.object_id = iti.id
+  );
+
+-- Pratiques liées (randonnée & trail)
+INSERT INTO object_iti_practice (object_id, practice_id, created_at, updated_at)
+SELECT iti.id, rp.id, NOW(), NOW()
+FROM object iti
+JOIN ref_code_iti_practice rp ON rp.code = ANY(ARRAY['randonnee_pedestre','trail'])
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_practice oip WHERE oip.object_id = iti.id AND oip.practice_id = rp.id
+  );
+
+-- Objets associés (hébergement & restaurant sur le parcours)
+INSERT INTO object_iti_associated_object (object_id, associated_object_id, role_id, note, created_at, updated_at)
+SELECT iti.id, target.id, role.id, v.note, NOW(), NOW()
+FROM object iti
+JOIN object target ON target.name = v.target_name AND target.region_code='TST'
+JOIN ref_iti_assoc_role role ON role.code = v.role_code
+JOIN (VALUES
+  ('Hôtel Test Océan','accommodation','Hébergement étape conseillé'),
+  ('Restaurant Test Océan','viewpoint','Pause gourmande et vue sur le littoral')
+) AS v(target_name, role_code, note) ON TRUE
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_associated_object a
+    WHERE a.object_id = iti.id AND a.associated_object_id = target.id AND a.role_id = role.id
+  );
+
+-- Étapes avec coordonnées ponctuelles
+INSERT INTO object_iti_stage (object_id, name, description, position, geom, created_at, updated_at)
+SELECT iti.id, v.name, v.description, v.position, ST_GeogFromText(v.wkt), NOW(), NOW()
+FROM object iti
+JOIN (
+  VALUES
+    ('Belvédère du col','Vue panoramique sur le cirque',1,'POINT(55.4548 -21.0512)'),
+    ('Ilet de La Nouvelle','Halte ravitaillement',2,'POINT(55.4705 -21.0550)')
+) AS v(name,description,position,wkt) ON TRUE
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_stage st WHERE st.object_id = iti.id AND st.name = v.name
+  );
+
+-- Médias associés aux étapes (réutilise la photo principale pour la première étape)
+INSERT INTO object_iti_stage_media (stage_id, media_id, position, created_at, updated_at)
+SELECT st.id, m.id, 1, NOW(), NOW()
+FROM object_iti_stage st
+JOIN object iti ON iti.id = st.object_id
+JOIN media m ON m.object_id = iti.id AND m.is_main IS TRUE
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND st.position = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_stage_media sm WHERE sm.stage_id = st.id AND sm.media_id = m.id
+  );
+
+-- Sections linéaires détaillées
+INSERT INTO object_iti_section (parent_object_id, name, position, geom, created_at, updated_at)
+SELECT iti.id, v.name, v.position, ST_GeogFromText(v.wkt), NOW(), NOW()
+FROM object iti
+JOIN (
+  VALUES
+    ('Ascension vers la crête',1,'LINESTRING(55.4548 -21.0512, 55.4620 -21.0650)'),
+    ('Descente vers La Nouvelle',2,'LINESTRING(55.4620 -21.0650, 55.4705 -21.0550)')
+) AS v(name,position,wkt) ON TRUE
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_section sec WHERE sec.parent_object_id = iti.id AND sec.name = v.name
+  );
+
+-- Informations additionnelles avec contenu multilingue
+INSERT INTO object_iti_info (object_id, access, ambiance, recommended_parking, required_equipment, info_places, is_child_friendly,
+                             access_i18n, ambiance_i18n, recommended_parking_i18n, required_equipment_i18n, info_places_i18n,
+                             created_at, updated_at)
+SELECT iti.id,
+  'Accès depuis le parking du Col des Bœufs (navette possible).',
+  'Ambiance montagne sauvage, passages en forêt de cryptomerias.',
+  'Parking surveillé du Col des Bœufs.',
+  'Chaussures de randonnée, eau (3L), coupe-vent.',
+  'Points d''eau à La Nouvelle, gîtes et snacks.',
+  FALSE,
+  jsonb_build_object('en','Access from Col des Bœufs car park (shuttle available).'),
+  jsonb_build_object('en','Wild mountain atmosphere with forest sections.'),
+  jsonb_build_object('en','Secure parking at Col des Bœufs.'),
+  jsonb_build_object('en','Hiking shoes, 3L water, windbreaker.'),
+  jsonb_build_object('en','Water refill and food at La Nouvelle.'),
+  NOW(), NOW()
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_info info WHERE info.object_id = iti.id
+  );
+
+-- Profil altimétrique simplifié
+INSERT INTO object_iti_profile (object_id, position_m, elevation_m, created_at, updated_at)
+SELECT iti.id, v.position_m, v.elevation_m, NOW(), NOW()
+FROM object iti
+JOIN (VALUES (0::numeric,1250::numeric), (6200, 1750), (12500, 1250)) AS v(position_m,elevation_m) ON TRUE
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_profile prof WHERE prof.object_id = iti.id AND prof.position_m = v.position_m
+  );
+
+-- Langues supportées sur l''itinéraire
+INSERT INTO object_language (object_id, language_id, created_at)
+SELECT iti.id, lang.id, NOW()
+FROM object iti
+JOIN ref_language lang ON lang.code IN ('fr','en')
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_language ol WHERE ol.object_id = iti.id AND ol.language_id = lang.id
+  );
+
+-- Environnement (parc national et montagne)
+INSERT INTO object_environment_tag (object_id, environment_tag_id, created_at)
+SELECT iti.id, tag.id, NOW()
+FROM object iti
+JOIN ref_code_environment_tag tag ON tag.code IN ('parc_national','montagne')
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_environment_tag et WHERE et.object_id = iti.id AND et.environment_tag_id = tag.id
+  );
+
+-- Origine & identifiant externe
+INSERT INTO object_origin (object_id, source, provider, import_reference, created_at)
+SELECT iti.id, 'datahub', 'IGN Réunion', 'DATAHUB-ITI-974', NOW()
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_origin oo WHERE oo.object_id = iti.id AND oo.source='datahub'
+  );
+
+INSERT INTO object_external_id (object_id, namespace, external_id, created_at)
+SELECT iti.id, 'APIDATA', 'ITI-974-MAFATE', NOW()
+FROM object iti
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_external_id oe WHERE oe.object_id = iti.id AND oe.namespace='APIDATA'
+  );
+
+-- Traduction i18n pour le chapo
+INSERT INTO i18n_translation (target_table, target_pk, target_column, language_id, value_text, created_at, updated_at)
+SELECT 'object_description', od.id::text, 'description_chapo', lang.id, 'Immersive Mafate loop hike', NOW(), NOW()
+FROM object_description od
+JOIN object iti ON iti.id = od.object_id AND iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+JOIN ref_language lang ON lang.code='en'
+WHERE NOT EXISTS (
+  SELECT 1 FROM i18n_translation t
+  WHERE t.target_table='object_description' AND t.target_pk = od.id::text AND t.target_column='description_chapo' AND t.language_id=lang.id
+);
+
+-- =====================================================
+-- ÉVÉNEMENT CULTUREL (OBJET FMA) AVEC OCCURRENCES
+-- =====================================================
+
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'FMA', 'Festival Nuit Créole', 'TST', 'published', NOW(), NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object WHERE object_type='FMA' AND region_code='TST' AND name='Festival Nuit Créole'
+);
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position)
+SELECT fma.id, 'Place du Barachois', '97400', 'Saint-Denis', -20.878200, 55.450900, TRUE, 1
+FROM object fma
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id = fma.id AND ol.is_main_location IS TRUE
+  );
+
+INSERT INTO object_fma (object_id, event_start_date, event_end_date, event_start_time, event_end_time, is_recurring, recurrence_pattern, created_at, updated_at)
+SELECT fma.id, DATE '2025-12-05', DATE '2025-12-07', TIME '18:00', TIME '02:00', TRUE, 'FREQ=YEARLY;BYMONTH=12;BYDAY=FR,SA', NOW(), NOW()
+FROM object fma
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_fma ofma WHERE ofma.object_id = fma.id
+  );
+
+INSERT INTO object_fma_occurrence (object_id, start_at, end_at, state, note, created_at, updated_at)
+SELECT fma.id, TIMESTAMPTZ '2025-12-05 18:00:00+04', TIMESTAMPTZ '2025-12-06 02:00:00+04', 'scheduled', 'Soirée d''ouverture avec artistes locaux', NOW(), NOW()
+FROM object fma
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_fma_occurrence occ WHERE occ.object_id = fma.id AND occ.start_at = TIMESTAMPTZ '2025-12-05 18:00:00+04'
+  );
+
+INSERT INTO object_fma_occurrence (object_id, start_at, end_at, state, note, created_at, updated_at)
+SELECT fma.id, TIMESTAMPTZ '2025-12-06 18:00:00+04', TIMESTAMPTZ '2025-12-07 02:00:00+04', 'scheduled', 'Nuit electro tropicale', NOW(), NOW()
+FROM object fma
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_fma_occurrence occ WHERE occ.object_id = fma.id AND occ.start_at = TIMESTAMPTZ '2025-12-06 18:00:00+04'
+  );
+
+-- Relations entre événement et partenaires
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, distance_m, note, position, created_at, updated_at)
+SELECT fma.id, org.id, rt.id, NULL, 'Organisation par le CRT', 1, NOW(), NOW()
+FROM object fma
+JOIN object org ON org.object_type='ORG' AND org.region_code='TST' AND org.name='Comité Régional de Tourisme TEST'
+JOIN ref_object_relation_type rt ON rt.code='managed_by'
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation rel WHERE rel.source_object_id=fma.id AND rel.target_object_id=org.id AND rel.relation_type_id=rt.id
+  );
+
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, distance_m, note, position, created_at, updated_at)
+SELECT fma.id, res.id, rt.id, 500.0, 'Restaurant partenaire pour les artistes', 2, NOW(), NOW()
+FROM object fma
+JOIN object res ON res.object_type='RES' AND res.region_code='TST' AND res.name='Restaurant Test Océan'
+JOIN ref_object_relation_type rt ON rt.code='partner_of'
+WHERE fma.object_type='FMA' AND fma.region_code='TST' AND fma.name='Festival Nuit Créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation rel WHERE rel.source_object_id=fma.id AND rel.target_object_id=res.id AND rel.relation_type_id=rt.id
+  );
+
+-- =====================================================
+-- MENUS : ALLERGÈNES / RÉGIMES / CUISINES POUR CHAQUE PLAT
+-- =====================================================
+
+INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id, created_at, updated_at)
+SELECT mi.id, dt.id, NOW(), NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id AND res.object_type='RES' AND res.region_code='TST' AND res.name='Restaurant Test Océan'
+JOIN ref_code_dietary_tag dt ON dt.code IN (CASE mi.name WHEN 'Salade créole' THEN 'vegetarian' ELSE 'pescatarian' END)
+WHERE NOT EXISTS (
+  SELECT 1 FROM object_menu_item_dietary_tag link
+  WHERE link.menu_item_id = mi.id AND link.dietary_tag_id = dt.id
+);
+
+INSERT INTO object_menu_item_allergen (menu_item_id, allergen_id, created_at, updated_at)
+SELECT mi.id, al.id, NOW(), NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id AND res.object_type='RES' AND res.region_code='TST' AND res.name='Restaurant Test Océan'
+JOIN ref_code_allergen al ON al.code IN (
+  CASE mi.name
+    WHEN 'Curry de poisson' THEN 'fish'
+    WHEN 'Salade créole' THEN 'nuts'
+    ELSE 'sulphites'
+  END
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM object_menu_item_allergen link
+  WHERE link.menu_item_id = mi.id AND link.allergen_id = al.id
+);
+
+INSERT INTO object_menu_item_cuisine_type (menu_item_id, cuisine_type_id, created_at, updated_at)
+SELECT mi.id, ct.id, NOW(), NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id AND res.object_type='RES' AND res.region_code='TST' AND res.name='Restaurant Test Océan'
+JOIN ref_code_cuisine_type ct ON ct.code = 'creole'
+WHERE NOT EXISTS (
+  SELECT 1 FROM object_menu_item_cuisine_type link
+  WHERE link.menu_item_id = mi.id AND link.cuisine_type_id = ct.id
+);
+
+INSERT INTO object_menu_item_media (menu_item_id, media_id, position, created_at, updated_at)
+SELECT mi.id, m.id, 1, NOW(), NOW()
+FROM object_menu_item mi
+JOIN object_menu om ON om.id = mi.menu_id
+JOIN object res ON res.id = om.object_id AND res.object_type='RES' AND res.region_code='TST' AND res.name='Restaurant Test Océan'
+JOIN media m ON m.object_id = res.id AND m.title LIKE mi.name || '%'
+WHERE NOT EXISTS (
+  SELECT 1 FROM object_menu_item_media link
+  WHERE link.menu_item_id = mi.id AND link.media_id = m.id
+);
+
+-- =====================================================
+-- POLITIQUES ANIMAUX & LABELS SUSTAINABILITY
+-- =====================================================
+
+INSERT INTO object_pet_policy (object_id, accepted, conditions, created_at, updated_at)
+SELECT h.id, TRUE, 'Animaux de moins de 10kg acceptés sur demande (supplément 15€).', NOW(), NOW()
+FROM object h
+WHERE h.object_type='HOT' AND h.region_code='TST' AND h.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_pet_policy pp WHERE pp.object_id = h.id
+  );
+
+INSERT INTO object_pet_policy (object_id, accepted, conditions, created_at, updated_at)
+SELECT r.id, FALSE, 'Animaux non autorisés pour raisons d''hygiène.', NOW(), NOW()
+FROM object r
+WHERE r.object_type='RES' AND r.region_code='TST' AND r.name='Restaurant Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_pet_policy pp WHERE pp.object_id = r.id
+  );
+
+-- Lier une action durable à un label
+INSERT INTO object_sustainability_action_label (object_sustainability_action_id, object_classification_id)
+SELECT osa.id, oc.id
+FROM object_sustainability_action osa
+JOIN object_classification oc ON oc.object_id = osa.object_id
+WHERE oc.status IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM object_sustainability_action_label l
+    WHERE l.object_sustainability_action_id = osa.id AND l.object_classification_id = oc.id
+  );
+
+-- =====================================================
+-- CRM : INTERACTIONS, TÂCHES, CONSENTEMENTS
+-- =====================================================
+
+-- Création d'un acteur "Guide local" si absent
+INSERT INTO actor (id, display_name, first_name, last_name, created_at, updated_at)
+SELECT gen_random_uuid(), 'Léa GUIDET', 'Léa', 'GUIDET', NOW(), NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM actor WHERE display_name='Léa GUIDET'
+);
+
+INSERT INTO actor_channel (actor_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT a.id, ck.id, 'lea.guidet@example.com', TRUE, 1, NOW(), NOW()
+FROM actor a
+JOIN ref_code_contact_kind ck ON ck.code='email'
+WHERE a.display_name='Léa GUIDET'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_channel ac WHERE ac.actor_id=a.id AND ac.kind_id=ck.id
+  );
+
+-- Interaction CRM liée à l'itinéraire
+INSERT INTO crm_interaction (object_id, actor_id, interaction_type, direction, status, body, occurred_at, demand_topic_id, demand_subtopic_id, request_mood_id, response_mood_id, created_at, updated_at)
+SELECT iti.id, a.id, 'call', 'inbound', 'done',
+  'Demande d''information sur l''état du sentier et disponibilité des guides.',
+  NOW() - INTERVAL '2 days',
+  topic.id, subtopic.id, mood_req.id, mood_resp.id, NOW(), NOW()
+FROM object iti
+JOIN actor a ON a.display_name='Léa GUIDET'
+JOIN ref_code_demand_topic topic ON topic.code='information'
+JOIN ref_code_demand_subtopic subtopic ON subtopic.code='information_activites'
+LEFT JOIN ref_code_mood mood_req ON mood_req.code='aventure'
+LEFT JOIN ref_code_mood mood_resp ON mood_resp.code='detente'
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM crm_interaction ci WHERE ci.object_id=iti.id AND ci.actor_id=a.id
+  );
+
+-- Tâche CRM issue de l'interaction
+INSERT INTO crm_task (object_id, actor_id, title, description, status, priority, due_at, related_interaction_id, created_at, updated_at)
+SELECT iti.id, a.id, 'Envoyer fiche sécurité', 'Envoyer la fiche de sécurité au guide avant la prochaine sortie.', 'in_progress', 'high', NOW() + INTERVAL '3 days', ci.id, NOW(), NOW()
+FROM object iti
+JOIN actor a ON a.display_name='Léa GUIDET'
+JOIN crm_interaction ci ON ci.object_id = iti.id AND ci.actor_id = a.id
+WHERE iti.object_type='ITI' AND iti.region_code='TST' AND iti.name='Sentier Mafate Aventure'
+  AND NOT EXISTS (
+    SELECT 1 FROM crm_task ct WHERE ct.object_id=iti.id AND ct.actor_id=a.id AND ct.title='Envoyer fiche sécurité'
+  );
+
+-- Consentement communication email pour le guide
+INSERT INTO actor_consent (actor_id, channel, consent_given, timestamp, source)
+SELECT a.id, 'email', TRUE, NOW() - INTERVAL '1 day', 'formulaire kiosque'
+FROM actor a
+WHERE a.display_name='Léa GUIDET'
+  AND NOT EXISTS (
+    SELECT 1 FROM actor_consent ac WHERE ac.actor_id=a.id AND ac.channel='email'
+  );
+
+-- =====================================================
+-- VERSIONNING D'OBJET POUR TESTER L'HISTORIQUE
+-- =====================================================
+
+INSERT INTO object_version (object_id, version_start, version_end, data)
+SELECT o.id, NOW() - INTERVAL '30 days', NOW() - INTERVAL '20 days', jsonb_build_object('status','published','note','Version initiale importée')
+FROM object o
+WHERE o.object_type IN ('HOT','RES') AND o.region_code='TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_version ov WHERE ov.object_id = o.id
+  );
+
+INSERT INTO object_version (object_id, version_start, data)
+SELECT o.id, NOW() - INTERVAL '10 days', jsonb_build_object('status','published','note','Mise à jour fiches média')
+FROM object o
+WHERE o.object_type IN ('HOT','RES') AND o.region_code='TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_version ov WHERE ov.object_id = o.id AND ov.version_end IS NULL
+  );
+
+-- =====================================================
+-- RÈGLES TARIFAIRES SUPPLÉMENTAIRES POUR LE CAMPING & HPA DE TEST
+-- (création d'objets minimaux pour couvrir les types restants)
+-- =====================================================
+
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT v.object_type, v.name, 'TST', 'published', NOW(), NOW()
+FROM (VALUES
+  ('CAMP','Camping des Plaines'),
+  ('HPA','Aire de camping-car des Plaines'),
+  ('PCU','Parcours culturel Street Art'),
+  ('PNA','Point Nature Cascade Langevin'),
+  ('ASC','Activité Canyoning Langevin'),
+  ('COM','Boutique Saveurs Créoles'),
+  ('HLO','Location Bungalow Vanille'),
+  ('LOI','Loisir Escape Game Urbain'),
+  ('VIL','Village Patrimonial Piton')
+) AS v(object_type,name)
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type = v.object_type AND o.region_code='TST' AND o.name = v.name
+);
+
+-- Donner une localisation minimale aux nouveaux objets
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position)
+SELECT o.id, 'Adresse test ' || o.object_type, '97450', 'Saint-Louis', -21.2850 + (ROW_NUMBER() OVER (ORDER BY o.id))*0.001, 55.4140, TRUE, 1
+FROM object o
+WHERE o.region_code='TST' AND o.object_type IN ('CAMP','HPA','PCU','PNA','ASC','COM','HLO','LOI','VIL')
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE
+  );
+
+-- Associer les nouveaux objets à l'organisation OTI TEST
+INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, created_at, updated_at)
+SELECT child.id, org.id, role.id, TRUE, NOW(), NOW()
+FROM object child
+JOIN object org ON org.object_type='ORG' AND org.region_code='TST' AND org.name='Office de Tourisme Intercommunal TEST'
+JOIN ref_org_role role ON role.code='manager'
+WHERE child.region_code='TST' AND child.object_type IN ('CAMP','HPA','PCU','PNA','ASC','COM','HLO','LOI','VIL')
+  AND NOT EXISTS (
+    SELECT 1 FROM object_org_link link WHERE link.object_id=child.id AND link.org_object_id=org.id
+  );
+
+-- Exemple de prix pour camping et location meublée
+INSERT INTO object_price (object_id, kind_id, unit_id, amount, currency, valid_from, valid_to, conditions, created_at, updated_at)
+SELECT camp.id, kind.id, unit.id, 25.00, 'EUR', CURRENT_DATE, CURRENT_DATE + INTERVAL '6 months', 'Emplacement tente - basse saison', NOW(), NOW()
+FROM object camp
+JOIN ref_code_price_kind kind ON kind.code='personne_handicapee'
+JOIN ref_code_price_unit unit ON unit.code='par_nuit'
+WHERE camp.object_type='CAMP' AND camp.region_code='TST' AND camp.name='Camping des Plaines'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_price p WHERE p.object_id=camp.id
+  );
+
+INSERT INTO object_price (object_id, kind_id, unit_id, amount, currency, valid_from, valid_to, conditions, created_at, updated_at)
+SELECT hlo.id, kind.id, unit.id, 480.00, 'EUR', CURRENT_DATE, CURRENT_DATE + INTERVAL '6 months', 'Location semaine basse saison', NOW(), NOW()
+FROM object hlo
+JOIN ref_code_price_kind kind ON kind.code='famille'
+JOIN ref_code_price_unit unit ON unit.code='par_semaine'
+WHERE hlo.object_type='HLO' AND hlo.region_code='TST' AND hlo.name='Location Bungalow Vanille'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_price p WHERE p.object_id=hlo.id
+  );
+
+-- Contacts rapides pour couvrir tous les canaux principaux
+INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position, created_at, updated_at)
+SELECT child.id, ck.id, v.value, TRUE, v.position, NOW(), NOW()
+FROM object child
+JOIN ref_code_contact_kind ck ON ck.code = v.kind
+JOIN (
+  VALUES ('CAMP','phone','0262 10 10 10',1),
+         ('CAMP','email','contact@camping-des-plaines.re',2),
+         ('COM','website','https://boutique-saveurs-creoles.re',1),
+         ('ASC','mobile','0692 00 11 22',1)
+) AS v(object_type,kind,value,position) ON child.object_type = v.object_type
+WHERE child.region_code='TST'
+  AND NOT EXISTS (
+    SELECT 1 FROM contact_channel cc WHERE cc.object_id=child.id AND cc.kind_id=ck.id
+  );
+
 

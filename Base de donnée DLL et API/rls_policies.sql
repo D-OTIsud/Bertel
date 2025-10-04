@@ -35,7 +35,7 @@ ALTER TABLE ref_iti_assoc_role ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_associated_object ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_info ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_profile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE object_structure ENABLE ROW LEVEL SECURITY;
+-- object_structure table does not exist in current schema
 ALTER TABLE ref_org_role ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_org_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_zone ENABLE ROW LEVEL SECURITY;

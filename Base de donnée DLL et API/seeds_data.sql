@@ -4675,6 +4675,252 @@ WHERE o.object_type = 'ITI' AND o.region_code = 'TST' AND o.name = 'Randonnée P
   );
 
 -- =====================================================
+-- ITI – elevation profile and info (exposed in API) 
+-- =====================================================
+-- Basic profile points (m position vs elevation)
+INSERT INTO object_iti_profile (object_id, position_m, elevation_m, created_at, updated_at)
+SELECT o.id, v.pos, v.elev, NOW(), NOW()
+FROM object o
+JOIN (
+  VALUES (0.0,   1200.0),
+         (1000.0,1300.0),
+         (3000.0,1550.0),
+         (6000.0,1850.0),
+         (9000.0,2300.0),
+         (12500.0,2500.0)
+) AS v(pos, elev) ON TRUE
+WHERE o.object_type='ITI' AND o.region_code='TST' AND o.name='Randonnée Piton des Neiges'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_profile p WHERE p.object_id=o.id
+  );
+
+-- Info texts
+INSERT INTO object_iti_info (object_id, access, ambiance, recommended_parking, required_equipment, info_places, is_child_friendly, created_at, updated_at)
+SELECT o.id,
+  'Accès par la route de Cilaos, départ au parking officiel indiqué.',
+  'Ambiance haute montagne, sentiers pierreux et vues dégagées.',
+  'Parking de départ à Cilaos, places limitées en haute saison.',
+  'Chaussures de randonnée, vêtements chauds, eau et lampe frontale.',
+  'Balisage standard, certaines portions techniques.',
+  FALSE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='ITI' AND o.region_code='TST' AND o.name='Randonnée Piton des Neiges'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_iti_info i WHERE i.object_id=o.id
+  );
+
+-- =====================================================
+-- HOT – hotel stars classification and extra media
+-- =====================================================
+-- 4 stars
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND cs.code='hot_stars' AND cv.scheme_id=cs.id AND cv.code='4'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id
+  );
+
+-- Add brochure and video
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Brochure Hôtel Test Océan', 'https://docs.example.com/hotels/test-ocean/brochure.pdf', 'brochure', FALSE, TRUE, 10, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code='brochure_pdf'
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id=o.id AND m.media_type_id=mt.id
+  );
+
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Vidéo présentation Hôtel Test Océan', 'https://videos.example.com/hotels/test-ocean/presentation.mp4', 'video', FALSE, TRUE, 11, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code='video'
+WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id=o.id AND m.media_type_id=mt.id
+  );
+
+-- =====================================================
+-- RES – dietary tags and allergens for menu items
+-- =====================================================
+-- Curry de poisson: seafood, contains fish
+INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id)
+SELECT mi.id, dt.id
+FROM object_menu_item mi
+JOIN object_menu m ON m.id = mi.menu_id
+JOIN object o ON o.id = m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+JOIN ref_code_dietary_tag dt ON dt.code IN ('seafood')
+WHERE mi.name='Curry de poisson'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_menu_item_dietary_tag x WHERE x.menu_item_id=mi.id AND x.dietary_tag_id=dt.id
+  );
+
+INSERT INTO object_menu_item_allergen (menu_item_id, allergen_id)
+SELECT mi.id, a.id
+FROM object_menu_item mi
+JOIN object_menu m ON m.id = mi.menu_id
+JOIN object o ON o.id = m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+JOIN ref_code_allergen a ON a.code IN ('fish')
+WHERE mi.name='Curry de poisson'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_menu_item_allergen x WHERE x.menu_item_id=mi.id AND x.allergen_id=a.id
+  );
+
+-- Salade créole: vegetarian
+INSERT INTO object_menu_item_dietary_tag (menu_item_id, dietary_tag_id)
+SELECT mi.id, dt.id
+FROM object_menu_item mi
+JOIN object_menu m ON m.id = mi.menu_id
+JOIN object o ON o.id = m.object_id AND o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Test Océan'
+JOIN ref_code_dietary_tag dt ON dt.code IN ('vegetarian')
+WHERE mi.name='Salade créole'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_menu_item_dietary_tag x WHERE x.menu_item_id=mi.id AND x.dietary_tag_id=dt.id
+  );
+
+-- =====================================================
+-- Additional legal records for COM/HPA/HLO/CAMP
+-- =====================================================
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, valid_from, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','COM-TST-0001'), 'forever', 'active', CURRENT_DATE, NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code='siret'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (SELECT 1 FROM object_legal x WHERE x.object_id=o.id AND x.type_id=t.id);
+
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, valid_from, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','HPA-TST-0001'), 'forever', 'active', CURRENT_DATE, NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code='siret'
+WHERE o.object_type='HPA' AND o.region_code='TST' AND o.name='Gîte Particulier Test'
+  AND NOT EXISTS (SELECT 1 FROM object_legal x WHERE x.object_id=o.id AND x.type_id=t.id);
+
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, valid_from, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','HLO-TST-0001'), 'forever', 'active', CURRENT_DATE, NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code='siret'
+WHERE o.object_type='HLO' AND o.region_code='TST' AND o.name='Résidence Loisir Test'
+  AND NOT EXISTS (SELECT 1 FROM object_legal x WHERE x.object_id=o.id AND x.type_id=t.id);
+
+INSERT INTO object_legal (object_id, type_id, value, validity_mode, status, valid_from, created_at, updated_at)
+SELECT o.id, t.id, jsonb_build_object('number','CAMP-TST-0001'), 'forever', 'active', CURRENT_DATE, NOW(), NOW()
+FROM object o JOIN ref_legal_type t ON t.code='siret'
+WHERE o.object_type='CAMP' AND o.region_code='TST' AND o.name='Camping Nature Test'
+  AND NOT EXISTS (SELECT 1 FROM object_legal x WHERE x.object_id=o.id AND x.type_id=t.id);
+
+-- =====================================================
+-- Payments & languages for additional objects
+-- =====================================================
+INSERT INTO object_language (object_id, language_id, created_at)
+SELECT o.id, l.id, NOW()
+FROM object o JOIN ref_language l ON l.code IN ('fr','en')
+WHERE o.object_type IN ('RES','CAMP','HPA','HLO') AND o.region_code='TST'
+  AND NOT EXISTS (SELECT 1 FROM object_language ol WHERE ol.object_id=o.id AND ol.language_id=l.id);
+
+INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
+SELECT o.id, pm.id, NOW()
+FROM object o JOIN ref_code_payment_method pm ON pm.code IN ('visa','mastercard','carte_bleue','paypal')
+WHERE o.object_type IN ('RES','CAMP','HPA','HLO') AND o.region_code='TST'
+  AND NOT EXISTS (SELECT 1 FROM object_payment_method x WHERE x.object_id=o.id AND x.payment_method_id=pm.id);
+
+-- =====================================================
+-- Relations: COM/PCU/CAMP part_of VIL
+-- =====================================================
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, created_at)
+SELECT c.id, v.id, rt.id, NOW()
+FROM object c, object v, ref_object_relation_type rt
+WHERE c.object_type='COM' AND c.region_code='TST' AND c.name='Boutique Artisanale Test'
+  AND v.object_type='VIL' AND v.region_code='TST' AND v.name='Village Test Authentique'
+  AND rt.code='part_of'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation r WHERE r.source_object_id=c.id AND r.target_object_id=v.id AND r.relation_type_id=rt.id
+  );
+
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, created_at)
+SELECT p.id, v.id, rt.id, NOW()
+FROM object p, object v, ref_object_relation_type rt
+WHERE p.object_type='PCU' AND p.region_code='TST' AND p.name='Point Culture Urbaine Test'
+  AND v.object_type='VIL' AND v.region_code='TST' AND v.name='Village Test Authentique'
+  AND rt.code='part_of'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation r WHERE r.source_object_id=p.id AND r.target_object_id=v.id AND r.relation_type_id=rt.id
+  );
+
+INSERT INTO object_relation (source_object_id, target_object_id, relation_type_id, created_at)
+SELECT c.id, v.id, rt.id, NOW()
+FROM object c, object v, ref_object_relation_type rt
+WHERE c.object_type='CAMP' AND c.region_code='TST' AND c.name='Camping Nature Test'
+  AND v.object_type='VIL' AND v.region_code='TST' AND v.name='Village Test Authentique'
+  AND rt.code='part_of'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_relation r WHERE r.source_object_id=c.id AND r.target_object_id=v.id AND r.relation_type_id=rt.id
+  );
+
+-- =====================================================
+-- FMA – add more occurrences (multi-day)
+-- =====================================================
+INSERT INTO object_fma_occurrence (object_id, start_at, end_at, state, created_at, updated_at)
+SELECT o.id, TIMESTAMPTZ '2025-12-16 18:00:00+04', TIMESTAMPTZ '2025-12-16 23:00:00+04', 'confirmed', NOW(), NOW()
+FROM object o
+WHERE o.object_type='FMA' AND o.region_code='TST' AND o.name='Festival Créole Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_fma_occurrence ofo WHERE ofo.object_id=o.id AND ofo.start_at=TIMESTAMPTZ '2025-12-16 18:00:00+04'
+  );
+
+INSERT INTO object_fma_occurrence (object_id, start_at, end_at, state, created_at, updated_at)
+SELECT o.id, TIMESTAMPTZ '2025-12-17 18:00:00+04', TIMESTAMPTZ '2025-12-17 23:00:00+04', 'confirmed', NOW(), NOW()
+FROM object o
+WHERE o.object_type='FMA' AND o.region_code='TST' AND o.name='Festival Créole Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_fma_occurrence ofo WHERE ofo.object_id=o.id AND ofo.start_at=TIMESTAMPTZ '2025-12-17 18:00:00+04'
+  );
+
+-- =====================================================
+-- Status variety: demo draft and archived objects
+-- =====================================================
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'RES','Restaurant Brouillon Test','TST','draft',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='RES' AND o.region_code='TST' AND o.name='Restaurant Brouillon Test'
+);
+
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'ASC','Association Archivée Test','TST','archived',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='ASC' AND o.region_code='TST' AND o.name='Association Archivée Test'
+);
+
+-- Minimal locations for those demo objects
+INSERT INTO object_location (object_id, address1, postcode, city, is_main_location, position, created_at, updated_at)
+SELECT o.id, 'Adresse inconnue', '97400', 'Saint-Denis', TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.region_code='TST' AND o.name IN ('Restaurant Brouillon Test','Association Archivée Test')
+  AND NOT EXISTS (
+    SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE
+  );
+
+-- =====================================================
+-- Org preference: add OTI descriptions for HPA and HLO
+-- =====================================================
+INSERT INTO object_description (object_id, org_object_id, description, description_chapo, visibility, created_at, updated_at)
+SELECT o.id, oti.id,
+  'Gîte confortable géré localement. Idéal pour familles.',
+  'Gîte familial – vue océan', 'public', NOW(), NOW()
+FROM object o
+JOIN object oti ON oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+WHERE o.object_type='HPA' AND o.region_code='TST' AND o.name='Gîte Particulier Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d WHERE d.object_id=o.id AND d.org_object_id=oti.id
+  );
+
+INSERT INTO object_description (object_id, org_object_id, description, description_chapo, visibility, created_at, updated_at)
+SELECT o.id, oti.id,
+  'Résidence de loisirs avec équipements bien-être et animations.',
+  'Résidence loisirs – bien-être', 'public', NOW(), NOW()
+FROM object o
+JOIN object oti ON oti.object_type='ORG' AND oti.region_code='TST' AND oti.name='Office de Tourisme Intercommunal TEST'
+WHERE o.object_type='HLO' AND o.region_code='TST' AND o.name='Résidence Loisir Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_description d WHERE d.object_id=o.id AND d.org_object_id=oti.id
+  );
+
+-- =====================================================
 -- ENHANCEMENTS: COM (Commerce) – richer shop scenarios
 -- =====================================================
 

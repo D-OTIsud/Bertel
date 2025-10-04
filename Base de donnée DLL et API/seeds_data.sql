@@ -4407,6 +4407,160 @@ JOIN ref_language rl ON rl.code IN ('en','es')
 ON CONFLICT (target_table, target_pk, target_column, language_id) DO UPDATE
 SET value_text = EXCLUDED.value_text;
 
+-- =====================================================
+-- ENHANCEMENTS: COM (Commerce) – richer shop scenarios
+-- =====================================================
+
+-- 1) Classification scheme for retail categories
+INSERT INTO ref_classification_scheme (code, name, description, select_mode, position)
+SELECT 'retail_category','Catégories de commerce','Catégorisation des commerces de détail','single', 50
+WHERE NOT EXISTS (
+  SELECT 1 FROM ref_classification_scheme s WHERE s.code='retail_category'
+);
+
+WITH s AS (
+  SELECT id FROM ref_classification_scheme WHERE code='retail_category'
+)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ord
+FROM s, (VALUES
+  ('souvenir','Boutique de souvenirs',1),
+  ('artisanal','Artisanat / produits locaux',2),
+  ('bakery','Boulangerie / pâtisserie',3),
+  ('pharmacy','Pharmacie',4),
+  ('supermarket','Supermarché',5)
+) AS v(code,name,ord)
+WHERE NOT EXISTS (
+  SELECT 1 FROM ref_classification_value cv
+  WHERE cv.scheme_id = s.id AND cv.code = v.code
+);
+
+-- 2) Tags useful for retail use-cases
+INSERT INTO ref_tag (slug, name, description, position)
+VALUES ('shopping','Shopping','Commerces et boutiques',10)
+ON CONFLICT (slug) DO NOTHING;
+INSERT INTO ref_tag (slug, name, description, position)
+VALUES ('local_products','Produits locaux','Produits du terroir, artisanat',11)
+ON CONFLICT (slug) DO NOTHING;
+
+-- 3) Enhance existing COM object: "Boutique Artisanale Test"
+--    Add languages, payments, opening hours, media, tags, classification, discount
+
+-- Languages (FR/EN)
+INSERT INTO object_language (object_id, language_id, created_at)
+SELECT o.id, l.id, NOW()
+FROM object o JOIN ref_language l ON l.code IN ('fr','en')
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (SELECT 1 FROM object_language ol WHERE ol.object_id=o.id AND ol.language_id=l.id);
+
+-- Payments
+INSERT INTO object_payment_method (object_id, payment_method_id, created_at)
+SELECT o.id, pm.id, NOW()
+FROM object o JOIN ref_code_payment_method pm ON pm.code IN ('especes','carte_bleue','visa','mastercard')
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (SELECT 1 FROM object_payment_method x WHERE x.object_id=o.id AND x.payment_method_id=pm.id);
+
+-- Opening: daily 10:00–19:00 (regular)
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Ouverture boutique', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND op.all_years IS TRUE AND COALESCE(op.name,'')='Ouverture boutique'
+  );
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Tous les jours', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code='regular'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id AND os.schedule_type_id=rst.id
+  );
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id=os.schedule_type_id AND rst.code='regular'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=FALSE
+  );
+
+INSERT INTO opening_time_period_weekday (time_period_id, weekday_id)
+SELECT tp.id, w.id
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_weekday w ON w.code IN ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_period_weekday tw WHERE tw.time_period_id=tp.id AND tw.weekday_id=w.id
+  );
+
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '10:00', TIME '19:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id=os.schedule_type_id AND rst.code='regular'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id=tp.id AND tf.start_time=TIME '10:00' AND tf.end_time=TIME '19:00'
+  );
+
+-- Media
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Logo Boutique Artisanale', 'https://static.example.com/logos/boutique-artisanale.svg', 'logo', TRUE, TRUE, 1, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code='vector'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id=o.id AND m.kind='logo'
+  );
+
+INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
+SELECT o.id, mt.id, 'Devanture boutique artisanale', 'https://images.example.com/commerces/boutique-artisanale.jpg', 'illustration', TRUE, TRUE, 2, NOW(), NOW()
+FROM object o JOIN ref_code_media_type mt ON mt.code='photo'
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM media m WHERE m.object_id=o.id AND m.media_type_id=mt.id AND m.is_main IS TRUE
+  );
+
+-- Tags
+INSERT INTO tag_link (tag_id, target_table, target_pk, created_at)
+SELECT t.id, 'object', o.id, NOW()
+FROM object o, ref_tag t
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND t.slug IN ('shopping','local_products')
+  AND NOT EXISTS (
+    SELECT 1 FROM tag_link tl WHERE tl.tag_id=t.id AND tl.target_table='object' AND tl.target_pk=o.id
+  );
+
+-- Classification: retail_category=artisanal
+INSERT INTO object_classification (object_id, scheme_id, value_id, created_at, updated_at)
+SELECT o.id, cs.id, cv.id, NOW(), NOW()
+FROM object o, ref_classification_scheme cs, ref_classification_value cv
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND cs.code='retail_category' AND cv.scheme_id=cs.id AND cv.code='artisanal'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_classification oc WHERE oc.object_id=o.id AND oc.scheme_id=cs.id AND oc.value_id=cv.id
+  );
+
+-- Discount example
+INSERT INTO object_discount (object_id, conditions, discount_percent, valid_from, valid_to, source, created_at, updated_at)
+SELECT o.id, 'Offre découverte – 10% sur produits du terroir', 10.00, CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', 'promotion', NOW(), NOW()
+FROM object o
+WHERE o.object_type='COM' AND o.region_code='TST' AND o.name='Boutique Artisanale Test'
+  AND NOT EXISTS (
+    SELECT 1 FROM object_discount od WHERE od.object_id=o.id AND od.conditions='Offre découverte – 10% sur produits du terroir'
+  );
+
+
 WITH cap AS (
   SELECT id, code FROM ref_capacity_metric
 ), t(name_code, name_en, name_es, desc_en, desc_es) AS (

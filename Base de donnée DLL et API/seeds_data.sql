@@ -4724,7 +4724,7 @@ WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan
 
 -- Add brochure and video
 INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
-SELECT o.id, mt.id, 'Brochure Hôtel Test Océan', 'https://docs.example.com/hotels/test-ocean/brochure.pdf', 'brochure', FALSE, TRUE, 10, NOW(), NOW()
+SELECT o.id, mt.id, 'Brochure Hôtel Test Océan', 'https://docs.example.com/hotels/test-ocean/brochure.pdf', 'asset', FALSE, TRUE, 10, NOW(), NOW()
 FROM object o JOIN ref_code_media_type mt ON mt.code='brochure_pdf'
 WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
   AND NOT EXISTS (
@@ -4732,7 +4732,7 @@ WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan
   );
 
 INSERT INTO media (object_id, media_type_id, title, url, kind, is_main, is_published, position, created_at, updated_at)
-SELECT o.id, mt.id, 'Vidéo présentation Hôtel Test Océan', 'https://videos.example.com/hotels/test-ocean/presentation.mp4', 'video', FALSE, TRUE, 11, NOW(), NOW()
+SELECT o.id, mt.id, 'Vidéo présentation Hôtel Test Océan', 'https://videos.example.com/hotels/test-ocean/presentation.mp4', 'asset', FALSE, TRUE, 11, NOW(), NOW()
 FROM object o JOIN ref_code_media_type mt ON mt.code='video'
 WHERE o.object_type='HOT' AND o.region_code='TST' AND o.name='Hôtel Test Océan'
   AND NOT EXISTS (

@@ -8,18 +8,22 @@
 
 -- Activation RLS sur toutes les tables principales
 ALTER TABLE object ENABLE ROW LEVEL SECURITY;
-ALTER TABLE address ENABLE ROW LEVEL SECURITY;
-ALTER TABLE location ENABLE ROW LEVEL SECURITY;
+-- legacy address/location dropped in schema; use unified tables below
+ALTER TABLE object_location ENABLE ROW LEVEL SECURITY;
+ALTER TABLE object_place ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_channel ENABLE ROW LEVEL SECURITY;
-ALTER TABLE social_network ENABLE ROW LEVEL SECURITY;
+-- social_network is a ref_code partition (ref_code_social_network); no separate table
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 -- classification table removed (use object_classification)
 -- capacity table removed (using object_capacity)
 -- (legacy) ALTER TABLE legal ENABLE ROW LEVEL SECURITY;
 -- Current tables
 ALTER TABLE object_legal ENABLE ROW LEVEL SECURITY;
-ALTER TABLE opening ENABLE ROW LEVEL SECURITY;
-ALTER TABLE opening_closed_day ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_period ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_schedule ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_time_period ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_time_period_weekday ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opening_time_frame ENABLE ROW LEVEL SECURITY;
 -- object_hot table removed (use object_classification)
 ALTER TABLE object_fma ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti ENABLE ROW LEVEL SECURITY;
@@ -273,8 +277,13 @@ CREATE POLICY "extended_objects_org_actor" ON object
 CREATE POLICY "Lecture publique des pratiques ITI" ON ref_iti_practice FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des rôles ITI" ON ref_iti_assoc_role FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des profils ITI" ON object_iti_profile FOR SELECT USING (true);
-CREATE POLICY "Lecture publique des adresses" ON address FOR SELECT USING (true);
-CREATE POLICY "Lecture publique des localisations" ON location FOR SELECT USING (true);
+-- Localisation tables
+DO $$ BEGIN
+  BEGIN DROP POLICY IF EXISTS "Lecture publique des adresses" ON address; EXCEPTION WHEN others THEN NULL; END;
+  BEGIN DROP POLICY IF EXISTS "Lecture publique des localisations" ON location; EXCEPTION WHEN others THEN NULL; END;
+END $$;
+CREATE POLICY "Lecture publique des localisations" ON object_location FOR SELECT USING (true);
+CREATE POLICY "Lecture publique des places" ON object_place FOR SELECT USING (true);
 -- Contacts: publics seulement si is_public, sinon accès étendu
 DO $$ BEGIN
   BEGIN DROP POLICY IF EXISTS "Lecture publique des contacts" ON contact_channel; EXCEPTION WHEN others THEN NULL; END;

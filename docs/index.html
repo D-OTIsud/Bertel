@@ -1420,7 +1420,7 @@ const json = await res.json();</pre>
                 <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.17</td></tr>
                 <tr><td><code>incoming_relations / outgoing_relations</code></td><td><code>array&lt;object&gt;</code></td><td>Relations entrantes/sortantes</td><td>voir §3.18</td></tr>
                 <tr><td><code>render</code></td><td><code>object</code></td><td>Données formatées pour l'affichage</td><td>voir §3.27</td></tr>
-                <tr><td><code>legal_records</code></td><td><code>array&lt;object&gt;</code></td><td>Enregistrements légaux unifiés (remplace legal et accommodation_legal)</td><td>voir §3.26</td></tr>
+                <tr><td><code>legal_records</code></td><td><code>array&lt;object&gt;</code></td><td>Enregistrements légaux et certifications</td><td>voir §3.26</td></tr>
                 <tr><td><code>documents</code></td><td><code>array&lt;object&gt;</code></td><td>Pièces justificatives publiables (référentiel commun)</td><td>voir §3.21</td></tr>
                 <tr><td><code>document_requests</code></td><td><code>array&lt;object&gt;</code></td><td>Suivi des demandes/remises de documents</td><td>voir §3.22</td></tr>
                 <tr><td><code>associated_restaurants_cuisine_types</code> (si <code>type="FMA"</code>)</td><td><code>array&lt;object&gt;</code></td><td>Types de cuisine agrégés via les restaurants liés</td><td>voir §3.20</td></tr>
@@ -1461,124 +1461,678 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.3 <code>contacts[]</code></summary>
+          <summary>3.3 <code>contacts[]</code> (moyens de contact enrichis)</summary>
           <div class="content">
+            <p>Le bloc <code>contacts[]</code> regroupe tous les moyens de contact disponibles pour un établissement : téléphone, email, site web, réseaux sociaux, etc. Chaque contact inclut des métadonnées pour l'affichage et la priorisation.</p>
+            
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>kind_code</code></td><td><code>enum</code></td><td>Type de contact</td><td><code>"email"</code>, <code>"phone"</code>, <code>"website"</code>…</td></tr>
-                <tr><td><code>kind_name</code></td><td><code>string</code></td><td>Libellé humain</td><td><code>"E-mail"</code></td></tr>
-                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône du type</td><td><code>"https://…/email.svg"</code></td></tr>
-                <tr><td><code>value</code></td><td><code>string</code></td><td>Adresse/numéro/URL</td><td><code>"contact@exemple.fr"</code></td></tr>
+                <tr><td><code>kind_code</code></td><td><code>string</code></td><td>Type de contact (référentiel <code>contact_kind</code>)</td><td><code>"email"</code></td></tr>
+                <tr><td><code>kind_name</code></td><td><code>string</code></td><td>Libellé humain du type</td><td><code>"E-mail"</code></td></tr>
+                <tr><td><code>kind_description</code></td><td><code>string</code></td><td>Description du type</td><td><code>"Adresse électronique"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône du type</td><td><code>"https://cdn.example.com/email.svg"</code></td></tr>
+                <tr><td><code>value</code></td><td><code>string</code></td><td>Adresse/numéro/URL de contact</td><td><code>"contact@hotel-exemple.fr"</code></td></tr>
                 <tr><td><code>is_public</code></td><td><code>boolean</code></td><td>Visible publiquement ?</td><td><code>true</code></td></tr>
                 <tr><td><code>is_primary</code></td><td><code>boolean</code></td><td>Canal prioritaire ?</td><td><code>true</code></td></tr>
-                <tr><td><code>role</code></td><td><code>enum</code></td><td>Rôle (ex. “booking”)</td><td><code>"booking"</code></td></tr>
-                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d’affichage conseillé</td><td><code>1</code></td></tr>
+                <tr><td><code>role</code></td><td><code>string</code></td><td>Rôle (code : <code>booking</code>, <code>info</code>, …)</td><td><code>"booking"</code></td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage conseillé</td><td><code>1</code></td></tr>
               </tbody>
             </table>
-            <p class="inline-help">Affichez d’abord <code>is_primary</code>, puis les autres canaux.</p>
-          </div>
-        </details>
 
-        <details>
-          <summary>3.4 <code>languages[]</code></summary>
-          <div class="content">
-            <table><thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
-              <tbody><tr><td><code>code</code></td><td><code>enum</code></td><td>Code langue ("fr","en", …)</td></tr>
-              <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé</td></tr></tbody></table>
-          </div>
-        </details>
-
-        <details>
-          <summary>3.5 <code>media[]</code> (publiés uniquement)</summary>
-          <div class="content">
+            <h4>Types de contacts disponibles</h4>
+            <p>Le système supporte plusieurs types de contacts via le référentiel <code>contact_kind</code> :</p>
+            
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Format attendu</th></tr></thead>
               <tbody>
-                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant média</td></tr>
-                <tr><td><code>type_code / type_name</code></td><td><code>enum + string</code></td><td>Type (<code>"image"</code>, <code>"video"</code>, …)</td></tr>
-                <tr><td><code>icon_url</code></td><td><code>string</code></td><td>Icône</td></tr>
-                <tr><td><code>title / credit</code></td><td><code>string</code></td><td>Légende & crédit</td></tr>
-                <tr><td><code>url</code></td><td><code>string (URL)</code></td><td>Lien direct</td></tr>
-                <tr><td><code>is_main</code></td><td><code>boolean</code></td><td>Média principal ?</td></tr>
-                <tr><td><code>visibility</code></td><td><code>enum</code></td><td>Niveau de visibilité</td></tr>
-                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre</td></tr>
-                <tr><td><code>width / height</code></td><td><code>number</code></td><td>Dimensions (si connues)</td></tr>
+                <tr><td><code>email</code></td><td>E-mail</td><td>Adresse électronique</td><td>email@domain.com</td></tr>
+                <tr><td><code>phone</code></td><td>Téléphone</td><td>Numéro de téléphone</td><td>+262 262 12 34 56</td></tr>
+                <tr><td><code>mobile</code></td><td>Mobile</td><td>Numéro de mobile</td><td>+262 692 12 34 56</td></tr>
+                <tr><td><code>website</code></td><td>Site web</td><td>URL du site internet</td><td>https://www.hotel-exemple.fr</td></tr>
+                <tr><td><code>facebook</code></td><td>Facebook</td><td>Page Facebook</td><td>https://facebook.com/hotel-exemple</td></tr>
+                <tr><td><code>instagram</code></td><td>Instagram</td><td>Compte Instagram</td><td>https://instagram.com/hotel_exemple</td></tr>
+                <tr><td><code>whatsapp</code></td><td>WhatsApp</td><td>Contact WhatsApp</td><td>+262 692 12 34 56</td></tr>
+                <tr><td><code>booking</code></td><td>Réservation</td><td>Lien de réservation</td><td>https://booking.com/hotel-exemple</td></tr>
               </tbody>
             </table>
+
+            <h4>Exemple concret : Contacts d'un hôtel</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "contacts": [
+    {
+      "kind_code": "phone",
+      "kind_name": "Téléphone",
+      "kind_description": "Numéro de téléphone",
+      "icon_url": "https://cdn.example.com/phone.svg",
+      "value": "+262 262 12 34 56",
+      "is_public": true,
+      "is_primary": true,
+      "role": "booking",
+      "position": 1
+    },
+    {
+      "kind_code": "email",
+      "kind_name": "E-mail",
+      "kind_description": "Adresse électronique",
+      "icon_url": "https://cdn.example.com/email.svg",
+      "value": "contact@hotel-exemple.fr",
+      "is_public": true,
+      "is_primary": false,
+      "role": "info",
+      "position": 2
+    },
+    {
+      "kind_code": "website",
+      "kind_name": "Site web",
+      "kind_description": "Site internet",
+      "icon_url": "https://cdn.example.com/website.svg",
+      "value": "https://www.hotel-exemple.fr",
+      "is_public": true,
+      "is_primary": false,
+      "role": "info",
+      "position": 3
+    },
+    {
+      "kind_code": "whatsapp",
+      "kind_name": "WhatsApp",
+      "kind_description": "Contact WhatsApp",
+      "icon_url": "https://cdn.example.com/whatsapp.svg",
+      "value": "+262 692 12 34 56",
+      "is_public": true,
+      "is_primary": false,
+      "role": "booking",
+      "position": 4
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Affichage</div>
+              <p><strong>Priorité :</strong> Affichez d'abord les contacts avec <code>is_primary: true</code>, puis les autres par <code>position</code>.</p>
+              <p><strong>Types :</strong> Utilisez <code>kind_code</code> et <code>kind_name</code> pour identifier le type de contact.</p>
+              <p><strong>Rôles :</strong> Utilisez <code>role</code> (code) pour grouper par usage (booking, info, commercial).</p>
+              <p><strong>Public :</strong> Filtrez avec <code>is_public: true</code> pour n'afficher que les contacts publics.</p>
+            </div>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Note sur les variantes</div>
+              <p>Dans <code>actors[].contacts[]</code> et les contacts d'organisations, la structure est <strong>imbriquée</strong> : <code>kind { code, name, description, icon_url }</code> et <code>role { code, name }</code>. Au niveau <strong>objet</strong>, le bloc <code>contacts[]</code> utilise les champs <code>kind_code</code>/<code>kind_name</code> et un <code>role</code> simple (code).</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les contacts sont <strong>vérifiés et validés</strong>. Respectez les préférences de contact de l'établissement (horaires, langue, etc.).</p>
+            </div>
           </div>
         </details>
 
         <details>
-          <summary>3.6 <code>capacity[]</code></summary>
+          <summary>3.4 <code>languages[]</code> (langues parlées)</summary>
           <div class="content">
+            <p>Le bloc <code>languages[]</code> indique les langues parlées par le personnel de l'établissement. Cette information est cruciale pour l'accessibilité et l'expérience client.</p>
+            
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>metric_code / metric_name</code></td><td><code>enum + string</code></td><td>Métrique (lits, couverts…)</td></tr>
-                <tr><td><code>icon_url</code></td><td><code>string</code></td><td>Icône</td></tr>
-                <tr><td><code>value</code></td><td><code>number</code></td><td>Valeur entière</td></tr>
-                <tr><td><code>unit</code></td><td><code>string</code></td><td>Unité (si applicable)</td></tr>
+                <tr><td><code>code</code></td><td><code>string</code></td><td>Code ISO 639-1 de la langue</td><td><code>"fr"</code></td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom de la langue</td><td><code>"Français"</code></td></tr>
               </tbody>
             </table>
-          </div>
-        </details>
 
-        <details>
-          <summary>3.7 <code>amenities[]</code></summary>
-          <div class="content">
+            <h4>Langues supportées</h4>
+            <p>Le système supporte les principales langues via le référentiel <code>ref_language</code> :</p>
+            
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
               <tbody>
-                <tr><td><code>code / name / icon_url</code></td><td>—</td><td>Équipement</td></tr>
-                <tr><td><code>family</code></td><td><code>object</code></td><td>{ code, name, icon_url } (famille d’équipements)</td></tr>
+                <tr><td><code>fr</code></td><td>Français</td><td>Langue officielle de La Réunion</td><td>Langue principale</td></tr>
+                <tr><td><code>en</code></td><td>Anglais</td><td>Langue internationale</td><td>Tourisme international</td></tr>
+                <tr><td><code>es</code></td><td>Espagnol</td><td>Langue latine</td><td>Tourisme hispanophone</td></tr>
+                <tr><td><code>de</code></td><td>Allemand</td><td>Langue germanique</td><td>Tourisme germanophone</td></tr>
+                <tr><td><code>it</code></td><td>Italien</td><td>Langue latine</td><td>Tourisme italophone</td></tr>
+                <tr><td><code>pt</code></td><td>Portugais</td><td>Langue lusophone</td><td>Tourisme brésilien</td></tr>
+                <tr><td><code>zh</code></td><td>Chinois</td><td>Langue asiatique</td><td>Tourisme chinois</td></tr>
+                <tr><td><code>ja</code></td><td>Japonais</td><td>Langue asiatique</td><td>Tourisme japonais</td></tr>
               </tbody>
             </table>
+
+            <h4>Exemple concret : Langues d'un hôtel</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "languages": [
+    {
+      "code": "fr",
+      "name": "Français"
+    },
+    {
+      "code": "en",
+      "name": "Anglais"
+    },
+    {
+      "code": "de",
+      "name": "Allemand"
+    },
+    {
+      "code": "es",
+      "name": "Espagnol"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par langue :</strong> Utilisez <code>p_filters.languages_any: ["fr", "en"]</code> pour trouver les établissements parlant français ou anglais.</p>
+              <p><strong>Affichage :</strong> Affichez les langues disponibles pour informer les clients de l'accessibilité linguistique.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les langues indiquées correspondent aux <strong>capacités réelles du personnel</strong>. Vérifiez la disponibilité selon les horaires et les équipes présentes.</p>
+            </div>
           </div>
         </details>
 
         <details>
-          <summary>3.8 <code>environment_tags[]</code> & <code>payment_methods[]</code></summary>
+          <summary>3.5 <code>media[]</code> (médias publiés)</summary>
           <div class="content">
-            <p>Structure identique : <code>{ code, name, icon_url }</code>.</p>
+            <p>Le bloc <code>media[]</code> contient tous les médias publiés associés à l'établissement : photos, vidéos, documents PDF, etc. La réponse n'inclut que les médias <strong>publiés</strong>.</p>
+            
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique du média</td><td><code>"media_123"</code></td></tr>
+                <tr><td><code>type_code</code></td><td><code>string</code></td><td>Type de média (référentiel <code>media_type</code>)</td><td><code>"image"</code></td></tr>
+                <tr><td><code>type_name</code></td><td><code>string</code></td><td>Nom du type de média</td><td><code>"Image"</code></td></tr>
+                <tr><td><code>type_description</code></td><td><code>string</code></td><td>Description du type de média</td><td><code>"Photos et illustrations"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône représentant le type</td><td><code>"https://cdn.example.com/image.svg"</code></td></tr>
+                <tr><td><code>title</code></td><td><code>string</code></td><td>Titre/légende du média</td><td><code>"Vue panoramique de l'hôtel"</code></td></tr>
+                <tr><td><code>credit</code></td><td><code>string</code></td><td>Crédit photo/vidéo</td><td><code>"© Hôtel Exemple"</code></td></tr>
+                <tr><td><code>url</code></td><td><code>string (URL)</code></td><td>URL directe du fichier</td><td><code>"https://cdn.example.com/hotel-view.jpg"</code></td></tr>
+                <tr><td><code>is_main</code></td><td><code>boolean</code></td><td>Média principal de l'établissement ?</td><td><code>true</code></td></tr>
+                <tr><td><code>visibility</code></td><td><code>string</code></td><td>Niveau de visibilité</td><td><code>"public"</code></td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage</td><td><code>1</code></td></tr>
+                <tr><td><code>width</code></td><td><code>number</code></td><td>Largeur en pixels (si connue)</td><td><code>1920</code></td></tr>
+                <tr><td><code>height</code></td><td><code>number</code></td><td>Hauteur en pixels (si connue)</td><td><code>1080</code></td></tr>
+              </tbody>
+            </table>
+
+            <h4>Types de médias disponibles</h4>
+            <p>Le système supporte plusieurs types de médias via le référentiel <code>media_type</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Formats typiques</th></tr></thead>
+              <tbody>
+                <tr><td><code>image</code></td><td>Image</td><td>Photos et illustrations</td><td>JPG, PNG, WebP</td></tr>
+                <tr><td><code>video</code></td><td>Vidéo</td><td>Vidéos promotionnelles</td><td>MP4, WebM</td></tr>
+                <tr><td><code>logo</code></td><td>Logo</td><td>Logo de l'établissement</td><td>PNG, SVG</td></tr>
+                <tr><td><code>brochure_pdf</code></td><td>Brochure PDF</td><td>Documentation imprimable</td><td>PDF</td></tr>
+                <tr><td><code>menu_pdf</code></td><td>Menu PDF</td><td>Menu au format PDF</td><td>PDF</td></tr>
+                <tr><td><code>audio</code></td><td>Audio</td><td>Fichiers audio</td><td>MP3, WAV</td></tr>
+                <tr><td><code>document</code></td><td>Document</td><td>Autres documents</td><td>PDF, DOC</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Médias d'un hôtel</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "media": [
+    {
+      "id": "media_001",
+      "type_code": "image",
+      "type_name": "Image",
+      "icon_url": "https://cdn.example.com/image.svg",
+      "title": "Vue panoramique de l'hôtel",
+      "credit": "© Hôtel Exemple",
+      "url": "https://cdn.example.com/hotel-panorama.jpg",
+      "is_main": true,
+      "visibility": "public",
+      "position": 1,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "media_002",
+      "type_code": "video",
+      "type_name": "Vidéo",
+      "icon_url": "https://cdn.example.com/video.svg",
+      "title": "Visite virtuelle de l'hôtel",
+      "credit": "© Hôtel Exemple",
+      "url": "https://cdn.example.com/hotel-tour.mp4",
+      "is_main": false,
+      "visibility": "public",
+      "position": 2,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "media_003",
+      "type_code": "brochure_pdf",
+      "type_name": "Brochure PDF",
+      "icon_url": "https://cdn.example.com/pdf.svg",
+      "title": "Brochure complète 2024",
+      "credit": "© Hôtel Exemple",
+      "url": "https://cdn.example.com/brochure-2024.pdf",
+      "is_main": false,
+      "visibility": "public",
+      "position": 3,
+      "width": null,
+      "height": null
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Variante menus</div>
+              <p>Dans <code>menus[].items[].media[]</code>, la structure utilise un objet imbriqué <code>media_type { id, code, name }</code> et inclut le champ <code>is_published</code>. Au niveau <strong>objet</strong>, le bloc <code>media[]</code> expose <code>type_code</code>/<code>type_name</code> et n'inclut pas <code>is_published</code>.</p>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Affichage</div>
+              <p><strong>Média principal :</strong> Affichez d'abord le média avec <code>is_main: true</code> comme image de couverture.</p>
+              <p><strong>Tri :</strong> Triez par <code>position</code> pour respecter l'ordre souhaité par l'établissement.</p>
+              <p><strong>Filtrage :</strong> Utilisez <code>p_filters.media_types_any: ["image"]</code> pour ne récupérer que les images.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les médias sont <strong>publiés et vérifiés</strong>. Respectez les droits d'auteur et les crédits mentionnés. Les URLs sont directes et ne nécessitent pas d'authentification.</p>
+            </div>
           </div>
         </details>
 
         <details>
-          <summary>3.9 <code>prices[]</code> (+ <code>periods[]</code> imbriquées)</summary>
+          <summary>3.6 <code>capacity[]</code> (capacités d'accueil)</summary>
           <div class="content">
-            <p>Structure de tarification avec périodes détaillées imbriquées :</p>
+            <p>Le bloc <code>capacity[]</code> définit les capacités d'accueil de l'établissement selon différentes métriques : nombre de lits, couverts, chambres, etc. Ces informations sont essentielles pour la planification et la réservation.</p>
+            
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>metric_code</code></td><td><code>string</code></td><td>Code de la métrique (référentiel <code>ref_capacity_metric</code>)</td><td><code>"beds"</code></td></tr>
+                <tr><td><code>metric_name</code></td><td><code>string</code></td><td>Nom de la métrique</td><td><code>"Lits"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône représentant la métrique</td><td><code>"https://cdn.example.com/bed.svg"</code></td></tr>
+                <tr><td><code>value</code></td><td><code>number</code></td><td>Valeur numérique de la capacité</td><td><code>50</code></td></tr>
+                <tr><td><code>unit</code></td><td><code>string</code></td><td>Unité de mesure (si applicable)</td><td><code>"personnes"</code></td></tr>
+              </tbody>
+            </table>
+
+            <h4>Métriques de capacité disponibles</h4>
+            <p>Le système supporte plusieurs métriques via le référentiel <code>ref_capacity_metric</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>beds</code></td><td>Lits</td><td>Nombre total de lits</td><td>Hôtels, gîtes</td></tr>
+                <tr><td><code>rooms</code></td><td>Chambres</td><td>Nombre de chambres</td><td>Hôtels, meublés</td></tr>
+                <tr><td><code>covers</code></td><td>Couverts</td><td>Capacité restaurant</td><td>Restaurants, cafés</td></tr>
+                <tr><td><code>seats</code></td><td>Places assises</td><td>Places en salle</td><td>Restaurants, salles</td></tr>
+                <tr><td><code>max_capacity</code></td><td>Capacité max</td><td>Capacité maximale totale</td><td>Événements, salles</td></tr>
+                <tr><td><code>parking_spaces</code></td><td>Places parking</td><td>Nombre de places de parking</td><td>Tous établissements</td></tr>
+                <tr><td><code>pools</code></td><td>Piscines</td><td>Nombre de piscines</td><td>Hôtels, campings</td></tr>
+                <tr><td><code>tennis_courts</code></td><td>Courts de tennis</td><td>Nombre de courts</td><td>Complexes sportifs</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Capacités d'un hôtel</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "capacity": [
+    {
+      "metric_code": "rooms",
+      "metric_name": "Chambres",
+      "icon_url": "https://cdn.example.com/room.svg",
+      "value": 25,
+      "unit": "chambres"
+    },
+    {
+      "metric_code": "beds",
+      "metric_name": "Lits",
+      "icon_url": "https://cdn.example.com/bed.svg",
+      "value": 50,
+      "unit": "lits"
+    },
+    {
+      "metric_code": "covers",
+      "metric_name": "Couverts",
+      "icon_url": "https://cdn.example.com/restaurant.svg",
+      "value": 80,
+      "unit": "couverts"
+    },
+    {
+      "metric_code": "parking_spaces",
+      "metric_name": "Places parking",
+      "icon_url": "https://cdn.example.com/parking.svg",
+      "value": 30,
+      "unit": "places"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par capacité :</strong> Utilisez <code>p_filters.capacity_filters: [{"metric": "beds", "min": 20, "max": 100}]</code> pour trouver les établissements avec 20 à 100 lits.</p>
+              <p><strong>Affichage :</strong> Affichez les capacités pertinentes selon le type d'établissement (lits pour hôtels, couverts pour restaurants).</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les capacités indiquent le <strong>maximum théorique</strong>. La disponibilité réelle dépend des réservations et de la configuration des chambres/salles.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.7 <code>amenities[]</code> (équipements et services)</summary>
+          <div class="content">
+            <p>Le bloc <code>amenities[]</code> liste tous les équipements et services disponibles dans l'établissement : WiFi, piscine, parking, restaurant, etc. Ces informations sont cruciales pour l'expérience client et les filtres de recherche.</p>
+            
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>code</code></td><td><code>string</code></td><td>Code de l'équipement (référentiel <code>amenity</code>)</td><td><code>"WIFI"</code></td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom de l'équipement</td><td><code>"WiFi gratuit"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône représentant l'équipement</td><td><code>"https://cdn.example.com/wifi.svg"</code></td></tr>
+                <tr><td><code>family</code></td><td><code>object</code></td><td>Famille d'équipements : { code, name, icon_url }</td><td><code>{"code": "connectivity", "name": "Connectivité"}</code></td></tr>
+              </tbody>
+            </table>
+
+            <h4>Familles d'équipements disponibles</h4>
+            <p>Les équipements sont organisés en familles via le référentiel <code>amenity_family</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Équipements typiques</th></tr></thead>
+              <tbody>
+                <tr><td><code>connectivity</code></td><td>Connectivité</td><td>Services internet et communication</td><td>WiFi, 4G, téléphone</td></tr>
+                <tr><td><code>comfort</code></td><td>Confort</td><td>Équipements de confort</td><td>Climatisation, chauffage, minibar</td></tr>
+                <tr><td><code>outdoor</code></td><td>Extérieur</td><td>Espaces et activités extérieures</td><td>Piscine, jardin, terrasse</td></tr>
+                <tr><td><code>wellness</code></td><td>Bien-être</td><td>Services de bien-être</td><td>Spa, sauna, fitness</td></tr>
+                <tr><td><code>dining</code></td><td>Restauration</td><td>Services de restauration</td><td>Restaurant, bar, petit-déjeuner</td></tr>
+                <tr><td><code>business</code></td><td>Business</td><td>Services professionnels</td><td>Salle de réunion, photocopieur</td></tr>
+                <tr><td><code>accessibility</code></td><td>Accessibilité</td><td>Équipements d'accessibilité</td><td>Ascenseur, rampe, chambre adaptée</td></tr>
+                <tr><td><code>transport</code></td><td>Transport</td><td>Services de transport</td><td>Parking, navette, location vélo</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Équipements populaires</h4>
+            <p>Voici quelques équipements couramment utilisés :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Famille</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>WIFI</code></td><td>WiFi gratuit</td><td>connectivity</td><td>Accès internet sans fil</td></tr>
+                <tr><td><code>PARKING</code></td><td>Parking</td><td>transport</td><td>Place de stationnement</td></tr>
+                <tr><td><code>POOL</code></td><td>Piscine</td><td>outdoor</td><td>Bassin de natation</td></tr>
+                <tr><td><code>RESTAURANT</code></td><td>Restaurant</td><td>dining</td><td>Service de restauration</td></tr>
+                <tr><td><code>AC</code></td><td>Climatisation</td><td>comfort</td><td>Air conditionné</td></tr>
+                <tr><td><code>SPA</code></td><td>Spa</td><td>wellness</td><td>Centre de bien-être</td></tr>
+                <tr><td><code>ELEVATOR</code></td><td>Ascenseur</td><td>accessibility</td><td>Équipement d'accessibilité</td></tr>
+                <tr><td><code>MEETING_ROOM</code></td><td>Salle de réunion</td><td>business</td><td>Espace de travail</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Équipements d'un hôtel</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "amenities": [
+    {
+      "code": "WIFI",
+      "name": "WiFi gratuit",
+      "icon_url": "https://cdn.example.com/wifi.svg",
+      "family": {
+        "code": "connectivity",
+        "name": "Connectivité",
+        "icon_url": "https://cdn.example.com/connectivity.svg"
+      }
+    },
+    {
+      "code": "PARKING",
+      "name": "Parking",
+      "icon_url": "https://cdn.example.com/parking.svg",
+      "family": {
+        "code": "transport",
+        "name": "Transport",
+        "icon_url": "https://cdn.example.com/transport.svg"
+      }
+    },
+    {
+      "code": "POOL",
+      "name": "Piscine",
+      "icon_url": "https://cdn.example.com/pool.svg",
+      "family": {
+        "code": "outdoor",
+        "name": "Extérieur",
+        "icon_url": "https://cdn.example.com/outdoor.svg"
+      }
+    },
+    {
+      "code": "RESTAURANT",
+      "name": "Restaurant",
+      "icon_url": "https://cdn.example.com/restaurant.svg",
+      "family": {
+        "code": "dining",
+        "name": "Restauration",
+        "icon_url": "https://cdn.example.com/dining.svg"
+      }
+    },
+    {
+      "code": "SPA",
+      "name": "Spa",
+      "icon_url": "https://cdn.example.com/spa.svg",
+      "family": {
+        "code": "wellness",
+        "name": "Bien-être",
+        "icon_url": "https://cdn.example.com/wellness.svg"
+      }
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par équipements :</strong> Utilisez <code>p_filters.amenities_any: ["WIFI", "POOL"]</code> pour trouver les établissements avec WiFi et piscine.</p>
+              <p><strong>Filtrer par famille :</strong> Utilisez <code>p_filters.amenity_families_any: ["wellness", "outdoor"]</code> pour les équipements de bien-être et extérieurs.</p>
+              <p><strong>Affichage :</strong> Groupez par <code>family</code> pour une meilleure organisation visuelle.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les équipements indiqués sont <strong>disponibles sur place</strong>. Vérifiez les conditions d'accès (horaires, restrictions, coûts supplémentaires) directement avec l'établissement.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.8 <code>environment_tags[]</code> & <code>payment_methods[]</code> (tags environnementaux et moyens de paiement)</summary>
+          <div class="content">
+            <p>Ces deux blocs partagent la même structure simple mais servent des objectifs différents : <code>environment_tags[]</code> décrit l'environnement de l'établissement, tandis que <code>payment_methods[]</code> liste les moyens de paiement acceptés.</p>
+            
+            <h4>Structure commune</h4>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>code</code></td><td><code>string</code></td><td>Code de référence</td><td><code>"beach"</code></td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom affiché</td><td><code>"Plage"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>Icône représentative</td><td><code>"https://cdn.example.com/beach.svg"</code></td></tr>
+              </tbody>
+            </table>
+
+            <h4>Tags environnementaux disponibles</h4>
+            <p>Le système supporte plusieurs tags environnementaux via le référentiel <code>environment_tag</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>beach</code></td><td>Plage</td><td>Proximité de la plage</td><td>Hôtels côtiers</td></tr>
+                <tr><td><code>mountain</code></td><td>Montagne</td><td>Environnement montagnard</td><td>Gîtes, refuges</td></tr>
+                <tr><td><code>forest</code></td><td>Forêt</td><td>Proximité de forêts</td><td>Campings, gîtes</td></tr>
+                <tr><td><code>city_center</code></td><td>Centre-ville</td><td>En centre-ville</td><td>Hôtels urbains</td></tr>
+                <tr><td><code>heritage</code></td><td>Patrimoine</td><td>Proche de sites patrimoniaux</td><td>Hôtels historiques</td></tr>
+                <tr><td><code>volcano</code></td><td>Volcan</td><td>Proximité volcanique</td><td>Spécifique à La Réunion</td></tr>
+                <tr><td><code>lagoon</code></td><td>Lagon</td><td>Proximité du lagon</td><td>Hôtels tropicaux</td></tr>
+                <tr><td><code>garden</code></td><td>Jardin</td><td>Jardin privé</td><td>Gîtes, maisons d'hôte</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Moyens de paiement disponibles</h4>
+            <p>Le système supporte plusieurs moyens de paiement via le référentiel <code>payment_method</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>cash</code></td><td>Espèces</td><td>Paiement en liquide</td><td>Petits établissements</td></tr>
+                <tr><td><code>card</code></td><td>Carte bancaire</td><td>Paiement par carte</td><td>Standard</td></tr>
+                <tr><td><code>check</code></td><td>Chèque</td><td>Paiement par chèque</td><td>Réservations longues</td></tr>
+                <tr><td><code>transfer</code></td><td>Virement</td><td>Virement bancaire</td><td>Groupes, entreprises</td></tr>
+                <tr><td><code>paypal</code></td><td>PayPal</td><td>Paiement en ligne</td><td>Réservations web</td></tr>
+                <tr><td><code>apple_pay</code></td><td>Apple Pay</td><td>Paiement mobile Apple</td><td>Clients Apple</td></tr>
+                <tr><td><code>google_pay</code></td><td>Google Pay</td><td>Paiement mobile Google</td><td>Clients Android</td></tr>
+                <tr><td><code>voucher</code></td><td>Bon cadeau</td><td>Paiement par bon</td><td>Offres spéciales</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Hôtel côtier</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "environment_tags": [
+    {
+      "code": "beach",
+      "name": "Plage",
+      "icon_url": "https://cdn.example.com/beach.svg"
+    },
+    {
+      "code": "lagoon",
+      "name": "Lagon",
+      "icon_url": "https://cdn.example.com/lagoon.svg"
+    },
+    {
+      "code": "volcano",
+      "name": "Volcan",
+      "icon_url": "https://cdn.example.com/volcano.svg"
+    }
+  ],
+  "payment_methods": [
+    {
+      "code": "card",
+      "name": "Carte bancaire",
+      "icon_url": "https://cdn.example.com/card.svg"
+    },
+    {
+      "code": "cash",
+      "name": "Espèces",
+      "icon_url": "https://cdn.example.com/cash.svg"
+    },
+    {
+      "code": "paypal",
+      "name": "PayPal",
+      "icon_url": "https://cdn.example.com/paypal.svg"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par environnement :</strong> Utilisez <code>p_filters.environment_tags_any: ["beach", "mountain"]</code> pour trouver les établissements en bord de plage ou en montagne.</p>
+              <p><strong>Filtrer par paiement :</strong> Utilisez <code>p_filters.payment_methods_any: ["card", "paypal"]</code> pour les établissements acceptant carte ou PayPal.</p>
+              <p><strong>Affichage :</strong> Affichez les tags environnementaux pour l'orientation géographique et les moyens de paiement pour la planification.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les moyens de paiement indiqués sont <strong>généralement acceptés</strong>. Vérifiez les conditions spécifiques (montants minimums, devises, etc.) directement avec l'établissement.</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.9 <code>prices[]</code> (tarification complexe avec périodes)</summary>
+          <div class="content">
+            <p>Le bloc <code>prices[]</code> gère la tarification complexe des établissements avec des prix variables selon les périodes, les types de clients, et les unités de facturation. Il supporte les fourchettes de prix, les conditions spéciales, et les créneaux horaires détaillés.</p>
             
             <h4>Structure principale d'un tarif</h4>
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>kind</code></td><td><code>object</code></td><td>Type de tarif enrichi : <code>{ id, code, name, position, icon_url }</code></td></tr>
-                <tr><td><code>unit</code></td><td><code>object</code></td><td>Unité enrichie : <code>{ id, code, name, position, icon_url }</code></td></tr>
-                <tr><td><code>amount</code></td><td><code>number</code></td><td>Montant de base (optionnel si fourchette)</td></tr>
-                <tr><td><code>amount_max</code></td><td><code>number</code></td><td>Montant maximum (pour fourchettes de prix)</td></tr>
-                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217, ex. <code>"EUR"</code>)</td></tr>
-                <tr><td><code>valid_from</code></td><td><code>date</code></td><td>Date de début de validité du tarif</td></tr>
-                <tr><td><code>valid_to</code></td><td><code>date</code></td><td>Date de fin de validité du tarif</td></tr>
-                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions, notes, restrictions</td></tr>
-                <tr><td><code>periods</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes détaillées imbriquées (voir ci-dessous)</td></tr>
+                <tr><td><code>kind</code></td><td><code>object</code></td><td>Type de tarif enrichi : { id, code, name, position, icon_url }</td><td><code>{"code": "adult", "name": "Adulte"}</code></td></tr>
+                <tr><td><code>unit</code></td><td><code>object</code></td><td>Unité enrichie : { id, code, name, position, icon_url }</td><td><code>{"code": "per_night", "name": "Par nuit"}</code></td></tr>
+                <tr><td><code>amount</code></td><td><code>number</code></td><td>Montant de base (optionnel si fourchette)</td><td><code>120.00</code></td></tr>
+                <tr><td><code>amount_max</code></td><td><code>number</code></td><td>Montant maximum (pour fourchettes de prix)</td><td><code>180.00</code></td></tr>
+                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217)</td><td><code>"EUR"</code></td></tr>
+                <tr><td><code>valid_from</code></td><td><code>date</code></td><td>Date de début de validité du tarif</td><td><code>"2024-01-01"</code></td></tr>
+                <tr><td><code>valid_to</code></td><td><code>date</code></td><td>Date de fin de validité du tarif</td><td><code>"2024-12-31"</code></td></tr>
+                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions, notes, restrictions</td><td><code>"Petit-déjeuner inclus"</code></td></tr>
+                <tr><td><code>periods</code></td><td><code>array&lt;object&gt;</code></td><td>Périodes détaillées imbriquées</td><td>Voir structure ci-dessous</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Types de tarifs disponibles</h4>
+            <p>Le système supporte plusieurs types de tarifs via le référentiel <code>price_kind</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>adult</code></td><td>Adulte</td><td>Tarif adulte standard</td><td>Hôtels, restaurants</td></tr>
+                <tr><td><code>child</code></td><td>Enfant</td><td>Tarif enfant (généralement réduit)</td><td>Hôtels, activités</td></tr>
+                <tr><td><code>senior</code></td><td>Sénior</td><td>Tarif senior (généralement réduit)</td><td>Hôtels, musées</td></tr>
+                <tr><td><code>group</code></td><td>Groupe</td><td>Tarif de groupe (généralement réduit)</td><td>Hôtels, restaurants</td></tr>
+                <tr><td><code>package</code></td><td>Forfait</td><td>Forfait tout inclus</td><td>Hôtels, agences</td></tr>
+                <tr><td><code>student</code></td><td>Étudiant</td><td>Tarif étudiant</td><td>Musées, activités</td></tr>
+                <tr><td><code>free</code></td><td>Gratuit</td><td>Accès gratuit</td><td>Musées, parcs</td></tr>
+                <tr><td><code>local</code></td><td>Résident</td><td>Tarif résident local</td><td>Activités, parcs</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Unités de tarification disponibles</h4>
+            <p>Le système supporte plusieurs unités via le référentiel <code>price_unit</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>per_night</code></td><td>Par nuit</td><td>Tarif par nuitée</td><td>Hôtels, gîtes</td></tr>
+                <tr><td><code>per_person</code></td><td>Par personne</td><td>Tarif par personne</td><td>Restaurants, activités</td></tr>
+                <tr><td><code>per_group</code></td><td>Par groupe</td><td>Tarif forfaitaire groupe</td><td>Guides, activités</td></tr>
+                <tr><td><code>per_entry</code></td><td>Par entrée</td><td>Tarif d'entrée unique</td><td>Musées, parcs</td></tr>
+                <tr><td><code>per_hour</code></td><td>Par heure</td><td>Tarif horaire</td><td>Location, services</td></tr>
+                <tr><td><code>per_day</code></td><td>Par jour</td><td>Tarif journalier</td><td>Location véhicules</td></tr>
+                <tr><td><code>per_week</code></td><td>Par semaine</td><td>Tarif hebdomadaire</td><td>Location longue durée</td></tr>
+                <tr><td><code>per_month</code></td><td>Par mois</td><td>Tarif mensuel</td><td>Location très longue durée</td></tr>
               </tbody>
             </table>
             
             <h4>Périodes imbriquées (<code>periods[]</code>)</h4>
-            <p>Chaque tarif peut avoir des périodes spécifiques avec des créneaux horaires :</p>
+            <p>Chaque tarif peut avoir des périodes spécifiques avec des créneaux horaires et des conditions particulières :</p>
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la période</td></tr>
-                <tr><td><code>start_date</code></td><td><code>date</code></td><td>Date de début de la période</td></tr>
-                <tr><td><code>end_date</code></td><td><code>date</code></td><td>Date de fin de la période</td></tr>
-                <tr><td><code>start_time</code></td><td><code>time</code></td><td>Heure de début (format HH:MM)</td></tr>
-                <tr><td><code>end_time</code></td><td><code>time</code></td><td>Heure de fin (format HH:MM)</td></tr>
-                <tr><td><code>note</code></td><td><code>string</code></td><td>Note spécifique à la période</td></tr>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la période</td><td><code>"uuid-period-1"</code></td></tr>
+                <tr><td><code>start_date</code></td><td><code>date</code></td><td>Date de début de la période</td><td><code>"2024-07-01"</code></td></tr>
+                <tr><td><code>end_date</code></td><td><code>date</code></td><td>Date de fin de la période</td><td><code>"2024-08-31"</code></td></tr>
+                <tr><td><code>start_time</code></td><td><code>time</code></td><td>Heure de début (format HH:MM)</td><td><code>"15:00"</code></td></tr>
+                <tr><td><code>end_time</code></td><td><code>time</code></td><td>Heure de fin (format HH:MM)</td><td><code>"11:00"</code></td></tr>
+                <tr><td><code>note</code></td><td><code>string</code></td><td>Note spécifique à la période</td><td><code>"Haute saison"</code></td></tr>
               </tbody>
             </table>
-            
+
+            <h4>Exemple concret : Tarification hôtel complexe</h4>
             <div class="card tip-card" style="margin-top: 16px;">
               <div class="pill tip-pill">Exemple</div>
               <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
@@ -1589,21 +2143,21 @@ const json = await res.json();</pre>
         "code": "adult",
         "name": "Adulte",
         "position": 1,
-        "icon_url": "https://.../adult.svg"
+        "icon_url": "https://cdn.example.com/adult.svg"
       },
       "unit": {
         "id": "uuid-unit-1", 
         "code": "per_night",
         "name": "Par nuit",
         "position": 1,
-        "icon_url": "https://.../night.svg"
+        "icon_url": "https://cdn.example.com/night.svg"
       },
       "amount": 120.00,
       "amount_max": null,
       "currency": "EUR",
       "valid_from": "2024-01-01",
       "valid_to": "2024-12-31",
-      "conditions": "Petit-déjeuner inclus",
+      "conditions": "Petit-déjeuner inclus, TVA comprise",
       "periods": [
         {
           "id": "uuid-period-1",
@@ -1611,7 +2165,7 @@ const json = await res.json();</pre>
           "end_date": "2024-08-31",
           "start_time": "15:00",
           "end_time": "11:00",
-          "note": "Haute saison"
+          "note": "Haute saison - Prix majoré"
         },
         {
           "id": "uuid-period-2",
@@ -1622,12 +2176,70 @@ const json = await res.json();</pre>
           "note": "Saison intermédiaire"
         }
       ]
+    },
+    {
+      "kind": {
+        "id": "uuid-kind-2",
+        "code": "child",
+        "name": "Enfant",
+        "position": 2,
+        "icon_url": "https://cdn.example.com/child.svg"
+      },
+      "unit": {
+        "id": "uuid-unit-1", 
+        "code": "per_night",
+        "name": "Par nuit",
+        "position": 1,
+        "icon_url": "https://cdn.example.com/night.svg"
+      },
+      "amount": 60.00,
+      "amount_max": null,
+      "currency": "EUR",
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "conditions": "Enfant de 3 à 12 ans, petit-déjeuner inclus",
+      "periods": []
+    },
+    {
+      "kind": {
+        "id": "uuid-kind-3",
+        "code": "group",
+        "name": "Groupe",
+        "position": 3,
+        "icon_url": "https://cdn.example.com/group.svg"
+      },
+      "unit": {
+        "id": "uuid-unit-2", 
+        "code": "per_person",
+        "name": "Par personne",
+        "position": 2,
+        "icon_url": "https://cdn.example.com/person.svg"
+      },
+      "amount": 80.00,
+      "amount_max": 100.00,
+      "currency": "EUR",
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "conditions": "Minimum 10 personnes, petit-déjeuner inclus",
+      "periods": []
     }
   ]
 }</code></pre>
             </div>
-            
-            <p class="inline-help"><b>Types de tarifs courants</b> : <code>adult</code>, <code>child</code>, <code>senior</code>, <code>group</code>, <code>package</code> • <b>Unités courantes</b> : <code>per_night</code>, <code>per_person</code>, <code>per_group</code>, <code>per_entry</code></p>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Calcul de prix</div>
+              <p><strong>Prix fixe :</strong> Utilisez <code>amount</code> quand le prix est fixe.</p>
+              <p><strong>Fourchette :</strong> Utilisez <code>amount</code> et <code>amount_max</code> pour les fourchettes de prix.</p>
+              <p><strong>Périodes :</strong> Vérifiez les <code>periods[]</code> pour les tarifs saisonniers et les créneaux horaires.</p>
+              <p><strong>Conditions :</strong> Affichez les <code>conditions</code> pour informer les clients des inclusions/exclusions.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les prix indiqués sont <strong>indicatifs</strong> et peuvent varier selon la disponibilité, les promotions, et les conditions particulières. Vérifiez toujours les prix finaux lors de la réservation.</p>
+            </div>
           </div>
         </details>
 
@@ -1749,25 +2361,203 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.12 <code>tags[]</code></summary>
+          <summary>3.12 <code>tags[]</code> (étiquettes thématiques)</summary>
           <div class="content">
+            <p>Le bloc <code>tags[]</code> contient des étiquettes thématiques personnalisées pour caractériser l'établissement : "romantique", "familial", "luxe", "authentique", etc. Ces tags permettent un filtrage et une catégorisation fine des établissements.</p>
+            
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>slug</code></td><td><code>string</code></td><td>Identifiant lisible</td></tr>
-                <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé</td></tr>
-                <tr><td><code>color</code></td><td><code>string</code></td><td>Couleur (CSS/hex)</td></tr>
-                <tr><td><code>icon / icon_url</code></td><td><code>string</code></td><td>Icône (nom/code) + URL</td></tr>
+                <tr><td><code>slug</code></td><td><code>string</code></td><td>Identifiant lisible (URL-friendly)</td><td><code>"romantique"</code></td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Libellé affiché</td><td><code>"Romantique"</code></td></tr>
+                <tr><td><code>color</code></td><td><code>string</code></td><td>Couleur d'affichage (CSS/hex)</td><td><code>"#FF6B6B"</code></td></tr>
+                <tr><td><code>icon</code></td><td><code>string</code></td><td>Nom/code de l'icône</td><td><code>"heart"</code></td></tr>
+                <tr><td><code>icon_url</code></td><td><code>string (URL)</code></td><td>URL de l'icône</td><td><code>"https://cdn.example.com/heart.svg"</code></td></tr>
               </tbody>
             </table>
+
+            <h4>Types de tags populaires</h4>
+            <p>Voici quelques exemples de tags couramment utilisés :</p>
+            
+            <table>
+              <thead><tr><th>Slug</th><th>Nom</th><th>Description</th><th>Couleur typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>romantique</code></td><td>Romantique</td><td>Idéal pour couples</td><td>#FF6B6B (rose)</td></tr>
+                <tr><td><code>familial</code></td><td>Familial</td><td>Adapté aux familles</td><td>#4ECDC4 (turquoise)</td></tr>
+                <tr><td><code>luxe</code></td><td>Luxe</td><td>Établissement haut de gamme</td><td>#FFD93D (doré)</td></tr>
+                <tr><td><code>authentique</code></td><td>Authentique</td><td>Expérience locale authentique</td><td>#6BCF7F (vert)</td></tr>
+                <tr><td><code>ecologique</code></td><td>Écologique</td><td>Engagement environnemental</td><td>#4D96FF (bleu)</td></tr>
+                <tr><td><code>historique</code></td><td>Historique</td><td>Patrimoine historique</td><td>#8B4513 (marron)</td></tr>
+                <tr><td><code>moderne</code></td><td>Moderne</td><td>Design contemporain</td><td>#9B59B6 (violet)</td></tr>
+                <tr><td><code>tranquille</code></td><td>Tranquille</td><td>Environnement calme</td><td>#95A5A6 (gris)</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Tags d'un hôtel de charme</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "tags": [
+    {
+      "slug": "romantique",
+      "name": "Romantique",
+      "color": "#FF6B6B",
+      "icon": "heart",
+      "icon_url": "https://cdn.example.com/heart.svg"
+    },
+    {
+      "slug": "authentique",
+      "name": "Authentique",
+      "color": "#6BCF7F",
+      "icon": "leaf",
+      "icon_url": "https://cdn.example.com/leaf.svg"
+    },
+    {
+      "slug": "historique",
+      "name": "Historique",
+      "color": "#8B4513",
+      "icon": "castle",
+      "icon_url": "https://cdn.example.com/castle.svg"
+    },
+    {
+      "slug": "tranquille",
+      "name": "Tranquille",
+      "color": "#95A5A6",
+      "icon": "peace",
+      "icon_url": "https://cdn.example.com/peace.svg"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par tags :</strong> Utilisez <code>p_filters.tags_any: ["romantique", "luxe"]</code> pour trouver les établissements romantiques ou de luxe.</p>
+              <p><strong>Affichage :</strong> Affichez les tags avec leurs couleurs et icônes pour une identification visuelle rapide.</p>
+              <p><strong>Recherche :</strong> Utilisez les <code>slug</code> pour les URLs et la recherche textuelle.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les tags sont <strong>subjectifs et qualitatifs</strong>. Ils reflètent l'ambiance et le positionnement de l'établissement plutôt que des caractéristiques objectives mesurables.</p>
+            </div>
           </div>
         </details>
 
         <details>
-          <summary>3.13 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
+          <summary>3.13 <code>meeting_rooms[]</code> (salles de réunion et équipements)</summary>
           <div class="content">
-            <p>Colonnes de salle (nom, surface, capacités <code>cap_theatre</code>, <code>cap_u</code>, <code>cap_classroom</code>, <code>cap_boardroom</code>, …).</p>
-            <p><code>equipment[]</code> : <code>{ code, name, icon_url }</code>.</p>
+            <p>Le bloc <code>meeting_rooms[]</code> décrit les salles de réunion, de conférence et d'événements disponibles dans l'établissement, avec leurs capacités selon différents formats d'organisation et leurs équipements techniques.</p>
+            
+            <h4>Structure d'une salle de réunion</h4>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom de la salle</td><td><code>"Salle des Palmiers"</code></td></tr>
+                <tr><td><code>surface</code></td><td><code>number</code></td><td>Surface en m²</td><td><code>120</code></td></tr>
+                <tr><td><code>cap_theatre</code></td><td><code>number</code></td><td>Capacité en format théâtre</td><td><code>80</code></td></tr>
+                <tr><td><code>cap_u</code></td><td><code>number</code></td><td>Capacité en format U</td><td><code>24</code></td></tr>
+                <tr><td><code>cap_classroom</code></td><td><code>number</code></td><td>Capacité en format classe</td><td><code>40</code></td></tr>
+                <tr><td><code>cap_boardroom</code></td><td><code>number</code></td><td>Capacité en format conseil</td><td><code>16</code></td></tr>
+                <tr><td><code>cap_cocktail</code></td><td><code>number</code></td><td>Capacité en format cocktail</td><td><code>100</code></td></tr>
+                <tr><td><code>cap_banquet</code></td><td><code>number</code></td><td>Capacité en format banquet</td><td><code>60</code></td></tr>
+                <tr><td><code>equipment</code></td><td><code>array&lt;object&gt;</code></td><td>Équipements disponibles</td><td>Voir structure ci-dessous</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Formats de salle expliqués</h4>
+            <p>Les différentes capacités correspondent aux formats d'organisation d'événements :</p>
+            
+            <table>
+              <thead><tr><th>Format</th><th>Description</th><th>Usage typique</th><th>Densité</th></tr></thead>
+              <tbody>
+                <tr><td><code>cap_theatre</code></td><td>Théâtre (toutes les chaises face à la scène)</td><td>Présentations, conférences</td><td>La plus élevée</td></tr>
+                <tr><td><code>cap_classroom</code></td><td>Classe (tables individuelles face à l'avant)</td><td>Formations, cours</td><td>Élevée</td></tr>
+                <tr><td><code>cap_u</code></td><td>U (tables en forme de U)</td><td>Réunions interactives</td><td>Moyenne</td></tr>
+                <tr><td><code>cap_boardroom</code></td><td>Conseil (table rectangulaire)</td><td>Réunions de direction</td><td>Faible</td></tr>
+                <tr><td><code>cap_cocktail</code></td><td>Cocktail (debout, circulation libre)</td><td>Réseautage, apéritifs</td><td>Très élevée</td></tr>
+                <tr><td><code>cap_banquet</code></td><td>Banquet (tables rondes)</td><td>Repas, galas</td><td>Moyenne</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Équipements disponibles</h4>
+            <p>Le système supporte plusieurs types d'équipements via le référentiel <code>meeting_equipment</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>projector</code></td><td>Vidéoprojecteur</td><td>Projection d'écran</td><td>Présentations</td></tr>
+                <tr><td><code>screen</code></td><td>Écran de projection</td><td>Écran fixe ou mobile</td><td>Présentations</td></tr>
+                <tr><td><code>sound_system</code></td><td>Système audio</td><td>Sonorisation</td><td>Conférences</td></tr>
+                <tr><td><code>microphone</code></td><td>Microphone</td><td>Micro fixe ou mobile</td><td>Présentations</td></tr>
+                <tr><td><code>whiteboard</code></td><td>Tableau blanc</td><td>Tableau effaçable</td><td>Formations</td></tr>
+                <tr><td><code>flipchart</code></td><td>Paperboard</td><td>Tableau à feuilles</td><td>Brainstorming</td></tr>
+                <tr><td><code>wifi</code></td><td>WiFi</td><td>Accès internet</td><td>Connectivité</td></tr>
+                <tr><td><code>air_conditioning</code></td><td>Climatisation</td><td>Contrôle température</td><td>Confort</td></tr>
+                <tr><td><code>natural_light</code></td><td>Éclairage naturel</td><td>Fenêtres, lumière du jour</td><td>Confort</td></tr>
+                <tr><td><code>catering</code></td><td>Restauration</td><td>Service traiteur</td><td>Événements</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Salle de conférence</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "meeting_rooms": [
+    {
+      "name": "Salle des Palmiers",
+      "surface": 120,
+      "cap_theatre": 80,
+      "cap_u": 24,
+      "cap_classroom": 40,
+      "cap_boardroom": 16,
+      "cap_cocktail": 100,
+      "cap_banquet": 60,
+      "equipment": [
+        {
+          "code": "projector",
+          "name": "Vidéoprojecteur",
+          "icon_url": "https://cdn.example.com/projector.svg"
+        },
+        {
+          "code": "screen",
+          "name": "Écran de projection",
+          "icon_url": "https://cdn.example.com/screen.svg"
+        },
+        {
+          "code": "sound_system",
+          "name": "Système audio",
+          "icon_url": "https://cdn.example.com/sound.svg"
+        },
+        {
+          "code": "wifi",
+          "name": "WiFi",
+          "icon_url": "https://cdn.example.com/wifi.svg"
+        },
+        {
+          "code": "air_conditioning",
+          "name": "Climatisation",
+          "icon_url": "https://cdn.example.com/ac.svg"
+        }
+      ]
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Sélection de salle</div>
+              <p><strong>Capacité :</strong> Choisissez le format selon le type d'événement (théâtre pour présentation, U pour réunion interactive).</p>
+              <p><strong>Équipements :</strong> Vérifiez la disponibilité des équipements nécessaires (projecteur, son, etc.).</p>
+              <p><strong>Surface :</strong> Considérez l'espace nécessaire pour la circulation et les équipements.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les capacités indiquées sont <strong>théoriques</strong>. La capacité réelle peut varier selon la configuration, les équipements, et les normes de sécurité en vigueur.</p>
+            </div>
           </div>
         </details>
 
@@ -1916,30 +2706,46 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.18 <code>relations { out[], in[] }</code></summary>
+          <summary>3.18 <code>incoming_relations[]</code> & <code>outgoing_relations[]</code></summary>
           <div class="content">
-            <p>La structure <code>relations</code> représente les liens entre l'objet courant et le reste du graphe (parent, enfants, liaisons éditoriales, etc.). Chaque entrée décrit le sens du lien, le type de relation et les métadonnées nécessaires à l'affichage ou au filtrage.</p>
+            <p>Les relations sont exposées par <strong>sens</strong> pour plus de clarté : <code>outgoing_relations[]</code> (liens sortants) et <code>incoming_relations[]</code> (liens entrants). Chaque entrée fournit le type de relation et les métadonnées nécessaires.</p>
             <ul>
-              <li><b>out[]</b> : relations <em>sortantes</em>. L'objet courant pointe vers une autre ressource exposée sous <code>target: { id, type, name }</code>.</li>
-              <li><b>in[]</b> : relations <em>entrantes</em>. Une autre ressource référence l'objet courant et apparaît via <code>source: { id, type, name }</code>.</li>
+              <li><b>outgoing_relations[]</b> : l'objet courant pointe vers une autre ressource exposée sous <code>target: { id, type, name }</code>.</li>
+              <li><b>incoming_relations[]</b> : une autre ressource référence l'objet courant, exposée sous <code>source: { id, type, name }</code>.</li>
             </ul>
             <p>Chaque enregistrement conserve les métadonnées du lien (<code>id</code>, <code>relation_type_id</code>, <code>distance_m</code>, <code>note</code>, <code>position</code>, <code>created_at</code>, <code>updated_at</code>) et ajoute le nœud opposé déjà résolu (<code>target</code> ou <code>source</code>).</p>
             <p>Pour interpréter le type de relation, mappez <code>relation_type_id</code> avec la table de référence <code>ref_object_relation_type</code> (code, libellé, description). Les champs <code>distance_m</code> et <code>note</code> restent optionnels et peuvent être utilisés pour afficher une distance ou un commentaire éditorial.</p>
             <div class="card tip-card" style="margin-top: 16px;">
               <div class="pill tip-pill">Exemple</div>
               <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
-  "id": "uuid-relation-1",
-  "relation_type_id": "uuid-type-restaurant",
-  "position": 1,
-  "note": null,
-  "distance_m": 120.0,
-  "created_at": "2024-03-12T09:15:00Z",
-  "updated_at": "2024-03-12T09:15:00Z",
-  "target": { "id": "RES-001", "type": "RES", "name": "Restaurant Chez Léon" }
+  "outgoing_relations": [
+    {
+      "id": "uuid-relation-1",
+      "relation_type_id": "uuid-type-restaurant",
+      "position": 1,
+      "note": null,
+      "distance_m": 120.0,
+      "created_at": "2024-03-12T09:15:00Z",
+      "updated_at": "2024-03-12T09:15:00Z",
+      "target": { "id": "RES-001", "type": "RES", "name": "Restaurant Chez Léon" }
+    }
+  ],
+  "incoming_relations": [
+    {
+      "id": "uuid-relation-2",
+      "relation_type_id": "uuid-type-managed-by",
+      "position": 1,
+      "note": null,
+      "distance_m": null,
+      "created_at": "2024-03-12T09:15:00Z",
+      "updated_at": "2024-03-12T09:15:00Z",
+      "source": { "id": "ORG-456", "type": "ORG", "name": "Organisation Parent" }
+    }
+  ]
 }</code></pre>
             </div>
             <p class="inline-help">Les objets liés ne sont pas étendus : interrogez séparément l'identifiant fourni si vous avez besoin de leurs contacts, adresses ou médias.</p>
-            <p class="inline-help"><b>Cas d'usage :</b> un objet "Restaurant" rattaché à un "Hôtel" aura un enregistrement dans <code>out[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans son tableau <code>in[]</code>.</p>
+            <p class="inline-help"><b>Cas d'usage :</b> un objet « Restaurant » rattaché à un « Hôtel » aura un enregistrement dans <code>outgoing_relations[]</code> pointant vers l'hôtel. Inversement, l'hôtel verra ce restaurant apparaître dans <code>incoming_relations[]</code>.</p>
           </div>
         </details>
 
@@ -2106,7 +2912,7 @@ const json = await res.json();</pre>
         <details>
           <summary>3.26 <code>legal_records[]</code></summary>
           <div class="content">
-            <p>Enregistrements légaux unifiés remplaçant les anciens blocs <code>legal</code> et <code>accommodation_legal</code>.</p>
+            <p>Enregistrements légaux et certifications officielles de l'établissement.</p>
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
               <tbody>
@@ -3076,7 +3882,7 @@ const json = await res.json();</pre>
             <h3>Nouveaux blocs de données</h3>
             <ul>
               <li><code>actors[]</code> : personnes physiques liées à l'objet avec leurs rôles.</li>
-              <li><code>legal_records[]</code> : enregistrements légaux unifiés (remplace <code>legal</code> et <code>accommodation_legal</code>).</li>
+              <li><code>legal_records[]</code> : enregistrements légaux et certifications officielles.</li>
               <li><code>incoming_relations[]</code> et <code>outgoing_relations[]</code> : relations séparées par sens.</li>
             </ul>
           </div>

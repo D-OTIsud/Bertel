@@ -1404,7 +1404,7 @@ const json = await res.json();</pre>
                 <tr><td><code>payment_methods</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de paiement</td><td>voir §3.8</td></tr>
                 <tr><td><code>pet_policy</code></td><td><code>object</code></td><td>Politique animaux</td><td><code>{ "accepted": true, ... }</code></td></tr>
                 <tr><td><code>prices</code></td><td><code>array&lt;object&gt;</code></td><td>Tarifs (+ périodes)</td><td>voir §3.9</td></tr>
-                <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements</td><td>voir §3.10</td></tr>
+                <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements (étoiles hôtels, certifications, etc.)</td><td>voir §3.10</td></tr>
                 <tr><td><code>handicap_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Labellisation Tourisme &amp; Handicap</td><td>voir §3.11</td></tr>
                 <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td>voir §3.12</td></tr>
                 <tr><td><code>discounts</code></td><td><code>array&lt;object&gt;</code></td><td>Réductions et offres spéciales</td><td>voir §3.23</td></tr>
@@ -1632,17 +1632,78 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.10 <code>classifications[]</code></summary>
+          <summary>3.10 <code>classifications[]</code> (labels, classements, certifications)</summary>
           <div class="content">
+            <p>Le bloc <code>classifications[]</code> regroupe tous les labels, classements et certifications attribués à un objet touristique. C'est ici que sont stockées les <strong>étoiles d'hôtel</strong>, les <strong>labels environnementaux</strong>, les <strong>certifications d'accessibilité</strong> et autres reconnaissances officielles.</p>
+            
             <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
-                <tr><td><code>scheme</code></td><td><code>enum</code></td><td>Schéma/organisme</td></tr>
-                <tr><td><code>value</code></td><td><code>enum</code></td><td>Valeur/grade</td></tr>
-                <tr><td><code>awarded_at / valid_until</code></td><td><code>date</code></td><td>Délivré / validité</td></tr>
-                <tr><td><code>status</code></td><td><code>enum</code></td><td>Statut</td></tr>
+                <tr><td><code>scheme</code></td><td><code>string</code></td><td>Code du schéma de classification</td><td><code>"hot_stars"</code></td></tr>
+                <tr><td><code>scheme_name</code></td><td><code>string</code></td><td>Nom du schéma/organisme</td><td><code>"Classement hôtelier"</code></td></tr>
+                <tr><td><code>value</code></td><td><code>string</code></td><td>Code de la valeur/grade</td><td><code>"4"</code></td></tr>
+                <tr><td><code>value_name</code></td><td><code>string</code></td><td>Libellé de la valeur</td><td><code>"4 étoiles"</code></td></tr>
+                <tr><td><code>awarded_at</code></td><td><code>date</code></td><td>Date d'obtention</td><td><code>"2024-01-15"</code></td></tr>
+                <tr><td><code>valid_until</code></td><td><code>date</code></td><td>Date d'expiration (si applicable)</td><td><code>"2025-01-15"</code></td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td>Statut de la classification</td><td><code>"active"</code></td></tr>
               </tbody>
             </table>
+
+            <h4>Types de classifications disponibles</h4>
+            <p>Le système supporte plusieurs types de classifications via le référentiel <code>ref_classification_scheme</code> :</p>
+            
+            <table>
+              <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Valeurs possibles</th></tr></thead>
+              <tbody>
+                <tr><td><code>hot_stars</code></td><td>Classement hôtelier</td><td>Étoiles officielles hôtels</td><td>1 à 5 étoiles</td></tr>
+                <tr><td><code>camp_stars</code></td><td>Classement camping</td><td>Étoiles officielles campings</td><td>1 à 5 étoiles</td></tr>
+                <tr><td><code>meuble_stars</code></td><td>Classement meublés</td><td>Étoiles meublés de tourisme</td><td>1 à 5 étoiles</td></tr>
+                <tr><td><code>gites_epics</code></td><td>Gîtes de France (épis)</td><td>Niveau Gîtes de France</td><td>1 à 5 épis</td></tr>
+                <tr><td><code>clevacances_keys</code></td><td>Clévacances (clés)</td><td>Niveau Clévacances</td><td>1 à 5 clés</td></tr>
+                <tr><td><code>green_key</code></td><td>La Clef Verte</td><td>Label environnemental</td><td>Certifié / Non certifié</td></tr>
+                <tr><td><code>eu_ecolabel</code></td><td>Écolabel Européen</td><td>Label environnemental UE</td><td>Certifié / Non certifié</td></tr>
+                <tr><td><code>tourisme_handicap</code></td><td>Tourisme & Handicap</td><td>Accessibilité (multi-sélection)</td><td>Moteur, Visuel, Auditif, Mental</td></tr>
+              </tbody>
+            </table>
+
+            <h4>Exemple concret : Hôtel 4 étoiles</h4>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "classifications": [
+    {
+      "scheme": "hot_stars",
+      "scheme_name": "Classement hôtelier",
+      "value": "4",
+      "value_name": "4 étoiles",
+      "awarded_at": "2024-01-15",
+      "valid_until": "2025-01-15",
+      "status": "active"
+    },
+    {
+      "scheme": "green_key",
+      "scheme_name": "La Clef Verte",
+      "value": "certified",
+      "value_name": "Certifié",
+      "awarded_at": "2024-03-01",
+      "valid_until": "2025-03-01",
+      "status": "active"
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h4>Utilisation pratique</h4>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Filtrage</div>
+              <p><strong>Filtrer par étoiles :</strong> Utilisez <code>p_filters.classifications_any: ["hot_stars:4"]</code> pour trouver les hôtels 4 étoiles.</p>
+              <p><strong>Filtrer par label :</strong> Utilisez <code>p_filters.classifications_any: ["green_key:certified"]</code> pour les établissements écolabellisés.</p>
+            </div>
+
+            <div class="card warning-card" style="margin-top: 16px;">
+              <div class="pill warning-pill">Important</div>
+              <p>Les classifications sont <strong>officielles et vérifiées</strong>. Elles ne peuvent être modifiées que par les organismes compétents via le système de gestion des labels.</p>
+            </div>
           </div>
         </details>
 
@@ -2956,82 +3017,9 @@ const json = await res.json();</pre>
         </details>
       </section>
 
-      <!-- 5) Outil de migration & orchestration IA -->
-      <section class="card" id="migration">
-        <h2>5) Outil de migration & orchestration IA</h2>
-        <p class="lead">L’outil FastAPI de migration tire parti d’agents spécialisés, d’un routeur IA et d’une télémétrie temps réel pour transformer des flux hétérogènes en enregistrements conformes au schéma DLL.</p>
-
-        <details open>
-          <summary>5.1 Architecture générale</summary>
-          <div class="content">
-            <p>Le serveur instancie tous les agents métiers (identité, localisation, contacts, équipements, langues, paiements, environnement, politique animaux, médias, prestataires et horaires), puis les relie au <em>FieldRouter</em> IA, au vérificateur et au nouvel agent de référentiels communs. Chaque agent peut ainsi consommer uniquement les fragments qui lui sont dédiés.</p>
-            <ul>
-              <li>Initialisation des services partagés : télémétrie, accès Supabase, notifications webhook et bibliothèque de prompts.</li>
-              <li>Bascule automatique vers un moteur heuristique <code>RuleBasedLLM</code> si la construction du client OpenAI échoue, avec journalisation de l’incident.</li>
-              <li>Coordination centralisée qui expose les descripteurs d’agents et orchestre leur exécution séquentielle avec partage de contexte.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details>
-          <summary>5.2 Endpoints principaux</summary>
-          <div class="content">
-            <p>Le service fournit une interface web de supervision ainsi qu’une API JSON pensée pour les intégrations batch :</p>
-            <table>
-              <thead><tr><th>Méthode</th><th>Chemin</th><th>Rôle</th></tr></thead>
-              <tbody>
-                <tr><td><code>GET</code></td><td><code>/</code></td><td>Dashboard HTML en temps réel.</td></tr>
-                <tr><td><code>GET</code></td><td><code>/health</code></td><td>Ping de vitalité simple.</td></tr>
-                <tr><td><code>GET</code></td><td><code>/events</code></td><td>Snapshot JSON de la télémétrie courante.</td></tr>
-                <tr><td><code>GET</code></td><td><code>/events/stream</code></td><td>Flux SSE continu pour suivre les événements (avec keep-alive).</td></tr>
-                <tr><td><code>GET</code></td><td><code>/agents</code></td><td>Liste des agents et de leurs champs attendus.</td></tr>
-                <tr><td><code>POST</code></td><td><code>/llm-test</code></td><td>Vérification ad hoc de la connectivité LLM.</td></tr>
-                <tr><td><code>POST</code></td><td><code>/ingest</code></td><td>Point d’entrée principal : retourne les fragments routés et les éléments non résolus.</td></tr>
-              </tbody>
-            </table>
-            <p>Chaque appel d’ingestion émet un événement de télémétrie <code>coordinator.responded</code> contenant le résumé de la réponse.</p>
-          </div>
-        </details>
-
-        <details>
-          <summary>5.3 Télémétrie & dashboard</summary>
-          <div class="content">
-            <p>La télémétrie repose sur un journal FIFO en mémoire qui conserve les derniers événements, fournit des snapshots instantanés et gère des abonnements asynchrones pour l’affichage en direct du dashboard. Les événements sont diffusés aussi bien aux clients SSE qu’à l’interface HTML.</p>
-            <ul>
-              <li>Chaque enregistrement pousse un événement horodaté contenant le type et la charge utile.</li>
-              <li>Les flux SSE démarrent en envoyant le snapshot actuel puis publient les événements en continu, avec des battements <code>keep-alive</code>.</li>
-              <li>La rétention est configurable via les paramètres d’application.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details>
-          <summary>5.4 Résilience & gestion des flux</summary>
-          <div class="content">
-            <p>L’orchestrateur est conçu pour continuer à fonctionner même sans accès complet aux services externes :</p>
-            <ul>
-              <li>Fallback IA : si le fournisseur externe n’est pas disponible, le coordinateur bascule vers les heuristiques intégrées et consigne l’erreur.</li>
-              <li>Supabase : toutes les opérations (<code>upsert</code>, <code>lookup</code>) produisent des événements <code>supabase.*</code> et retournent un statut <code>skipped</code> si les identifiants sont absents.</li>
-              <li>Normalisation de payload : la couche de coordination fusionne les blocs <code>data</code>, élimine les clés inutiles et conserve un reliquat propre pour éviter les doublons entre sections et leftovers.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details>
-          <summary>5.5 Référentiels & vérification continue</summary>
-          <div class="content">
-            <p>Deux agents transverses garantissent la cohérence métier :</p>
-            <ul>
-              <li><strong>ReferenceCodeAgent</strong> : assure la création/recherche des codes de référence, maintient un cache mémoire et partage les résolutions via le contexte commun.</li>
-              <li><strong>VerificationAgent</strong> : observe les fragments traités, détecte les erreurs répétées et enrichit dynamiquement les prompts des agents concernés tout en journalisant les ajustements.</li>
-            </ul>
-          </div>
-        </details>
-      </section>
-
-      <!-- 6) Conseils -->
+      <!-- 5) Conseils -->
       <section class="card" id="tips">
-        <h2>6) Conseils & bonnes pratiques</h2>
+        <h2>5) Conseils & bonnes pratiques</h2>
         <div class="row">
           <div>
             <h3>Tracé ITI</h3>

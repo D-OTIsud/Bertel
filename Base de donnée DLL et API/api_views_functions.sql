@@ -488,11 +488,16 @@ RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
 AS $$
-  SELECT
-    regexp_replace(
-      replace(replace(encode(p, 'base64'), '+', '-'), '/', '_'),
-      '='||'+$',''
-    );
+  SELECT regexp_replace(
+           replace(
+             replace(
+               replace(
+                 replace(encode(p, 'base64'), E'\n', ''),
+               E'\r', ''),
+             '+', '-'),
+           '/', '_'),
+           '=+$',''
+         );
 $$;
 
 -- Décodage base64url (text -> bytea)
@@ -532,6 +537,15 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT convert_from(api.b64url_decode(p), 'UTF8')::jsonb;
+$$;
+
+-- Clean JSON by removing newlines and extra whitespace
+CREATE OR REPLACE FUNCTION api.json_clean(p jsonb)
+RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT regexp_replace(p::text, E'[\\n\\r\\s]+', '', 'g')::jsonb;
 $$;
 
 -- Langue préférée (première en minuscules)
@@ -2692,8 +2706,20 @@ BEGIN
     cur := api.cursor_unpack(p_cursor);
     IF cur ? 'offset' THEN v_offset := (cur->>'offset')::INT; END IF;
     IF cur ? 'page_size' THEN v_limit := (cur->>'page_size')::INT; END IF;
-    IF cur ? 'types' THEN v_types := ARRAY(SELECT jsonb_array_elements_text(cur->'types'))::object_type[]; END IF;
-    IF cur ? 'status' THEN v_status := ARRAY(SELECT jsonb_array_elements_text(cur->'status'))::object_status[]; END IF;
+    IF cur ? 'types' THEN
+      IF (cur->'types') IS NULL OR jsonb_typeof(cur->'types') <> 'array' THEN
+        v_types := NULL;
+      ELSE
+        v_types := ARRAY(SELECT jsonb_array_elements_text(cur->'types'))::object_type[];
+      END IF;
+    END IF;
+    IF cur ? 'status' THEN
+      IF (cur->'status') IS NULL OR jsonb_typeof(cur->'status') <> 'array' THEN
+        v_status := NULL;
+      ELSE
+        v_status := ARRAY(SELECT jsonb_array_elements_text(cur->'status'))::object_status[];
+      END IF;
+    END IF;
     IF cur ? 'search' THEN v_search := cur->>'search'; END IF;
     IF cur ? 'track_format' THEN v_track := lower(cur->>'track_format'); END IF;
     IF cur ? 'include_stages' THEN v_inc := (cur->>'include_stages')::boolean; END IF;
@@ -2740,7 +2766,7 @@ BEGIN
   -- Next cursor si on a rempli la page
   IF array_length(ids,1) = v_limit THEN
     next_offset := v_offset + v_limit;
-    next_cursor := api.cursor_pack(jsonb_build_object(
+    next_cursor := api.cursor_pack(api.json_clean(jsonb_strip_nulls(jsonb_build_object(
       'kind','page',
       'offset', next_offset,
       'page_size', v_limit,
@@ -2756,10 +2782,10 @@ BEGIN
       'render_locale', v_render_locale,
       'render_tz', v_render_tz,
       'render_version', v_render_version
-    ));
+    ))));
   END IF;
 
-  v_current_cursor := api.cursor_pack(jsonb_build_object(
+  v_current_cursor := api.cursor_pack(api.json_clean(jsonb_strip_nulls(jsonb_build_object(
     'kind','page',
     'offset', v_offset,
     'page_size', v_limit,
@@ -2775,7 +2801,7 @@ BEGIN
     'render_locale', v_render_locale,
     'render_tz', v_render_tz,
     'render_version', v_render_version
-  ));
+  ))));
 
   RETURN json_build_object(
     'meta', json_build_object(
@@ -2817,6 +2843,40 @@ END;
 $$;
 
 
+
+-- Convenience alias: accept TEXT[] for p_types/p_status (page)
+DROP FUNCTION IF EXISTS api.list_object_resources_page_text(TEXT, TEXT[], INTEGER, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN) CASCADE;
+CREATE OR REPLACE FUNCTION api.list_object_resources_page_text(
+  p_cursor         TEXT DEFAULT NULL,
+  p_lang_prefs     TEXT[] DEFAULT ARRAY['fr']::text[],
+  p_page_size      INTEGER DEFAULT 50,
+  p_types          TEXT[] DEFAULT NULL,
+  p_status         TEXT[] DEFAULT ARRAY['published']::text[],
+  p_search         TEXT DEFAULT NULL,
+  p_track_format   TEXT DEFAULT 'none',
+  p_include_stages BOOLEAN DEFAULT NULL,
+  p_stage_color    TEXT DEFAULT NULL,
+  p_omit_empty     BOOLEAN DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN api.list_object_resources_page(
+    p_cursor,
+    p_lang_prefs,
+    p_page_size,
+    CASE WHEN p_types IS NULL THEN NULL ELSE ARRAY(SELECT t::object_type FROM unnest(p_types) AS t) END,
+    CASE WHEN p_status IS NULL THEN NULL ELSE ARRAY(SELECT s::object_status FROM unnest(p_status) AS s) END,
+    p_search,
+    p_track_format,
+    p_include_stages,
+    p_stage_color,
+    p_omit_empty
+  );
+END;
+$$;
 
 -- =====================================================
 -- 5) Endpoint : list_object_resources_since_fast (keyset)
@@ -2877,8 +2937,20 @@ BEGIN
     cur := api.cursor_unpack(p_cursor);
     IF cur ? 'use_source'   THEN v_use_source := (cur->>'use_source')::boolean; END IF;
     IF cur ? 'limit'        THEN v_limit := (cur->>'limit')::int; END IF;
-    IF cur ? 'types'        THEN v_types := ARRAY(SELECT jsonb_array_elements_text(cur->'types'))::object_type[]; END IF;
-    IF cur ? 'status'       THEN v_status := ARRAY(SELECT jsonb_array_elements_text(cur->'status'))::object_status[]; END IF;
+    IF cur ? 'types'        THEN
+      IF (cur->'types') IS NULL OR jsonb_typeof(cur->'types') <> 'array' THEN
+        v_types := NULL;
+      ELSE
+        v_types := ARRAY(SELECT jsonb_array_elements_text(cur->'types'))::object_type[];
+      END IF;
+    END IF;
+    IF cur ? 'status'       THEN
+      IF (cur->'status') IS NULL OR jsonb_typeof(cur->'status') <> 'array' THEN
+        v_status := NULL;
+      ELSE
+        v_status := ARRAY(SELECT jsonb_array_elements_text(cur->'status'))::object_status[];
+      END IF;
+    END IF;
     IF cur ? 'search'       THEN v_search := cur->>'search'; END IF;
     IF cur ? 'track_format' THEN v_track := lower(cur->>'track_format'); END IF;
     IF cur ? 'include_stages' THEN v_inc := (cur->>'include_stages')::boolean; END IF;
@@ -2940,7 +3012,7 @@ BEGIN
       FROM object o WHERE o.id = ids[v_limit];
     END IF;
 
-    next_cursor := api.cursor_pack(jsonb_build_object(
+    next_cursor := api.cursor_pack(api.json_clean(jsonb_strip_nulls(jsonb_build_object(
       'kind','since',
       'since', to_char(p_since AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
       'use_source', v_use_source,
@@ -2958,10 +3030,10 @@ BEGIN
       'render_locale', v_render_locale,
       'render_tz', v_render_tz,
       'render_version', v_render_version
-    ));
+    ))));
   END IF;
 
-  v_current_cursor := api.cursor_pack(jsonb_build_object(
+  v_current_cursor := api.cursor_pack(api.json_clean(jsonb_strip_nulls(jsonb_build_object(
     'kind','since',
     'since', to_char(p_since AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),
     'use_source', v_use_source,
@@ -2979,7 +3051,7 @@ BEGIN
     'render_locale', v_render_locale,
     'render_tz', v_render_tz,
     'render_version', v_render_version
-  ));
+  ))));
 
   RETURN json_build_object(
     'meta', json_build_object(
@@ -3020,6 +3092,42 @@ END;
 $$;
 
 
+
+-- Convenience alias: accept TEXT[] for p_types/p_status (since)
+DROP FUNCTION IF EXISTS api.list_object_resources_since_fast_text(timestamptz, TEXT, boolean, TEXT[], integer, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast_text(
+  p_since          TIMESTAMPTZ,
+  p_cursor         TEXT DEFAULT NULL,
+  p_use_source     BOOLEAN DEFAULT FALSE,
+  p_lang_prefs     TEXT[] DEFAULT ARRAY['fr']::text[],
+  p_limit          INTEGER DEFAULT 50,
+  p_types          TEXT[] DEFAULT NULL,
+  p_status         TEXT[] DEFAULT ARRAY['published']::text[],
+  p_search         TEXT DEFAULT NULL,
+  p_track_format   TEXT DEFAULT 'none',
+  p_include_stages BOOLEAN DEFAULT NULL,
+  p_stage_color    TEXT DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN api.list_object_resources_since_fast(
+    p_since,
+    p_cursor,
+    p_use_source,
+    p_lang_prefs,
+    p_limit,
+    CASE WHEN p_types IS NULL THEN NULL ELSE ARRAY(SELECT t::object_type FROM unnest(p_types) AS t) END,
+    CASE WHEN p_status IS NULL THEN NULL ELSE ARRAY(SELECT s::object_status FROM unnest(p_status) AS s) END,
+    p_search,
+    p_track_format,
+    p_include_stages,
+    p_stage_color
+  );
+END;
+$$;
 
 -- =====================================================
 -- 6) Endpoints filtrés (p_filters JSONB) — page-based
@@ -3334,8 +3442,8 @@ BEGIN
     'render_tz', v_render_tz,
     'render_version', v_render_version
   );
-  v_current_cursor := api.cursor_pack(v_cursor);
-  v_next := api.cursor_pack( jsonb_set(v_cursor,'{offset}', to_jsonb(v_offset + v_limit)) );
+  v_current_cursor := api.cursor_pack(api.json_clean(v_cursor));
+  v_next := api.cursor_pack(api.json_clean(jsonb_set(v_cursor,'{offset}', to_jsonb(v_offset + v_limit))));
 
   RETURN json_build_object(
     'meta', json_build_object(
@@ -3689,7 +3797,7 @@ BEGIN
       'use_source', v_use_source,
       'limit', v_limit,
       'schema_version', '3.0',
-      'cursor', api.cursor_pack(v_cursor),
+      'cursor', api.cursor_pack(api.json_clean(v_cursor)),
       'next_cursor', v_next
     ),
     'data', v_data

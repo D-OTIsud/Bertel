@@ -2666,10 +2666,6 @@ BEGIN
       'cursor', v_current_cursor,
       'next_cursor', next_cursor
     ),
-    'links', json_build_object(
-      'self', '?cursor=' || v_current_cursor,
-      'next', CASE WHEN next_cursor IS NOT NULL THEN '?cursor=' || next_cursor ELSE NULL END
-    ),
     'data', COALESCE((
       SELECT json_agg(
                api.get_object_resource(
@@ -2872,10 +2868,6 @@ BEGIN
       'render_version', v_render_version,
       'cursor', v_current_cursor,
       'next_cursor', next_cursor
-    ),
-    'links', json_build_object(
-      'self', '?cursor=' || v_current_cursor,
-      'next', CASE WHEN next_cursor IS NOT NULL THEN '?cursor=' || next_cursor ELSE NULL END
     ),
     'data', COALESCE((
       SELECT json_agg(
@@ -3233,10 +3225,6 @@ BEGIN
       'cursor', v_current_cursor,
       'next_cursor', CASE WHEN v_offset + v_limit < v_total THEN v_next ELSE NULL END
     ),
-    'links', json_build_object(
-      'self', '?cursor=' || v_current_cursor,
-      'next', CASE WHEN v_offset + v_limit < v_total THEN '?cursor=' || v_next ELSE NULL END
-    ),
     'data', v_data
   );
 END;
@@ -3576,9 +3564,6 @@ BEGIN
       'schema_version', '3.0',
       'cursor', api.cursor_pack(v_cursor),
       'next_cursor', v_next
-    ),
-    'links', json_build_object(
-      'next', CASE WHEN v_next IS NOT NULL THEN '?cursor=' || v_next ELSE NULL END
     ),
     'data', v_data
   );

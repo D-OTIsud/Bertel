@@ -483,6 +483,8 @@ FROM (
     ('valet_parking','Parking voiturier','parking','Service de parking voiturier'),
     ('garage','Garage','parking','Garage couvert'),
     ('electric_charging','Recharge électrique','parking','Station de recharge véhicule électrique'),
+  ('public_toilets','Toilettes publiques','services','Toilettes publiques accessibles'),
+  ('drinking_water','Point d\'eau potable','services','Fontaine / robinet eau potable en libre service'),
     
     -- Services spécialisés
     ('spa','Spa','services','Centre de spa'),
@@ -4894,6 +4896,167 @@ WHERE o.region_code='TST' AND o.name IN ('Restaurant Brouillon Test','Associatio
   AND NOT EXISTS (
     SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE
   );
+
+-- =====================================================
+-- NEW OBJECT TYPES: PSV (public services) and RVA (RV stopover areas)
+-- =====================================================
+
+-- PSV: Public Toilets (24/7)
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'PSV','Toilettes Publiques Front de Mer','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Toilettes Publiques Front de Mer'
+);
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, 'Boulevard du Front de Mer', '97410', 'Saint-Pierre', -21.3412, 55.4778, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Toilettes Publiques Front de Mer'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Ouvert 24/7', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Toilettes Publiques Front de Mer'
+  AND NOT EXISTS (SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND COALESCE(op.name,'')='Ouvert 24/7');
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Continu', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code='continuous_service'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Toilettes Publiques Front de Mer'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id AND os.schedule_type_id=rst.id);
+
+-- Amenity: public_toilets
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o JOIN ref_amenity a ON a.code='public_toilets'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Toilettes Publiques Front de Mer'
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
+
+-- PSV: Drinking Water Fountain (06:00–22:00)
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'PSV','Fontaine d''Eau Potable Place du Marché','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+);
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, 'Place du Marché', '97432', 'Ravine des Cabris', -21.2844, 55.5051, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Horaires quotidiens', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND COALESCE(op.name,'')='Horaires quotidiens');
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Service', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code='regular'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id AND os.schedule_type_id=rst.id);
+
+INSERT INTO opening_time_period (schedule_id, closed, created_at, updated_at)
+SELECT os.id, FALSE, NOW(), NOW()
+FROM opening_schedule os
+JOIN opening_period op ON op.id=os.period_id
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id=os.schedule_type_id AND rst.code='regular'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (SELECT 1 FROM opening_time_period tp WHERE tp.schedule_id=os.id AND tp.closed=FALSE);
+
+INSERT INTO opening_time_frame (time_period_id, start_time, end_time, created_at, updated_at)
+SELECT tp.id, TIME '06:00', TIME '22:00', NOW(), NOW()
+FROM opening_time_period tp
+JOIN opening_schedule os ON os.id=tp.schedule_id
+JOIN opening_period op ON op.id=os.period_id
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.id=os.schedule_type_id AND rst.code='regular'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (
+    SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id=tp.id AND tf.start_time=TIME '06:00' AND tf.end_time=TIME '22:00'
+  );
+
+-- Amenity: drinking_water
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o JOIN ref_amenity a ON a.code='drinking_water'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Fontaine d''Eau Potable Place du Marché'
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
+
+-- PSV: EV Charging Station
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'PSV','Borne Recharge Électrique Centre','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Borne Recharge Électrique Centre'
+);
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, 'Parking Centre-Ville', '97410', 'Saint-Pierre', -21.3391, 55.4722, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Borne Recharge Électrique Centre'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+INSERT INTO opening_period (object_id, name, all_years, created_at, updated_at)
+SELECT o.id, 'Ouvert 24/7', TRUE, NOW(), NOW()
+FROM object o
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Borne Recharge Électrique Centre'
+  AND NOT EXISTS (SELECT 1 FROM opening_period op WHERE op.object_id=o.id AND COALESCE(op.name,'')='Ouvert 24/7');
+
+INSERT INTO opening_schedule (period_id, schedule_type_id, name, created_at, updated_at)
+SELECT op.id, rst.id, 'Continu', NOW(), NOW()
+FROM opening_period op
+JOIN object o ON o.id=op.object_id
+JOIN ref_code_opening_schedule_type rst ON rst.code='continuous_service'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Borne Recharge Électrique Centre'
+  AND NOT EXISTS (SELECT 1 FROM opening_schedule os WHERE os.period_id=op.id AND os.schedule_type_id=rst.id);
+
+-- Amenity: electric_charging
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o JOIN ref_amenity a ON a.code='electric_charging'
+WHERE o.object_type='PSV' AND o.region_code='TST' AND o.name='Borne Recharge Électrique Centre'
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
+
+-- RVA: RV stopover area (parking & simple amenities)
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'RVA','Aire Camping-Car Test','TST','published',NOW(),NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object o WHERE o.object_type='RVA' AND o.region_code='TST' AND o.name='Aire Camping-Car Test'
+);
+
+INSERT INTO object_location (object_id, address1, postcode, city, latitude, longitude, is_main_location, position, created_at, updated_at)
+SELECT o.id, 'Route des Caravanes', '97436', 'Saint-Leu', -21.1430, 55.2835, TRUE, 1, NOW(), NOW()
+FROM object o
+WHERE o.object_type='RVA' AND o.region_code='TST' AND o.name='Aire Camping-Car Test'
+  AND NOT EXISTS (SELECT 1 FROM object_location ol WHERE ol.object_id=o.id AND ol.is_main_location IS TRUE);
+
+-- Capacities
+INSERT INTO object_capacity (object_id, metric_id, value_integer)
+SELECT o.id, m.id, v.val
+FROM object o
+JOIN (
+  VALUES
+    ('vehicles'::text, 30),
+    ('campers',        20),
+    ('pitches',        25)
+) v(code,val) ON TRUE
+JOIN ref_capacity_metric m ON m.code=v.code
+WHERE o.object_type='RVA' AND o.region_code='TST' AND o.name='Aire Camping-Car Test'
+  AND NOT EXISTS (SELECT 1 FROM object_capacity oc WHERE oc.object_id=o.id AND oc.metric_id=m.id);
+
+-- Amenities: parking, electric_charging, drinking_water
+INSERT INTO object_amenity (object_id, amenity_id, created_at)
+SELECT o.id, a.id, NOW()
+FROM object o JOIN ref_amenity a ON a.code IN ('parking','electric_charging','drinking_water')
+WHERE o.object_type='RVA' AND o.region_code='TST' AND o.name='Aire Camping-Car Test'
+  AND NOT EXISTS (SELECT 1 FROM object_amenity oa WHERE oa.object_id=o.id AND oa.amenity_id=a.id);
 
 -- =====================================================
 -- Org preference: add OTI descriptions for HPA and HLO

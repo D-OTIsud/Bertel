@@ -103,7 +103,7 @@ $$ language 'plpgsql';
 -- =====================================================
 
 CREATE TYPE object_type AS ENUM (
-  'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP'
+  'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP','PSV','RVA'
 );
 
 CREATE TYPE object_status AS ENUM ('draft','published','archived','hidden');
@@ -739,6 +739,16 @@ CREATE TABLE IF NOT EXISTS media (
   CONSTRAINT chk_media_target_present CHECK (object_id IS NOT NULL OR place_id IS NOT NULL),
   CONSTRAINT chk_media_url_shape CHECK (url ~* '^https?://')
 );
+
+-- Ensure new enum labels exist on upgraded databases
+DO $$ BEGIN
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'PSV';
+  EXCEPTION WHEN others THEN NULL; END;
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'RVA';
+  EXCEPTION WHEN others THEN NULL; END;
+END $$;
 
 -- Valider dimensions médias selon type
 CREATE OR REPLACE FUNCTION validate_media_dimensions()

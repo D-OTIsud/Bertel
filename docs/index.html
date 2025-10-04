@@ -3374,14 +3374,11 @@ const json = await res.json();</pre>
         </details>
       </section>
 
-      <!-- 4) Exemples pratiques -->
-      <section class="card" id="examples">
-        <h2>4) Exemples pratiques (HTTP)</h2>
-
-        <details>
-          <summary>4.0 Types de référence</summary>
-          <div class="content">
-            <p>Référentiels utilisés pour les filtres et l'interprétation des données de sortie.</p>
+      <!-- 4) Types de référence -->
+      <section class="card" id="reference-types">
+        <h2>4) Types de référence</h2>
+        <div class="content">
+          <p>Référentiels utilisés pour les filtres et l'interprétation des données de sortie.</p>
             
             <h4><code>accommodation_type</code></h4>
             <table>
@@ -3824,11 +3821,15 @@ const json = await res.json();</pre>
                 <tr><td><code>activity_provider</code></td><td>Prestataire d'activités</td><td>Partenariat activités</td></tr>
               </tbody>
             </table>
-          </div>
-        </details>
+        </div>
+      </section>
+
+      <!-- 5) Exemples pratiques (HTTP) -->
+      <section class="card" id="examples">
+        <h2>5) Exemples pratiques (HTTP)</h2>
 
         <details open>
-          <summary>4.1 Un objet ITI sans tracé (léger)</summary>
+          <summary>5.1 Un objet ITI sans tracé (léger)</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-41">Copier</button>
@@ -3839,7 +3840,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.2 Le même objet ITI avec KML, étapes en bleu</summary>
+          <summary>5.2 Le même objet ITI avec KML, étapes en bleu</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-42">Copier</button>
@@ -3854,7 +3855,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.3 Liste paginée d’itinéraires publiés, 20 par page</summary>
+          <summary>5.3 Liste paginée d'itinéraires publiés, 20 par page</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-43a">Copier</button>
@@ -3871,7 +3872,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.4 Sync incrémentale depuis une date (keyset)</summary>
+          <summary>5.4 Sync incrémentale depuis une date (keyset)</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-44">Copier</button>
@@ -3886,7 +3887,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.5 Liste filtrée (ITI boucles ≤ 15 km, à 20 km de 45.76/4.84, avec image principale)</summary>
+          <summary>5.5 Liste filtrée (ITI boucles ≤ 15 km, à 20 km de 45.76/4.84, avec image principale)</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-45">Copier</button>
@@ -3907,7 +3908,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.6 Restaurant avec menu complet</summary>
+          <summary>5.6 Restaurant avec menu complet</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-46">Copier</button>
@@ -3923,7 +3924,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.7 Récupération avec Deep Data</summary>
+          <summary>5.7 Récupération avec Deep Data</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
@@ -3935,7 +3936,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.8 Recherche de restaurants par cuisine</summary>
+          <summary>5.8 Recherche de restaurants par cuisine</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-48">Copier</button>
@@ -3951,7 +3952,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.9 Recherche d'événements par cuisine de restaurant</summary>
+          <summary>5.9 Recherche d'événements par cuisine de restaurant</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-49">Copier</button>
@@ -3967,7 +3968,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.10 Récupération avec options avancées</summary>
+          <summary>5.10 Récupération avec options avancées</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-410">Copier</button>
@@ -3989,7 +3990,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>4.11 Événement avec menu (FMA)</summary>
+          <summary>5.11 Événement avec menu (FMA)</summary>
           <div class="content">
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
@@ -4005,9 +4006,9 @@ const json = await res.json();</pre>
         </details>
       </section>
 
-      <!-- 5) Conseils -->
+      <!-- 6) Conseils -->
       <section class="card" id="tips">
-        <h2>5) Conseils & bonnes pratiques</h2>
+        <h2>6) Conseils & bonnes pratiques</h2>
         <div class="row">
           <div>
             <h3>Tracé ITI</h3>

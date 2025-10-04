@@ -893,9 +893,46 @@
                 <tr><td><code>p_object_id</code></td><td><code>string</code></td><td>✅</td><td>—</td><td>Identifiant de la ressource à lire.</td></tr>
                 <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue (ordre de priorité).</td></tr>
                 <tr><td><code>p_track_format</code></td><td><code>enum</code> <code>"none" | "kml" | "gpx"</code></td><td>❌</td><td><code>"none"</code></td><td>Tracé : par défaut aucun. Mettez <code>"kml"</code> ou <code>"gpx"</code> (type ITI).</td></tr>
-                <tr><td><code>p_options</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Options tracé : <code>{ "include_stages": boolean, "stage_color": string }</code>.</td></tr>
+                <tr><td><code>p_options</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Options avancées (voir détails ci-dessous).</td></tr>
               </tbody>
             </table>
+
+            <details>
+              <summary><b>p_options</b> — options avancées</summary>
+              <div class="content">
+                <table>
+                  <thead><tr><th>Option</th><th>Type</th><th>Défaut</th><th>Description</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>include_stages</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Inclure les étapes dans le tracé KML/GPX.</td></tr>
+                    <tr><td><code>stage_color</code></td><td><code>string</code></td><td><code>"red"</code></td><td>Couleur des étapes (KML uniquement).</td></tr>
+                    <tr><td><code>render</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Générer le bloc <code>render</code> avec données formatées.</td></tr>
+                    <tr><td><code>render_locale</code></td><td><code>string</code></td><td><code>auto</code></td><td>Locale pour le formatage (ex. "fr-FR").</td></tr>
+                    <tr><td><code>render_tz</code></td><td><code>string</code></td><td><code>"UTC"</code></td><td>Fuseau horaire pour le formatage.</td></tr>
+                    <tr><td><code>render_version</code></td><td><code>string</code></td><td><code>"1.0"</code></td><td>Version du formatage.</td></tr>
+                    <tr><td><code>fields</code></td><td><code>array&lt;string&gt;</code></td><td><code>null</code></td><td>Limiter les champs retournés (ex. ["id", "name", "contacts"]).</td></tr>
+                    <tr><td><code>include</code></td><td><code>array&lt;string&gt;</code></td><td><code>null</code></td><td>Inclure des blocs optionnels (ex. ["render", "actors"]).</td></tr>
+                    <tr><td><code>org_object_id</code></td><td><code>string</code></td><td><code>auto</code></td><td>Préférence d'organisation pour les descriptions.</td></tr>
+                    <tr><td><code>include_private</code></td><td><code>boolean</code></td><td><code>false</code></td><td>Inclure les données privées (nécessite permissions).</td></tr>
+                  </tbody>
+                </table>
+                <div class="card tip-card" style="margin-top: 16px;">
+                  <div class="pill tip-pill">Exemple</div>
+                  <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "p_object_id": "HOT123",
+  "p_lang_prefs": ["fr", "en"],
+  "p_track_format": "kml",
+  "p_options": {
+    "include_stages": true,
+    "stage_color": "blue",
+    "render": true,
+    "render_locale": "fr-FR",
+    "fields": ["id", "name", "contacts", "media"],
+    "org_object_id": "ORG456"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </details>
 
             <details>
               <summary>Important (tracé ITI)</summary>
@@ -1169,6 +1206,152 @@ const json = await res.json();</pre>
             <p>Réponse : même forme que §2.3, avec <code>filters</code> propagés dans le curseur.</p>
           </div>
         </details>
+
+        <!-- 2.6 Deep Data Functions -->
+        <details id="deep_data_functions">
+          <summary>2.6 Fonctions Deep Data : données enrichies en un appel</summary>
+          <div class="content">
+            <p><b>But</b> — Récupérer des objets avec leurs données en profondeur : objets parents, acteurs, organisations et contacts associés. Idéal pour les applications nécessitant des informations complètes.</p>
+
+            <div class="card tip-card" style="margin-bottom: 20px;">
+              <div class="pill tip-pill">Nouveau</div>
+              <p class="lead tip-text">Ces fonctions incluent automatiquement les données des objets liés, évitant les appels multiples pour obtenir une vue complète.</p>
+            </div>
+
+            <h3>2.6.1 Récupérer un objet avec Deep Data : <code>get_object_with_deep_data</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>string</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet à récupérer.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.6.2 Récupérer plusieurs objets avec Deep Data : <code>get_objects_with_deep_data</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_ids</code></td><td><code>array&lt;string&gt;</code></td><td>✅</td><td>—</td><td>Liste des identifiants d'objets.</td></tr>
+                <tr><td><code>p_languages</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_include_media</code></td><td><code>string</code></td><td>❌</td><td><code>"none"</code></td><td>Inclusion des médias : "none", "basic", "full".</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Filtres optionnels.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.6.3 Lister par type avec Deep Data : <code>get_objects_by_type_with_deep_data</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_type</code></td><td><code>string</code></td><td>✅</td><td>—</td><td>Type d'objet ("HOT", "ORG", "RES", etc.).</td></tr>
+                <tr><td><code>p_languages</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_include_media</code></td><td><code>string</code></td><td>❌</td><td><code>"none"</code></td><td>Inclusion des médias.</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Filtres optionnels.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>100</code></td><td>Nombre maximum d'objets.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.6.4 Rechercher avec Deep Data : <code>search_objects_with_deep_data</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_search_term</code></td><td><code>string</code></td><td>✅</td><td>—</td><td>Terme de recherche.</td></tr>
+                <tr><td><code>p_object_types</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>null</code></td><td>Types d'objets à inclure (null = tous).</td></tr>
+                <tr><td><code>p_languages</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_include_media</code></td><td><code>string</code></td><td>❌</td><td><code>"none"</code></td><td>Inclusion des médias.</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>object</code></td><td>❌</td><td><code>{}</code></td><td>Filtres optionnels.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>Nombre maximum d'objets.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.6.5 Recherche spécialisée restaurants : <code>search_restaurants_by_cuisine</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_cuisine_types</code></td><td><code>array&lt;string&gt;</code></td><td>✅</td><td>—</td><td>Types de cuisine recherchés (ex. ["local", "veggie"]).</td></tr>
+                <tr><td><code>p_languages</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>Nombre maximum de résultats.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.6.6 Recherche événements par cuisine : <code>search_events_by_restaurant_cuisine</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_cuisine_types</code></td><td><code>array&lt;string&gt;</code></td><td>✅</td><td>—</td><td>Types de cuisine des restaurants associés.</td></tr>
+                <tr><td><code>p_languages</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>50</code></td><td>Nombre maximum de résultats.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>Structure de réponse Deep Data</h3>
+            <p>Les fonctions Deep Data retournent une structure enrichie :</p>
+            <pre>{
+  "object": {
+    // Données complètes de l'objet principal (comme get_object_resource)
+    "id": "HOT123",
+    "name": "Hôtel Example",
+    "type": "HOT",
+    "contacts": [...],
+    "media": [...],
+    // ... toutes les autres données de l'objet
+  },
+  "parent_objects": [
+    {
+      "id": "ORG456",
+      "type": "ORG", 
+      "name": "Organisation Parent",
+      "status": "published",
+      "relation_type": {
+        "id": "uuid-relation-type",
+        "name": "Gestionnaire"
+      },
+      "distance_m": 100,
+      "note": "Relation de gestion",
+      "basic_info": {
+        "id": "ORG456",
+        "type": "ORG",
+        "name": "Organisation Parent",
+        "status": "published"
+      }
+    }
+  ],
+  "actors": [
+    {
+      "id": "actor-uuid",
+      "display_name": "Jean Dupont",
+      "first_name": "Jean",
+      "last_name": "Dupont",
+      "role": {
+        "id": "role-uuid",
+        "code": "manager",
+        "name": "Gestionnaire"
+      },
+      "is_primary": true,
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "contacts": [...]
+    }
+  ],
+  "organizations": [
+    {
+      "id": "ORG789",
+      "type": "ORG",
+      "name": "Agence de Conciergerie",
+      "status": "published",
+      "role": {
+        "id": "org-role-uuid",
+        "code": "concierge",
+        "name": "Conciergerie"
+      },
+      "contacts": [...]
+    }
+  ]
+}</pre>
+          </div>
+        </details>
       </section>
 
       <!-- 3) Dictionnaire de données -->
@@ -1210,42 +1393,75 @@ const json = await res.json();</pre>
                 <tr><td><code>created_at / updated_at / updated_at_source / published_at</code></td><td><code>timestamp</code></td><td>Suivi de vie (technique + source amont)</td><td><code>"2024-03-18T09:30:00Z"</code></td></tr>
                 <tr><td><code>address</code></td><td><code>object</code></td><td>Adresse postale (si connue)</td><td><code>{ "street": "...", "city": "..." }</code></td></tr>
                 <tr><td><code>location</code></td><td><code>object</code></td><td>Position WGS84</td><td><code>{ "latitude": 45.76, "longitude": 4.84, "altitude_m": 250 }</code></td></tr>
-                <tr><td><code>descriptions</code></td><td><code>array&lt;object&gt;</code></td><td>Descriptions publiques multilingues</td><td><code>[{ "language":"fr", "text":"..." }]</code></td></tr>
+                <tr><td><code>descriptions</code></td><td><code>object</code></td><td>Descriptions multilingues enrichies (description, description_chapo, description_mobile, description_edition, description_offre_hors_zone, sanitary_measures)</td><td>voir §3.2</td></tr>
                 <tr><td><code>external_ids</code></td><td><code>array&lt;object&gt;</code></td><td>Identifiants externes (SIT, DMS…)</td><td><code>[{ "system":"X", "value":"1234" }]</code></td></tr>
-                <tr><td><code>contacts</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de contact enrichis</td><td>voir §3.2</td></tr>
+                <tr><td><code>contacts</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de contact enrichis</td><td>voir §3.3</td></tr>
                 <tr><td><code>languages</code></td><td><code>array&lt;object&gt;</code></td><td>Langues parlées</td><td><code>[{ "code":"fr", "name":"Français" }]</code></td></tr>
-                <tr><td><code>media</code></td><td><code>array&lt;object&gt;</code></td><td>Médias publiés</td><td>voir §3.4</td></tr>
-                <tr><td><code>capacity</code></td><td><code>array&lt;object&gt;</code></td><td>Capacités</td><td>voir §3.5</td></tr>
-                <tr><td><code>amenities</code></td><td><code>array&lt;object&gt;</code></td><td>Équipements/Services</td><td>voir §3.6</td></tr>
-                <tr><td><code>environment_tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags environnement (éco)</td><td>voir §3.7</td></tr>
-                <tr><td><code>payment_methods</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de paiement</td><td>voir §3.7</td></tr>
+                <tr><td><code>media</code></td><td><code>array&lt;object&gt;</code></td><td>Médias publiés</td><td>voir §3.5</td></tr>
+                <tr><td><code>capacity</code></td><td><code>array&lt;object&gt;</code></td><td>Capacités</td><td>voir §3.6</td></tr>
+                <tr><td><code>amenities</code></td><td><code>array&lt;object&gt;</code></td><td>Équipements/Services</td><td>voir §3.7</td></tr>
+                <tr><td><code>environment_tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags environnement (éco)</td><td>voir §3.8</td></tr>
+                <tr><td><code>payment_methods</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de paiement</td><td>voir §3.8</td></tr>
                 <tr><td><code>pet_policy</code></td><td><code>object</code></td><td>Politique animaux</td><td><code>{ "accepted": true, ... }</code></td></tr>
-                <tr><td><code>prices</code></td><td><code>array&lt;object&gt;</code></td><td>Tarifs (+ périodes)</td><td>voir §3.8</td></tr>
-                <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements</td><td>voir §3.9</td></tr>
-                <tr><td><code>handicap_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Labellisation Tourisme &amp; Handicap</td><td>voir §3.10</td></tr>
-                <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td>voir §3.11</td></tr>
-                <tr><td><code>discounts / group_policies / origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
-                <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.12</td></tr>
+                <tr><td><code>prices</code></td><td><code>array&lt;object&gt;</code></td><td>Tarifs (+ périodes)</td><td>voir §3.9</td></tr>
+                <tr><td><code>classifications</code></td><td><code>array&lt;object&gt;</code></td><td>Labels/Classements</td><td>voir §3.10</td></tr>
+                <tr><td><code>handicap_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Labellisation Tourisme &amp; Handicap</td><td>voir §3.11</td></tr>
+                <tr><td><code>tags</code></td><td><code>array&lt;object&gt;</code></td><td>Tags libres</td><td>voir §3.12</td></tr>
+                <tr><td><code>discounts</code></td><td><code>array&lt;object&gt;</code></td><td>Réductions et offres spéciales</td><td>voir §3.23</td></tr>
+                <tr><td><code>group_policies</code></td><td><code>array&lt;object&gt;</code></td><td>Politiques de groupe</td><td>voir §3.24</td></tr>
+                <tr><td><code>origins / org_links</code></td><td><code>array&lt;object&gt;</code></td><td>Blocs transparents</td><td>—</td></tr>
+                <tr><td><code>actors</code></td><td><code>array&lt;object&gt;</code></td><td>Acteurs (personnes) liés à l'objet</td><td>voir §3.25</td></tr>
+                <tr><td><code>legal_records</code></td><td><code>array&lt;object&gt;</code></td><td>Enregistrements légaux unifiés</td><td>voir §3.26</td></tr>
+                <tr><td><code>meeting_rooms</code></td><td><code>array&lt;object&gt;</code></td><td>Salles de réunion</td><td>voir §3.13</td></tr>
                 <tr><td><code>fma / fma_occurrences</code></td><td><code>array&lt;object&gt;</code></td><td>Occurrences d'événements/activités</td><td>—</td></tr>
-                <tr><td><code>opening_times</code></td><td><code>object</code></td><td>Horaires d'ouverture (structure temporelle)</td><td>voir §3.13</td></tr>
-                <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.14</td></tr>
-                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.15</td></tr>
-                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.16</td></tr>
-                <tr><td><code>relations</code></td><td><code>object</code></td><td>Relations in/out</td><td>voir §3.17</td></tr>
-                <tr><td><code>legal</code></td><td><code>object|null</code></td><td>Identité légale consolidée (SIRET/SIREN, TVA, justificatif)</td><td>voir §3.20</td></tr>
-                <tr><td><code>accommodation_legal</code> (hébergements)</td><td><code>object|null</code></td><td>Cadastre taxe de séjour &amp; licences spécifiques</td><td>voir §3.21</td></tr>
-                <tr><td><code>documents</code></td><td><code>array&lt;object&gt;</code></td><td>Pièces justificatives publiables (référentiel commun)</td><td>voir §3.22</td></tr>
-                <tr><td><code>document_requests</code></td><td><code>array&lt;object&gt;</code></td><td>Suivi des demandes/remises de documents</td><td>voir §3.23</td></tr>
-                <tr><td><code>associated_restaurants_cuisine_types</code> (si <code>type="FMA"</code>)</td><td><code>array&lt;object&gt;</code></td><td>Types de cuisine agrégés via les restaurants liés</td><td>voir §3.19</td></tr>
-                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.18</td></tr>
-                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.18</td></tr>
+                <tr><td><code>opening_times</code></td><td><code>object</code></td><td>Horaires d'ouverture (structure temporelle)</td><td>voir §3.14</td></tr>
+                <tr><td><code>menus</code></td><td><code>array&lt;object&gt;</code></td><td>Menus (restaurants/événements)</td><td>voir §3.15</td></tr>
+                <tr><td><code>places</code></td><td><code>array&lt;object&gt;</code></td><td>Lieux internes</td><td>voir §3.16</td></tr>
+                <tr><td><code>sustainability_action_labels</code></td><td><code>array&lt;object&gt;</code></td><td>Actions RSE + labels</td><td>voir §3.17</td></tr>
+                <tr><td><code>incoming_relations / outgoing_relations</code></td><td><code>array&lt;object&gt;</code></td><td>Relations entrantes/sortantes</td><td>voir §3.18</td></tr>
+                <tr><td><code>render</code></td><td><code>object</code></td><td>Données formatées pour l'affichage</td><td>voir §3.27</td></tr>
+                <tr><td><code>legal_records</code></td><td><code>array&lt;object&gt;</code></td><td>Enregistrements légaux unifiés (remplace legal et accommodation_legal)</td><td>voir §3.26</td></tr>
+                <tr><td><code>documents</code></td><td><code>array&lt;object&gt;</code></td><td>Pièces justificatives publiables (référentiel commun)</td><td>voir §3.21</td></tr>
+                <tr><td><code>document_requests</code></td><td><code>array&lt;object&gt;</code></td><td>Suivi des demandes/remises de documents</td><td>voir §3.22</td></tr>
+                <tr><td><code>associated_restaurants_cuisine_types</code> (si <code>type="FMA"</code>)</td><td><code>array&lt;object&gt;</code></td><td>Types de cuisine agrégés via les restaurants liés</td><td>voir §3.20</td></tr>
+                <tr><td><code>itinerary_details</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Détails ITI</td><td>voir §3.19</td></tr>
+                <tr><td><code>itinerary</code> (si <code>type="ITI"</code>)</td><td><code>object</code></td><td>Résumé ITI (+ track si demandé)</td><td>voir §3.19</td></tr>
               </tbody>
             </table>
           </div>
         </details>
 
         <details>
-          <summary>3.2 <code>contacts[]</code></summary>
+          <summary>3.2 <code>descriptions</code> (descriptions multilingues enrichies)</summary>
+          <div class="content">
+            <p>Bloc contenant toutes les descriptions multilingues de l'objet, avec support pour différents contextes d'affichage et mesures sanitaires.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description principale multilingue</td><td><code>"Restaurant gastronomique avec vue sur mer..."</code></td></tr>
+                <tr><td><code>description_chapo</code></td><td><code>string</code></td><td>Chapô/accroche multilingue</td><td><code>"Une expérience culinaire unique..."</code></td></tr>
+                <tr><td><code>description_mobile</code></td><td><code>string</code></td><td>Description optimisée pour mobile</td><td><code>"Resto vue mer, spécialités locales"</code></td></tr>
+                <tr><td><code>description_edition</code></td><td><code>string</code></td><td>Description pour édition papier</td><td><code>"Établissement familial depuis 1950..."</code></td></tr>
+                <tr><td><code>description_offre_hors_zone</code></td><td><code>string</code></td><td>Description pour offres hors zone géographique</td><td><code>"Découvrez nos spécialités créoles..."</code></td></tr>
+                <tr><td><code>sanitary_measures</code></td><td><code>string</code></td><td>Mesures sanitaires et protocoles</td><td><code>"Gel hydroalcoolique disponible, masques fournis"</code></td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Multilingue</div>
+              <p>Tous les champs de description supportent la gestion multilingue via les paramètres <code>p_lang_prefs</code> de l'API. La langue de fallback est le français.</p>
+            </div>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Contexte</div>
+              <p><strong>description_mobile</strong> : Version courte pour affichage mobile<br/>
+              <strong>description_edition</strong> : Version pour supports imprimés<br/>
+              <strong>description_offre_hors_zone</strong> : Version pour communication externe<br/>
+              <strong>sanitary_measures</strong> : Informations sanitaires obligatoires</p>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.3 <code>contacts[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
@@ -1265,7 +1481,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.3 <code>languages[]</code></summary>
+          <summary>3.4 <code>languages[]</code></summary>
           <div class="content">
             <table><thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
               <tbody><tr><td><code>code</code></td><td><code>enum</code></td><td>Code langue ("fr","en", …)</td></tr>
@@ -1274,7 +1490,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.4 <code>media[]</code> (publiés uniquement)</summary>
+          <summary>3.5 <code>media[]</code> (publiés uniquement)</summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1294,7 +1510,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.5 <code>capacity[]</code></summary>
+          <summary>3.6 <code>capacity[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1309,7 +1525,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.6 <code>amenities[]</code></summary>
+          <summary>3.7 <code>amenities[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1322,14 +1538,14 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.7 <code>environment_tags[]</code> & <code>payment_methods[]</code></summary>
+          <summary>3.8 <code>environment_tags[]</code> & <code>payment_methods[]</code></summary>
           <div class="content">
             <p>Structure identique : <code>{ code, name, icon_url }</code>.</p>
           </div>
         </details>
 
         <details>
-          <summary>3.8 <code>prices[]</code> (+ <code>periods[]</code> imbriquées)</summary>
+          <summary>3.9 <code>prices[]</code> (+ <code>periods[]</code> imbriquées)</summary>
           <div class="content">
             <p>Structure de tarification avec périodes détaillées imbriquées :</p>
             
@@ -1416,7 +1632,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.9 <code>classifications[]</code></summary>
+          <summary>3.10 <code>classifications[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1431,7 +1647,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.10 <code>handicap_labels[]</code> (accessibilité)</summary>
+          <summary>3.11 <code>handicap_labels[]</code> (accessibilité)</summary>
           <div class="content">
             <p>Expose la labellisation «&nbsp;Tourisme &amp; Handicap&nbsp;» pour chaque objet. Les entrées sont issues de <code>object_classification</code> avec le schéma <code>HANDICAP_LABEL</code>, les sous-valeurs (<code>subvalue_ids</code>) représentant les handicaps couverts.</p>
             <table>
@@ -1472,7 +1688,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.11 <code>tags[]</code></summary>
+          <summary>3.12 <code>tags[]</code></summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1487,7 +1703,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.12 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
+          <summary>3.13 <code>meeting_rooms[]</code> (+ <code>equipment[]</code>)</summary>
           <div class="content">
             <p>Colonnes de salle (nom, surface, capacités <code>cap_theatre</code>, <code>cap_u</code>, <code>cap_classroom</code>, <code>cap_boardroom</code>, …).</p>
             <p><code>equipment[]</code> : <code>{ code, name, icon_url }</code>.</p>
@@ -1495,7 +1711,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.13 <code>opening_times</code></summary>
+          <summary>3.14 <code>opening_times</code></summary>
           <div class="content">
             <p>Structure d'horaires d'ouverture organisée en deux groupes temporels :</p>
             <table>
@@ -1558,7 +1774,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.14 <code>menus[]</code> (restaurants/événements)</summary>
+          <summary>3.15 <code>menus[]</code> (restaurants/événements)</summary>
           <div class="content">
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
@@ -1586,14 +1802,37 @@ const json = await res.json();</pre>
                 <tr><td><code>unit</code></td><td><code>object</code></td><td>{ id, code, name } (ex. "par personne", "par portion")</td></tr>
                 <tr><td><code>dietary_tags[]</code></td><td><code>array&lt;object&gt;</code></td><td>Tags alimentaires (végétarien, vegan, halal...)</td></tr>
                 <tr><td><code>allergens[]</code></td><td><code>array&lt;object&gt;</code></td><td>Allergènes (gluten, arachides, lait...)</td></tr>
+                <tr><td><code>media[]</code></td><td><code>array&lt;object&gt;</code></td><td>Médias associés au plat (photos, vidéos...)</td></tr>
               </tbody>
             </table>
             <p><b>Tags & Allergènes</b> : structure <code>{ id, code, name, icon_url }</code></p>
+            
+            <h4>Médias des articles (<code>media[]</code>)</h4>
+            <p>Chaque article de menu peut avoir des médias associés (photos, vidéos, etc.) via la table de liaison <code>object_menu_item_media</code>.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant du média</td><td><code>"media_123"</code></td></tr>
+                <tr><td><code>title</code></td><td><code>string</code></td><td>Titre du média</td><td><code>"Photo du plat principal"</code></td></tr>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description du média</td><td><code>"Vue rapprochée du plat"</code></td></tr>
+                <tr><td><code>url</code></td><td><code>string (URL)</code></td><td>URL du fichier média</td><td><code>"https://cdn.example.com/plat.jpg"</code></td></tr>
+                <tr><td><code>credit</code></td><td><code>string</code></td><td>Crédit photo/vidéo</td><td><code>"© Restaurant XYZ"</code></td></tr>
+                <tr><td><code>width / height</code></td><td><code>number</code></td><td>Dimensions (si connues)</td><td><code>1920, 1080</code></td></tr>
+                <tr><td><code>is_main</code></td><td><code>boolean</code></td><td>Média principal de l'article ?</td><td><code>true</code></td></tr>
+                <tr><td><code>is_published</code></td><td><code>boolean</code></td><td>Média publié ?</td><td><code>true</code></td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage</td><td><code>1</code></td></tr>
+                <tr><td><code>media_type</code></td><td><code>object</code></td><td>Type de média</td><td><code>{ "id": "1", "code": "image", "name": "Image" }</code></td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Affichage</div>
+              <p>Les médias sont triés par <code>position</code> puis par <code>created_at</code>. Seuls les médias avec <code>is_published: true</code> sont inclus.</p>
+            </div>
           </div>
         </details>
 
         <details>
-          <summary>3.15 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
+          <summary>3.16 <code>places[]</code> (+ <code>descriptions[]</code>)</summary>
           <div class="content">
             <p>Colonnes du lieu (id, nom, position, …).</p>
             <p><code>descriptions[]</code> : multilingue — structure transparente (ex. <code>language</code>, <code>text</code>, <code>position</code>, …).</p>
@@ -1601,7 +1840,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.16 <code>sustainability_action_labels[]</code></summary>
+          <summary>3.17 <code>sustainability_action_labels[]</code></summary>
           <div class="content">
             <p>Associe les actions de durabilité et les labels obtenus.</p>
             <table>
@@ -1616,7 +1855,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.17 <code>relations { out[], in[] }</code></summary>
+          <summary>3.18 <code>relations { out[], in[] }</code></summary>
           <div class="content">
             <p>La structure <code>relations</code> représente les liens entre l'objet courant et le reste du graphe (parent, enfants, liaisons éditoriales, etc.). Chaque entrée décrit le sens du lien, le type de relation et les métadonnées nécessaires à l'affichage ou au filtrage.</p>
             <ul>
@@ -1644,7 +1883,277 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.18 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
+          <summary>3.23 <code>discounts[]</code></summary>
+          <div class="content">
+            <p>Liste des réductions et offres spéciales proposées par l'objet.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la réduction</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom de l'offre</td></tr>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description détaillée</td></tr>
+                <tr><td><code>discount_percent</code></td><td><code>number</code></td><td>Pourcentage de réduction (0-100)</td></tr>
+                <tr><td><code>discount_amount</code></td><td><code>number</code></td><td>Montant de réduction fixe</td></tr>
+                <tr><td><code>currency</code></td><td><code>string</code></td><td>Devise (ISO 4217)</td></tr>
+                <tr><td><code>conditions</code></td><td><code>string</code></td><td>Conditions d'application</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité</td></tr>
+                <tr><td><code>is_active</code></td><td><code>boolean</code></td><td>Offre active ?</td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage</td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "discounts": [
+    {
+      "id": "discount-1",
+      "name": "Réduction séniors",
+      "description": "10% de réduction pour les plus de 65 ans",
+      "discount_percent": 10.0,
+      "discount_amount": null,
+      "currency": "EUR",
+      "conditions": "Sur présentation d'une pièce d'identité",
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "is_active": true,
+      "position": 1
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.24 <code>group_policies[]</code></summary>
+          <div class="content">
+            <p>Politiques et conditions spécifiques aux groupes.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de la politique</td></tr>
+                <tr><td><code>name</code></td><td><code>string</code></td><td>Nom de la politique</td></tr>
+                <tr><td><code>description</code></td><td><code>string</code></td><td>Description détaillée</td></tr>
+                <tr><td><code>min_size</code></td><td><code>number</code></td><td>Taille minimale du groupe</td></tr>
+                <tr><td><code>max_size</code></td><td><code>number</code></td><td>Taille maximale du groupe</td></tr>
+                <tr><td><code>notes</code></td><td><code>string</code></td><td>Notes et conditions particulières</td></tr>
+                <tr><td><code>is_active</code></td><td><code>boolean</code></td><td>Politique active ?</td></tr>
+                <tr><td><code>position</code></td><td><code>number</code></td><td>Ordre d'affichage</td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "group_policies": [
+    {
+      "id": "policy-1",
+      "name": "Groupes scolaires",
+      "description": "Tarifs préférentiels pour les groupes scolaires",
+      "min_size": 15,
+      "max_size": 50,
+      "notes": "Réservation obligatoire 48h à l'avance",
+      "is_active": true,
+      "position": 1
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.25 <code>actors[]</code></summary>
+          <div class="content">
+            <p>Acteurs (personnes physiques) liés à l'objet avec leurs rôles et contacts. <strong>Important :</strong> Les rôles sont définis par le référentiel <code>ref_actor_role</code> qui détermine les codes et libellés des fonctions (director, receptionist, guide, etc.).</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de l'acteur</td></tr>
+                <tr><td><code>display_name</code></td><td><code>string</code></td><td>Nom d'affichage complet</td></tr>
+                <tr><td><code>first_name</code></td><td><code>string</code></td><td>Prénom</td></tr>
+                <tr><td><code>last_name</code></td><td><code>string</code></td><td>Nom de famille</td></tr>
+                <tr><td><code>gender</code></td><td><code>enum</code></td><td>Genre (M, F, O)</td></tr>
+                <tr><td><code>role</code></td><td><code>object</code></td><td>Rôle de l'acteur : { id, code, name } - Le <code>code</code> correspond à <code>ref_actor_role.code</code></td></tr>
+                <tr><td><code>is_primary</code></td><td><code>boolean</code></td><td>Acteur principal ?</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité du rôle</td></tr>
+                <tr><td><code>visibility</code></td><td><code>enum</code></td><td>Visibilité (public, private)</td></tr>
+                <tr><td><code>note</code></td><td><code>string</code></td><td>Note ou commentaire</td></tr>
+                <tr><td><code>contacts</code></td><td><code>array&lt;object&gt;</code></td><td>Canaux de contact de l'acteur</td></tr>
+              </tbody>
+            </table>
+            
+            <h4>Rôles d'acteurs (<code>ref_actor_role</code>)</h4>
+            <p>Le champ <code>role.code</code> fait référence au référentiel <code>ref_actor_role</code> qui définit les types de rôles disponibles dans le système.</p>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th><th>Usage typique</th></tr></thead>
+              <tbody>
+                <tr><td><code>director</code></td><td>Directeur</td><td>Responsable de l'établissement</td><td>Hôtels, restaurants, attractions</td></tr>
+                <tr><td><code>receptionist</code></td><td>Réceptionniste</td><td>Accueil et service client</td><td>Hôtels, offices de tourisme</td></tr>
+                <tr><td><code>guide</code></td><td>Guide</td><td>Guide touristique ou accompagnateur</td><td>Agences, sites touristiques</td></tr>
+                <tr><td><code>manager</code></td><td>Gestionnaire</td><td>Responsable opérationnel</td><td>Établissements divers</td></tr>
+                <tr><td><code>chef</code></td><td>Chef</td><td>Chef de cuisine</td><td>Restaurants, hôtels</td></tr>
+                <tr><td><code>owner</code></td><td>Propriétaire</td><td>Propriétaire de l'établissement</td><td>Petits commerces, gîtes</td></tr>
+              </tbody>
+            </table>
+            <div class="card info-card" style="margin-top: 16px;">
+              <div class="pill info-pill">Référentiel</div>
+              <p>Le référentiel <code>ref_actor_role</code> est consultable via l'API pour obtenir la liste complète des rôles disponibles et leurs libellés multilingues.</p>
+            </div>
+            
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "actors": [
+    {
+      "id": "actor-123",
+      "display_name": "Marie Martin",
+      "first_name": "Marie",
+      "last_name": "Martin",
+      "gender": "F",
+      "role": {
+        "id": "role-director",
+        "code": "director",
+        "name": "Directeur"
+      },
+      "is_primary": true,
+      "valid_from": "2024-01-01",
+      "valid_to": "2024-12-31",
+      "visibility": "public",
+      "note": "Responsable principal",
+      "contacts": [
+        {
+          "id": "contact-1",
+          "kind": {
+            "code": "email",
+            "name": "Email"
+          },
+          "value": "marie.martin@hotel.com",
+          "is_primary": true,
+          "role": {
+            "code": "work",
+            "name": "Professionnel"
+          }
+        }
+      ]
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.26 <code>legal_records[]</code></summary>
+          <div class="content">
+            <p>Enregistrements légaux unifiés remplaçant les anciens blocs <code>legal</code> et <code>accommodation_legal</code>.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant unique de l'enregistrement</td></tr>
+                <tr><td><code>type</code></td><td><code>object</code></td><td>Type de document : { id, code, name, category }</td></tr>
+                <tr><td><code>value</code></td><td><code>string</code></td><td>Valeur du document (numéro, référence)</td></tr>
+                <tr><td><code>status</code></td><td><code>enum</code></td><td>Statut (active, expired, pending, suspended)</td></tr>
+                <tr><td><code>valid_from / valid_to</code></td><td><code>date</code></td><td>Période de validité</td></tr>
+                <tr><td><code>validity_mode</code></td><td><code>enum</code></td><td>Mode de validité (fixed_end_date, tacit_renewal, forever)</td></tr>
+                <tr><td><code>issuer</code></td><td><code>string</code></td><td>Organisme émetteur</td></tr>
+                <tr><td><code>document</code></td><td><code>object</code></td><td>Justificatif : { id, url, title, visibility }</td></tr>
+                <tr><td><code>notes</code></td><td><code>string</code></td><td>Notes et commentaires</td></tr>
+                <tr><td><code>created_at / updated_at</code></td><td><code>timestamp</code></td><td>Horodatage</td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "legal_records": [
+    {
+      "id": "legal-1",
+      "type": {
+        "id": "type-siret",
+        "code": "SIRET",
+        "name": "SIRET",
+        "category": "business"
+      },
+      "value": "12345678901234",
+      "status": "active",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "validity_mode": "forever",
+      "issuer": "INSEE",
+      "document": {
+        "id": "doc-1",
+        "url": "https://.../siret.pdf",
+        "title": "Extrait SIRET",
+        "visibility": "private"
+      },
+      "notes": "Mise à jour 2024",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.27 <code>render</code> (données formatées)</summary>
+          <div class="content">
+            <p>Bloc contenant des données formatées prêtes à l'affichage, généré quand <code>p_options.render: true</code>.</p>
+            <table>
+              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>lang</code></td><td><code>string</code></td><td>Code langue (ex. "fr")</td></tr>
+                <tr><td><code>locale</code></td><td><code>string</code></td><td>Locale complète (ex. "fr-FR")</td></tr>
+                <tr><td><code>timezone</code></td><td><code>string</code></td><td>Fuseau horaire (ex. "UTC")</td></tr>
+                <tr><td><code>version</code></td><td><code>string</code></td><td>Version du formatage (ex. "1.0")</td></tr>
+                <tr><td><code>contact_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de contact formatées</td></tr>
+                <tr><td><code>media_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de médias formatées</td></tr>
+                <tr><td><code>capacity_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de capacité formatées</td></tr>
+                <tr><td><code>amenity_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes d'équipements formatées</td></tr>
+                <tr><td><code>price_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de tarifs formatées</td></tr>
+                <tr><td><code>classification_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de classements formatées</td></tr>
+                <tr><td><code>discount_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de réductions formatées</td></tr>
+                <tr><td><code>group_policy_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes de politiques de groupe formatées</td></tr>
+                <tr><td><code>actor_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes d'acteurs formatées</td></tr>
+                <tr><td><code>legal_record_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes d'enregistrements légaux formatées</td></tr>
+                <tr><td><code>menu_item_lines</code></td><td><code>array&lt;string&gt;</code></td><td>Lignes d'articles de menu formatées</td></tr>
+              </tbody>
+            </table>
+            <div class="card tip-card" style="margin-top: 16px;">
+              <div class="pill tip-pill">Exemple</div>
+              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>{
+  "render": {
+    "lang": "fr",
+    "locale": "fr-FR",
+    "timezone": "UTC",
+    "version": "1.0",
+    "contact_lines": [
+      "Téléphone : +262 123 456 789",
+      "Email : contact@hotel.com"
+    ],
+    "media_lines": [
+      "Photo principale : Vue de la plage",
+      "Vidéo : Présentation de l'hôtel"
+    ],
+    "capacity_lines": [
+      "Chambres : 42",
+      "Lits : 84"
+    ],
+    "amenity_lines": [
+      "Piscine, WiFi, Parking"
+    ],
+    "price_lines": [
+      "Adulte - Par nuit : 120,00 €",
+      "Enfant - Par nuit : 60,00 €"
+    ]
+  }
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>3.19 Spécifique Itinéraire (<code>type="ITI"</code>)</summary>
           <div class="content">
             <h3><code>itinerary_details</code></h3>
             <ul>
@@ -1702,7 +2211,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.19 Spécifique Événement (<code>type="FMA"</code>)</summary>
+          <summary>3.20 Spécifique Événement (<code>type="FMA"</code>)</summary>
           <div class="content">
             <p>Les événements peuvent agréger les types de cuisine proposés par leurs restaurants partenaires via le bloc <code>associated_restaurants_cuisine_types[]</code>.</p>
             <table>
@@ -1727,109 +2236,9 @@ const json = await res.json();</pre>
           </div>
         </details>
 
-        <details>
-          <summary>3.20 <code>legal</code> (socle unifié)</summary>
-          <div class="content">
-            <p>Bloc présent sur toutes les réponses quand l’objet dispose d’une fiche légale dans la table <code>legal</code>. Il expose les identifiants officiels ainsi que le justificatif associé via <code>ref_document</code> (fichiers fiscaux, extrait KBIS, etc.).</p>
-            <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
-              <tbody>
-                <tr><td><code>siret</code></td><td><code>string</code></td><td>SIRET à 14 chiffres (contrôle de forme appliqué côté base)</td></tr>
-                <tr><td><code>siren</code></td><td><code>string|null</code></td><td>SIREN dérivé (9 chiffres) si stocké distinctement</td></tr>
-                <tr><td><code>vat_number</code></td><td><code>string|null</code></td><td>Numéro de TVA intracommunautaire déclaré</td></tr>
-                <tr><td><code>document</code></td><td><code>object|null</code></td><td>Pièce justificative enrichie (voir structure ci-dessous)</td></tr>
-                <tr><td><code>updated_at</code></td><td><code>timestamp</code></td><td>Date de dernière mise à jour connue de la fiche légale</td></tr>
-              </tbody>
-            </table>
-
-            <h4>Structure du champ <code>document</code></h4>
-            <p>Les documents légaux sont normalisés depuis <code>ref_document</code> et comportent des métadonnées communes.</p>
-            <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
-              <tbody>
-                <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant du document dans le référentiel</td></tr>
-                <tr><td><code>url</code></td><td><code>string</code></td><td>URL sécurisée du justificatif (presignée côté API)</td></tr>
-                <tr><td><code>title</code></td><td><code>string|null</code></td><td>Titre libre (ex. «&nbsp;KBIS 2024&nbsp;»)</td></tr>
-                <tr><td><code>issuer</code></td><td><code>string|null</code></td><td>Organisme émetteur</td></tr>
-                <tr><td><code>description</code></td><td><code>string|null</code></td><td>Description courte ou notes métiers</td></tr>
-                <tr><td><code>valid_from / valid_to</code></td><td><code>date|null</code></td><td>Période de validité de la pièce (si connu)</td></tr>
-                <tr><td><code>visibility</code></td><td><code>enum</code></td><td><code>"public"</code> ou <code>"private"</code> pour contrôler l’exposition</td></tr>
-              </tbody>
-            </table>
-
-            <div class="card tip-card" style="margin-top: 16px;">
-              <div class="pill tip-pill">Exemple</div>
-              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"legal": {
-  "siret": "12345678901234",
-  "siren": "123456789",
-  "vat_number": "FR45123456789",
-  "updated_at": "2025-01-15T10:42:27Z",
-  "document": {
-    "id": "9d9f6f4c-4b8f-4c48-b8c2-2474b61f5a31",
-    "url": "https://cdn.example.tld/legal/kbis-2025.pdf",
-    "title": "Extrait KBIS",
-    "issuer": "Greffe du Tribunal de Commerce",
-    "description": "KBIS mis à jour après fusion",
-    "valid_from": "2024-12-01",
-    "valid_to": "2025-12-01",
-    "visibility": "private"
-  }
-}</code></pre>
-            </div>
-
-            <div class="card info-card" style="margin-top: 12px;">
-              <div class="pill info-pill">Bon à savoir</div>
-              <p>Les contrôles de cohérence (longueur SIRET/SIREN) sont exécutés côté base ; l’API relaie telle quelle la valeur enregistrée. La visibilité du document permet de filtrer côté portail si seuls les justificatifs publics doivent être exposés.</p>
-            </div>
-          </div>
-        </details>
 
         <details>
-          <summary>3.21 <code>accommodation_legal</code> (hébergements uniquement)</summary>
-          <div class="content">
-            <p>Présent pour les objets de type <code>HOT</code>, <code>HLO</code>, <code>HPA</code>, <code>VIL</code> ou <code>CAMP</code> disposant d’un enregistrement dans <code>accommodation_legal</code>. Permet de suivre les obligations spécifiques des hébergeurs.</p>
-            <table>
-              <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
-              <tbody>
-                <tr><td><code>tourist_tax_number</code></td><td><code>string|null</code></td><td>Numéro de taxe de séjour ou identifiant fiscal local</td></tr>
-                <tr><td><code>tourist_tax_issued_date</code></td><td><code>date|null</code></td><td>Date d’émission du justificatif de taxe de séjour</td></tr>
-                <tr><td><code>tourist_tax_valid_until</code></td><td><code>date|null</code></td><td>Date d’expiration de l’attestation</td></tr>
-                <tr><td><code>accommodation_license_number</code></td><td><code>string|null</code></td><td>Licence d’exploitation (meublé, camping, etc.)</td></tr>
-                <tr><td><code>accommodation_license_issued_date</code></td><td><code>date|null</code></td><td>Date de délivrance de la licence</td></tr>
-                <tr><td><code>accommodation_license_valid_until</code></td><td><code>date|null</code></td><td>Fin de validité de la licence</td></tr>
-                <tr><td><code>document</code></td><td><code>object|null</code></td><td>Justificatif principal (structure identique à §3.20)</td></tr>
-                <tr><td><code>updated_at</code></td><td><code>timestamp</code></td><td>Horodatage de la dernière modification</td></tr>
-              </tbody>
-            </table>
-
-            <div class="card tip-card" style="margin-top: 16px;">
-              <div class="pill tip-pill">Exemple</div>
-              <pre style="background: var(--code-bg); color: var(--code); padding: 12px; border-radius: 8px; margin: 8px 0; overflow-x: auto;"><code>"accommodation_legal": {
-  "tourist_tax_number": "TS-2025-001",
-  "tourist_tax_issued_date": "2025-01-01",
-  "tourist_tax_valid_until": "2025-12-31",
-  "accommodation_license_number": "LIC-HOT-98765",
-  "accommodation_license_issued_date": "2024-11-15",
-  "accommodation_license_valid_until": "2027-11-14",
-  "updated_at": "2025-02-02T09:10:03Z",
-  "document": {
-    "id": "7c4ae51f-6a95-4e75-8fbf-f7688b87df2e",
-    "url": "https://cdn.example.tld/legal/licence-hotel.pdf",
-    "title": "Licence d'exploitation",
-    "visibility": "public"
-  }
-}</code></pre>
-            </div>
-
-            <div class="card info-card" style="margin-top: 12px;">
-              <div class="pill info-pill">Règle métier</div>
-              <p>Le back-end applique un trigger pour empêcher la création de données <code>accommodation_legal</code> sur d’autres types d’objets. Les clients peuvent donc se baser sur la présence du bloc pour déterminer si l’objet est soumis aux obligations d’hébergement.</p>
-            </div>
-          </div>
-        </details>
-
-        <details>
-          <summary>3.22 <code>documents[]</code> (référentiel partagé)</summary>
+          <summary>3.21 <code>documents[]</code> (référentiel partagé)</summary>
           <div class="content">
             <p>Ce tableau regroupe l’ensemble des pièces justificatives exposées par l’API (qu’elles soient liées à la fiche légale, à une classification ou à une action RSE). Chaque entrée correspond à un enregistrement de <code>ref_document</code> relié à l’objet.</p>
             <table>
@@ -1873,7 +2282,7 @@ const json = await res.json();</pre>
         </details>
 
         <details>
-          <summary>3.23 <code>document_requests[]</code> (suivi des pièces)</summary>
+          <summary>3.22 <code>document_requests[]</code> (suivi des pièces)</summary>
           <div class="content">
             <p>Ce bloc retrace la vie des demandes de documents métiers : qui a demandé quoi, quand l’objet a fourni la pièce et si la visibilité est publique ou réservée. Les informations proviennent du module de suivi <code>document_request</code>.</p>
             <table>
@@ -1919,6 +2328,455 @@ const json = await res.json();</pre>
       <!-- 4) Exemples pratiques -->
       <section class="card" id="examples">
         <h2>4) Exemples pratiques (HTTP)</h2>
+
+        <details>
+          <summary>4.0 Types de référence</summary>
+          <div class="content">
+            <p>Référentiels utilisés pour les filtres et l'interprétation des données de sortie.</p>
+            
+            <h4><code>accommodation_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>hotel</code></td><td>Hôtel</td><td>Établissement hôtelier classique</td></tr>
+                <tr><td><code>gite</code></td><td>Gîte</td><td>Gîte rural, gîte d'étape</td></tr>
+                <tr><td><code>camping</code></td><td>Camping</td><td>Camping, aire de camping-car</td></tr>
+                <tr><td><code>chambre_hote</code></td><td>Chambre d'hôte</td><td>Chambre d'hôte, B&B</td></tr>
+                <tr><td><code>residence</code></td><td>Résidence</td><td>Résidence de tourisme</td></tr>
+                <tr><td><code>auberge</code></td><td>Auberge</td><td>Auberge de jeunesse</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>room_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>single</code></td><td>Chambre simple</td><td>1 lit simple</td></tr>
+                <tr><td><code>double</code></td><td>Chambre double</td><td>1 lit double</td></tr>
+                <tr><td><code>twin</code></td><td>Chambre twin</td><td>2 lits simples</td></tr>
+                <tr><td><code>triple</code></td><td>Chambre triple</td><td>3 lits</td></tr>
+                <tr><td><code>family</code></td><td>Chambre familiale</td><td>4+ lits</td></tr>
+                <tr><td><code>suite</code></td><td>Suite</td><td>Suite de luxe</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>tourism_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>cultural</code></td><td>Culturel</td><td>Musées, monuments, patrimoine</td></tr>
+                <tr><td><code>nature</code></td><td>Nature</td><td>Parcs, randonnées, observation</td></tr>
+                <tr><td><code>adventure</code></td><td>Aventure</td><td>Sports extrêmes, activités</td></tr>
+                <tr><td><code>wellness</code></td><td>Bien-être</td><td>Spa, relaxation, thermalisme</td></tr>
+                <tr><td><code>gastronomy</code></td><td>Gastronomie</td><td>Dégustation, cuisine locale</td></tr>
+                <tr><td><code>business</code></td><td>Affaires</td><td>Congrès, séminaires</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>ref_legal_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Catégorie</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>SIRET</code></td><td>SIRET</td><td>business</td><td>Numéro SIRET de l'entreprise</td></tr>
+                <tr><td><code>SIREN</code></td><td>SIREN</td><td>business</td><td>Numéro SIREN de l'entreprise</td></tr>
+                <tr><td><code>VAT</code></td><td>N° TVA</td><td>business</td><td>Numéro de TVA intracommunautaire</td></tr>
+                <tr><td><code>LICENSE</code></td><td>Licence</td><td>accommodation</td><td>Licence d'exploitation</td></tr>
+                <tr><td><code>TAX_SEJOUR</code></td><td>Taxe de séjour</td><td>accommodation</td><td>Enregistrement taxe de séjour</td></tr>
+                <tr><td><code>INSURANCE</code></td><td>Assurance</td><td>business</td><td>Police d'assurance</td></tr>
+                <tr><td><code>PERMIT</code></td><td>Autorisation</td><td>business</td><td>Permis d'exploitation</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>legal_validity_mode</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>fixed_end_date</code></td><td>Date de fin fixe</td><td>Le document expire à une date précise</td></tr>
+                <tr><td><code>tacit_renewal</code></td><td>Renouvellement tacite</td><td>Le document se renouvelle automatiquement</td></tr>
+                <tr><td><code>forever</code></td><td>Permanent</td><td>Le document n'a pas de date d'expiration</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>ref_capacity_metric</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>beds</code></td><td>Lits</td><td>Nombre de lits disponibles</td></tr>
+                <tr><td><code>rooms</code></td><td>Chambres</td><td>Nombre de chambres</td></tr>
+                <tr><td><code>max_capacity</code></td><td>Capacité max</td><td>Capacité maximale d'accueil</td></tr>
+                <tr><td><code>seats</code></td><td>Places assises</td><td>Nombre de places assises (restaurants)</td></tr>
+                <tr><td><code>parking_spaces</code></td><td>Places de parking</td><td>Nombre de places de stationnement</td></tr>
+                <tr><td><code>meeting_rooms</code></td><td>Salles de réunion</td><td>Nombre de salles de réunion</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>ref_actor_role</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>director</code></td><td>Directeur</td><td>Directeur de l'établissement</td></tr>
+                <tr><td><code>manager</code></td><td>Gestionnaire</td><td>Gestionnaire, responsable</td></tr>
+                <tr><td><code>receptionist</code></td><td>Réceptionniste</td><td>Accueil, réception</td></tr>
+                <tr><td><code>guide</code></td><td>Guide</td><td>Guide touristique, accompagnateur</td></tr>
+                <tr><td><code>chef</code></td><td>Chef</td><td>Chef de cuisine</td></tr>
+                <tr><td><code>waiter</code></td><td>Serveur</td><td>Serveur, personnel de salle</td></tr>
+                <tr><td><code>maintenance</code></td><td>Maintenance</td><td>Personnel de maintenance</td></tr>
+                <tr><td><code>security</code></td><td>Sécurité</td><td>Agent de sécurité</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>client_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>individual</code></td><td>Individuel</td><td>Client individuel</td></tr>
+                <tr><td><code>family</code></td><td>Famille</td><td>Famille avec enfants</td></tr>
+                <tr><td><code>business_traveler</code></td><td>Voyageur d'affaires</td><td>Client professionnel</td></tr>
+                <tr><td><code>group</code></td><td>Groupe</td><td>Groupe organisé</td></tr>
+                <tr><td><code>senior</code></td><td>Sénior</td><td>Personne âgée</td></tr>
+                <tr><td><code>student</code></td><td>Étudiant</td><td>Étudiant/jeune</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>service_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>accommodation</code></td><td>Hébergement</td><td>Services d'hébergement</td></tr>
+                <tr><td><code>restaurant</code></td><td>Restauration</td><td>Services de restauration</td></tr>
+                <tr><td><code>transport</code></td><td>Transport</td><td>Services de transport</td></tr>
+                <tr><td><code>activity</code></td><td>Activité</td><td>Activités touristiques</td></tr>
+                <tr><td><code>entertainment</code></td><td>Divertissement</td><td>Services de divertissement</td></tr>
+                <tr><td><code>wellness</code></td><td>Bien-être</td><td>Services de bien-être</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>transport_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>airplane</code></td><td>Avion</td><td>Transport aérien</td></tr>
+                <tr><td><code>train</code></td><td>Train</td><td>Transport ferroviaire</td></tr>
+                <tr><td><code>bus</code></td><td>Bus</td><td>Transport par bus</td></tr>
+                <tr><td><code>car</code></td><td>Voiture</td><td>Transport automobile</td></tr>
+                <tr><td><code>boat</code></td><td>Bateau</td><td>Transport maritime</td></tr>
+                <tr><td><code>walking</code></td><td>Marche</td><td>Déplacement à pied</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>activity_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>hiking</code></td><td>Randonnée</td><td>Randonnée pédestre</td></tr>
+                <tr><td><code>diving</code></td><td>Plongée</td><td>Plongée sous-marine</td></tr>
+                <tr><td><code>museum_visit</code></td><td>Visite musée</td><td>Visite de musée</td></tr>
+                <tr><td><code>beach</code></td><td>Plage</td><td>Activités de plage</td></tr>
+                <tr><td><code>cultural</code></td><td>Culturel</td><td>Activités culturelles</td></tr>
+                <tr><td><code>adventure</code></td><td>Aventure</td><td>Sports d'aventure</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>destination_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>urban</code></td><td>Urbain</td><td>Destination urbaine</td></tr>
+                <tr><td><code>coastal</code></td><td>Côtier</td><td>Destination côtière</td></tr>
+                <tr><td><code>mountain</code></td><td>Montagne</td><td>Destination montagnarde</td></tr>
+                <tr><td><code>rural</code></td><td>Rural</td><td>Destination rurale</td></tr>
+                <tr><td><code>island</code></td><td>Île</td><td>Destination insulaire</td></tr>
+                <tr><td><code>desert</code></td><td>Désert</td><td>Destination désertique</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>price_kind</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>adulte</code></td><td>Adulte</td><td>Tarif adulte</td></tr>
+                <tr><td><code>enfant</code></td><td>Enfant</td><td>Tarif enfant</td></tr>
+                <tr><td><code>groupe</code></td><td>Groupe</td><td>Tarif de groupe</td></tr>
+                <tr><td><code>gratuit</code></td><td>Gratuit</td><td>Entrée gratuite</td></tr>
+                <tr><td><code>senior</code></td><td>Sénior</td><td>Tarif sénior</td></tr>
+                <tr><td><code>etudiant</code></td><td>Étudiant</td><td>Tarif étudiant</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>price_unit</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>par_personne</code></td><td>Par personne</td><td>Prix par personne</td></tr>
+                <tr><td><code>par_nuit</code></td><td>Par nuit</td><td>Prix par nuitée</td></tr>
+                <tr><td><code>par_heure</code></td><td>Par heure</td><td>Prix par heure</td></tr>
+                <tr><td><code>par_jour</code></td><td>Par jour</td><td>Prix par jour</td></tr>
+                <tr><td><code>forfait</code></td><td>Forfait</td><td>Prix forfaitaire</td></tr>
+                <tr><td><code>gratuit</code></td><td>Gratuit</td><td>Entrée gratuite</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>season_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>high_season</code></td><td>Haute saison</td><td>Période de haute saison</td></tr>
+                <tr><td><code>low_season</code></td><td>Basse saison</td><td>Période de basse saison</td></tr>
+                <tr><td><code>winter</code></td><td>Hiver</td><td>Saison hivernale</td></tr>
+                <tr><td><code>summer</code></td><td>Été</td><td>Saison estivale</td></tr>
+                <tr><td><code>cyclone_season</code></td><td>Saison cyclonique</td><td>Période cyclonique</td></tr>
+                <tr><td><code>shoulder_season</code></td><td>Mi-saison</td><td>Période intermédiaire</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>promotion_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>early_booking</code></td><td>Réservation anticipée</td><td>Réduction réservation anticipée</td></tr>
+                <tr><td><code>last_minute</code></td><td>Dernière minute</td><td>Offre dernière minute</td></tr>
+                <tr><td><code>loyalty</code></td><td>Fidélité</td><td>Réduction fidélité</td></tr>
+                <tr><td><code>group</code></td><td>Groupe</td><td>Réduction groupe</td></tr>
+                <tr><td><code>seasonal</code></td><td>Saisonnière</td><td>Offre saisonnière</td></tr>
+                <tr><td><code>package</code></td><td>Forfait</td><td>Réduction forfait</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>package_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>all_inclusive</code></td><td>Tout inclus</td><td>Forfait tout inclus</td></tr>
+                <tr><td><code>half_board</code></td><td>Demi-pension</td><td>Hébergement + petit-déjeuner + dîner</td></tr>
+                <tr><td><code>full_board</code></td><td>Pension complète</td><td>Hébergement + tous les repas</td></tr>
+                <tr><td><code>flight_hotel</code></td><td>Vol + Hôtel</td><td>Forfait transport + hébergement</td></tr>
+                <tr><td><code>activity_package</code></td><td>Forfait activité</td><td>Hébergement + activités</td></tr>
+                <tr><td><code>romantic</code></td><td>Romantique</td><td>Forfait romantique</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>cuisine_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>creole</code></td><td>Créole</td><td>Cuisine créole locale</td></tr>
+                <tr><td><code>metropolitan</code></td><td>Métropolitaine</td><td>Cuisine française métropolitaine</td></tr>
+                <tr><td><code>vegan</code></td><td>Végan</td><td>Cuisine végétalienne</td></tr>
+                <tr><td><code>vegetarian</code></td><td>Végétarienne</td><td>Cuisine végétarienne</td></tr>
+                <tr><td><code>seafood</code></td><td>Fruits de mer</td><td>Cuisine de fruits de mer</td></tr>
+                <tr><td><code>local</code></td><td>Locale</td><td>Cuisine locale traditionnelle</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>menu_category</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>entree</code></td><td>Entrée</td><td>Plats d'entrée</td></tr>
+                <tr><td><code>main</code></td><td>Plat principal</td><td>Plats principaux</td></tr>
+                <tr><td><code>dessert</code></td><td>Dessert</td><td>Desserts</td></tr>
+                <tr><td><code>drink</code></td><td>Boisson</td><td>Boissons</td></tr>
+                <tr><td><code>appetizer</code></td><td>Amuse-bouche</td><td>Amuse-bouches</td></tr>
+                <tr><td><code>side</code></td><td>Accompagnement</td><td>Accompagnements</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>dietary_tag</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>vegetarian</code></td><td>Végétarien</td><td>Convient aux végétariens</td></tr>
+                <tr><td><code>vegan</code></td><td>Végan</td><td>Convient aux végans</td></tr>
+                <tr><td><code>halal</code></td><td>Halal</td><td>Certifié halal</td></tr>
+                <tr><td><code>kosher</code></td><td>Casher</td><td>Certifié casher</td></tr>
+                <tr><td><code>gluten_free</code></td><td>Sans gluten</td><td>Sans gluten</td></tr>
+                <tr><td><code>lactose_free</code></td><td>Sans lactose</td><td>Sans lactose</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>allergen</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>gluten</code></td><td>Gluten</td><td>Contient du gluten</td></tr>
+                <tr><td><code>dairy</code></td><td>Lait</td><td>Contient des produits laitiers</td></tr>
+                <tr><td><code>nuts</code></td><td>Noix</td><td>Contient des noix</td></tr>
+                <tr><td><code>eggs</code></td><td>Œufs</td><td>Contient des œufs</td></tr>
+                <tr><td><code>soy</code></td><td>Soja</td><td>Contient du soja</td></tr>
+                <tr><td><code>shellfish</code></td><td>Crustacés</td><td>Contient des crustacés</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>event_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>festival</code></td><td>Festival</td><td>Festival culturel</td></tr>
+                <tr><td><code>conference</code></td><td>Conférence</td><td>Conférence professionnelle</td></tr>
+                <tr><td><code>wedding</code></td><td>Mariage</td><td>Cérémonie de mariage</td></tr>
+                <tr><td><code>exhibition</code></td><td>Exposition</td><td>Exposition artistique</td></tr>
+                <tr><td><code>concert</code></td><td>Concert</td><td>Concert musical</td></tr>
+                <tr><td><code>sport</code></td><td>Sport</td><td>Événement sportif</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>iti_practice</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>randonnee_pedestre</code></td><td>Randonnée pédestre</td><td>Randonnée à pied</td></tr>
+                <tr><td><code>velo_vtt</code></td><td>Vélo/VTT</td><td>Cyclisme et VTT</td></tr>
+                <tr><td><code>equitation</code></td><td>Équitation</td><td>Randonnée équestre</td></tr>
+                <tr><td><code>kayak</code></td><td>Kayak</td><td>Navigation en kayak</td></tr>
+                <tr><td><code>plongee</code></td><td>Plongée</td><td>Plongée sous-marine</td></tr>
+                <tr><td><code>escalade</code></td><td>Escalade</td><td>Escalade et varappe</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>contact_kind</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>phone</code></td><td>Téléphone</td><td>Numéro de téléphone</td></tr>
+                <tr><td><code>email</code></td><td>Email</td><td>Adresse email</td></tr>
+                <tr><td><code>whatsapp</code></td><td>WhatsApp</td><td>Contact WhatsApp</td></tr>
+                <tr><td><code>website</code></td><td>Site web</td><td>Site internet</td></tr>
+                <tr><td><code>address</code></td><td>Adresse</td><td>Adresse physique</td></tr>
+                <tr><td><code>fax</code></td><td>Fax</td><td>Numéro de fax</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>social_network</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>facebook</code></td><td>Facebook</td><td>Page Facebook</td></tr>
+                <tr><td><code>instagram</code></td><td>Instagram</td><td>Compte Instagram</td></tr>
+                <tr><td><code>youtube</code></td><td>YouTube</td><td>Chaîne YouTube</td></tr>
+                <tr><td><code>twitter</code></td><td>Twitter</td><td>Compte Twitter</td></tr>
+                <tr><td><code>linkedin</code></td><td>LinkedIn</td><td>Page LinkedIn</td></tr>
+                <tr><td><code>tiktok</code></td><td>TikTok</td><td>Compte TikTok</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>media_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>photo</code></td><td>Photo</td><td>Image photographique</td></tr>
+                <tr><td><code>video</code></td><td>Vidéo</td><td>Vidéo</td></tr>
+                <tr><td><code>logo</code></td><td>Logo</td><td>Logo de l'établissement</td></tr>
+                <tr><td><code>brochure_pdf</code></td><td>Brochure PDF</td><td>Document PDF</td></tr>
+                <tr><td><code>audio</code></td><td>Audio</td><td>Fichier audio</td></tr>
+                <tr><td><code>panorama</code></td><td>Panorama</td><td>Image panoramique</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>environment_tag</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>plage</code></td><td>Plage</td><td>Environnement de plage</td></tr>
+                <tr><td><code>montagne</code></td><td>Montagne</td><td>Environnement montagnard</td></tr>
+                <tr><td><code>patrimoine</code></td><td>Patrimoine</td><td>Site patrimonial</td></tr>
+                <tr><td><code>foret</code></td><td>Forêt</td><td>Environnement forestier</td></tr>
+                <tr><td><code>urbain</code></td><td>Urbain</td><td>Environnement urbain</td></tr>
+                <tr><td><code>rural</code></td><td>Rural</td><td>Environnement rural</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>amenity_family</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>comforts</code></td><td>Conforts</td><td>Équipements de confort</td></tr>
+                <tr><td><code>services</code></td><td>Services</td><td>Services proposés</td></tr>
+                <tr><td><code>outdoor</code></td><td>Extérieur</td><td>Équipements extérieurs</td></tr>
+                <tr><td><code>sports</code></td><td>Sports</td><td>Équipements sportifs</td></tr>
+                <tr><td><code>wellness</code></td><td>Bien-être</td><td>Équipements bien-être</td></tr>
+                <tr><td><code>business</code></td><td>Affaires</td><td>Équipements professionnels</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>ref_object_relation_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>parent_of</code></td><td>Parent de</td><td>Relation parent-enfant</td></tr>
+                <tr><td><code>part_of</code></td><td>Partie de</td><td>Fait partie de</td></tr>
+                <tr><td><code>partner_of</code></td><td>Partenaire de</td><td>Partenariat commercial</td></tr>
+                <tr><td><code>near_to</code></td><td>Près de</td><td>Proximité géographique</td></tr>
+                <tr><td><code>managed_by</code></td><td>Géré par</td><td>Gestion administrative</td></tr>
+                <tr><td><code>owned_by</code></td><td>Propriété de</td><td>Propriété</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>ref_classification_scheme</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>hot_stars</code></td><td>Étoiles hôtel</td><td>Classification hôtelière</td></tr>
+                <tr><td><code>tourisme_handicap</code></td><td>Tourisme & Handicap</td><td>Label accessibilité</td></tr>
+                <tr><td><code>eco_label</code></td><td>Écolabel</td><td>Certification environnementale</td></tr>
+                <tr><td><code>quality_label</code></td><td>Label qualité</td><td>Label de qualité</td></tr>
+                <tr><td><code>heritage</code></td><td>Patrimoine</td><td>Classification patrimoniale</td></tr>
+                <tr><td><code>gastronomy</code></td><td>Gastronomie</td><td>Label gastronomique</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>insurance_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>travel</code></td><td>Voyage</td><td>Assurance voyage</td></tr>
+                <tr><td><code>medical</code></td><td>Médicale</td><td>Assurance médicale</td></tr>
+                <tr><td><code>cancellation</code></td><td>Annulation</td><td>Assurance annulation</td></tr>
+                <tr><td><code>liability</code></td><td>Responsabilité</td><td>Assurance responsabilité</td></tr>
+                <tr><td><code>property</code></td><td>Biens</td><td>Assurance des biens</td></tr>
+                <tr><td><code>activity</code></td><td>Activité</td><td>Assurance activité</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>assistance_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>customer_service</code></td><td>Service client</td><td>Assistance clientèle</td></tr>
+                <tr><td><code>emergency</code></td><td>Urgence</td><td>Assistance d'urgence</td></tr>
+                <tr><td><code>legal</code></td><td>Légale</td><td>Assistance juridique</td></tr>
+                <tr><td><code>medical</code></td><td>Médicale</td><td>Assistance médicale</td></tr>
+                <tr><td><code>technical</code></td><td>Technique</td><td>Assistance technique</td></tr>
+                <tr><td><code>concierge</code></td><td>Conciergerie</td><td>Service de conciergerie</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>feedback_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>online_review</code></td><td>Avis en ligne</td><td>Avis client en ligne</td></tr>
+                <tr><td><code>complaint</code></td><td>Plainte</td><td>Plainte client</td></tr>
+                <tr><td><code>suggestion</code></td><td>Suggestion</td><td>Suggestion d'amélioration</td></tr>
+                <tr><td><code>compliment</code></td><td>Compliment</td><td>Félicitation client</td></tr>
+                <tr><td><code>rating</code></td><td>Note</td><td>Évaluation numérique</td></tr>
+                <tr><td><code>survey</code></td><td>Enquête</td><td>Enquête de satisfaction</td></tr>
+              </tbody>
+            </table>
+
+            <h4><code>partnership_type</code></h4>
+            <table>
+              <thead><tr><th>Code</th><th>Libellé</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>hotel</code></td><td>Hôtel</td><td>Partenariat hôtelier</td></tr>
+                <tr><td><code>airline</code></td><td>Compagnie aérienne</td><td>Partenariat aérien</td></tr>
+                <tr><td><code>local_business</code></td><td>Commerce local</td><td>Partenariat local</td></tr>
+                <tr><td><code>tour_operator</code></td><td>Tour-opérateur</td><td>Partenariat tour-opérateur</td></tr>
+                <tr><td><code>restaurant</code></td><td>Restaurant</td><td>Partenariat restauration</td></tr>
+                <tr><td><code>activity_provider</code></td><td>Prestataire d'activités</td><td>Partenariat activités</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
 
         <details open>
           <summary>4.1 Un objet ITI sans tracé (léger)</summary>
@@ -2012,6 +2870,72 @@ const json = await res.json();</pre>
   }'</pre>
             </div>
             <p class="inline-help">La réponse inclura les <code>menus[]</code> avec leurs <code>items[]</code>, catégories, prix, tags alimentaires et allergènes.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.7 Récupération avec Deep Data</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
+<pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_with_deep_data" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{ "p_object_id": "HOT123" }'</pre>
+            <p class="inline-help">Retourne l'objet avec ses objets parents, acteurs et organisations liées.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.8 Recherche de restaurants par cuisine</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-48">Copier</button>
+<pre id="ex-48">curl -X POST "{BASE_URL}/rpc/search_restaurants_by_cuisine" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_cuisine_types": ["local", "veggie", "seafood"],
+    "p_languages": ["fr", "en"],
+    "p_limit": 20
+  }'</pre>
+            <p class="inline-help">Recherche spécialisée pour trouver des restaurants par types de cuisine.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.9 Recherche d'événements par cuisine de restaurant</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-49">Copier</button>
+<pre id="ex-49">curl -X POST "{BASE_URL}/rpc/search_events_by_restaurant_cuisine" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_cuisine_types": ["local", "gastronomy"],
+    "p_languages": ["fr"],
+    "p_limit": 15
+  }'</pre>
+            <p class="inline-help">Trouve des événements (FMA) basés sur les types de cuisine des restaurants associés.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>4.10 Récupération avec options avancées</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-410">Copier</button>
+<pre id="ex-410">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{
+    "p_object_id": "HOT123",
+    "p_lang_prefs": ["fr", "en"],
+    "p_options": {
+      "render": true,
+      "render_locale": "fr-FR",
+      "render_tz": "Europe/Paris",
+      "fields": ["id", "name", "contacts", "media", "actors"],
+      "org_object_id": "ORG456"
+    }
+  }'</pre>
+            <p class="inline-help">Exemple avec contrôle du rendu, filtrage des champs et préférence d'organisation.</p>
           </div>
         </details>
 
@@ -2138,6 +3062,42 @@ const json = await res.json();</pre>
             <ul>
               <li><code>p_lang_prefs</code> prend un ordre de préférence (ex. <code>["en","fr"]</code>).</li>
               <li>Si un champ n’existe pas, attendez-vous à <code>[]</code>, <code>{}</code> ou <code>null</code> suivant le bloc.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Deep Data & Performance</h3>
+            <ul>
+              <li>Utilisez les fonctions Deep Data pour éviter les appels multiples.</li>
+              <li>Activez <code>render: true</code> pour des données formatées prêtes à l'affichage.</li>
+              <li>Utilisez <code>fields</code> et <code>include</code> pour limiter les données retournées.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Recherches spécialisées</h3>
+            <ul>
+              <li>Préférez <code>search_restaurants_by_cuisine</code> aux filtres génériques.</li>
+              <li>Utilisez <code>search_events_by_restaurant_cuisine</code> pour les événements liés à la gastronomie.</li>
+              <li>Les fonctions Deep Data incluent automatiquement les objets liés.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Nouveaux blocs de données</h3>
+            <ul>
+              <li><code>actors[]</code> : personnes physiques liées à l'objet avec leurs rôles.</li>
+              <li><code>legal_records[]</code> : enregistrements légaux unifiés (remplace <code>legal</code> et <code>accommodation_legal</code>).</li>
+              <li><code>incoming_relations[]</code> et <code>outgoing_relations[]</code> : relations séparées par sens.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Options avancées</h3>
+            <ul>
+              <li><code>org_object_id</code> : priorise les descriptions d'une organisation spécifique.</li>
+              <li><code>render_locale</code> et <code>render_tz</code> : contrôlent le formatage des données.</li>
+              <li><code>include_private</code> : accès aux données privées (nécessite permissions).</li>
             </ul>
           </div>
         </div>

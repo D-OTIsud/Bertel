@@ -484,7 +484,7 @@ FROM (
     ('garage','Garage','parking','Garage couvert'),
     ('electric_charging','Recharge électrique','parking','Station de recharge véhicule électrique'),
   ('public_toilets','Toilettes publiques','services','Toilettes publiques accessibles'),
-  ('drinking_water','Point d\'eau potable','services','Fontaine / robinet eau potable en libre service'),
+  ('drinking_water','Point d''eau potable','services','Fontaine / robinet eau potable en libre service'),
     
     -- Services spécialisés
     ('spa','Spa','services','Centre de spa'),

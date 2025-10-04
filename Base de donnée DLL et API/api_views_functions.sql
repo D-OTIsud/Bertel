@@ -308,6 +308,44 @@ BEGIN
 END;
 $$;
 
+-- I18N Helper (strict): Pick translation from JSONB without "any language" fallback
+-- Returns NULL if both requested and fallback are missing/empty
+CREATE OR REPLACE FUNCTION api.i18n_pick_strict(
+  p_i18n_data JSONB,
+  p_lang_code TEXT DEFAULT 'fr',
+  p_fallback_lang TEXT DEFAULT 'fr'
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+  v_result TEXT;
+  v_normalized_lang TEXT := lower(trim(p_lang_code));
+  v_normalized_fallback TEXT := lower(trim(p_fallback_lang));
+BEGIN
+  IF p_i18n_data IS NULL OR p_i18n_data = '{}'::jsonb THEN
+    RETURN NULL;
+  END IF;
+
+  IF p_i18n_data ? v_normalized_lang THEN
+    v_result := p_i18n_data ->> v_normalized_lang;
+    IF v_result IS NOT NULL AND trim(v_result) != '' THEN
+      RETURN v_result;
+    END IF;
+  END IF;
+
+  IF v_normalized_fallback != v_normalized_lang AND p_i18n_data ? v_normalized_fallback THEN
+    v_result := p_i18n_data ->> v_normalized_fallback;
+    IF v_result IS NOT NULL AND trim(v_result) != '' THEN
+      RETURN v_result;
+    END IF;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
 -- I18N Helper: Get translation from EAV i18n_translation table with fallback
 -- Usage: api.i18n_get_text('object_description', 'desc-uuid-123', 'description', 'en', 'fr')
 -- Returns: Translated text from i18n_translation table with fallback support
@@ -375,6 +413,72 @@ BEGIN
 
   RETURN v_result;
 END;
+$$;
+
+-- I18N Helper (strict): EAV i18n without "any language" fallback
+CREATE OR REPLACE FUNCTION api.i18n_get_text_strict(
+  p_target_table TEXT,
+  p_target_pk TEXT,
+  p_target_column TEXT,
+  p_lang_code TEXT DEFAULT 'fr',
+  p_fallback_lang TEXT DEFAULT 'fr'
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_result TEXT;
+  v_normalized_lang TEXT := lower(trim(p_lang_code));
+  v_normalized_fallback TEXT := lower(trim(p_fallback_lang));
+BEGIN
+  SELECT it.value_text INTO v_result
+  FROM i18n_translation it
+  JOIN ref_language rl ON rl.id = it.language_id
+  WHERE it.target_table = p_target_table
+    AND it.target_pk = p_target_pk
+    AND it.target_column = p_target_column
+    AND lower(rl.code) = v_normalized_lang
+    AND it.value_text IS NOT NULL
+    AND trim(it.value_text) != ''
+  LIMIT 1;
+  IF v_result IS NOT NULL THEN RETURN v_result; END IF;
+
+  IF v_normalized_fallback != v_normalized_lang THEN
+    SELECT it.value_text INTO v_result
+    FROM i18n_translation it
+    JOIN ref_language rl ON rl.id = it.language_id
+    WHERE it.target_table = p_target_table
+      AND it.target_pk = p_target_pk
+      AND it.target_column = p_target_column
+      AND lower(rl.code) = v_normalized_fallback
+      AND it.value_text IS NOT NULL
+      AND trim(it.value_text) != ''
+    LIMIT 1;
+    IF v_result IS NOT NULL THEN RETURN v_result; END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+-- =====================================================
+-- JSON Helper: Prune empty top-level keys (arrays/objects)
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.jsonb_prune_empty_top(p JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT COALESCE(jsonb_object_agg(k, v), '{}'::jsonb)
+  FROM (
+    SELECT key AS k, value AS v
+    FROM jsonb_each(p)
+    WHERE NOT (
+      (jsonb_typeof(value) = 'array'  AND jsonb_array_length(value) = 0)
+      OR (jsonb_typeof(value) = 'object' AND value = '{}'::jsonb)
+      OR value IS NULL
+    )
+  ) s;
 $$;
 
 -- Encodage base64url (sans "=") pour un bytea -> text
@@ -717,6 +821,7 @@ DECLARE
   v_render_version TEXT := COALESCE(NULLIF(p_options->>'render_version',''), '1.0');
   v_render JSONB := '{}'::jsonb;
   v_tmp_json JSONB;
+  v_omit_empty BOOLEAN := COALESCE((p_options->>'omit_empty')::boolean, FALSE);
 BEGIN
   SELECT o.* INTO obj
   FROM object o
@@ -1015,8 +1120,8 @@ BEGIN
       SELECT jsonb_agg(
               jsonb_build_object(
                 'kind_code', rc.code,
-                'kind_name', rc.name,
-                'kind_description', rc.description,
+                'kind_name', COALESCE(api.i18n_pick_strict(rc.name_i18n, lang, 'fr'), rc.name),
+                'kind_description', COALESCE(api.i18n_pick_strict(rc.description_i18n, lang, 'fr'), rc.description),
                 'icon_url',  rc.icon_url,
                  'value',     c.value,
                  'is_public', c.is_public,
@@ -1058,10 +1163,10 @@ BEGIN
               jsonb_build_object(
                  'id',        m.id,
                 'type_code', mt.code,
-                'type_name', mt.name,
-                'type_description', mt.description,
+                'type_name', COALESCE(api.i18n_pick_strict(mt.name_i18n, lang, 'fr'), mt.name),
+                'type_description', COALESCE(api.i18n_pick_strict(mt.description_i18n, lang, 'fr'), mt.description),
                  'icon_url',  mt.icon_url,
-                 'title',     m.title,
+                 'title',     COALESCE(api.i18n_pick_strict(m.title_i18n, lang, 'fr'), m.title),
                  'credit',    m.credit,
                  'url',       m.url,
                  'is_main',   m.is_main,
@@ -1090,8 +1195,8 @@ BEGIN
       SELECT jsonb_agg(
               jsonb_build_object(
                 'metric_code', rm.code,
-                'metric_name', rm.name,
-                'metric_description', rm.description,
+                'metric_name', COALESCE(api.i18n_get_text_strict('ref_capacity_metric', rm.id::text, 'name', lang, 'fr'), rm.name),
+                'metric_description', COALESCE(api.i18n_get_text_strict('ref_capacity_metric', rm.id::text, 'description', lang, 'fr'), rm.description),
                 'icon_url',    rm.icon_url,
                 'value',       oc.value_integer,
                 'unit',        oc.unit
@@ -1111,11 +1216,11 @@ BEGIN
       SELECT jsonb_agg(
                jsonb_build_object(
                  'code',     ra.code,
-                 'name',     ra.name,
+                 'name',     COALESCE(api.i18n_pick_strict(ra.name_i18n, lang, 'fr'), ra.name),
                  'icon_url', ra.icon_url,
                  'family', jsonb_build_object(
                    'code',     rf.code,
-                   'name',     rf.name,
+                   'name',     COALESCE(api.i18n_pick_strict(rf.name_i18n, lang, 'fr'), rf.name),
                    'icon_url', rf.icon_url
                  )
                )
@@ -1133,7 +1238,12 @@ BEGIN
     'environment_tags',
     COALESCE((
       SELECT jsonb_agg(
-              jsonb_build_object('code', et.code, 'name', et.name, 'description', et.description, 'icon_url', et.icon_url)
+             jsonb_build_object(
+               'code', et.code,
+               'name', COALESCE(api.i18n_pick_strict(et.name_i18n, lang, 'fr'), et.name),
+               'description', COALESCE(api.i18n_pick_strict(et.description_i18n, lang, 'fr'), et.description),
+               'icon_url', et.icon_url
+             )
                ORDER BY et.name, et.code
              )
       FROM object_environment_tag oet
@@ -1147,7 +1257,12 @@ BEGIN
     'payment_methods',
     COALESCE((
       SELECT jsonb_agg(
-              jsonb_build_object('code', pm.code, 'name', pm.name, 'description', pm.description, 'icon_url', pm.icon_url)
+             jsonb_build_object(
+               'code', pm.code,
+               'name', COALESCE(api.i18n_pick_strict(pm.name_i18n, lang, 'fr'), pm.name),
+               'description', COALESCE(api.i18n_pick_strict(pm.description_i18n, lang, 'fr'), pm.description),
+               'icon_url', pm.icon_url
+             )
                ORDER BY pm.name, pm.code
              )
       FROM object_payment_method opm
@@ -1170,8 +1285,8 @@ BEGIN
       SELECT jsonb_agg(
         (
           jsonb_build_object(
-            'kind',       (SELECT jsonb_build_object('id', k.id, 'code', k.code, 'name', k.name, 'description', k.description, 'position', k.position, 'icon_url', k.icon_url) FROM ref_code_price_kind k WHERE k.id = p.kind_id),
-            'unit',       (SELECT jsonb_build_object('id', u.id, 'code', u.code, 'name', u.name, 'description', u.description, 'position', u.position, 'icon_url', u.icon_url) FROM ref_code_price_unit u WHERE u.id = p.unit_id),
+            'kind',       (SELECT jsonb_build_object('id', k.id, 'code', k.code, 'name', COALESCE(api.i18n_pick_strict(k.name_i18n, lang, 'fr'), k.name), 'description', COALESCE(api.i18n_pick_strict(k.description_i18n, lang, 'fr'), k.description), 'position', k.position, 'icon_url', k.icon_url) FROM ref_code_price_kind k WHERE k.id = p.kind_id),
+            'unit',       (SELECT jsonb_build_object('id', u.id, 'code', u.code, 'name', COALESCE(api.i18n_pick_strict(u.name_i18n, lang, 'fr'), u.name), 'description', COALESCE(api.i18n_pick_strict(u.description_i18n, lang, 'fr'), u.description), 'position', u.position, 'icon_url', u.icon_url) FROM ref_code_price_unit u WHERE u.id = p.unit_id),
             'amount',     p.amount,
             'amount_max', p.amount_max,
             'currency',   p.currency,
@@ -1965,8 +2080,8 @@ BEGIN
       INTO v_tmp_json
       FROM (
         SELECT 
-          CASE WHEN rcr.code IS NOT NULL THEN rc.name || ' : ' || c.value || ' (' || rcr.code || ')'
-               ELSE rc.name || ' : ' || c.value
+          CASE WHEN rcr.code IS NOT NULL THEN COALESCE(api.i18n_pick(rc.name_i18n, lang, 'fr'), rc.name) || ' : ' || c.value || ' (' || rcr.code || ')'
+               ELSE COALESCE(api.i18n_pick(rc.name_i18n, lang, 'fr'), rc.name) || ' : ' || c.value
           END AS line_text,
           c.is_primary,
           c.position,
@@ -1988,11 +2103,11 @@ BEGIN
         SELECT 
           CASE 
             WHEN m.width IS NOT NULL AND m.height IS NOT NULL THEN
-              COALESCE(m.title, mt.name) ||
+              COALESCE(api.i18n_pick(m.title_i18n, lang, 'fr'), m.title, COALESCE(api.i18n_pick(mt.name_i18n, lang, 'fr'), mt.name)) ||
               CASE WHEN m.credit IS NOT NULL THEN ' (' || m.credit || ')' ELSE '' END ||
               ' - ' || m.width || 'x' || m.height
             ELSE
-              COALESCE(m.title, mt.name) ||
+              COALESCE(api.i18n_pick(m.title_i18n, lang, 'fr'), m.title, COALESCE(api.i18n_pick(mt.name_i18n, lang, 'fr'), mt.name)) ||
               CASE WHEN m.credit IS NOT NULL THEN ' (' || m.credit || ')' ELSE '' END
           END AS line_text,
           m.is_main,
@@ -2021,15 +2136,15 @@ BEGIN
                   || ' '
                   || COALESCE(NULLIF(oc.unit, ''), '')
                   || CASE
-                       WHEN COALESCE(NULLIF(oc.unit, ''), '') <> '' AND COALESCE(rm.name, '') <> '' THEN ' '
+                       WHEN COALESCE(NULLIF(oc.unit, ''), '') <> '' AND COALESCE(COALESCE(api.i18n_get_text('ref_capacity_metric', rm.id::text, 'name', lang, 'fr'), rm.name), '') <> '' THEN ' '
                        ELSE ''
                      END
-                  || COALESCE(rm.name, '')
+                  || COALESCE(api.i18n_get_text('ref_capacity_metric', rm.id::text, 'name', lang, 'fr'), rm.name, '')
               )
-            ELSE COALESCE(rm.name, '')
+            ELSE COALESCE(api.i18n_get_text('ref_capacity_metric', rm.id::text, 'name', lang, 'fr'), rm.name, '')
           END AS line_text,
           rm.position AS rm_position,
-          rm.name AS metric_name,
+          COALESCE(api.i18n_get_text('ref_capacity_metric', rm.id::text, 'name', lang, 'fr'), rm.name) AS metric_name,
           rm.code AS metric_code
         FROM object_capacity oc
         JOIN ref_capacity_metric rm ON rm.id = oc.metric_id
@@ -2048,10 +2163,10 @@ BEGIN
       INTO v_tmp_json
       FROM (
         SELECT 
-          ra.name || ' (' || rf.name || ')' AS line_text,
-          rf.name AS family_name,
+          COALESCE(api.i18n_pick(ra.name_i18n, lang, 'fr'), ra.name) || ' (' || COALESCE(api.i18n_pick(rf.name_i18n, lang, 'fr'), rf.name) || ')' AS line_text,
+          COALESCE(api.i18n_pick(rf.name_i18n, lang, 'fr'), rf.name) AS family_name,
           rf.code AS family_code,
-          ra.name AS amenity_name,
+          COALESCE(api.i18n_pick(ra.name_i18n, lang, 'fr'), ra.name) AS amenity_name,
           ra.code AS amenity_code
         FROM object_amenity oa
         JOIN ref_amenity ra ON ra.id = oa.amenity_id
@@ -2067,7 +2182,7 @@ BEGIN
       INTO v_tmp_json
       FROM (
         SELECT
-          COALESCE(k.name, k.code, 'Tarif') || ' - ' ||
+          COALESCE(COALESCE(api.i18n_pick(k.name_i18n, lang, 'fr'), k.name), k.code, 'Tarif') || ' - ' ||
           COALESCE(
             CASE WHEN p.amount_max IS NOT NULL THEN
               api.render_format_currency(p.amount, p.currency, v_render_locale) || ' - ' ||
@@ -2077,7 +2192,7 @@ BEGIN
             END,
             ''
           ) ||
-          CASE WHEN u.name IS NOT NULL AND trim(u.name) <> '' THEN ' ' || lower(u.name) ELSE '' END ||
+          CASE WHEN COALESCE(api.i18n_pick(u.name_i18n, lang, 'fr'), u.name) IS NOT NULL AND trim(COALESCE(api.i18n_pick(u.name_i18n, lang, 'fr'), u.name)) <> '' THEN ' ' || lower(COALESCE(api.i18n_pick(u.name_i18n, lang, 'fr'), u.name)) ELSE '' END ||
           CASE WHEN period_text IS NOT NULL THEN ' (' || period_text || ')' ELSE '' END ||
           CASE WHEN p.conditions IS NOT NULL THEN ' - ' || p.conditions ELSE '' END AS line_text,
           COALESCE(k.code, '') AS order_kind,
@@ -2337,6 +2452,12 @@ BEGIN
     WHERE value IS NOT NULL AND value != 'null'::jsonb
   );
   
+  IF v_omit_empty THEN
+    js := api.jsonb_prune_empty_top(js);
+    js := js || jsonb_build_object('opening_times', v_opening_times);
+    RETURN js::json;
+  END IF;
+  
   RETURN json_build_object(
     'id',                   (js->'id')::json,
     'type',                 (js->'type')::json,
@@ -2520,7 +2641,7 @@ $$;
 --      - Listes : pas de track par défaut ('none')
 --      - Options propagées via curseur (inchangé)
 -- =====================================================
-DROP FUNCTION IF EXISTS api.list_object_resources_page(TEXT, TEXT[], INTEGER, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_page(TEXT, TEXT[], INTEGER, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN) CASCADE;
 
 CREATE OR REPLACE FUNCTION api.list_object_resources_page(
   p_cursor         TEXT DEFAULT NULL,
@@ -2531,7 +2652,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_page(
   p_search         TEXT DEFAULT NULL,
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
-  p_stage_color    TEXT DEFAULT NULL
+  p_stage_color    TEXT DEFAULT NULL,
+  p_omit_empty     BOOLEAN DEFAULT NULL
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -2556,6 +2678,7 @@ DECLARE
   v_render_locale TEXT;
   v_render_tz TEXT := 'UTC';
   v_render_version TEXT := '1.0';
+  v_omit_empty BOOLEAN := COALESCE(p_omit_empty, FALSE);
   v_current_cursor TEXT;
 BEGIN
   v_render_locale := CASE
@@ -2580,6 +2703,7 @@ BEGIN
     IF cur ? 'render_locale' THEN v_render_locale := cur->>'render_locale'; END IF;
     IF cur ? 'render_tz' THEN v_render_tz := cur->>'render_tz'; END IF;
     IF cur ? 'render_version' THEN v_render_version := cur->>'render_version'; END IF;
+    IF cur ? 'omit_empty' THEN v_omit_empty := (cur->>'omit_empty')::boolean; END IF;
   END IF;
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
@@ -2626,6 +2750,7 @@ BEGIN
       'track_format', v_track,
       'include_stages', v_inc,
       'stage_color', v_color,
+      'omit_empty', v_omit_empty,
       'lang', to_jsonb(p_lang_prefs),
       'render', v_render_enabled,
       'render_locale', v_render_locale,
@@ -2644,6 +2769,7 @@ BEGIN
     'track_format', v_track,
     'include_stages', v_inc,
     'stage_color', v_color,
+    'omit_empty', v_omit_empty,
     'lang', to_jsonb(p_lang_prefs),
     'render', v_render_enabled,
     'render_locale', v_render_locale,
@@ -2678,7 +2804,8 @@ BEGIN
                    'render', v_render_enabled,
                    'render_locale', v_render_locale,
                    'render_tz', v_render_tz,
-                   'render_version', v_render_version
+                   'render_version', v_render_version,
+                   'omit_empty', v_omit_empty
                  )
                )
                ORDER BY ord
@@ -4060,7 +4187,10 @@ $$;
 -- =====================================================
 -- Enhanced API function: Get object with deep parent, actor, and organization data
 -- =====================================================
-CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(p_object_id TEXT)
+CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(
+  p_object_id TEXT,
+  p_languages TEXT[] DEFAULT ARRAY['fr']
+)
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
@@ -4072,8 +4202,8 @@ DECLARE
   v_organizations JSONB;
   v_result JSON;
 BEGIN
-  -- Get basic object data using existing function
-  SELECT api.get_object_resource(p_object_id, ARRAY['fr'], 'none', '{}'::jsonb)::jsonb INTO v_object_data;
+  -- Get basic object data using existing function with requested languages
+  SELECT api.get_object_resource(p_object_id, p_languages, 'none', '{}'::jsonb)::jsonb INTO v_object_data;
   
   -- Get parent objects data
   SELECT api.get_parent_object_data(p_object_id) INTO v_parent_objects;
@@ -4117,8 +4247,8 @@ BEGIN
   -- Process each object ID
   FOREACH v_object_id IN ARRAY p_object_ids
   LOOP
-    -- Get deep data for each object
-    SELECT api.get_object_with_deep_data(v_object_id)::jsonb INTO v_object_data;
+    -- Get deep data for each object with requested languages
+    SELECT api.get_object_with_deep_data(v_object_id, p_languages)::jsonb INTO v_object_data;
     v_result := v_result || v_object_data;
   END LOOP;
   

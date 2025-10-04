@@ -4010,3 +4010,424 @@ SET label_i18n = COALESCE(sa.label_i18n, '{}'::jsonb) || jsonb_build_object('en'
 FROM ref_sustainability_action_category sac
 JOIN action_translations at ON at.category_code = sac.code
 WHERE sa.category_id = sac.id AND sa.code = at.code;
+
+-- =====================================================
+-- OBJECT CONTENT TRANSLATIONS (EN & ES)
+-- =====================================================
+
+-- object_description translations
+WITH object_descriptions AS (
+  SELECT 
+    od.object_id,
+    od.description,
+    od.description_chapo,
+    od.description_mobile,
+    od.description_edition,
+    od.description_offre_hors_zone,
+    od.sanitary_measures,
+    o.name as object_name,
+    o.object_type
+  FROM object_description od
+  JOIN object o ON o.id = od.object_id
+  WHERE o.region_code = 'TST'
+), description_translations AS (
+  SELECT 
+    object_id,
+    CASE object_name
+      WHEN 'Office de Tourisme Intercommunal TEST' THEN 
+        jsonb_build_object(
+          'en', 'Test tourism office to validate Bertel 3.0 system functionalities. This organization serves as parent for all test objects and allows testing the complete unified system features.',
+          'es', 'Oficina de turismo de prueba para validar las funcionalidades del sistema Bertel 3.0. Esta organización sirve como padre para todos los objetos de prueba y permite probar todas las características del sistema unificado.'
+        )
+      WHEN 'Hôtel Test Océan' THEN 
+        jsonb_build_object(
+          'en', 'Boutique hotel located on the west coast of Reunion Island, offering direct beach access and panoramic ocean views. Modern facilities with Creole charm.',
+          'es', 'Hotel boutique ubicado en la costa oeste de la isla de Reunión, con acceso directo a la playa y vistas panorámicas al océano. Instalaciones modernas con encanto criollo.'
+        )
+      WHEN 'Restaurant Test Océan' THEN 
+        jsonb_build_object(
+          'en', 'Restaurant specializing in Creole cuisine with fresh local products. Traditional recipes with a modern twist, overlooking the ocean.',
+          'es', 'Restaurante especializado en cocina criolla con productos locales frescos. Recetas tradicionales con un toque moderno, con vista al océano.'
+        )
+      WHEN 'Restaurant Fermeture Saisonnière' THEN 
+        jsonb_build_object(
+          'en', 'Seasonal restaurant open only during high season. Traditional Creole cuisine with local ingredients.',
+          'es', 'Restaurante estacional abierto solo durante la temporada alta. Cocina criolla tradicional con ingredientes locales.'
+        )
+      WHEN 'Itinéraire Test Côte Ouest' THEN 
+        jsonb_build_object(
+          'en', 'Discovery itinerary along the west coast of Reunion Island, from Saint-Paul to Saint-Leu. Panoramic views, beaches, and Creole villages.',
+          'es', 'Itinerario de descubrimiento a lo largo de la costa oeste de la isla de Reunión, desde Saint-Paul hasta Saint-Leu. Vistas panorámicas, playas y pueblos criollos.'
+        )
+      WHEN 'Salle de Réunion Test' THEN 
+        jsonb_build_object(
+          'en', 'Modern meeting room with ocean view, equipped with video conferencing and presentation facilities.',
+          'es', 'Sala de reuniones moderna con vista al océano, equipada con videoconferencia e instalaciones de presentación.'
+        )
+      WHEN 'Événement Test Festival' THEN 
+        jsonb_build_object(
+          'en', 'Annual cultural festival celebrating Creole traditions, music, and gastronomy. Free admission.',
+          'es', 'Festival cultural anual que celebra las tradiciones criollas, música y gastronomía. Entrada gratuita.'
+        )
+      WHEN 'Parc National Test' THEN 
+        jsonb_build_object(
+          'en', 'National park covering the central massif of Reunion Island. UNESCO World Heritage site with exceptional biodiversity.',
+          'es', 'Parque nacional que cubre el macizo central de la isla de Reunión. Sitio del Patrimonio Mundial de la UNESCO con biodiversidad excepcional.'
+        )
+      WHEN 'Musée Test Histoire' THEN 
+        jsonb_build_object(
+          'en', 'History museum retracing the settlement of Reunion Island and the development of Creole culture.',
+          'es', 'Museo de historia que rastrea el asentamiento de la isla de Reunión y el desarrollo de la cultura criolla.'
+        )
+      WHEN 'Plage Test Public' THEN 
+        jsonb_build_object(
+          'en', 'Public beach with white sand and turquoise waters. Ideal for families with children.',
+          'es', 'Playa pública con arena blanca y aguas turquesas. Ideal para familias con niños.'
+        )
+      WHEN 'Transport Test Navette' THEN 
+        jsonb_build_object(
+          'en', 'Shuttle service connecting the airport to major hotels on the west coast. Regular departures every 30 minutes.',
+          'es', 'Servicio de lanzadera que conecta el aeropuerto con los principales hoteles de la costa oeste. Salidas regulares cada 30 minutos.'
+        )
+      WHEN 'Activité Test Randonnée' THEN 
+        jsonb_build_object(
+          'en', 'Guided hiking tour in the national park with a certified guide. Discovery of endemic flora and fauna.',
+          'es', 'Tour de senderismo guiado en el parque nacional con guía certificado. Descubrimiento de flora y fauna endémicas.'
+        )
+      WHEN 'Prestataire Test Guide' THEN 
+        jsonb_build_object(
+          'en', 'Professional guide service specializing in hiking and cultural tours. Licensed and experienced.',
+          'es', 'Servicio de guía profesional especializado en senderismo y tours culturales. Licenciado y experimentado.'
+        )
+      WHEN 'Comité Régional de Tourisme TEST' THEN 
+        jsonb_build_object(
+          'en', 'Regional tourism committee coordinating tourism development across Reunion Island.',
+          'es', 'Comité regional de turismo que coordina el desarrollo turístico en toda la isla de Reunión.'
+        )
+      ELSE jsonb_build_object('en', description, 'es', description)
+    END as description_i18n,
+    CASE object_name
+      WHEN 'Office de Tourisme Intercommunal TEST' THEN 
+        jsonb_build_object('en', 'Test tourism office', 'es', 'Oficina de turismo de prueba')
+      WHEN 'Hôtel Test Océan' THEN 
+        jsonb_build_object('en', 'Boutique hotel with ocean view', 'es', 'Hotel boutique con vista al océano')
+      WHEN 'Restaurant Test Océan' THEN 
+        jsonb_build_object('en', 'Creole cuisine restaurant', 'es', 'Restaurante de cocina criolla')
+      WHEN 'Restaurant Fermeture Saisonnière' THEN 
+        jsonb_build_object('en', 'Seasonal restaurant', 'es', 'Restaurante estacional')
+      WHEN 'Itinéraire Test Côte Ouest' THEN 
+        jsonb_build_object('en', 'West coast discovery route', 'es', 'Ruta de descubrimiento de la costa oeste')
+      WHEN 'Salle de Réunion Test' THEN 
+        jsonb_build_object('en', 'Meeting room with ocean view', 'es', 'Sala de reuniones con vista al océano')
+      WHEN 'Événement Test Festival' THEN 
+        jsonb_build_object('en', 'Annual cultural festival', 'es', 'Festival cultural anual')
+      WHEN 'Parc National Test' THEN 
+        jsonb_build_object('en', 'UNESCO World Heritage national park', 'es', 'Parque nacional Patrimonio Mundial de la UNESCO')
+      WHEN 'Musée Test Histoire' THEN 
+        jsonb_build_object('en', 'History and culture museum', 'es', 'Museo de historia y cultura')
+      WHEN 'Plage Test Public' THEN 
+        jsonb_build_object('en', 'Family-friendly public beach', 'es', 'Playa pública familiar')
+      WHEN 'Transport Test Navette' THEN 
+        jsonb_build_object('en', 'Airport shuttle service', 'es', 'Servicio de lanzadera al aeropuerto')
+      WHEN 'Activité Test Randonnée' THEN 
+        jsonb_build_object('en', 'Guided hiking tour', 'es', 'Tour de senderismo guiado')
+      WHEN 'Prestataire Test Guide' THEN 
+        jsonb_build_object('en', 'Professional guide service', 'es', 'Servicio de guía profesional')
+      WHEN 'Comité Régional de Tourisme TEST' THEN 
+        jsonb_build_object('en', 'Regional tourism committee', 'es', 'Comité regional de turismo')
+      ELSE jsonb_build_object('en', description_chapo, 'es', description_chapo)
+    END as description_chapo_i18n,
+    CASE object_name
+      WHEN 'Office de Tourisme Intercommunal TEST' THEN 
+        jsonb_build_object('en', 'OTI TEST — essential information and contacts. Le Tampon (97430).', 'es', 'OTI TEST — información esencial y contactos. Le Tampon (97430).')
+      WHEN 'Hôtel Test Océan' THEN 
+        jsonb_build_object('en', 'Boutique hotel with direct beach access. Modern comfort in Creole setting.', 'es', 'Hotel boutique con acceso directo a la playa. Comodidad moderna en entorno criollo.')
+      WHEN 'Restaurant Test Océan' THEN 
+        jsonb_build_object('en', 'Creole cuisine with fresh local products. Ocean view terrace.', 'es', 'Cocina criolla con productos locales frescos. Terraza con vista al océano.')
+      WHEN 'Restaurant Fermeture Saisonnière' THEN 
+        jsonb_build_object('en', 'Open during high season only. Traditional Creole specialties.', 'es', 'Abierto solo en temporada alta. Especialidades criollas tradicionales.')
+      WHEN 'Itinéraire Test Côte Ouest' THEN 
+        jsonb_build_object('en', 'Discovery route from Saint-Paul to Saint-Leu. Beaches and Creole villages.', 'es', 'Ruta de descubrimiento de Saint-Paul a Saint-Leu. Playas y pueblos criollos.')
+      WHEN 'Salle de Réunion Test' THEN 
+        jsonb_build_object('en', 'Modern meeting room with video conferencing. Ocean view.', 'es', 'Sala de reuniones moderna con videoconferencia. Vista al océano.')
+      WHEN 'Événement Test Festival' THEN 
+        jsonb_build_object('en', 'Annual cultural festival. Free admission. Music and gastronomy.', 'es', 'Festival cultural anual. Entrada gratuita. Música y gastronomía.')
+      WHEN 'Parc National Test' THEN 
+        jsonb_build_object('en', 'UNESCO World Heritage site. Exceptional biodiversity and landscapes.', 'es', 'Sitio del Patrimonio Mundial de la UNESCO. Biodiversidad y paisajes excepcionales.')
+      WHEN 'Musée Test Histoire' THEN 
+        jsonb_build_object('en', 'History museum. Settlement and Creole culture development.', 'es', 'Museo de historia. Asentamiento y desarrollo de la cultura criolla.')
+      WHEN 'Plage Test Public' THEN 
+        jsonb_build_object('en', 'Public beach with white sand. Family-friendly with facilities.', 'es', 'Playa pública con arena blanca. Familiar con instalaciones.')
+      WHEN 'Transport Test Navette' THEN 
+        jsonb_build_object('en', 'Airport shuttle. Regular departures every 30 minutes.', 'es', 'Lanzadera al aeropuerto. Salidas regulares cada 30 minutos.')
+      WHEN 'Activité Test Randonnée' THEN 
+        jsonb_build_object('en', 'Guided hiking with certified guide. Endemic flora and fauna.', 'es', 'Senderismo guiado con guía certificado. Flora y fauna endémicas.')
+      WHEN 'Prestataire Test Guide' THEN 
+        jsonb_build_object('en', 'Professional guide service. Licensed and experienced.', 'es', 'Servicio de guía profesional. Licenciado y experimentado.')
+      WHEN 'Comité Régional de Tourisme TEST' THEN 
+        jsonb_build_object('en', 'Regional tourism coordination. Island-wide development.', 'es', 'Coordinación turística regional. Desarrollo en toda la isla.')
+      ELSE jsonb_build_object('en', description_mobile, 'es', description_mobile)
+    END as description_mobile_i18n,
+    CASE object_name
+      WHEN 'Office de Tourisme Intercommunal TEST' THEN 
+        jsonb_build_object('en', 'Editorial sheet: test organization for validation scenarios, content and workflows.', 'es', 'Ficha editorial: organización de prueba para escenarios de validación, contenido y flujos de trabajo.')
+      WHEN 'Hôtel Test Océan' THEN 
+        jsonb_build_object('en', 'Editorial sheet: boutique hotel with ocean view, modern facilities and Creole charm.', 'es', 'Ficha editorial: hotel boutique con vista al océano, instalaciones modernas y encanto criollo.')
+      WHEN 'Restaurant Test Océan' THEN 
+        jsonb_build_object('en', 'Editorial sheet: Creole cuisine restaurant with fresh local products and ocean view.', 'es', 'Ficha editorial: restaurante de cocina criolla con productos locales frescos y vista al océano.')
+      WHEN 'Restaurant Fermeture Saisonnière' THEN 
+        jsonb_build_object('en', 'Editorial sheet: seasonal restaurant with traditional Creole specialties.', 'es', 'Ficha editorial: restaurante estacional con especialidades criollas tradicionales.')
+      WHEN 'Itinéraire Test Côte Ouest' THEN 
+        jsonb_build_object('en', 'Editorial sheet: discovery route along the west coast with beaches and villages.', 'es', 'Ficha editorial: ruta de descubrimiento a lo largo de la costa oeste con playas y pueblos.')
+      WHEN 'Salle de Réunion Test' THEN 
+        jsonb_build_object('en', 'Editorial sheet: modern meeting room with video conferencing and ocean view.', 'es', 'Ficha editorial: sala de reuniones moderna con videoconferencia y vista al océano.')
+      WHEN 'Événement Test Festival' THEN 
+        jsonb_build_object('en', 'Editorial sheet: annual cultural festival celebrating Creole traditions.', 'es', 'Ficha editorial: festival cultural anual que celebra las tradiciones criollas.')
+      WHEN 'Parc National Test' THEN 
+        jsonb_build_object('en', 'Editorial sheet: UNESCO World Heritage national park with exceptional biodiversity.', 'es', 'Ficha editorial: parque nacional Patrimonio Mundial de la UNESCO con biodiversidad excepcional.')
+      WHEN 'Musée Test Histoire' THEN 
+        jsonb_build_object('en', 'Editorial sheet: history museum tracing settlement and Creole culture.', 'es', 'Ficha editorial: museo de historia que rastrea el asentamiento y la cultura criolla.')
+      WHEN 'Plage Test Public' THEN 
+        jsonb_build_object('en', 'Editorial sheet: family-friendly public beach with white sand.', 'es', 'Ficha editorial: playa pública familiar con arena blanca.')
+      WHEN 'Transport Test Navette' THEN 
+        jsonb_build_object('en', 'Editorial sheet: airport shuttle service with regular departures.', 'es', 'Ficha editorial: servicio de lanzadera al aeropuerto con salidas regulares.')
+      WHEN 'Activité Test Randonnée' THEN 
+        jsonb_build_object('en', 'Editorial sheet: guided hiking tour with certified guide.', 'es', 'Ficha editorial: tour de senderismo guiado con guía certificado.')
+      WHEN 'Prestataire Test Guide' THEN 
+        jsonb_build_object('en', 'Editorial sheet: professional guide service licensed and experienced.', 'es', 'Ficha editorial: servicio de guía profesional licenciado y experimentado.')
+      WHEN 'Comité Régional de Tourisme TEST' THEN 
+        jsonb_build_object('en', 'Editorial sheet: regional tourism committee coordinating island development.', 'es', 'Ficha editorial: comité regional de turismo que coordina el desarrollo de la isla.')
+      ELSE jsonb_build_object('en', description_edition, 'es', description_edition)
+    END as description_edition_i18n
+  FROM object_descriptions
+)
+UPDATE object_description od
+SET 
+  description_i18n = dt.description_i18n,
+  description_chapo_i18n = dt.description_chapo_i18n,
+  description_mobile_i18n = dt.description_mobile_i18n,
+  description_edition_i18n = dt.description_edition_i18n
+FROM description_translations dt
+WHERE od.object_id = dt.object_id;
+
+-- media translations
+WITH media_translations AS (
+  SELECT 
+    m.id as media_id,
+    m.title,
+    m.description,
+    o.name as object_name,
+    o.object_type,
+    CASE m.title
+      WHEN 'Logo Hôtel Test Océan' THEN 
+        jsonb_build_object('en', 'Hotel Test Ocean Logo', 'es', 'Logotipo Hotel Test Ocean')
+      WHEN 'Façade & piscine' THEN 
+        jsonb_build_object('en', 'Facade & swimming pool', 'es', 'Fachada y piscina')
+      WHEN 'Curry de poisson - Photo du plat' THEN 
+        jsonb_build_object('en', 'Fish curry - Dish photo', 'es', 'Curry de pescado - Foto del plato')
+      WHEN 'Salade créole - Photo du plat' THEN 
+        jsonb_build_object('en', 'Creole salad - Dish photo', 'es', 'Ensalada criolla - Foto del plato')
+      WHEN 'Vue panoramique restaurant' THEN 
+        jsonb_build_object('en', 'Restaurant panoramic view', 'es', 'Vista panorámica del restaurante')
+      WHEN 'Plat signature - Rougail saucisse' THEN 
+        jsonb_build_object('en', 'Signature dish - Sausage rougail', 'es', 'Plato estrella - Rougail de salchicha')
+      WHEN 'Vue aérienne itinéraire' THEN 
+        jsonb_build_object('en', 'Aerial view of the route', 'es', 'Vista aérea del itinerario')
+      WHEN 'Plage de Boucan Canot' THEN 
+        jsonb_build_object('en', 'Boucan Canot Beach', 'es', 'Playa de Boucan Canot')
+      WHEN 'Village de l''Étang-Salé' THEN 
+        jsonb_build_object('en', 'Étang-Salé Village', 'es', 'Pueblo de Étang-Salé')
+      WHEN 'Salle de réunion moderne' THEN 
+        jsonb_build_object('en', 'Modern meeting room', 'es', 'Sala de reuniones moderna')
+      WHEN 'Vue océan depuis la salle' THEN 
+        jsonb_build_object('en', 'Ocean view from the room', 'es', 'Vista al océano desde la sala')
+      WHEN 'Affiche Festival Test' THEN 
+        jsonb_build_object('en', 'Test Festival Poster', 'es', 'Cartel del Festival Test')
+      WHEN 'Groupe de musique créole' THEN 
+        jsonb_build_object('en', 'Creole music group', 'es', 'Grupo de música criolla')
+      WHEN 'Piton des Neiges' THEN 
+        jsonb_build_object('en', 'Piton des Neiges', 'es', 'Piton des Neiges')
+      WHEN 'Cirque de Mafate' THEN 
+        jsonb_build_object('en', 'Cirque de Mafate', 'es', 'Circo de Mafate')
+      WHEN 'Exposition permanente' THEN 
+        jsonb_build_object('en', 'Permanent exhibition', 'es', 'Exposición permanente')
+      WHEN 'Objets historiques créoles' THEN 
+        jsonb_build_object('en', 'Historical Creole objects', 'es', 'Objetos históricos criollos')
+      WHEN 'Plage vue générale' THEN 
+        jsonb_build_object('en', 'General beach view', 'es', 'Vista general de la playa')
+      WHEN 'Famille sur la plage' THEN 
+        jsonb_build_object('en', 'Family on the beach', 'es', 'Familia en la playa')
+      WHEN 'Navette aéroport' THEN 
+        jsonb_build_object('en', 'Airport shuttle', 'es', 'Lanzadera al aeropuerto')
+      WHEN 'Intérieur navette' THEN 
+        jsonb_build_object('en', 'Shuttle interior', 'es', 'Interior de la lanzadera')
+      WHEN 'Sentier de randonnée' THEN 
+        jsonb_build_object('en', 'Hiking trail', 'es', 'Sendero de senderismo')
+      WHEN 'Guide et randonneurs' THEN 
+        jsonb_build_object('en', 'Guide and hikers', 'es', 'Guía y senderistas')
+      WHEN 'Photo de profil guide' THEN 
+        jsonb_build_object('en', 'Guide profile photo', 'es', 'Foto de perfil del guía')
+      WHEN 'Certificat guide' THEN 
+        jsonb_build_object('en', 'Guide certificate', 'es', 'Certificado de guía')
+      ELSE jsonb_build_object('en', m.title, 'es', m.title)
+    END as title_i18n,
+    CASE m.description
+      WHEN 'Photo du curry de poisson servi dans notre restaurant' THEN 
+        jsonb_build_object('en', 'Photo of fish curry served in our restaurant', 'es', 'Foto del curry de pescado servido en nuestro restaurante')
+      WHEN 'Photo de la salade créole fraîche et colorée' THEN 
+        jsonb_build_object('en', 'Photo of fresh and colorful Creole salad', 'es', 'Foto de la ensalada criolla fresca y colorida')
+      WHEN 'Vue panoramique du restaurant avec terrasse océan' THEN 
+        jsonb_build_object('en', 'Panoramic view of the restaurant with ocean terrace', 'es', 'Vista panorámica del restaurante con terraza al océano')
+      WHEN 'Notre plat signature : rougail saucisse traditionnel' THEN 
+        jsonb_build_object('en', 'Our signature dish: traditional sausage rougail', 'es', 'Nuestro plato estrella: rougail de salchicha tradicional')
+      WHEN 'Vue aérienne de l''itinéraire de découverte' THEN 
+        jsonb_build_object('en', 'Aerial view of the discovery route', 'es', 'Vista aérea de la ruta de descubrimiento')
+      WHEN 'Plage de Boucan Canot, une des plus belles de l''île' THEN 
+        jsonb_build_object('en', 'Boucan Canot Beach, one of the most beautiful on the island', 'es', 'Playa de Boucan Canot, una de las más hermosas de la isla')
+      WHEN 'Village traditionnel de l''Étang-Salé' THEN 
+        jsonb_build_object('en', 'Traditional village of Étang-Salé', 'es', 'Pueblo tradicional de Étang-Salé')
+      WHEN 'Salle de réunion moderne avec vue océan' THEN 
+        jsonb_build_object('en', 'Modern meeting room with ocean view', 'es', 'Sala de reuniones moderna con vista al océano')
+      WHEN 'Vue panoramique océan depuis la salle' THEN 
+        jsonb_build_object('en', 'Panoramic ocean view from the room', 'es', 'Vista panorámica al océano desde la sala')
+      WHEN 'Affiche officielle du Festival Test 2024' THEN 
+        jsonb_build_object('en', 'Official poster for Test Festival 2024', 'es', 'Cartel oficial del Festival Test 2024')
+      WHEN 'Groupe de musique créole en concert' THEN 
+        jsonb_build_object('en', 'Creole music group in concert', 'es', 'Grupo de música criolla en concierto')
+      WHEN 'Piton des Neiges, point culminant de l''île' THEN 
+        jsonb_build_object('en', 'Piton des Neiges, highest point of the island', 'es', 'Piton des Neiges, punto más alto de la isla')
+      WHEN 'Cirque de Mafate, site classé UNESCO' THEN 
+        jsonb_build_object('en', 'Cirque de Mafate, UNESCO World Heritage site', 'es', 'Circo de Mafate, sitio del Patrimonio Mundial de la UNESCO')
+      WHEN 'Exposition permanente sur l''histoire de l''île' THEN 
+        jsonb_build_object('en', 'Permanent exhibition on the history of the island', 'es', 'Exposición permanente sobre la historia de la isla')
+      WHEN 'Objets historiques de la culture créole' THEN 
+        jsonb_build_object('en', 'Historical objects of Creole culture', 'es', 'Objetos históricos de la cultura criolla')
+      WHEN 'Vue générale de la plage publique' THEN 
+        jsonb_build_object('en', 'General view of the public beach', 'es', 'Vista general de la playa pública')
+      WHEN 'Famille profitant de la plage' THEN 
+        jsonb_build_object('en', 'Family enjoying the beach', 'es', 'Familia disfrutando de la playa')
+      WHEN 'Navette moderne pour l''aéroport' THEN 
+        jsonb_build_object('en', 'Modern shuttle to the airport', 'es', 'Lanzadera moderna al aeropuerto')
+      WHEN 'Intérieur confortable de la navette' THEN 
+        jsonb_build_object('en', 'Comfortable shuttle interior', 'es', 'Interior cómodo de la lanzadera')
+      WHEN 'Sentier de randonnée dans le parc national' THEN 
+        jsonb_build_object('en', 'Hiking trail in the national park', 'es', 'Sendero de senderismo en el parque nacional')
+      WHEN 'Guide accompagnant un groupe de randonneurs' THEN 
+        jsonb_build_object('en', 'Guide accompanying a group of hikers', 'es', 'Guía acompañando a un grupo de senderistas')
+      WHEN 'Photo de profil du guide professionnel' THEN 
+        jsonb_build_object('en', 'Professional guide profile photo', 'es', 'Foto de perfil del guía profesional')
+      WHEN 'Certificat de qualification du guide' THEN 
+        jsonb_build_object('en', 'Guide qualification certificate', 'es', 'Certificado de calificación del guía')
+      ELSE jsonb_build_object('en', m.description, 'es', m.description)
+    END as description_i18n
+  FROM media m
+  JOIN object o ON o.id = m.object_id
+  WHERE o.region_code = 'TST'
+)
+UPDATE media m
+SET 
+  title_i18n = mt.title_i18n,
+  description_i18n = mt.description_i18n
+FROM media_translations mt
+WHERE m.id = mt.media_id;
+
+-- Supplemental explicit object translations (missing earlier)
+UPDATE object_description od
+SET 
+  description_i18n = COALESCE(od.description_i18n, '{}'::jsonb) || jsonb_build_object(
+    'en','Cultural association promoting Creole heritage and organizing cultural events.',
+    'es','Asociación cultural que promueve el patrimonio criollo y organiza eventos culturales.'
+  ),
+  description_chapo_i18n = COALESCE(od.description_chapo_i18n, '{}'::jsonb) || jsonb_build_object(
+    'en','Creole cultural association',
+    'es','Asociación cultural criolla'
+  )
+FROM object o
+WHERE od.object_id = o.id AND o.region_code = 'TST' AND o.name = 'Association Culturelle Test';
+
+UPDATE object_description od
+SET 
+  description_i18n = COALESCE(od.description_i18n, '{}'::jsonb) || jsonb_build_object(
+    'en','Nature campground with pitches for tents and campervans, restrooms and showers.',
+    'es','Camping en plena naturaleza con parcelas para tiendas y autocaravanas, sanitarios y duchas.'
+  ),
+  description_chapo_i18n = COALESCE(od.description_chapo_i18n, '{}'::jsonb) || jsonb_build_object(
+    'en','Nature camping - tents and campervans',
+    'es','Camping de naturaleza - tiendas y autocaravanas'
+  )
+FROM object o
+WHERE od.object_id = o.id AND o.region_code = 'TST' AND o.name = 'Camping Nature Test';
+
+-- Media title i18n for generic logo/photo titles created from object name
+UPDATE media m
+SET title_i18n = COALESCE(m.title_i18n,'{}'::jsonb) || jsonb_build_object(
+  'en', 'Logo ' || o.name,
+  'es', 'Logotipo ' || o.name
+)
+FROM object o, ref_code_media_type mt
+WHERE m.object_id = o.id
+  AND m.media_type_id = mt.id
+  AND mt.code = 'vector'
+  AND (m.kind = 'logo' OR m.title LIKE 'Logo %');
+
+UPDATE media m
+SET title_i18n = COALESCE(m.title_i18n,'{}'::jsonb) || jsonb_build_object(
+  'en', 'Main photo ' || o.name,
+  'es', 'Foto principal ' || o.name
+)
+FROM object o, ref_code_media_type mt
+WHERE m.object_id = o.id
+  AND m.media_type_id = mt.id
+  AND mt.code = 'photo'
+  AND (m.is_main IS TRUE OR m.title LIKE 'Photo principale %');
+
+-- EAV translations for capacity metrics (name/description)
+WITH cap AS (
+  SELECT id, code FROM ref_capacity_metric
+), t(name_code, name_en, name_es, desc_en, desc_es) AS (
+  VALUES
+    ('beds','Beds','Camas','Number of beds','Número de camas'),
+    ('bedrooms','Bedrooms','Habitaciones','Number of bedrooms','Número de habitaciones'),
+    ('max_capacity','Maximum capacity','Capacidad máxima','Maximum guest capacity (people)','Capacidad máxima de acogida (personas)'),
+    ('seats','Seats','Asientos','Number of seated places','Número de plazas sentadas'),
+    ('standing_places','Standing places','Plazas de pie','Number of standing places','Número de plazas de pie'),
+    ('pitches','Pitches','Parcelas','Number of camping pitches','Número de parcelas de camping'),
+    ('campers','Campervans','Autocaravanas','Campervan capacity','Capacidad de autocaravanas'),
+    ('tents','Tents','Tiendas','Tent capacity','Capacidad de tiendas'),
+    ('vehicles','Vehicles','Vehículos','Vehicle capacity','Capacidad de vehículos'),
+    ('bikes','Bikes','Bicicletas','Bike capacity','Capacidad de bicicletas'),
+    ('meeting_rooms','Meeting rooms','Salas de reuniones','Number of meeting rooms','Número de salas de reuniones'),
+    ('floor_area_m2','Floor area (m²)','Superficie (m²)','Usable floor area in square metres','Superficie útil en metros cuadrados')
+)
+INSERT INTO i18n_translation (target_table, target_pk, target_column, language_id, value_text)
+SELECT 'ref_capacity_metric', cap.id::text, 'name', rl.id, CASE rl.code WHEN 'en' THEN t.name_en WHEN 'es' THEN t.name_es END
+FROM cap
+JOIN t ON t.name_code = cap.code
+JOIN ref_language rl ON rl.code IN ('en','es')
+ON CONFLICT (target_table, target_pk, target_column, language_id) DO UPDATE
+SET value_text = EXCLUDED.value_text;
+
+WITH cap AS (
+  SELECT id, code FROM ref_capacity_metric
+), t(name_code, name_en, name_es, desc_en, desc_es) AS (
+  VALUES
+    ('beds','Beds','Camas','Number of beds','Número de camas'),
+    ('bedrooms','Bedrooms','Habitaciones','Number of bedrooms','Número de habitaciones'),
+    ('max_capacity','Maximum capacity','Capacidad máxima','Maximum guest capacity (people)','Capacidad máxima de acogida (personas)'),
+    ('seats','Seats','Asientos','Number of seated places','Número de plazas sentadas'),
+    ('standing_places','Standing places','Plazas de pie','Number of standing places','Número de plazas de pie'),
+    ('pitches','Pitches','Parcelas','Number of camping pitches','Número de parcelas de camping'),
+    ('campers','Campervans','Autocaravanas','Campervan capacity','Capacidad de autocaravanas'),
+    ('tents','Tents','Tiendas','Tent capacity','Capacidad de tiendas'),
+    ('vehicles','Vehicles','Vehículos','Vehicle capacity','Capacidad de vehículos'),
+    ('bikes','Bikes','Bicicletas','Bike capacity','Capacidad de bicicletas'),
+    ('meeting_rooms','Meeting rooms','Salas de reuniones','Number of meeting rooms','Número de salas de reuniones'),
+    ('floor_area_m2','Floor area (m²)','Superficie (m²)','Usable floor area in square metres','Superficie útil en metros cuadrados')
+)
+INSERT INTO i18n_translation (target_table, target_pk, target_column, language_id, value_text)
+SELECT 'ref_capacity_metric', cap.id::text, 'description', rl.id, CASE rl.code WHEN 'en' THEN t.desc_en WHEN 'es' THEN t.desc_es END
+FROM cap
+JOIN t ON t.name_code = cap.code
+JOIN ref_language rl ON rl.code IN ('en','es')
+ON CONFLICT (target_table, target_pk, target_column, language_id) DO UPDATE
+SET value_text = EXCLUDED.value_text;

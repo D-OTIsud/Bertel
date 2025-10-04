@@ -70,7 +70,7 @@ ALTER TABLE audit.audit_log ENABLE ROW LEVEL SECURITY;
 -- Activation RLS sur les tables de référence (lecture publique)
 ALTER TABLE ref_language ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_code_payment_method ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ref_environment_tag ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ref_code_environment_tag ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_amenity ENABLE ROW LEVEL SECURITY;
 -- ref_classification_prefectoral / ref_type_hot removed (use schemes/values)
 
@@ -120,7 +120,7 @@ CREATE POLICY "Lecture publique des langues" ON ref_language
 CREATE POLICY "Lecture publique des moyens de paiement" ON ref_code_payment_method
     FOR SELECT USING (true);
 
-CREATE POLICY "Lecture publique des tags d'environnement" ON ref_environment_tag
+CREATE POLICY "Lecture publique des tags d'environnement" ON ref_code_environment_tag
     FOR SELECT USING (true);
 
 CREATE POLICY "Lecture publique des équipements" ON ref_amenity
@@ -167,7 +167,7 @@ CREATE POLICY "Écriture admin des moyens de paiement" ON ref_code_payment_metho
         )
     );
 
-CREATE POLICY "Écriture admin des tags d'environnement" ON ref_environment_tag
+CREATE POLICY "Écriture admin des tags d'environnement" ON ref_code_environment_tag
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR

@@ -378,11 +378,4 @@ CREATE POLICY "Insertion via triggers" ON audit.audit_log
     FOR INSERT WITH CHECK (true);
 
 -- Aucune mise à jour/suppression par défaut (omise intentionnellement)
-    FOR ALL USING (
-        auth.role() = 'service_role' OR 
-        auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- (aucune policy UPDATE/DELETE)

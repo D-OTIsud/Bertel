@@ -4412,7 +4412,7 @@ SET value_text = EXCLUDED.value_text;
 -- =====================================================
 
 -- 1) Classification scheme for retail categories
-INSERT INTO ref_classification_scheme (code, name, description, select_mode, position)
+INSERT INTO ref_classification_scheme (code, name, description, selection, position)
 SELECT 'retail_category','Catégories de commerce','Catégorisation des commerces de détail','single', 50
 WHERE NOT EXISTS (
   SELECT 1 FROM ref_classification_scheme s WHERE s.code='retail_category'

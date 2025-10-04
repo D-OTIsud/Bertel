@@ -27,7 +27,7 @@ ALTER TABLE opening_time_frame ENABLE ROW LEVEL SECURITY;
 -- object_hot table removed (use object_classification)
 ALTER TABLE object_fma ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ref_iti_practice ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ref_code_iti_practice ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_practice ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_stage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_iti_section ENABLE ROW LEVEL SECURITY;
@@ -274,7 +274,7 @@ CREATE POLICY "public_objects_published" ON object
 CREATE POLICY "extended_objects_org_actor" ON object
   FOR SELECT USING (api.can_read_extended(id));
 -- Lecture publique des référentiels ITI
-CREATE POLICY "Lecture publique des pratiques ITI" ON ref_iti_practice FOR SELECT USING (true);
+CREATE POLICY "Lecture publique des pratiques ITI" ON ref_code_iti_practice FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des rôles ITI" ON ref_iti_assoc_role FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des profils ITI" ON object_iti_profile FOR SELECT USING (true);
 -- Localisation tables

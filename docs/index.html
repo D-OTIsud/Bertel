@@ -833,8 +833,10 @@
             <h3>Accès anonyme (Lecture seule)</h3>
             <p>Pour les données publiques uniquement :</p>
             <div class="code-block">
-              <pre><code># Aucun en-tête d'authentification requis</code></pre>
+              <pre><code>apikey: &lt;SUPABASE_ANON_KEY&gt;
+Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
             </div>
+            <p><strong>Important :</strong> même en accès anonyme, Supabase/PostgREST exige ces en-têtes pour router la requête. Utilisez la clé publique (anon) fournie par votre projet Supabase.</p>
             <p><strong>Limitations :</strong> Seules les données publiques (<code>status = 'published'</code>) sont accessibles.</p>
           </div>
         </details>
@@ -854,9 +856,11 @@
               <pre><code>curl -X POST "https://api.bertel.re/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"p_object_id": "HOTTST0000000001"}'</code></pre>
             </div>
+            <p class="inline-help"><strong>Remplacez</strong> <code>{SUPABASE_ANON_KEY}</code> par la clé publique (anon) de votre projet Supabase. Pour les appels serveur à serveur, utilisez la clé service et un token approprié.</p>
           </div>
         </details>
 
@@ -1109,7 +1113,10 @@
               <div class="tab-panel active" data-panel="curl">
                 <button class="copy copy-floating" data-copy="#ex-gor-curl">Copier</button>
 <pre id="ex-gor-curl">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_object_id": "ITI123",
     "p_lang_prefs": ["fr","en"],
@@ -1121,7 +1128,12 @@
                 <button class="copy copy-floating" data-copy="#ex-gor-js">Copier</button>
 <pre id="ex-gor-js">const res = await fetch(`${BASE_URL}/rpc/get_object_resource`, {
   method: "POST",
-  headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+  },
   body: JSON.stringify({
     p_object_id: "ITI123",
     p_lang_prefs: ["fr","en"],
@@ -1182,7 +1194,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-page-curl">Copier</button>
 <pre id="ex-page-curl">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_page_size": 20,
     "p_types": ["ITI"],
@@ -1200,7 +1215,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-omit-empty">Copier</button>
 <pre id="ex-omit-empty">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_page_size": 2,
     "p_omit_empty": true
@@ -3834,7 +3852,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-41">Copier</button>
 <pre id="ex-41">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_object_id": "ITI123", "p_track_format": "none" }'</pre>
           </div>
         </details>
@@ -3845,7 +3866,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-42">Copier</button>
 <pre id="ex-42">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_object_id": "ITI123",
     "p_track_format": "kml",
@@ -3860,13 +3884,19 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-43a">Copier</button>
 <pre id="ex-43a">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_page_size": 20, "p_types": ["ITI"], "p_status": ["published"] }'</pre>
             <p class="inline-help">Puis, pour la page suivante, reprenez <code>info.next_cursor</code> :</p>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-43b">Copier</button>
 <pre id="ex-43b">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_cursor": "&lt;valeur de next_cursor&gt;" }'</pre>
           </div>
         </details>
@@ -3877,7 +3907,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-44">Copier</button>
 <pre id="ex-44">curl -X POST "{BASE_URL}/rpc/list_object_resources_since_fast" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_since": "2024-04-01T00:00:00Z",
     "p_types": ["ITI"], "p_status": ["published"]
@@ -3892,7 +3925,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-45">Copier</button>
 <pre id="ex-45">curl -X POST "{BASE_URL}/rpc/list_object_resources_filtered_page" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_page_size": 24,
     "p_types": ["ITI"],
@@ -3913,7 +3949,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-46">Copier</button>
 <pre id="ex-46">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_object_id": "RESTAURANT-001",
     "p_lang_prefs": ["fr", "en"]
@@ -3929,7 +3968,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
 <pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_with_deep_data" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_object_id": "HOT123" }'</pre>
             <p class="inline-help">Retourne l'objet avec ses objets parents, acteurs et organisations liées.</p>
           </div>
@@ -3941,7 +3983,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-48">Copier</button>
 <pre id="ex-48">curl -X POST "{BASE_URL}/rpc/search_restaurants_by_cuisine" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_cuisine_types": ["local", "veggie", "seafood"],
     "p_languages": ["fr", "en"],
@@ -3957,7 +4002,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-49">Copier</button>
 <pre id="ex-49">curl -X POST "{BASE_URL}/rpc/search_events_by_restaurant_cuisine" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_cuisine_types": ["local", "gastronomy"],
     "p_languages": ["fr"],
@@ -3973,7 +4021,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-410">Copier</button>
 <pre id="ex-410">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_object_id": "HOT123",
     "p_lang_prefs": ["fr", "en"],
@@ -3995,7 +4046,10 @@ const json = await res.json();</pre>
             <div style="position:relative;">
               <button class="copy copy-floating" data-copy="#ex-47">Copier</button>
 <pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
-  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
     "p_object_id": "FMA-FESTIVAL-2024",
     "p_lang_prefs": ["fr"]

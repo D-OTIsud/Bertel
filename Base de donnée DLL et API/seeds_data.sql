@@ -4573,7 +4573,7 @@ FROM opening_time_period tp
 JOIN opening_schedule os ON os.id = tp.schedule_id
 JOIN opening_period op ON op.id = os.period_id
 JOIN object o ON o.id = op.object_id
-JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_id AND rst.code = 'regular'
+JOIN ref_code_opening_schedule_type rst ON rst.id = os.schedule_type_id AND rst.code = 'regular'
 WHERE o.object_type = 'LOI' AND o.region_code = 'TST' AND o.name = 'Centre Loisirs Test'
   AND NOT EXISTS (
     SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id AND tf.start_time = TIME '09:00' AND tf.end_time = TIME '18:00'

@@ -836,7 +836,6 @@
               <pre><code>apikey: &lt;SUPABASE_ANON_KEY&gt;
 Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
             </div>
-            <p><strong>Important :</strong> même en accès anonyme, Supabase/PostgREST exige ces en-têtes pour router la requête. Utilisez la clé publique (anon) fournie par votre projet Supabase.</p>
             <p><strong>Limitations :</strong> Seules les données publiques (<code>status = 'published'</code>) sont accessibles.</p>
           </div>
         </details>
@@ -848,6 +847,7 @@ Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
             <ul>
               <li><code>Content-Type: application/json</code></li>
               <li><code>Accept: application/json</code></li>
+              <li><code>Content-Profile: api</code></li>
               <li>Vos en-têtes d'authentification selon votre méthode choisie (voir ci-dessus)</li>
             </ul>
             
@@ -856,6 +856,7 @@ Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
               <pre><code>curl -X POST "https://api.bertel.re/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"p_object_id": "HOTTST0000000001"}'</code></pre>
@@ -1115,6 +1116,7 @@ Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
 <pre id="ex-gor-curl">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -1131,6 +1133,7 @@ Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
+    "Content-Profile": "api",
     "apikey": SUPABASE_ANON_KEY,
     "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
   },
@@ -1196,6 +1199,7 @@ const json = await res.json();</pre>
 <pre id="ex-page-curl">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -1217,6 +1221,7 @@ const json = await res.json();</pre>
 <pre id="ex-omit-empty">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -3854,6 +3859,7 @@ const json = await res.json();</pre>
 <pre id="ex-41">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_object_id": "ITI123", "p_track_format": "none" }'</pre>
@@ -3868,6 +3874,7 @@ const json = await res.json();</pre>
 <pre id="ex-42">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -3886,6 +3893,7 @@ const json = await res.json();</pre>
 <pre id="ex-43a">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_page_size": 20, "p_types": ["ITI"], "p_status": ["published"] }'</pre>
@@ -3895,6 +3903,7 @@ const json = await res.json();</pre>
 <pre id="ex-43b">curl -X POST "{BASE_URL}/rpc/list_object_resources_page" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_cursor": "&lt;valeur de next_cursor&gt;" }'</pre>
@@ -3909,6 +3918,7 @@ const json = await res.json();</pre>
 <pre id="ex-44">curl -X POST "{BASE_URL}/rpc/list_object_resources_since_fast" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -3927,6 +3937,7 @@ const json = await res.json();</pre>
 <pre id="ex-45">curl -X POST "{BASE_URL}/rpc/list_object_resources_filtered_page" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -3951,6 +3962,7 @@ const json = await res.json();</pre>
 <pre id="ex-46">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -3970,6 +3982,7 @@ const json = await res.json();</pre>
 <pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_with_deep_data" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{ "p_object_id": "HOT123" }'</pre>
@@ -3985,6 +3998,7 @@ const json = await res.json();</pre>
 <pre id="ex-48">curl -X POST "{BASE_URL}/rpc/search_restaurants_by_cuisine" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -4004,6 +4018,7 @@ const json = await res.json();</pre>
 <pre id="ex-49">curl -X POST "{BASE_URL}/rpc/search_events_by_restaurant_cuisine" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -4023,6 +4038,7 @@ const json = await res.json();</pre>
 <pre id="ex-410">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{
@@ -4048,6 +4064,7 @@ const json = await res.json();</pre>
 <pre id="ex-47">curl -X POST "{BASE_URL}/rpc/get_object_resource" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
+  -H "Content-Profile: api" \
   -H "apikey: {SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
   -d '{

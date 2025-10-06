@@ -807,6 +807,7 @@ $$;
 --       et ctid comme dernier recours si besoin
 -- =====================================================
 DROP FUNCTION IF EXISTS api.get_object_resource(text, text[], text, jsonb);
+DROP FUNCTION IF EXISTS api.get_object_resource(text, text[], text, boolean, text);
 CREATE OR REPLACE FUNCTION api.get_object_resource(
   p_object_id    TEXT,
   p_lang_prefs   TEXT[]  DEFAULT ARRAY['fr']::text[],
@@ -816,6 +817,7 @@ CREATE OR REPLACE FUNCTION api.get_object_resource(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+SECURITY DEFINER
 AS $$
 DECLARE
   lang    TEXT := api.pick_lang(p_lang_prefs);
@@ -837,9 +839,18 @@ DECLARE
   v_tmp_json JSONB;
   v_omit_empty BOOLEAN := COALESCE((p_options->>'omit_empty')::boolean, FALSE);
 BEGIN
+  -- Check if user can access this object (RLS-aware)
+  -- First check if object exists and user has access
   SELECT o.* INTO obj
   FROM object o
-  WHERE o.id = p_object_id;
+  WHERE o.id = p_object_id
+    AND (
+      -- Public access: published objects
+      o.status = 'published' 
+      OR 
+      -- Extended access: user is actor for this object or parent org
+      api.can_read_extended(p_object_id)
+    );
 
   IF NOT FOUND THEN
     RETURN NULL;

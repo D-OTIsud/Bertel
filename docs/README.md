@@ -17,6 +17,10 @@ Documentation complète de l'API Bertel v3.0 avec interface moderne et collectio
 
 3. **Déploiement automatique** à chaque push
 
+### Configuration Supabase (self‑hosted)
+
+Voir le guide: [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md)
+
 ### Avec Docker local
 
 ```bash

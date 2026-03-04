@@ -58,7 +58,7 @@ principaux du modèle de données PostgreSQL :
   postale, coordonnées géographiques et zones desservies (`object_zone`).
 - **Contenus multilingues (`object_description`, colonnes `*_i18n`)** : descriptions, chapôs, infos mobiles et traductions gérées
   soit en JSONB, soit via la table générique `i18n_translation` accessible depuis les vues `api.*`.
-- **Contacts et médias (`object_contact`, `media`)** : gestion des téléphones, emails, réseaux sociaux et ressources médias
+- **Contacts et médias (`contact_channel`, `media`)** : gestion des téléphones, emails, réseaux sociaux et ressources médias
   associées (y compris les médias spécifiques à un point de rencontre via `media.place_id`).
 - **Référentiels (`ref_code`, `ref_classification_scheme`, `ref_classification_value`)** : codes normalisés pour les types, labels,
   classements ou tags. Les liens objets ↔ référentiels se font via `object_classification` et `object_capacity`.
@@ -67,12 +67,32 @@ principaux du modèle de données PostgreSQL :
   décrire des plages d'ouverture complexes et des exceptions.
 - **Workflow de modération (`pending_change`, `object_version`)** : suivi des modifications proposées et historisation des versions
   avant/après pour audit.
-- **API JSON** : vues et fonctions exposées dans le schéma `api` (ex. `api.v_hot`, `api.v_objects`, `api.v_needed`,
-  `api.get_object_resource`) qui assemblent ces données pour produire les payloads documentés.
+- **API JSON** : fonctions exposées dans le schéma `api` (ex. `api.get_object_resource`,
+  `api.list_object_resources_page`, `api.search_objects_by_label`, `api.get_object_legal_data`) qui assemblent ces données pour produire les payloads documentés.
+- **Classification des médias (`media_tag`)** : 23 tags prédéfinis (contenu, qualité, exclusion) pour un affichage intelligent
+  sur le web. Les médias avec tags d'exclusion (interne, archive, brouillon) sont automatiquement filtrés.
+  Image principale sélectionnée par priorité de tags via `api.get_media_for_web()`.
+- **Statut des itinéraires (`open_status`)** : suivi d'ouverture (open/closed/partially_closed/warning) avec lien vers
+  les documents officiels (arrêtés préfectoraux).
+- **Performance & caching** : agrégats cachés (`cached_min_price`, `cached_main_image_url`), vue matérialisée
+  `mv_ref_data_json`, recherche full-text via `tsvector`, pagination par curseur Base64URL, API carte allégée.
+- **Infrastructure** : environnement Supabase géré, maintenance quotidienne automatisée, suite de tests EXPLAIN ANALYZE.
+- **Système juridique complet** : gestion des documents légaux (assurances, licences, certifications), suivi de conformité, alertes
+  d'expiration, workflow de demande/livraison de documents, 15+ types juridiques prédéfinis. Fonctions : `add_legal_record`,
+  `get_object_legal_compliance`, `get_expiring_legal_records_api`, `audit_legal_compliance`.
+- **Export GPX & traces** : export complet ou simplifié (KML, GPX, GeoJSON) avec métadonnées et waypoints, batch export,
+  simplification Douglas-Peucker pour affichage carte léger. Fonctions : `export_itinerary_gpx`, `get_itinerary_track_geojson`.
+- **Avis & types de chambres** : importation d'avis externes avec agrégats, gestion des types de chambres (hébergements) avec
+  équipements, capacités et tarifs. Fonctions : `get_object_reviews`, `get_object_room_types`.
+- **Recherche & découverte** : recherche par labels de durabilité, vue carte allégée (payload minimal), recherche par cuisine.
+  Fonctions : `search_objects_by_label`, `list_objects_map_view`, `search_restaurants_by_cuisine`.
+- **Promotions** : validation de codes promotionnels avec vérification temporelle et applicabilité. Fonction : `validate_promotion_code`.
 
 Chaque section de la documentation fait référence à ces structures : lorsque vous consultez une ressource dans l'interface web,
 les champs proviennent directement de ces tables ou vues. Pour une vision exhaustive, reportez-vous au schéma SQL dans
-`../Base de donnée DLL et API/schema_unified.sql`.
+`../Base de donnée DLL et API/schema_unified.sql`, aux fonctions API dans
+`../Base de donnée DLL et API/api_views_functions.sql`, et au runbook de déploiement SQL
+`./SQL_ROLLOUT_RUNBOOK.md`.
 
 ## 🔗 Liens utiles
 

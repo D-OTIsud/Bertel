@@ -1,4 +1,10 @@
-# Document Request System - Complete
+# Document Request System - Historical Notes
+
+> Historical/reference note: this file is non-canonical.
+> For authoritative runtime behavior and signatures, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
 
 ## Summary
 
@@ -252,4 +258,4 @@ SELECT api.add_legal_record(
 4. **Set up monitoring** for pending requests
 5. **Create alerts** for overdue documents
 
-The document request system is now fully integrated and ready for production use!
+This file is retained as historical implementation notes; rely on canonical SQL/docs for current production behavior.

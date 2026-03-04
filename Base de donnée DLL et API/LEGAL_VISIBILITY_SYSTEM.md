@@ -1,4 +1,10 @@
-# Legal Document Visibility System - Complete
+# Legal Document Visibility System - Historical Notes
+
+> Historical/reference note: this file is non-canonical.
+> For authoritative runtime behavior and signatures, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
 
 ## Summary
 
@@ -210,4 +216,4 @@ SELECT api.get_object_private_legal_records('HOT123');
 4. **Implement** access controls based on visibility
 5. **Monitor** data access patterns
 
-The legal document visibility system is now fully integrated and ready for production use!
+This file is retained as historical implementation notes; rely on canonical SQL/docs for current production behavior.

@@ -1,5 +1,11 @@
 # API Extensions - Deep Data Inclusion
 
+> Historical/reference note: this file is non-canonical.
+> For authoritative runtime behavior and signatures, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
+
 ## Vue d'ensemble
 
 L'API a été étendue pour inclure automatiquement les données en profondeur des objets parents, des acteurs associés et de leurs contacts. Ces extensions permettent d'obtenir toutes les informations liées à un objet en un seul appel API.

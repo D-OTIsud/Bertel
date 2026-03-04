@@ -34,8 +34,9 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 
 ### 2. Core Endpoints
 - **Get Object Resource** : Récupérer une ressource spécifique
-- **List Object Resources (Page)** : Lister avec pagination page/offset
+- **List Object Resources (Page)** : Lister avec pagination par curseur (`p_cursor`, `p_page_size`)
 - **List Object Resources (Since)** : Lister depuis une date (keyset)
+- **List Objects with Validated Changes Since** : IDs d'objets avec modifications validées depuis une date (accès `service_role`/`admin`)
 
 ### 3. Advanced Filtering
 - **List with Rich Filters (Page)** : Filtres avancés + pagination
@@ -51,6 +52,38 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 ### 5. Track Data Examples
 - **Get Itinerary with KML Track** : Récupérer tracé KML
 - **Get Itinerary with GPX Track** : Récupérer tracé GPX
+
+### 6. Deep Data
+- **Get Object with Deep Data** : Récupérer un objet avec parents, acteurs et organisations
+- **Search Objects with Deep Data** : Recherche avec inclusion automatique des données liées
+
+### 7. Search & Discovery
+- **Search Objects by Label** : Recherche par labels de durabilité avec correspondances partielles
+- **List Objects Map View** : Vue carte allégée (payload minimal pour marqueurs)
+- **Search Restaurants by Cuisine** : Recherche spécialisée par types de cuisine
+
+### 8. Media
+- **Get Media for Web** : Médias filtrés pour le web (exclut internes/brouillons, sélection intelligente)
+
+### 9. Reviews & Room Types
+- **Get Object Reviews** : Avis avec agrégats (note moyenne, nombre total)
+- **Get Object Room Types** : Types de chambres avec équipements, capacités et tarifs
+
+### 10. Promotions
+- **Validate Promotion Code** : Validation de codes promotionnels avec vérification temporelle
+
+### 11. Track & GPX Export
+- **Export Itinerary GPX** : Export GPX complet avec métadonnées et waypoints
+- **Export Itineraries GPX Batch** : Export batch pour plusieurs itinéraires
+- **Get Itinerary Track GeoJSON** : Tracé GeoJSON FeatureCollection (Leaflet, Mapbox)
+
+### 12. Legal System
+- **Add Legal Record** : Ajouter un enregistrement juridique (assurance, licence, certification)
+- **Get Object Legal Data** : Récupérer tous les enregistrements juridiques d'un objet
+- **Get Object Legal Compliance** : Vérifier la conformité (documents manquants, expirés)
+- **Get Expiring Legal Records** : Lister les enregistrements arrivant à expiration
+- **Request Legal Document** : Marquer un document comme demandé (workflow)
+- **Get Pending Document Requests** : Lister les demandes de documents en attente
 
 ## 🔧 Variables d'environnement
 
@@ -85,8 +118,8 @@ Chaque requête inclut des tests automatiques :
 ### Lister avec pagination
 ```json
 {
-  "p_page": 1,
-  "p_limit": 20,
+  "p_cursor": null,
+  "p_page_size": 20,
   "p_types": ["ITI", "HER"],
   "p_status": ["published"]
 }
@@ -95,8 +128,8 @@ Chaque requête inclut des tests automatiques :
 ### Filtrer par équipements
 ```json
 {
-  "p_page": 1,
-  "p_limit": 20,
+  "p_cursor": null,
+  "p_page_size": 20,
   "p_filters": {
     "amenities_any": ["PARKING", "WIFI"],
     "pet_accepted": true
@@ -151,10 +184,11 @@ Chaque requête inclut des tests automatiques :
 3. **Les variables** sont automatiquement remplies par les scripts
 4. **Les tests** vous donnent un retour immédiat sur la validité des réponses
 5. **Copiez** les exemples de requêtes pour vos propres développements
+6. **Pagination** : pour les endpoints *Page*, utilisez `p_cursor` et `p_page_size` (pas `p_page`)
 
 ## 📚 Documentation complète
 
-Pour plus de détails sur l'API, consultez la documentation complète dans `doc_api_bertel_v3.html`.
+Pour plus de détails sur l'API, consultez la documentation complète dans `index.html`.
 
 ## 🤝 Support
 

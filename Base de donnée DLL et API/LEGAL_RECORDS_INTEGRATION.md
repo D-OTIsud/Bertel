@@ -1,4 +1,10 @@
-# Legal Records Integration in api.get_object_resource - Complete
+# Legal Records Integration in api.get_object_resource - Historical Notes
+
+> Historical/reference note: this file is non-canonical and kept for context only.
+> For authoritative runtime behavior, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
 
 ## Summary
 
@@ -186,11 +192,13 @@ This provides a logical grouping and chronological ordering of legal records.
 
 ## Testing
 
-### **Test Script**
-- `test_get_object_resource_with_legal.sql` - Comprehensive test suite
-- Tests all legal records integration scenarios
-- Validates data structure and content
-- Demonstrates filtering and analysis
+### **Test Method**
+- Use existing RPC/function calls in `api_views_functions.sql` to validate behavior end-to-end.
+- Verify `api.get_object_resource(...)` includes `legal_records`.
+- Cross-check legal subsets with:
+  - `api.get_object_legal_records(...)`
+  - `api.get_object_public_legal_records(...)`
+  - `api.get_object_private_legal_records(...)`
 
 ### **Test Scenarios**
 1. Create objects with comprehensive legal records
@@ -227,4 +235,4 @@ This provides a logical grouping and chronological ordering of legal records.
 4. **Implement** filtering based on visibility and status
 5. **Monitor** performance and usage patterns
 
-The legal records integration in `api.get_object_resource` is now complete and ready for production use!
+The legal records integration notes in this file are complete as a historical reference.

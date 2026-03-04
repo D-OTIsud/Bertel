@@ -106,10 +106,51 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
  ('media_type','press_kit','Dossier de presse','Dossiers médias et communiqués')
 ON CONFLICT DO NOTHING;
 
+-- Tags de médias (catégorisation multi-dimensionnelle)
+INSERT INTO ref_code (domain, code, name, description, position, icon_url) VALUES
+-- 1. Contenu / Sujet (position 100-199)
+ ('media_tag','facade','Façade / Extérieur','Vue extérieure du bâtiment', 100, NULL),
+ ('media_tag','interieur','Intérieur','Vues intérieures générales', 110, NULL),
+ ('media_tag','chambre','Chambre','Chambres d''hébergement', 120, NULL),
+ ('media_tag','salle_bain','Salle de bain','Salles de bain', 130, NULL),
+ ('media_tag','cuisine','Cuisine / Plats','Photos culinaires et gastronomiques', 140, NULL),
+ ('media_tag','equipement','Équipements','Installations et équipements', 150, NULL),
+ ('media_tag','paysage','Paysage','Vue panoramique et environnement', 160, NULL),
+ ('media_tag','activite','Activités','Sports, loisirs, animations', 170, NULL),
+ ('media_tag','evenement','Événement','Événements spéciaux et manifestations', 180, NULL),
+ ('media_tag','parking','Parking','Zone de stationnement', 190, NULL),
+ ('media_tag','piscine','Piscine / Spa','Piscine, spa, espace wellness', 200, NULL),
+ ('media_tag','restaurant','Restaurant','Salle de restaurant et espace repas', 210, NULL),
+ ('media_tag','reunion','Salle de réunion','Espaces professionnels et salles de conférence', 220, NULL),
+ ('media_tag','plan_carte','Plan / Carte','Plans, schémas, cartes', 230, NULL),
+-- 2. Source / Qualité (position 300-399)
+ ('media_tag','officiel','Officiel','Photo officielle validée', 300, NULL),
+ ('media_tag','professionnel','Professionnel','Photographe professionnel', 310, NULL),
+ ('media_tag','contributeur','Contributeur','Contribution utilisateur ou partenaire', 320, NULL),
+ ('media_tag','prefere','Préférée','Photo à mettre en avant en priorité', 330, NULL),
+-- 3. Usage / Sensibilité (position 400-499) - EXCLUSION WEB
+ ('media_tag','interne','Usage interne','Réservé à un usage interne uniquement', 400, NULL),
+ ('media_tag','personnel','Personnel','Photo du personnel (sensible)', 410, NULL),
+ ('media_tag','document','Document administratif','Document administratif ou certificat', 420, NULL),
+ ('media_tag','archive','Archive','Ancienne photo obsolète à ne plus afficher', 430, NULL),
+ ('media_tag','brouillon','Brouillon','Photo non validée ou en attente de validation', 440, NULL)
+ON CONFLICT DO NOTHING;
+
 -- Type média vectoriel (pour logos SVG/PDF)
 INSERT INTO ref_code (domain, code, name, description)
 VALUES ('media_type','vector','Vectoriel','Fichiers vectoriels (SVG, PDF)')
 ON CONFLICT DO NOTHING;
+
+-- Sources d'avis externes
+INSERT INTO ref_review_source (code, name, icon_url, base_url) VALUES
+('tripadvisor', 'TripAdvisor', 'https://static.tacdn.com/img2/brand_refresh/Tripadvisor_logomark.svg', 'https://www.tripadvisor.com'),
+('google', 'Google', 'https://www.google.com/images/branding/googlelogo.svg', 'https://www.google.com/maps'),
+('booking', 'Booking.com', 'https://cf.bstatic.com/static/img/favicon.ico', 'https://www.booking.com'),
+('expedia', 'Expedia', NULL, 'https://www.expedia.com'),
+('hotels_com', 'Hotels.com', NULL, 'https://www.hotels.com'),
+('airbnb', 'Airbnb', NULL, 'https://www.airbnb.com'),
+('internal', 'Avis interne', NULL, NULL)
+ON CONFLICT (code) DO NOTHING;
 
 -- Niveaux de langue (CECRL)
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -159,7 +200,8 @@ INSERT INTO ref_contact_role (code, name, description) VALUES
 ('press', 'Presse', 'Relations presse'),
 ('technical', 'Technique', 'Support technique / IT'),
 ('sales', 'Commercial', 'Ventes / commercial'),
-('info', 'Information', 'Informations générales');
+('info', 'Information', 'Informations générales')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','volcan', 'Au pied du volcan', 'Situé au pied du Piton de la Fournaise'),
@@ -371,7 +413,8 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('dietary_tag','pescatarian', 'Pescétarien', 'Avec poisson mais sans viande'),
 ('dietary_tag','flexitarian', 'Flexitarien', 'Consommation modérée de viande'),
 ('dietary_tag','organic', 'Bio', 'Produits biologiques'),
-('dietary_tag','local', 'Local', 'Produits locaux de La Réunion');
+('dietary_tag','local', 'Local', 'Produits locaux de La Réunion')
+ON CONFLICT DO NOTHING;
 
 -- Allergènes
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -398,7 +441,7 @@ INSERT INTO ref_amenity (code, name, family_id, description)
 SELECT v.code, v.name, fam.id, v.description
 FROM (
   VALUES
-    -- Équipements généraux
+    -- Équipements généraux  
     ('wifi','Wi-Fi','general','Accès Wi‑Fi gratuit'),
     ('tv','Télévision','general','Télévision dans les chambres'),
     ('air_conditioning','Climatisation','climate_control','Climatisation'),
@@ -471,6 +514,24 @@ FROM (
     ('accessible_bathroom','Salle de bain accessible','accessibility','Salle de bain accessible'),
     ('accessible_parking','Parking accessible','accessibility','Parking accessible'),
     ('hearing_impaired','Personnes malentendantes','accessibility','Équipements pour malentendants'),
+    ('braille_signage','Signalétique en braille','accessibility','Panneaux et indications en braille'),
+    ('tactile_flooring','Bandes podotactiles','accessibility','Guidage au sol pour malvoyants'),
+    ('audio_description','Audiodescription','accessibility','Descriptions audio disponibles'),
+    ('large_print','Documents grands caractères','accessibility','Documents en grands caractères'),
+    ('guide_dog_welcome','Chien guide bienvenu','accessibility','Acceptation des chiens guides'),
+    ('induction_loop','Boucle magnétique','accessibility','Boucle d''induction magnétique'),
+    ('sign_language','Langue des signes','accessibility','Personnel formé LSF'),
+    ('visual_alerts','Alertes visuelles','accessibility','Alarmes et alertes visuelles'),
+    ('subtitles_available','Sous-titres disponibles','accessibility','Vidéos sous-titrées'),
+    ('written_communication','Communication écrite','accessibility','Communication écrite disponible'),
+    ('easy_read','Facile à lire (FALC)','accessibility','Documents en langage simplifié'),
+    ('pictograms','Pictogrammes','accessibility','Signalétique par pictogrammes'),
+    ('quiet_space','Espace calme','accessibility','Espace calme disponible'),
+    ('sensory_room','Salle sensorielle','accessibility','Salle de régulation sensorielle'),
+    ('staff_trained_cognitive','Personnel formé handicap cognitif','accessibility','Accueil adapté handicap cognitif'),
+    ('staff_trained_mental','Personnel formé handicap psychique','accessibility','Accueil adapté handicap psychique'),
+    ('flexible_visit','Visite flexible','accessibility','Horaires et parcours adaptables'),
+    ('low_stimulation','Environnement apaisant','accessibility','Environnement à stimulation réduite'),
     
     -- Sécurité
     ('security_24h','Sécurité 24h/24','security','Sécurité 24 heures sur 24'),
@@ -509,10 +570,12 @@ FROM (
     ('gym_equipment','Équipement gym','sports','Équipement de musculation'),
     ('swimming_equipment','Équipement natation','sports','Équipement de natation')
 ) AS v(code,name,fam_code,description)
-JOIN ref_code_amenity_family fam ON fam.code = v.fam_code;
+JOIN ref_code_amenity_family fam ON fam.code = v.fam_code
+WHERE NOT EXISTS (SELECT 1 FROM ref_amenity ra WHERE ra.code = v.code);
 
 -- Types HOT via ref_classification_scheme/value
-INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel');
+INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel')
+ON CONFLICT (code) DO NOTHING;
 INSERT INTO ref_classification_value (scheme_id, code, name)
 SELECT rcs.id, v.code, v.name
 FROM ref_classification_scheme rcs,
@@ -528,7 +591,11 @@ FROM ref_classification_scheme rcs,
        ('hotel_romantique','Hôtel romantique'),
        ('hotel_affaires','Hôtel d''affaires')
      ) AS v(code,name)
-WHERE rcs.code='type_hot';
+WHERE rcs.code='type_hot'
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_classification_value cv
+    WHERE cv.scheme_id = rcs.id AND cv.code = v.code
+  );
 
 
 -- =====================================================
@@ -546,7 +613,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('accommodation_type', 'camping', 'Camping', 'Camping', 7),
 ('accommodation_type', 'glamping', 'Glamping', 'Camping de luxe', 8),
 ('accommodation_type', 'villa', 'Villa', 'Villa de location', 9),
-('accommodation_type', 'apartment', 'Appartement', 'Appartement de tourisme', 10);
+('accommodation_type', 'apartment', 'Appartement', 'Appartement de tourisme', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de tourisme
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -559,7 +627,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('tourism_type', 'wellness', 'Tourisme de bien-être', 'Tourisme spa et bien-être', 7),
 ('tourism_type', 'nature', 'Tourisme de nature', 'Tourisme axé sur la nature', 8),
 ('tourism_type', 'sports', 'Tourisme sportif', 'Tourisme sportif', 9),
-('tourism_type', 'rural', 'Tourisme rural', 'Tourisme rural', 10);
+('tourism_type', 'rural', 'Tourisme rural', 'Tourisme rural', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de transport
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -572,7 +641,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('transport_type', 'bicycle', 'Vélo', 'Transport à vélo', 7),
 ('transport_type', 'taxi', 'Taxi', 'Transport par taxi', 8),
 ('transport_type', 'helicopter', 'Hélicoptère', 'Transport par hélicoptère', 9),
-('transport_type', 'walking', 'Marche à pied', 'Transport à pied', 10);
+('transport_type', 'walking', 'Marche à pied', 'Transport à pied', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types d'activités
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -585,7 +655,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('activity_type', 'wine_tasting', 'Dégustation de vin', 'Dégustation de vin', 7),
 ('activity_type', 'spa_treatment', 'Soin spa', 'Soin spa', 8),
 ('activity_type', 'paragliding', 'Parapente', 'Parapente', 9),
-('activity_type', 'bird_watching', 'Observation d''oiseaux', 'Observation d''oiseaux', 10);
+('activity_type', 'bird_watching', 'Observation d''oiseaux', 'Observation d''oiseaux', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de saisons
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -598,7 +669,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('season_type', 'vanilla_harvest', 'Récolte vanille', 'Période de récolte de la vanille', 7),
 ('season_type', 'lychee_season', 'Saison des litchis', 'Période des litchis', 8),
 ('season_type', 'festival_season', 'Saison des festivals', 'Période des festivals', 9),
-('season_type', 'holiday_season', 'Saison des vacances', 'Période des vacances', 10);
+('season_type', 'holiday_season', 'Saison des vacances', 'Période des vacances', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de clients
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -611,7 +683,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('client_type', 'student', 'Étudiant', 'Voyageur étudiant', 7),
 ('client_type', 'luxury_traveler', 'Voyageur de luxe', 'Voyageur haut de gamme', 8),
 ('client_type', 'budget_traveler', 'Voyageur économique', 'Voyageur économique', 9),
-('client_type', 'accessible', 'Personne à mobilité réduite', 'Client avec handicap', 10);
+('client_type', 'accessible', 'Personne à mobilité réduite', 'Client avec handicap', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de services
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -624,7 +697,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('service_type', 'event_planning', 'Organisation d''événements', 'Service d''organisation d''événements', 7),
 ('service_type', 'translation', 'Traduction', 'Service de traduction', 8),
 ('service_type', 'insurance', 'Assurance', 'Service d''assurance', 9),
-('service_type', 'security', 'Sécurité', 'Service de sécurité', 10);
+('service_type', 'security', 'Sécurité', 'Service de sécurité', 10)
+ON CONFLICT DO NOTHING;
 
 -- Statuts de réservation
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -637,7 +711,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('booking_status', 'payment_confirmed', 'Paiement confirmé', 'Paiement confirmé', 7),
 ('booking_status', 'modified', 'Modifiée', 'Réservation modifiée', 8),
 ('booking_status', 'checked_in', 'Enregistré', 'Client enregistré', 9),
-('booking_status', 'checked_out', 'Départ', 'Client parti', 10);
+('booking_status', 'checked_out', 'Départ', 'Client parti', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de promotions
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -650,7 +725,16 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('promotion_type', 'flash_sale', 'Vente flash', 'Vente flash', 7),
 ('promotion_type', 'student', 'Étudiant', 'Promotion étudiants', 8),
 ('promotion_type', 'senior', 'Senior', 'Promotion seniors', 9),
-('promotion_type', 'family', 'Famille', 'Promotion famille', 10);
+('promotion_type', 'family', 'Famille', 'Promotion famille', 10)
+ON CONFLICT DO NOTHING;
+
+-- Types de promotions additionnels
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('promotion_type', 'partner', 'Partenaire', 'Offre partenaire', 11),
+('promotion_type', 'weekend', 'Week-end', 'Offre week-end', 12),
+('promotion_type', 'long_stay', 'Long séjour', 'Réduction pour séjours longs', 13),
+('promotion_type', 'holiday', 'Vacances', 'Offre vacances et jours fériés', 14)
+ON CONFLICT DO NOTHING;
 
 -- Types de documents: retiré au profit de ref_legal_type et de documents associés via object_legal
 
@@ -665,7 +749,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('insurance_type', 'multi_risk', 'Assurance multirisque', 'Assurance multirisque', 7),
 ('insurance_type', 'adventure', 'Assurance aventure', 'Assurance pour sports d''aventure', 8),
 ('insurance_type', 'business', 'Assurance business', 'Assurance voyage d''affaires', 9),
-('insurance_type', 'group', 'Assurance groupe', 'Assurance pour groupes', 10);
+('insurance_type', 'group', 'Assurance groupe', 'Assurance pour groupes', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de feedback
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -678,7 +763,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('feedback_type', 'rating', 'Note', 'Note d''évaluation', 7),
 ('feedback_type', 'testimonial', 'Témoignage', 'Témoignage client', 8),
 ('feedback_type', 'social_media', 'Réseaux sociaux', 'Retour via réseaux sociaux', 9),
-('feedback_type', 'email', 'Email', 'Retour par email', 10);
+('feedback_type', 'email', 'Email', 'Retour par email', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de partenariats
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -691,7 +777,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('partnership_type', 'restaurant', 'Restaurant', 'Partenariat avec restaurants', 7),
 ('partnership_type', 'transport', 'Transport', 'Partenariat avec entreprises de transport', 8),
 ('partnership_type', 'activity_provider', 'Prestataire d''activités', 'Partenariat avec prestataires d''activités', 9),
-('partnership_type', 'supplier', 'Fournisseur', 'Partenariat avec fournisseurs', 10);
+('partnership_type', 'supplier', 'Fournisseur', 'Partenariat avec fournisseurs', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types d'assistance
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -704,7 +791,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('assistance_type', 'travel', 'Assistance voyage', 'Assistance voyage', 7),
 ('assistance_type', 'lost_documents', 'Documents perdus', 'Assistance en cas de perte de documents', 8),
 ('assistance_type', 'theft', 'Vol', 'Assistance en cas de vol', 9),
-('assistance_type', 'natural_disaster', 'Catastrophe naturelle', 'Assistance en cas de catastrophe naturelle', 10);
+('assistance_type', 'natural_disaster', 'Catastrophe naturelle', 'Assistance en cas de catastrophe naturelle', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de destinations
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -717,7 +805,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('destination_type', 'adventure', 'Destination aventure', 'Destination aventure', 7),
 ('destination_type', 'wellness', 'Destination bien-être', 'Destination bien-être', 8),
 ('destination_type', 'business', 'Destination d''affaires', 'Destination d''affaires', 9),
-('destination_type', 'family', 'Destination familiale', 'Destination familiale', 10);
+('destination_type', 'family', 'Destination familiale', 'Destination familiale', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types d'événements
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -730,7 +819,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('event_type', 'wedding', 'Mariage', 'Mariage', 7),
 ('event_type', 'corporate_event', 'Événement d''entreprise', 'Événement d''entreprise', 8),
 ('event_type', 'sporting_event', 'Événement sportif', 'Événement sportif', 9),
-('event_type', 'cultural_event', 'Événement culturel', 'Événement culturel', 10);
+('event_type', 'cultural_event', 'Événement culturel', 'Événement culturel', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de forfaits
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -743,7 +833,8 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('package_type', 'cruise', 'Croisière', 'Forfait croisière', 7),
 ('package_type', 'wellness', 'Bien-être', 'Forfait bien-être', 8),
 ('package_type', 'adventure', 'Aventure', 'Forfait aventure', 9),
-('package_type', 'family', 'Famille', 'Forfait famille', 10);
+('package_type', 'family', 'Famille', 'Forfait famille', 10)
+ON CONFLICT DO NOTHING;
 
 -- Types de chambres
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
@@ -756,7 +847,25 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('room_type', 'presidential', 'Suite présidentielle', 'Suite présidentielle', 7),
 ('room_type', 'junior_suite', 'Suite junior', 'Suite junior', 8),
 ('room_type', 'accessible', 'Chambre accessible', 'Chambre accessible PMR', 9),
-('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10);
+('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10)
+ON CONFLICT DO NOTHING;
+
+-- Types de vue (chambres)
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('view_type', 'sea', 'Vue mer', 'Vue sur la mer ou l''océan', 1),
+('view_type', 'ocean', 'Vue océan', 'Vue panoramique sur l''océan', 2),
+('view_type', 'mountain', 'Vue montagne', 'Vue sur les montagnes', 3),
+('view_type', 'garden', 'Vue jardin', 'Vue sur le jardin', 4),
+('view_type', 'pool', 'Vue piscine', 'Vue sur la piscine', 5),
+('view_type', 'city', 'Vue ville', 'Vue sur la ville', 6),
+('view_type', 'courtyard', 'Vue cour', 'Vue sur la cour intérieure', 7),
+('view_type', 'street', 'Vue rue', 'Vue sur la rue', 8),
+('view_type', 'park', 'Vue parc', 'Vue sur le parc', 9),
+('view_type', 'lake', 'Vue lac', 'Vue sur le lac', 10),
+('view_type', 'river', 'Vue rivière', 'Vue sur la rivière', 11),
+('view_type', 'forest', 'Vue forêt', 'Vue sur la forêt', 12),
+('view_type', 'none', 'Sans vue particulière', 'Pas de vue spécifique', 99)
+ON CONFLICT DO NOTHING;
 
 
 -- =====================================================

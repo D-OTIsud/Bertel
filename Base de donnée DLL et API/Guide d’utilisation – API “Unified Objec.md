@@ -1,9 +1,16 @@
 Guide d’utilisation – API “Unified Object Resource”
+
+> Historical/reference note: this guide is non-canonical.
+> For current endpoint signatures and behavior, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
+
 1) Aperçu
 
 Endpoints RPC (PostgREST / Supabase) :
 
-list_object_resources_page : pagination par pages (offset).
+list_object_resources_page : pagination par curseur (keyset/cursor).
 
 list_object_resources_since_fast : pagination incrémentale “depuis une date” (keyset).
 

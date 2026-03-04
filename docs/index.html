@@ -1292,7 +1292,7 @@ const json = await res.json();</pre>
 
         <!-- 2.4 filtered page -->
         <details id="list_object_resources_filtered_page">
-          <summary>2.4 Lister avec filtres riches (page/offset) : <code>list_object_resources_filtered_page</code></summary>
+          <summary>2.4 Lister avec filtres riches (page/cursor) : <code>list_object_resources_filtered_page</code></summary>
           <div class="content">
             <p><b>But</b> — Même idée que §2.2, mais avec un JSON de filtres riches <code>p_filters</code>.</p>
 
@@ -1409,6 +1409,23 @@ const json = await res.json();</pre>
               </tbody>
             </table>
             <p>Réponse : même forme que §2.3, avec <code>filters</code> propagés dans le curseur.</p>
+          </div>
+        </details>
+
+        <!-- 2.5.1 validated changes -->
+        <details id="list_objects_with_validated_changes_since">
+          <summary>2.5.1 IDs avec modifications validées : <code>list_objects_with_validated_changes_since</code></summary>
+          <div class="content">
+            <p><b>But</b> — Retourner la liste des <code>object_id</code> ayant au moins une modification validée depuis une date donnée.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Oblig.</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_since</code></td><td><code>timestamp</code></td><td>✅</td><td>—</td><td>Seuil de temps (UTC).</td></tr>
+              </tbody>
+            </table>
+            <p>Statuts pris en compte : <code>approved</code> et <code>applied</code>. Horodatage effectif : <code>COALESCE(applied_at, reviewed_at)</code>.</p>
+            <p><b>Réponse</b> : tableau JSON d'IDs (ex. <code>["HOT123", "RES456"]</code>).</p>
+            <p><b>Accès</b> : endpoint réservé aux rôles <code>service_role</code> et <code>admin</code>.</p>
           </div>
         </details>
 
@@ -1557,6 +1574,464 @@ const json = await res.json();</pre>
 }</pre>
           </div>
         </details>
+
+        <details open>
+          <summary>2.7 Recherche & Découverte</summary>
+          <div class="content">
+            <p>Fonctions pour rechercher des objets par critères spécialisés ou afficher des objets sur une carte avec un payload minimal.</p>
+
+            <h3>2.7.1 Recherche par label de durabilité : <code>search_objects_by_label</code></h3>
+            <p>Recherche d'objets par label de durabilité (ex. écolabels). Peut inclure les correspondances partielles (objets avec certaines actions du label).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_label_value_id</code></td><td><code>uuid</code></td><td>✅</td><td>—</td><td>ID de la valeur de label recherchée (ref_classification_value).</td></tr>
+                <tr><td><code>p_include_partial</code></td><td><code>boolean</code></td><td>❌</td><td><code>true</code></td><td>Inclure les objets avec correspondances partielles (certaines actions du label).</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>20</code></td><td>Nombre maximum de résultats.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Liste de ressources complètes incluant tous les blocs de données (comme <code>get_object_resource</code>).</p>
+
+            <h3>2.7.2 Vue carte allégée : <code>list_objects_map_view</code></h3>
+            <p>Retourne un payload minimal optimisé pour l'affichage sur une carte interactive. Inclut uniquement les données essentielles : coordonnées, nom, type, image principale.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_types</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>null</code></td><td>Codes de types d'objets à inclure (ex. ["HOT", "RES"]).</td></tr>
+                <tr><td><code>p_status</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["published"]</code></td><td>Statuts d'objets à inclure.</td></tr>
+                <tr><td><code>p_filters</code></td><td><code>jsonb</code></td><td>❌</td><td><code>{}</code></td><td>Filtres riches (même format que list_object_resources_filtered_page).</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>500</code></td><td>Nombre maximum de résultats.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Array d'objets avec structure minimale :</p>
+            <pre>[
+  {
+    "object_id": "HOT123",
+    "type": "HOT",
+    "name": "Hôtel Example",
+    "latitude": 43.296482,
+    "longitude": 5.369780,
+    "main_image_url": "https://...",
+    "status": "published"
+  }
+]</pre>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.8 Médias</summary>
+          <div class="content">
+            <h3>2.8.1 Médias pour le web : <code>get_media_for_web</code></h3>
+            <p>Retourne les médias d'un objet filtrés pour l'affichage web. Exclut automatiquement les médias internes, archives et brouillons. Sélectionne l'image principale intelligemment selon les tags de priorité.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+                <tr><td><code>p_preferred_tags</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["facade", "interieur", "cuisine", "paysage"]</code></td><td>Tags préférés pour la sélection de l'image principale (ordre de priorité).</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue pour les légendes.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>20</code></td><td>Nombre maximum de médias retournés.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Array de médias avec URL, légendes, tags de classification (23 tags prédéfinis : facade, interieur, cuisine, paysage, chambre, salle_bain, piscine, jardin, terrasse, vue, restaurant, bar, spa, salle_reunion, equipement, activite, ambiance, detail, produit, menu, plan, equipe, autre_contenu).</p>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.9 Avis (Reviews)</summary>
+          <div class="content">
+            <h3>2.9.1 Récupérer les avis : <code>get_object_reviews</code></h3>
+            <p>Retourne les avis importés d'une plateforme externe avec agrégats (note moyenne, nombre total d'avis).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+                <tr><td><code>p_limit</code></td><td><code>number</code></td><td>❌</td><td><code>10</code></td><td>Nombre maximum d'avis retournés.</td></tr>
+                <tr><td><code>p_offset</code></td><td><code>number</code></td><td>❌</td><td><code>0</code></td><td>Décalage pour la pagination.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue pour filtrer les avis.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Objet JSON avec <code>reviews[]</code> (array d'avis individuels) et <code>aggregates</code> (note moyenne, nombre total).</p>
+            <pre>{
+  "reviews": [
+    {
+      "id": "uuid",
+      "author_name": "Jean Dupont",
+      "rating": 4.5,
+      "comment": "Excellent séjour...",
+      "review_date": "2026-01-15",
+      "language_id": "uuid-fr",
+      "source_platform": "Google"
+    }
+  ],
+  "aggregates": {
+    "average_rating": 4.3,
+    "total_reviews": 127
+  }
+}</pre>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.10 Types de chambres</summary>
+          <div class="content">
+            <h3>2.10.1 Récupérer les types de chambres : <code>get_object_room_types</code></h3>
+            <p>Retourne les types de chambres pour un hébergement avec leurs équipements, capacités et tarifs.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'hébergement.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue pour les libellés.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Array de types de chambres avec détails complets (nom, description, équipements, capacité, tarifs).</p>
+            <pre>[
+  {
+    "id": "uuid",
+    "name": "Chambre Double Confort",
+    "description": "Chambre spacieuse avec vue sur le jardin...",
+    "room_count": 5,
+    "amenities": ["wifi", "tv", "minibar"],
+    "capacity": {
+      "max_adults": 2,
+      "max_children": 1
+    },
+    "prices": [
+      {
+        "amount": 120.00,
+        "currency": "EUR",
+        "unit": "night"
+      }
+    ]
+  }
+]</pre>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.11 Promotions</summary>
+          <div class="content">
+            <h3>2.11.1 Valider un code promo : <code>validate_promotion_code</code></h3>
+            <p>Valide un code promotionnel pour un objet spécifique. Vérifie la validité temporelle, le statut et l'applicabilité.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_code</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Code promotionnel à valider.</td></tr>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>❌</td><td><code>null</code></td><td>Identifiant de l'objet (si spécifique à un objet).</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Objet JSON avec résultat de validation et détails de la promotion si valide.</p>
+            <pre>{
+  "is_valid": true,
+  "promotion": {
+    "id": "uuid",
+    "code": "SUMMER2026",
+    "discount_percent": 15,
+    "valid_from": "2026-06-01",
+    "valid_to": "2026-08-31",
+    "description": "Réduction été 2026"
+  }
+}</pre>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.12 Traces & Export GPX</summary>
+          <div class="content">
+            <p>Fonctions pour exporter les tracés d'itinéraires dans différents formats (KML, GPX, GeoJSON) avec ou sans métadonnées et points d'étape.</p>
+
+            <h3>2.12.1 Construire un tracé : <code>build_iti_track</code></h3>
+            <p>Construit le tracé d'un itinéraire au format KML ou GPX avec placemarks/waypoints optionnels pour les étapes.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'itinéraire.</td></tr>
+                <tr><td><code>p_format</code></td><td><code>text</code></td><td>❌</td><td><code>"kml"</code></td><td>Format de sortie : "kml" ou "gpx".</td></tr>
+                <tr><td><code>p_include_stages</code></td><td><code>boolean</code></td><td>❌</td><td><code>true</code></td><td>Inclure les étapes comme placemarks/waypoints.</td></tr>
+                <tr><td><code>p_stage_color</code></td><td><code>text</code></td><td>❌</td><td><code>"red"</code></td><td>Couleur des placemarks d'étapes (pour KML).</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Document KML ou GPX (XML) prêt à être téléchargé ou affiché dans une application cartographique.</p>
+
+            <h3>2.12.2 Export GPX complet : <code>export_itinerary_gpx</code></h3>
+            <p>Exporte un itinéraire au format GPX complet avec métadonnées enrichies (nom, description, auteur, copyright) et waypoints pour les étapes.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'itinéraire.</td></tr>
+                <tr><td><code>p_include_stages</code></td><td><code>boolean</code></td><td>❌</td><td><code>true</code></td><td>Inclure les waypoints d'étapes.</td></tr>
+                <tr><td><code>p_include_metadata</code></td><td><code>boolean</code></td><td>❌</td><td><code>true</code></td><td>Inclure les métadonnées enrichies (nom, desc, auteur).</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Document GPX 1.1 complet avec métadonnées et extensions.</p>
+
+            <h3>2.12.3 Export GPX batch : <code>export_itineraries_gpx_batch</code></h3>
+            <p>Exporte plusieurs itinéraires en un seul appel. Utile pour générer un package de traces.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_ids</code></td><td><code>array&lt;text&gt;</code></td><td>✅</td><td>—</td><td>Array d'identifiants d'itinéraires.</td></tr>
+                <tr><td><code>p_include_stages</code></td><td><code>boolean</code></td><td>❌</td><td><code>true</code></td><td>Inclure les waypoints d'étapes.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Array d'objets JSON avec <code>object_id</code> et <code>gpx</code> (document GPX pour chaque itinéraire).</p>
+            <pre>[
+  {
+    "object_id": "ITI123",
+    "gpx": "&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;&lt;gpx...&gt;...&lt;/gpx&gt;"
+  }
+]</pre>
+
+            <h3>2.12.4 Tracé simplifié : <code>get_itinerary_track_simplified</code></h3>
+            <p>Retourne un tracé simplifié (moins de points) pour affichage léger sur une carte. Utilise l'algorithme Douglas-Peucker.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'itinéraire.</td></tr>
+                <tr><td><code>p_tolerance</code></td><td><code>float</code></td><td>❌</td><td><code>0.0001</code></td><td>Tolérance de simplification (plus élevé = moins de points).</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> GeoJSON LineString simplifié.</p>
+            <pre>{
+  "type": "LineString",
+  "coordinates": [
+    [5.3698, 43.2965],
+    [5.3712, 43.2978],
+    ...
+  ]
+}</pre>
+
+            <h3>2.12.5 Tracé GeoJSON avec étapes : <code>get_itinerary_track_geojson</code></h3>
+            <p>Retourne le tracé et les étapes sous forme de FeatureCollection GeoJSON (compatible Leaflet, Mapbox, etc.).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'itinéraire.</td></tr>
+                <tr><td><code>p_simplify</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Appliquer la simplification Douglas-Peucker.</td></tr>
+                <tr><td><code>p_tolerance</code></td><td><code>float</code></td><td>❌</td><td><code>0.0001</code></td><td>Tolérance si simplification activée.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> GeoJSON FeatureCollection avec le tracé (LineString) et les étapes (Points).</p>
+            <pre>{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[5.3698, 43.2965], ...]
+      },
+      "properties": {
+        "object_id": "ITI123",
+        "name": "Sentier du littoral"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [5.3698, 43.2965]
+      },
+      "properties": {
+        "stage_number": 1,
+        "name": "Départ - Port de Cassis"
+      }
+    }
+  ]
+}</pre>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.13 Système juridique (Legal)</summary>
+          <div class="content">
+            <p>Système complet de gestion des documents juridiques et réglementaires : licences, assurances, certifications, attestations, etc. Permet le suivi de conformité, des expirations et des demandes de documents.</p>
+
+            <h3>2.13.1 CRUD - Ajouter un enregistrement juridique : <code>add_legal_record</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+                <tr><td><code>p_type_code</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Code du type juridique (ex. "ASSURANCE_RC").</td></tr>
+                <tr><td><code>p_value</code></td><td><code>jsonb</code></td><td>✅</td><td>—</td><td>Données spécifiques (numéro de police, montant couverture, etc.).</td></tr>
+                <tr><td><code>p_document_id</code></td><td><code>uuid</code></td><td>❌</td><td><code>null</code></td><td>Référence au document justificatif (ref_document).</td></tr>
+                <tr><td><code>p_valid_from</code></td><td><code>date</code></td><td>❌</td><td><code>CURRENT_DATE</code></td><td>Date de début de validité.</td></tr>
+                <tr><td><code>p_valid_to</code></td><td><code>date</code></td><td>❌</td><td><code>null</code></td><td>Date de fin de validité (si applicable).</td></tr>
+                <tr><td><code>p_validity_mode</code></td><td><code>legal_validity_mode</code></td><td>❌</td><td><code>"fixed_end_date"</code></td><td>Mode : "forever", "tacit_renewal", "fixed_end_date".</td></tr>
+                <tr><td><code>p_status</code></td><td><code>text</code></td><td>❌</td><td><code>"active"</code></td><td>Statut : "active", "pending", "expired", "revoked".</td></tr>
+                <tr><td><code>p_note</code></td><td><code>text</code></td><td>❌</td><td><code>null</code></td><td>Note interne.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> UUID du nouvel enregistrement créé.</p>
+
+            <h3>2.13.2 CRUD - Mettre à jour un enregistrement : <code>update_legal_record</code></h3>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_legal_id</code></td><td><code>uuid</code></td><td>✅</td><td>—</td><td>ID de l'enregistrement à mettre à jour.</td></tr>
+                <tr><td><code>p_value</code></td><td><code>jsonb</code></td><td>❌</td><td><code>null</code></td><td>Nouvelles données (merge avec existantes si fourni).</td></tr>
+                <tr><td><code>p_document_id</code></td><td><code>uuid</code></td><td>❌</td><td><code>null</code></td><td>Nouveau document justificatif.</td></tr>
+                <tr><td><code>p_valid_from</code></td><td><code>date</code></td><td>❌</td><td><code>null</code></td><td>Nouvelle date de début.</td></tr>
+                <tr><td><code>p_valid_to</code></td><td><code>date</code></td><td>❌</td><td><code>null</code></td><td>Nouvelle date de fin.</td></tr>
+                <tr><td><code>p_validity_mode</code></td><td><code>legal_validity_mode</code></td><td>❌</td><td><code>null</code></td><td>Nouveau mode de validité.</td></tr>
+                <tr><td><code>p_status</code></td><td><code>text</code></td><td>❌</td><td><code>null</code></td><td>Nouveau statut.</td></tr>
+                <tr><td><code>p_note</code></td><td><code>text</code></td><td>❌</td><td><code>null</code></td><td>Nouvelle note.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Note :</strong> Seuls les paramètres fournis sont mis à jour. Les autres restent inchangés.</p>
+
+            <h3>2.13.3 Récupérer les données juridiques : <code>get_object_legal_data</code></h3>
+            <p>Retourne tous les enregistrements juridiques d'un objet au format JSON structuré pour l'API.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> JSONB avec array d'enregistrements juridiques.</p>
+
+            <h3>2.13.4 Vérifier la conformité : <code>check_object_legal_compliance</code></h3>
+            <p>Vérifie si un objet possède tous les documents juridiques requis pour son type.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Table avec <code>is_compliant</code> (boolean), <code>missing_types[]</code> (array des types manquants), <code>expired_records[]</code>.</p>
+
+            <h3>2.13.5 Rapport de conformité JSON : <code>get_object_legal_compliance</code></h3>
+            <p>Version JSON de la vérification de conformité, prête pour l'API.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Objet JSON avec conformité détaillée.</p>
+            <pre>{
+  "is_compliant": false,
+  "missing_types": [
+    {
+      "type_code": "ASSURANCE_RC",
+      "type_name": "Assurance responsabilité civile",
+      "is_required": true
+    }
+  ],
+  "expired_records": [
+    {
+      "legal_id": "uuid",
+      "type_code": "LICENCE_IV",
+      "valid_to": "2025-12-31"
+    }
+  ]
+}</pre>
+
+            <h3>2.13.6 Enregistrements expirant : <code>get_expiring_legal_records_api</code></h3>
+            <p>Liste les enregistrements juridiques arrivant à expiration dans un délai donné. Utile pour les alertes et notifications.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_days_ahead</code></td><td><code>integer</code></td><td>❌</td><td><code>30</code></td><td>Nombre de jours avant expiration.</td></tr>
+                <tr><td><code>p_object_types</code></td><td><code>array&lt;text&gt;</code></td><td>❌</td><td><code>null</code></td><td>Filtrer par types d'objets (ex. ["HOT", "RES"]).</td></tr>
+                <tr><td><code>p_legal_types</code></td><td><code>array&lt;text&gt;</code></td><td>❌</td><td><code>null</code></td><td>Filtrer par types juridiques.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> JSON avec array d'enregistrements expirant bientôt.</p>
+
+            <h3>2.13.7 Générer des notifications d'expiration : <code>generate_legal_expiry_notifications</code></h3>
+            <p>Génère automatiquement des notifications pour les enregistrements juridiques arrivant à expiration.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_days_ahead</code></td><td><code>integer</code></td><td>❌</td><td><code>30</code></td><td>Nombre de jours avant expiration pour alerter.</td></tr>
+                <tr><td><code>p_object_types</code></td><td><code>array&lt;text&gt;</code></td><td>❌</td><td><code>null</code></td><td>Filtrer par types d'objets.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> JSON avec nombre de notifications créées.</p>
+
+            <h3>2.13.8 Audit de conformité global : <code>audit_legal_compliance</code></h3>
+            <p>Audit complet de la conformité juridique sur tous les objets ou un sous-ensemble. Génère un rapport d'audit.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_types</code></td><td><code>array&lt;text&gt;</code></td><td>❌</td><td><code>null</code></td><td>Limiter l'audit à certains types d'objets.</td></tr>
+                <tr><td><code>p_include_expired</code></td><td><code>boolean</code></td><td>❌</td><td><code>false</code></td><td>Inclure les enregistrements expirés dans le rapport.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Rapport JSON avec statistiques (nombre d'objets conformes, non-conformes, en attente).</p>
+
+            <h3>2.13.9 Workflow - Demander un document : <code>request_legal_document</code></h3>
+            <p>Marque un enregistrement juridique comme « document demandé » avec horodatage. Permet le suivi des demandes de justificatifs.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_legal_id</code></td><td><code>uuid</code></td><td>✅</td><td>—</td><td>ID de l'enregistrement juridique.</td></tr>
+                <tr><td><code>p_requested_at</code></td><td><code>timestamptz</code></td><td>❌</td><td><code>NOW()</code></td><td>Date/heure de la demande.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.13.10 Workflow - Livrer un document : <code>deliver_legal_document</code></h3>
+            <p>Marque un document comme livré, met à jour le statut de l'enregistrement juridique et associe le document.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_legal_id</code></td><td><code>uuid</code></td><td>✅</td><td>—</td><td>ID de l'enregistrement juridique.</td></tr>
+                <tr><td><code>p_document_id</code></td><td><code>uuid</code></td><td>✅</td><td>—</td><td>ID du document livré.</td></tr>
+                <tr><td><code>p_delivered_at</code></td><td><code>timestamptz</code></td><td>❌</td><td><code>NOW()</code></td><td>Date/heure de livraison.</td></tr>
+                <tr><td><code>p_new_status</code></td><td><code>text</code></td><td>❌</td><td><code>"active"</code></td><td>Nouveau statut après livraison.</td></tr>
+              </tbody>
+            </table>
+
+            <h3>2.13.11 Demandes en attente : <code>get_pending_document_requests_api</code></h3>
+            <p>Liste les demandes de documents juridiques en attente (document demandé mais pas encore livré).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>❌</td><td><code>null</code></td><td>Filtrer par objet (si null, tous les objets).</td></tr>
+                <tr><td><code>p_type_codes</code></td><td><code>array&lt;text&gt;</code></td><td>❌</td><td><code>null</code></td><td>Filtrer par types juridiques.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> JSON avec array des demandes en attente.</p>
+
+            <h3>2.13.12 Visibilité - Documents publics : <code>get_object_public_legal_records</code></h3>
+            <p>Retourne uniquement les enregistrements juridiques marqués comme publics (visibles par tous).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Table avec enregistrements publics uniquement (ex. certifications affichables).</p>
+
+            <h3>2.13.13 Visibilité - Documents privés : <code>get_object_private_legal_records</code></h3>
+            <p>Retourne uniquement les enregistrements juridiques privés (visibles uniquement par l'organisation parente).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Table avec enregistrements privés (ex. assurances, licences internes).</p>
+
+            <p><strong>Types juridiques prédéfinis :</strong> Le système inclut 15+ types juridiques courants : ASSURANCE_RC (assurance responsabilité civile), LICENCE_IV (licence débit de boissons), CERTIF_TOURISME (certificat tourisme), AUTORISATION_ERP, REGISTRE_SURETE, PLAN_EVACUATION, VERIF_ELECTRIQUE, CONTRAT_MAINTENANCE, etc. Consultez <code>ref_legal_type</code> pour la liste complète et leurs paramètres de validité.</p>
+          </div>
+        </details>
+
+        <details open>
+          <summary>2.14 Aliases TEXT (convenience wrappers)</summary>
+          <div class="content">
+            <p>Pour les clients qui ne peuvent pas passer des tableaux d'enums PostgreSQL natifs (<code>object_type[]</code>, <code>object_status[]</code>), des alias de fonctions acceptant <code>TEXT[]</code> sont disponibles :</p>
+            <ul>
+              <li><code>list_object_resources_page_text</code> — alias de <code>list_object_resources_page</code> avec <code>p_types</code> et <code>p_status</code> en <code>TEXT[]</code>.</li>
+              <li><code>list_object_resources_since_fast_text</code> — alias de <code>list_object_resources_since_fast</code> avec <code>p_types</code> et <code>p_status</code> en <code>TEXT[]</code>.</li>
+            </ul>
+            <p>Ces fonctions convertissent automatiquement les tableaux TEXT en enums correspondants et délèguent aux fonctions principales. Utilisez-les si votre client HTTP/ORM ne supporte pas les types personnalisés PostgreSQL.</p>
+          </div>
+        </details>
       </section>
 
       <!-- 3) Dictionnaire de données -->
@@ -1573,12 +2048,12 @@ const json = await res.json();</pre>
               <li><strong>Objets touristiques</strong> <code>object</code> — entité cœur pour tous les types (hébergements, itinéraires, événements, etc.) avec les métadonnées communes (statut, dates de publication, indicateurs d’édition en cours).</li>
               <li><strong>Localisation unifiée</strong> <code>object_location</code> — regroupe adresse postale, coordonnées géographiques et rattachements territoriaux via <code>object_zone</code>.</li>
               <li><strong>Contenus multilingues</strong> <code>object_description</code> et colonnes <code>*_i18n</code> — textes publics, chapôs, infos mobiles stockés soit en JSONB, soit via la table générique <code>i18n_translation</code> exposée dans les vues <code>api.*</code>.</li>
-              <li><strong>Contacts &amp; médias</strong> <code>object_contact</code>, <code>media</code> — téléphones, e-mails, réseaux sociaux et ressources médias, y compris les médias spécifiques à un lieu via <code>media.place_id</code>.</li>
+              <li><strong>Contacts &amp; médias</strong> <code>contact_channel</code>, <code>media</code> — téléphones, e-mails, réseaux sociaux et ressources médias, y compris les médias spécifiques à un lieu via <code>media.place_id</code>.</li>
               <li><strong>Référentiels</strong> <code>ref_code</code>, <code>ref_classification_scheme</code>, <code>ref_classification_value</code> — types, labels, classements et tags reliés aux objets par <code>object_classification</code> et <code>object_capacity</code>.</li>
               <li><strong>Accessibilité &amp; labels handicap</strong> — entrées <code>object_classification</code> avec <code>scheme_code = "HANDICAP_LABEL"</code>, valeurs et sous-valeurs (<code>subvalue_ids</code>) pour chaque handicap couvert (moteur, visuel, auditif, mental), justificatifs optionnels via <code>ref_document</code>.</li>
               <li><strong>Horaires d’ouverture</strong> <code>opening_period</code>, <code>opening_schedule</code>, <code>opening_time_period</code> — structure hiérarchique permettant de décrire des plages complexes et leurs exceptions.</li>
               <li><strong>Modération</strong> <code>pending_change</code>, <code>object_version</code> — suivi des propositions de modification et historisation avant/après pour audit.</li>
-              <li><strong>API JSON</strong> — vues et fonctions du schéma <code>api</code> (ex. <code>api.v_hot</code>, <code>api.v_objects</code>, <code>api.v_needed</code>, <code>api.get_object_resource</code>) qui orchestrent les blocs ci-dessus.</li>
+              <li><strong>API JSON</strong> — fonctions du schéma <code>api</code> (ex. <code>api.get_object_resource</code>, <code>api.list_object_resources_page</code>, <code>api.search_objects_by_label</code>) qui orchestrent les blocs ci-dessus.</li>
             </ul>
             <p>Les sections du dictionnaire (§3.x) décrivent comment ces blocs sont agrégés pour produire chaque champ. Pour une vision exhaustive, consultez le schéma SQL&nbsp;: <a href="../Base%20de%20donn%C3%A9e%20DLL%20et%20API/schema_unified.sql">schema_unified.sql</a>.</p>
           </div>
@@ -4075,6 +4550,117 @@ const json = await res.json();</pre>
             <p class="inline-help">Les événements peuvent aussi avoir des menus pour les repas/boissons proposés.</p>
           </div>
         </details>
+
+        <details>
+          <summary>5.8 Recherche par label de durabilité</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-48">Copier</button>
+<pre id="ex-48">curl -X POST "{BASE_URL}/rpc/search_objects_by_label" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Content-Profile: api" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
+  -d '{
+    "p_label_value_id": "uuid-ecolabel-europeen",
+    "p_include_partial": true,
+    "p_limit": 20
+  }'</pre>
+            </div>
+            <p class="inline-help">Retourne les hébergements avec l'Écolabel Européen (complet ou partiel).</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>5.9 Vue carte allégée pour affichage interactif</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-49">Copier</button>
+<pre id="ex-49">curl -X POST "{BASE_URL}/rpc/list_objects_map_view" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Content-Profile: api" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
+  -d '{
+    "p_types": ["HOT", "RES"],
+    "p_status": ["published"],
+    "p_limit": 500
+  }'</pre>
+            </div>
+            <p class="inline-help">Payload minimal pour afficher des marqueurs sur une carte : coordonnées, nom, type, image principale.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>5.10 Export GPX d'un itinéraire</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-50">Copier</button>
+<pre id="ex-50">curl -X POST "{BASE_URL}/rpc/export_itinerary_gpx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Content-Profile: api" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
+  -d '{
+    "p_object_id": "ITI123",
+    "p_include_stages": true,
+    "p_include_metadata": true
+  }'</pre>
+            </div>
+            <p class="inline-help">Retourne un document GPX 1.1 complet avec métadonnées et waypoints. Prêt pour import dans Garmin, Komoot, etc.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>5.11 Vérifier la conformité juridique d'un objet</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-51">Copier</button>
+<pre id="ex-51">curl -X POST "{BASE_URL}/rpc/get_object_legal_compliance" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Content-Profile: api" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
+  -d '{
+    "p_object_id": "HOT123"
+  }'</pre>
+            </div>
+            <p class="inline-help">Retourne un rapport de conformité : documents manquants, expirés, statut global.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>5.12 Ajouter un enregistrement juridique (assurance RC)</summary>
+          <div class="content">
+            <div style="position:relative;">
+              <button class="copy copy-floating" data-copy="#ex-52">Copier</button>
+<pre id="ex-52">curl -X POST "{BASE_URL}/rpc/add_legal_record" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Content-Profile: api" \
+  -H "apikey: {SUPABASE_ANON_KEY}" \
+  -H "Authorization: Bearer {SUPABASE_ANON_KEY}" \
+  -d '{
+    "p_object_id": "HOT123",
+    "p_type_code": "ASSURANCE_RC",
+    "p_value": {
+      "policy_number": "RC-2024-12345",
+      "insurer": "Allianz",
+      "coverage_amount": 5000000
+    },
+    "p_valid_from": "2024-01-01",
+    "p_valid_to": "2024-12-31",
+    "p_validity_mode": "fixed_end_date",
+    "p_status": "active"
+  }'</pre>
+            </div>
+            <p class="inline-help">Crée un nouvel enregistrement juridique avec validité fixe (1 an).</p>
+          </div>
+        </details>
       </section>
 
       <!-- 6) Conseils -->
@@ -4146,6 +4732,46 @@ const json = await res.json();</pre>
               <li><code>org_object_id</code> : priorise les descriptions d'une organisation spécifique.</li>
               <li><code>render_locale</code> et <code>render_tz</code> : contrôlent le formatage des données.</li>
               <li><code>include_private</code> : accès aux données privées (nécessite permissions).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Export GPX & traces</h3>
+            <ul>
+              <li>Utilisez <code>export_itinerary_gpx</code> pour un GPX complet (métadonnées + waypoints).</li>
+              <li><code>get_itinerary_track_simplified</code> pour affichage carte léger (moins de points).</li>
+              <li><code>export_itineraries_gpx_batch</code> pour exporter plusieurs itinéraires en un appel.</li>
+              <li>GeoJSON (<code>get_itinerary_track_geojson</code>) est compatible Leaflet, Mapbox, OpenLayers.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Système juridique</h3>
+            <ul>
+              <li>Vérifiez la conformité avec <code>get_object_legal_compliance</code> avant publication.</li>
+              <li>Utilisez <code>get_expiring_legal_records_api</code> pour alerter 30-60 jours avant expiration.</li>
+              <li>Les modes de validité : <code>"forever"</code> (SIRET), <code>"tacit_renewal"</code> (assurances), <code>"fixed_end_date"</code> (licences).</li>
+              <li>Documents publics vs privés : <code>is_public</code> dans <code>ref_legal_type</code> contrôle la visibilité.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Médias & avis</h3>
+            <ul>
+              <li><code>get_media_for_web</code> filtre automatiquement les médias internes/brouillons.</li>
+              <li>23 tags de classification : facade, interieur, cuisine, paysage, chambre, etc.</li>
+              <li>L'image principale est sélectionnée par priorité de tags (paramètre <code>p_preferred_tags</code>).</li>
+              <li>Les avis (<code>get_object_reviews</code>) incluent les agrégats (note moyenne, total).</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Recherche & carte</h3>
+            <ul>
+              <li><code>list_objects_map_view</code> : payload minimal (coordonnées + nom + image) pour cartes.</li>
+              <li><code>search_objects_by_label</code> : recherche par écolabels avec correspondances partielles.</li>
+              <li>Limitez <code>list_objects_map_view</code> à 500-1000 objets max pour ne pas surcharger la carte.</li>
+              <li>Utilisez les filtres géographiques (<code>within_radius</code>, <code>within_bbox</code>) pour limiter la zone.</li>
             </ul>
           </div>
         </div>

@@ -74,11 +74,22 @@ CREATE EXTENSION IF NOT EXISTS "unaccent";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 ```
 
-4) Grant permissions (run once in SQL editor):
+4) Grant permissions (run once in SQL editor, least privilege):
 
 ```sql
 GRANT USAGE ON SCHEMA api TO anon, authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA api TO anon, authenticated;
+
+-- Public-safe RPC allowlist (examples)
+GRANT EXECUTE ON FUNCTION api.get_object_resource(text, text[], text, jsonb) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_page_text(text, text[], integer, text[], text[], text, text, boolean, text, boolean) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_since_fast_text(timestamptz, text, boolean, text[], integer, text[], text[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_since_fast(timestamptz, text, boolean, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_objects_map_view(text[], text[], jsonb, text[], integer, integer) TO anon, authenticated;
+
+-- Privileged/admin-only RPC: service role only
+GRANT EXECUTE ON FUNCTION api.list_objects_with_validated_changes_since(timestamptz) TO service_role;
+GRANT EXECUTE ON FUNCTION api.export_publication_indesign(uuid, integer, integer) TO service_role;
 ```
 
 5) Test an RPC from the API docs or via curl/Postman
@@ -88,17 +99,52 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA api TO anon, authenticated;
 
 Troubleshooting is identical to the self‑hosted section below (404 → expose `api`; 42883 → add `extensions` to DB Extra Search Path; 401/406/415 → headers/roles/body).
 
+6) Optional: schedule filtered materialized-view refresh (5-15 minute staleness budget)
+
+```sql
+-- Create once (adjust cadence to your freshness target)
+SELECT cron.schedule(
+  'refresh-mv-filtered-objects',
+  '*/10 * * * *',
+  $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;$$
+);
+
+-- Run immediately after deploying schema/function changes
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;
+```
+
+Recommended monitor checks:
+
+```sql
+SELECT COUNT(*) AS mv_rows FROM mv_filtered_objects;
+SELECT COUNT(*) AS published_main_location_rows
+FROM object o
+JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location IS TRUE
+WHERE o.status = 'published';
+```
+
 ### 3) Permissions for API consumers
 
-Grant once to the roles you use (typically `anon`, `authenticated`, optionally `service_role`):
+Grant once to the roles you use (prefer allowlists, avoid blanket `ALL FUNCTIONS`):
 
 ```sql
 GRANT USAGE ON SCHEMA api TO anon, authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA api TO anon, authenticated;
+
+-- Optional hard reset if broad grants existed in older setups
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA api FROM anon, authenticated;
+
+-- Re-grant only endpoints you expose publicly
+GRANT EXECUTE ON FUNCTION api.get_object_resource(text, text[], text, jsonb) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_page_text(text, text[], integer, text[], text[], text, text, boolean, text, boolean) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_since_fast_text(timestamptz, text, boolean, text[], integer, text[], text[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_since_fast(timestamptz, text, boolean, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_objects_map_view(text[], text[], jsonb, text[], integer, integer) TO anon, authenticated;
 
 -- Optional if you call with the service key
 GRANT USAGE ON SCHEMA api TO service_role;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA api TO service_role;
+GRANT EXECUTE ON FUNCTION api.list_objects_with_validated_changes_since(timestamptz) TO service_role;
+GRANT EXECUTE ON FUNCTION api.export_publication_indesign(uuid, integer, integer) TO service_role;
 ```
 
 ### 4) Calling RPCs (examples)

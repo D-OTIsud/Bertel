@@ -1,5 +1,11 @@
 # Unified Legal System Documentation
 
+> Historical/reference note: this file is non-canonical.
+> For authoritative runtime behavior and signatures, use:
+> - `Base de donnée DLL et API/api_views_functions.sql`
+> - `Base de donnée DLL et API/schema_unified.sql`
+> - `docs/index.html`
+
 ## Overview
 
 The unified legal system replaces the separate `legal` and `accommodation_legal` tables with a single, flexible `object_legal` table that can handle legal records for any object type. This system provides comprehensive legal compliance tracking, expiry notifications, and audit capabilities.

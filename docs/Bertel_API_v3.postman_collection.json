@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Bertel API v3.0",
-    "description": "Collection Postman complète pour l'API Bertel v3.0 - OTI du Sud\n\nCette collection inclut tous les endpoints documentés avec leurs paramètres, exemples et variables d'environnement.\n\n## Authentification\nTous les endpoints nécessitent une authentification via headers (apikey, Authorization Bearer, etc.)\n\n## Variables d'environnement\n- `base_url`: URL de base de l'API\n- `apikey`: Votre clé API\n- `authorization`: Token Bearer (alternative)\n\n## Endpoints disponibles\n1. **get_object_resource** - Récupérer une ressource spécifique\n2. **list_object_resources_page** - Lister avec pagination page/offset\n3. **list_object_resources_since_fast** - Lister depuis une date (keyset)\n4. **list_object_resources_filtered_page** - Lister avec filtres riches (page/offset)\n5. **list_object_resources_filtered_since_fast** - Filtres + depuis une date (keyset)",
+    "description": "Collection Postman complète pour l'API Bertel v3.0 - OTI du Sud\n\nCette collection inclut tous les endpoints documentés avec leurs paramètres, exemples et variables d'environnement.\n\n## Authentification\nTous les endpoints nécessitent une authentification via headers (apikey, Authorization Bearer, etc.)\n\n## Variables d'environnement\n- `base_url`: URL de base de l'API\n- `apikey`: Votre clé API\n- `authorization`: Token Bearer (alternative)\n\n## Endpoints disponibles\n1. **get_object_resource** - Récupérer une ressource spécifique\n2. **list_object_resources_page** - Lister avec curseur (`p_cursor`) et taille de page (`p_page_size`)\n3. **list_object_resources_since_fast** - Lister depuis une date (keyset)\n4. **list_object_resources_filtered_page** - Lister avec filtres riches (curseur + `p_page_size`)\n5. **list_object_resources_filtered_since_fast** - Filtres + depuis une date (keyset)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "bertel-api-v3-collection"
   },
@@ -134,14 +134,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"ITI\", \"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_search\": \"rando\",\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_track_format\": \"none\"\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"ITI\", \"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_search\": \"rando\",\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_track_format\": \"none\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_page",
               "host": ["{{base_url}}"],
               "path": ["rpc", "list_object_resources_page"]
             },
-            "description": "Lister les ressources avec pagination page/offset. Idéal pour la navigation classique."
+            "description": "Lister les ressources avec pagination par curseur. Idéal pour la navigation classique et stable."
           },
           "response": [
             {
@@ -160,7 +160,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20\n}"
+                  "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/rpc/list_object_resources_page",
@@ -249,6 +249,52 @@
               "body": "{\n  \"info\": {\n    \"kind\": \"since\",\n    \"language\": \"fr\",\n    \"language_fallbacks\": [\"fr\"],\n    \"since\": \"2024-04-01T00:00:00Z\",\n    \"use_source\": false,\n    \"limit\": 50,\n    \"cursor\": \"<opaque>\",\n    \"next_cursor\": \"<opaque or null>\"\n  },\n  \"data\": []\n}"
             }
           ]
+        },
+        {
+          "name": "List Objects with Validated Changes Since",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_since\": \"2024-04-01T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/list_objects_with_validated_changes_since",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "list_objects_with_validated_changes_since"]
+            },
+            "description": "Retourne un tableau JSON d'IDs d'objets ayant des changements validés depuis p_since. Accès restreint : service_role/admin."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\"HOTRUN0000000001\", \"RESRUN0000000456\"]"
+            }
+          ]
         }
       ],
       "description": "Endpoints principaux pour récupérer et lister les ressources"
@@ -276,14 +322,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_track_format\": \"none\",\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\", \"WIFI\"],\n    \"pet_accepted\": true,\n    \"within_radius\": {\n      \"lat\": 45.76,\n      \"lon\": 4.84,\n      \"radius_m\": 20000\n    },\n    \"media_types_any\": [\"image\"],\n    \"media_published_only\": true,\n    \"media_must_have_main\": true\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_track_format\": \"none\",\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\", \"WIFI\"],\n    \"pet_accepted\": true,\n    \"within_radius\": {\n      \"lat\": 45.76,\n      \"lon\": 4.84,\n      \"radius_m\": 20000\n    },\n    \"media_types_any\": [\"image\"],\n    \"media_published_only\": true,\n    \"media_must_have_main\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
               "host": ["{{base_url}}"],
               "path": ["rpc", "list_object_resources_filtered_page"]
             },
-            "description": "Lister avec filtres riches et pagination page/offset. Inclut tous les filtres avancés (équipements, géolocalisation, médias, etc.)"
+            "description": "Lister avec filtres riches et pagination par curseur (`p_cursor`, `p_page_size`). Inclut tous les filtres avancés."
           },
           "response": [
             {
@@ -302,7 +348,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\"]\n  }\n}"
+                  "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\"]\n  }\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -418,7 +464,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\", \"WIFI\"],\n    \"amenities_all\": [\"RESTAURANT\"],\n    \"amenity_families_any\": [\"ACCOMMODATION\"],\n    \"pet_accepted\": true,\n    \"payment_methods_any\": [\"CREDIT_CARD\", \"CASH\"],\n    \"environment_tags_any\": [\"MOUNTAIN\", \"FOREST\"],\n    \"languages_any\": [\"fr\", \"en\"]\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"amenities_any\": [\"PARKING\", \"WIFI\"],\n    \"amenities_all\": [\"RESTAURANT\"],\n    \"amenity_families_any\": [\"ACCOMMODATION\"],\n    \"pet_accepted\": true,\n    \"payment_methods_any\": [\"CREDIT_CARD\", \"CASH\"],\n    \"environment_tags_any\": [\"MOUNTAIN\", \"FOREST\"],\n    \"languages_any\": [\"fr\", \"en\"]\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -448,7 +494,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"HER\", \"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"media_types_any\": [\"image\", \"video\"],\n    \"media_published_only\": true,\n    \"media_must_have_main\": true\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HER\", \"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"media_types_any\": [\"image\", \"video\"],\n    \"media_published_only\": true,\n    \"media_must_have_main\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -478,7 +524,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"HER\", \"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"within_radius\": {\n      \"lat\": 45.76,\n      \"lon\": 4.84,\n      \"radius_m\": 20000\n    },\n    \"bbox\": [4.8, 45.7, 4.9, 45.8]\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HER\", \"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"within_radius\": {\n      \"lat\": 45.76,\n      \"lon\": 4.84,\n      \"radius_m\": 20000\n    },\n    \"bbox\": [4.8, 45.7, 4.9, 45.8]\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -508,7 +554,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"itinerary\": {\n      \"is_loop\": true,\n      \"difficulty_min\": 1,\n      \"difficulty_max\": 3,\n      \"distance_min_km\": 5,\n      \"distance_max_km\": 15,\n      \"duration_min_h\": 2,\n      \"duration_max_h\": 6,\n      \"practices_any\": [\"hiking\", \"trail_running\"]\n    }\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"ITI\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"itinerary\": {\n      \"is_loop\": true,\n      \"difficulty_min\": 1,\n      \"difficulty_max\": 3,\n      \"distance_min_km\": 5,\n      \"distance_max_km\": 15,\n      \"duration_min_h\": 2,\n      \"duration_max_h\": 6,\n      \"practices_any\": [\"hiking\", \"trail_running\"]\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -538,7 +584,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"p_page\": 1,\n  \"p_limit\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"capacity_filters\": [\n      {\n        \"code\": \"TOTAL_CAPACITY\",\n        \"min\": 10,\n        \"max\": 100\n      }\n    ],\n    \"classifications_any\": [\n      {\n        \"scheme_code\": \"STARS\",\n        \"value_code\": \"4\"\n      }\n    ],\n    \"tags_any\": [\"luxury\", \"family-friendly\"],\n    \"meeting_room\": {\n      \"min_count\": 1,\n      \"min_area_m2\": 50,\n      \"min_cap_theatre\": 20,\n      \"equipment_any\": [\"PROJECTOR\", \"WHITEBOARD\"]\n    }\n  }\n}"
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HER\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_filters\": {\n    \"capacity_filters\": [\n      {\n        \"code\": \"TOTAL_CAPACITY\",\n        \"min\": 10,\n        \"max\": 100\n      }\n    ],\n    \"classifications_any\": [\n      {\n        \"scheme_code\": \"STARS\",\n        \"value_code\": \"4\"\n      }\n    ],\n    \"tags_any\": [\"luxury\", \"family-friendly\"],\n    \"meeting_room\": {\n      \"min_count\": 1,\n      \"min_area_m2\": 50,\n      \"min_cap_theatre\": 20,\n      \"equipment_any\": [\"PROJECTOR\", \"WHITEBOARD\"]\n    }\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
@@ -616,6 +662,426 @@
         }
       ],
       "description": "Exemples pour récupérer les données de tracé (KML/GPX)"
+    },
+    {
+      "name": "6. Deep Data",
+      "item": [
+        {
+          "name": "Get Object with Deep Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\",\n  \"p_languages\": [\"fr\", \"en\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_object_with_deep_data",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_object_with_deep_data"]
+            },
+            "description": "Récupérer un objet avec ses parents, acteurs et organisations en un seul appel"
+          }
+        },
+        {
+          "name": "Search Objects with Deep Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_search_term\": \"hôtel spa\",\n  \"p_object_types\": [\"HOT\"],\n  \"p_languages\": [\"fr\"],\n  \"p_limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/search_objects_with_deep_data",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "search_objects_with_deep_data"]
+            },
+            "description": "Rechercher des objets avec inclusion automatique des données liées"
+          }
+        }
+      ],
+      "description": "Fonctions Deep Data pour récupérer les objets avec leurs relations en un seul appel"
+    },
+    {
+      "name": "7. Search & Discovery",
+      "item": [
+        {
+          "name": "Search Objects by Label",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_label_value_id\": \"uuid-ecolabel-europeen\",\n  \"p_include_partial\": true,\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/search_objects_by_label",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "search_objects_by_label"]
+            },
+            "description": "Rechercher des objets par label de durabilité avec correspondances partielles"
+          }
+        },
+        {
+          "name": "List Objects Map View",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_types\": [\"HOT\", \"RES\"],\n  \"p_status\": [\"published\"],\n  \"p_limit\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/list_objects_map_view",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "list_objects_map_view"]
+            },
+            "description": "Vue carte allégée avec payload minimal (coordonnées, nom, type, image)"
+          }
+        },
+        {
+          "name": "Search Restaurants by Cuisine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_cuisine_types\": [\"local\", \"veggie\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/search_restaurants_by_cuisine",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "search_restaurants_by_cuisine"]
+            },
+            "description": "Recherche spécialisée de restaurants par types de cuisine"
+          }
+        }
+      ],
+      "description": "Fonctions de recherche et découverte (labels, carte, cuisine)"
+    },
+    {
+      "name": "8. Media",
+      "item": [
+        {
+          "name": "Get Media for Web",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\",\n  \"p_preferred_tags\": [\"facade\", \"interieur\", \"cuisine\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_limit\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_media_for_web",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_media_for_web"]
+            },
+            "description": "Récupérer les médias filtrés pour le web (exclut internes/brouillons, sélection intelligente de l'image principale)"
+          }
+        }
+      ],
+      "description": "Gestion des médias avec filtrage et sélection intelligente"
+    },
+    {
+      "name": "9. Reviews & Room Types",
+      "item": [
+        {
+          "name": "Get Object Reviews",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\",\n  \"p_limit\": 10,\n  \"p_offset\": 0,\n  \"p_lang_prefs\": [\"fr\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_object_reviews",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_object_reviews"]
+            },
+            "description": "Récupérer les avis avec agrégats (note moyenne, nombre total)"
+          }
+        },
+        {
+          "name": "Get Object Room Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\",\n  \"p_lang_prefs\": [\"fr\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_object_room_types",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_object_room_types"]
+            },
+            "description": "Récupérer les types de chambres avec équipements, capacités et tarifs"
+          }
+        }
+      ],
+      "description": "Avis externes et types de chambres pour hébergements"
+    },
+    {
+      "name": "10. Promotions",
+      "item": [
+        {
+          "name": "Validate Promotion Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_code\": \"SUMMER2026\",\n  \"p_object_id\": \"{{object_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/validate_promotion_code",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "validate_promotion_code"]
+            },
+            "description": "Valider un code promotionnel avec vérification temporelle et applicabilité"
+          }
+        }
+      ],
+      "description": "Validation de codes promotionnels"
+    },
+    {
+      "name": "11. Track & GPX Export",
+      "item": [
+        {
+          "name": "Export Itinerary GPX",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{itinerary_id}}\",\n  \"p_include_stages\": true,\n  \"p_include_metadata\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/export_itinerary_gpx",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "export_itinerary_gpx"]
+            },
+            "description": "Export GPX complet avec métadonnées et waypoints"
+          }
+        },
+        {
+          "name": "Export Itineraries GPX Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_ids\": [\"ITI123\", \"ITI456\"],\n  \"p_include_stages\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/export_itineraries_gpx_batch",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "export_itineraries_gpx_batch"]
+            },
+            "description": "Export GPX batch pour plusieurs itinéraires"
+          }
+        },
+        {
+          "name": "Get Itinerary Track GeoJSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{itinerary_id}}\",\n  \"p_simplify\": false,\n  \"p_tolerance\": 0.0001\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_itinerary_track_geojson",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_itinerary_track_geojson"]
+            },
+            "description": "Tracé GeoJSON FeatureCollection (compatible Leaflet, Mapbox)"
+          }
+        }
+      ],
+      "description": "Export de traces GPX et GeoJSON pour itinéraires"
+    },
+    {
+      "name": "12. Legal System",
+      "item": [
+        {
+          "name": "Add Legal Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\",\n  \"p_type_code\": \"ASSURANCE_RC\",\n  \"p_value\": {\n    \"policy_number\": \"RC-2024-12345\",\n    \"insurer\": \"Allianz\",\n    \"coverage_amount\": 5000000\n  },\n  \"p_valid_from\": \"2024-01-01\",\n  \"p_valid_to\": \"2024-12-31\",\n  \"p_validity_mode\": \"fixed_end_date\",\n  \"p_status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/add_legal_record",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "add_legal_record"]
+            },
+            "description": "Ajouter un enregistrement juridique (assurance, licence, certification, etc.)"
+          }
+        },
+        {
+          "name": "Get Object Legal Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_object_legal_data",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_object_legal_data"]
+            },
+            "description": "Récupérer tous les enregistrements juridiques d'un objet"
+          }
+        },
+        {
+          "name": "Get Object Legal Compliance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": \"{{object_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_object_legal_compliance",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_object_legal_compliance"]
+            },
+            "description": "Vérifier la conformité juridique (documents manquants, expirés)"
+          }
+        },
+        {
+          "name": "Get Expiring Legal Records",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_days_ahead\": 30,\n  \"p_object_types\": [\"HOT\", \"RES\"],\n  \"p_legal_types\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_expiring_legal_records_api",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_expiring_legal_records_api"]
+            },
+            "description": "Lister les enregistrements juridiques arrivant à expiration"
+          }
+        },
+        {
+          "name": "Request Legal Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_legal_id\": \"uuid-legal-record\",\n  \"p_requested_at\": \"2024-01-15T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/request_legal_document",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "request_legal_document"]
+            },
+            "description": "Marquer un document comme demandé (workflow)"
+          }
+        },
+        {
+          "name": "Get Pending Document Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"},
+              {"key": "apikey", "value": "{{apikey}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_object_id\": null,\n  \"p_type_codes\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/get_pending_document_requests_api",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "get_pending_document_requests_api"]
+            },
+            "description": "Lister les demandes de documents en attente"
+          }
+        }
+      ],
+      "description": "Système juridique complet : CRUD, conformité, expirations, workflow documentaire"
     }
   ],
   "event": [

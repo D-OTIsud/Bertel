@@ -19,8 +19,8 @@ Bertel/
 │   ├── rls_policies.sql           # Politiques de sécurité
 │   ├── README.md                  # Documentation technique complète
 │   └── erd_diagram.md             # Diagramme ER en Mermaid
-├── frontend/                      # Interface utilisateur (à venir)
-└── README.md                     # Ce fichier
+├── archive/                       # Archives documentaires (historique)
+└── README.md                      # Ce fichier
 ```
 
 ## 🗄️ Base de données unifiée
@@ -37,9 +37,9 @@ Le projet Bertel utilise un système de données unifié PostgreSQL avec des fon
 
 ### 📊 Documentation technique
 
-- **Schéma complet** : [`Base de donnée DLL et API/schema_unified.sql`](./Base%20de%20donnée%20DLL%20et%20API/schema_unified.sql)
-- **Documentation détaillée** : [`Base de donnée DLL et API/README.md`](./Base%20de%20donnée%20DLL%20et%20API/README.md)
-- **Diagramme ER** : [`Base de donnée DLL et API/erd_diagram.md`](./Base%20de%20donnée%20DLL%20et%20API/erd_diagram.md)
+- **Schéma complet** : [`Base de donnée DLL et API/schema_unified.sql`](./Base de donnée DLL et API/schema_unified.sql)
+- **Documentation détaillée** : [`Base de donnée DLL et API/README.md`](./Base de donnée DLL et API/README.md)
+- **Diagramme ER** : [`Base de donnée DLL et API/erd_diagram.md`](./Base de donnée DLL et API/erd_diagram.md)
 
 ## 🚀 Documentation API
 
@@ -72,6 +72,15 @@ docker run -p 8080:80 bertel-api-docs
 ### Installation de la base de données
 
 ```bash
+# 0. Préactiver les extensions PostgreSQL nécessaires (Supabase/Postgres neuf)
+psql -d votre_database -c "CREATE SCHEMA IF NOT EXISTS extensions;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"postgis\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"unaccent\" WITH SCHEMA extensions;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+# Optionnel: psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS pg_cron;"
+
 # 1. Exécuter le schéma principal
 psql -d votre_database -f "Base de donnée DLL et API/schema_unified.sql"
 

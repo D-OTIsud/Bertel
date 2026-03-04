@@ -12,7 +12,8 @@
 -- Extensions requises
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "postgis";
-CREATE EXTENSION IF NOT EXISTS "unaccent";
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
@@ -33,7 +34,7 @@ CREATE SEQUENCE IF NOT EXISTS object_id_seq START 1;
 CREATE OR REPLACE FUNCTION public.immutable_unaccent(text)
 RETURNS text
 LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
-  SELECT unaccent($1);
+  SELECT extensions.unaccent($1);
 $$;
 
 -- to_base36
@@ -161,6 +162,7 @@ END $$;
 -- Partitions courantes
 CREATE TABLE IF NOT EXISTS ref_code_contact_kind PARTITION OF ref_code FOR VALUES IN ('contact_kind');
 CREATE TABLE IF NOT EXISTS ref_code_media_type PARTITION OF ref_code FOR VALUES IN ('media_type');
+CREATE TABLE IF NOT EXISTS ref_code_media_tag PARTITION OF ref_code FOR VALUES IN ('media_tag');
 CREATE TABLE IF NOT EXISTS ref_code_social_network PARTITION OF ref_code FOR VALUES IN ('social_network');
 CREATE TABLE IF NOT EXISTS ref_code_weekday PARTITION OF ref_code FOR VALUES IN ('weekday');
 CREATE TABLE IF NOT EXISTS ref_code_language_level PARTITION OF ref_code FOR VALUES IN ('language_level');
@@ -197,11 +199,16 @@ CREATE TABLE IF NOT EXISTS ref_code_destination_type PARTITION OF ref_code FOR V
 CREATE TABLE IF NOT EXISTS ref_code_event_type PARTITION OF ref_code FOR VALUES IN ('event_type');
 CREATE TABLE IF NOT EXISTS ref_code_package_type PARTITION OF ref_code FOR VALUES IN ('package_type');
 CREATE TABLE IF NOT EXISTS ref_code_room_type PARTITION OF ref_code FOR VALUES IN ('room_type');
+CREATE TABLE IF NOT EXISTS ref_code_view_type PARTITION OF ref_code FOR VALUES IN ('view_type');
 CREATE TABLE IF NOT EXISTS ref_code_amenity_type PARTITION OF ref_code FOR VALUES IN ('amenity_type');
+CREATE TABLE IF NOT EXISTS ref_code_membership_tier PARTITION OF ref_code FOR VALUES IN ('membership_tier');
+CREATE TABLE IF NOT EXISTS ref_code_membership_campaign PARTITION OF ref_code FOR VALUES IN ('membership_campaign');
+CREATE TABLE IF NOT EXISTS ref_code_incident_category PARTITION OF ref_code FOR VALUES IN ('incident_category');
 
 -- Index d'unicité nécessaires sur chaque partition (id & code)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_id ON ref_code_contact_kind (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_id ON ref_code_media_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_tag_id ON ref_code_media_tag (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_social_network_id ON ref_code_social_network (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_weekday_id ON ref_code_weekday (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_id ON ref_code_language_level (id);
@@ -238,10 +245,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_id ON ref_code_de
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_id ON ref_code_event_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_id ON ref_code_package_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_id ON ref_code_room_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_id ON ref_code_view_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_id ON ref_code_amenity_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_id ON ref_code_membership_tier (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_campaign_id ON ref_code_membership_campaign (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_incident_category_id ON ref_code_incident_category (id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_code ON ref_code_contact_kind(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_code ON ref_code_media_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_tag_code ON ref_code_media_tag(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_social_network_code ON ref_code_social_network(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_weekday_code ON ref_code_weekday(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_code ON ref_code_language_level(code);
@@ -278,7 +290,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_code ON ref_code_
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_code ON ref_code_event_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_code ON ref_code_package_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_code ON ref_code_room_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_code ON ref_code_view_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_code ON ref_code_amenity_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_code ON ref_code_membership_tier(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_campaign_code ON ref_code_membership_campaign(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_incident_category_code ON ref_code_incident_category(code);
 
 -- =====================================================
 -- Référentiels et i18n
@@ -317,7 +333,7 @@ CREATE TABLE IF NOT EXISTS ref_amenity (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   code VARCHAR(50) NOT NULL UNIQUE,
   name VARCHAR(100) NOT NULL,
-  family_id UUID NOT NULL REFERENCES ref_code_amenity_family(id),
+  family_id UUID NOT NULL REFERENCES ref_code_amenity_family(id) ON DELETE RESTRICT,
   scope TEXT DEFAULT 'object' CHECK (scope IN ('object','meeting_room','both')),
   description TEXT,
   icon_url TEXT,
@@ -384,6 +400,16 @@ CREATE TABLE IF NOT EXISTS ref_document (
   extra JSONB
 );
 
+CREATE TABLE IF NOT EXISTS ref_review_source (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  icon_url TEXT,
+  base_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Link documents to a ref_code document_type when present
 -- Revert prior attempt to link documents to ref_code document_type; legal types are handled by ref_legal_type via object_legal
 ALTER TABLE IF EXISTS ref_document DROP COLUMN IF EXISTS type_id;
@@ -399,8 +425,8 @@ CREATE TABLE IF NOT EXISTS ref_tag (
   icon TEXT,
   icon_url TEXT,
   position INTEGER,
-  created_by UUID REFERENCES auth.users(id),
-  updated_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   extra JSONB,
@@ -414,7 +440,7 @@ CREATE TABLE IF NOT EXISTS tag_link (
   tag_id UUID NOT NULL REFERENCES ref_tag(id) ON DELETE CASCADE,
   target_table TEXT NOT NULL,
   target_pk TEXT NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   extra JSONB,
   CONSTRAINT uq_tag_unique_target UNIQUE (tag_id, target_table, target_pk)
@@ -477,14 +503,35 @@ CREATE TABLE IF NOT EXISTS object (
   is_editing BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
-  updated_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
+  name_search_vector tsvector GENERATED ALWAYS AS (to_tsvector('french', COALESCE(name, ''))) STORED,
+  -- Cached aggregates for quick lookups (updated by triggers)
+  cached_min_price NUMERIC(10,2),
+  cached_main_image_url TEXT,
+  cached_rating NUMERIC(3,2),
+  cached_review_count INTEGER DEFAULT 0,
+  cached_is_open_now BOOLEAN,
+  cached_amenity_codes TEXT[],
+  cached_payment_codes TEXT[],
+  cached_environment_tags TEXT[],
+  cached_language_codes TEXT[],
+  cached_classification_codes TEXT[],
+  -- Current version number (for efficient versioning without MAX() scan)
+  current_version INTEGER NOT NULL DEFAULT 0,
   extra JSONB,
   name_i18n JSONB,
   CONSTRAINT chk_object_id_shape CHECK (id ~ '^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$'),
   CONSTRAINT chk_object_status CHECK (status IN ('draft','published','archived','hidden'))
 );
+
+-- Ensure cache columns exist for existing installations
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_amenity_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_payment_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_environment_tags TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_language_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_classification_codes TEXT[];
 
 -- Génération d'ID si absent
 CREATE OR REPLACE FUNCTION api.before_insert_object_generate_id()
@@ -588,6 +635,11 @@ CREATE TABLE IF NOT EXISTS object_location (
     END
   ) STORED,
 
+  -- Full-text search vector for city
+  city_search_vector tsvector GENERATED ALWAYS AS (
+    to_tsvector('french', COALESCE(immutable_unaccent(lower(city)), ''))
+  ) STORED,
+
   -- Constraints
   CONSTRAINT chk_object_or_place CHECK ((object_id IS NOT NULL AND place_id IS NULL) OR (object_id IS NULL AND place_id IS NOT NULL)),
   CONSTRAINT chk_latitude_range_unified CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
@@ -611,10 +663,10 @@ CREATE TABLE IF NOT EXISTS pending_change (
   target_pk TEXT,
   action TEXT NOT NULL CHECK (action IN ('insert','update','delete')),
   payload JSONB NOT NULL,
-  submitted_by UUID REFERENCES auth.users(id),
+  submitted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','applied')),
-  reviewed_by UUID REFERENCES auth.users(id),
+  reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
   applied_at TIMESTAMPTZ,
@@ -625,6 +677,11 @@ CREATE TABLE IF NOT EXISTS pending_change (
 
 CREATE INDEX IF NOT EXISTS idx_pending_change_object_status ON pending_change(object_id, status);
 CREATE INDEX IF NOT EXISTS idx_pending_change_target ON pending_change(target_table, target_pk);
+-- Index to support querying validated changes by effective timestamp
+DROP INDEX IF EXISTS idx_pending_change_validated_timestamp;
+CREATE INDEX IF NOT EXISTS idx_pending_change_validated_effective_ts
+ON pending_change (status, (COALESCE(applied_at, reviewed_at)))
+WHERE status IN ('approved', 'applied');
 
 CREATE TRIGGER update_pending_change_updated_at BEFORE UPDATE ON pending_change FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -695,7 +752,7 @@ CREATE TABLE IF NOT EXISTS ref_contact_role (
 CREATE TABLE IF NOT EXISTS contact_channel (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
-  kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id),
+  kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id) ON DELETE RESTRICT,
   value TEXT NOT NULL,
   role_id UUID REFERENCES ref_contact_role(id) ON DELETE RESTRICT,
   is_public BOOLEAN NOT NULL DEFAULT TRUE,
@@ -712,7 +769,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_contact_primary ON contact_channel(object_i
 CREATE TABLE IF NOT EXISTS media (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
-  media_type_id UUID NOT NULL REFERENCES ref_code_media_type(id),
+  media_type_id UUID NOT NULL REFERENCES ref_code_media_type(id) ON DELETE RESTRICT,
   title TEXT,
   credit TEXT,
   url TEXT NOT NULL,
@@ -739,6 +796,10 @@ CREATE TABLE IF NOT EXISTS media (
   CONSTRAINT chk_media_target_present CHECK (object_id IS NOT NULL OR place_id IS NOT NULL),
   CONSTRAINT chk_media_url_shape CHECK (url ~* '^https?://')
 );
+
+-- Add organization context to media table (similar to object_description)
+ALTER TABLE IF EXISTS media
+  ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
 
 -- Ensure new enum labels exist on upgraded databases
 DO $$ BEGIN
@@ -885,6 +946,33 @@ CREATE TABLE IF NOT EXISTS object_external_id (
   CONSTRAINT uq_object_org UNIQUE (object_id, organization_object_id)
 );
 
+-- Avis (reviews) importés
+CREATE TABLE IF NOT EXISTS object_review (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  source_id UUID NOT NULL REFERENCES ref_review_source(id) ON DELETE RESTRICT,
+  external_id TEXT,
+  rating NUMERIC(3,2) CHECK (rating >= 0 AND rating <= 5),
+  rating_max INTEGER DEFAULT 5,
+  title TEXT,
+  content TEXT,
+  author_name TEXT,
+  author_avatar_url TEXT,
+  review_date DATE,
+  visit_date DATE,
+  traveler_type TEXT,
+  language_id UUID REFERENCES ref_language(id) ON DELETE SET NULL,
+  helpful_count INTEGER DEFAULT 0,
+  response TEXT,
+  response_date DATE,
+  is_published BOOLEAN DEFAULT TRUE,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  raw_data JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (source_id, external_id)
+);
+
 -- Origine
 CREATE TABLE IF NOT EXISTS object_origin (
   object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
@@ -965,7 +1053,7 @@ CREATE TABLE IF NOT EXISTS object_relation (
 CREATE TABLE IF NOT EXISTS object_language (
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   language_id UUID NOT NULL REFERENCES ref_language(id) ON DELETE CASCADE,
-  level_id UUID REFERENCES ref_code_language_level(id),
+  level_id UUID REFERENCES ref_code_language_level(id) ON DELETE SET NULL,
   extra JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (object_id, language_id)
@@ -987,6 +1075,14 @@ CREATE TABLE IF NOT EXISTS object_amenity (
   amenity_id UUID NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (object_id, amenity_id)
+);
+
+-- Media tags (M:N - multiple tags per media)
+CREATE TABLE IF NOT EXISTS media_tag (
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES ref_code_media_tag(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (media_id, tag_id)
 );
 
 -- ORG/Contacts/Actor
@@ -1037,8 +1133,8 @@ CREATE TABLE IF NOT EXISTS actor (
   display_name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(display_name))) STORED,
   first_name_normalized TEXT GENERATED ALWAYS AS (CASE WHEN first_name IS NOT NULL THEN immutable_unaccent(lower(first_name)) END) STORED,
   last_name_normalized TEXT GENERATED ALWAYS AS (CASE WHEN last_name IS NOT NULL THEN immutable_unaccent(lower(last_name)) END) STORED,
-  created_by UUID REFERENCES auth.users(id),
-  updated_by UUID REFERENCES auth.users(id)
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 CREATE TABLE IF NOT EXISTS actor_channel (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1046,7 +1142,7 @@ CREATE TABLE IF NOT EXISTS actor_channel (
   kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id) ON DELETE RESTRICT,
   value TEXT NOT NULL,
   is_primary BOOLEAN DEFAULT FALSE,
-  role_id UUID REFERENCES ref_contact_role(id),
+  role_id UUID REFERENCES ref_contact_role(id) ON DELETE SET NULL,
   position INTEGER DEFAULT 0,
   extra JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1133,7 +1229,7 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   occurred_at TIMESTAMPTZ,
   due_at TIMESTAMPTZ,
   duration_min INTEGER,
-  owner UUID REFERENCES auth.users(id),
+  owner UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   handled_by_actor_id UUID REFERENCES actor(id) ON DELETE SET NULL,
   demand_topic_id UUID REFERENCES ref_code_demand_topic(id) ON DELETE RESTRICT,
   demand_subtopic_id UUID REFERENCES ref_code_demand_subtopic(id) ON DELETE RESTRICT,
@@ -1187,7 +1283,7 @@ CREATE TABLE IF NOT EXISTS crm_task (
   status crm_task_status NOT NULL DEFAULT 'todo',
   priority crm_task_priority NOT NULL DEFAULT 'medium',
   due_at TIMESTAMPTZ,
-  owner UUID REFERENCES auth.users(id),
+  owner UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   related_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE SET NULL,
   extra JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1348,6 +1444,50 @@ CREATE TABLE IF NOT EXISTS meeting_room_equipment (
   PRIMARY KEY (room_id, equipment_id)
 );
 
+-- Types de chambres (Hébergement)
+CREATE TABLE IF NOT EXISTS object_room_type (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  name_i18n JSONB,
+  description TEXT,
+  description_i18n JSONB,
+  capacity_adults INTEGER CHECK (capacity_adults IS NULL OR capacity_adults >= 0),
+  capacity_children INTEGER CHECK (capacity_children IS NULL OR capacity_children >= 0),
+  capacity_total INTEGER CHECK (capacity_total IS NULL OR capacity_total >= 0),
+  size_sqm NUMERIC(6,2),
+  bed_config TEXT,
+  bed_config_i18n JSONB,
+  total_rooms INTEGER DEFAULT 1,
+  floor_level INTEGER,
+  view_type_id UUID REFERENCES ref_code_view_type(id) ON DELETE SET NULL,
+  base_price NUMERIC(12,2),
+  currency TEXT DEFAULT 'EUR',
+  is_accessible BOOLEAN DEFAULT FALSE,
+  is_published BOOLEAN DEFAULT TRUE,
+  position INTEGER DEFAULT 0,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (object_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS object_room_type_amenity (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  amenity_id UUID NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, amenity_id)
+);
+
+CREATE TABLE IF NOT EXISTS object_room_type_media (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, media_id)
+);
+
 -- Ouvertures riches
 CREATE TABLE IF NOT EXISTS opening_period (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1422,6 +1562,52 @@ CREATE TABLE IF NOT EXISTS object_pet_policy (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Promotions
+CREATE TABLE IF NOT EXISTS promotion (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT UNIQUE,
+  name TEXT NOT NULL,
+  name_i18n JSONB,
+  description TEXT,
+  description_i18n JSONB,
+  type_id UUID REFERENCES ref_code_promotion_type(id) ON DELETE RESTRICT,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed_amount', 'free_item')),
+  discount_value NUMERIC(12,2) NOT NULL,
+  currency TEXT,
+  valid_from TIMESTAMPTZ,
+  valid_to TIMESTAMPTZ,
+  max_uses INTEGER,
+  max_uses_per_user INTEGER,
+  current_uses INTEGER DEFAULT 0,
+  min_purchase_amount NUMERIC(12,2),
+  applicable_object_types TEXT[],
+  season_id UUID REFERENCES ref_code_season_type(id) ON DELETE SET NULL,
+  partner_org_id TEXT REFERENCES object(id) ON DELETE SET NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  is_public BOOLEAN DEFAULT TRUE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_promo_currency_amount CHECK (discount_type <> 'fixed_amount' OR currency IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS promotion_object (
+  promotion_id UUID NOT NULL REFERENCES promotion(id) ON DELETE CASCADE,
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (promotion_id, object_id)
+);
+
+CREATE TABLE IF NOT EXISTS promotion_usage (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  promotion_id UUID NOT NULL REFERENCES promotion(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  object_id TEXT REFERENCES object(id) ON DELETE SET NULL,
+  used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  amount_saved NUMERIC(12,2),
+  currency TEXT
+);
+
 -- =====================================================
 -- Spécifiques FMA (événements)
 -- =====================================================
@@ -1460,6 +1646,15 @@ CREATE TABLE IF NOT EXISTS object_iti (
   elevation_gain INTEGER,
   is_loop BOOLEAN DEFAULT FALSE,
   geom GEOGRAPHY(LINESTRING, 4326),
+  -- Cached GPX/KML for performance (auto-regenerated on geometry change)
+  cached_gpx TEXT,
+  cached_kml TEXT,
+  cached_gpx_generated_at TIMESTAMPTZ,
+  -- Itinerary status (open/closed/partial)
+  open_status TEXT CHECK (open_status IS NULL OR open_status IN ('open', 'closed', 'partially_closed', 'warning')),
+  status_note TEXT,
+  status_document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  status_updated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1559,6 +1754,496 @@ CREATE TABLE IF NOT EXISTS object_iti_profile (
 );
 
 -- =====================================================
+-- Tourism CRM extensions
+-- =====================================================
+
+-- Memberships & subscriptions
+CREATE TABLE IF NOT EXISTS object_membership (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES ref_code_membership_campaign(id) ON DELETE RESTRICT,
+  tier_id UUID NOT NULL REFERENCES ref_code_membership_tier(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'prospect' CHECK (status IN ('prospect','invoiced','paid','canceled','lapsed')),
+  starts_at DATE,
+  ends_at DATE,
+  payment_date DATE,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_object_membership_dates CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at)
+);
+CREATE INDEX IF NOT EXISTS idx_object_membership_org ON object_membership(org_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_membership_object ON object_membership(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_membership_campaign_status ON object_membership(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_object_membership_current
+ON object_membership(org_object_id, object_id, starts_at, ends_at)
+WHERE status IN ('invoiced','paid');
+
+CREATE OR REPLACE FUNCTION api.handle_membership_status_transition()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_target_status object_status := 'hidden';
+BEGIN
+  IF NEW.status = 'lapsed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    IF NEW.object_id IS NOT NULL THEN
+      UPDATE object o
+      SET status = v_target_status
+      WHERE o.id = NEW.object_id
+        AND o.status = 'published';
+    ELSE
+      UPDATE object o
+      SET status = v_target_status
+      WHERE o.status = 'published'
+        AND EXISTS (
+          SELECT 1
+          FROM object_org_link l
+          WHERE l.object_id = o.id
+            AND l.org_object_id = NEW.org_object_id
+        );
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_membership_status_transition ON object_membership;
+CREATE TRIGGER trg_membership_status_transition
+AFTER INSERT OR UPDATE OF status ON object_membership
+FOR EACH ROW EXECUTE FUNCTION api.handle_membership_status_transition();
+
+-- Incident reporting
+CREATE TABLE IF NOT EXISTS incident_report (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  category_id UUID NOT NULL REFERENCES ref_code_incident_category(id) ON DELETE RESTRICT,
+  geom GEOGRAPHY(POINT, 4326),
+  description TEXT,
+  reporter_email TEXT,
+  reporter_name TEXT,
+  media_urls TEXT[],
+  severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','critical')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','resolved','rejected')),
+  crm_task_id UUID REFERENCES crm_task(id) ON DELETE SET NULL,
+  crm_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE SET NULL,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_incident_reporter_email_shape
+    CHECK (
+      reporter_email IS NULL
+      OR reporter_email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_incident_report_object_status ON incident_report(object_id, status);
+CREATE INDEX IF NOT EXISTS idx_incident_report_category ON incident_report(category_id);
+CREATE INDEX IF NOT EXISTS idx_incident_report_geom ON incident_report USING GIST(geom);
+CREATE INDEX IF NOT EXISTS idx_incident_report_created_at ON incident_report(created_at DESC);
+
+CREATE OR REPLACE FUNCTION api.create_crm_artifacts_from_incident()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_interaction_id UUID;
+  v_task_id UUID;
+  v_priority crm_task_priority;
+BEGIN
+  v_priority := CASE NEW.severity
+    WHEN 'critical' THEN 'urgent'::crm_task_priority
+    WHEN 'medium' THEN 'high'::crm_task_priority
+    ELSE 'medium'::crm_task_priority
+  END;
+
+  INSERT INTO crm_interaction (
+    object_id,
+    interaction_type,
+    direction,
+    status,
+    subject,
+    body,
+    source,
+    occurred_at,
+    is_actionable,
+    extra
+  ) VALUES (
+    NEW.object_id,
+    'note',
+    'internal',
+    'done',
+    'Incident report received',
+    COALESCE(NEW.description, 'No details provided'),
+    'incident_report',
+    NOW(),
+    TRUE,
+    jsonb_build_object(
+      'incident_id', NEW.id,
+      'severity', NEW.severity,
+      'category_id', NEW.category_id
+    )
+  )
+  RETURNING id INTO v_interaction_id;
+
+  INSERT INTO crm_task (
+    object_id,
+    title,
+    description,
+    status,
+    priority,
+    related_interaction_id,
+    extra
+  ) VALUES (
+    NEW.object_id,
+    'Maintenance incident to review',
+    COALESCE(NEW.description, 'No details provided'),
+    'todo',
+    v_priority,
+    v_interaction_id,
+    jsonb_build_object(
+      'incident_id', NEW.id,
+      'severity', NEW.severity
+    )
+  )
+  RETURNING id INTO v_task_id;
+
+  UPDATE incident_report
+  SET crm_task_id = v_task_id,
+      crm_interaction_id = v_interaction_id
+  WHERE id = NEW.id;
+
+  IF NEW.severity = 'critical' THEN
+    UPDATE object_iti
+    SET open_status = 'warning',
+        status_note = COALESCE(status_note, 'Critical incident reported'),
+        status_updated_at = NOW()
+    WHERE object_id = NEW.object_id
+      AND COALESCE(open_status, 'open') <> 'closed';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_incident_report_after_insert ON incident_report;
+CREATE TRIGGER trg_incident_report_after_insert
+AFTER INSERT ON incident_report
+FOR EACH ROW EXECUTE FUNCTION api.create_crm_artifacts_from_incident();
+
+-- Publication / print management
+CREATE TABLE IF NOT EXISTS publication (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  target_audience TEXT,
+  year INTEGER CHECK (year IS NULL OR (year BETWEEN 2000 AND 2200)),
+  status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning','proofing','at_press','published')),
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_publication_code_normalized CHECK (code = immutable_unaccent(lower(code)))
+);
+
+CREATE TABLE IF NOT EXISTS publication_object (
+  publication_id UUID NOT NULL REFERENCES publication(id) ON DELETE CASCADE,
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  custom_print_text TEXT,
+  workflow_status TEXT NOT NULL DEFAULT 'selected'
+    CHECK (workflow_status IN ('selected','proof_sent','changes_requested','validated_bat','rejected')),
+  page_number INTEGER CHECK (page_number IS NULL OR page_number > 0),
+  proof_sent_at TIMESTAMPTZ,
+  validated_bat_at TIMESTAMPTZ,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (publication_id, object_id)
+);
+CREATE INDEX IF NOT EXISTS idx_publication_status_year ON publication(status, year);
+CREATE INDEX IF NOT EXISTS idx_publication_object_status ON publication_object(workflow_status, publication_id);
+CREATE INDEX IF NOT EXISTS idx_publication_object_object_id ON publication_object(object_id);
+
+CREATE OR REPLACE FUNCTION api.set_publication_workflow_timestamps()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
+    NEW.proof_sent_at := NOW();
+  END IF;
+  IF NEW.workflow_status = 'validated_bat' AND (OLD.workflow_status IS DISTINCT FROM 'validated_bat') THEN
+    NEW.validated_bat_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_publication_object_workflow_timestamps ON publication_object;
+CREATE TRIGGER trg_publication_object_workflow_timestamps
+BEFORE UPDATE OF workflow_status ON publication_object
+FOR EACH ROW EXECUTE FUNCTION api.set_publication_workflow_timestamps();
+
+CREATE OR REPLACE FUNCTION api.log_publication_proof_interaction()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
+    INSERT INTO crm_interaction (
+      object_id,
+      interaction_type,
+      direction,
+      status,
+      subject,
+      body,
+      source,
+      occurred_at,
+      is_actionable,
+      extra
+    ) VALUES (
+      NEW.object_id,
+      'email',
+      'outbound',
+      'done',
+      'Proof sent for publication',
+      'A PDF proof was sent for publication workflow.',
+      'publication_workflow',
+      NOW(),
+      TRUE,
+      jsonb_build_object(
+        'publication_id', NEW.publication_id,
+        'workflow_status', NEW.workflow_status
+      )
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_publication_proof_interaction ON publication_object;
+CREATE TRIGGER trg_publication_proof_interaction
+AFTER UPDATE OF workflow_status ON publication_object
+FOR EACH ROW EXECUTE FUNCTION api.log_publication_proof_interaction();
+
+-- Structured quality audits
+CREATE TABLE IF NOT EXISTS audit_template (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE RESTRICT,
+  classification_value_id UUID REFERENCES ref_classification_value(id) ON DELETE RESTRICT,
+  code TEXT,
+  name TEXT NOT NULL,
+  passing_score_required INTEGER NOT NULL DEFAULT 0 CHECK (passing_score_required >= 0),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_audit_template_scheme_name UNIQUE (scheme_id, name),
+  CONSTRAINT uq_audit_template_code UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS audit_criteria (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  template_id UUID NOT NULL REFERENCES audit_template(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  question TEXT NOT NULL,
+  max_points INTEGER NOT NULL CHECK (max_points > 0),
+  is_mandatory BOOLEAN NOT NULL DEFAULT FALSE,
+  position INTEGER NOT NULL DEFAULT 0,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_audit_criteria_template_code UNIQUE (template_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS audit_session (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES audit_template(id) ON DELETE RESTRICT,
+  auditor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  audit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  total_score INTEGER NOT NULL DEFAULT 0 CHECK (total_score >= 0),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','completed','certified','failed')),
+  certified_at TIMESTAMPTZ,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS audit_result (
+  session_id UUID NOT NULL REFERENCES audit_session(id) ON DELETE CASCADE,
+  criteria_id UUID NOT NULL REFERENCES audit_criteria(id) ON DELETE CASCADE,
+  points_awarded INTEGER NOT NULL DEFAULT 0 CHECK (points_awarded >= 0),
+  auditor_note TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (session_id, criteria_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_template_scheme_active ON audit_template(scheme_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_audit_criteria_template ON audit_criteria(template_id, position);
+CREATE INDEX IF NOT EXISTS idx_audit_session_object_status ON audit_session(object_id, status, audit_date DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_result_session ON audit_result(session_id);
+
+CREATE OR REPLACE FUNCTION api.validate_audit_result_points()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_max_points INTEGER;
+BEGIN
+  SELECT c.max_points INTO v_max_points
+  FROM audit_criteria c
+  WHERE c.id = NEW.criteria_id;
+
+  IF v_max_points IS NULL THEN
+    RAISE EXCEPTION 'Unknown criteria_id %', NEW.criteria_id;
+  END IF;
+  IF NEW.points_awarded < 0 OR NEW.points_awarded > v_max_points THEN
+    RAISE EXCEPTION 'points_awarded (%) must be between 0 and %', NEW.points_awarded, v_max_points;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_audit_result_points ON audit_result;
+CREATE TRIGGER trg_validate_audit_result_points
+BEFORE INSERT OR UPDATE OF points_awarded, criteria_id ON audit_result
+FOR EACH ROW EXECUTE FUNCTION api.validate_audit_result_points();
+
+CREATE OR REPLACE FUNCTION api.recompute_audit_session_score()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_session_id UUID;
+BEGIN
+  v_session_id := COALESCE(NEW.session_id, OLD.session_id);
+
+  UPDATE audit_session s
+  SET total_score = COALESCE((
+      SELECT SUM(ar.points_awarded)
+      FROM audit_result ar
+      WHERE ar.session_id = v_session_id
+    ), 0)
+  WHERE s.id = v_session_id;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_recompute_audit_session_score ON audit_result;
+CREATE TRIGGER trg_recompute_audit_session_score
+AFTER INSERT OR UPDATE OR DELETE ON audit_result
+FOR EACH ROW EXECUTE FUNCTION api.recompute_audit_session_score();
+
+CREATE OR REPLACE FUNCTION api.sync_classification_from_audit_session()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_scheme_id UUID;
+  v_value_id UUID;
+  v_validity_months INTEGER;
+BEGIN
+  IF NEW.status = 'certified' AND (OLD.status IS DISTINCT FROM 'certified') THEN
+    NEW.certified_at := COALESCE(NEW.certified_at, NOW());
+
+    SELECT t.scheme_id,
+           t.classification_value_id,
+           COALESCE(NULLIF((t.metadata->>'validity_months'),'')::INTEGER, 36)
+    INTO v_scheme_id, v_value_id, v_validity_months
+    FROM audit_template t
+    WHERE t.id = NEW.template_id;
+
+    IF v_scheme_id IS NOT NULL AND v_value_id IS NOT NULL THEN
+      UPDATE object_classification oc
+      SET awarded_at = NEW.audit_date,
+          valid_until = NEW.audit_date + make_interval(months => GREATEST(v_validity_months, 1)),
+          status = 'granted',
+          source = 'audit',
+          note = COALESCE(oc.note, 'Granted from certified audit session'),
+          updated_at = NOW()
+      WHERE oc.object_id = NEW.object_id
+        AND oc.scheme_id = v_scheme_id
+        AND oc.value_id = v_value_id
+        AND COALESCE(oc.source, '') = 'audit';
+
+      IF NOT FOUND THEN
+        INSERT INTO object_classification (
+          object_id,
+          scheme_id,
+          value_id,
+          awarded_at,
+          valid_until,
+          status,
+          source,
+          note
+        ) VALUES (
+          NEW.object_id,
+          v_scheme_id,
+          v_value_id,
+          NEW.audit_date,
+          NEW.audit_date + make_interval(months => GREATEST(v_validity_months, 1)),
+          'granted',
+          'audit',
+          'Granted from certified audit session'
+        );
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_classification_from_audit_session ON audit_session;
+CREATE TRIGGER trg_sync_classification_from_audit_session
+BEFORE UPDATE OF status ON audit_session
+FOR EACH ROW EXECUTE FUNCTION api.sync_classification_from_audit_session();
+
+DROP TRIGGER IF EXISTS update_object_membership_updated_at ON object_membership;
+CREATE TRIGGER update_object_membership_updated_at
+BEFORE UPDATE ON object_membership
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_incident_report_updated_at ON incident_report;
+CREATE TRIGGER update_incident_report_updated_at
+BEFORE UPDATE ON incident_report
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_publication_updated_at ON publication;
+CREATE TRIGGER update_publication_updated_at
+BEFORE UPDATE ON publication
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_publication_object_updated_at ON publication_object;
+CREATE TRIGGER update_publication_object_updated_at
+BEFORE UPDATE ON publication_object
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_template_updated_at ON audit_template;
+CREATE TRIGGER update_audit_template_updated_at
+BEFORE UPDATE ON audit_template
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_criteria_updated_at ON audit_criteria;
+CREATE TRIGGER update_audit_criteria_updated_at
+BEFORE UPDATE ON audit_criteria
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_session_updated_at ON audit_session;
+CREATE TRIGGER update_audit_session_updated_at
+BEFORE UPDATE ON audit_session
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_result_updated_at ON audit_result;
+CREATE TRIGGER update_audit_result_updated_at
+BEFORE UPDATE ON audit_result
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
 -- Classifications objets (labels)
 -- =====================================================
  
@@ -1604,6 +2289,9 @@ END; $$ LANGUAGE plpgsql;
 
 SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE));
 SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');
+
+-- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
+CREATE TABLE IF NOT EXISTS audit.audit_log_default PARTITION OF audit.audit_log DEFAULT;
 
 CREATE OR REPLACE FUNCTION audit.ensure_future_partitions(months_ahead INTEGER DEFAULT 3)
 RETURNS TEXT AS $$
@@ -1651,7 +2339,11 @@ END; $$ LANGUAGE plpgsql;
 COMMENT ON TABLE audit.audit_log IS 'Partitioned audit log table tracking all UPDATE and DELETE operations on public tables.';
 
 CREATE OR REPLACE FUNCTION audit.log_row_changes()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = audit, public
+AS $$
 DECLARE v_pk JSONB := NULL; v_changed_by TEXT := NULL;
 BEGIN
   v_changed_by := COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), NULLIF(current_setting('request.jwt.claim.sub', true), ''), current_user);
@@ -1666,7 +2358,8 @@ BEGIN
     RETURN OLD;
   END IF;
   RETURN NULL;
-END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+END;
+$$;
 
 -- Attacher triggers d'audit
 DO $$
@@ -1725,17 +2418,28 @@ END; $$ LANGUAGE plpgsql;
 SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE));
 SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');
 
+-- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
+CREATE TABLE IF NOT EXISTS object_version_default PARTITION OF object_version DEFAULT;
+
 CREATE TRIGGER trg_audit_object_version AFTER UPDATE OR DELETE ON object_version FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
 
 CREATE OR REPLACE FUNCTION save_object_version()
 RETURNS TRIGGER AS $$
 DECLARE v_version_number INTEGER; v_change_type TEXT;
 BEGIN
-  IF TG_OP = 'INSERT' THEN v_change_type := 'insert';
-  ELSIF TG_OP = 'UPDATE' THEN v_change_type := 'update';
-  ELSIF TG_OP = 'DELETE' THEN v_change_type := 'delete'; END IF;
-
-  SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_version_number FROM object_version WHERE object_id = COALESCE(NEW.id, OLD.id);
+  IF TG_OP = 'INSERT' THEN 
+    v_change_type := 'insert';
+    -- For INSERT, use current_version from NEW (should be 1 after increment trigger)
+    v_version_number := COALESCE(NEW.current_version, 1);
+  ELSIF TG_OP = 'UPDATE' THEN 
+    v_change_type := 'update';
+    -- For UPDATE, use current_version from NEW (already incremented)
+    v_version_number := COALESCE(NEW.current_version, OLD.current_version, 1);
+  ELSIF TG_OP = 'DELETE' THEN 
+    v_change_type := 'delete';
+    -- For DELETE (BEFORE trigger), use OLD.current_version + 1
+    v_version_number := COALESCE(OLD.current_version, 0) + 1;
+  END IF;
 
   INSERT INTO object_version (object_id, version_number, data, created_by, change_type)
   VALUES (COALESCE(NEW.id, OLD.id), v_version_number, to_jsonb(COALESCE(NEW, OLD)), COALESCE(NEW.created_by, OLD.created_by), v_change_type);
@@ -1757,7 +2461,69 @@ CREATE INDEX IF NOT EXISTS idx_object_status_draft ON object(id, name, object_ty
 CREATE INDEX IF NOT EXISTS idx_object_status_archived ON object(id, name, object_type) WHERE status = 'archived';
 CREATE INDEX IF NOT EXISTS idx_object_name_normalized_trgm ON object USING GIN (name_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_name_normalized_btree ON object (name_normalized);
+CREATE INDEX IF NOT EXISTS idx_object_name_search_vector ON object USING GIN (name_search_vector);
+CREATE INDEX IF NOT EXISTS idx_object_cached_amenity_codes_gin ON object USING GIN (cached_amenity_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_payment_codes_gin ON object USING GIN (cached_payment_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_environment_tags_gin ON object USING GIN (cached_environment_tags);
+CREATE INDEX IF NOT EXISTS idx_object_cached_language_codes_gin ON object USING GIN (cached_language_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_classification_codes_gin ON object USING GIN (cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_object_location_city_search_vector ON object_location USING GIN (city_search_vector);
+
+-- Covering index for map view and filtered list base CTE (index-only scan)
+CREATE INDEX IF NOT EXISTS idx_location_main_covering
+ON object_location(object_id)
+INCLUDE (latitude, longitude, address1, postcode, city, city_search_vector, geog2)
+WHERE is_main_location = TRUE;
+
 CREATE INDEX IF NOT EXISTS idx_object_updated_at_source ON object(updated_at_source);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_id ON object(updated_at, id);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_source_id ON object(updated_at_source, id);
+
+-- Partial indexes for hot paths (published objects only)
+CREATE INDEX IF NOT EXISTS idx_object_published_type_updated 
+ON object(object_type, updated_at, id) 
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_published_updated_at_id
+ON object(updated_at, id)
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_published_updated_at_source_id
+ON object(updated_at_source, id)
+WHERE status = 'published';
+
+CREATE INDEX IF NOT EXISTS idx_object_published_name_search
+ON object USING GIN(name_search_vector)
+WHERE status = 'published';
+
+-- Only index main locations with coordinates
+CREATE INDEX IF NOT EXISTS idx_location_main_with_coords
+ON object_location(object_id, latitude, longitude)
+WHERE is_main_location = TRUE AND latitude IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_location_main_city_search
+ON object_location USING GIN(city_search_vector)
+WHERE is_main_location = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_location_main_geog_gist
+ON object_location USING GIST(geog2)
+WHERE is_main_location = TRUE AND geog2 IS NOT NULL;
+
+-- Only index published media with org context
+CREATE INDEX IF NOT EXISTS idx_media_published_org
+ON media(object_id, org_object_id, is_main, position)
+WHERE is_published = TRUE;
+
+-- Only index active classifications
+CREATE INDEX IF NOT EXISTS idx_classification_active
+ON object_classification(object_id, value_id, scheme_id)
+WHERE status = 'granted';
+-- Critical indexes for 1M+ row performance
+CREATE INDEX IF NOT EXISTS idx_object_type_status ON object(object_type, status);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at ON object(updated_at);
+DROP INDEX IF EXISTS idx_object_updated_at_brin;
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_brin
+ON object(updated_at)
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_org_link_org ON object_org_link(org_object_id, is_primary);
 -- Address indexes removed; see object_location indexes below
 -- Legacy location indexes removed (using object_location)
 CREATE INDEX IF NOT EXISTS idx_object_place_object ON object_place(object_id);
@@ -1770,6 +2536,8 @@ CREATE INDEX IF NOT EXISTS idx_contact_channel_public ON contact_channel(is_publ
 CREATE INDEX IF NOT EXISTS idx_contact_channel_role ON contact_channel(role_id);
 CREATE INDEX IF NOT EXISTS idx_contact_channel_object_kind_id ON contact_channel(object_id, kind_id);
 CREATE INDEX IF NOT EXISTS idx_media_object_id ON media(object_id);
+CREATE INDEX IF NOT EXISTS idx_media_org_object_id ON media(org_object_id) WHERE org_object_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_media_object_org ON media(object_id, org_object_id) WHERE org_object_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_media_place_id ON media(place_id);
 CREATE INDEX IF NOT EXISTS idx_media_media_type_id ON media(media_type_id);
 CREATE INDEX IF NOT EXISTS idx_media_is_published ON media(is_published);
@@ -1777,12 +2545,18 @@ CREATE INDEX IF NOT EXISTS idx_media_rights_expires_at ON media(rights_expires_a
 CREATE INDEX IF NOT EXISTS idx_media_analyse_data ON media USING GIN (analyse_data);
 CREATE INDEX IF NOT EXISTS idx_media_is_main ON media(is_main);
 CREATE INDEX IF NOT EXISTS idx_media_visibility ON media(visibility);
+DROP INDEX IF EXISTS idx_media_updated_at_brin;
+CREATE INDEX IF NOT EXISTS idx_media_updated_at_brin
+ON media(updated_at)
+WHERE is_published = TRUE;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_media_one_main_per_type ON media(object_id, media_type_id) WHERE is_main;
 CREATE INDEX IF NOT EXISTS idx_media_title_normalized_trgm ON media USING GIN (title_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_media_description_normalized_trgm ON media USING GIN (description_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_description_object_id ON object_description(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_description_normalized_trgm ON object_description USING GIN (description_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_description_chapo_normalized_trgm ON object_description USING GIN (description_chapo_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_object_description_i18n_gin
+ON object_description USING GIN (description_i18n jsonb_path_ops);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_private_description(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
@@ -1794,6 +2568,22 @@ CREATE INDEX IF NOT EXISTS idx_object_language_object_id ON object_language(obje
 CREATE INDEX IF NOT EXISTS idx_object_language_language_id ON object_language(language_id);
 CREATE INDEX IF NOT EXISTS idx_object_amenity_object_id ON object_amenity(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_amenity_amenity_id ON object_amenity(amenity_id);
+CREATE INDEX IF NOT EXISTS idx_media_tag_media_id ON media_tag(media_id);
+CREATE INDEX IF NOT EXISTS idx_media_tag_tag_id ON media_tag(tag_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_object_id ON object_review(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_source_id ON object_review(source_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_published ON object_review(is_published);
+CREATE INDEX IF NOT EXISTS idx_object_review_date ON object_review(review_date);
+CREATE INDEX IF NOT EXISTS idx_room_type_object_id ON object_room_type(object_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_published ON object_room_type(is_published);
+CREATE INDEX IF NOT EXISTS idx_room_type_view_type ON object_room_type(view_type_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_amenity_amenity_id ON object_room_type_amenity(amenity_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_media_media_id ON object_room_type_media(media_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_active_public ON promotion(is_active, is_public);
+CREATE INDEX IF NOT EXISTS idx_promotion_validity ON promotion(valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_promotion_object_object_id ON promotion_object(object_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_usage_promotion_id ON promotion_usage(promotion_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_usage_user_id ON promotion_usage(user_id);
 CREATE INDEX IF NOT EXISTS idx_object_payment_method_object_id ON object_payment_method(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_payment_method_payment_method_id ON object_payment_method(payment_method_id);
 CREATE INDEX IF NOT EXISTS idx_object_environment_tag_object_id ON object_environment_tag(object_id);
@@ -1841,10 +2631,21 @@ CREATE INDEX IF NOT EXISTS idx_object_fma_occ_object ON object_fma_occurrence(ob
 CREATE INDEX IF NOT EXISTS idx_object_fma_occ_start ON object_fma_occurrence(start_at);
 CREATE INDEX IF NOT EXISTS idx_object_iti_object_id ON object_iti(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_geom ON object_iti USING GIST (geom);
+-- Additional GPX-specific indexes
+CREATE INDEX IF NOT EXISTS idx_iti_geom_bbox
+ON object_iti USING GIST(geom)
+WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_iti_with_track
+ON object_iti(object_id, distance_km, difficulty_level)
+WHERE geom IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_object_iti_practice_object_id ON object_iti_practice(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_practice_practice_id ON object_iti_practice(practice_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_stage_object_id ON object_iti_stage(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_stage_geom_gist ON object_iti_stage USING GIST (geom);
+-- Index for stage waypoints with coordinates
+CREATE INDEX IF NOT EXISTS idx_iti_stage_with_geom
+ON object_iti_stage(object_id, position)
+WHERE geom IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_object_iti_stage_media_stage_id ON object_iti_stage_media(stage_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_stage_media_media_id ON object_iti_stage_media(media_id);
 CREATE INDEX IF NOT EXISTS idx_object_iti_section_parent_object_id ON object_iti_section(parent_object_id);
@@ -1853,6 +2654,396 @@ CREATE INDEX IF NOT EXISTS idx_object_iti_associated_object_associated_object_id
 CREATE INDEX IF NOT EXISTS idx_object_iti_profile_object ON object_iti_profile(object_id);
 CREATE INDEX IF NOT EXISTS idx_i18n_translation_target ON i18n_translation(target_table, target_pk);
 CREATE INDEX IF NOT EXISTS idx_i18n_translation_column_language ON i18n_translation(target_table, target_column, language_id);
+
+-- =====================================================
+-- Materialized views for reference data caching
+-- =====================================================
+
+-- Consolidated reference data cache for frequently accessed data
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_ref_data_json AS
+SELECT 
+  'amenity' as ref_type,
+  ra.id,
+  ra.code,
+  jsonb_build_object(
+    'code', ra.code,
+    'name', ra.name,
+    'name_i18n', ra.name_i18n,
+    'icon_url', ra.icon_url,
+    'family_code', fam.code,
+    'family_name', fam.name,
+    'family_icon_url', fam.icon_url
+  ) as json_data
+FROM ref_amenity ra
+LEFT JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+UNION ALL
+SELECT 
+  'language',
+  rl.id,
+  rl.code,
+  jsonb_build_object(
+    'code', rl.code,
+    'name', rl.name
+  ) as json_data
+FROM ref_language rl
+UNION ALL
+SELECT 
+  'media_type',
+  mt.id,
+  mt.code,
+  jsonb_build_object(
+    'code', mt.code,
+    'name', mt.name,
+    'name_i18n', mt.name_i18n,
+    'description_i18n', mt.description_i18n,
+    'icon_url', mt.icon_url
+  ) as json_data
+FROM ref_code_media_type mt
+UNION ALL
+SELECT
+  'contact_kind',
+  ck.id,
+  ck.code,
+  jsonb_build_object(
+    'code', ck.code,
+    'name', ck.name,
+    'description', ck.description,
+    'icon_url', ck.icon_url
+  ) as json_data
+FROM ref_code_contact_kind ck;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_ref_data_type_id ON mv_ref_data_json(ref_type, id);
+CREATE INDEX IF NOT EXISTS idx_mv_ref_data_code ON mv_ref_data_json(ref_type, code);
+
+-- Note: Refresh this view daily or when reference data changes
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;
+
+-- Hot-path filter projection for list/map endpoints (published + main location).
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_filtered_objects AS
+SELECT
+  o.id,
+  o.object_type,
+  o.status,
+  o.updated_at,
+  o.name_normalized,
+  o.name_search_vector,
+  ol.city_search_vector,
+  ol.latitude,
+  ol.longitude,
+  ol.geog2,
+  o.cached_min_price,
+  o.cached_main_image_url,
+  o.cached_rating,
+  o.cached_is_open_now,
+  o.cached_amenity_codes,
+  o.cached_payment_codes,
+  o.cached_environment_tags,
+  o.cached_language_codes,
+  o.cached_classification_codes
+FROM object o
+JOIN object_location ol
+  ON ol.object_id = o.id
+ AND ol.is_main_location IS TRUE
+WHERE o.status = 'published';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_filtered_objects_id
+ON mv_filtered_objects(id);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_name_search_gin
+ON mv_filtered_objects USING GIN(name_search_vector);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_city_search_gin
+ON mv_filtered_objects USING GIN(city_search_vector);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_geog_gist
+ON mv_filtered_objects USING GIST(geog2);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_amenity_codes_gin
+ON mv_filtered_objects USING GIN(cached_amenity_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_payment_codes_gin
+ON mv_filtered_objects USING GIN(cached_payment_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_environment_tags_gin
+ON mv_filtered_objects USING GIN(cached_environment_tags);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_language_codes_gin
+ON mv_filtered_objects USING GIN(cached_language_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_classification_codes_gin
+ON mv_filtered_objects USING GIN(cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_updated_at_id
+ON mv_filtered_objects(updated_at, id);
+
+-- =====================================================
+-- Triggers for cached GPX/KML generation
+-- =====================================================
+
+-- Regenerate GPX/KML when itinerary geometry changes
+CREATE OR REPLACE FUNCTION regenerate_iti_track_cache()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.geom IS DISTINCT FROM OLD.geom OR (TG_OP = 'INSERT' AND NEW.geom IS NOT NULL) THEN
+    -- Generate GPX (track only, stages added separately by export function)
+    NEW.cached_gpx := CASE 
+      WHEN NEW.geom IS NOT NULL 
+      THEN ST_AsGPX(3, NEW.geom::geometry, 15, 1, NULL, NULL)
+      ELSE NULL
+    END;
+    
+    -- Generate KML
+    NEW.cached_kml := CASE 
+      WHEN NEW.geom IS NOT NULL 
+      THEN ST_AsKML(3, NEW.geom::geometry, 15, NULL)
+      ELSE NULL
+    END;
+    
+    NEW.cached_gpx_generated_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_cache_iti_track ON object_iti;
+CREATE TRIGGER trg_cache_iti_track
+BEFORE INSERT OR UPDATE ON object_iti
+FOR EACH ROW EXECUTE FUNCTION regenerate_iti_track_cache();
+
+-- =====================================================
+-- Triggers for cached aggregate updates
+-- =====================================================
+
+-- Update cached min price when prices change
+CREATE OR REPLACE FUNCTION update_object_cached_min_price()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Prevent cascading trigger updates (e.g., when triggered from another trigger)
+  IF pg_trigger_depth() > 1 THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+  
+  UPDATE object 
+  SET cached_min_price = (
+    SELECT MIN(amount)
+    FROM object_price
+    WHERE object_id = COALESCE(NEW.object_id, OLD.object_id)
+      AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+      AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+  )
+  WHERE id = COALESCE(NEW.object_id, OLD.object_id);
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_min_price ON object_price;
+CREATE TRIGGER trg_update_cached_min_price
+AFTER INSERT OR UPDATE OR DELETE ON object_price
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_min_price();
+
+-- Update cached main image when media changes
+CREATE OR REPLACE FUNCTION update_object_cached_main_image()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Prevent cascading trigger updates (e.g., when triggered from another trigger)
+  IF pg_trigger_depth() > 1 THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+  
+  UPDATE object 
+  SET cached_main_image_url = (
+    SELECT url
+    FROM media
+    WHERE object_id = COALESCE(NEW.object_id, OLD.object_id)
+      AND is_published = TRUE
+      AND is_main = TRUE
+    ORDER BY position NULLS LAST
+    LIMIT 1
+  )
+  WHERE id = COALESCE(NEW.object_id, OLD.object_id);
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_main_image ON media;
+CREATE TRIGGER trg_update_cached_main_image
+AFTER INSERT OR UPDATE OR DELETE ON media
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_main_image();
+
+-- Refresh denormalized filter caches used by hot-path filtered listing.
+CREATE OR REPLACE FUNCTION api.refresh_object_filter_caches(p_object_id TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF p_object_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  UPDATE object o
+  SET
+    cached_amenity_codes = COALESCE((
+      SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+      FROM object_amenity oa
+      JOIN ref_amenity ra ON ra.id = oa.amenity_id
+      WHERE oa.object_id = p_object_id
+    ), ARRAY[]::TEXT[]),
+    cached_payment_codes = COALESCE((
+      SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+      FROM object_payment_method opm
+      JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+      WHERE opm.object_id = p_object_id
+    ), ARRAY[]::TEXT[]),
+    cached_environment_tags = COALESCE((
+      SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+      FROM object_environment_tag oet
+      JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+      WHERE oet.object_id = p_object_id
+    ), ARRAY[]::TEXT[]),
+    cached_language_codes = COALESCE((
+      SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+      FROM object_language ol
+      JOIN ref_language rl ON rl.id = ol.language_id
+      WHERE ol.object_id = p_object_id
+    ), ARRAY[]::TEXT[]),
+    cached_classification_codes = COALESCE((
+      SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+      FROM object_classification oc
+      JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+      JOIN ref_classification_value v ON v.id = oc.value_id
+      WHERE oc.object_id = p_object_id
+    ), ARRAY[]::TEXT[])
+  WHERE o.id = p_object_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.trg_refresh_object_filter_caches_from_child()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    PERFORM api.refresh_object_filter_caches(v_old_object_id);
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    PERFORM api.refresh_object_filter_caches(v_new_object_id);
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_amenity ON object_amenity;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_amenity
+AFTER INSERT OR UPDATE OR DELETE ON object_amenity
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_payment_method ON object_payment_method;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_payment_method
+AFTER INSERT OR UPDATE OR DELETE ON object_payment_method
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_environment_tag ON object_environment_tag;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_environment_tag
+AFTER INSERT OR UPDATE OR DELETE ON object_environment_tag
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_language ON object_language;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_language
+AFTER INSERT OR UPDATE OR DELETE ON object_language
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_classification ON object_classification;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_classification
+AFTER INSERT OR UPDATE OR DELETE ON object_classification
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+-- One-time/upgrade backfill for existing object rows
+UPDATE object o
+SET
+  cached_amenity_codes = COALESCE((
+    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_payment_codes = COALESCE((
+    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_environment_tags = COALESCE((
+    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_language_codes = COALESCE((
+    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_classification_codes = COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = o.id
+  ), ARRAY[]::TEXT[]);
+
+-- Batch refresh cached_is_open_now for all objects
+-- Should be called via pg_cron every 15 minutes:
+-- SELECT cron.schedule('refresh-open-status', '*/15 * * * *', $$SELECT api.refresh_open_status()$$);
+CREATE OR REPLACE FUNCTION api.refresh_open_status()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE object o
+  SET cached_is_open_now = (
+    -- Check if there's any current opening period that indicates the object is open
+    -- Note: trim(lower(to_char(..., 'FMDay'))) avoids trailing-space padding from to_char
+    EXISTS (
+      SELECT 1
+      FROM opening_period p
+      JOIN opening_schedule s ON s.period_id = p.id
+      JOIN opening_time_period tp ON tp.schedule_id = s.id
+      JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+      JOIN opening_time_frame tf ON tf.time_period_id = tp.id
+      JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+      WHERE p.object_id = o.id
+        AND tp.closed = FALSE
+        AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
+        AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
+        AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
+        AND (tf.start_time IS NULL OR tf.start_time <= LOCALTIME)
+        AND (tf.end_time IS NULL OR tf.end_time > LOCALTIME)
+    )
+    -- Also check for 24/7 periods (no time frames means always open)
+    OR EXISTS (
+      SELECT 1
+      FROM opening_period p
+      JOIN opening_schedule s ON s.period_id = p.id
+      JOIN opening_time_period tp ON tp.schedule_id = s.id
+      JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+      JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+      WHERE p.object_id = o.id
+        AND tp.closed = FALSE
+        AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
+        AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
+        AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
+        AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
+    )
+  )
+  WHERE o.status = 'published';  -- Only update published objects
+END;
+$$;
 
 -- =====================================================
 -- Triggers updated_at sur les tables clés
@@ -1873,8 +3064,28 @@ CREATE TRIGGER update_ref_iti_assoc_role_updated_at BEFORE UPDATE ON ref_iti_ass
 CREATE TRIGGER update_ref_object_relation_type_updated_at BEFORE UPDATE ON ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Increment version number on INSERT/UPDATE (BEFORE trigger so version is available for save_object_version)
+CREATE OR REPLACE FUNCTION increment_object_version()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.current_version := 1;
+  ELSIF TG_OP = 'UPDATE' THEN
+    NEW.current_version := COALESCE(OLD.current_version, 0) + 1;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_increment_object_version ON object;
+CREATE TRIGGER trg_increment_object_version 
+BEFORE INSERT OR UPDATE ON object 
+FOR EACH ROW 
+EXECUTE FUNCTION increment_object_version();
+
 -- Address trigger removed with table drop
--- Legacy location trigger removed (using object_location)
+CREATE TRIGGER update_object_location_updated_at BEFORE UPDATE ON object_location FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_object_place_updated_at BEFORE UPDATE ON object_place FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_contact_channel_updated_at BEFORE UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_media_updated_at BEFORE UPDATE ON media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -1912,6 +3123,21 @@ CREATE TRIGGER update_opening_schedule_updated_at BEFORE UPDATE ON opening_sched
 CREATE TRIGGER update_opening_time_period_updated_at BEFORE UPDATE ON opening_time_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_opening_time_period_weekday_updated_at BEFORE UPDATE ON opening_time_period_weekday FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_opening_time_frame_updated_at BEFORE UPDATE ON opening_time_frame FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- PHASE 2: Missing updated_at triggers
+-- =====================================================
+CREATE TRIGGER update_ref_review_source_updated_at BEFORE UPDATE ON ref_review_source FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_object_description_updated_at BEFORE UPDATE ON object_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_object_review_updated_at BEFORE UPDATE ON object_review FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_object_org_link_updated_at BEFORE UPDATE ON object_org_link FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_ref_actor_role_updated_at BEFORE UPDATE ON ref_actor_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_actor_updated_at BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_actor_channel_updated_at BEFORE UPDATE ON actor_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_actor_object_role_updated_at BEFORE UPDATE ON actor_object_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_object_room_type_updated_at BEFORE UPDATE ON object_room_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_promotion_updated_at BEFORE UPDATE ON promotion FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_object_iti_profile_updated_at BEFORE UPDATE ON object_iti_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- Fin du schéma monolithique

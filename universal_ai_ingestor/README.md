@@ -54,11 +54,13 @@ docker compose up --build
 ### POST `/api/v1/ingest`
 
 - Auth: `Authorization: Bearer <API_BEARER_TOKEN>`
+- Rôle requis: `operator` ou `admin`
 - Entrées:
   - query param obligatoire: `organization_object_id=<ORG_ID>`
   - query param optionnel: `organization_name=<Nom Organisation>`
   - `multipart/form-data` avec `upload_file` (CSV/JSON/XML/XLSX), ou
   - body brut JSON/XML/CSV
+- Limite taille payload: `INGEST_MAX_BYTES` (retour `413` si depassee)
 - Réponse: `202` logique (endpoint retourne payload d'acceptation + traitement async)
 - Comportement strict gate:
   - génère un contrat discovery/mapping
@@ -69,6 +71,7 @@ docker compose up --build
 
 Alias explicite de l’endpoint d’ingestion discovery-first.
 Les mêmes paramètres d'organisation (`organization_object_id`, `organization_name`) sont requis.
+Rôle requis: `operator` ou `admin`.
 
 ### GET `/api/v1/ingest/{batch_id}/discovery`
 
@@ -77,25 +80,37 @@ Retourne le dernier contrat discovery: champs proposés, cibles inférées, hypo
 ### POST `/api/v1/ingest/{batch_id}/mapping/approve`
 
 Approuve le contrat (ou les propositions) et passe le lot en `mapping_approved`.
+Rôle requis: `reviewer` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/mapping/reject`
 
 Rejette une proposition de mapping (champ/relation), maintient le lot en revue manuelle.
+Rôle requis: `reviewer` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/run-etl`
 
 Déclenche l’ETL uniquement si le contrat de mapping est approuvé.
+Rôle requis: `operator` ou `admin`.
 
 ### GET `/api/v1/ingest/{batch_id}`
 
 Retourne l'état du batch (`received`, `profiling`, `mapping`, `transforming`, `staging_loaded`, `failed`).
 Inclut aussi `sheet_progress` (compteurs par feuille pour les imports Excel multi-feuilles).
+Rôle requis: tout token valide (`operator`/`reviewer`/`admin`).
+
+### GET `/api/v1/ingest`
+
+Liste des batches avec pagination:
+- `limit` (max strict: `INGEST_LIST_MAX_LIMIT`)
+- `offset`
+Rôle requis: tout token valide (`operator`/`reviewer`/`admin`).
 
 ### POST `/api/v1/ingest/{batch_id}/deduplicate`
 
 Lance le moteur de déduplication:
 - exact match: `object_external_id`, email, téléphone
 - fuzzy match: `pg_trgm` (`similarity`) + `PostGIS` (`ST_DWithin`)
+Rôle requis: `operator` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/commit`
 
@@ -104,18 +119,22 @@ Guardrails actifs:
 - re-commit interdit (`409` si batch déjà commité/immutable)
 - ledger de commit enregistré pour rollback compensatoire
 - médias `ready_for_commit` committés de façon idempotente
+Rôle requis: `operator` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/resolve-dependencies`
 
 Execute la phase explicite de resolution des dependances du lot (`staging.resolve_batch_dependencies`) et retourne un rapport (`resolved`, `requires_review`, `blocked`).
+Rôle requis: `operator` ou `admin`.
 
 ### GET `/api/v1/ingest/{batch_id}/integrity`
 
 Execute les assertions SQL d'integrite du lot (dependances manquantes + orphelins staging).
+Rôle requis: tout token valide (`operator`/`reviewer`/`admin`).
 
 ### POST `/api/v1/ingest/{batch_id}/purge`
 
 Purge un lot en etat terminal (`committed`, `failed_permanent`) ou force si `force=true`.
+Rôle requis: `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/media/process`
 
@@ -123,14 +142,17 @@ Traite les URLs média staging:
 - download HTTPS sécurisé (allowlist optionnelle, taille max, timeout)
 - upload dans bucket final (`MEDIA_BUCKET`)
 - score IA/gouvernance semi-auto (`auto_ready`, `review_required`, `blocked_low_confidence`)
+Rôle requis: `operator` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/media/{import_media_id}/review`
 
 Validation humaine d’un media (`approve=true/false`) avec traçabilité reviewer.
+Rôle requis: `reviewer` ou `admin`.
 
 ### POST `/api/v1/ingest/{batch_id}/rollback`
 
 Rollback compensatoire piloté par ledger (`api.rollback_staging_batch_compensate`).
+Rôle requis: `admin`.
 
 ### GET `/api/v1/metrics`
 
@@ -140,18 +162,22 @@ Retourne les metriques operationnelles agregees:
 - medias par statut + backlog review + echec download
 - backlog ambiguite relations implicites
 - compteurs de gouvernance IA
+Rôle requis: `admin`.
 
 ### GET `/api/v1/ops/cron-health`
 
 Expose la santé scheduler (`pg_cron` disponible, nombre de jobs, dernier run).
+Rôle requis: `admin`.
 
 ### POST `/api/v1/ops/media/retry-failed`
 
 Réarme les médias `download_failed` vers `pending_download` pour reprise.
+Rôle requis: `admin`.
 
 ### POST `/api/v1/ops/watchdog/stale-batches`
 
 Watchdog ops: marque les lots ETL bloqués trop longtemps en `failed_permanent`.
+Rôle requis: `admin`.
 
 ### POST (SQL RPC) `api.purge_expired_staging_batches`
 
@@ -160,6 +186,11 @@ Purge en lot les batches terminaux expires (`retention_until < now()`), sans uti
 ## Notes
 
 - Le commit implémente une trajectoire robuste minimale (insert/update objet + localisation principale + external_id).
+- RBAC minimal par token:
+  - `API_OPERATOR_TOKEN` -> opérations ingestion/ETL/commit
+  - `API_REVIEWER_TOKEN` -> revue mapping/media
+  - `API_ADMIN_TOKEN` -> opérations sensibles (rollback/purge/ops)
+  - `API_BEARER_TOKEN` reste compatible et donne un rôle `admin` par défaut
 - Organisation obligatoire a l'ingestion: chaque batch doit fournir `organization_object_id`.
 - Priorité d'affectation organisation: `source_org_object_id`/`org_name` présent dans la ligne import > organisation sélectionnée au démarrage du batch.
 - Gate strict: dedup/resolve/media/commit refusent (`409`) tant que le mapping contract n'est pas `approved`.

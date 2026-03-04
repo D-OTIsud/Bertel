@@ -1,0 +1,710 @@
+from __future__ import annotations
+
+import asyncio
+import io
+import json
+import hashlib
+import re
+from dataclasses import dataclass
+from typing import Any
+from xml.etree import ElementTree as ET
+
+import pandas as pd
+
+from core.ai_graph import generate_mapping_plan, run_cleaner_batch
+from core.config import settings
+from core.schemas import MappingPlan, MappingTarget, MultiSheetMappingPlan, SheetSample, WorkbookPayload
+from core.supabase_client import insert_staging_table_rows, update_import_batch_row
+
+
+@dataclass
+class ParsedPayload:
+    source_format: str
+    dataframe: pd.DataFrame
+    workbook_sheets: dict[str, pd.DataFrame] | None = None
+
+
+def parse_payload(content_type: str | None, payload: bytes, source_name: str | None = None) -> ParsedPayload:
+    ct = (content_type or "").lower()
+    filename = (source_name or "").lower()
+    if (
+        "spreadsheetml" in ct
+        or "excel" in ct
+        or filename.endswith(".xlsx")
+        or filename.endswith(".xlsm")
+        or (payload[:2] == b"PK" and "csv" not in ct and "json" not in ct and "xml" not in ct)
+    ):
+        sheets = pd.read_excel(io.BytesIO(payload), sheet_name=None)
+        normalized_sheets: dict[str, pd.DataFrame] = {}
+        frames: list[pd.DataFrame] = []
+        for raw_sheet_name, sheet_df in sheets.items():
+            if sheet_df is None or sheet_df.empty:
+                continue
+            name = str(raw_sheet_name).strip() or "Sheet"
+            normalized = sheet_df.copy()
+            normalized.columns = [str(c).strip() for c in normalized.columns]
+            normalized["source_sheet"] = name
+            normalized["source_row_index"] = range(1, len(normalized) + 1)
+            normalized_sheets[name] = normalized
+            frames.append(normalized)
+        combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        return ParsedPayload(source_format="xlsx", dataframe=combined, workbook_sheets=normalized_sheets)
+    if "csv" in ct:
+        df = pd.read_csv(io.BytesIO(payload))
+        return ParsedPayload(source_format="csv", dataframe=df)
+    if "json" in ct:
+        obj = json.loads(payload.decode("utf-8"))
+        if isinstance(obj, list):
+            df = pd.DataFrame(obj)
+        else:
+            df = pd.DataFrame([obj])
+        return ParsedPayload(source_format="json", dataframe=df)
+    if "xml" in ct or payload.strip().startswith(b"<"):
+        root = ET.fromstring(payload.decode("utf-8"))
+        rows = []
+        for child in root:
+            row = {sub.tag: (sub.text or "") for sub in list(child)}
+            if row:
+                rows.append(row)
+        df = pd.DataFrame(rows)
+        return ParsedPayload(source_format="xml", dataframe=df)
+    # Default fallback: attempt CSV.
+    df = pd.read_csv(io.BytesIO(payload))
+    return ParsedPayload(source_format="csv", dataframe=df)
+
+
+def schema_snapshot_from_dataframe(df: pd.DataFrame) -> dict[str, Any]:
+    sample_dtypes = {c: str(t) for c, t in df.dtypes.items()}
+    return {
+        "public_tables_hint": ["object", "object_location", "actor", "ref_code"],
+        "target_required_fields_hint": ["object_type", "name"],
+        "incoming_columns": list(df.columns),
+        "incoming_dtypes": sample_dtypes,
+    }
+
+
+def workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame], workbook_name: str | None = None) -> WorkbookPayload:
+    samples: list[SheetSample] = []
+    for sheet_name, df in sheets.items():
+        sample_rows = df.head(settings.sample_rows).to_dict(orient="records")
+        samples.append(
+            SheetSample(
+                sheet_name=sheet_name,
+                incoming_columns=list(df.columns),
+                sample_rows=sample_rows,
+            )
+        )
+    return WorkbookPayload(workbook_name=workbook_name, sheets=samples)
+
+
+def apply_mapping(df: pd.DataFrame, plan: MappingPlan) -> pd.DataFrame:
+    out = pd.DataFrame()
+    for target in plan.targets:
+        if target.source_key not in df.columns:
+            continue
+        value = df[target.source_key]
+        if target.transform == "split_gps":
+            split = value.astype(str).str.replace(" ", "", regex=False).str.split(",", n=1, expand=True)
+            if target.column == "latitude":
+                out[target.column] = pd.to_numeric(split[0], errors="coerce")
+            elif target.column == "longitude":
+                out[target.column] = pd.to_numeric(split[1], errors="coerce")
+        elif target.transform == "lowercase":
+            out[target.column] = value.astype(str).str.lower()
+        else:
+            out[target.column] = value
+    if "name" not in out.columns and len(df.columns) > 0:
+        out["name"] = df.iloc[:, 0].astype(str)
+    if "object_type" not in out.columns:
+        out["object_type"] = "ORG"
+    return out
+
+
+def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> MappingPlan | MultiSheetMappingPlan | None:
+    contract_resp = (
+        sb.schema("staging")
+        .table("mapping_contract")
+        .select("id,status")
+        .eq("import_batch_id", batch_id)
+        .order("contract_version", desc=True)
+        .limit(1)
+        .execute()
+    )
+    contract_rows = contract_resp.data or []
+    if not contract_rows:
+        return None
+    contract_row = contract_rows[0]
+    if contract_row.get("status") != "approved":
+        return None
+    field_resp = (
+        sb.schema("staging")
+        .table("mapping_contract_field")
+        .select("sheet_name,source_column,target_table,target_column,transform,confidence")
+        .eq("contract_id", contract_row["id"])
+        .eq("status", "approved")
+        .execute()
+    )
+    field_rows = field_resp.data or []
+    if not field_rows:
+        return None
+    per_sheet_targets: dict[str, list[MappingTarget]] = {}
+    per_sheet_conf: dict[str, list[float]] = {}
+    for row in field_rows:
+        sheet = row.get("sheet_name") or "default"
+        per_sheet_targets.setdefault(sheet, []).append(
+            MappingTarget(
+                table=row.get("target_table") or "object_temp",
+                column=row.get("target_column") or row.get("source_column"),
+                transform=row.get("transform") or "identity",
+                source_key=row.get("source_column"),
+                source_sheet=sheet,
+            )
+        )
+        per_sheet_conf.setdefault(sheet, []).append(float(row.get("confidence") or 0))
+    if len(per_sheet_targets) == 1 and "default" in per_sheet_targets:
+        confs = per_sheet_conf.get("default", [0.0])
+        return MappingPlan(
+            source_format=source_format,
+            confidence=sum(confs) / len(confs),
+            targets=per_sheet_targets["default"],
+            assumptions=["approved_mapping_contract"],
+        )
+    per_sheet_plans: dict[str, MappingPlan] = {}
+    for sheet, targets in per_sheet_targets.items():
+        confs = per_sheet_conf.get(sheet, [0.0])
+        per_sheet_plans[sheet] = MappingPlan(
+            source_format=source_format,
+            confidence=sum(confs) / len(confs),
+            targets=targets,
+            assumptions=["approved_mapping_contract"],
+        )
+    conf_all = [v for vals in per_sheet_conf.values() for v in vals] or [0.0]
+    return MultiSheetMappingPlan(
+        source_format=source_format,
+        confidence=sum(conf_all) / len(conf_all),
+        per_sheet=per_sheet_plans,
+        assumptions=["approved_mapping_contract_multisheet"],
+    )
+
+
+def _pick_from_row(row: dict[str, Any], candidates: list[str]) -> Any:
+    for key in candidates:
+        if key in row and row[key] not in (None, ""):
+            return row[key]
+    return None
+
+
+def _to_float_or_none(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_pipe_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    text = str(value).strip()
+    if not text:
+        return []
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        except Exception:  # noqa: BLE001
+            pass
+    return [s.strip() for s in re.split(r"[|,;]", text) if s.strip()]
+
+
+def _stable_key(prefix: str, *parts: Any) -> str:
+    raw = "|".join([(str(p) if p is not None else "") for p in parts]).lower()
+    return f"{prefix}::{hashlib.md5(raw.encode('utf-8')).hexdigest()}"
+
+
+def _chunked_insert(
+    sb,
+    table_name: str,
+    rows: list[dict[str, Any]],
+    *,
+    upsert: bool = False,
+    on_conflict: str | None = None,
+) -> None:
+    if not rows:
+        return
+    for i in range(0, len(rows), settings.etl_chunk_size):
+        insert_staging_table_rows(
+            sb,
+            table_name,
+            rows[i : i + settings.etl_chunk_size],
+            upsert=upsert,
+            on_conflict=on_conflict,
+        )
+
+
+async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    if not columns:
+        return df
+    for col in columns:
+        if col not in df.columns:
+            continue
+        values = df[col].fillna("").astype(str).tolist()
+        cleaned: list[dict[str, Any]] = []
+        for i in range(0, len(values), settings.cleaner_batch_size):
+            batch = values[i : i + settings.cleaner_batch_size]
+            response = await run_cleaner_batch(batch)
+            cleaned.extend([it.normalized for it in response.items])
+        df[f"{col}_cleaned"] = cleaned[: len(df)]
+    return df
+
+
+async def run_batch_pipeline(
+    *,
+    sb,
+    batch_id: str,
+    payload: bytes,
+    content_type: str | None,
+    source_name: str | None = None,
+    default_org_object_id: str | None = None,
+    default_org_name: str | None = None,
+) -> dict[str, Any]:
+    update_import_batch_row(sb, batch_id, status="profiling")
+    parsed = parse_payload(content_type, payload, source_name=source_name)
+    schema_snapshot = schema_snapshot_from_dataframe(parsed.dataframe)
+    sample_rows = parsed.dataframe.head(settings.sample_rows).to_dict(orient="records")
+    workbook_payload = None
+    if parsed.workbook_sheets:
+        workbook_payload = workbook_payload_from_sheets(parsed.workbook_sheets, workbook_name=source_name)
+
+    update_import_batch_row(sb, batch_id, status="mapping")
+    mapping_source_label = "llm_plan"
+    plan_bundle = _load_approved_contract_plan(sb, batch_id, parsed.source_format)
+    if plan_bundle is None:
+        try:
+            plan_bundle = generate_mapping_plan(
+                schema_snapshot=schema_snapshot,
+                sample_rows=sample_rows,
+                source_format=parsed.source_format,
+                workbook_payload=workbook_payload,
+            )
+        except Exception:  # noqa: BLE001
+            # Deterministic fallback if LLM mapping fails.
+            if workbook_payload is not None and workbook_payload.sheets:
+                plan_bundle = MultiSheetMappingPlan(
+                    source_format=parsed.source_format,
+                    confidence=0.0,
+                    per_sheet={
+                        s.sheet_name: MappingPlan(
+                            source_format=parsed.source_format,
+                            confidence=0.0,
+                            targets=[],
+                            assumptions=[f"llm_fallback_for_sheet:{s.sheet_name}"],
+                        )
+                        for s in workbook_payload.sheets
+                    },
+                    assumptions=["llm_workbook_fallback"],
+                )
+            else:
+                plan_bundle = MappingPlan(
+                    source_format=parsed.source_format,
+                    confidence=0.0,
+                    targets=[],
+                    assumptions=["llm_fallback"],
+                )
+    else:
+        mapping_source_label = "approved_contract"
+    update_import_batch_row(sb, batch_id, mapping_rules=plan_bundle.model_dump())
+
+    update_import_batch_row(sb, batch_id, status="transforming")
+    if isinstance(plan_bundle, MultiSheetMappingPlan) and parsed.workbook_sheets:
+        transformed_parts: list[pd.DataFrame] = []
+        for sheet_name, sheet_df in parsed.workbook_sheets.items():
+            sheet_plan = plan_bundle.per_sheet.get(sheet_name) or MappingPlan(
+                source_format=parsed.source_format,
+                confidence=0.0,
+                targets=[],
+                assumptions=[f"missing_sheet_plan:{sheet_name}"],
+            )
+            sheet_transformed = apply_mapping(sheet_df, sheet_plan)
+            sheet_transformed["source_sheet"] = sheet_name
+            transformed_parts.append(sheet_transformed)
+        transformed = pd.concat(transformed_parts, ignore_index=True) if transformed_parts else pd.DataFrame()
+        unstructured_fields = sorted(
+            {
+                field
+                for per_sheet_plan in plan_bundle.per_sheet.values()
+                for field in per_sheet_plan.unstructured_fields
+            }
+        )
+    else:
+        single_plan = plan_bundle if isinstance(plan_bundle, MappingPlan) else MappingPlan(source_format=parsed.source_format, confidence=0.0, targets=[])
+        transformed = apply_mapping(parsed.dataframe, single_plan)
+        unstructured_fields = single_plan.unstructured_fields
+    try:
+        transformed = await clean_unstructured(transformed, unstructured_fields)
+    except Exception:  # noqa: BLE001
+        # Keep pipeline progressing with deterministic output if cleaner fails.
+        pass
+    transformed = transformed.fillna("")
+
+    object_rows: list[dict[str, Any]] = []
+    org_rows: dict[str, dict[str, Any]] = {}
+    location_rows: list[dict[str, Any]] = []
+    contact_rows: list[dict[str, Any]] = []
+    org_link_rows: list[dict[str, Any]] = []
+    class_scheme_rows: dict[str, dict[str, Any]] = {}
+    class_value_rows: dict[str, dict[str, Any]] = {}
+    object_class_rows: list[dict[str, Any]] = []
+    amenity_rows: list[dict[str, Any]] = []
+    payment_rows: list[dict[str, Any]] = []
+    media_rows: list[dict[str, Any]] = []
+
+    for row in transformed.to_dict(orient="records"):
+        lineage_row = dict(row)
+        lineage_row["_lineage"] = {"mapping_source": mapping_source_label}
+        source_sheet = _pick_from_row(row, ["source_sheet", "_sheet", "sheet_name"]) or "default"
+        source_org = _pick_from_row(
+            row,
+            ["source_org_object_id", "organization_object_id", "org_object_id", "org_id", "organization_id"],
+        )
+        org_name = _pick_from_row(row, ["org_name", "organization_name", "organization", "owner_org_name"])
+        if not source_org and default_org_object_id:
+            source_org = default_org_object_id
+        if not org_name and default_org_name:
+            org_name = default_org_name
+        external_id = _pick_from_row(row, ["external_id", "source_object_id", "id_externe", "partner_id"])
+        email = _pick_from_row(row, ["email", "mail", "courriel", "contact_email"])
+        phone = _pick_from_row(row, ["phone", "telephone", "tel", "mobile", "contact_phone"])
+        latitude = _to_float_or_none(_pick_from_row(row, ["latitude", "lat", "coord_lat"]))
+        longitude = _to_float_or_none(_pick_from_row(row, ["longitude", "lon", "lng", "coord_lon"]))
+        staging_object_key = _stable_key("obj", row.get("name"), external_id, latitude, longitude)
+
+        staging_org_key = None
+        if source_org:
+            staging_org_key = f"org::source::{source_org}"
+        elif org_name:
+            staging_org_key = _stable_key("org", org_name)
+
+        object_rows.append(
+            {
+                "staging_object_key": staging_object_key,
+                "staging_org_key": staging_org_key,
+                "source_sheet": source_sheet,
+                "raw_source_data": lineage_row,
+                "object_type": row.get("object_type"),
+                "name": row.get("name"),
+                "org_name": org_name,
+                "external_id": external_id,
+                "source_org_object_id": source_org,
+                "email": email,
+                "phone": phone,
+                "latitude": latitude,
+                "longitude": longitude,
+                "deduplication_status": "pending",
+                "resolution_status": "pending",
+                "is_approved": False,
+            }
+        )
+
+        if staging_org_key:
+            org_rows.setdefault(
+                staging_org_key,
+                {
+                    "import_batch_id": batch_id,
+                    "staging_org_key": staging_org_key,
+                    "name": org_name or "Imported organization",
+                    "source_org_object_id": source_org,
+                    "external_id": None,
+                    "source_sheet": source_sheet,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "policy_action": "allow_auto",
+                    "is_approved": True,
+                },
+            )
+            org_link_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "staging_org_key": staging_org_key,
+                    "source_sheet": source_sheet,
+                    "role_code": (_pick_from_row(row, ["org_role_code", "organization_role"]) or "owner").lower(),
+                    "is_primary": True,
+                    "note": None,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        if latitude is not None and longitude is not None:
+            location_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "source_sheet": source_sheet,
+                    "address1": _pick_from_row(row, ["address1", "adresse", "address"]),
+                    "city": _pick_from_row(row, ["city", "ville", "commune"]),
+                    "postcode": _pick_from_row(row, ["postcode", "postal_code", "cp"]),
+                    "is_main_location": True,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        if email:
+            contact_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "kind_code": "email",
+                    "value": str(email),
+                    "source_sheet": source_sheet,
+                    "is_public": True,
+                    "is_primary": True,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+        if phone:
+            contact_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "kind_code": "phone",
+                    "value": str(phone),
+                    "source_sheet": source_sheet,
+                    "is_public": True,
+                    "is_primary": True,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        scheme_code = _pick_from_row(row, ["classification_scheme", "classification_scheme_code", "scheme_code"])
+        value_code = _pick_from_row(row, ["classification_value", "classification_value_code", "value_code"])
+        if scheme_code and value_code:
+            scheme_code = str(scheme_code).lower()
+            value_code = str(value_code).lower()
+            class_scheme_rows.setdefault(
+                scheme_code,
+                {
+                    "import_batch_id": batch_id,
+                    "scheme_code": scheme_code,
+                    "scheme_name": str(
+                        _pick_from_row(row, ["classification_scheme_name", "scheme_name"]) or scheme_code
+                    ),
+                    "source_sheet": source_sheet,
+                    "description": None,
+                    "selection": "single",
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "policy_action": "require_review",
+                    "is_approved": False,
+                },
+            )
+            class_value_rows.setdefault(
+                f"{scheme_code}::{value_code}",
+                {
+                    "import_batch_id": batch_id,
+                    "scheme_code": scheme_code,
+                    "value_code": value_code,
+                    "source_sheet": source_sheet,
+                    "value_name": str(_pick_from_row(row, ["classification_value_name", "value_name"]) or value_code),
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "policy_action": "require_review",
+                    "is_approved": False,
+                },
+            )
+            object_class_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "scheme_code": scheme_code,
+                    "value_code": value_code,
+                    "source_sheet": source_sheet,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": False,
+                }
+            )
+
+        relationship_tokens = _to_pipe_list(
+            _pick_from_row(row, ["related_org_ids", "org_ids", "organization_ids", "associated_org_ids"])
+        )
+        for raw_org_token in relationship_tokens:
+            token = raw_org_token.strip()
+            rel_org_key = f"org::source::{token}"
+            org_rows.setdefault(
+                rel_org_key,
+                {
+                    "import_batch_id": batch_id,
+                    "staging_org_key": rel_org_key,
+                    "name": f"Imported organization {token}",
+                    "source_org_object_id": token,
+                    "external_id": None,
+                    "source_sheet": source_sheet,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "policy_action": "allow_auto",
+                    "is_approved": True,
+                },
+            )
+            org_link_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "staging_org_key": rel_org_key,
+                    "source_sheet": source_sheet,
+                    "source_column": "related_org_ids",
+                    "raw_relation_token": token,
+                    "role_code": "owner",
+                    "is_primary": False,
+                    "note": "derived_from_related_org_ids",
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        for amenity_code in _to_pipe_list(
+            _pick_from_row(row, ["amenity_codes", "amenities", "amenities_any", "amenity"])
+        ):
+            amenity_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "amenity_code": amenity_code.lower(),
+                    "source_sheet": source_sheet,
+                    "source_column": "amenity_codes",
+                    "raw_relation_token": amenity_code,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        for payment_code in _to_pipe_list(
+            _pick_from_row(row, ["payment_codes", "payment_methods", "payments_any", "payment"])
+        ):
+            payment_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "payment_code": payment_code.lower(),
+                    "source_sheet": source_sheet,
+                    "source_column": "payment_codes",
+                    "raw_relation_token": payment_code,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+
+        media_urls = _to_pipe_list(
+            _pick_from_row(row, ["media_urls", "media_url", "photo_urls", "image_urls", "photos"])
+        )
+        for position, media_url in enumerate(media_urls):
+            media_rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    "source_sheet": source_sheet,
+                    "source_column": "media_urls",
+                    "source_url": media_url,
+                    "url_token": media_url.rsplit("/", 1)[-1].lower(),
+                    "source_external_object_token": str(external_id).lower() if external_id else None,
+                    "position": position,
+                    "raw_source_data": lineage_row,
+                    "resolution_status": "pending",
+                    "processing_status": "pending_download",
+                    "is_approved": False,
+                }
+            )
+
+    # Base object staging load.
+    enriched_objects = [{"import_batch_id": batch_id, **r} for r in object_rows]
+    _chunked_insert(sb, "object_temp", enriched_objects)
+
+    # Typed staging entities.
+    _chunked_insert(sb, "org_temp", list(org_rows.values()), upsert=True, on_conflict="import_batch_id,staging_org_key")
+    _chunked_insert(
+        sb,
+        "object_location_temp",
+        location_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,is_main_location",
+    )
+    _chunked_insert(
+        sb,
+        "contact_channel_temp",
+        contact_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,kind_code,value",
+    )
+    _chunked_insert(
+        sb,
+        "object_org_link_temp",
+        org_link_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,staging_org_key,role_code",
+    )
+    _chunked_insert(
+        sb,
+        "ref_classification_scheme_temp",
+        list(class_scheme_rows.values()),
+        upsert=True,
+        on_conflict="import_batch_id,scheme_code",
+    )
+    _chunked_insert(
+        sb,
+        "ref_classification_value_temp",
+        list(class_value_rows.values()),
+        upsert=True,
+        on_conflict="import_batch_id,scheme_code,value_code",
+    )
+    _chunked_insert(
+        sb,
+        "object_classification_temp",
+        object_class_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,scheme_code,value_code",
+    )
+    _chunked_insert(
+        sb,
+        "object_amenity_temp",
+        amenity_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,amenity_code",
+    )
+    _chunked_insert(
+        sb,
+        "object_payment_method_temp",
+        payment_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,payment_code",
+    )
+    _chunked_insert(
+        sb,
+        "media_temp",
+        media_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,source_url",
+    )
+
+    update_import_batch_row(sb, batch_id, status="staging_loaded")
+    return {"rows_loaded": len(object_rows)}
+
+
+def run_batch_pipeline_sync(**kwargs):
+    return asyncio.run(run_batch_pipeline(**kwargs))

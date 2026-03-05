@@ -1002,8 +1002,48 @@ def purge_batch(batch_id: str, force: bool = False) -> JSONResponse:
 @app.get("/api/v1/metrics", dependencies=[Depends(verify_token)])
 def metrics() -> JSONResponse:
     sb = get_supabase()
-    result = sb.rpc("get_ingestor_metrics").execute()
-    return JSONResponse(content={"metrics": result.data})
+    try:
+        result = sb.rpc("get_ingestor_metrics").execute()
+        return JSONResponse(content={"metrics": result.data, "source": "rpc"})
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("get_ingestor_metrics rpc failed: %s", exc)
+        batches_resp = (
+            sb.schema("staging")
+            .table("import_batches")
+            .select("status,updated_at")
+            .order("updated_at", desc=True)
+            .limit(1000)
+            .execute()
+        )
+        events_resp = (
+            sb.schema("staging")
+            .table("import_events")
+            .select("level,phase,created_at")
+            .order("created_at", desc=True)
+            .limit(500)
+            .execute()
+        )
+        batch_rows = batches_resp.data or []
+        event_rows = events_resp.data or []
+        by_status: dict[str, int] = {}
+        for row in batch_rows:
+            status = row.get("status") or "unknown"
+            by_status[status] = by_status.get(status, 0) + 1
+        recent_errors = [row for row in event_rows if (row.get("level") or "").lower() == "error"]
+        fallback_metrics = {
+            "total_batches_seen": len(batch_rows),
+            "status_counts": by_status,
+            "recent_event_count": len(event_rows),
+            "recent_error_count": len(recent_errors),
+            "latest_batch_update": batch_rows[0].get("updated_at") if batch_rows else None,
+        }
+        return JSONResponse(
+            content={
+                "metrics": fallback_metrics,
+                "source": "fallback",
+                "warning": "get_ingestor_metrics RPC failed; using fallback metrics snapshot",
+            }
+        )
 
 
 @app.get("/api/v1/ops/cron-health", dependencies=[Depends(verify_token)])

@@ -29,6 +29,7 @@ from core.supabase_client import (
     store_raw_payload,
     update_import_batch_row,
 )
+from core.target_schema import flatten_required_columns, validate_mapping_target
 
 app = FastAPI(title="Universal AI Data Ingestor API", version="0.1.0")
 security = HTTPBearer(auto_error=False)
@@ -203,6 +204,38 @@ def _latest_mapping_contract(sb, batch_id: str) -> dict[str, Any] | None:
 def _ensure_mapping_approved(sb, batch_id: str) -> tuple[bool, dict[str, Any] | None]:
     latest = _latest_mapping_contract(sb, batch_id)
     return bool(latest and latest.get("status") == "approved"), latest
+
+
+def _validate_contract_targets(sb, contract_id: str) -> tuple[bool, str]:
+    fields_resp = (
+        sb.schema("staging")
+        .table("mapping_contract_field")
+        .select("target_table,target_column,transform,status")
+        .eq("contract_id", contract_id)
+        .in_("status", ["approved", "proposed"])
+        .execute()
+    )
+    field_rows = fields_resp.data or []
+    if not field_rows:
+        return False, "No active mapping fields found in contract."
+    required = flatten_required_columns().get("object_temp", set())
+    approved_object_columns = {
+        str(row.get("target_column") or "")
+        for row in field_rows
+        if row.get("target_table") == "object_temp" and row.get("status") == "approved"
+    }
+    missing_required = sorted([col for col in required if col not in approved_object_columns])
+    if missing_required:
+        return False, f"Missing required approved object mappings: {', '.join(missing_required)}"
+    for row in field_rows:
+        ok, reason = validate_mapping_target(
+            target_table=str(row.get("target_table") or "").strip(),
+            target_column=str(row.get("target_column") or "").strip(),
+            transform=str(row.get("transform") or "identity").strip(),
+        )
+        if not ok:
+            return False, reason
+    return True, "ok"
 
 
 def _build_discovery_for_payload(
@@ -479,6 +512,16 @@ def approve_mapping(batch_id: str, reviewer: str = "mapping_reviewer", approve_a
             .in_("status", ["proposed", "approved"])
             .execute()
         )
+    valid, reason = _validate_contract_targets(sb, contract_id)
+    if not valid:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "batch_id": batch_id,
+                "contract_id": contract_id,
+                "error": f"Contract validation failed: {reason}",
+            },
+        )
     rejected_fields = (
         sb.schema("staging")
         .table("mapping_contract_field")
@@ -614,6 +657,17 @@ def review_mapping_field(
     cleaned_target_table = (target_table or "").strip()
     cleaned_target_column = (target_column or "").strip()
     cleaned_transform = (transform or "").strip()
+    if cleaned_target_table and cleaned_target_column:
+        ok, reason = validate_mapping_target(
+            target_table=cleaned_target_table,
+            target_column=cleaned_target_column,
+            transform=cleaned_transform or "identity",
+        )
+        if not ok:
+            return JSONResponse(
+                status_code=400,
+                content={"batch_id": batch_id, "contract_id": contract_id, "error": reason},
+            )
     if cleaned_target_table:
         update_payload["target_table"] = cleaned_target_table
     if cleaned_target_column:

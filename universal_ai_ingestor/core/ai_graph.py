@@ -23,23 +23,49 @@ def _build_mapping_agent() -> Any:
 
 def _mapping_node(state: MappingState) -> MappingState:
     agent = _build_mapping_agent()
+
+    schema = state["schema_snapshot"]
+    tables_desc = ""
+    for t in schema.get("target_tables", []):
+        cols = ", ".join(
+            c["column"] + (" (REQUIRED)" if c.get("required") else "")
+            for c in t.get("columns", [])
+        )
+        tables_desc += f"\n  - {t['table']}: {t.get('description', '')}  Columns: [{cols}]  Transforms: {t.get('allowed_transforms', [])}"
+
+    hints = "\n".join(f"  - {h}" for h in schema.get("relationship_hints", []))
+
     prompt = (
-        "You are a data-mapping architect for a strict tourism CRM schema.\n"
-        "Generate a mapping plan from sample input to target schema.\n"
-        "Use stable transformations and avoid hallucinating columns."
+        "You are an expert data-mapping architect for a tourism CRM (Bertel).\n"
+        "Your job: map each SOURCE column to the correct TARGET staging table + column.\n\n"
+        "## Target staging tables\n"
+        f"{tables_desc}\n\n"
+        "## Key rules\n"
+        f"{hints}\n\n"
+        "## Mapping guidelines\n"
+        "- Source data is often in French. 'Nom' = name, 'Adresse' = address, 'Téléphone' = phone, etc.\n"
+        "- Each source column maps to EXACTLY ONE target table.column.\n"
+        "- If a source column contains delimited lists (commas, pipes), use 'split_list' transform.\n"
+        "- If a source column has 'lat,lon' text, use 'split_gps' transform.\n"
+        "- Address fields (rue, ville, code postal) go to object_location_temp, NOT object_temp.\n"
+        "- Contact fields (email, phone, website, social URLs) go to contact_channel_temp.\n"
+        "- Metadata columns (date, user, moderator, formulaire, row index) should NOT be mapped. Omit them.\n"
+        "- Set confidence between 0.0 and 1.0 reflecting your certainty.\n"
+        "- ONLY use table names and column names from the schema above. Do NOT invent columns.\n"
     )
-    plan = agent.invoke(
-        [
-            ("system", prompt),
-            (
-                "user",
-                f"Source format: {state['source_format']}\n"
-                f"Schema snapshot: {state['schema_snapshot']}\n"
-                f"Sample rows: {state['sample_rows']}\n"
-                "Return a precise mapping.",
-            ),
-        ]
+
+    incoming = state["schema_snapshot"].get("incoming_columns", [])
+    sheet_name = state["schema_snapshot"].get("sheet_name", "unknown")
+
+    user_msg = (
+        f"Source format: {state['source_format']}\n"
+        f"Sheet name: {sheet_name}\n"
+        f"Source columns: {incoming}\n"
+        f"Sample rows (first 5):\n{state['sample_rows'][:5]}\n\n"
+        "Return a mapping plan. For each source column, specify the target table, target column, and transform."
     )
+
+    plan = agent.invoke([("system", prompt), ("user", user_msg)])
     state["mapping_plan"] = plan
     return state
 

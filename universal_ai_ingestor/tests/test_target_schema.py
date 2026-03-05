@@ -9,7 +9,7 @@ def test_find_best_target_prefers_schema_alias() -> None:
     assert column == "org_name"
     assert transform == "identity"
     assert confidence >= 0.8
-    assert "Schema" in rationale
+    assert "alias match" in rationale.lower()
 
 
 def test_validate_mapping_target_rejects_invalid_table_column_combo() -> None:

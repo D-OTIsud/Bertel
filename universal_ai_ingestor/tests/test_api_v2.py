@@ -101,6 +101,8 @@ class _FakeSupabase:
         self._data = data or []
     def schema(self, name):
         return _FakeSchema(self._data)
+    def table(self, name):
+        return _FakeTableQuery(self._data)
     def rpc(self, name, payload=None):
         return SimpleNamespace(execute=lambda: _FakeExecute({"ok": True}))
 
@@ -126,7 +128,7 @@ def test_auth_rejects_missing_token():
 
 def test_list_orgs(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([
-        {"object_id": "org-1", "name": "Test Org", "org_type_code": "DMO"},
+        {"id": "org-1", "name": "Test Org", "object_type": "ORG"},
     ]))
     client = TestClient(api_main.app)
     r = client.get("/api/v1/orgs", headers=AUTH)

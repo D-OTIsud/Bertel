@@ -240,7 +240,7 @@ st.set_page_config(page_title="Bertel Data Ingestor", page_icon="database", layo
 
 st.markdown("""
 <style>
-    .block-container { max-width: 1100px; padding-top: 1.5rem; }
+    .block-container { max-width: 1400px; padding-top: 1.5rem; }
     .confidence-high { color: #4caf50; font-weight: 700; }
     .confidence-mid  { color: #ff9800; font-weight: 700; }
     .confidence-low  { color: #f44336; font-weight: 700; }
@@ -249,6 +249,7 @@ st.markdown("""
     .field-source    { font-weight: 600; font-size: 0.95rem; }
     .field-sheet     { font-size: 0.75rem; opacity: 0.5; }
     hr { margin: 0.5rem 0; }
+    div[data-baseweb="select"] { min-width: 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -412,7 +413,7 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
     ]
 
     # Column headers
-    hdr = st.columns([2.5, 2, 2, 1.5, 0.6, 0.5])
+    hdr = st.columns([2, 3, 2, 1.5, 0.6, 0.5])
     with hdr[0]:
         st.markdown("<div class='mapping-header'>Source field</div>", unsafe_allow_html=True)
     with hdr[1]:
@@ -422,7 +423,7 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
     with hdr[3]:
         st.markdown("<div class='mapping-header'>Transform</div>", unsafe_allow_html=True)
     with hdr[4]:
-        st.markdown("<div class='mapping-header'>Confidence</div>", unsafe_allow_html=True)
+        st.markdown("<div class='mapping-header'>Conf.</div>", unsafe_allow_html=True)
     with hdr[5]:
         st.markdown("<div class='mapping-header'>Skip</div>", unsafe_allow_html=True)
 
@@ -454,19 +455,22 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
         else:
             conf_html = f"<span class='confidence-low'>{confidence:.0%}</span>"
 
-        cols = st.columns([2.5, 2, 2, 1.5, 0.6, 0.5])
+        cols = st.columns([2, 3, 2, 1.5, 0.6, 0.5])
 
         with cols[0]:
-            st.markdown(f"<span class='field-source'>{source_col}</span><br><span class='field-sheet'>{sheet_name}</span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<span class='field-source'>{source_col}</span>"
+                f"<br><span class='field-sheet'>{sheet_name}</span>",
+                unsafe_allow_html=True,
+            )
 
-        table_display = [TABLE_LABELS.get(t, t) for t in ALL_TABLES]
         current_table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
         with cols[1]:
-            sel_label = st.selectbox(
-                "tbl", options=table_display, index=current_table_idx,
+            new_table = st.selectbox(
+                "tbl", options=ALL_TABLES, index=current_table_idx,
+                format_func=lambda t: t,
                 key=f"tbl_{i}", label_visibility="collapsed",
             )
-            new_table = ALL_TABLES[table_display.index(sel_label)]
 
         col_options = TARGET_SCHEMA.get(new_table, {}).get("columns", [])
         current_col_idx = col_options.index(current_column) if current_column in col_options else 0
@@ -474,7 +478,7 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
             new_column = st.selectbox(
                 "col", options=col_options if col_options else [current_column],
                 index=min(current_col_idx, max(0, len(col_options) - 1)),
-                key=f"col_{i}", label_visibility="collapsed",
+                key=f"col_{i}_{new_table}", label_visibility="collapsed",
             )
 
         transform_options = TARGET_SCHEMA.get(new_table, {}).get("transforms", ["identity"])
@@ -483,7 +487,7 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
             new_transform = st.selectbox(
                 "tr", options=transform_options,
                 index=min(current_tr_idx, max(0, len(transform_options) - 1)),
-                key=f"tr_{i}", label_visibility="collapsed",
+                key=f"tr_{i}_{new_table}", label_visibility="collapsed",
             )
 
         with cols[4]:

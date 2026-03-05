@@ -82,15 +82,24 @@ def _mapping_node(state: MappingState) -> MappingState:
 
     incoming = schema.get("incoming_columns", [])
     sheet_name = schema.get("sheet_name", "unknown")
-    samples = state["sample_rows"][:5]
+    samples = state["sample_rows"][:10]
+
+    col_profiles = ""
+    if samples:
+        for col_name in incoming:
+            vals = [str(row.get(col_name, "")) for row in samples if row.get(col_name) not in (None, "", "nan")]
+            unique_vals = list(dict.fromkeys(vals))[:5]
+            col_profiles += f"\n  - '{col_name}': {len(vals)}/{len(samples)} non-null, samples: {unique_vals}"
 
     user_msg = (
         f"Source format: {state['source_format']}\n"
         f"Sheet: '{sheet_name}'\n"
-        f"Columns: {incoming}\n\n"
-        f"Sample rows:\n{samples}\n\n"
-        "Map each source column to the best target table.column. "
-        "Omit columns that should be skipped (metadata, descriptions, actor data)."
+        f"Columns ({len(incoming)}): {incoming}\n\n"
+        f"Column profiles (from {len(samples)} sample rows):{col_profiles}\n\n"
+        f"Full sample rows:\n{samples[:3]}\n\n"
+        "For EACH source column, return the target staging table and column. "
+        "Omit metadata columns (date, user, moderator). "
+        "Pay close attention to the sample values to determine the correct target."
     )
 
     plan = agent.invoke([("system", prompt), ("user", user_msg)])

@@ -4,7 +4,7 @@ import hmac
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
@@ -617,6 +617,104 @@ def reject_mapping(
         payload={"contract_id": contract_id, "field_id": field_id, "relation_id": relation_id, "reviewer": reviewer},
     )
     return JSONResponse(content={"batch_id": batch_id, "contract_id": contract_id, "status": "review_required"})
+
+
+@app.post("/api/v1/ingest/{batch_id}/mapping/review-field", dependencies=[Depends(require_reviewer_or_admin)])
+def review_mapping_field(
+    batch_id: str,
+    field_id: str,
+    reviewer: str = "mapping_reviewer",
+    decision: Literal["approve", "reject"] = "approve",
+    reason: str = "manual_review",
+    target_table: str | None = None,
+    target_column: str | None = None,
+    transform: str | None = None,
+) -> JSONResponse:
+    sb = get_supabase()
+    latest = _latest_mapping_contract(sb, batch_id)
+    if not latest:
+        return JSONResponse(status_code=404, content={"error": "No discovery contract found for batch"})
+
+    contract_id = latest["id"]
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    update_payload: dict[str, Any] = {
+        "status": "approved" if decision == "approve" else "rejected",
+        "reviewed_by": reviewer,
+        "reviewed_at": now_iso,
+        "review_reason": reason,
+    }
+
+    cleaned_target_table = (target_table or "").strip()
+    cleaned_target_column = (target_column or "").strip()
+    cleaned_transform = (transform or "").strip()
+    if cleaned_target_table:
+        update_payload["target_table"] = cleaned_target_table
+    if cleaned_target_column:
+        update_payload["target_column"] = cleaned_target_column
+    if cleaned_transform:
+        update_payload["transform"] = cleaned_transform
+
+    (
+        sb.schema("staging")
+        .table("mapping_contract_field")
+        .update(update_payload)
+        .eq("id", field_id)
+        .eq("contract_id", contract_id)
+        .execute()
+    )
+
+    rejected_fields = (
+        sb.schema("staging")
+        .table("mapping_contract_field")
+        .select("id")
+        .eq("contract_id", contract_id)
+        .eq("status", "rejected")
+        .limit(1)
+        .execute()
+    )
+    rejected_relations = (
+        sb.schema("staging")
+        .table("mapping_relation_hypothesis")
+        .select("id")
+        .eq("contract_id", contract_id)
+        .eq("status", "rejected")
+        .limit(1)
+        .execute()
+    )
+    new_contract_status = "approved" if not (rejected_fields.data or rejected_relations.data) else "review_required"
+
+    (
+        sb.schema("staging")
+        .table("mapping_contract")
+        .update(
+            {
+                "status": new_contract_status,
+                "approved_by": reviewer if new_contract_status == "approved" else None,
+                "approved_at": now_iso if new_contract_status == "approved" else None,
+                "is_immutable": new_contract_status == "approved",
+            }
+        )
+        .eq("id", contract_id)
+        .execute()
+    )
+    update_import_batch_row(sb, batch_id, status="mapping_approved" if new_contract_status == "approved" else "mapping_review_required")
+    append_import_event(
+        sb,
+        batch_id=batch_id,
+        phase="mapping_review",
+        level="info" if decision == "approve" else "warning",
+        message="Mapping field reviewed inline",
+        payload={
+            "contract_id": contract_id,
+            "field_id": field_id,
+            "decision": decision,
+            "reviewer": reviewer,
+            "target_table": update_payload.get("target_table"),
+            "target_column": update_payload.get("target_column"),
+        },
+    )
+    return JSONResponse(content={"batch_id": batch_id, "contract_id": contract_id, "status": new_contract_status})
 
 
 @app.post("/api/v1/ingest/{batch_id}/run-etl", dependencies=[Depends(require_operator_or_admin)])

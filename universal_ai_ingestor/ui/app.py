@@ -4,6 +4,7 @@ import json
 import os
 from typing import Any
 
+import pandas as pd
 import requests
 import streamlit as st
 from supabase import create_client
@@ -13,7 +14,10 @@ st.set_page_config(page_title="Universal AI Data Ingestor", layout="wide")
 st.title("Universal AI Data Ingestor - Validation Console")
 
 api_base_url = os.getenv("API_BASE_URL", "http://api:8000")
-api_token = os.getenv("API_BEARER_TOKEN", "")
+api_bearer_token_env = os.getenv("API_BEARER_TOKEN", "")
+api_operator_token_env = os.getenv("API_OPERATOR_TOKEN", "")
+api_reviewer_token_env = os.getenv("API_REVIEWER_TOKEN", "")
+api_admin_token_env = os.getenv("API_ADMIN_TOKEN", "")
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
 
@@ -26,14 +30,47 @@ with st.sidebar:
     st.markdown("### Connection and auth")
     st.caption("Values are loaded from runtime environment (Coolify/Docker).")
     st.code(
-        "API_BASE_URL\nAPI_BEARER_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
+        "API_BASE_URL\nAPI_BEARER_TOKEN\nAPI_OPERATOR_TOKEN\nAPI_REVIEWER_TOKEN\nAPI_ADMIN_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
         language="text",
     )
     st.caption("Role model: operator=ingest/etl, reviewer=mapping/media review, admin=all.")
-    if api_token:
-        st.success("API_BEARER_TOKEN loaded")
+    auth_mode = st.radio(
+        "API authentication mode",
+        options=["Use environment role token", "Paste token manually"],
+        key="auth_mode",
+    )
+
+    api_token = ""
+    if auth_mode == "Use environment role token":
+        env_role_options: list[tuple[str, str]] = []
+        if api_admin_token_env:
+            env_role_options.append(("admin (API_ADMIN_TOKEN)", api_admin_token_env))
+        if api_reviewer_token_env:
+            env_role_options.append(("reviewer (API_REVIEWER_TOKEN)", api_reviewer_token_env))
+        if api_operator_token_env:
+            env_role_options.append(("operator (API_OPERATOR_TOKEN)", api_operator_token_env))
+        if api_bearer_token_env:
+            env_role_options.append(("admin fallback (API_BEARER_TOKEN)", api_bearer_token_env))
+
+        if env_role_options:
+            selected_role_label = st.selectbox(
+                "Select token profile",
+                options=[label for label, _ in env_role_options],
+                key="selected_token_profile",
+            )
+            api_token = next(token for label, token in env_role_options if label == selected_role_label)
+            st.caption(f"Using: {selected_role_label}")
+        else:
+            st.error("No API token available in environment variables.")
     else:
-        st.error("Missing API_BEARER_TOKEN")
+        manual_token = st.text_input("Paste bearer token", type="password", key="manual_api_token")
+        api_token = manual_token.strip()
+
+    if api_token:
+        st.success("API token loaded for requests")
+    else:
+        st.error("Missing API token for requests")
+
     if supabase_url:
         st.success("SUPABASE_URL loaded")
     else:
@@ -148,6 +185,34 @@ def reject_mapping_field(batch_id: str, field_id: str, reviewer: str, reason: st
     return r.json()
 
 
+def review_mapping_field_row(
+    batch_id: str,
+    field_id: str,
+    reviewer: str,
+    decision: str,
+    reason: str,
+    target_table: str,
+    target_column: str,
+    transform: str,
+) -> dict[str, Any]:
+    r = requests.post(
+        f"{api_base_url}/api/v1/ingest/{batch_id}/mapping/review-field",
+        headers=auth_headers(),
+        params={
+            "field_id": field_id,
+            "reviewer": reviewer,
+            "decision": decision,
+            "reason": reason,
+            "target_table": target_table,
+            "target_column": target_column,
+            "transform": transform,
+        },
+        timeout=120,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 def trigger_resolve_dependencies(batch_id: str) -> dict[str, Any]:
     r = requests.post(
         f"{api_base_url}/api/v1/ingest/{batch_id}/resolve-dependencies",
@@ -189,6 +254,79 @@ def upload_file_to_api(file_obj, organization_object_id: str, organization_name:
     )
     r.raise_for_status()
     return r.json()
+
+
+@st.cache_data(ttl=20, show_spinner=False)
+def fetch_recent_batches(
+    api_base_url_value: str,
+    api_token_value: str,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    if not api_token_value:
+        return []
+    r = requests.get(
+        f"{api_base_url_value}/api/v1/ingest",
+        headers={"Authorization": f"Bearer {api_token_value}"},
+        params={"limit": limit, "offset": 0},
+        timeout=30,
+    )
+    r.raise_for_status()
+    payload = r.json()
+    return payload if isinstance(payload, list) else []
+
+
+def choose_active_batch(context_key: str, title: str) -> str:
+    st.markdown(f"#### {title}")
+    col_picker, col_refresh = st.columns([4, 1])
+    if col_refresh.button("Refresh list", key=f"{context_key}_refresh_batches"):
+        fetch_recent_batches.clear()
+
+    options_map: dict[str, str] = {}
+    try:
+        rows = fetch_recent_batches(api_base_url, api_token, limit=100)
+    except Exception as exc:  # noqa: BLE001
+        rows = []
+        st.warning(f"Unable to fetch recent batches: {exc}")
+
+    for row in rows:
+        row_batch_id = str(row.get("batch_id") or "").strip()
+        if not row_batch_id:
+            continue
+        status = row.get("status") or "unknown"
+        filename = row.get("filename") or "-"
+        label = f"{row_batch_id} | status={status} | file={filename}"
+        options_map[label] = row_batch_id
+
+    active_batch = (st.session_state.get("active_batch_id") or "").strip()
+    if active_batch and all(v != active_batch for v in options_map.values()):
+        options_map[f"{active_batch} | status=active_context"] = active_batch
+
+    if options_map:
+        labels = list(options_map.keys())
+        default_index = 0
+        if active_batch:
+            for idx, label in enumerate(labels):
+                if options_map[label] == active_batch:
+                    default_index = idx
+                    break
+        selected_label = col_picker.selectbox(
+            "Recent batches",
+            options=labels,
+            index=default_index,
+            key=f"{context_key}_recent_batch",
+        )
+        selected_batch = options_map[selected_label]
+        st.session_state["active_batch_id"] = selected_batch
+
+    manual_batch = st.text_input(
+        "Batch ID",
+        value=(st.session_state.get("active_batch_id") or "").strip(),
+        key=f"{context_key}_batch_input",
+        placeholder="Paste batch id",
+    ).strip()
+    if manual_batch:
+        st.session_state["active_batch_id"] = manual_batch
+    return (st.session_state.get("active_batch_id") or "").strip()
 
 
 def _sanitize_ilike_term(value: str) -> str:
@@ -297,7 +435,11 @@ with tab_upload:
                     organization_object_id=organization_object_id.strip(),
                     organization_name=organization_name.strip() or None,
                 )
-                st.success(f"Accepted batch: {response['batch_id']}")
+                accepted_batch_id = str(response.get("batch_id") or "").strip()
+                if accepted_batch_id:
+                    st.session_state["active_batch_id"] = accepted_batch_id
+                    fetch_recent_batches.clear()
+                st.success(f"Accepted batch: {accepted_batch_id}")
                 st.json(response)
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Ingest failed: {exc}")
@@ -308,7 +450,11 @@ with tab_batches:
         "If batch status is mapping_review_required, go to Step 2 (Discovery Review) and "
         "approve mapping before Run ETL / Commit."
     )
-    batch_id = st.text_input("Batch ID", placeholder="Paste batch id")
+    st.caption(
+        "Batches are persisted in Supabase (`staging.import_batches` / `staging.import_events`), "
+        "not only in container memory."
+    )
+    batch_id = choose_active_batch(context_key="batches", title="Batch context")
     col_a, col_b, col_c, col_d, col_e, col_f, col_g, col_h = st.columns(8)
     if col_a.button("Fetch status"):
         try:
@@ -385,45 +531,58 @@ with tab_staging:
     else:
         sb = create_client(supabase_url, supabase_service_key)
         limit = st.slider("Rows to display", min_value=20, max_value=500, value=100, step=20)
-        blocked_ref_resp = (
+        active_batch = (st.session_state.get("active_batch_id") or "").strip()
+        filter_active = st.checkbox(
+            "Filter to active batch",
+            value=bool(active_batch),
+            disabled=not bool(active_batch),
+            help="Uses current batch context from Upload/Discovery/Batches tabs.",
+        )
+        if active_batch:
+            st.caption(f"Active batch context: `{active_batch}`")
+
+        blocked_ref_query = (
             sb.schema("staging")
             .table("ref_code_temp")
             .select("domain,code,resolution_status,policy_action")
             .in_("resolution_status", ["blocked_policy", "review_required"])
-            .limit(limit)
-            .execute()
         )
-        blocked_org_resp = (
+        blocked_org_query = (
             sb.schema("staging")
             .table("org_temp")
             .select("staging_org_key,name,resolution_status,policy_action")
             .in_("resolution_status", ["blocked_policy", "review_required"])
-            .limit(limit)
-            .execute()
         )
-        blocked_obj_resp = (
+        blocked_obj_query = (
             sb.schema("staging")
             .table("object_temp")
             .select("import_row_id,staging_object_key,name,resolution_status,staging_org_key")
             .eq("resolution_status", "blocked_missing_dependency")
-            .limit(limit)
-            .execute()
         )
-        media_review_resp = (
+        media_review_query = (
             sb.schema("staging")
             .table("media_temp")
             .select("import_media_id,import_batch_id,source_url,bucket_path,processing_status,ai_confidence,ai_decision,is_approved,reviewed_by,review_reason")
             .in_("processing_status", ["review_required", "blocked_low_confidence", "download_failed"])
-            .limit(limit)
-            .execute()
         )
-        rows_resp = (
+        rows_query = (
             sb.schema("staging")
             .table("object_temp")
             .select("import_row_id,import_batch_id,staging_object_key,staging_org_key,name,object_type,email,phone,external_id,deduplication_status,resolution_status,matched_public_object_id,ai_merge_proposal,is_approved,raw_source_data")
-            .limit(limit)
-            .execute()
         )
+
+        if filter_active and active_batch:
+            blocked_ref_query = blocked_ref_query.eq("import_batch_id", active_batch)
+            blocked_org_query = blocked_org_query.eq("import_batch_id", active_batch)
+            blocked_obj_query = blocked_obj_query.eq("import_batch_id", active_batch)
+            media_review_query = media_review_query.eq("import_batch_id", active_batch)
+            rows_query = rows_query.eq("import_batch_id", active_batch)
+
+        blocked_ref_resp = blocked_ref_query.limit(limit).execute()
+        blocked_org_resp = blocked_org_query.limit(limit).execute()
+        blocked_obj_resp = blocked_obj_query.limit(limit).execute()
+        media_review_resp = media_review_query.limit(limit).execute()
+        rows_resp = rows_query.limit(limit).execute()
         rows = rows_resp.data or []
         blocked_ref = blocked_ref_resp.data or []
         blocked_org = blocked_org_resp.data or []
@@ -555,8 +714,16 @@ with tab_staging:
 with tab_discovery:
     st.subheader("Step 2 - Mapping contract review and approval")
     st.caption("Required role: reviewer or admin.")
-    batch_id = st.text_input("Batch ID for discovery", placeholder="Paste batch id", key="discovery_batch_id")
-    reviewer = st.text_input("Reviewer", value="mapping_reviewer")
+    batch_id = choose_active_batch(context_key="discovery", title="Batch context")
+    reviewer_profile = st.selectbox(
+        "Reviewer profile",
+        options=["mapping_reviewer", "qa_reviewer", "admin_reviewer", "custom"],
+        key="discovery_reviewer_profile",
+    )
+    if reviewer_profile == "custom":
+        reviewer = st.text_input("Reviewer", value="mapping_reviewer", key="discovery_reviewer_custom")
+    else:
+        reviewer = reviewer_profile
     col_a, col_b = st.columns(2)
     if col_a.button("Fetch discovery contract"):
         try:
@@ -579,21 +746,90 @@ with tab_discovery:
     if not fields:
         st.info("No discovery fields loaded.")
     else:
-        st.dataframe(fields, use_container_width=True)
-        proposed_only = [f for f in fields if f.get("status") == "proposed"]
-        if proposed_only:
-            selected_field = st.selectbox(
-                "Reject one field mapping",
-                options=[f"{f.get('id')} | {f.get('sheet_name')}::{f.get('source_column')} -> {f.get('target_table')}.{f.get('target_column')}" for f in proposed_only],
-                key="reject_field_select",
+        st.caption(
+            "Inline review: edit target table/column/transform directly in rows, then set decision "
+            "(`approve` or `reject`) and click Apply field decisions."
+        )
+        original_fields_by_id = {str(f.get("id")): f for f in fields if f.get("id")}
+        editable_rows: list[dict[str, Any]] = []
+        for f in fields:
+            editable_rows.append(
+                {
+                    "id": f.get("id"),
+                    "sheet_name": f.get("sheet_name"),
+                    "source_column": f.get("source_column"),
+                    "target_table": f.get("target_table"),
+                    "target_column": f.get("target_column"),
+                    "transform": f.get("transform"),
+                    "confidence": f.get("confidence"),
+                    "status": f.get("status"),
+                    "review_reason": f.get("review_reason") or "",
+                    "decision": "approve" if f.get("status") == "approved" else "keep",
+                }
             )
-            reason = st.text_input("Reject reason", value="wrong_semantic_mapping")
-            if st.button("Reject selected field"):
-                try:
-                    field_id = selected_field.split("|", 1)[0].strip()
-                    st.json(reject_mapping_field(batch_id, field_id, reviewer, reason))
-                except Exception as exc:  # noqa: BLE001
-                    st.error(f"Reject mapping failed: {exc}")
+
+        editor_df = pd.DataFrame(editable_rows)
+        edited_df = st.data_editor(
+            editor_df,
+            use_container_width=True,
+            hide_index=True,
+            key="field_mapping_editor",
+            column_config={
+                "decision": st.column_config.SelectboxColumn(
+                    "decision",
+                    options=["keep", "approve", "reject"],
+                    help="keep = no action, approve/reject = apply review decision",
+                ),
+                "review_reason": st.column_config.TextColumn(
+                    "review_reason",
+                    help="Used when decision is reject (or custom approve note).",
+                ),
+            },
+            disabled=["id", "sheet_name", "source_column", "confidence", "status"],
+        )
+
+        if st.button("Apply field decisions"):
+            if not batch_id:
+                st.error("Batch ID is required.")
+            else:
+                applied = 0
+                skipped = 0
+                for row in edited_df.to_dict("records"):
+                    row_id = str(row.get("id") or "").strip()
+                    if not row_id:
+                        skipped += 1
+                        continue
+                    decision = str(row.get("decision") or "keep").strip().lower()
+                    if decision not in {"approve", "reject"}:
+                        skipped += 1
+                        continue
+                    reason = str(row.get("review_reason") or "").strip() or (
+                        "inline_approved" if decision == "approve" else "inline_rejected"
+                    )
+                    try:
+                        review_mapping_field_row(
+                            batch_id=batch_id,
+                            field_id=row_id,
+                            reviewer=reviewer,
+                            decision=decision,
+                            reason=reason,
+                            target_table=str(row.get("target_table") or "").strip(),
+                            target_column=str(row.get("target_column") or "").strip(),
+                            transform=str(row.get("transform") or "").strip(),
+                        )
+                        applied += 1
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(f"Failed to apply decision for field {row_id}: {exc}")
+
+                if applied:
+                    try:
+                        payload = fetch_discovery(batch_id)
+                        st.session_state["discovery_payload"] = payload
+                        st.success(f"Applied {applied} field review decisions.")
+                    except Exception as exc:  # noqa: BLE001
+                        st.warning(f"Decisions applied but discovery refresh failed: {exc}")
+                if skipped:
+                    st.caption(f"Skipped {skipped} rows with decision=keep or missing id.")
 
     st.markdown("### Relation hypotheses")
     if not relations:

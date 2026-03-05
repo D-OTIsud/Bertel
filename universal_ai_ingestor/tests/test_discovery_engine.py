@@ -19,7 +19,7 @@ def test_discovery_contract_profiles_sheet_and_fields() -> None:
     assert contract.fields
     assert contract.sheets[0].sheet_name == "ObjetLegacy"
     mapped_targets = {(f.target_table, f.target_column) for f in contract.fields}
-    assert ("object_temp", "email") in mapped_targets
+    assert ("contact_channel_temp", "value") in mapped_targets
 
 
 def test_discovery_detects_media_sheet_entity() -> None:

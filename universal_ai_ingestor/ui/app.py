@@ -88,18 +88,46 @@ except ModuleNotFoundError:
 
 
 st.set_page_config(page_title="Universal AI Data Ingestor", layout="wide")
-st.title("Universal AI Data Ingestor - Validation Console")
+st.markdown(
+    """
+    <style>
+      .block-container {padding-top: 1.2rem; padding-bottom: 2rem; max-width: 1500px;}
+      h1, h2, h3 {letter-spacing: 0.2px;}
+      div[data-testid="stMetric"] {
+        background: rgba(20, 26, 35, 0.55);
+        border: 1px solid rgba(120, 140, 170, 0.25);
+        border-radius: 10px;
+        padding: 8px 12px;
+      }
+      div[data-testid="stMetric"] label {font-size: 0.78rem;}
+      div[data-testid="stMetricValue"] {font-size: 1rem;}
+      .bertel-card {
+        background: linear-gradient(180deg, rgba(20,26,35,0.55), rgba(14,18,25,0.55));
+        border: 1px solid rgba(120, 140, 170, 0.22);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+      }
+      .bertel-muted {opacity: 0.86; font-size: 0.9rem;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown("## Universal AI Data Ingestor")
+st.markdown('<div class="bertel-muted">Validation console for guided ingest, review, ETL and staging checks.</div>', unsafe_allow_html=True)
 
 api_base_url = os.getenv("API_BASE_URL", "http://api:8000")
 api_token = os.getenv("API_BEARER_TOKEN", "")
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
 
-st.info(
-    "Workflow: 1) Upload with organization -> 2) Discovery Review (approve mapping) -> "
-    "3) Batches (dedup/resolve/ETL/commit) -> 4) Staging Review."
+st.markdown(
+    '<div class="bertel-card"><b>Workflow</b>: 1) Upload with organization -> 2) Discovery Review '
+    '(approve mapping) -> 3) Batches (dedup/resolve/ETL/commit) -> 4) Staging Review.</div>',
+    unsafe_allow_html=True,
 )
 
+st.markdown("### Connection status")
 health_col_1, health_col_2, health_col_3, health_col_4 = st.columns(4)
 health_col_1.metric("API base", api_base_url)
 health_col_2.metric("API token", "loaded" if api_token else "missing")
@@ -164,7 +192,8 @@ def trigger_rollback(batch_id: str, force: bool = False) -> dict[str, Any]:
         params={"force": str(force).lower()},
         timeout=180,
     )
-    r.raise_for_status()
+    if not r.ok:
+        raise RuntimeError(f"Rollback failed ({r.status_code}): {r.text}")
     return r.json()
 
 
@@ -621,7 +650,7 @@ with tab_batches:
             gate = (current.get("mapping_contract") or {}).get("status")
             if primary_action == "recover":
                 recovery_report = {
-                    "rollback": trigger_rollback(batch_id, force=False),
+                    "rollback": trigger_rollback(batch_id, force=True),
                     "dedup": trigger_dedup(batch_id),
                     "resolve_dependencies": trigger_resolve_dependencies(batch_id),
                     "run_etl": trigger_run_etl(batch_id),

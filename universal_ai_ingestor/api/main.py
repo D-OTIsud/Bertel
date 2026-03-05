@@ -1037,7 +1037,19 @@ def review_media(batch_id: str, import_media_id: str, approve: bool, reviewer: s
 @app.post("/api/v1/ingest/{batch_id}/rollback", dependencies=[Depends(verify_token)])
 def rollback_batch(batch_id: str, force: bool = False) -> JSONResponse:
     sb = get_supabase()
-    result = sb.rpc("rollback_staging_batch_compensate", {"p_batch_id": batch_id, "p_force": force}).execute()
+    try:
+        result = sb.rpc("rollback_staging_batch_compensate", {"p_batch_id": batch_id, "p_force": force}).execute()
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("rollback failed for batch_id=%s force=%s: %s", batch_id, force, exc)
+        return JSONResponse(
+            status_code=400,
+            content={
+                "batch_id": batch_id,
+                "error": "Rollback failed",
+                "details": str(exc),
+                "hint": "If the batch is blocked, retry with force=true or verify rollback_staging_batch_compensate exists.",
+            },
+        )
     record = batch_registry.get(batch_id)
     if record is not None:
         record.status = BatchStatus.staging_loaded

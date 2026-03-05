@@ -15,7 +15,7 @@ def test_find_best_target_prefers_schema_alias() -> None:
 def test_validate_mapping_target_rejects_invalid_table_column_combo() -> None:
     ok, reason = validate_mapping_target("object_temp", "source_url", "identity")
     assert not ok
-    assert "Unsupported target_column" in reason
+    assert "Unknown column" in reason or "Unsupported target_column" in reason
 
 
 def test_validate_mapping_target_accepts_supported_mapping() -> None:

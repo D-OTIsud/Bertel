@@ -17,50 +17,131 @@ API_BASE = os.getenv("API_BASE_URL", "http://api:8000").rstrip("/")
 TOKEN = os.getenv("API_BEARER_TOKEN", "")
 
 TARGET_SCHEMA: dict[str, dict[str, Any]] = {
+    # --- Part 1: Core & Identity ---
     "object_temp": {
-        "label": "Object (HOT, RES, ITI...)",
+        "label": "1. Object (HOT, RES, ORG, ITI...)",
         "columns": ["name", "object_type", "external_id", "source_org_object_id", "org_name", "email", "phone", "latitude", "longitude"],
         "transforms": ["identity", "lowercase"],
     },
+    "object_external_id_temp": {
+        "label": "1. External ID (upsert key)",
+        "columns": ["external_id", "organization_object_id"],
+        "transforms": ["identity"],
+    },
+    "object_origin_temp": {
+        "label": "1. Origin (source system)",
+        "columns": ["source_system", "source_object_id"],
+        "transforms": ["identity", "lowercase"],
+    },
+    # --- Part 2: Governance ---
     "org_temp": {
-        "label": "Organization (ORG)",
+        "label": "2. Organization (ORG)",
         "columns": ["name", "source_org_object_id", "external_id"],
         "transforms": ["identity", "lowercase"],
     },
-    "object_location_temp": {
-        "label": "Location (address + GPS)",
-        "columns": ["latitude", "longitude", "address1", "city", "postcode"],
-        "transforms": ["identity", "split_gps"],
-    },
-    "contact_channel_temp": {
-        "label": "Contact (email, phone, web...)",
-        "columns": ["value", "kind_code"],
-        "transforms": ["identity", "lowercase"],
-    },
     "object_org_link_temp": {
-        "label": "Object-Org link (ownership)",
+        "label": "2. Object-Org link",
         "columns": ["role_code", "is_primary", "note"],
         "transforms": ["identity", "lowercase"],
     },
-    "object_classification_temp": {
-        "label": "Classification (labels, stars)",
-        "columns": ["scheme_code", "value_code"],
+    "actor_temp": {
+        "label": "2. Actor (human contact)",
+        "columns": ["display_name", "first_name", "last_name", "gender"],
+        "transforms": ["identity", "lowercase"],
+    },
+    "actor_channel_temp": {
+        "label": "2. Actor contact (personal)",
+        "columns": ["kind_code", "value", "is_primary"],
+        "transforms": ["identity", "lowercase"],
+    },
+    "actor_object_role_temp": {
+        "label": "2. Actor role on object",
+        "columns": ["role_code", "is_primary", "note"],
+        "transforms": ["identity", "lowercase"],
+    },
+    # --- Part 3: Core Satellites ---
+    "object_location_temp": {
+        "label": "3. Location (address + GPS)",
+        "columns": ["latitude", "longitude", "address1", "city", "postcode"],
+        "transforms": ["identity", "split_gps"],
+    },
+    "object_description_temp": {
+        "label": "3. Description (texts)",
+        "columns": ["description", "description_chapo", "description_mobile", "sanitary_measures"],
+        "transforms": ["identity"],
+    },
+    "contact_channel_temp": {
+        "label": "3. Establishment contact",
+        "columns": ["value", "kind_code"],
         "transforms": ["identity", "lowercase"],
     },
     "media_temp": {
-        "label": "Media (photos, URLs)",
+        "label": "3. Media (photos, URLs)",
         "columns": ["source_url"],
         "transforms": ["identity", "split_list"],
     },
+    # --- Part 4: Characteristics ---
+    "object_classification_temp": {
+        "label": "4. Classification (stars, labels)",
+        "columns": ["scheme_code", "value_code"],
+        "transforms": ["identity", "lowercase"],
+    },
     "object_amenity_temp": {
-        "label": "Amenities / equipment",
+        "label": "4. Amenities / equipment",
         "columns": ["amenity_code"],
         "transforms": ["identity", "split_list"],
     },
     "object_payment_method_temp": {
-        "label": "Payment methods",
+        "label": "4. Payment methods",
         "columns": ["payment_code"],
         "transforms": ["identity", "split_list"],
+    },
+    "object_language_temp": {
+        "label": "4. Languages spoken",
+        "columns": ["language_code", "level_code"],
+        "transforms": ["identity", "split_list", "lowercase"],
+    },
+    "object_environment_tag_temp": {
+        "label": "4. Environment (mountain, sea...)",
+        "columns": ["environment_tag_code"],
+        "transforms": ["identity", "split_list", "lowercase"],
+    },
+    "object_legal_temp": {
+        "label": "4. Legal (SIRET, license...)",
+        "columns": ["type_code", "value", "valid_from", "valid_to", "note"],
+        "transforms": ["identity"],
+    },
+    # --- Part 5: Time & Money ---
+    "object_price_temp": {
+        "label": "5. Pricing",
+        "columns": ["kind_code", "unit_code", "amount", "amount_max", "currency", "conditions", "valid_from", "valid_to"],
+        "transforms": ["identity"],
+    },
+    "object_capacity_temp": {
+        "label": "5. Capacity (rooms, beds...)",
+        "columns": ["metric_code", "value_integer", "unit"],
+        "transforms": ["identity"],
+    },
+    "opening_period_temp": {
+        "label": "5. Opening hours",
+        "columns": ["period_name", "date_start", "date_end", "schedule_text", "weekdays", "start_time", "end_time"],
+        "transforms": ["identity"],
+    },
+    # --- Part 6: Typologies ---
+    "object_fma_temp": {
+        "label": "6. Event (FMA) dates",
+        "columns": ["event_start_date", "event_end_date", "event_start_time", "event_end_time", "is_recurring", "recurrence_pattern"],
+        "transforms": ["identity"],
+    },
+    "object_iti_temp": {
+        "label": "6. Itinerary (ITI) details",
+        "columns": ["distance_km", "duration_hours", "difficulty_level", "elevation_gain", "is_loop", "gpx_data"],
+        "transforms": ["identity"],
+    },
+    "object_room_type_temp": {
+        "label": "6. Room type (HOT/HPA)",
+        "columns": ["code", "name", "capacity_adults", "capacity_children", "capacity_total", "size_sqm", "bed_config", "total_rooms", "base_price"],
+        "transforms": ["identity"],
     },
 }
 
@@ -74,8 +155,6 @@ SKIP_PATTERNS: set[str] = {
     "date_creation", "date_modification", "created_at", "updated_at",
     "user", "utilisateur", "auteur", "author",
     "date_saisie", "date_maj", "date_import",
-    "description", "descriptif", "presentation", "commentaire",
-    "comment", "remarque", "observation",
 }
 
 TRANSFORM_HELP = {

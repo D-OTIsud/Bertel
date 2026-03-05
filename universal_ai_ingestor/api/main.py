@@ -277,17 +277,25 @@ def health() -> dict[str, str]:
 @app.get("/api/v1/orgs", dependencies=[Depends(verify_token)])
 def list_orgs(search: str = Query(default="", max_length=200)) -> JSONResponse:
     sb = get_supabase()
-    for schema, table in [("api", "v_org_all"), ("public", "v_org_all"), ("public", "object")]:
-        try:
-            cols = "object_id,name,org_type_code" if table == "v_org_all" else "object_id,name"
-            query = sb.schema(schema).table(table).select(cols).limit(200)
-            if search.strip():
-                query = query.ilike("name", f"%{search.strip()}%")
-            result = query.execute()
-            return JSONResponse(content={"orgs": result.data or []})
-        except Exception:  # noqa: BLE001
-            continue
-    return JSONResponse(content={"orgs": [], "warning": "No org view found. Enter org ID manually."})
+    try:
+        query = (
+            sb.table("object")
+            .select("id,name,object_type")
+            .eq("object_type", "ORG")
+            .order("name")
+            .limit(200)
+        )
+        if search.strip():
+            query = query.ilike("name", f"%{search.strip()}%")
+        result = query.execute()
+        orgs = [
+            {"object_id": r["id"], "name": r["name"], "org_type_code": r.get("object_type", "ORG")}
+            for r in (result.data or [])
+        ]
+        return JSONResponse(content={"orgs": orgs})
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to fetch orgs: %s", exc)
+        return JSONResponse(content={"orgs": [], "warning": "Could not load organizations. Enter org ID manually."})
 
 
 # ---------------------------------------------------------------------------

@@ -110,14 +110,13 @@ class _FakeSupabase:
 
 
 def test_ingest_rejects_oversized_payload(monkeypatch) -> None:
-    monkeypatch.setattr(api_main.settings, "api_operator_token", "operator-token")
     monkeypatch.setattr(api_main.settings, "ingest_max_bytes", 10)
     monkeypatch.setattr(api_main, "MAX_INGEST_BYTES", 10)
     client = TestClient(api_main.app)
 
     response = client.post(
         "/api/v1/ingest",
-        headers={"Authorization": "Bearer operator-token"},
+        headers={"Authorization": "Bearer admin-token"},
         params={"organization_object_id": "ORG001"},
         files={"upload_file": ("big.csv", b"0123456789ABCDEF", "text/csv")},
     )
@@ -127,7 +126,6 @@ def test_ingest_rejects_oversized_payload(monkeypatch) -> None:
 
 
 def test_list_batches_applies_limit_offset_and_max_cap(monkeypatch) -> None:
-    monkeypatch.setattr(api_main.settings, "api_operator_token", "operator-token")
     monkeypatch.setattr(api_main.settings, "ingest_list_default_limit", 2)
     monkeypatch.setattr(api_main.settings, "ingest_list_max_limit", 3)
     monkeypatch.setattr(
@@ -156,7 +154,7 @@ def test_list_batches_applies_limit_offset_and_max_cap(monkeypatch) -> None:
 
     ok = client.get(
         "/api/v1/ingest",
-        headers={"Authorization": "Bearer operator-token"},
+        headers={"Authorization": "Bearer admin-token"},
         params={"limit": 2, "offset": 1},
     )
     assert ok.status_code == 200
@@ -164,37 +162,8 @@ def test_list_batches_applies_limit_offset_and_max_cap(monkeypatch) -> None:
 
     bad = client.get(
         "/api/v1/ingest",
-        headers={"Authorization": "Bearer operator-token"},
+        headers={"Authorization": "Bearer admin-token"},
         params={"limit": 4},
     )
     assert bad.status_code == 400
     assert "limit must be <=" in bad.json()["detail"]
-
-
-def test_rbac_enforced_between_operator_reviewer_admin(monkeypatch) -> None:
-    monkeypatch.setattr(api_main.settings, "api_operator_token", "operator-token")
-    monkeypatch.setattr(api_main.settings, "api_reviewer_token", "reviewer-token")
-    monkeypatch.setattr(api_main.settings, "api_admin_token", "admin-token")
-    monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([]))
-
-    client = TestClient(api_main.app)
-
-    operator_on_admin = client.get(
-        "/api/v1/metrics",
-        headers={"Authorization": "Bearer operator-token"},
-    )
-    assert operator_on_admin.status_code == 403
-
-    reviewer_on_operator = client.post(
-        "/api/v1/ingest",
-        headers={"Authorization": "Bearer reviewer-token"},
-        params={"organization_object_id": "ORG001"},
-        files={"upload_file": ("tiny.csv", b"a,b\n1,2\n", "text/csv")},
-    )
-    assert reviewer_on_operator.status_code == 403
-
-    admin_on_admin = client.get(
-        "/api/v1/metrics",
-        headers={"Authorization": "Bearer admin-token"},
-    )
-    assert admin_on_admin.status_code == 200

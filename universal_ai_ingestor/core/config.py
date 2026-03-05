@@ -9,9 +9,6 @@ class Settings(BaseSettings):
     supabase_service_key: str = Field(alias="SUPABASE_SERVICE_KEY")
     openai_api_key: str = Field(alias="OPENAI_API_KEY")
     api_bearer_token: str = Field(alias="API_BEARER_TOKEN")
-    api_operator_token: str | None = Field(default=None, alias="API_OPERATOR_TOKEN")
-    api_reviewer_token: str | None = Field(default=None, alias="API_REVIEWER_TOKEN")
-    api_admin_token: str | None = Field(default=None, alias="API_ADMIN_TOKEN")
 
     # Optional but recommended for schema introspection SQL.
     supabase_db_url: str | None = Field(default=None, alias="SUPABASE_DB_URL")

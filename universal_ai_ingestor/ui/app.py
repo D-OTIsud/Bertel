@@ -14,10 +14,7 @@ st.set_page_config(page_title="Universal AI Data Ingestor", layout="wide")
 st.title("Universal AI Data Ingestor - Validation Console")
 
 api_base_url = os.getenv("API_BASE_URL", "http://api:8000")
-api_bearer_token_env = os.getenv("API_BEARER_TOKEN", "")
-api_operator_token_env = os.getenv("API_OPERATOR_TOKEN", "")
-api_reviewer_token_env = os.getenv("API_REVIEWER_TOKEN", "")
-api_admin_token_env = os.getenv("API_ADMIN_TOKEN", "")
+api_token = os.getenv("API_BEARER_TOKEN", "")
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
 
@@ -30,46 +27,13 @@ with st.sidebar:
     st.markdown("### Connection and auth")
     st.caption("Values are loaded from runtime environment (Coolify/Docker).")
     st.code(
-        "API_BASE_URL\nAPI_BEARER_TOKEN\nAPI_OPERATOR_TOKEN\nAPI_REVIEWER_TOKEN\nAPI_ADMIN_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
+        "API_BASE_URL\nAPI_BEARER_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
         language="text",
     )
-    st.caption("Role model: operator=ingest/etl, reviewer=mapping/media review, admin=all.")
-    auth_mode = st.radio(
-        "API authentication mode",
-        options=["Use environment role token", "Paste token manually"],
-        key="auth_mode",
-    )
-
-    api_token = ""
-    if auth_mode == "Use environment role token":
-        env_role_options: list[tuple[str, str]] = []
-        if api_admin_token_env:
-            env_role_options.append(("admin (API_ADMIN_TOKEN)", api_admin_token_env))
-        if api_reviewer_token_env:
-            env_role_options.append(("reviewer (API_REVIEWER_TOKEN)", api_reviewer_token_env))
-        if api_operator_token_env:
-            env_role_options.append(("operator (API_OPERATOR_TOKEN)", api_operator_token_env))
-        if api_bearer_token_env:
-            env_role_options.append(("admin fallback (API_BEARER_TOKEN)", api_bearer_token_env))
-
-        if env_role_options:
-            selected_role_label = st.selectbox(
-                "Select token profile",
-                options=[label for label, _ in env_role_options],
-                key="selected_token_profile",
-            )
-            api_token = next(token for label, token in env_role_options if label == selected_role_label)
-            st.caption(f"Using: {selected_role_label}")
-        else:
-            st.error("No API token available in environment variables.")
-    else:
-        manual_token = st.text_input("Paste bearer token", type="password", key="manual_api_token")
-        api_token = manual_token.strip()
-
     if api_token:
-        st.success("API token loaded for requests")
+        st.success("API_BEARER_TOKEN loaded")
     else:
-        st.error("Missing API token for requests")
+        st.error("Missing API_BEARER_TOKEN")
 
     if supabase_url:
         st.success("SUPABASE_URL loaded")
@@ -713,17 +677,8 @@ with tab_staging:
 
 with tab_discovery:
     st.subheader("Step 2 - Mapping contract review and approval")
-    st.caption("Required role: reviewer or admin.")
     batch_id = choose_active_batch(context_key="discovery", title="Batch context")
-    reviewer_profile = st.selectbox(
-        "Reviewer profile",
-        options=["mapping_reviewer", "qa_reviewer", "admin_reviewer", "custom"],
-        key="discovery_reviewer_profile",
-    )
-    if reviewer_profile == "custom":
-        reviewer = st.text_input("Reviewer", value="mapping_reviewer", key="discovery_reviewer_custom")
-    else:
-        reviewer = reviewer_profile
+    reviewer = st.text_input("Reviewer (for audit metadata)", value="mapping_reviewer", key="discovery_reviewer")
     col_a, col_b = st.columns(2)
     if col_a.button("Fetch discovery contract"):
         try:

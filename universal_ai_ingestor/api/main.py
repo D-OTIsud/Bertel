@@ -42,45 +42,11 @@ RETRY_BACKOFF_SECONDS = settings.etl_retry_backoff_seconds
 MAX_INGEST_BYTES = settings.ingest_max_bytes
 
 
-def _token_roles() -> list[tuple[str, str]]:
-    roles: list[tuple[str, str]] = []
-    if settings.api_operator_token:
-        roles.append((settings.api_operator_token, "operator"))
-    if settings.api_reviewer_token:
-        roles.append((settings.api_reviewer_token, "reviewer"))
-    if settings.api_admin_token:
-        roles.append((settings.api_admin_token, "admin"))
-    # Backward-compatible default token keeps full privileges.
-    roles.append((settings.api_bearer_token, "admin"))
-    return roles
-
-
-def get_request_role(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> None:
     if credentials is None:
         raise HTTPException(status_code=401, detail="Missing bearer token")
-    for token, role in _token_roles():
-        if hmac.compare_digest(credentials.credentials, token):
-            return role
-    raise HTTPException(status_code=401, detail="Invalid bearer token")
-
-
-def require_authenticated(_: str = Depends(get_request_role)) -> None:
-    return None
-
-
-def require_operator_or_admin(role: str = Depends(get_request_role)) -> None:
-    if role not in {"operator", "admin"}:
-        raise HTTPException(status_code=403, detail="Insufficient role")
-
-
-def require_reviewer_or_admin(role: str = Depends(get_request_role)) -> None:
-    if role not in {"reviewer", "admin"}:
-        raise HTTPException(status_code=403, detail="Insufficient role")
-
-
-def require_admin(role: str = Depends(get_request_role)) -> None:
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Insufficient role")
+    if not hmac.compare_digest(credentials.credentials, settings.api_bearer_token):
+        raise HTTPException(status_code=401, detail="Invalid bearer token")
 
 
 def detect_extension(content_type: str | None, fallback_name: str | None = None) -> str:
@@ -287,7 +253,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/v1/ingest", dependencies=[Depends(require_operator_or_admin)], response_model=IngestAccepted, status_code=202)
+@app.post("/api/v1/ingest", dependencies=[Depends(verify_token)], response_model=IngestAccepted, status_code=202)
 async def ingest(
     request: Request,
     _: BackgroundTasks,
@@ -406,7 +372,7 @@ async def ingest(
 
 
 @app.get("/api/v1/ingest/{batch_id}")
-def ingest_status(batch_id: str, _: None = Depends(require_authenticated)) -> JSONResponse:
+def ingest_status(batch_id: str, _: None = Depends(verify_token)) -> JSONResponse:
     record = batch_registry.get(batch_id)
     if record is None:
         sb = get_supabase()
@@ -432,7 +398,7 @@ def ingest_status(batch_id: str, _: None = Depends(require_authenticated)) -> JS
     )
 
 
-@app.post("/api/v1/ingest/discover", dependencies=[Depends(require_operator_or_admin)], response_model=IngestAccepted, status_code=202)
+@app.post("/api/v1/ingest/discover", dependencies=[Depends(verify_token)], response_model=IngestAccepted, status_code=202)
 async def ingest_discover(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -451,7 +417,7 @@ async def ingest_discover(
     )
 
 
-@app.get("/api/v1/ingest/{batch_id}/discovery", dependencies=[Depends(require_authenticated)])
+@app.get("/api/v1/ingest/{batch_id}/discovery", dependencies=[Depends(verify_token)])
 def get_discovery(batch_id: str) -> JSONResponse:
     sb = get_supabase()
     latest = _latest_mapping_contract(sb, batch_id)
@@ -482,7 +448,7 @@ def get_discovery(batch_id: str) -> JSONResponse:
     )
 
 
-@app.post("/api/v1/ingest/{batch_id}/mapping/approve", dependencies=[Depends(require_reviewer_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/mapping/approve", dependencies=[Depends(verify_token)])
 def approve_mapping(batch_id: str, reviewer: str = "mapping_reviewer", approve_all: bool = True) -> JSONResponse:
     sb = get_supabase()
     latest = _latest_mapping_contract(sb, batch_id)
@@ -560,7 +526,7 @@ def approve_mapping(batch_id: str, reviewer: str = "mapping_reviewer", approve_a
     )
 
 
-@app.post("/api/v1/ingest/{batch_id}/mapping/reject", dependencies=[Depends(require_reviewer_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/mapping/reject", dependencies=[Depends(verify_token)])
 def reject_mapping(
     batch_id: str,
     reviewer: str = "mapping_reviewer",
@@ -619,7 +585,7 @@ def reject_mapping(
     return JSONResponse(content={"batch_id": batch_id, "contract_id": contract_id, "status": "review_required"})
 
 
-@app.post("/api/v1/ingest/{batch_id}/mapping/review-field", dependencies=[Depends(require_reviewer_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/mapping/review-field", dependencies=[Depends(verify_token)])
 def review_mapping_field(
     batch_id: str,
     field_id: str,
@@ -717,7 +683,7 @@ def review_mapping_field(
     return JSONResponse(content={"batch_id": batch_id, "contract_id": contract_id, "status": new_contract_status})
 
 
-@app.post("/api/v1/ingest/{batch_id}/run-etl", dependencies=[Depends(require_operator_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/run-etl", dependencies=[Depends(verify_token)])
 def run_etl(batch_id: str, background_tasks: BackgroundTasks) -> JSONResponse:
     sb = get_supabase()
     is_approved, latest = _ensure_mapping_approved(sb, batch_id)
@@ -758,7 +724,7 @@ def run_etl(batch_id: str, background_tasks: BackgroundTasks) -> JSONResponse:
 
 @app.get("/api/v1/ingest")
 def list_batches(
-    _: None = Depends(require_authenticated),
+    _: None = Depends(verify_token),
     limit: int = Query(default=settings.ingest_list_default_limit, ge=1),
     offset: int = Query(default=0, ge=0),
 ) -> list[dict[str, Any]]:
@@ -807,14 +773,14 @@ def list_batches(
     return in_memory[offset : offset + limit]
 
 
-@app.get("/api/v1/ingest/{batch_id}/integrity", dependencies=[Depends(require_authenticated)])
+@app.get("/api/v1/ingest/{batch_id}/integrity", dependencies=[Depends(verify_token)])
 def integrity_check(batch_id: str) -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("assert_staging_batch_integrity", {"p_batch_id": batch_id}).execute()
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
 
 
-@app.post("/api/v1/ingest/{batch_id}/deduplicate", dependencies=[Depends(require_operator_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/deduplicate", dependencies=[Depends(verify_token)])
 def deduplicate_batch(
     batch_id: str,
     distance_meters: int = 50,
@@ -842,7 +808,7 @@ def deduplicate_batch(
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
 
 
-@app.post("/api/v1/ingest/{batch_id}/resolve-dependencies", dependencies=[Depends(require_operator_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/resolve-dependencies", dependencies=[Depends(verify_token)])
 def resolve_dependencies(batch_id: str) -> JSONResponse:
     sb = get_supabase()
     is_approved, latest = _ensure_mapping_approved(sb, batch_id)
@@ -855,7 +821,7 @@ def resolve_dependencies(batch_id: str) -> JSONResponse:
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
 
 
-@app.post("/api/v1/ingest/{batch_id}/commit", dependencies=[Depends(require_operator_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/commit", dependencies=[Depends(verify_token)])
 def commit_batch(batch_id: str) -> JSONResponse:
     sb = get_supabase()
     is_approved, latest = _ensure_mapping_approved(sb, batch_id)
@@ -891,7 +857,7 @@ def commit_batch(batch_id: str) -> JSONResponse:
     return JSONResponse(content={"batch_id": batch_id, "dependency_report": report_payload, "result": result.data})
 
 
-@app.post("/api/v1/ingest/{batch_id}/media/process", dependencies=[Depends(require_operator_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/media/process", dependencies=[Depends(verify_token)])
 def process_media(batch_id: str, limit: int = Query(default=200, ge=1, le=1000)) -> JSONResponse:
     sb = get_supabase()
     is_approved, latest = _ensure_mapping_approved(sb, batch_id)
@@ -993,7 +959,7 @@ def process_media(batch_id: str, limit: int = Query(default=200, ge=1, le=1000))
     )
 
 
-@app.post("/api/v1/ingest/{batch_id}/media/{import_media_id}/review", dependencies=[Depends(require_reviewer_or_admin)])
+@app.post("/api/v1/ingest/{batch_id}/media/{import_media_id}/review", dependencies=[Depends(verify_token)])
 def review_media(batch_id: str, import_media_id: str, approve: bool, reviewer: str = "manual_reviewer") -> JSONResponse:
     sb = get_supabase()
     update_payload = {
@@ -1014,7 +980,7 @@ def review_media(batch_id: str, import_media_id: str, approve: bool, reviewer: s
     return JSONResponse(content={"batch_id": batch_id, "import_media_id": import_media_id, "approved": approve})
 
 
-@app.post("/api/v1/ingest/{batch_id}/rollback", dependencies=[Depends(require_admin)])
+@app.post("/api/v1/ingest/{batch_id}/rollback", dependencies=[Depends(verify_token)])
 def rollback_batch(batch_id: str, force: bool = False) -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("rollback_staging_batch_compensate", {"p_batch_id": batch_id, "p_force": force}).execute()
@@ -1025,7 +991,7 @@ def rollback_batch(batch_id: str, force: bool = False) -> JSONResponse:
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
 
 
-@app.post("/api/v1/ingest/{batch_id}/purge", dependencies=[Depends(require_admin)])
+@app.post("/api/v1/ingest/{batch_id}/purge", dependencies=[Depends(verify_token)])
 def purge_batch(batch_id: str, force: bool = False) -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("purge_staging_batch", {"p_batch_id": batch_id, "p_force": force}).execute()
@@ -1033,28 +999,28 @@ def purge_batch(batch_id: str, force: bool = False) -> JSONResponse:
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
 
 
-@app.get("/api/v1/metrics", dependencies=[Depends(require_admin)])
+@app.get("/api/v1/metrics", dependencies=[Depends(verify_token)])
 def metrics() -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("get_ingestor_metrics").execute()
     return JSONResponse(content={"metrics": result.data})
 
 
-@app.get("/api/v1/ops/cron-health", dependencies=[Depends(require_admin)])
+@app.get("/api/v1/ops/cron-health", dependencies=[Depends(verify_token)])
 def cron_health() -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("get_ingestor_scheduler_health").execute()
     return JSONResponse(content={"scheduler": result.data})
 
 
-@app.post("/api/v1/ops/media/retry-failed", dependencies=[Depends(require_admin)])
+@app.post("/api/v1/ops/media/retry-failed", dependencies=[Depends(verify_token)])
 def retry_failed_media(limit: int = Query(default=200, ge=1, le=2000)) -> JSONResponse:
     sb = get_supabase()
     result = sb.rpc("retry_failed_media_downloads", {"p_limit": limit}).execute()
     return JSONResponse(content={"result": result.data})
 
 
-@app.post("/api/v1/ops/watchdog/stale-batches", dependencies=[Depends(require_admin)])
+@app.post("/api/v1/ops/watchdog/stale-batches", dependencies=[Depends(verify_token)])
 def watchdog_stale_batches(
     stale_minutes: int = Query(default=30, ge=1, le=24 * 60),
     limit: int = Query(default=200, ge=1, le=2000),

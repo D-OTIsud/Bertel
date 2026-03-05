@@ -607,6 +607,142 @@ _object_room_type_temp = TargetTableRule(
     ),
 )
 
+# ─────────────────────────────────────────────────────────────────────
+# PART 7 : CRM & Operations
+# ─────────────────────────────────────────────────────────────────────
+
+_crm_interaction_temp = TargetTableRule(
+    table="crm_interaction_temp",
+    entity="crm_interaction",
+    production_table="crm_interaction",
+    description="CRM contact history: calls, emails, meetings. Always linked to an object. Optionally linked to an actor.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("interaction_type", (
+            "interaction_type", "type_interaction", "type_echange",
+            "canal", "channel", "mode_contact",
+        )),
+        TargetColumnRule("direction", (
+            "direction", "sens", "inbound", "outbound",
+        )),
+        TargetColumnRule("subject", (
+            "subject", "objet", "sujet", "motif", "topic",
+        )),
+        TargetColumnRule("body", (
+            "body", "contenu", "message", "notes_echange",
+            "compte_rendu", "resume_echange",
+        )),
+        TargetColumnRule("source", (
+            "interaction_source", "source_echange",
+        )),
+        TargetColumnRule("occurred_at", (
+            "occurred_at", "date_echange", "date_contact",
+            "date_appel", "date_interaction",
+        )),
+        TargetColumnRule("duration_min", (
+            "duration_min", "duree_min", "duree_appel",
+        )),
+        TargetColumnRule("demand_topic_code", (
+            "demand_topic", "sujet_demande", "topic_code",
+            "type_demande", "motif_demande",
+        )),
+        TargetColumnRule("status", (
+            "interaction_status", "statut_echange",
+        )),
+    ),
+)
+
+_crm_task_temp = TargetTableRule(
+    table="crm_task_temp",
+    entity="crm_task",
+    production_table="crm_task",
+    description="CRM follow-up tasks (to-do list). Linked to an object, optionally to an actor or interaction.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("title", (
+            "task_title", "titre_tache", "tache", "todo",
+            "action_a_faire", "suivi",
+        )),
+        TargetColumnRule("description", (
+            "task_description", "description_tache", "detail_tache",
+        )),
+        TargetColumnRule("status", (
+            "task_status", "statut_tache", "etat_tache",
+        )),
+        TargetColumnRule("priority", (
+            "priority", "priorite", "urgence",
+        )),
+        TargetColumnRule("due_at", (
+            "due_at", "echeance", "date_echeance", "deadline",
+            "date_limite",
+        )),
+    ),
+)
+
+_object_membership_temp = TargetTableRule(
+    table="object_membership_temp",
+    entity="membership",
+    production_table="object_membership",
+    description="Memberships/subscriptions: an object (establishment) paying dues to an org (e.g. Office de Tourisme).",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("campaign_code", (
+            "campaign", "campagne", "campagne_adhesion",
+        )),
+        TargetColumnRule("tier_code", (
+            "tier", "niveau_adhesion", "formule", "pack",
+        )),
+        TargetColumnRule("status", (
+            "membership_status", "statut_adhesion", "etat_adhesion",
+        )),
+        TargetColumnRule("starts_at", (
+            "starts_at", "date_debut_adhesion", "debut_adhesion",
+        )),
+        TargetColumnRule("ends_at", (
+            "ends_at", "date_fin_adhesion", "fin_adhesion", "expiration_adhesion",
+        )),
+        TargetColumnRule("payment_date", (
+            "payment_date", "date_paiement", "date_cotisation",
+        )),
+    ),
+)
+
+_object_review_temp = TargetTableRule(
+    table="object_review_temp",
+    entity="review",
+    production_table="object_review",
+    description="External reviews (TripAdvisor, Google, Booking...). Rating, author, content, source.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("source_code", (
+            "review_source", "source_avis", "plateforme_avis",
+            "tripadvisor", "google_reviews", "booking",
+        )),
+        TargetColumnRule("rating", (
+            "rating", "note", "note_avis", "score", "evaluation",
+        )),
+        TargetColumnRule("rating_max", (
+            "rating_max", "note_max", "score_max",
+        )),
+        TargetColumnRule("title", (
+            "review_title", "titre_avis",
+        )),
+        TargetColumnRule("content", (
+            "review_content", "contenu_avis", "texte_avis", "avis",
+            "commentaire_client", "review_text",
+        )),
+        TargetColumnRule("author_name", (
+            "author_name", "nom_auteur", "auteur_avis", "reviewer",
+        )),
+        TargetColumnRule("review_date", (
+            "review_date", "date_avis", "date_review",
+        )),
+        TargetColumnRule("traveler_type", (
+            "traveler_type", "type_voyageur", "profil_voyageur",
+        )),
+    ),
+)
+
 
 # ─────────────────────────────────────────────────────────────────────
 # Registry
@@ -630,6 +766,9 @@ TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
         _object_price_temp, _object_capacity_temp, _opening_period_temp,
         # Part 6: Typologies
         _object_fma_temp, _object_iti_temp, _object_room_type_temp,
+        # Part 7: CRM
+        _crm_interaction_temp, _crm_task_temp,
+        _object_membership_temp, _object_review_temp,
     ]
 }
 
@@ -712,6 +851,10 @@ def build_target_schema_context() -> dict[str, object]:
             "Capacity (rooms, beds, seats) -> object_capacity_temp.",
             "Pricing -> object_price_temp. Opening hours -> opening_period_temp.",
             "Event dates -> object_fma_temp. Itinerary details -> object_iti_temp. Rooms -> object_room_type_temp.",
+            "CRM interactions (calls, emails, meetings) -> crm_interaction_temp.",
+            "CRM follow-up tasks -> crm_task_temp.",
+            "Memberships/subscriptions (adhesion, cotisation) -> object_membership_temp.",
+            "External reviews (TripAdvisor, Google, Booking ratings) -> object_review_temp.",
             "Metadata (date_creation, user, moderator) -> SKIP.",
         ],
     }

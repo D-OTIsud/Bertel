@@ -143,6 +143,27 @@ TARGET_SCHEMA: dict[str, dict[str, Any]] = {
         "columns": ["code", "name", "capacity_adults", "capacity_children", "capacity_total", "size_sqm", "bed_config", "total_rooms", "base_price"],
         "transforms": ["identity"],
     },
+    # --- Part 7: CRM ---
+    "crm_interaction_temp": {
+        "label": "7. CRM interaction (calls, emails)",
+        "columns": ["interaction_type", "direction", "subject", "body", "source", "occurred_at", "duration_min", "demand_topic_code", "status"],
+        "transforms": ["identity", "lowercase"],
+    },
+    "crm_task_temp": {
+        "label": "7. CRM task (follow-up)",
+        "columns": ["title", "description", "status", "priority", "due_at"],
+        "transforms": ["identity", "lowercase"],
+    },
+    "object_membership_temp": {
+        "label": "7. Membership (adhesion)",
+        "columns": ["campaign_code", "tier_code", "status", "starts_at", "ends_at", "payment_date"],
+        "transforms": ["identity", "lowercase"],
+    },
+    "object_review_temp": {
+        "label": "7. Review (avis client)",
+        "columns": ["source_code", "rating", "rating_max", "title", "content", "author_name", "review_date", "traveler_type"],
+        "transforms": ["identity", "lowercase"],
+    },
 }
 
 ALL_TABLES = list(TARGET_SCHEMA.keys())

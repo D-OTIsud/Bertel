@@ -225,7 +225,8 @@ def approve_mapping_contract(batch_id: str, reviewer: str) -> dict[str, Any]:
         params={"reviewer": reviewer, "approve_all": "true"},
         timeout=120,
     )
-    r.raise_for_status()
+    if not r.ok:
+        raise RuntimeError(f"Approve mapping failed ({r.status_code}): {r.text}")
     return r.json()
 
 

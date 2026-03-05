@@ -321,6 +321,46 @@ def fetch_organizations(
     return response.data or []
 
 
+@st.cache_data(ttl=6, show_spinner=False)
+def fetch_batch_events(
+    supabase_url_value: str,
+    supabase_service_key_value: str,
+    batch_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    if not supabase_url_value or not supabase_service_key_value or not batch_id:
+        return []
+    sb = create_client(supabase_url_value, supabase_service_key_value)
+    response = (
+        sb.schema("staging")
+        .table("import_events")
+        .select("created_at,phase,level,message,payload")
+        .eq("batch_id", batch_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
+def recommend_next_step(status_payload: dict[str, Any]) -> str:
+    status = str(status_payload.get("status") or "").lower()
+    contract_status = str((status_payload.get("mapping_contract") or {}).get("status") or "").lower()
+    if status == "mapping_review_required" or contract_status in {"review_required", "proposed", ""}:
+        return "Go to Step 2 (Discovery Review), approve mapping, then come back to Step 3."
+    if status in {"mapping_approved", "discovering"}:
+        return "Run pipeline now (dedup -> resolve dependencies -> ETL)."
+    if status in {"profiling"}:
+        return "ETL is running in background. Watch Live event log below, then Refresh status."
+    if status in {"staging_loaded", "deduplicated"}:
+        return "Run Resolve dependencies, review blockers in Step 4 if needed, then Commit approved."
+    if status in {"failed_permanent"}:
+        return "Open Live event log, fix the failing rule/data issue, then Rollback or Purge and retry ingest."
+    if status in {"committed"}:
+        return "Batch is committed. Review final rows in Step 4 or start a new upload."
+    return "Fetch status and follow the next action guidance."
+
+
 tab_upload, tab_discovery, tab_batches, tab_staging = st.tabs(
     [
         "1) Upload",
@@ -332,7 +372,7 @@ tab_upload, tab_discovery, tab_batches, tab_staging = st.tabs(
 
 with tab_upload:
     st.subheader("Step 1 - Upload and assign organization")
-    st.caption("Required role: operator or admin.")
+    st.caption("Requires a valid `API_BEARER_TOKEN`.")
     organization_input_mode = st.radio(
         "Organization input mode",
         options=["Select from database", "Enter manually"],
@@ -410,19 +450,50 @@ with tab_upload:
 
 with tab_batches:
     st.subheader("Step 3 - Run batch pipeline")
-    st.info(
-        "If batch status is mapping_review_required, go to Step 2 (Discovery Review) and "
-        "approve mapping before Run ETL / Commit."
-    )
+    st.info("Use this tab as the control tower: check current status, run next action, and monitor event logs.")
     st.caption(
         "Batches are persisted in Supabase (`staging.import_batches` / `staging.import_events`), "
         "not only in container memory."
     )
     batch_id = choose_active_batch(context_key="batches", title="Batch context")
+    latest_status_payload: dict[str, Any] | None = None
+    if batch_id:
+        try:
+            latest_status_payload = call_status(batch_id)
+            st.markdown("#### Current batch status")
+            status_value = latest_status_payload.get("status")
+            contract_status = (latest_status_payload.get("mapping_contract") or {}).get("status")
+            st.write(f"Batch status: `{status_value}`")
+            if contract_status:
+                st.write(f"Mapping contract: `{contract_status}`")
+            st.info(f"Next action: {recommend_next_step(latest_status_payload)}")
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Could not auto-load batch status: {exc}")
+
+    if st.button("Run pipeline now (dedup -> resolve -> ETL)", disabled=not bool(batch_id)):
+        try:
+            current = latest_status_payload or call_status(batch_id)
+            gate = (current.get("mapping_contract") or {}).get("status")
+            if gate != "approved":
+                st.error("Mapping contract is not approved yet. Go to Step 2 (Discovery Review) first.")
+            else:
+                run_report = {
+                    "dedup": trigger_dedup(batch_id),
+                    "resolve_dependencies": trigger_resolve_dependencies(batch_id),
+                    "run_etl": trigger_run_etl(batch_id),
+                }
+                st.success("Pipeline launched. ETL runs asynchronously; monitor Live event log below.")
+                st.json(run_report)
+                fetch_recent_batches.clear()
+                fetch_batch_events.clear()
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Pipeline launch failed: {exc}")
+
     col_a, col_b, col_c, col_d, col_e, col_f, col_g, col_h = st.columns(8)
     if col_a.button("Fetch status"):
         try:
             status_payload = call_status(batch_id)
+            latest_status_payload = status_payload
             st.json(status_payload)
             sheet_progress = status_payload.get("sheet_progress") or {}
             if sheet_progress:
@@ -478,15 +549,41 @@ with tab_batches:
             st.error(f"Rollback failed: {exc}")
     if col_h.button("Run ETL"):
         try:
-            st.json(trigger_run_etl(batch_id))
+            etl_result = trigger_run_etl(batch_id)
+            st.json(etl_result)
+            st.info("ETL started in background. Use Live event log below to track progress and errors.")
+            fetch_batch_events.clear()
         except Exception as exc:  # noqa: BLE001
             st.error(f"Run ETL failed: {exc}")
 
     if st.button("Refresh metrics"):
         try:
-            st.json(fetch_metrics())
+            metrics_payload = fetch_metrics()
+            if metrics_payload.get("source") == "fallback":
+                st.warning(metrics_payload.get("warning") or "Using fallback metrics.")
+            st.json(metrics_payload)
         except Exception as exc:  # noqa: BLE001
             st.error(f"Metrics fetch failed: {exc}")
+
+    st.markdown("#### Live event log")
+    if not batch_id:
+        st.info("Select or paste a batch ID to view event logs.")
+    elif not supabase_url or not supabase_service_key:
+        st.info("Set SUPABASE_URL and SUPABASE_SERVICE_KEY to view event logs.")
+    else:
+        try:
+            events = fetch_batch_events(
+                supabase_url_value=supabase_url,
+                supabase_service_key_value=supabase_service_key,
+                batch_id=batch_id,
+                limit=50,
+            )
+            if not events:
+                st.info("No events yet for this batch.")
+            else:
+                st.dataframe(events, use_container_width=True, hide_index=True)
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Unable to load batch events: {exc}")
 
 with tab_staging:
     st.subheader("Step 4 - Staging review and manual corrections")

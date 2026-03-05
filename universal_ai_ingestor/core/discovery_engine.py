@@ -53,8 +53,8 @@ def _enhance_with_ai(
     assumptions: list[str],
 ) -> None:
     openai_key = os.getenv("OPENAI_API_KEY", "")
-    if not openai_key or not openai_key.startswith("sk-"):
-        assumptions.append("AI discovery skipped: OPENAI_API_KEY missing or invalid format.")
+    if not openai_key.strip():
+        assumptions.append("AI discovery skipped: OPENAI_API_KEY is missing.")
         return
     try:
         from core.ai_graph import generate_mapping_plan
@@ -72,8 +72,8 @@ def _enhance_with_ai(
             source_format=source_format,
             workbook_payload=None,
         )
-    except Exception:  # noqa: BLE001
-        assumptions.append("AI discovery failed; kept rule-based mappings.")
+    except Exception as exc:  # noqa: BLE001
+        assumptions.append(f"AI discovery failed ({exc.__class__.__name__}); kept rule-based mappings.")
         return
 
     ai_by_source = {str(t.source_key): t for t in plan.targets}

@@ -191,7 +191,7 @@ def _latest_mapping_contract(sb, batch_id: str) -> dict[str, Any] | None:
     resp = (
         sb.schema("staging")
         .table("mapping_contract")
-        .select("id,contract_version,status,overall_confidence,approved_at,approved_by")
+        .select("id,contract_version,status,overall_confidence,approved_at,approved_by,assumptions")
         .eq("import_batch_id", batch_id)
         .order("contract_version", desc=True)
         .limit(1)

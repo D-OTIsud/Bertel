@@ -40,6 +40,30 @@ Le flux inclut maintenant un **Discovery Agent** pre-ingest: profilage des feuil
 \i sql/security_audit_checks.sql
 ```
 
+5. Exposer le schema `staging` dans Supabase Data API (obligatoire pour l'UI Streamlit):
+   - Supabase Dashboard -> `Project Settings` -> `API` -> `Exposed schemas`
+   - Ajouter `staging` (exemple: `public, graphql_public, staging`)
+   - Sauvegarder puis relancer/redeployer l'application
+
+   Si `staging` n'est pas exposé, l'UI échoue avec:
+   - `PGRST106`
+   - `Invalid schema: staging`
+   - `Only the following schemas are exposed: public, graphql_public`
+
+6. (Optionnel mais recommande) S'assurer que `service_role` a les droits SQL sur `staging`:
+
+```sql
+GRANT USAGE ON SCHEMA staging TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA staging TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA staging TO service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA staging
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA staging
+GRANT USAGE, SELECT ON SEQUENCES TO service_role;
+```
+
 ## Run local (Docker Compose)
 
 ```bash
@@ -48,6 +72,36 @@ docker compose up --build
 
 - API: `http://localhost:8000`
 - UI: `http://localhost:8501`
+
+## Connexion, utilisateurs et tokens (clarifie)
+
+Configuration runtime:
+- En local Docker: variables dans `.env` (chargees par `docker-compose.yml`).
+- Sur Coolify: variables dans l'UI Coolify (section Environment Variables), puis redeploy.
+
+Variables minimales a renseigner:
+- `API_BASE_URL`: URL de l'API vue par l'UI (ex: `http://api:8000` en reseau Docker interne).
+- `API_BEARER_TOKEN`: token envoye par l'UI dans `Authorization: Bearer ...`.
+- `SUPABASE_URL`: URL projet Supabase (`https://<project-ref>.supabase.co`).
+- `SUPABASE_SERVICE_KEY`: cle serveur Supabase (service role / secret backend selon compatibilite client).
+
+Roles et usages:
+- `operator`: peut ingerer, lancer dedup/resolve/etl/commit.
+- `reviewer`: peut approuver/rejeter le mapping et reviewer les medias.
+- `admin`: peut tout faire (incluant purge/rollback/ops).
+- Compatibilite: `API_BEARER_TOKEN` est traite comme `admin` par defaut.
+
+## Ordre d'utilisation UI (workflow recommande)
+
+1. `Upload`: envoyer le fichier avec `organization_object_id` obligatoire.
+   - Le mode "Select from database" permet de rechercher et selectionner une organisation existante (`object_type='ORG'`) sans connaitre l'ID exact.
+   - Le mode "Enter manually" reste disponible si vous n'avez pas d'acces DB depuis l'UI.
+2. `Discovery Review`: fetch du contrat et approbation mapping.
+3. `Batches`: dedup -> resolve dependencies -> run ETL -> commit approved.
+4. `Staging Review`: controle manuel des lignes bloquees / medias en revue.
+
+Important:
+- Tant que le mapping est `review_required`, `Run ETL` et `Commit` retournent `409 Conflict` (comportement attendu).
 
 ## API
 

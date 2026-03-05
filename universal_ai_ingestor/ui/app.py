@@ -17,6 +17,32 @@ api_token = os.getenv("API_BEARER_TOKEN", "")
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_service_key = os.getenv("SUPABASE_SERVICE_KEY", "")
 
+st.info(
+    "Workflow: 1) Upload with organization -> 2) Discovery Review (approve mapping) -> "
+    "3) Batches (dedup/resolve/ETL/commit) -> 4) Staging Review."
+)
+
+with st.sidebar:
+    st.markdown("### Connection and auth")
+    st.caption("Values are loaded from runtime environment (Coolify/Docker).")
+    st.code(
+        "API_BASE_URL\nAPI_BEARER_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
+        language="text",
+    )
+    st.caption("Role model: operator=ingest/etl, reviewer=mapping/media review, admin=all.")
+    if api_token:
+        st.success("API_BEARER_TOKEN loaded")
+    else:
+        st.error("Missing API_BEARER_TOKEN")
+    if supabase_url:
+        st.success("SUPABASE_URL loaded")
+    else:
+        st.warning("SUPABASE_URL not set")
+    if supabase_service_key:
+        st.success("SUPABASE_SERVICE_KEY loaded")
+    else:
+        st.warning("SUPABASE_SERVICE_KEY not set")
+
 
 def auth_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {api_token}"}
@@ -165,12 +191,97 @@ def upload_file_to_api(file_obj, organization_object_id: str, organization_name:
     return r.json()
 
 
-tab_upload, tab_batches, tab_discovery, tab_staging = st.tabs(["Upload", "Batches", "Discovery Review", "Staging Review"])
+def _sanitize_ilike_term(value: str) -> str:
+    # Keep search simple/safe for PostgREST ilike filters.
+    return value.replace("%", "").replace(",", " ").strip()
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def fetch_organizations(
+    supabase_url_value: str,
+    supabase_service_key_value: str,
+    search_term: str,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    if not supabase_url_value or not supabase_service_key_value:
+        return []
+    sb = create_client(supabase_url_value, supabase_service_key_value)
+    query = (
+        sb.schema("public")
+        .table("object")
+        .select("id,name")
+        .eq("object_type", "ORG")
+    )
+    normalized = _sanitize_ilike_term(search_term)
+    if normalized:
+        query = query.or_(f"name.ilike.%{normalized}%,id.ilike.%{normalized}%")
+    response = query.order("name").limit(limit).execute()
+    return response.data or []
+
+
+tab_upload, tab_discovery, tab_batches, tab_staging = st.tabs(
+    [
+        "1) Upload",
+        "2) Discovery Review",
+        "3) Batches",
+        "4) Staging Review",
+    ]
+)
 
 with tab_upload:
-    st.subheader("Manual ingestion")
-    organization_object_id = st.text_input("Organization object ID (required)", placeholder="ORG...")
-    organization_name = st.text_input("Organization name (optional)", placeholder="My organization")
+    st.subheader("Step 1 - Upload and assign organization")
+    st.caption("Required role: operator or admin.")
+    organization_input_mode = st.radio(
+        "Organization input mode",
+        options=["Select from database", "Enter manually"],
+        horizontal=True,
+    )
+
+    selected_org_id = ""
+    selected_org_name = ""
+    if organization_input_mode == "Select from database":
+        if not supabase_url or not supabase_service_key:
+            st.warning(
+                "Database picker needs SUPABASE_URL and SUPABASE_SERVICE_KEY. "
+                "Use manual mode if these variables are not configured."
+            )
+        else:
+            org_search = st.text_input(
+                "Search organization",
+                placeholder="Type organization name or ID fragment",
+            )
+            try:
+                org_rows = fetch_organizations(
+                    supabase_url_value=supabase_url,
+                    supabase_service_key_value=supabase_service_key,
+                    search_term=org_search,
+                    limit=100,
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.warning(f"Unable to load organizations from database: {exc}")
+                org_rows = []
+
+            if org_rows:
+                labels = [f"{row.get('name') or '(no name)'} [{row.get('id')}]" for row in org_rows]
+                selected_label = st.selectbox("Organization (from database)", options=labels)
+                selected_row = org_rows[labels.index(selected_label)]
+                selected_org_id = (selected_row.get("id") or "").strip()
+                selected_org_name = (selected_row.get("name") or "").strip()
+                st.caption(f"Selected organization ID: `{selected_org_id}`")
+            else:
+                st.info("No organizations found for this search. You can switch to manual mode.")
+
+    if selected_org_id:
+        organization_object_id = selected_org_id
+        st.text_input("Organization object ID (required)", value=selected_org_id, disabled=True)
+    else:
+        organization_object_id = st.text_input("Organization object ID (required)", placeholder="ORG...")
+
+    organization_name = st.text_input(
+        "Organization name (optional)",
+        value=selected_org_name,
+        placeholder="My organization",
+    )
     upload = st.file_uploader("Drop CSV / JSON / XML / XLSX", type=["csv", "json", "xml", "xlsx"])
     if st.button("Ingest file", disabled=upload is None):
         if not api_token:
@@ -192,7 +303,11 @@ with tab_upload:
                 st.error(f"Ingest failed: {exc}")
 
 with tab_batches:
-    st.subheader("Batch status")
+    st.subheader("Step 3 - Run batch pipeline")
+    st.info(
+        "If batch status is mapping_review_required, go to Step 2 (Discovery Review) and "
+        "approve mapping before Run ETL / Commit."
+    )
     batch_id = st.text_input("Batch ID", placeholder="Paste batch id")
     col_a, col_b, col_c, col_d, col_e, col_f, col_g, col_h = st.columns(8)
     if col_a.button("Fetch status"):
@@ -264,7 +379,7 @@ with tab_batches:
             st.error(f"Metrics fetch failed: {exc}")
 
 with tab_staging:
-    st.subheader("Staging rows (staging.object_temp)")
+    st.subheader("Step 4 - Staging review and manual corrections")
     if not supabase_url or not supabase_service_key:
         st.info("Set SUPABASE_URL and SUPABASE_SERVICE_KEY to browse/edit staging rows.")
     else:
@@ -438,7 +553,8 @@ with tab_staging:
                     st.success("Media review saved")
 
 with tab_discovery:
-    st.subheader("Mapping contract discovery review")
+    st.subheader("Step 2 - Mapping contract review and approval")
+    st.caption("Required role: reviewer or admin.")
     batch_id = st.text_input("Batch ID for discovery", placeholder="Paste batch id", key="discovery_batch_id")
     reviewer = st.text_input("Reviewer", value="mapping_reviewer")
     col_a, col_b = st.columns(2)

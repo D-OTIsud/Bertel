@@ -295,6 +295,91 @@ CREATE TABLE IF NOT EXISTS staging.opening_period_temp (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 16. crm_interaction_temp  (→ crm_interaction)  Contact history
+CREATE TABLE IF NOT EXISTS staging.crm_interaction_temp (
+    import_interaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    import_batch_id TEXT NOT NULL REFERENCES staging.import_batches(batch_id) ON DELETE CASCADE,
+    staging_object_key TEXT NOT NULL,
+    staging_actor_key TEXT,
+    interaction_type TEXT,
+    direction TEXT,
+    status TEXT DEFAULT 'done',
+    subject TEXT,
+    body TEXT,
+    source TEXT,
+    occurred_at TIMESTAMPTZ,
+    duration_min INTEGER,
+    demand_topic_code TEXT,
+    raw_source_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    resolution_status TEXT NOT NULL DEFAULT 'pending',
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    source_sheet TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 17. crm_task_temp  (→ crm_task)  Follow-up tasks
+CREATE TABLE IF NOT EXISTS staging.crm_task_temp (
+    import_task_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    import_batch_id TEXT NOT NULL REFERENCES staging.import_batches(batch_id) ON DELETE CASCADE,
+    staging_object_key TEXT NOT NULL,
+    staging_actor_key TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'open',
+    priority TEXT DEFAULT 'normal',
+    due_at TIMESTAMPTZ,
+    raw_source_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    resolution_status TEXT NOT NULL DEFAULT 'pending',
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    source_sheet TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 18. object_membership_temp  (→ object_membership)  Subscriptions/memberships
+CREATE TABLE IF NOT EXISTS staging.object_membership_temp (
+    import_membership_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    import_batch_id TEXT NOT NULL REFERENCES staging.import_batches(batch_id) ON DELETE CASCADE,
+    staging_object_key TEXT NOT NULL,
+    staging_org_key TEXT,
+    campaign_code TEXT,
+    tier_code TEXT,
+    status TEXT DEFAULT 'active',
+    starts_at DATE,
+    ends_at DATE,
+    payment_date DATE,
+    raw_source_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    resolution_status TEXT NOT NULL DEFAULT 'pending',
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    source_sheet TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 19. object_review_temp  (→ object_review)  External reviews
+CREATE TABLE IF NOT EXISTS staging.object_review_temp (
+    import_review_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    import_batch_id TEXT NOT NULL REFERENCES staging.import_batches(batch_id) ON DELETE CASCADE,
+    staging_object_key TEXT NOT NULL,
+    source_code TEXT,
+    external_id TEXT,
+    rating NUMERIC(3,1),
+    rating_max INTEGER DEFAULT 5,
+    title TEXT,
+    content TEXT,
+    author_name TEXT,
+    review_date DATE,
+    traveler_type TEXT,
+    language_code TEXT,
+    raw_source_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    resolution_status TEXT NOT NULL DEFAULT 'pending',
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    source_sheet TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Add updated_at triggers for all new tables
 DO $$
 DECLARE
@@ -306,7 +391,8 @@ BEGIN
             'actor_temp', 'actor_channel_temp', 'actor_object_role_temp',
             'object_language_temp', 'object_environment_tag_temp', 'object_legal_temp',
             'object_capacity_temp', 'object_price_temp', 'object_fma_temp',
-            'object_iti_temp', 'object_room_type_temp', 'opening_period_temp'
+            'object_iti_temp', 'object_room_type_temp', 'opening_period_temp',
+            'crm_interaction_temp', 'crm_task_temp', 'object_membership_temp', 'object_review_temp'
         ])
     LOOP
         EXECUTE format(

@@ -90,15 +90,21 @@ Roles et usages:
 - `reviewer`: peut approuver/rejeter le mapping et reviewer les medias.
 - `admin`: peut tout faire (incluant purge/rollback/ops).
 - Compatibilite: `API_BEARER_TOKEN` est traite comme `admin` par defaut.
+- Dans l'UI, vous pouvez choisir le profil token (`admin/reviewer/operator`) ou coller un token manuellement.
 
 ## Ordre d'utilisation UI (workflow recommande)
 
 1. `Upload`: envoyer le fichier avec `organization_object_id` obligatoire.
    - Le mode "Select from database" permet de rechercher et selectionner une organisation existante (`object_type='ORG'`) sans connaitre l'ID exact.
    - Le mode "Enter manually" reste disponible si vous n'avez pas d'acces DB depuis l'UI.
+   - Le `batch_id` accepte est automatiquement conserve comme contexte actif.
 2. `Discovery Review`: fetch du contrat et approbation mapping.
+   - Vous pouvez selectionner le batch depuis la liste des batches recents (ou saisir manuellement).
+   - Les lignes de mapping sont maintenant editables inline (target table/column/transform) avec decision par ligne (`approve`/`reject`) sans passer par un formulaire separe.
 3. `Batches`: dedup -> resolve dependencies -> run ETL -> commit approved.
+   - Meme batch context reutilise automatiquement, avec liste des batches recents.
 4. `Staging Review`: controle manuel des lignes bloquees / medias en revue.
+   - Option de filtrage direct sur le batch context actif.
 
 Important:
 - Tant que le mapping est `review_required`, `Run ETL` et `Commit` retournent `409 Conflict` (comportement attendu).

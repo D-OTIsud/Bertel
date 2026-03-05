@@ -89,6 +89,38 @@ def flatten_required_columns() -> dict[str, set[str]]:
     return required
 
 
+def build_target_schema_context() -> dict[str, object]:
+    tables: list[dict[str, object]] = []
+    for rule in TARGET_SCHEMA_RULES.values():
+        tables.append(
+            {
+                "table": rule.table,
+                "entity": rule.entity,
+                "allowed_transforms": list(rule.allowed_transforms),
+                "columns": [
+                    {
+                        "column": col.column,
+                        "aliases": list(col.aliases),
+                        "required": col.required_for_entity,
+                        "default_transform": col.default_transform,
+                    }
+                    for col in rule.columns
+                ],
+            }
+        )
+    return {
+        "target_tables": tables,
+        "required_columns_by_table": {k: sorted(v) for k, v in flatten_required_columns().items()},
+        "relationship_hints": [
+            "object_temp is the primary entity.",
+            "contact_channel_temp rows attach to object via staging_object_key in ETL materialization.",
+            "object_location_temp stores geospatial/address details for objects.",
+            "media_temp stores media URLs linked to objects.",
+            "object_amenity_temp and object_payment_method_temp model many-to-one feature lists.",
+        ],
+    }
+
+
 def find_best_target(source_column_normalized: str) -> tuple[str, str, str, float, str]:
     for table_rule in TARGET_SCHEMA_RULES.values():
         for col_rule in table_rule.columns:

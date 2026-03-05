@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-import re
 import os
+import re
 from typing import Any
 
 import pandas as pd
 
 try:
-    from core.target_schema import find_best_target, validate_mapping_target
+    from core.target_schema import build_target_schema_context, find_best_target, validate_mapping_target
 except ModuleNotFoundError:
-    from universal_ai_ingestor.core.target_schema import find_best_target, validate_mapping_target  # type: ignore
+    from universal_ai_ingestor.core.target_schema import (  # type: ignore
+        build_target_schema_context,
+        find_best_target,
+        validate_mapping_target,
+    )
 
 try:
     from core.schemas import (
@@ -17,6 +21,10 @@ try:
         DiscoveryFieldProposal,
         DiscoveryRelationHypothesis,
         DiscoverySheetProfile,
+        MappingPlan,
+        MultiSheetMappingPlan,
+        SheetSample,
+        WorkbookPayload,
     )
 except ModuleNotFoundError:
     from universal_ai_ingestor.core.schemas import (  # type: ignore
@@ -24,30 +32,30 @@ except ModuleNotFoundError:
         DiscoveryFieldProposal,
         DiscoveryRelationHypothesis,
         DiscoverySheetProfile,
+        MappingPlan,
+        MultiSheetMappingPlan,
+        SheetSample,
+        WorkbookPayload,
     )
 
 
-def _discovery_schema_snapshot(columns: list[str], sheet_name: str) -> dict[str, Any]:
-    return {
-        "target_tables": [
-            "object_temp",
-            "object_location_temp",
-            "contact_channel_temp",
-            "media_temp",
-            "object_amenity_temp",
-            "object_payment_method_temp",
-        ],
-        "allowed_transforms": ["identity", "lowercase", "split_list", "split_gps"],
-        "incoming_columns": columns,
-        "sheet_name": sheet_name,
-    }
+def _workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame]) -> WorkbookPayload:
+    samples: list[SheetSample] = []
+    for sheet_name, df in sheets.items():
+        samples.append(
+            SheetSample(
+                sheet_name=sheet_name,
+                incoming_columns=[str(c) for c in df.columns],
+                sample_rows=df.head(10).to_dict(orient="records"),
+            )
+        )
+    return WorkbookPayload(workbook_name="discovery_workbook", sheets=samples)
 
 
-def _enhance_with_ai(
+def _enhance_with_ai_workbook(
     *,
     source_format: str,
-    sheet_name: str,
-    df: pd.DataFrame,
+    sheets: dict[str, pd.DataFrame],
     proposals: list[DiscoveryFieldProposal],
     scores: list[float],
     assumptions: list[str],
@@ -65,23 +73,35 @@ def _enhance_with_ai(
             assumptions.append("AI discovery skipped: mapping agent module unavailable.")
             return
 
+    workbook_payload = _workbook_payload_from_sheets(sheets)
+    global_sample_rows: list[dict[str, Any]] = []
+    for sheet in workbook_payload.sheets:
+        global_sample_rows.extend(sheet.sample_rows[:3])
+
     try:
-        plan = generate_mapping_plan(
-            schema_snapshot=_discovery_schema_snapshot(list(df.columns), sheet_name),
-            sample_rows=df.head(10).to_dict(orient="records"),
+        plan_bundle = generate_mapping_plan(
+            schema_snapshot=build_target_schema_context(),
+            sample_rows=global_sample_rows[:30],
             source_format=source_format,
-            workbook_payload=None,
+            workbook_payload=workbook_payload,
         )
     except Exception as exc:  # noqa: BLE001
         assumptions.append(f"AI discovery failed ({exc.__class__.__name__}); kept rule-based mappings.")
         return
 
-    ai_by_source = {str(t.source_key): t for t in plan.targets}
+    ai_by_sheet_and_source: dict[tuple[str, str], Any] = {}
+    if isinstance(plan_bundle, MultiSheetMappingPlan):
+        for sheet_name, plan in plan_bundle.per_sheet.items():
+            for target in plan.targets:
+                ai_by_sheet_and_source[(sheet_name, str(target.source_key))] = target
+    elif isinstance(plan_bundle, MappingPlan):
+        default_sheet = next(iter(sheets.keys()), "default")
+        for target in plan_bundle.targets:
+            ai_by_sheet_and_source[(default_sheet, str(target.source_key))] = target
+
     updated = 0
     for idx, proposal in enumerate(proposals):
-        if proposal.sheet_name != sheet_name:
-            continue
-        ai_target = ai_by_source.get(proposal.source_column)
+        ai_target = ai_by_sheet_and_source.get((proposal.sheet_name, proposal.source_column))
         if ai_target is None:
             continue
         ok, _ = validate_mapping_target(
@@ -97,15 +117,15 @@ def _enhance_with_ai(
             target_table=ai_target.table,
             target_column=ai_target.column,
             transform=ai_target.transform or "identity",
-            confidence=max(float(proposal.confidence), float(plan.confidence), 0.65),
+            confidence=max(float(proposal.confidence), float(getattr(plan_bundle, "confidence", 0.0)), 0.7),
             rationale=f"AI-assisted mapping from source sample for {proposal.source_column}.",
             status="proposed",
         )
-        scores.append(max(float(plan.confidence), 0.65))
+        scores.append(max(float(getattr(plan_bundle, "confidence", 0.0)), 0.7))
         updated += 1
     assumptions.append(
-        f"AI discovery applied on sheet '{sheet_name}' for {updated} fields." if updated else
-        f"AI discovery run on sheet '{sheet_name}' but produced no valid upgrades."
+        f"AI discovery applied across workbook for {updated} fields." if updated else
+        "AI discovery run produced no valid upgrades."
     )
 
 
@@ -194,14 +214,13 @@ def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFra
                 )
             )
             scores.append(conf)
-        _enhance_with_ai(
-            source_format=source_format,
-            sheet_name=sheet_name,
-            df=df,
-            proposals=field_proposals,
-            scores=scores,
-            assumptions=assumptions,
-        )
+    _enhance_with_ai_workbook(
+        source_format=source_format,
+        sheets=sheets,
+        proposals=field_proposals,
+        scores=scores,
+        assumptions=assumptions,
+    )
 
     sheet_cols = {s.sheet_name: set(s.profile.get("columns", {}).keys()) for s in sheet_profiles}
     for left_name, left_cols in sheet_cols.items():

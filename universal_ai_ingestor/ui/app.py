@@ -18,23 +18,23 @@ TOKEN = os.getenv("API_BEARER_TOKEN", "")
 
 TARGET_SCHEMA: dict[str, dict[str, Any]] = {
     "object_temp": {
-        "label": "Object (main entity)",
+        "label": "Object (HOT, RES, ITI...)",
         "columns": ["name", "object_type", "external_id", "source_org_object_id", "org_name", "email", "phone", "latitude", "longitude"],
         "transforms": ["identity", "lowercase"],
     },
+    "org_temp": {
+        "label": "Organization (ORG)",
+        "columns": ["name", "source_org_object_id", "external_id"],
+        "transforms": ["identity", "lowercase"],
+    },
     "object_location_temp": {
-        "label": "Location (address / GPS)",
+        "label": "Location (address + GPS)",
         "columns": ["latitude", "longitude", "address1", "city", "postcode"],
         "transforms": ["identity", "split_gps"],
     },
     "contact_channel_temp": {
-        "label": "Contact channel (email, phone...)",
+        "label": "Contact (email, phone, web...)",
         "columns": ["value", "kind_code"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "org_temp": {
-        "label": "Organization",
-        "columns": ["name", "source_org_object_id", "external_id"],
         "transforms": ["identity", "lowercase"],
     },
     "object_org_link_temp": {
@@ -43,12 +43,12 @@ TARGET_SCHEMA: dict[str, dict[str, Any]] = {
         "transforms": ["identity", "lowercase"],
     },
     "object_classification_temp": {
-        "label": "Classification (scheme+value)",
+        "label": "Classification (labels, stars)",
         "columns": ["scheme_code", "value_code"],
         "transforms": ["identity", "lowercase"],
     },
     "media_temp": {
-        "label": "Media (images, URLs)",
+        "label": "Media (photos, URLs)",
         "columns": ["source_url"],
         "transforms": ["identity", "split_list"],
     },
@@ -67,9 +67,15 @@ TARGET_SCHEMA: dict[str, dict[str, Any]] = {
 ALL_TABLES = list(TARGET_SCHEMA.keys())
 TABLE_LABELS = {k: v["label"] for k, v in TARGET_SCHEMA.items()}
 
-SKIP_COLUMNS = {
+SKIP_PATTERNS: set[str] = {
     "source_sheet", "source_row_index", "formulaire", "source_row",
     "row_number", "row_index", "index", "unnamed",
+    "moderer", "moderateur", "moderator",
+    "date_creation", "date_modification", "created_at", "updated_at",
+    "user", "utilisateur", "auteur", "author",
+    "date_saisie", "date_maj", "date_import",
+    "description", "descriptif", "presentation", "commentaire",
+    "comment", "remarque", "observation",
 }
 
 TRANSFORM_HELP = {
@@ -332,10 +338,12 @@ if fields and batch_status_val not in ("committed", "profiling", "transforming")
         field_id = field.get("id", "")
         field_status = field.get("status", "proposed")
 
+        norm_source = source_col.lower().strip().replace(" ", "_")
         auto_skip = (
             field_status == "rejected"
-            or source_col.lower().strip().replace(" ", "_") in SKIP_COLUMNS
-            or source_col.lower().startswith("unnamed")
+            or any(pat in norm_source for pat in SKIP_PATTERNS)
+            or norm_source.startswith("unnamed")
+            or confidence <= 0.15
         )
 
         if confidence >= 0.8:

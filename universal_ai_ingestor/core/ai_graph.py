@@ -23,46 +23,68 @@ def _build_mapping_agent() -> Any:
 
 def _mapping_node(state: MappingState) -> MappingState:
     agent = _build_mapping_agent()
-
     schema = state["schema_snapshot"]
+
+    # Build structured table descriptions for the prompt
     tables_desc = ""
     for t in schema.get("target_tables", []):
         cols = ", ".join(
             c["column"] + (" (REQUIRED)" if c.get("required") else "")
             for c in t.get("columns", [])
         )
-        tables_desc += f"\n  - {t['table']}: {t.get('description', '')}  Columns: [{cols}]  Transforms: {t.get('allowed_transforms', [])}"
+        tables_desc += (
+            f"\n### {t['table']}\n"
+            f"  {t.get('description', '')}\n"
+            f"  Columns: [{cols}]\n"
+            f"  Transforms: {t.get('allowed_transforms', [])}\n"
+        )
 
     hints = "\n".join(f"  - {h}" for h in schema.get("relationship_hints", []))
+    model_overview = schema.get("data_model_overview", "")
+    obj_types = schema.get("known_object_types", {})
+    obj_types_str = ", ".join(f"{k}={v}" for k, v in obj_types.items()) if obj_types else ""
 
     prompt = (
-        "You are an expert data-mapping architect for a tourism CRM (Bertel).\n"
-        "Your job: map each SOURCE column to the correct TARGET staging table + column.\n\n"
-        "## Target staging tables\n"
-        f"{tables_desc}\n\n"
-        "## Key rules\n"
+        "You are an expert data-mapping architect for the Bertel tourism CRM.\n\n"
+        "## Data Model\n"
+        f"{model_overview}\n\n"
+        f"Known object_type codes: {obj_types_str}\n\n"
+        "## Available Staging Tables\n"
+        f"{tables_desc}\n"
+        "## Relationship Rules\n"
         f"{hints}\n\n"
-        "## Mapping guidelines\n"
-        "- Source data is often in French. 'Nom' = name, 'Adresse' = address, 'Téléphone' = phone, etc.\n"
-        "- Each source column maps to EXACTLY ONE target table.column.\n"
-        "- If a source column contains delimited lists (commas, pipes), use 'split_list' transform.\n"
-        "- If a source column has 'lat,lon' text, use 'split_gps' transform.\n"
-        "- Address fields (rue, ville, code postal) go to object_location_temp, NOT object_temp.\n"
-        "- Contact fields (email, phone, website, social URLs) go to contact_channel_temp.\n"
-        "- Metadata columns (date, user, moderator, formulaire, row index) should NOT be mapped. Omit them.\n"
-        "- Set confidence between 0.0 and 1.0 reflecting your certainty.\n"
-        "- ONLY use table names and column names from the schema above. Do NOT invent columns.\n"
+        "## Mapping Instructions\n"
+        "1. Source data is often in FRENCH. Common translations:\n"
+        "   Nom/Raison sociale -> name | Adresse/Rue -> address1 | Ville/Commune -> city\n"
+        "   Code postal/CP -> postcode | Téléphone/Tel -> phone | Courriel/Mail -> email\n"
+        "   Site web/URL -> website | Latitude/Lat -> latitude | Longitude/Lon -> longitude\n"
+        "   Type/Catégorie -> object_type | Identifiant/Référence -> external_id\n"
+        "   Étoiles/Classement -> classification | Équipements -> amenities\n"
+        "   Description/Présentation -> descriptive text (no staging column)\n\n"
+        "2. Each source column maps to EXACTLY ONE target table.column.\n"
+        "3. Address fields (street, city, postcode) -> object_location_temp (NOT object_temp).\n"
+        "4. Establishment contacts (email, phone, website, social) -> contact_channel_temp.\n"
+        "5. If source has 'lat,lon' as single text -> use split_gps transform.\n"
+        "6. If source has delimited lists (commas/pipes/semicolons) -> use split_list transform.\n"
+        "7. Metadata columns (date_creation, user, moderator, formulaire, row index) -> OMIT (do not map).\n"
+        "8. Descriptive text (description, presentation, opening hours text) -> OMIT (stored in raw_source_data).\n"
+        "9. Actor/human data (contact person name, director, guide) -> OMIT (no staging table).\n"
+        "10. external_id is CRITICAL: always map source IDs (identifiant, ref, SIRET, code) to external_id.\n"
+        "11. ONLY use table and column names from the schema above. Do NOT invent columns.\n"
+        "12. Set confidence 0.0-1.0 reflecting certainty. Use >0.8 for clear matches, <0.5 for uncertain.\n"
     )
 
-    incoming = state["schema_snapshot"].get("incoming_columns", [])
-    sheet_name = state["schema_snapshot"].get("sheet_name", "unknown")
+    incoming = schema.get("incoming_columns", [])
+    sheet_name = schema.get("sheet_name", "unknown")
+    samples = state["sample_rows"][:5]
 
     user_msg = (
         f"Source format: {state['source_format']}\n"
-        f"Sheet name: {sheet_name}\n"
-        f"Source columns: {incoming}\n"
-        f"Sample rows (first 5):\n{state['sample_rows'][:5]}\n\n"
-        "Return a mapping plan. For each source column, specify the target table, target column, and transform."
+        f"Sheet: '{sheet_name}'\n"
+        f"Columns: {incoming}\n\n"
+        f"Sample rows:\n{samples}\n\n"
+        "Map each source column to the best target table.column. "
+        "Omit columns that should be skipped (metadata, descriptions, actor data)."
     )
 
     plan = agent.invoke([("system", prompt), ("user", user_msg)])

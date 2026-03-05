@@ -25,7 +25,6 @@ def _mapping_node(state: MappingState) -> MappingState:
     agent = _build_mapping_agent()
     schema = state["schema_snapshot"]
 
-    # Build structured table descriptions for the prompt
     tables_desc = ""
     for t in schema.get("target_tables", []):
         cols = ", ".join(
@@ -33,45 +32,52 @@ def _mapping_node(state: MappingState) -> MappingState:
             for c in t.get("columns", [])
         )
         tables_desc += (
-            f"\n### {t['table']}\n"
+            f"\n### {t['table']}  (→ {t.get('production_table', '?')})\n"
             f"  {t.get('description', '')}\n"
             f"  Columns: [{cols}]\n"
             f"  Transforms: {t.get('allowed_transforms', [])}\n"
         )
 
     hints = "\n".join(f"  - {h}" for h in schema.get("relationship_hints", []))
-    model_overview = schema.get("data_model_overview", "")
+    etl_order = "\n".join(f"  {s}" for s in schema.get("etl_execution_order", []))
+    overview = schema.get("data_model_overview", "")
     obj_types = schema.get("known_object_types", {})
     obj_types_str = ", ".join(f"{k}={v}" for k, v in obj_types.items()) if obj_types else ""
 
     prompt = (
         "You are an expert data-mapping architect for the Bertel tourism CRM.\n\n"
         "## Data Model\n"
-        f"{model_overview}\n\n"
-        f"Known object_type codes: {obj_types_str}\n\n"
-        "## Available Staging Tables\n"
+        f"{overview}\n\n"
+        f"Object type codes: {obj_types_str}\n\n"
+        "## ETL Execution Order\n"
+        f"{etl_order}\n\n"
+        "## 24 Staging Tables (exhaustive)\n"
         f"{tables_desc}\n"
         "## Relationship Rules\n"
         f"{hints}\n\n"
         "## Mapping Instructions\n"
-        "1. Source data is often in FRENCH. Common translations:\n"
-        "   Nom/Raison sociale -> name | Adresse/Rue -> address1 | Ville/Commune -> city\n"
-        "   Code postal/CP -> postcode | Téléphone/Tel -> phone | Courriel/Mail -> email\n"
-        "   Site web/URL -> website | Latitude/Lat -> latitude | Longitude/Lon -> longitude\n"
-        "   Type/Catégorie -> object_type | Identifiant/Référence -> external_id\n"
-        "   Étoiles/Classement -> classification | Équipements -> amenities\n"
-        "   Description/Présentation -> descriptive text (no staging column)\n\n"
-        "2. Each source column maps to EXACTLY ONE target table.column.\n"
-        "3. Address fields (street, city, postcode) -> object_location_temp (NOT object_temp).\n"
-        "4. Establishment contacts (email, phone, website, social) -> contact_channel_temp.\n"
-        "5. If source has 'lat,lon' as single text -> use split_gps transform.\n"
-        "6. If source has delimited lists (commas/pipes/semicolons) -> use split_list transform.\n"
-        "7. Metadata columns (date_creation, user, moderator, formulaire, row index) -> OMIT (do not map).\n"
-        "8. Descriptive text (description, presentation, opening hours text) -> OMIT (stored in raw_source_data).\n"
-        "9. Actor/human data (contact person name, director, guide) -> OMIT (no staging table).\n"
-        "10. external_id is CRITICAL: always map source IDs (identifiant, ref, SIRET, code) to external_id.\n"
-        "11. ONLY use table and column names from the schema above. Do NOT invent columns.\n"
-        "12. Set confidence 0.0-1.0 reflecting certainty. Use >0.8 for clear matches, <0.5 for uncertain.\n"
+        "1. Source data is often in FRENCH. Key translations:\n"
+        "   Nom -> name | Adresse/Rue -> address1 | Ville -> city | CP -> postcode\n"
+        "   Téléphone -> phone | Courriel -> email | Site web -> website\n"
+        "   Latitude -> latitude | Type -> object_type | Identifiant -> external_id\n"
+        "   Étoiles -> classification | Équipements -> amenities | Description -> description\n"
+        "   Tarif/Prix -> price | Capacité -> capacity | Horaires -> opening hours\n"
+        "   Contact/Interlocuteur (person) -> actor | SIRET/Licence -> legal\n\n"
+        "2. Each source column -> EXACTLY ONE staging table.column.\n"
+        "3. Address fields -> object_location_temp (NEVER object_temp).\n"
+        "4. Descriptions -> object_description_temp (NEVER object_temp).\n"
+        "5. Establishment contacts -> contact_channel_temp. Person contacts -> actor_channel_temp.\n"
+        "6. Human names (director, contact person) -> actor_temp.\n"
+        "7. Source system IDs -> object_external_id_temp. Source name -> object_origin_temp.\n"
+        "8. SIRET/license/legal -> object_legal_temp.\n"
+        "9. Pricing -> object_price_temp. Capacity -> object_capacity_temp.\n"
+        "10. Opening hours -> opening_period_temp.\n"
+        "11. Event dates -> object_fma_temp. Itinerary -> object_iti_temp. Rooms -> object_room_type_temp.\n"
+        "12. Delimited lists (commas/pipes) -> use split_list transform.\n"
+        "13. 'lat,lon' as single text -> use split_gps transform.\n"
+        "14. Metadata (date_creation, user, moderator) -> OMIT.\n"
+        "15. ONLY use table+column names from the schema above. Do NOT invent.\n"
+        "16. Confidence 0.0-1.0: >0.8 clear match, <0.5 uncertain.\n"
     )
 
     incoming = schema.get("incoming_columns", [])

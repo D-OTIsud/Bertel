@@ -276,7 +276,8 @@ col_org, col_file = st.columns([1, 2])
 
 with col_org:
     if org_options:
-        org_choice = st.selectbox("Organization", options=[""] + list(org_options.keys()), disabled=step1_disabled)
+        org_keys = list(org_options.keys())
+        org_choice = st.selectbox("Organization", options=org_keys, disabled=step1_disabled)
         selected_org_id = org_options.get(org_choice, "")
         org_name_input = ""
     else:

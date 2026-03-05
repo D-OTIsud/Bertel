@@ -46,7 +46,7 @@ def _workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame]) -> WorkbookPa
             SheetSample(
                 sheet_name=sheet_name,
                 incoming_columns=[str(c) for c in df.columns],
-                sample_rows=df.head(10).to_dict(orient="records"),
+                sample_rows=df.head(20).to_dict(orient="records"),
             )
         )
     return WorkbookPayload(workbook_name="discovery_workbook", sheets=samples)
@@ -76,7 +76,7 @@ def _enhance_with_ai_workbook(
     workbook_payload = _workbook_payload_from_sheets(sheets)
     global_sample_rows: list[dict[str, Any]] = []
     for sheet in workbook_payload.sheets:
-        global_sample_rows.extend(sheet.sample_rows[:3])
+        global_sample_rows.extend(sheet.sample_rows[:10])
 
     try:
         plan_bundle = generate_mapping_plan(

@@ -15,6 +15,14 @@ from core.ai_graph import generate_mapping_plan, run_cleaner_batch
 from core.config import settings
 from core.schemas import MappingPlan, MappingTarget, MultiSheetMappingPlan, SheetSample, WorkbookPayload
 from core.supabase_client import insert_staging_table_rows, update_import_batch_row
+try:
+    from core.target_schema import TARGET_SCHEMA_RULES, VALID_TRANSFORMS, flatten_required_columns
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.target_schema import (  # type: ignore
+        TARGET_SCHEMA_RULES,
+        VALID_TRANSFORMS,
+        flatten_required_columns,
+    )
 
 
 @dataclass
@@ -75,9 +83,11 @@ def parse_payload(content_type: str | None, payload: bytes, source_name: str | N
 
 def schema_snapshot_from_dataframe(df: pd.DataFrame) -> dict[str, Any]:
     sample_dtypes = {c: str(t) for c, t in df.dtypes.items()}
+    required = flatten_required_columns()
     return {
-        "public_tables_hint": ["object", "object_location", "actor", "ref_code"],
-        "target_required_fields_hint": ["object_type", "name"],
+        "target_tables": list(TARGET_SCHEMA_RULES.keys()),
+        "target_required_fields": required,
+        "allowed_transforms": sorted(VALID_TRANSFORMS),
         "incoming_columns": list(df.columns),
         "incoming_dtypes": sample_dtypes,
     }
@@ -120,6 +130,33 @@ def apply_mapping(df: pd.DataFrame, plan: MappingPlan) -> pd.DataFrame:
     return out
 
 
+def apply_mapping_by_table(df: pd.DataFrame, plan: MappingPlan) -> dict[str, pd.DataFrame]:
+    table_outputs: dict[str, pd.DataFrame] = {}
+    for target in plan.targets:
+        if target.source_key not in df.columns:
+            continue
+        table_name = target.table or "object_temp"
+        table_df = table_outputs.setdefault(table_name, pd.DataFrame(index=df.index))
+        value = df[target.source_key]
+        if target.transform == "split_gps":
+            split = value.astype(str).str.replace(" ", "", regex=False).str.split(",", n=1, expand=True)
+            if target.column == "latitude":
+                table_df[target.column] = pd.to_numeric(split[0], errors="coerce")
+            elif target.column == "longitude":
+                table_df[target.column] = pd.to_numeric(split[1], errors="coerce")
+        elif target.transform == "lowercase":
+            table_df[target.column] = value.astype(str).str.lower()
+        else:
+            table_df[target.column] = value
+
+    object_df = table_outputs.setdefault("object_temp", pd.DataFrame(index=df.index))
+    if "name" not in object_df.columns and len(df.columns) > 0:
+        object_df["name"] = df.iloc[:, 0].astype(str)
+    if "object_type" not in object_df.columns:
+        object_df["object_type"] = "ORG"
+    return table_outputs
+
+
 def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> MappingPlan | MultiSheetMappingPlan | None:
     contract_resp = (
         sb.schema("staging")
@@ -150,12 +187,22 @@ def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> Mappi
     per_sheet_targets: dict[str, list[MappingTarget]] = {}
     per_sheet_conf: dict[str, list[float]] = {}
     for row in field_rows:
+        table_name = row.get("target_table") or "object_temp"
+        column_name = row.get("target_column") or row.get("source_column")
+        transform_name = row.get("transform") or "identity"
+        table_rule = TARGET_SCHEMA_RULES.get(str(table_name))
+        if table_rule is None:
+            continue
+        if str(column_name) not in {c.column for c in table_rule.columns}:
+            continue
+        if str(transform_name) not in table_rule.allowed_transforms:
+            continue
         sheet = row.get("sheet_name") or "default"
         per_sheet_targets.setdefault(sheet, []).append(
             MappingTarget(
-                table=row.get("target_table") or "object_temp",
-                column=row.get("target_column") or row.get("source_column"),
-                transform=row.get("transform") or "identity",
+                table=table_name,
+                column=column_name,
+                transform=transform_name,
                 source_key=row.get("source_column"),
                 source_sheet=sheet,
             )
@@ -320,8 +367,9 @@ async def run_batch_pipeline(
     update_import_batch_row(sb, batch_id, mapping_rules=plan_bundle.model_dump())
 
     update_import_batch_row(sb, batch_id, status="transforming")
+    transformed_by_table: dict[str, pd.DataFrame] = {}
     if isinstance(plan_bundle, MultiSheetMappingPlan) and parsed.workbook_sheets:
-        transformed_parts: list[pd.DataFrame] = []
+        merged_tables: dict[str, list[pd.DataFrame]] = {}
         for sheet_name, sheet_df in parsed.workbook_sheets.items():
             sheet_plan = plan_bundle.per_sheet.get(sheet_name) or MappingPlan(
                 source_format=parsed.source_format,
@@ -329,10 +377,15 @@ async def run_batch_pipeline(
                 targets=[],
                 assumptions=[f"missing_sheet_plan:{sheet_name}"],
             )
-            sheet_transformed = apply_mapping(sheet_df, sheet_plan)
-            sheet_transformed["source_sheet"] = sheet_name
-            transformed_parts.append(sheet_transformed)
-        transformed = pd.concat(transformed_parts, ignore_index=True) if transformed_parts else pd.DataFrame()
+            table_outputs = apply_mapping_by_table(sheet_df, sheet_plan)
+            for table_name, table_df in table_outputs.items():
+                tagged = table_df.copy()
+                tagged["source_sheet"] = sheet_name
+                merged_tables.setdefault(table_name, []).append(tagged)
+        transformed_by_table = {
+            table_name: pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+            for table_name, parts in merged_tables.items()
+        }
         unstructured_fields = sorted(
             {
                 field
@@ -342,14 +395,34 @@ async def run_batch_pipeline(
         )
     else:
         single_plan = plan_bundle if isinstance(plan_bundle, MappingPlan) else MappingPlan(source_format=parsed.source_format, confidence=0.0, targets=[])
-        transformed = apply_mapping(parsed.dataframe, single_plan)
+        transformed_by_table = apply_mapping_by_table(parsed.dataframe, single_plan)
         unstructured_fields = single_plan.unstructured_fields
+
+    transformed = transformed_by_table.get("object_temp", pd.DataFrame()).copy()
+    for table_name, table_df in transformed_by_table.items():
+        if table_name == "object_temp":
+            continue
+        for col in table_df.columns:
+            if col not in transformed.columns:
+                transformed[col] = table_df[col]
+
     try:
         transformed = await clean_unstructured(transformed, unstructured_fields)
     except Exception:  # noqa: BLE001
         # Keep pipeline progressing with deterministic output if cleaner fails.
         pass
     transformed = transformed.fillna("")
+    required_object_fields = flatten_required_columns().get("object_temp", set())
+    missing_required = [field for field in required_object_fields if field not in transformed.columns]
+    if missing_required:
+        raise ValueError(f"Approved mapping missing required object fields: {', '.join(sorted(missing_required))}")
+    empty_required = [
+        field
+        for field in required_object_fields
+        if transformed[field].astype(str).str.strip().eq("").all()
+    ]
+    if empty_required:
+        raise ValueError(f"Required object fields contain no values: {', '.join(sorted(empty_required))}")
 
     object_rows: list[dict[str, Any]] = []
     org_rows: dict[str, dict[str, Any]] = {}

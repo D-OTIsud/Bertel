@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 import pandas as pd
 import requests
 import streamlit as st
 from supabase import create_client
+
+try:
+    from core.eta_estimator import estimate_eta, format_seconds
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.eta_estimator import estimate_eta, format_seconds  # type: ignore
 
 
 st.set_page_config(page_title="Universal AI Data Ingestor", layout="wide")
@@ -23,26 +29,11 @@ st.info(
     "3) Batches (dedup/resolve/ETL/commit) -> 4) Staging Review."
 )
 
-with st.sidebar:
-    st.markdown("### Connection and auth")
-    st.caption("Values are loaded from runtime environment (Coolify/Docker).")
-    st.code(
-        "API_BASE_URL\nAPI_BEARER_TOKEN\nSUPABASE_URL\nSUPABASE_SERVICE_KEY",
-        language="text",
-    )
-    if api_token:
-        st.success("API_BEARER_TOKEN loaded")
-    else:
-        st.error("Missing API_BEARER_TOKEN")
-
-    if supabase_url:
-        st.success("SUPABASE_URL loaded")
-    else:
-        st.warning("SUPABASE_URL not set")
-    if supabase_service_key:
-        st.success("SUPABASE_SERVICE_KEY loaded")
-    else:
-        st.warning("SUPABASE_SERVICE_KEY not set")
+health_col_1, health_col_2, health_col_3, health_col_4 = st.columns(4)
+health_col_1.metric("API base", api_base_url)
+health_col_2.metric("API token", "loaded" if api_token else "missing")
+health_col_3.metric("Supabase URL", "loaded" if supabase_url else "missing")
+health_col_4.metric("Service key", "loaded" if supabase_service_key else "missing")
 
 
 def auth_headers() -> dict[str, str]:
@@ -335,12 +326,51 @@ def fetch_batch_events(
         sb.schema("staging")
         .table("import_events")
         .select("created_at,phase,level,message,payload")
-        .eq("batch_id", batch_id)
+        .eq("import_batch_id", batch_id)
         .order("created_at", desc=True)
         .limit(limit)
         .execute()
     )
     return response.data or []
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def fetch_historical_etl_durations_seconds(
+    supabase_url_value: str,
+    supabase_service_key_value: str,
+    limit: int = 300,
+) -> list[float]:
+    if not supabase_url_value or not supabase_service_key_value:
+        return []
+    sb = create_client(supabase_url_value, supabase_service_key_value)
+    response = (
+        sb.schema("staging")
+        .table("import_events")
+        .select("import_batch_id,message,created_at,level,phase")
+        .eq("phase", "etl")
+        .in_("message", ["ETL task started", "ETL task completed"])
+        .order("created_at", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    rows = response.data or []
+    started_at_by_batch: dict[str, datetime] = {}
+    durations: list[float] = []
+    for row in rows:
+        batch = str(row.get("import_batch_id") or "")
+        message = str(row.get("message") or "")
+        created_at = str(row.get("created_at") or "")
+        if not batch or not created_at:
+            continue
+        try:
+            ts = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if message == "ETL task started":
+            started_at_by_batch[batch] = ts
+        elif message == "ETL task completed" and batch in started_at_by_batch:
+            durations.append((ts - started_at_by_batch[batch]).total_seconds())
+    return [d for d in durations if d > 0]
 
 
 def recommend_next_step(status_payload: dict[str, Any]) -> str:
@@ -355,7 +385,7 @@ def recommend_next_step(status_payload: dict[str, Any]) -> str:
     if status in {"staging_loaded", "deduplicated"}:
         return "Run Resolve dependencies, review blockers in Step 4 if needed, then Commit approved."
     if status in {"failed_permanent"}:
-        return "Open Live event log, fix the failing rule/data issue, then Rollback or Purge and retry ingest."
+        return "This batch failed. Start with Rollback batch, then rerun pipeline. Use Live event log for the root cause."
     if status in {"committed"}:
         return "Batch is committed. Review final rows in Step 4 or start a new upload."
     return "Fetch status and follow the next action guidance."
@@ -450,32 +480,89 @@ with tab_upload:
 
 with tab_batches:
     st.subheader("Step 3 - Run batch pipeline")
-    st.info("Use this tab as the control tower: check current status, run next action, and monitor event logs.")
+    st.info("Use this tab as the control tower: guided action, pipeline progress, and live timeline.")
     st.caption(
         "Batches are persisted in Supabase (`staging.import_batches` / `staging.import_events`), "
         "not only in container memory."
     )
     batch_id = choose_active_batch(context_key="batches", title="Batch context")
     latest_status_payload: dict[str, Any] | None = None
+    events: list[dict[str, Any]] = []
+    current_status = ""
+    contract_status = ""
+    auto_refresh_enabled = st.checkbox("Auto-refresh status and events", value=True, key="batches_auto_refresh")
+    refresh_interval_s = st.selectbox("Refresh interval", options=[5, 10, 15, 30], index=1, key="batches_refresh_interval")
+    if auto_refresh_enabled and hasattr(st, "autorefresh"):
+        st.autorefresh(interval=int(refresh_interval_s) * 1000, key="batches_auto_refresh_tick")
     if batch_id:
         try:
             latest_status_payload = call_status(batch_id)
             st.markdown("#### Current batch status")
             status_value = latest_status_payload.get("status")
-            contract_status = (latest_status_payload.get("mapping_contract") or {}).get("status")
+            current_status = str(status_value or "").lower()
+            contract_status = str((latest_status_payload.get("mapping_contract") or {}).get("status") or "").lower()
             st.write(f"Batch status: `{status_value}`")
             if contract_status:
                 st.write(f"Mapping contract: `{contract_status}`")
             st.info(f"Next action: {recommend_next_step(latest_status_payload)}")
         except Exception as exc:  # noqa: BLE001
             st.warning(f"Could not auto-load batch status: {exc}")
+    st.caption(f"Last refreshed: {datetime.now(timezone.utc).isoformat(timespec='seconds')}")
 
-    if st.button("Run pipeline now (dedup -> resolve -> ETL)", disabled=not bool(batch_id)):
+    if batch_id and supabase_url and supabase_service_key:
+        try:
+            events = fetch_batch_events(
+                supabase_url_value=supabase_url,
+                supabase_service_key_value=supabase_service_key,
+                batch_id=batch_id,
+                limit=100,
+            )
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Unable to fetch batch events: {exc}")
+            events = []
+
+    pipeline_disabled = (not bool(batch_id)) or contract_status != "approved" or current_status in {
+        "failed_permanent",
+        "committed",
+    }
+    if current_status == "failed_permanent":
+        st.warning("Batch is in `failed_permanent`. Use recovery action first.")
+
+    primary_label = "Run pipeline now (dedup -> resolve -> ETL)"
+    primary_action = "run"
+    if current_status == "mapping_review_required":
+        primary_label = "Go to Step 2: review mapping first"
+        primary_action = "review"
+    elif current_status == "failed_permanent":
+        primary_label = "Recover failed batch (rollback -> dedup -> resolve -> ETL)"
+        primary_action = "recover"
+    elif current_status == "committed":
+        primary_label = "Batch already committed"
+        primary_action = "done"
+    elif current_status in {"profiling", "mapping", "transforming"}:
+        primary_label = "ETL in progress"
+        primary_action = "running"
+
+    primary_disabled = not bool(batch_id) or primary_action in {"review", "done", "running"}
+    if st.button(primary_label, disabled=primary_disabled):
         try:
             current = latest_status_payload or call_status(batch_id)
             gate = (current.get("mapping_contract") or {}).get("status")
-            if gate != "approved":
+            if primary_action == "recover":
+                recovery_report = {
+                    "rollback": trigger_rollback(batch_id, force=False),
+                    "dedup": trigger_dedup(batch_id),
+                    "resolve_dependencies": trigger_resolve_dependencies(batch_id),
+                    "run_etl": trigger_run_etl(batch_id),
+                }
+                st.success("Recovery pipeline launched.")
+                st.json(recovery_report)
+                fetch_batch_events.clear()
+                fetch_recent_batches.clear()
+            elif gate != "approved":
                 st.error("Mapping contract is not approved yet. Go to Step 2 (Discovery Review) first.")
+            elif str(current.get("status") or "").lower() in {"failed_permanent", "committed"}:
+                st.error("Current batch status does not allow this action. Use recovery or start a new batch.")
             else:
                 run_report = {
                     "dedup": trigger_dedup(batch_id),
@@ -489,8 +576,32 @@ with tab_batches:
         except Exception as exc:  # noqa: BLE001
             st.error(f"Pipeline launch failed: {exc}")
 
+    if events:
+        latest_error = next((e for e in events if str(e.get("level") or "").lower() == "error"), None)
+        if latest_error:
+            st.error(
+                f"Latest error ({latest_error.get('phase')}): {latest_error.get('message')}"
+            )
+
+    historical = []
+    if supabase_url and supabase_service_key:
+        try:
+            historical = fetch_historical_etl_durations_seconds(
+                supabase_url_value=supabase_url,
+                supabase_service_key_value=supabase_service_key,
+                limit=300,
+            )
+        except Exception:  # noqa: BLE001
+            historical = []
+    eta_payload = estimate_eta(status_payload=latest_status_payload, events=events, historical_durations=historical)
+    eta_col_1, eta_col_2, eta_col_3 = st.columns(3)
+    eta_col_1.metric("Current phase", str(eta_payload.get("phase") or "unknown"))
+    eta_col_2.metric("Elapsed", format_seconds(eta_payload.get("elapsed_seconds")))
+    eta_col_3.metric("ETA remaining", format_seconds(eta_payload.get("remaining_seconds")))
+    st.caption(f"ETA confidence: `{eta_payload.get('eta_confidence')}` — {eta_payload.get('note')}")
+
     col_a, col_b, col_c, col_d, col_e, col_f, col_g, col_h = st.columns(8)
-    if col_a.button("Fetch status"):
+    if col_a.button("Fetch status", disabled=not bool(batch_id)):
         try:
             status_payload = call_status(batch_id)
             latest_status_payload = status_payload
@@ -512,17 +623,17 @@ with tab_batches:
                 )
         except Exception as exc:  # noqa: BLE001
             st.error(f"Unable to fetch status: {exc}")
-    if col_b.button("Run dedup"):
+    if col_b.button("Run dedup", disabled=not bool(batch_id) or contract_status != "approved"):
         try:
             st.json(trigger_dedup(batch_id))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Dedup failed: {exc}")
-    if col_c.button("Resolve dependencies"):
+    if col_c.button("Resolve dependencies", disabled=not bool(batch_id) or contract_status != "approved"):
         try:
             st.json(trigger_resolve_dependencies(batch_id))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Dependency resolution failed: {exc}")
-    if col_d.button("Commit approved"):
+    if col_d.button("Commit approved", disabled=not bool(batch_id) or contract_status != "approved"):
         try:
             current = call_status(batch_id)
             gate = (current.get("mapping_contract") or {}).get("status")
@@ -532,22 +643,22 @@ with tab_batches:
                 st.json(trigger_commit(batch_id))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Commit failed: {exc}")
-    if col_e.button("Purge batch"):
+    if col_e.button("Purge batch", disabled=not bool(batch_id)):
         try:
             st.json(trigger_purge(batch_id, force=False))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Purge failed: {exc}")
-    if col_f.button("Process media"):
+    if col_f.button("Process media", disabled=not bool(batch_id) or contract_status != "approved"):
         try:
             st.json(trigger_media_process(batch_id))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Media process failed: {exc}")
-    if col_g.button("Rollback batch"):
+    if col_g.button("Rollback batch", disabled=not bool(batch_id)):
         try:
             st.json(trigger_rollback(batch_id, force=False))
         except Exception as exc:  # noqa: BLE001
             st.error(f"Rollback failed: {exc}")
-    if col_h.button("Run ETL"):
+    if col_h.button("Run ETL", disabled=not bool(batch_id) or contract_status != "approved"):
         try:
             etl_result = trigger_run_etl(batch_id)
             st.json(etl_result)
@@ -565,23 +676,26 @@ with tab_batches:
         except Exception as exc:  # noqa: BLE001
             st.error(f"Metrics fetch failed: {exc}")
 
-    st.markdown("#### Live event log")
+    st.markdown("#### Live event timeline")
     if not batch_id:
         st.info("Select or paste a batch ID to view event logs.")
     elif not supabase_url or not supabase_service_key:
         st.info("Set SUPABASE_URL and SUPABASE_SERVICE_KEY to view event logs.")
     else:
         try:
-            events = fetch_batch_events(
-                supabase_url_value=supabase_url,
-                supabase_service_key_value=supabase_service_key,
-                batch_id=batch_id,
-                limit=50,
-            )
             if not events:
                 st.info("No events yet for this batch.")
             else:
-                st.dataframe(events, use_container_width=True, hide_index=True)
+                timeline_rows = [
+                    {
+                        "time": event.get("created_at"),
+                        "phase": event.get("phase"),
+                        "level": event.get("level"),
+                        "message": event.get("message"),
+                    }
+                    for event in events
+                ]
+                st.dataframe(timeline_rows, use_container_width=True, hide_index=True)
         except Exception as exc:  # noqa: BLE001
             st.warning(f"Unable to load batch events: {exc}")
 

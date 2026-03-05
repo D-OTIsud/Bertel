@@ -6,6 +6,11 @@ from typing import Any
 import pandas as pd
 
 try:
+    from core.target_schema import find_best_target
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.target_schema import find_best_target  # type: ignore
+
+try:
     from core.schemas import (
         DiscoveryContract,
         DiscoveryFieldProposal,
@@ -43,37 +48,7 @@ def _detect_entity_type(sheet_name: str, columns: list[str]) -> tuple[str, float
 
 def _infer_target(source_column: str) -> tuple[str, str, str, float, str]:
     col = _norm(source_column)
-    if col in {"name", "nom", "title"}:
-        return "object_temp", "name", "identity", 0.95, "Direct lexical match for object name."
-    if col in {"type", "object_type", "categorie", "category"}:
-        return "object_temp", "object_type", "identity", 0.9, "Column indicates type/category semantics."
-    if "email" in col or "mail" in col:
-        return "contact_channel_temp", "value", "identity", 0.95, "Contact email pattern."
-    if "phone" in col or "tel" in col or "mobile" in col:
-        return "contact_channel_temp", "value", "identity", 0.95, "Contact phone pattern."
-    if col in {"lat", "latitude", "coord_lat"}:
-        return "object_location_temp", "latitude", "identity", 0.95, "Latitude geospatial candidate."
-    if col in {"lon", "lng", "longitude", "coord_lon"}:
-        return "object_location_temp", "longitude", "identity", 0.95, "Longitude geospatial candidate."
-    if "address" in col or "adresse" in col:
-        return "object_location_temp", "address1", "identity", 0.85, "Address lexical match."
-    if "city" in col or "ville" in col or "commune" in col:
-        return "object_location_temp", "city", "identity", 0.85, "City lexical match."
-    if "post" in col or col in {"cp", "zip"}:
-        return "object_location_temp", "postcode", "identity", 0.85, "Postal code lexical match."
-    if "external" in col or col in {"id", "source_id", "partner_id", "id_externe"}:
-        return "object_temp", "external_id", "identity", 0.8, "Potential external identifier."
-    if "org" in col and "id" in col:
-        return "object_temp", "source_org_object_id", "identity", 0.8, "Organization identifier candidate."
-    if "org" in col and "name" in col:
-        return "object_temp", "org_name", "identity", 0.8, "Organization name candidate."
-    if any(k in col for k in ("media_url", "image_url", "photo_url", "photos", "images")):
-        return "media_temp", "source_url", "split_list", 0.9, "Media URL collection candidate."
-    if "amenity" in col or "equip" in col:
-        return "object_amenity_temp", "amenity_code", "split_list", 0.75, "Amenities code list candidate."
-    if "payment" in col:
-        return "object_payment_method_temp", "payment_code", "split_list", 0.75, "Payment method list candidate."
-    return "object_temp", col, "identity", 0.35, "Low-confidence fallback mapping."
+    return find_best_target(col)
 
 
 def _profile_column(series: pd.Series) -> dict[str, Any]:

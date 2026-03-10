@@ -222,7 +222,6 @@ _render_stepper(st.session_state.step)
 if st.session_state.step == 1:
     st.markdown("### Importez vos donnees brutes")
     st.caption("Glissez-deposez un fichier. L'IA lira la structure et adaptera le mapping.")
-    st.markdown("<div class='import-card'>", unsafe_allow_html=True)
     orgs_data = _api_get("/api/v1/orgs", quiet=True)
     orgs = (orgs_data or {}).get("orgs", []) if isinstance(orgs_data, dict) else []
     options = {f"{o['name']} ({o['object_id'][:8]}...)": o["object_id"] for o in orgs}
@@ -250,7 +249,6 @@ if st.session_state.step == 1:
             st.session_state.batch_id = result["batch_id"]
             st.session_state.step = 2
             st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 batch_data = _fetch_batch()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any
@@ -474,26 +475,41 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
         ).execute()
 
     if contract.relations:
-        sb.schema("staging").table("mapping_relation_hypothesis").insert(
-            [
-                {
-                    "contract_id": contract_id,
-                    "from_sheet": r.from_sheet,
-                    "from_column": r.from_column,
-                    "to_sheet": r.to_sheet,
-                    "to_column": r.to_column,
-                    "relation_type": r.relation_type,
+        _EXTENDED_RELATION_COLS = ("separator", "is_join_table", "target_staging_table", "target_entity_type")
+
+        def _relation_row(r, *, extended: bool = True):
+            row = {
+                "contract_id": contract_id,
+                "from_sheet": r.from_sheet,
+                "from_column": r.from_column,
+                "to_sheet": r.to_sheet,
+                "to_column": r.to_column,
+                "relation_type": r.relation_type,
+                "confidence": r.confidence,
+                "rationale": r.rationale,
+                "status": r.status if status != "review_required" else "proposed",
+            }
+            if extended:
+                row.update({
                     "separator": r.separator,
                     "is_join_table": r.is_join_table,
                     "target_staging_table": r.target_staging_table,
                     "target_entity_type": r.target_entity_type,
-                    "confidence": r.confidence,
-                    "rationale": r.rationale,
-                    "status": r.status if status != "review_required" else "proposed",
-                }
-                for r in contract.relations
-            ]
-        ).execute()
+                })
+            return row
+
+        try:
+            sb.schema("staging").table("mapping_relation_hypothesis").insert(
+                [_relation_row(r, extended=True) for r in contract.relations]
+            ).execute()
+        except Exception as exc:
+            if "PGRST204" in str(exc) and any(c in str(exc) for c in _EXTENDED_RELATION_COLS):
+                logging.warning("mapping_relation_hypothesis missing extended columns, retrying without them: %s", exc)
+                sb.schema("staging").table("mapping_relation_hypothesis").insert(
+                    [_relation_row(r, extended=False) for r in contract.relations]
+                ).execute()
+            else:
+                raise
 
     return {
         "contract_id": contract_id,

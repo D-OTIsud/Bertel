@@ -131,7 +131,6 @@ def _reset_wizard() -> None:
     st.session_state.batch_id = None
     st.session_state.batch_data = None
     st.session_state.ai_correction = True
-    st.session_state.demo_filename = "restaurants_2026.xlsx"
 
 
 def _fetch_batch() -> dict[str, Any] | None:
@@ -200,8 +199,6 @@ if "batch_data" not in st.session_state:
     st.session_state.batch_data = None
 if "ai_correction" not in st.session_state:
     st.session_state.ai_correction = True
-if "demo_filename" not in st.session_state:
-    st.session_state.demo_filename = "restaurants_2026.xlsx"
 
 st.title("Bertel Data Ingestor")
 healthy = _check_health()
@@ -235,22 +232,17 @@ if st.session_state.step == 1:
         unsafe_allow_html=True,
     )
     uploaded_file = st.file_uploader("Fichier source", type=["csv", "xlsx", "xlsm", "json", "xml"], label_visibility="collapsed")
-    col_a, col_b = st.columns([1, 1])
-    with col_a:
-        if st.button(f"Simuler l'ajout de '{st.session_state.demo_filename}'", use_container_width=True):
-            st.info("Simulation active. Chargez ensuite un fichier reel pour lancer l'import.")
-    with col_b:
-        can_upload = bool(uploaded_file and selected_org_id)
-        if st.button("Analyser avec l'IA", type="primary", use_container_width=True, disabled=not can_upload):
-            files = {"upload_file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-            params = {"organization_object_id": selected_org_id}
-            if org_name_input:
-                params["organization_name"] = org_name_input
-            result = _api_post("/api/v1/ingest", params=params, files=files)
-            if result:
-                st.session_state.batch_id = result["batch_id"]
-                st.session_state.step = 2
-                st.rerun()
+    can_upload = bool(uploaded_file and selected_org_id)
+    if st.button("Analyser avec l'IA", type="primary", use_container_width=True, disabled=not can_upload):
+        files = {"upload_file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+        params: dict[str, str] = {"organization_object_id": selected_org_id}
+        if org_name_input:
+            params["organization_name"] = org_name_input
+        result = _api_post("/api/v1/ingest", params=params, files=files)
+        if result:
+            st.session_state.batch_id = result["batch_id"]
+            st.session_state.step = 2
+            st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 

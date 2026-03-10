@@ -8,6 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -406,7 +407,7 @@ def batch_status(batch_id: str) -> JSONResponse:
     fields = _contract_fields(sb, contract["id"]) if contract else []
     events = _batch_events(sb, batch_id)
 
-    return JSONResponse(content={
+    return JSONResponse(content=jsonable_encoder({
         "batch_id": batch_id,
         "status": batch.get("status"),
         "created_at": batch.get("created_at"),
@@ -416,7 +417,7 @@ def batch_status(batch_id: str) -> JSONResponse:
         "contract": contract,
         "fields": fields,
         "events": events,
-    })
+    }))
 
 
 @app.get("/api/v1/ingest/{batch_id}/preview", dependencies=[Depends(verify_token)])
@@ -481,7 +482,7 @@ def batch_preview(batch_id: str) -> JSONResponse:
                 "object_description": description_by_key.get(key),
             }
         )
-    return JSONResponse(content={"rows": rows})
+    return JSONResponse(content=jsonable_encoder({"rows": rows}))
 
 
 # ---------------------------------------------------------------------------

@@ -350,7 +350,7 @@ async def ingest(
     sb = get_supabase()
     payload_sha = hash_payload(payload)
     existing = find_batch_by_idempotency(sb, payload_sha256=payload_sha)
-    if existing:
+    if existing and existing.get("status") not in ("failed", "failed_permanent"):
         return IngestAccepted(
             batch_id=existing["batch_id"],
             status=BatchStatus(existing["status"]),

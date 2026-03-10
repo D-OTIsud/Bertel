@@ -99,22 +99,146 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Object-specific updated_at guard: ignore cache-only updates.
+CREATE OR REPLACE FUNCTION update_object_updated_at_business()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (
+    to_jsonb(NEW) - ARRAY[
+      'updated_at',
+      'is_editing',
+      'commercial_visibility',
+      'cached_min_price',
+      'cached_main_image_url',
+      'cached_rating',
+      'cached_review_count',
+      'cached_is_open_now',
+      'cached_amenity_codes',
+      'cached_payment_codes',
+      'cached_environment_tags',
+      'cached_language_codes',
+      'cached_classification_codes',
+      'current_version'
+    ]
+  ) IS NOT DISTINCT FROM (
+    to_jsonb(OLD) - ARRAY[
+      'updated_at',
+      'is_editing',
+      'commercial_visibility',
+      'cached_min_price',
+      'cached_main_image_url',
+      'cached_rating',
+      'cached_review_count',
+      'cached_is_open_now',
+      'cached_amenity_codes',
+      'cached_payment_codes',
+      'cached_environment_tags',
+      'cached_language_codes',
+      'cached_classification_codes',
+      'current_version'
+    ]
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =====================================================
 -- Types
 -- =====================================================
 
-CREATE TYPE object_type AS ENUM (
-  'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP','PSV','RVA'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'object_type'
+  ) THEN
+    CREATE TYPE object_type AS ENUM (
+      'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP','PSV','RVA'
+    );
+  END IF;
+END $$;
 
-CREATE TYPE object_status AS ENUM ('draft','published','archived','hidden');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'object_status'
+  ) THEN
+    CREATE TYPE object_status AS ENUM ('draft','published','archived','hidden');
+  END IF;
+END $$;
 
-CREATE TYPE crm_interaction_type AS ENUM ('call','email','meeting','visit','whatsapp','sms','note','other');
-CREATE TYPE crm_direction AS ENUM ('inbound','outbound','internal');
-CREATE TYPE crm_status AS ENUM ('planned','done','canceled');
-CREATE TYPE crm_task_status AS ENUM ('todo','in_progress','done','canceled','blocked');
-CREATE TYPE crm_task_priority AS ENUM ('low','medium','high','urgent');
-CREATE TYPE crm_consent_channel AS ENUM ('email','phone','sms','whatsapp','postal');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_interaction_type'
+  ) THEN
+    CREATE TYPE crm_interaction_type AS ENUM ('call','email','meeting','visit','whatsapp','sms','note','other');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_direction'
+  ) THEN
+    CREATE TYPE crm_direction AS ENUM ('inbound','outbound','internal');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_status'
+  ) THEN
+    CREATE TYPE crm_status AS ENUM ('planned','done','canceled');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_task_status'
+  ) THEN
+    CREATE TYPE crm_task_status AS ENUM ('todo','in_progress','done','canceled','blocked');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_task_priority'
+  ) THEN
+    CREATE TYPE crm_task_priority AS ENUM ('low','medium','high','urgent');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_consent_channel'
+  ) THEN
+    CREATE TYPE crm_consent_channel AS ENUM ('email','phone','sms','whatsapp','postal');
+  END IF;
+END $$;
 
 -- =====================================================
 -- ref_code partitionné
@@ -204,6 +328,55 @@ CREATE TABLE IF NOT EXISTS ref_code_amenity_type PARTITION OF ref_code FOR VALUE
 CREATE TABLE IF NOT EXISTS ref_code_membership_tier PARTITION OF ref_code FOR VALUES IN ('membership_tier');
 CREATE TABLE IF NOT EXISTS ref_code_membership_campaign PARTITION OF ref_code FOR VALUES IN ('membership_campaign');
 CREATE TABLE IF NOT EXISTS ref_code_incident_category PARTITION OF ref_code FOR VALUES IN ('incident_category');
+CREATE TABLE IF NOT EXISTS ref_code_other PARTITION OF ref_code DEFAULT;
+
+-- Stable weekday mapping: locale-independent day number (1=Mon..7=Sun).
+ALTER TABLE IF EXISTS ref_code
+  ADD COLUMN IF NOT EXISTS dow_number SMALLINT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_ref_code_weekday_dow_number'
+      AND conrelid = 'ref_code'::regclass
+  ) THEN
+    ALTER TABLE ref_code
+      ADD CONSTRAINT chk_ref_code_weekday_dow_number
+      CHECK (
+        domain <> 'weekday'
+        OR (dow_number BETWEEN 1 AND 7)
+      );
+  END IF;
+END $$;
+
+-- Backfill weekday numeric mapping from canonical weekday code.
+UPDATE ref_code
+SET dow_number = CASE code
+  WHEN 'monday' THEN 1
+  WHEN 'tuesday' THEN 2
+  WHEN 'wednesday' THEN 3
+  WHEN 'thursday' THEN 4
+  WHEN 'friday' THEN 5
+  WHEN 'saturday' THEN 6
+  WHEN 'sunday' THEN 7
+  ELSE dow_number
+END
+WHERE domain = 'weekday'
+  AND (
+    dow_number IS NULL
+    OR dow_number <> CASE code
+      WHEN 'monday' THEN 1
+      WHEN 'tuesday' THEN 2
+      WHEN 'wednesday' THEN 3
+      WHEN 'thursday' THEN 4
+      WHEN 'friday' THEN 5
+      WHEN 'saturday' THEN 6
+      WHEN 'sunday' THEN 7
+      ELSE dow_number
+    END
+  );
 
 -- Index d'unicité nécessaires sur chaque partition (id & code)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_id ON ref_code_contact_kind (id);
@@ -316,6 +489,7 @@ CREATE OR REPLACE FUNCTION ref_language_set_position()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.position IS NULL THEN
+    LOCK TABLE ref_language IN SHARE ROW EXCLUSIVE MODE;
     SELECT COALESCE(MAX(position), 0) + 1 INTO NEW.position FROM ref_language;
   END IF;
   RETURN NEW;
@@ -461,6 +635,103 @@ CREATE TABLE IF NOT EXISTS i18n_translation (
   CONSTRAINT uq_i18n_translation UNIQUE (target_table, target_pk, target_column, language_id)
 );
 
+-- Governance guard: avoid dual source-of-truth when table already has a JSONB *_i18n column.
+CREATE OR REPLACE FUNCTION validate_i18n_translation_target()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_has_jsonb_i18n BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.table_name = NEW.target_table
+      AND c.column_name = NEW.target_column || '_i18n'
+      AND c.data_type = 'jsonb'
+  )
+  INTO v_has_jsonb_i18n;
+
+  IF v_has_jsonb_i18n THEN
+    RAISE EXCEPTION
+      'i18n_translation is blocked for %.% because %.%_i18n exists and is canonical',
+      NEW.target_table, NEW.target_column, NEW.target_table, NEW.target_column;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_i18n_translation_target ON i18n_translation;
+CREATE TRIGGER trg_validate_i18n_translation_target
+BEFORE INSERT OR UPDATE ON i18n_translation
+FOR EACH ROW EXECUTE FUNCTION validate_i18n_translation_target();
+
+CREATE OR REPLACE FUNCTION validate_org_object_type()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_column_name TEXT := TG_ARGV[0];
+  v_org_id TEXT;
+BEGIN
+  v_org_id := to_jsonb(NEW)->>v_column_name;
+
+  IF v_org_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM object o
+       WHERE o.id = v_org_id
+         AND o.object_type = 'ORG'
+     ) THEN
+    RAISE EXCEPTION '% must reference an ORG object id, got %', v_column_name, v_org_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION enforce_classification_single_selection()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_scheme_code TEXT;
+BEGIN
+  IF NEW.value_id IS NOT NULL
+     AND NEW.scheme_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM ref_classification_value v
+       WHERE v.id = NEW.value_id
+         AND v.scheme_id = NEW.scheme_id
+     ) THEN
+    RAISE EXCEPTION 'value_id % does not belong to scheme_id %', NEW.value_id, NEW.scheme_id;
+  END IF;
+
+  IF NEW.status = 'granted'
+     AND EXISTS (
+       SELECT 1
+       FROM ref_classification_scheme s
+       WHERE s.id = NEW.scheme_id
+         AND s.selection = 'single'
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM object_classification oc
+       WHERE oc.object_id = NEW.object_id
+         AND oc.scheme_id = NEW.scheme_id
+         AND oc.status = 'granted'
+         AND oc.id IS DISTINCT FROM NEW.id
+     ) THEN
+    SELECT s.code
+    INTO v_scheme_code
+    FROM ref_classification_scheme s
+    WHERE s.id = NEW.scheme_id;
+
+    RAISE EXCEPTION 'classification scheme % allows only one granted value per object',
+      COALESCE(v_scheme_code, NEW.scheme_id::TEXT);
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Classifications
 CREATE TABLE IF NOT EXISTS ref_classification_scheme (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -473,6 +744,25 @@ CREATE TABLE IF NOT EXISTS ref_classification_scheme (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'ref_classification_scheme'
+      AND c.conname = 'chk_classification_scheme_selection'
+  ) THEN
+    ALTER TABLE ref_classification_scheme
+      ADD CONSTRAINT chk_classification_scheme_selection
+      CHECK (selection IN ('single', 'multiple'));
+  END IF;
+END $$;
+
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS name_i18n JSONB;
 CREATE TABLE IF NOT EXISTS ref_classification_value (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE CASCADE,
@@ -496,6 +786,8 @@ CREATE TABLE IF NOT EXISTS object (
   id TEXT PRIMARY KEY,
   object_type object_type NOT NULL,
   name TEXT NOT NULL,
+  business_timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
+  commercial_visibility TEXT NOT NULL DEFAULT 'active',
   region_code TEXT CHECK (region_code IS NULL OR region_code ~ '^[A-Z0-9]{3}$'),
   updated_at_source TIMESTAMPTZ,
   status object_status NOT NULL DEFAULT 'draft',
@@ -506,7 +798,7 @@ CREATE TABLE IF NOT EXISTS object (
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
-  name_search_vector tsvector GENERATED ALWAYS AS (to_tsvector('french', COALESCE(name, ''))) STORED,
+  name_search_vector tsvector GENERATED ALWAYS AS (to_tsvector('french', COALESCE(immutable_unaccent(lower(name)), ''))) STORED,
   -- Cached aggregates for quick lookups (updated by triggers)
   cached_min_price NUMERIC(10,2),
   cached_main_image_url TEXT,
@@ -523,10 +815,30 @@ CREATE TABLE IF NOT EXISTS object (
   extra JSONB,
   name_i18n JSONB,
   CONSTRAINT chk_object_id_shape CHECK (id ~ '^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$'),
-  CONSTRAINT chk_object_status CHECK (status IN ('draft','published','archived','hidden'))
+  CONSTRAINT chk_object_status CHECK (status IN ('draft','published','archived','hidden')),
+  CONSTRAINT chk_object_commercial_visibility CHECK (commercial_visibility IN ('active','lapsed','suspended'))
 );
 
 -- Ensure cache columns exist for existing installations
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS business_timezone TEXT;
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS commercial_visibility TEXT;
+UPDATE object
+SET business_timezone = 'Indian/Reunion'
+WHERE business_timezone IS NULL
+   OR btrim(business_timezone) = '';
+UPDATE object
+SET commercial_visibility = 'active'
+WHERE commercial_visibility IS NULL
+   OR btrim(commercial_visibility) = '';
+ALTER TABLE IF EXISTS object ALTER COLUMN business_timezone SET DEFAULT 'Indian/Reunion';
+ALTER TABLE IF EXISTS object ALTER COLUMN business_timezone SET NOT NULL;
+ALTER TABLE IF EXISTS object ALTER COLUMN commercial_visibility SET DEFAULT 'active';
+ALTER TABLE IF EXISTS object ALTER COLUMN commercial_visibility SET NOT NULL;
+ALTER TABLE IF EXISTS object DROP CONSTRAINT IF EXISTS chk_object_commercial_visibility;
+ALTER TABLE IF EXISTS object
+ADD CONSTRAINT chk_object_commercial_visibility
+CHECK (commercial_visibility IN ('active','lapsed','suspended'));
+
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_amenity_codes TEXT[];
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_payment_codes TEXT[];
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_environment_tags TEXT[];
@@ -547,6 +859,27 @@ END;
 $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_before_insert_object_generate_id ON object;
 CREATE TRIGGER trg_before_insert_object_generate_id BEFORE INSERT ON object FOR EACH ROW EXECUTE FUNCTION api.before_insert_object_generate_id();
+
+CREATE OR REPLACE FUNCTION api.validate_object_business_timezone()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.business_timezone := COALESCE(NULLIF(btrim(NEW.business_timezone), ''), 'Indian/Reunion');
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_timezone_names tzn
+    WHERE tzn.name = NEW.business_timezone
+  ) THEN
+    RAISE EXCEPTION 'Invalid business_timezone: %', NEW.business_timezone
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_validate_object_business_timezone ON object;
+CREATE TRIGGER trg_validate_object_business_timezone
+BEFORE INSERT OR UPDATE OF business_timezone ON object
+FOR EACH ROW
+EXECUTE FUNCTION api.validate_object_business_timezone();
 
 -- Mise à jour published_at
 CREATE OR REPLACE FUNCTION api.manage_object_published_at()
@@ -651,6 +984,7 @@ CREATE INDEX IF NOT EXISTS idx_object_location_object_id ON object_location(obje
 CREATE INDEX IF NOT EXISTS idx_object_location_place_id ON object_location(place_id);
 CREATE INDEX IF NOT EXISTS idx_object_location_geog2 ON object_location USING GIST (geog2);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_object_location_main ON object_location(object_id) WHERE is_main_location;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_location_main_place ON object_location(place_id) WHERE is_main_location;
 
 -- =====================================================
 -- Pending changes moderation queue
@@ -683,6 +1017,7 @@ CREATE INDEX IF NOT EXISTS idx_pending_change_validated_effective_ts
 ON pending_change (status, (COALESCE(applied_at, reviewed_at)))
 WHERE status IN ('approved', 'applied');
 
+DROP TRIGGER IF EXISTS update_pending_change_updated_at ON pending_change;
 CREATE TRIGGER update_pending_change_updated_at BEFORE UPDATE ON pending_change FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Maintain object.is_editing based on pending changes lifecycle
@@ -793,7 +1128,7 @@ CREATE TABLE IF NOT EXISTS media (
   CONSTRAINT chk_media_url_not_empty CHECK (LENGTH(TRIM(url)) > 0),
   CONSTRAINT chk_media_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners')),
   CONSTRAINT chk_media_kind CHECK (kind IS NULL OR kind IN ('illustration','asset','logo')),
-  CONSTRAINT chk_media_target_present CHECK (object_id IS NOT NULL OR place_id IS NOT NULL),
+  CONSTRAINT chk_media_target_present CHECK ((object_id IS NOT NULL) <> (place_id IS NOT NULL)),
   CONSTRAINT chk_media_url_shape CHECK (url ~* '^https?://')
 );
 
@@ -869,24 +1204,26 @@ ALTER TABLE IF EXISTS object_description
   ADD COLUMN IF NOT EXISTS sanitary_measures_i18n JSONB,
   ADD COLUMN IF NOT EXISTS extra JSONB;
 
--- Backfill duplicates: keep most recent canonical row per object and attach others to the object itself
--- (safe at this stage without needing object_org_link to exist yet)
+-- Backfill duplicates: keep most recent canonical row per object and delete older duplicates.
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'object_description' AND column_name = 'org_object_id'
   ) THEN
-    WITH dups AS (
+    WITH ranked AS (
       SELECT id, object_id,
              ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY created_at DESC, id) AS rn
       FROM object_description
       WHERE org_object_id IS NULL
+    ), to_delete AS (
+      SELECT id
+      FROM ranked
+      WHERE rn > 1
     )
-    UPDATE object_description d
-    SET org_object_id = d.object_id
-    FROM dups
-    WHERE d.id = dups.id AND dups.rn > 1;
+    DELETE FROM object_description d
+    USING to_delete
+    WHERE d.id = to_delete.id;
   END IF;
 END $$;
 
@@ -938,13 +1275,87 @@ CREATE TABLE IF NOT EXISTS object_external_id (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   organization_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE RESTRICT,
+  source_system TEXT NOT NULL DEFAULT 'default',
   external_id TEXT NOT NULL,
   last_synced_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (organization_object_id, external_id),
-  CONSTRAINT uq_object_org UNIQUE (object_id, organization_object_id)
+  CONSTRAINT uq_object_external_id_by_source UNIQUE (organization_object_id, source_system, external_id),
+  CONSTRAINT uq_object_external_id_object_org_source UNIQUE (object_id, organization_object_id, source_system)
 );
+
+ALTER TABLE IF EXISTS object_external_id
+  ADD COLUMN IF NOT EXISTS source_system TEXT;
+
+UPDATE object_external_id
+SET source_system = 'default'
+WHERE source_system IS NULL;
+
+ALTER TABLE IF EXISTS object_external_id
+  ALTER COLUMN source_system SET DEFAULT 'default';
+
+ALTER TABLE IF EXISTS object_external_id
+  ALTER COLUMN source_system SET NOT NULL;
+
+DO $$
+DECLARE
+  v_legacy_conname TEXT;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_org'
+  ) THEN
+    ALTER TABLE object_external_id DROP CONSTRAINT uq_object_org;
+  END IF;
+
+  SELECT c.conname
+  INTO v_legacy_conname
+  FROM pg_constraint c
+  JOIN pg_class t ON t.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = t.relnamespace
+  WHERE n.nspname = 'public'
+    AND t.relname = 'object_external_id'
+    AND c.contype = 'u'
+    AND pg_get_constraintdef(c.oid) LIKE 'UNIQUE (organization_object_id, external_id)%'
+  LIMIT 1;
+
+  IF v_legacy_conname IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE object_external_id DROP CONSTRAINT %I', v_legacy_conname);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_external_id_by_source'
+  ) THEN
+    ALTER TABLE object_external_id
+      ADD CONSTRAINT uq_object_external_id_by_source
+      UNIQUE (organization_object_id, source_system, external_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_external_id_object_org_source'
+  ) THEN
+    ALTER TABLE object_external_id
+      ADD CONSTRAINT uq_object_external_id_object_org_source
+      UNIQUE (object_id, organization_object_id, source_system);
+  END IF;
+END $$;
 
 -- Avis (reviews) importés
 CREATE TABLE IF NOT EXISTS object_review (
@@ -1173,7 +1584,7 @@ RETURNS TRIGGER AS $$
 DECLARE v_is_email BOOLEAN;
 BEGIN
   SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
-  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
+  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
     RAISE EXCEPTION 'Invalid email format for contact kind=email: %', NEW.value;
   END IF;
   RETURN NEW;
@@ -1186,7 +1597,7 @@ RETURNS TRIGGER AS $$
 DECLARE v_is_email BOOLEAN;
 BEGIN
   SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
-  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
+  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
     RAISE EXCEPTION 'Invalid email format for actor channel kind=email: %', NEW.value;
   END IF;
   RETURN NEW;
@@ -1533,6 +1944,8 @@ CREATE TABLE IF NOT EXISTS opening_time_period_weekday (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (time_period_id, weekday_id)
 );
+ALTER TABLE IF EXISTS opening_time_period_weekday
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE TABLE IF NOT EXISTS opening_time_frame (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   time_period_id UUID NOT NULL REFERENCES opening_time_period(id) ON DELETE CASCADE,
@@ -1753,6 +2166,49 @@ CREATE TABLE IF NOT EXISTS object_iti_profile (
   PRIMARY KEY (object_id, position_m)
 );
 
+ALTER TABLE IF EXISTS object_iti_profile
+  ADD COLUMN IF NOT EXISTS id UUID;
+
+UPDATE object_iti_profile
+SET id = uuid_generate_v4()
+WHERE id IS NULL;
+
+ALTER TABLE IF EXISTS object_iti_profile
+  ALTER COLUMN id SET DEFAULT uuid_generate_v4();
+
+ALTER TABLE IF EXISTS object_iti_profile
+  ALTER COLUMN id SET NOT NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_iti_profile'
+      AND c.conname = 'object_iti_profile_pkey'
+  ) THEN
+    ALTER TABLE object_iti_profile DROP CONSTRAINT object_iti_profile_pkey;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_iti_profile'
+      AND c.conname = 'object_iti_profile_id_pkey'
+  ) THEN
+    ALTER TABLE object_iti_profile ADD CONSTRAINT object_iti_profile_id_pkey PRIMARY KEY (id);
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_iti_profile_pos
+ON object_iti_profile(object_id, position_m);
+
 -- =====================================================
 -- Tourism CRM extensions
 -- =====================================================
@@ -1784,24 +2240,99 @@ WHERE status IN ('invoiced','paid');
 
 CREATE OR REPLACE FUNCTION api.handle_membership_status_transition()
 RETURNS TRIGGER AS $$
-DECLARE
-  v_target_status object_status := 'hidden';
 BEGIN
   IF NEW.status = 'lapsed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
     IF NEW.object_id IS NOT NULL THEN
       UPDATE object o
-      SET status = v_target_status
+      SET commercial_visibility = 'lapsed'
       WHERE o.id = NEW.object_id
-        AND o.status = 'published';
+        AND o.commercial_visibility IS DISTINCT FROM 'lapsed'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE m2.id <> NEW.id
+            AND (
+              m2.object_id = NEW.object_id
+              OR (
+                m2.object_id IS NULL
+                AND m2.org_object_id IN (
+                  SELECT l.org_object_id
+                  FROM object_org_link l
+                  WHERE l.object_id = NEW.object_id
+                )
+              )
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
     ELSE
       UPDATE object o
-      SET status = v_target_status
-      WHERE o.status = 'published'
+      SET commercial_visibility = 'lapsed'
+      WHERE o.commercial_visibility IS DISTINCT FROM 'lapsed'
         AND EXISTS (
           SELECT 1
           FROM object_org_link l
           WHERE l.object_id = o.id
             AND l.org_object_id = NEW.org_object_id
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE m2.id <> NEW.id
+            AND (
+              m2.object_id = o.id
+              OR (m2.object_id IS NULL AND m2.org_object_id = NEW.org_object_id)
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    END IF;
+  ELSIF NEW.status IN ('paid', 'invoiced') AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    IF NEW.object_id IS NOT NULL THEN
+      UPDATE object o
+      SET commercial_visibility = 'active'
+      WHERE o.id = NEW.object_id
+        AND o.commercial_visibility IS DISTINCT FROM 'active'
+        AND EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE (
+              m2.object_id = NEW.object_id
+              OR (
+                m2.object_id IS NULL
+                AND m2.org_object_id IN (
+                  SELECT l.org_object_id
+                  FROM object_org_link l
+                  WHERE l.object_id = NEW.object_id
+                )
+              )
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    ELSE
+      UPDATE object o
+      SET commercial_visibility = 'active'
+      WHERE o.commercial_visibility IS DISTINCT FROM 'active'
+        AND EXISTS (
+          SELECT 1
+          FROM object_org_link l
+          WHERE l.object_id = o.id
+            AND l.org_object_id = NEW.org_object_id
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE (
+              m2.object_id = o.id
+              OR (m2.object_id IS NULL AND m2.org_object_id = NEW.org_object_id)
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
         );
     END IF;
   END IF;
@@ -1836,7 +2367,7 @@ CREATE TABLE IF NOT EXISTS incident_report (
   CONSTRAINT chk_incident_reporter_email_shape
     CHECK (
       reporter_email IS NULL
-      OR reporter_email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'
+      OR reporter_email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
     )
 );
 CREATE INDEX IF NOT EXISTS idx_incident_report_object_status ON incident_report(object_id, status);
@@ -2306,22 +2837,39 @@ END; $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION audit.drop_old_partitions(months_to_keep INTEGER DEFAULT 12)
 RETURNS TEXT AS $$
-DECLARE partition_name TEXT; cutoff_date TIMESTAMPTZ; result_text TEXT := ''; r RECORD;
+DECLARE
+  cutoff_date DATE;
+  result_text TEXT := '';
+  r RECORD;
+  part_year INTEGER;
+  part_month INTEGER;
+  part_date DATE;
 BEGIN
-  cutoff_date := date_trunc('month', CURRENT_DATE) - (months_to_keep || ' months')::INTERVAL;
-  FOR r IN SELECT schemaname, tablename FROM pg_tables WHERE schemaname='audit' AND tablename LIKE 'audit_log_%'
+  cutoff_date := (date_trunc('month', CURRENT_DATE) - make_interval(months => months_to_keep))::date;
+
+  FOR r IN
+    SELECT schemaname, tablename
+    FROM pg_tables
+    WHERE schemaname = 'audit'
+      AND tablename ~ '^audit_log_[0-9]{4}_[0-9]{2}$'
   LOOP
-    IF r.tablename ~ '^audit_log_[0-9]{4}_[0-9]{2}$' THEN
-      partition_name := r.tablename;
-      IF to_timestamp(split_part(split_part(partition_name, '_', 3), '_', 1) || '-' || split_part(split_part(partition_name, '_', 3), '_', 2) || '-01','YYYY-MM-DD') < cutoff_date THEN
-        EXECUTE 'DROP TABLE IF EXISTS audit.' || quote_ident(partition_name);
-        result_text := result_text || 'Dropped old partition: ' || partition_name || E'\n';
-      END IF;
+    part_year := split_part(r.tablename, '_', 3)::INTEGER;
+    part_month := split_part(r.tablename, '_', 4)::INTEGER;
+    part_date := make_date(part_year, part_month, 1);
+
+    IF part_date < cutoff_date THEN
+      EXECUTE format('DROP TABLE IF EXISTS audit.%I', r.tablename);
+      result_text := result_text || 'Dropped old partition: ' || r.tablename || E'\n';
     END IF;
   END LOOP;
-  IF result_text = '' THEN result_text := 'No old partitions to drop'; END IF;
+
+  IF result_text = '' THEN
+    result_text := 'No old partitions to drop';
+  END IF;
+
   RETURN result_text;
-END; $$ LANGUAGE plpgsql;
+END;
+$$ LANGUAGE plpgsql;
 
 SELECT audit.ensure_future_partitions(3);
 
@@ -2342,18 +2890,44 @@ CREATE OR REPLACE FUNCTION audit.log_row_changes()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = audit, public
+SET search_path = pg_catalog, audit, public, pg_temp
 AS $$
-DECLARE v_pk JSONB := NULL; v_changed_by TEXT := NULL;
+DECLARE
+  v_pk JSONB := NULL;
+  v_changed_by TEXT := NULL;
+  v_pk_cols TEXT[];
+  v_row JSONB;
 BEGIN
   v_changed_by := COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), NULLIF(current_setting('request.jwt.claim.sub', true), ''), current_user);
+
+  v_row := CASE
+    WHEN TG_OP = 'DELETE' THEN to_jsonb(OLD)
+    WHEN NEW IS NOT NULL THEN to_jsonb(NEW)
+    ELSE to_jsonb(OLD)
+  END;
+
+  SELECT array_agg(a.attname ORDER BY k.ord)
+  INTO v_pk_cols
+  FROM pg_index i
+  JOIN unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) ON TRUE
+  JOIN pg_attribute a
+    ON a.attrelid = i.indrelid
+   AND a.attnum = k.attnum
+  WHERE i.indrelid = TG_RELID
+    AND i.indisprimary;
+
+  IF v_pk_cols IS NOT NULL AND array_length(v_pk_cols, 1) > 0 THEN
+    SELECT jsonb_object_agg(col_name, v_row -> col_name)
+    INTO v_pk
+    FROM unnest(v_pk_cols) AS t(col_name);
+  ELSIF v_row ? 'id' THEN
+    v_pk := jsonb_build_object('id', v_row->'id');
+  END IF;
+
   IF TG_OP = 'UPDATE' THEN
-    IF NEW IS NOT NULL AND to_jsonb(NEW) ? 'id' THEN v_pk := jsonb_build_object('id', to_jsonb(NEW)->'id');
-    ELSIF OLD IS NOT NULL AND to_jsonb(OLD) ? 'id' THEN v_pk := jsonb_build_object('id', to_jsonb(OLD)->'id'); END IF;
     INSERT INTO audit.audit_log(table_name, operation, row_pk, before_data, after_data, changed_by) VALUES (TG_TABLE_NAME, TG_OP, v_pk, to_jsonb(OLD), to_jsonb(NEW), v_changed_by);
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
-    IF OLD IS NOT NULL AND to_jsonb(OLD) ? 'id' THEN v_pk := jsonb_build_object('id', to_jsonb(OLD)->'id'); END IF;
     INSERT INTO audit.audit_log(table_name, operation, row_pk, before_data, after_data, changed_by) VALUES (TG_TABLE_NAME, TG_OP, v_pk, to_jsonb(OLD), NULL, v_changed_by);
     RETURN OLD;
   END IF;
@@ -2361,9 +2935,16 @@ BEGIN
 END;
 $$;
 
--- Attacher triggers d'audit
-DO $$
-DECLARE r RECORD; trig_name TEXT;
+-- Attach audit triggers (invoked at end of script to include late-created tables).
+CREATE OR REPLACE FUNCTION audit.attach_missing_triggers()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, audit, public, pg_temp
+AS $$
+DECLARE
+  r RECORD;
+  trig_name TEXT;
 BEGIN
   FOR r IN
     SELECT table_schema, table_name
@@ -2384,7 +2965,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_crm_interaction') THEN
     CREATE TRIGGER trg_audit_crm_interaction AFTER UPDATE OR DELETE ON crm_interaction FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
   END IF;
-END; $$;
+END;
+$$;
 
 -- Versioning
 CREATE TABLE IF NOT EXISTS object_version (
@@ -2420,29 +3002,71 @@ SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE)
 
 -- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
 CREATE TABLE IF NOT EXISTS object_version_default PARTITION OF object_version DEFAULT;
+CREATE INDEX IF NOT EXISTS idx_object_version_object_id_created
+ON object_version(object_id, created_at DESC);
 
 CREATE TRIGGER trg_audit_object_version AFTER UPDATE OR DELETE ON object_version FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
 
 CREATE OR REPLACE FUNCTION save_object_version()
 RETURNS TRIGGER AS $$
-DECLARE v_version_number INTEGER; v_change_type TEXT;
+DECLARE v_version_number INTEGER; v_change_type TEXT; v_actor UUID;
 BEGIN
   IF TG_OP = 'INSERT' THEN 
     v_change_type := 'insert';
     -- For INSERT, use current_version from NEW (should be 1 after increment trigger)
     v_version_number := COALESCE(NEW.current_version, 1);
+    v_actor := NEW.created_by;
   ELSIF TG_OP = 'UPDATE' THEN 
+    IF (
+      to_jsonb(NEW) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'commercial_visibility',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'current_version'
+      ]
+    ) IS NOT DISTINCT FROM (
+      to_jsonb(OLD) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'commercial_visibility',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'current_version'
+      ]
+    ) THEN
+      RETURN NEW;
+    END IF;
     v_change_type := 'update';
     -- For UPDATE, use current_version from NEW (already incremented)
     v_version_number := COALESCE(NEW.current_version, OLD.current_version, 1);
+    v_actor := COALESCE(NEW.updated_by, NEW.created_by, OLD.updated_by, OLD.created_by);
   ELSIF TG_OP = 'DELETE' THEN 
     v_change_type := 'delete';
     -- For DELETE (BEFORE trigger), use OLD.current_version + 1
     v_version_number := COALESCE(OLD.current_version, 0) + 1;
+    v_actor := COALESCE(OLD.updated_by, OLD.created_by);
   END IF;
 
   INSERT INTO object_version (object_id, version_number, data, created_by, change_type)
-  VALUES (COALESCE(NEW.id, OLD.id), v_version_number, to_jsonb(COALESCE(NEW, OLD)), COALESCE(NEW.created_by, OLD.created_by), v_change_type);
+  VALUES (COALESCE(NEW.id, OLD.id), v_version_number, to_jsonb(COALESCE(NEW, OLD)), v_actor, v_change_type);
 
   RETURN COALESCE(NEW, OLD);
 END; $$ LANGUAGE plpgsql;
@@ -2520,7 +3144,7 @@ WHERE status = 'granted';
 CREATE INDEX IF NOT EXISTS idx_object_type_status ON object(object_type, status);
 CREATE INDEX IF NOT EXISTS idx_object_updated_at ON object(updated_at);
 DROP INDEX IF EXISTS idx_object_updated_at_brin;
-CREATE INDEX IF NOT EXISTS idx_object_updated_at_brin
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_published
 ON object(updated_at)
 WHERE status = 'published';
 CREATE INDEX IF NOT EXISTS idx_object_org_link_org ON object_org_link(org_object_id, is_primary);
@@ -2546,10 +3170,11 @@ CREATE INDEX IF NOT EXISTS idx_media_analyse_data ON media USING GIN (analyse_da
 CREATE INDEX IF NOT EXISTS idx_media_is_main ON media(is_main);
 CREATE INDEX IF NOT EXISTS idx_media_visibility ON media(visibility);
 DROP INDEX IF EXISTS idx_media_updated_at_brin;
-CREATE INDEX IF NOT EXISTS idx_media_updated_at_brin
+CREATE INDEX IF NOT EXISTS idx_media_updated_at_published
 ON media(updated_at)
 WHERE is_published = TRUE;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_media_one_main_per_type ON media(object_id, media_type_id) WHERE is_main;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_media_one_main_per_type_place ON media(place_id, media_type_id) WHERE is_main;
 CREATE INDEX IF NOT EXISTS idx_media_title_normalized_trgm ON media USING GIN (title_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_media_description_normalized_trgm ON media USING GIN (description_normalized gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_object_description_object_id ON object_description(object_id);
@@ -2719,11 +3344,14 @@ CREATE INDEX IF NOT EXISTS idx_mv_ref_data_code ON mv_ref_data_json(ref_type, co
 -- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;
 
 -- Hot-path filter projection for list/map endpoints (published + main location).
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_filtered_objects AS
+-- Freshness strategy: REFRESH MATERIALIZED VIEW CONCURRENTLY via pg_cron every 5 minutes.
+DROP MATERIALIZED VIEW IF EXISTS mv_filtered_objects CASCADE;
+CREATE MATERIALIZED VIEW mv_filtered_objects AS
 SELECT
   o.id,
   o.object_type,
   o.status,
+  o.commercial_visibility,
   o.updated_at,
   o.name_normalized,
   o.name_search_vector,
@@ -2741,7 +3369,7 @@ SELECT
   o.cached_language_codes,
   o.cached_classification_codes
 FROM object o
-JOIN object_location ol
+LEFT JOIN object_location ol
   ON ol.object_id = o.id
  AND ol.is_main_location IS TRUE
 WHERE o.status = 'published';
@@ -2775,7 +3403,8 @@ ON mv_filtered_objects(updated_at, id);
 CREATE OR REPLACE FUNCTION regenerate_iti_track_cache()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.geom IS DISTINCT FROM OLD.geom OR (TG_OP = 'INSERT' AND NEW.geom IS NOT NULL) THEN
+  IF (TG_OP = 'INSERT' AND NEW.geom IS NOT NULL)
+     OR (TG_OP = 'UPDATE' AND NEW.geom IS DISTINCT FROM OLD.geom) THEN
     -- Generate GPX (track only, stages added separately by export function)
     NEW.cached_gpx := CASE 
       WHEN NEW.geom IS NOT NULL 
@@ -2808,21 +3437,50 @@ FOR EACH ROW EXECUTE FUNCTION regenerate_iti_track_cache();
 -- Update cached min price when prices change
 CREATE OR REPLACE FUNCTION update_object_cached_min_price()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
 BEGIN
-  -- Prevent cascading trigger updates (e.g., when triggered from another trigger)
-  IF pg_trigger_depth() > 1 THEN
-    RETURN COALESCE(NEW, OLD);
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET cached_min_price = (
+      SELECT MIN(amount)
+      FROM object_price
+      WHERE object_id = v_old_object_id
+        AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+        AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+    )
+    WHERE id = v_old_object_id
+      AND cached_min_price IS DISTINCT FROM (
+        SELECT MIN(amount)
+        FROM object_price
+        WHERE object_id = v_old_object_id
+          AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+          AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+      );
   END IF;
-  
-  UPDATE object 
-  SET cached_min_price = (
-    SELECT MIN(amount)
-    FROM object_price
-    WHERE object_id = COALESCE(NEW.object_id, OLD.object_id)
-      AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
-      AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
-  )
-  WHERE id = COALESCE(NEW.object_id, OLD.object_id);
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET cached_min_price = (
+      SELECT MIN(amount)
+      FROM object_price
+      WHERE object_id = v_new_object_id
+        AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+        AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+    )
+    WHERE id = v_new_object_id
+      AND cached_min_price IS DISTINCT FROM (
+        SELECT MIN(amount)
+        FROM object_price
+        WHERE object_id = v_new_object_id
+          AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+          AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+      );
+  END IF;
   
   RETURN COALESCE(NEW, OLD);
 END;
@@ -2836,23 +3494,62 @@ FOR EACH ROW EXECUTE FUNCTION update_object_cached_min_price();
 -- Update cached main image when media changes
 CREATE OR REPLACE FUNCTION update_object_cached_main_image()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
 BEGIN
-  -- Prevent cascading trigger updates (e.g., when triggered from another trigger)
-  IF pg_trigger_depth() > 1 THEN
-    RETURN COALESCE(NEW, OLD);
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET cached_main_image_url = (
+      SELECT url
+      FROM media
+      WHERE object_id = v_old_object_id
+        AND is_published = TRUE
+        AND is_main = TRUE
+        AND (kind IS NULL OR kind = 'illustration')
+      ORDER BY position NULLS LAST
+      LIMIT 1
+    )
+    WHERE id = v_old_object_id
+      AND cached_main_image_url IS DISTINCT FROM (
+        SELECT url
+        FROM media
+        WHERE object_id = v_old_object_id
+          AND is_published = TRUE
+          AND is_main = TRUE
+          AND (kind IS NULL OR kind = 'illustration')
+        ORDER BY position NULLS LAST
+        LIMIT 1
+      );
   END IF;
-  
-  UPDATE object 
-  SET cached_main_image_url = (
-    SELECT url
-    FROM media
-    WHERE object_id = COALESCE(NEW.object_id, OLD.object_id)
-      AND is_published = TRUE
-      AND is_main = TRUE
-    ORDER BY position NULLS LAST
-    LIMIT 1
-  )
-  WHERE id = COALESCE(NEW.object_id, OLD.object_id);
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET cached_main_image_url = (
+      SELECT url
+      FROM media
+      WHERE object_id = v_new_object_id
+        AND is_published = TRUE
+        AND is_main = TRUE
+        AND (kind IS NULL OR kind = 'illustration')
+      ORDER BY position NULLS LAST
+      LIMIT 1
+    )
+    WHERE id = v_new_object_id
+      AND cached_main_image_url IS DISTINCT FROM (
+        SELECT url
+        FROM media
+        WHERE object_id = v_new_object_id
+          AND is_published = TRUE
+          AND is_main = TRUE
+          AND (kind IS NULL OR kind = 'illustration')
+        ORDER BY position NULLS LAST
+        LIMIT 1
+      );
+  END IF;
   
   RETURN COALESCE(NEW, OLD);
 END;
@@ -2863,6 +3560,93 @@ CREATE TRIGGER trg_update_cached_main_image
 AFTER INSERT OR UPDATE OR DELETE ON media
 FOR EACH ROW EXECUTE FUNCTION update_object_cached_main_image();
 
+-- Update cached rating metrics when reviews change
+CREATE OR REPLACE FUNCTION update_object_cached_rating_metrics()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET
+      cached_rating = (
+        SELECT ROUND(AVG(r.rating)::numeric, 2)
+        FROM object_review r
+        WHERE r.object_id = v_old_object_id
+          AND r.is_published = TRUE
+          AND r.rating IS NOT NULL
+      ),
+      cached_review_count = (
+        SELECT COUNT(*)
+        FROM object_review r
+        WHERE r.object_id = v_old_object_id
+          AND r.is_published = TRUE
+      )
+    WHERE id = v_old_object_id
+      AND (
+        cached_rating IS DISTINCT FROM (
+          SELECT ROUND(AVG(r.rating)::numeric, 2)
+          FROM object_review r
+          WHERE r.object_id = v_old_object_id
+            AND r.is_published = TRUE
+            AND r.rating IS NOT NULL
+        )
+        OR cached_review_count IS DISTINCT FROM (
+          SELECT COUNT(*)
+          FROM object_review r
+          WHERE r.object_id = v_old_object_id
+            AND r.is_published = TRUE
+        )
+      );
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET
+      cached_rating = (
+        SELECT ROUND(AVG(r.rating)::numeric, 2)
+        FROM object_review r
+        WHERE r.object_id = v_new_object_id
+          AND r.is_published = TRUE
+          AND r.rating IS NOT NULL
+      ),
+      cached_review_count = (
+        SELECT COUNT(*)
+        FROM object_review r
+        WHERE r.object_id = v_new_object_id
+          AND r.is_published = TRUE
+      )
+    WHERE id = v_new_object_id
+      AND (
+        cached_rating IS DISTINCT FROM (
+          SELECT ROUND(AVG(r.rating)::numeric, 2)
+          FROM object_review r
+          WHERE r.object_id = v_new_object_id
+            AND r.is_published = TRUE
+            AND r.rating IS NOT NULL
+        )
+        OR cached_review_count IS DISTINCT FROM (
+          SELECT COUNT(*)
+          FROM object_review r
+          WHERE r.object_id = v_new_object_id
+            AND r.is_published = TRUE
+        )
+      );
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_rating_metrics ON object_review;
+CREATE TRIGGER trg_update_cached_rating_metrics
+AFTER INSERT OR UPDATE OR DELETE ON object_review
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_rating_metrics();
+
 -- Refresh denormalized filter caches used by hot-path filtered listing.
 CREATE OR REPLACE FUNCTION api.refresh_object_filter_caches(p_object_id TEXT)
 RETURNS VOID
@@ -2870,45 +3654,74 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, api, auth
 AS $$
+DECLARE
+  v_cached_amenity_codes TEXT[];
+  v_cached_payment_codes TEXT[];
+  v_cached_environment_tags TEXT[];
+  v_cached_language_codes TEXT[];
+  v_cached_classification_codes TEXT[];
 BEGIN
   IF p_object_id IS NULL THEN
     RETURN;
   END IF;
 
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_amenity_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_payment_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_environment_tags;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_language_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = p_object_id
+      AND oc.status = 'granted'
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_classification_codes;
+
   UPDATE object o
   SET
-    cached_amenity_codes = COALESCE((
-      SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
-      FROM object_amenity oa
-      JOIN ref_amenity ra ON ra.id = oa.amenity_id
-      WHERE oa.object_id = p_object_id
-    ), ARRAY[]::TEXT[]),
-    cached_payment_codes = COALESCE((
-      SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
-      FROM object_payment_method opm
-      JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
-      WHERE opm.object_id = p_object_id
-    ), ARRAY[]::TEXT[]),
-    cached_environment_tags = COALESCE((
-      SELECT array_agg(DISTINCT et.code ORDER BY et.code)
-      FROM object_environment_tag oet
-      JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
-      WHERE oet.object_id = p_object_id
-    ), ARRAY[]::TEXT[]),
-    cached_language_codes = COALESCE((
-      SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
-      FROM object_language ol
-      JOIN ref_language rl ON rl.id = ol.language_id
-      WHERE ol.object_id = p_object_id
-    ), ARRAY[]::TEXT[]),
-    cached_classification_codes = COALESCE((
-      SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
-      FROM object_classification oc
-      JOIN ref_classification_scheme s ON s.id = oc.scheme_id
-      JOIN ref_classification_value v ON v.id = oc.value_id
-      WHERE oc.object_id = p_object_id
-    ), ARRAY[]::TEXT[])
-  WHERE o.id = p_object_id;
+    cached_amenity_codes = v_cached_amenity_codes,
+    cached_payment_codes = v_cached_payment_codes,
+    cached_environment_tags = v_cached_environment_tags,
+    cached_language_codes = v_cached_language_codes,
+    cached_classification_codes = v_cached_classification_codes
+  WHERE o.id = p_object_id
+    AND (
+      o.cached_amenity_codes IS DISTINCT FROM v_cached_amenity_codes
+      OR o.cached_payment_codes IS DISTINCT FROM v_cached_payment_codes
+      OR o.cached_environment_tags IS DISTINCT FROM v_cached_environment_tags
+      OR o.cached_language_codes IS DISTINCT FROM v_cached_language_codes
+      OR o.cached_classification_codes IS DISTINCT FROM v_cached_classification_codes
+    );
 END;
 $$;
 
@@ -2995,75 +3808,302 @@ SET
     JOIN ref_classification_scheme s ON s.id = oc.scheme_id
     JOIN ref_classification_value v ON v.id = oc.value_id
     WHERE oc.object_id = o.id
+      AND oc.status = 'granted'
+  ), ARRAY[]::TEXT[])
+WHERE
+  o.cached_amenity_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_payment_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_environment_tags IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_language_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_classification_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = o.id
+      AND oc.status = 'granted'
   ), ARRAY[]::TEXT[]);
 
+-- Backfill cached review metrics
+UPDATE object o
+SET
+  cached_rating = sub.avg_rating,
+  cached_review_count = sub.review_count
+FROM (
+  SELECT
+    object_id,
+    ROUND((AVG(rating) FILTER (WHERE rating IS NOT NULL))::numeric, 2) AS avg_rating,
+    COUNT(*) AS review_count
+  FROM object_review
+  WHERE is_published = TRUE
+  GROUP BY object_id
+) sub
+WHERE o.id = sub.object_id;
+
+UPDATE object o
+SET
+  cached_rating = NULL,
+  cached_review_count = 0
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM object_review r
+  WHERE r.object_id = o.id
+    AND r.is_published = TRUE
+);
+
 -- Batch refresh cached_is_open_now for all objects
--- Should be called via pg_cron every 15 minutes:
--- SELECT cron.schedule('refresh-open-status', '*/15 * * * *', $$SELECT api.refresh_open_status()$$);
+-- Should be called via pg_cron every 5 minutes:
+-- SELECT cron.schedule('refresh-open-status', '*/5 * * * *', $$SELECT api.refresh_open_status()$$);
+CREATE OR REPLACE FUNCTION api.is_opening_period_active_on_date(
+  p_all_years BOOLEAN,
+  p_date_start DATE,
+  p_date_end DATE,
+  p_local_date DATE
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    CASE
+      WHEN COALESCE(p_all_years, FALSE) = FALSE THEN
+        (p_date_start IS NULL OR p_date_start <= p_local_date)
+        AND (p_date_end IS NULL OR p_date_end >= p_local_date)
+      ELSE
+        CASE
+          WHEN p_date_start IS NULL OR p_date_end IS NULL THEN TRUE
+          WHEN to_char(p_date_start, 'MMDD') <= to_char(p_date_end, 'MMDD') THEN
+            to_char(p_local_date, 'MMDD') BETWEEN to_char(p_date_start, 'MMDD') AND to_char(p_date_end, 'MMDD')
+          ELSE
+            to_char(p_local_date, 'MMDD') >= to_char(p_date_start, 'MMDD')
+            OR to_char(p_local_date, 'MMDD') <= to_char(p_date_end, 'MMDD')
+        END
+    END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.is_opening_period_active_today(
+  p_all_years BOOLEAN,
+  p_date_start DATE,
+  p_date_end DATE
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT api.is_opening_period_active_on_date(
+    p_all_years,
+    p_date_start,
+    p_date_end,
+    CURRENT_DATE
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_local_now_for_timezone(
+  p_business_timezone TEXT
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name)::DATE AS local_date,
+    (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name)::TIME AS local_time,
+    EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name))::INT AS local_isodow,
+    tz.zone_name AS business_timezone
+  FROM (
+    SELECT CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM pg_timezone_names tzn
+        WHERE tzn.name = COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion')
+      ) THEN COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion')
+      ELSE 'Indian/Reunion'
+    END AS zone_name
+  ) tz;
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_object_local_now(
+  p_object_id TEXT
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT ln.local_date, ln.local_time, ln.local_isodow, ln.business_timezone
+  FROM object o
+  CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
+  WHERE o.id = p_object_id;
+$$;
+
 CREATE OR REPLACE FUNCTION api.refresh_open_status()
 RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  UPDATE object o
-  SET cached_is_open_now = (
-    -- Check if there's any current opening period that indicates the object is open
-    -- Note: trim(lower(to_char(..., 'FMDay'))) avoids trailing-space padding from to_char
-    EXISTS (
-      SELECT 1
-      FROM opening_period p
-      JOIN opening_schedule s ON s.period_id = p.id
-      JOIN opening_time_period tp ON tp.schedule_id = s.id
-      JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
-      JOIN opening_time_frame tf ON tf.time_period_id = tp.id
-      JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
-      WHERE p.object_id = o.id
-        AND tp.closed = FALSE
-        AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
-        AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
-        AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
-        AND (tf.start_time IS NULL OR tf.start_time <= LOCALTIME)
-        AND (tf.end_time IS NULL OR tf.end_time > LOCALTIME)
-    )
-    -- Also check for 24/7 periods (no time frames means always open)
-    OR EXISTS (
-      SELECT 1
-      FROM opening_period p
-      JOIN opening_schedule s ON s.period_id = p.id
-      JOIN opening_time_period tp ON tp.schedule_id = s.id
-      JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
-      JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
-      WHERE p.object_id = o.id
-        AND tp.closed = FALSE
-        AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
-        AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
-        AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
-        AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
-    )
+  WITH open_state AS (
+    SELECT
+      o.id,
+      (
+        EXISTS (
+          SELECT 1
+          FROM opening_period p
+          JOIN opening_schedule s ON s.period_id = p.id
+          JOIN opening_time_period tp ON tp.schedule_id = s.id
+          JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+          JOIN opening_time_frame tf ON tf.time_period_id = tp.id
+          JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+          CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
+          WHERE p.object_id = o.id
+            AND tp.closed = FALSE
+            AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+            AND COALESCE(
+              wd.dow_number,
+              CASE wd.code
+                WHEN 'monday' THEN 1
+                WHEN 'tuesday' THEN 2
+                WHEN 'wednesday' THEN 3
+                WHEN 'thursday' THEN 4
+                WHEN 'friday' THEN 5
+                WHEN 'saturday' THEN 6
+                WHEN 'sunday' THEN 7
+                ELSE NULL
+              END
+            ) = ln.local_isodow
+            AND (tf.start_time IS NULL OR tf.start_time <= ln.local_time)
+            AND (tf.end_time IS NULL OR tf.end_time > ln.local_time)
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM opening_period p
+          JOIN opening_schedule s ON s.period_id = p.id
+          JOIN opening_time_period tp ON tp.schedule_id = s.id
+          JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+          JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+          CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
+          WHERE p.object_id = o.id
+            AND tp.closed = FALSE
+            AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+            AND COALESCE(
+              wd.dow_number,
+              CASE wd.code
+                WHEN 'monday' THEN 1
+                WHEN 'tuesday' THEN 2
+                WHEN 'wednesday' THEN 3
+                WHEN 'thursday' THEN 4
+                WHEN 'friday' THEN 5
+                WHEN 'saturday' THEN 6
+                WHEN 'sunday' THEN 7
+                ELSE NULL
+              END
+            ) = ln.local_isodow
+            AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
+        )
+      ) AS new_is_open_now
+    FROM object o
+    WHERE o.status = 'published'
   )
-  WHERE o.status = 'published';  -- Only update published objects
+  UPDATE object o
+  SET cached_is_open_now = s.new_is_open_now
+  FROM open_state s
+  WHERE o.id = s.id
+    AND o.cached_is_open_now IS DISTINCT FROM s.new_is_open_now;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.disable_cache_triggers()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF COALESCE(auth.role(), '') NOT IN ('service_role', 'admin') THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  SET LOCAL session_replication_role = replica;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.enable_cache_triggers()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF COALESCE(auth.role(), '') NOT IN ('service_role', 'admin') THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  SET LOCAL session_replication_role = DEFAULT;
 END;
 $$;
 
 -- =====================================================
 -- Triggers updated_at sur les tables clés
 -- =====================================================
+DROP TRIGGER IF EXISTS update_ref_language_updated_at ON ref_language;
 CREATE TRIGGER update_ref_language_updated_at BEFORE UPDATE ON ref_language FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_code_updated_at ON ref_code;
 CREATE TRIGGER update_ref_code_updated_at BEFORE UPDATE ON ref_code FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_amenity_updated_at ON ref_amenity;
 CREATE TRIGGER update_ref_amenity_updated_at BEFORE UPDATE ON ref_amenity FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_sustainability_action_category_updated_at ON ref_sustainability_action_category;
 CREATE TRIGGER update_ref_sustainability_action_category_updated_at BEFORE UPDATE ON ref_sustainability_action_category FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_sustainability_action_updated_at ON ref_sustainability_action;
 CREATE TRIGGER update_ref_sustainability_action_updated_at BEFORE UPDATE ON ref_sustainability_action FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_document_updated_at ON ref_document;
 CREATE TRIGGER update_ref_document_updated_at BEFORE UPDATE ON ref_document FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_tag_updated_at ON ref_tag;
 CREATE TRIGGER update_ref_tag_updated_at BEFORE UPDATE ON ref_tag FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_classification_scheme_updated_at ON ref_classification_scheme;
 CREATE TRIGGER update_ref_classification_scheme_updated_at BEFORE UPDATE ON ref_classification_scheme FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_classification_value_updated_at ON ref_classification_value;
 CREATE TRIGGER update_ref_classification_value_updated_at BEFORE UPDATE ON ref_classification_value FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_org_role_updated_at ON ref_org_role;
 CREATE TRIGGER update_ref_org_role_updated_at BEFORE UPDATE ON ref_org_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_contact_role_updated_at ON ref_contact_role;
 CREATE TRIGGER update_ref_contact_role_updated_at BEFORE UPDATE ON ref_contact_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_capacity_metric_updated_at ON ref_capacity_metric;
 CREATE TRIGGER update_ref_capacity_metric_updated_at BEFORE UPDATE ON ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_iti_assoc_role_updated_at ON ref_iti_assoc_role;
 CREATE TRIGGER update_ref_iti_assoc_role_updated_at BEFORE UPDATE ON ref_iti_assoc_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_object_relation_type_updated_at ON ref_object_relation_type;
 CREATE TRIGGER update_ref_object_relation_type_updated_at BEFORE UPDATE ON ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_updated_at ON object;
+CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION update_object_updated_at_business();
 
 -- Increment version number on INSERT/UPDATE (BEFORE trigger so version is available for save_object_version)
 CREATE OR REPLACE FUNCTION increment_object_version()
@@ -3072,6 +4112,42 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     NEW.current_version := 1;
   ELSIF TG_OP = 'UPDATE' THEN
+    IF (
+      to_jsonb(NEW) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'current_version'
+      ]
+    ) IS NOT DISTINCT FROM (
+      to_jsonb(OLD) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'current_version'
+      ]
+    ) THEN
+      NEW.current_version := COALESCE(OLD.current_version, 0);
+      RETURN NEW;
+    END IF;
     NEW.current_version := COALESCE(OLD.current_version, 0) + 1;
   END IF;
   RETURN NEW;
@@ -3085,58 +4161,125 @@ FOR EACH ROW
 EXECUTE FUNCTION increment_object_version();
 
 -- Address trigger removed with table drop
+DROP TRIGGER IF EXISTS update_object_location_updated_at ON object_location;
 CREATE TRIGGER update_object_location_updated_at BEFORE UPDATE ON object_location FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_place_updated_at ON object_place;
 CREATE TRIGGER update_object_place_updated_at BEFORE UPDATE ON object_place FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_contact_channel_updated_at ON contact_channel;
 CREATE TRIGGER update_contact_channel_updated_at BEFORE UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_media_updated_at ON media;
 CREATE TRIGGER update_media_updated_at BEFORE UPDATE ON media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_place_description_updated_at ON object_place_description;
 CREATE TRIGGER update_object_place_description_updated_at BEFORE UPDATE ON object_place_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_private_description_updated_at ON object_private_description;
 CREATE TRIGGER update_object_private_description_updated_at BEFORE UPDATE ON object_private_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_classification_updated_at ON object_classification;
 CREATE TRIGGER update_object_classification_updated_at BEFORE UPDATE ON object_classification FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_enforce_classification_single_selection ON object_classification;
+CREATE TRIGGER trg_enforce_classification_single_selection
+BEFORE INSERT OR UPDATE ON object_classification
+FOR EACH ROW EXECUTE FUNCTION enforce_classification_single_selection();
 -- Legacy legal triggers removed (using object_legal only)
 -- Simple opening table triggers removed
+DROP TRIGGER IF EXISTS update_object_fma_updated_at ON object_fma;
 CREATE TRIGGER update_object_fma_updated_at BEFORE UPDATE ON object_fma FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_fma_occurrence_updated_at ON object_fma_occurrence;
 CREATE TRIGGER update_object_fma_occurrence_updated_at BEFORE UPDATE ON object_fma_occurrence FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_updated_at ON object_iti;
 CREATE TRIGGER update_object_iti_updated_at BEFORE UPDATE ON object_iti FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_practice_updated_at ON object_iti_practice;
 CREATE TRIGGER update_object_iti_practice_updated_at BEFORE UPDATE ON object_iti_practice FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_stage_updated_at ON object_iti_stage;
 CREATE TRIGGER update_object_iti_stage_updated_at BEFORE UPDATE ON object_iti_stage FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_stage_media_updated_at ON object_iti_stage_media;
 CREATE TRIGGER update_object_iti_stage_media_updated_at BEFORE UPDATE ON object_iti_stage_media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_section_updated_at ON object_iti_section;
 CREATE TRIGGER update_object_iti_section_updated_at BEFORE UPDATE ON object_iti_section FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_associated_object_updated_at ON object_iti_associated_object;
 CREATE TRIGGER update_object_iti_associated_object_updated_at BEFORE UPDATE ON object_iti_associated_object FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_info_updated_at ON object_iti_info;
 CREATE TRIGGER update_object_iti_info_updated_at BEFORE UPDATE ON object_iti_info FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_zone_updated_at ON object_zone;
 CREATE TRIGGER update_object_zone_updated_at BEFORE UPDATE ON object_zone FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_external_id_updated_at ON object_external_id;
 CREATE TRIGGER update_object_external_id_updated_at BEFORE UPDATE ON object_external_id FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_org_link ON object_org_link;
+CREATE TRIGGER trg_validate_org_object_type_object_org_link
+BEFORE INSERT OR UPDATE ON object_org_link
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_membership ON object_membership;
+CREATE TRIGGER trg_validate_org_object_type_object_membership
+BEFORE INSERT OR UPDATE ON object_membership
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_external_id ON object_external_id;
+CREATE TRIGGER trg_validate_org_object_type_object_external_id
+BEFORE INSERT OR UPDATE ON object_external_id
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('organization_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_description ON object_description;
+CREATE TRIGGER trg_validate_org_object_type_object_description
+BEFORE INSERT OR UPDATE ON object_description
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS update_object_origin_updated_at ON object_origin;
 CREATE TRIGGER update_object_origin_updated_at BEFORE UPDATE ON object_origin FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_sustainability_action_updated_at ON object_sustainability_action;
 CREATE TRIGGER update_object_sustainability_action_updated_at BEFORE UPDATE ON object_sustainability_action FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_capacity_updated_at ON object_capacity;
 CREATE TRIGGER update_object_capacity_updated_at BEFORE UPDATE ON object_capacity FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_i18n_translation_updated_at ON i18n_translation;
 CREATE TRIGGER update_i18n_translation_updated_at BEFORE UPDATE ON i18n_translation FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_crm_interaction_updated_at ON crm_interaction;
 CREATE TRIGGER update_crm_interaction_updated_at BEFORE UPDATE ON crm_interaction FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_crm_task_updated_at ON crm_task;
 CREATE TRIGGER update_crm_task_updated_at BEFORE UPDATE ON crm_task FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_price_updated_at ON object_price;
 CREATE TRIGGER update_object_price_updated_at BEFORE UPDATE ON object_price FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_price_period_updated_at ON object_price_period;
 CREATE TRIGGER update_object_price_period_updated_at BEFORE UPDATE ON object_price_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_discount_updated_at ON object_discount;
 CREATE TRIGGER update_object_discount_updated_at BEFORE UPDATE ON object_discount FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_group_policy_updated_at ON object_group_policy;
 CREATE TRIGGER update_object_group_policy_updated_at BEFORE UPDATE ON object_group_policy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_pet_policy_updated_at ON object_pet_policy;
 CREATE TRIGGER update_object_pet_policy_updated_at BEFORE UPDATE ON object_pet_policy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_meeting_room_updated_at ON object_meeting_room;
 CREATE TRIGGER update_object_meeting_room_updated_at BEFORE UPDATE ON object_meeting_room FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_relation_updated_at ON object_relation;
 CREATE TRIGGER update_object_relation_updated_at BEFORE UPDATE ON object_relation FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_period_updated_at ON opening_period;
 CREATE TRIGGER update_opening_period_updated_at BEFORE UPDATE ON opening_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_schedule_updated_at ON opening_schedule;
 CREATE TRIGGER update_opening_schedule_updated_at BEFORE UPDATE ON opening_schedule FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_period_updated_at ON opening_time_period;
 CREATE TRIGGER update_opening_time_period_updated_at BEFORE UPDATE ON opening_time_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_period_weekday_updated_at ON opening_time_period_weekday;
 CREATE TRIGGER update_opening_time_period_weekday_updated_at BEFORE UPDATE ON opening_time_period_weekday FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_frame_updated_at ON opening_time_frame;
 CREATE TRIGGER update_opening_time_frame_updated_at BEFORE UPDATE ON opening_time_frame FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- PHASE 2: Missing updated_at triggers
 -- =====================================================
+DROP TRIGGER IF EXISTS update_ref_review_source_updated_at ON ref_review_source;
 CREATE TRIGGER update_ref_review_source_updated_at BEFORE UPDATE ON ref_review_source FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_description_updated_at ON object_description;
 CREATE TRIGGER update_object_description_updated_at BEFORE UPDATE ON object_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_review_updated_at ON object_review;
 CREATE TRIGGER update_object_review_updated_at BEFORE UPDATE ON object_review FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_org_link_updated_at ON object_org_link;
 CREATE TRIGGER update_object_org_link_updated_at BEFORE UPDATE ON object_org_link FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_actor_role_updated_at ON ref_actor_role;
 CREATE TRIGGER update_ref_actor_role_updated_at BEFORE UPDATE ON ref_actor_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_updated_at ON actor;
 CREATE TRIGGER update_actor_updated_at BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_channel_updated_at ON actor_channel;
 CREATE TRIGGER update_actor_channel_updated_at BEFORE UPDATE ON actor_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_object_role_updated_at ON actor_object_role;
 CREATE TRIGGER update_actor_object_role_updated_at BEFORE UPDATE ON actor_object_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_room_type_updated_at ON object_room_type;
 CREATE TRIGGER update_object_room_type_updated_at BEFORE UPDATE ON object_room_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_promotion_updated_at ON promotion;
 CREATE TRIGGER update_promotion_updated_at BEFORE UPDATE ON promotion FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_profile_updated_at ON object_iti_profile;
 CREATE TRIGGER update_object_iti_profile_updated_at BEFORE UPDATE ON object_iti_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
@@ -3174,6 +4317,7 @@ CREATE INDEX IF NOT EXISTS idx_object_menu_category_id ON object_menu(category_i
 CREATE INDEX IF NOT EXISTS idx_object_menu_is_active ON object_menu(is_active);
 CREATE INDEX IF NOT EXISTS idx_object_menu_position ON object_menu(position);
 
+DROP TRIGGER IF EXISTS update_object_menu_updated_at ON object_menu;
 CREATE TRIGGER update_object_menu_updated_at
 BEFORE UPDATE ON object_menu
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -3197,6 +4341,7 @@ CREATE TABLE IF NOT EXISTS object_menu_item (
 CREATE INDEX IF NOT EXISTS idx_object_menu_item_menu_id ON object_menu_item(menu_id);
 CREATE INDEX IF NOT EXISTS idx_object_menu_item_position ON object_menu_item(position);
 
+DROP TRIGGER IF EXISTS update_object_menu_item_updated_at ON object_menu_item;
 CREATE TRIGGER update_object_menu_item_updated_at
 BEFORE UPDATE ON object_menu_item
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -3248,6 +4393,7 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_media_item ON object_menu_item_media(me
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_media ON object_menu_item_media(media_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_position ON object_menu_item_media(position);
 
+DROP TRIGGER IF EXISTS update_object_menu_item_media_updated_at ON object_menu_item_media;
 CREATE TRIGGER update_object_menu_item_media_updated_at
 BEFORE UPDATE ON object_menu_item_media
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -3259,11 +4405,20 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 -- =====================================================
 -- 1. Create legal validity mode enum
 -- =====================================================
-CREATE TYPE legal_validity_mode AS ENUM (
-  'forever',           -- Open ended, valid_to must be null
-  'tacit_renewal',     -- Considered valid unless revoked, valid_to can be null
-  'fixed_end_date'     -- Requires a non-null valid_to
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'legal_validity_mode'
+  ) THEN
+    CREATE TYPE legal_validity_mode AS ENUM (
+      'forever',           -- Open ended, valid_to must be null
+      'tacit_renewal',     -- Considered valid unless revoked, valid_to can be null
+      'fixed_end_date'     -- Requires a non-null valid_to
+    );
+  END IF;
+END $$;
 
 -- =====================================================
 -- 2. Create reference table for legal record types
@@ -3365,6 +4520,12 @@ CREATE INDEX IF NOT EXISTS idx_object_legal_document_dates ON object_legal(docum
 -- =====================================================
 -- 5. Create trigger for updated_at
 -- =====================================================
+DROP TRIGGER IF EXISTS update_ref_legal_type_updated_at ON ref_legal_type;
+CREATE TRIGGER update_ref_legal_type_updated_at
+  BEFORE UPDATE ON ref_legal_type
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_object_legal_updated_at ON object_legal;
 CREATE TRIGGER update_object_legal_updated_at 
   BEFORE UPDATE ON object_legal 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -3422,4 +4583,7 @@ COMMENT ON COLUMN object_legal.document_delivered_at IS 'Timestamp when the supp
 
 COMMENT ON TABLE ref_legal_type IS 'Reference table for legal record types. Defines what types of legal documents can be stored for objects.';
 COMMENT ON COLUMN ref_legal_type.is_public IS 'Whether documents of this type can be public (true) or should only be visible to parent organization (false)';
+
+-- Run audit attachment after all table creations (including late sections).
+SELECT audit.attach_missing_triggers();
 

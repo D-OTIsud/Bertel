@@ -234,6 +234,70 @@ def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> Mappi
     )
 
 
+def _load_approved_contract_relations(sb, batch_id: str) -> list[dict[str, Any]]:
+    """Load approved relation hypotheses from the discovery contract."""
+    contract_resp = (
+        sb.schema("staging")
+        .table("mapping_contract")
+        .select("id,status")
+        .eq("import_batch_id", batch_id)
+        .order("contract_version", desc=True)
+        .limit(1)
+        .execute()
+    )
+    contract_rows = contract_resp.data or []
+    if not contract_rows:
+        return []
+    contract_row = contract_rows[0]
+    if contract_row.get("status") != "approved":
+        return []
+    relation_resp = (
+        sb.schema("staging")
+        .table("mapping_relation_hypothesis")
+        .select(
+            "from_sheet,from_column,to_sheet,to_column,"
+            "relation_type,separator,is_join_table,"
+            "target_staging_table,target_entity_type,confidence"
+        )
+        .eq("contract_id", contract_row["id"])
+        .eq("status", "approved")
+        .execute()
+    )
+    return relation_resp.data or []
+
+
+_LEGACY_RELATION_FALLBACKS: list[dict[str, Any]] = [
+    {
+        "from_sheet": "*",
+        "from_column_candidates": ["related_org_ids", "org_ids", "organization_ids", "associated_org_ids"],
+        "separator": ",",
+        "target_entity_type": "org",
+        "target_staging_table": "object_org_link_temp",
+    },
+    {
+        "from_sheet": "*",
+        "from_column_candidates": ["amenity_codes", "amenities", "amenities_any", "amenity"],
+        "separator": ",",
+        "target_entity_type": "amenity",
+        "target_staging_table": "object_amenity_temp",
+    },
+    {
+        "from_sheet": "*",
+        "from_column_candidates": ["payment_codes", "payment_methods", "payments_any", "payment"],
+        "separator": ",",
+        "target_entity_type": "payment",
+        "target_staging_table": "object_payment_method_temp",
+    },
+    {
+        "from_sheet": "*",
+        "from_column_candidates": ["media_urls", "media_url", "photo_urls", "image_urls", "photos"],
+        "separator": ",",
+        "target_entity_type": "media",
+        "target_staging_table": "media_temp",
+    },
+]
+
+
 def _pick_from_row(row: dict[str, Any], candidates: list[str]) -> Any:
     for key in candidates:
         if key in row and row[key] not in (None, ""):
@@ -268,6 +332,25 @@ def _to_pipe_list(value: Any) -> list[str]:
     return [s.strip() for s in re.split(r"[|,;]", text) if s.strip()]
 
 
+def _to_list_with_separator(value: Any, separator: str = ",") -> list[str]:
+    """Split a value using a contract-specified separator (AI-determined)."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    text = str(value).strip()
+    if not text:
+        return []
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(v).strip() for v in parsed if str(v).strip()]
+        except Exception:  # noqa: BLE001
+            pass
+    return [s.strip() for s in text.split(separator) if s.strip()]
+
+
 def _stable_key(prefix: str, *parts: Any) -> str:
     raw = "|".join([(str(p) if p is not None else "") for p in parts]).lower()
     return f"{prefix}::{hashlib.md5(raw.encode('utf-8')).hexdigest()}"
@@ -291,6 +374,132 @@ def _chunked_insert(
             upsert=upsert,
             on_conflict=on_conflict,
         )
+
+
+def _resolve_relations_for_row(
+    *,
+    row: dict[str, Any],
+    source_sheet: str,
+    contract_relations: list[dict[str, Any]],
+    batch_id: str,
+    staging_object_key: str,
+    lineage_row: dict[str, Any],
+    external_id: Any,
+    org_rows: dict[str, dict[str, Any]],
+    org_link_rows: list[dict[str, Any]],
+    amenity_rows: list[dict[str, Any]],
+    payment_rows: list[dict[str, Any]],
+    media_rows: list[dict[str, Any]],
+) -> None:
+    """Route multi-value tokens to staging tables based on contract relations."""
+    for relation in contract_relations:
+        rel_sheet = relation.get("from_sheet", "")
+        if rel_sheet and rel_sheet != "*" and rel_sheet != source_sheet:
+            continue
+
+        candidates = relation.get("from_column_candidates")
+        if candidates:
+            raw_val = _pick_from_row(row, candidates)
+            source_col = next(
+                (c for c in candidates if c in row and row[c] not in (None, "")),
+                candidates[0] if candidates else "unknown",
+            )
+        else:
+            source_col = relation.get("from_column", "")
+            raw_val = row.get(source_col)
+
+        if not raw_val:
+            continue
+
+        separator = relation.get("separator", ",")
+        entity_type = relation.get("target_entity_type", "")
+        tokens = _to_list_with_separator(raw_val, separator)
+        if not tokens:
+            continue
+
+        if entity_type == "org":
+            for token in tokens:
+                token = token.strip()
+                rel_org_key = f"org::source::{token}"
+                org_rows.setdefault(
+                    rel_org_key,
+                    {
+                        "import_batch_id": batch_id,
+                        "staging_org_key": rel_org_key,
+                        "name": f"Imported organization {token}",
+                        "source_org_object_id": token,
+                        "external_id": None,
+                        "source_sheet": source_sheet,
+                        "raw_source_data": lineage_row,
+                        "resolution_status": "pending",
+                        "policy_action": "allow_auto",
+                        "is_approved": True,
+                    },
+                )
+                org_link_rows.append(
+                    {
+                        "import_batch_id": batch_id,
+                        "staging_object_key": staging_object_key,
+                        "staging_org_key": rel_org_key,
+                        "source_sheet": source_sheet,
+                        "source_column": source_col,
+                        "raw_relation_token": token,
+                        "role_code": "owner",
+                        "is_primary": False,
+                        "note": f"derived_from_{source_col}",
+                        "raw_source_data": lineage_row,
+                        "resolution_status": "pending",
+                        "is_approved": True,
+                    }
+                )
+        elif entity_type == "amenity":
+            for token in tokens:
+                amenity_rows.append(
+                    {
+                        "import_batch_id": batch_id,
+                        "staging_object_key": staging_object_key,
+                        "amenity_code": token.lower(),
+                        "source_sheet": source_sheet,
+                        "source_column": source_col,
+                        "raw_relation_token": token,
+                        "raw_source_data": lineage_row,
+                        "resolution_status": "pending",
+                        "is_approved": True,
+                    }
+                )
+        elif entity_type == "payment":
+            for token in tokens:
+                payment_rows.append(
+                    {
+                        "import_batch_id": batch_id,
+                        "staging_object_key": staging_object_key,
+                        "payment_code": token.lower(),
+                        "source_sheet": source_sheet,
+                        "source_column": source_col,
+                        "raw_relation_token": token,
+                        "raw_source_data": lineage_row,
+                        "resolution_status": "pending",
+                        "is_approved": True,
+                    }
+                )
+        elif entity_type == "media":
+            for position, media_url in enumerate(tokens):
+                media_rows.append(
+                    {
+                        "import_batch_id": batch_id,
+                        "staging_object_key": staging_object_key,
+                        "source_sheet": source_sheet,
+                        "source_column": source_col,
+                        "source_url": media_url,
+                        "url_token": media_url.rsplit("/", 1)[-1].lower(),
+                        "source_external_object_token": str(external_id).lower() if external_id else None,
+                        "position": position,
+                        "raw_source_data": lineage_row,
+                        "resolution_status": "pending",
+                        "processing_status": "pending_download",
+                        "is_approved": False,
+                    }
+                )
 
 
 async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -435,6 +644,10 @@ async def run_batch_pipeline(
     amenity_rows: list[dict[str, Any]] = []
     payment_rows: list[dict[str, Any]] = []
     media_rows: list[dict[str, Any]] = []
+
+    contract_relations = _load_approved_contract_relations(sb, batch_id)
+    if not contract_relations:
+        contract_relations = _LEGACY_RELATION_FALLBACKS
 
     for row in transformed.to_dict(orient="records"):
         lineage_row = dict(row)
@@ -612,98 +825,20 @@ async def run_batch_pipeline(
                 }
             )
 
-        relationship_tokens = _to_pipe_list(
-            _pick_from_row(row, ["related_org_ids", "org_ids", "organization_ids", "associated_org_ids"])
+        _resolve_relations_for_row(
+            row=row,
+            source_sheet=source_sheet,
+            contract_relations=contract_relations,
+            batch_id=batch_id,
+            staging_object_key=staging_object_key,
+            lineage_row=lineage_row,
+            external_id=external_id,
+            org_rows=org_rows,
+            org_link_rows=org_link_rows,
+            amenity_rows=amenity_rows,
+            payment_rows=payment_rows,
+            media_rows=media_rows,
         )
-        for raw_org_token in relationship_tokens:
-            token = raw_org_token.strip()
-            rel_org_key = f"org::source::{token}"
-            org_rows.setdefault(
-                rel_org_key,
-                {
-                    "import_batch_id": batch_id,
-                    "staging_org_key": rel_org_key,
-                    "name": f"Imported organization {token}",
-                    "source_org_object_id": token,
-                    "external_id": None,
-                    "source_sheet": source_sheet,
-                    "raw_source_data": lineage_row,
-                    "resolution_status": "pending",
-                    "policy_action": "allow_auto",
-                    "is_approved": True,
-                },
-            )
-            org_link_rows.append(
-                {
-                    "import_batch_id": batch_id,
-                    "staging_object_key": staging_object_key,
-                    "staging_org_key": rel_org_key,
-                    "source_sheet": source_sheet,
-                    "source_column": "related_org_ids",
-                    "raw_relation_token": token,
-                    "role_code": "owner",
-                    "is_primary": False,
-                    "note": "derived_from_related_org_ids",
-                    "raw_source_data": lineage_row,
-                    "resolution_status": "pending",
-                    "is_approved": True,
-                }
-            )
-
-        for amenity_code in _to_pipe_list(
-            _pick_from_row(row, ["amenity_codes", "amenities", "amenities_any", "amenity"])
-        ):
-            amenity_rows.append(
-                {
-                    "import_batch_id": batch_id,
-                    "staging_object_key": staging_object_key,
-                    "amenity_code": amenity_code.lower(),
-                    "source_sheet": source_sheet,
-                    "source_column": "amenity_codes",
-                    "raw_relation_token": amenity_code,
-                    "raw_source_data": lineage_row,
-                    "resolution_status": "pending",
-                    "is_approved": True,
-                }
-            )
-
-        for payment_code in _to_pipe_list(
-            _pick_from_row(row, ["payment_codes", "payment_methods", "payments_any", "payment"])
-        ):
-            payment_rows.append(
-                {
-                    "import_batch_id": batch_id,
-                    "staging_object_key": staging_object_key,
-                    "payment_code": payment_code.lower(),
-                    "source_sheet": source_sheet,
-                    "source_column": "payment_codes",
-                    "raw_relation_token": payment_code,
-                    "raw_source_data": lineage_row,
-                    "resolution_status": "pending",
-                    "is_approved": True,
-                }
-            )
-
-        media_urls = _to_pipe_list(
-            _pick_from_row(row, ["media_urls", "media_url", "photo_urls", "image_urls", "photos"])
-        )
-        for position, media_url in enumerate(media_urls):
-            media_rows.append(
-                {
-                    "import_batch_id": batch_id,
-                    "staging_object_key": staging_object_key,
-                    "source_sheet": source_sheet,
-                    "source_column": "media_urls",
-                    "source_url": media_url,
-                    "url_token": media_url.rsplit("/", 1)[-1].lower(),
-                    "source_external_object_token": str(external_id).lower() if external_id else None,
-                    "position": position,
-                    "raw_source_data": lineage_row,
-                    "resolution_status": "pending",
-                    "processing_status": "pending_download",
-                    "is_approved": False,
-                }
-            )
 
     # Base object staging load.
     enriched_objects = [{"import_batch_id": batch_id, **r} for r in object_rows]

@@ -10,6 +10,8 @@
 
 -- Refresh reference data cache (concurrently to allow reads during refresh)
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;
+-- Refresh hot-path filtered object projection
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;
 
 -- =====================================================
 -- Update Statistics
@@ -75,7 +77,9 @@ FROM (
     object_id,
     url as main_image_url
   FROM media
-  WHERE is_published = TRUE AND is_main = TRUE
+  WHERE is_published = TRUE
+    AND is_main = TRUE
+    AND (kind IS NULL OR kind = 'illustration')
   ORDER BY object_id, position NULLS LAST
 ) subq
 WHERE o.id = subq.object_id
@@ -133,6 +137,54 @@ SELECT
   last_analyze
 FROM pg_matviews
 WHERE schemaname IN ('public', 'api');
+
+-- =====================================================
+-- Ensure pg_cron schedules are present (idempotent)
+-- =====================================================
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh-mv-filtered-objects') THEN
+      PERFORM cron.schedule(
+        'refresh-mv-filtered-objects',
+        '*/5 * * * *',
+        $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects$$
+      );
+    END IF;
+
+    -- Enforce 5-minute cadence for open-now cache freshness.
+    PERFORM cron.unschedule(j.jobid)
+    FROM cron.job j
+    WHERE j.jobname = 'refresh-open-status'
+      AND j.schedule <> '*/5 * * * *';
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM cron.job
+      WHERE jobname = 'refresh-open-status'
+        AND schedule = '*/5 * * * *'
+    ) THEN
+      PERFORM cron.schedule(
+        'refresh-open-status',
+        '*/5 * * * *',
+        $$SELECT api.refresh_open_status()$$
+      );
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'maintain-partitions') THEN
+      PERFORM cron.schedule(
+        'maintain-partitions',
+        '0 2 * * *',
+        $$SELECT audit.maintain_partitions()$$
+      );
+    END IF;
+  ELSE
+    RAISE NOTICE 'pg_cron extension is not installed; skipping schedule creation.';
+  END IF;
+EXCEPTION
+  WHEN undefined_table THEN
+    RAISE NOTICE 'cron.job table is unavailable; skipping schedule creation.';
+END $$;
 
 \echo 'Maintenance complete!'
 

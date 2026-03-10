@@ -33,10 +33,23 @@ class MappingTarget(BaseModel):
     notes: str | None = None
 
 
+class RelationTarget(BaseModel):
+    from_sheet: str
+    from_column: str
+    to_sheet: str = ""
+    separator: str = ","
+    target_entity_type: str = ""
+    target_staging_table: str = ""
+    is_join_table: bool = False
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+    rationale: str = ""
+
+
 class MappingPlan(BaseModel):
     source_format: str
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     targets: list[MappingTarget]
+    relation_targets: list[RelationTarget] = Field(default_factory=list)
     unstructured_fields: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
 

@@ -238,12 +238,21 @@ if st.session_state.step == 1:
         unsafe_allow_html=True,
     )
     uploaded_file = st.file_uploader("Fichier source", type=["csv", "xlsx", "xlsm", "json", "xml"], label_visibility="collapsed")
+    custom_rules = st.text_area(
+        "Regles metiers specifiques (optionnel)",
+        placeholder=(
+            "Ex: La colonne 'id OTI' correspond toujours a external_id.\n"
+            "Les reseaux sociaux vont dans contact_channel_temp."
+        ),
+    )
     can_upload = bool(uploaded_file and selected_org_id)
     if st.button("Analyser avec l'IA", type="primary", use_container_width=True, disabled=not can_upload):
         files = {"upload_file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
         params: dict[str, str] = {"organization_object_id": selected_org_id}
         if org_name_input:
             params["organization_name"] = org_name_input
+        if custom_rules.strip():
+            params["custom_rules"] = custom_rules.strip()
         result = _api_post("/api/v1/ingest", params=params, files=files)
         if result:
             st.session_state.batch_id = result["batch_id"]
@@ -299,6 +308,7 @@ if st.session_state.step == 2:
 if st.session_state.step == 3:
     st.markdown("### Validation du Mapping IA")
     fields: list[dict[str, Any]] = batch_data.get("fields", [])
+    relations: list[dict[str, Any]] = batch_data.get("relations", [])
     if not fields:
         st.warning("Aucun champ detecte.")
         if st.button("Rafraichir"):
@@ -312,6 +322,20 @@ if st.session_state.step == 3:
         st.markdown(f"<span class='pill pill-ok'>{perfect} correspondances parfaites</span>", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<span class='pill pill-warn'>{to_review} a verifier</span>", unsafe_allow_html=True)
+    if relations:
+        with st.expander(f"Relations detectees par l'IA ({len(relations)})", expanded=False):
+            for rel in relations:
+                from_sheet = str(rel.get("from_sheet", ""))
+                from_col = str(rel.get("from_column", ""))
+                target_entity = str(rel.get("target_entity_type", ""))
+                target_table = str(rel.get("target_staging_table", ""))
+                sep = str(rel.get("separator", ","))
+                join_label = "join_table" if bool(rel.get("is_join_table")) else "relation"
+                conf = float(rel.get("confidence", 0.0))
+                st.markdown(
+                    f"- `{from_sheet}.{from_col}` -> `{target_entity}` / `{target_table}` "
+                    f"(sep=`{sep}`, {join_label}, conf={conf:.0%})"
+                )
 
     corrections: list[dict[str, Any]] = []
     changed_any = False

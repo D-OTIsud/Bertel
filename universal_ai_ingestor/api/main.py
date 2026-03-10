@@ -378,7 +378,11 @@ async def ingest(
     update_import_batch_row(sb, batch_id, status="discovering")
     parsed = parse_payload(content_type, payload, source_name=filename)
     sheets = parsed.workbook_sheets if parsed.workbook_sheets and len(parsed.workbook_sheets) > 0 else {"default": parsed.dataframe}
-    contract = build_discovery_contract(source_format=parsed.source_format, sheets=sheets)
+
+    def on_discovery_event(phase: str, message: str) -> None:
+        append_import_event(sb, batch_id=batch_id, phase=phase, level="info", message=message)
+
+    contract = build_discovery_contract(source_format=parsed.source_format, sheets=sheets, event_callback=on_discovery_event)
     stored = persist_discovery_contract(sb, batch_id=batch_id, contract=contract)
 
     batch_status = "mapping_review_required"

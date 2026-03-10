@@ -328,7 +328,7 @@ def generate_mapping_plan(
     source_format: str,
     workbook_payload: WorkbookPayload | None = None,
     event_callback: Callable[[str, str], None] | None = None,
-) -> MappingPlan | MultiSheetMappingPlan:
+) -> tuple[MappingPlan | MultiSheetMappingPlan, RelationAnalysis | None]:
     sheets_summary: list[dict[str, Any]] = []
     if workbook_payload and workbook_payload.sheets:
         for sheet in workbook_payload.sheets:
@@ -357,6 +357,7 @@ def generate_mapping_plan(
     compiled = build_mapping_graph()
     final_state = compiled.invoke(initial_state)
     plan = final_state["mapping_plan"]
+    analysed_relations = final_state.get("analysed_relations")
 
     if workbook_payload and workbook_payload.sheets and len(workbook_payload.sheets) > 1:
         columns_result = final_state.get("selected_columns") or ColumnSelection()
@@ -373,13 +374,16 @@ def generate_mapping_plan(
                 confidence=sum(confs) / len(confs) if confs else 0.0,
                 targets=sheet_targets,
             )
-        return MultiSheetMappingPlan(
-            source_format=source_format,
-            confidence=plan.confidence,
-            per_sheet=per_sheet,
+        return (
+            MultiSheetMappingPlan(
+                source_format=source_format,
+                confidence=plan.confidence,
+                per_sheet=per_sheet,
+            ),
+            analysed_relations,
         )
 
-    return plan
+    return plan, analysed_relations
 
 
 async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutput:

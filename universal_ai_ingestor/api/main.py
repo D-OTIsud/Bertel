@@ -97,6 +97,21 @@ def _contract_fields(sb, contract_id: str) -> list[dict[str, Any]]:
     return resp.data or []
 
 
+def _contract_relations(sb, contract_id: str) -> list[dict[str, Any]]:
+    resp = (
+        sb.schema("staging")
+        .table("mapping_relation_hypothesis")
+        .select(
+            "id,from_sheet,from_column,to_sheet,to_column,relation_type,"
+            "separator,is_join_table,target_staging_table,target_entity_type,confidence,rationale,status"
+        )
+        .eq("contract_id", contract_id)
+        .order("from_sheet")
+        .execute()
+    )
+    return resp.data or []
+
+
 def _batch_events(sb, batch_id: str, limit: int = 50) -> list[dict[str, Any]]:
     resp = (
         sb.schema("staging")
@@ -327,6 +342,7 @@ async def ingest(
     upload_file: UploadFile | None = File(default=None),
     organization_object_id: str = Query(..., min_length=1),
     organization_name: str | None = Query(default=None),
+    custom_rules: str | None = Query(default=None),
 ) -> IngestAccepted:
     batch_id = str(uuid4())
 
@@ -346,6 +362,7 @@ async def ingest(
 
     org_id = organization_object_id.strip()
     org_name = (organization_name or "").strip() or None
+    custom_rules_value = (custom_rules or "").strip() or None
 
     sb = get_supabase()
     payload_sha = hash_payload(payload)
@@ -371,6 +388,7 @@ async def ingest(
             "payload_size": len(payload),
             "organization_object_id": org_id,
             "organization_name": org_name,
+            "custom_rules": custom_rules_value,
         },
     )
     append_import_event(sb, batch_id=batch_id, phase="ingest", level="info", message="Payload accepted")
@@ -382,7 +400,12 @@ async def ingest(
     def on_discovery_event(phase: str, message: str) -> None:
         append_import_event(sb, batch_id=batch_id, phase=phase, level="info", message=message)
 
-    contract = build_discovery_contract(source_format=parsed.source_format, sheets=sheets, event_callback=on_discovery_event)
+    contract = build_discovery_contract(
+        source_format=parsed.source_format,
+        sheets=sheets,
+        custom_rules=custom_rules_value,
+        event_callback=on_discovery_event,
+    )
     stored = persist_discovery_contract(sb, batch_id=batch_id, contract=contract)
 
     batch_status = "mapping_review_required"
@@ -409,6 +432,7 @@ def batch_status(batch_id: str) -> JSONResponse:
 
     contract = _latest_contract(sb, batch_id)
     fields = _contract_fields(sb, contract["id"]) if contract else []
+    relations = _contract_relations(sb, contract["id"]) if contract else []
     events = _batch_events(sb, batch_id)
 
     return JSONResponse(content=jsonable_encoder({
@@ -420,6 +444,7 @@ def batch_status(batch_id: str) -> JSONResponse:
         "metadata": batch.get("metadata"),
         "contract": contract,
         "fields": fields,
+        "relations": relations,
         "events": events,
     }))
 

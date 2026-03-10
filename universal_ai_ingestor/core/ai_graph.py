@@ -16,6 +16,7 @@ from core.schemas import (
     MappingTarget,
     MultiSheetMappingPlan,
     RelationAnalysis,
+    RelationTarget,
     WorkbookPayload,
 )
 
@@ -39,6 +40,7 @@ class MappingState(TypedDict):
     selected_columns: ColumnSelection | None
     analysed_relations: RelationAnalysis | None
     mapping_plan: MappingPlan
+    custom_rules: str | None
     emit_event: Callable[[str, str], None] | None
 
 
@@ -65,6 +67,16 @@ def _tables_summary() -> str:
 
 def _obj_types_str() -> str:
     return ", ".join(f"{k}={v}" for k, v in KNOWN_OBJECT_TYPES.items())
+
+
+_ENTITY_TYPE_TO_STAGING: dict[str, str] = {
+    "org": "object_org_link_temp",
+    "amenity": "object_amenity_temp",
+    "payment": "object_payment_method_temp",
+    "media": "media_temp",
+    "language": "object_language_temp",
+    "environment_tag": "object_environment_tag_temp",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +134,11 @@ def _profile_columns_node(state: MappingState) -> MappingState:
     schema = state["schema_snapshot"]
     entities = state.get("identified_entities") or EntityIdentification()
     entity_map = {s.sheet_name: s.inferred_object_type for s in entities.sheets}
+    global_context = "\n".join(
+        f"- Sheet '{sheet_name}' identified as: {entity_type}"
+        for sheet_name, entity_type in sorted(entity_map.items())
+    ) or "- No global workbook entity context available."
+    user_rules = (state.get("custom_rules") or "").strip() or "No user business rules provided."
 
     tables_desc = _tables_summary()
     prompt = (
@@ -146,6 +163,12 @@ def _profile_columns_node(state: MappingState) -> MappingState:
         "- 'lat,lon' text -> transform=split_gps\n"
         "- ONLY use table+column names from the schema. Do NOT invent.\n"
         "- Confidence 0-1: >0.8 clear, <0.5 uncertain.\n"
+        "\n## Global workbook context (critical for foreign keys and join tables):\n"
+        f"{global_context}\n\n"
+        "## STRICT USER BUSINESS RULES (priority):\n"
+        f"{user_rules}\n\n"
+        "Apply valid user rules with priority.\n"
+        "If a user rule points to a table/column not in schema, ignore that invalid part and continue with best valid mapping.\n"
     )
 
     sheets_info: list[dict[str, Any]] = schema.get("sheets_summary", [])
@@ -256,6 +279,7 @@ def _analyse_relations_node(state: MappingState) -> MappingState:
 def _validate_plan_node(state: MappingState) -> MappingState:
     _emit(state, "discovery_validation", "Validation du mapping en cours...")
     columns = state.get("selected_columns") or ColumnSelection()
+    relations = state.get("analysed_relations") or RelationAnalysis(relations=[])
     source_format = state["source_format"]
 
     per_sheet_plans: dict[str, MappingPlan] = {}
@@ -283,6 +307,43 @@ def _validate_plan_node(state: MappingState) -> MappingState:
             targets=targets,
         )
 
+    seen_rel_keys: set[tuple[str, str, str, str, str, bool]] = set()
+    for rel in relations.relations:
+        from_sheet = str(rel.from_sheet or "").strip()
+        from_column = str(rel.from_column or "").strip()
+        if not from_sheet or not from_column:
+            continue
+        target_entity_type = str(rel.target_entity_type or "").strip().lower()
+        rel_key = (
+            from_sheet,
+            from_column,
+            str(rel.to_sheet or "").strip(),
+            str(rel.separator or ","),
+            target_entity_type,
+            bool(rel.is_join_table),
+        )
+        if rel_key in seen_rel_keys:
+            continue
+        seen_rel_keys.add(rel_key)
+        relation_target = RelationTarget(
+            from_sheet=from_sheet,
+            from_column=from_column,
+            to_sheet=str(rel.to_sheet or "").strip(),
+            separator=str(rel.separator or ","),
+            target_entity_type=target_entity_type,
+            target_staging_table=_ENTITY_TYPE_TO_STAGING.get(target_entity_type, ""),
+            is_join_table=bool(rel.is_join_table),
+            confidence=float(rel.confidence),
+            rationale="AI relation hypothesis validated for mapping output.",
+        )
+        if from_sheet not in per_sheet_plans:
+            per_sheet_plans[from_sheet] = MappingPlan(
+                source_format=source_format,
+                confidence=0.0,
+                targets=[],
+            )
+        per_sheet_plans[from_sheet].relation_targets.append(relation_target)
+
     if len(per_sheet_plans) == 1:
         plan = next(iter(per_sheet_plans.values()))
         state["mapping_plan"] = plan
@@ -292,10 +353,12 @@ def _validate_plan_node(state: MappingState) -> MappingState:
             source_format=source_format,
             confidence=sum(all_confs) / len(all_confs) if all_confs else 0.0,
             targets=[t for p in per_sheet_plans.values() for t in p.targets],
+            relation_targets=[r for p in per_sheet_plans.values() for r in p.relation_targets],
         )
 
     total_targets = len(state["mapping_plan"].targets)
-    _emit(state, "discovery_validation", f"Validation terminee: {total_targets} mappings valides")
+    total_relations = len(state["mapping_plan"].relation_targets)
+    _emit(state, "discovery_validation", f"Validation terminee: {total_targets} mappings et {total_relations} relations valides")
     return state
 
 
@@ -327,6 +390,7 @@ def generate_mapping_plan(
     sample_rows: list[dict[str, Any]],
     source_format: str,
     workbook_payload: WorkbookPayload | None = None,
+    custom_rules: str | None = None,
     event_callback: Callable[[str, str], None] | None = None,
 ) -> tuple[MappingPlan | MultiSheetMappingPlan, RelationAnalysis | None]:
     sheets_summary: list[dict[str, Any]] = []
@@ -351,6 +415,7 @@ def generate_mapping_plan(
         "selected_columns": None,
         "analysed_relations": None,
         "mapping_plan": MappingPlan(source_format=source_format, confidence=0.0, targets=[]),
+        "custom_rules": custom_rules,
         "emit_event": event_callback,
     }
 
@@ -373,6 +438,7 @@ def generate_mapping_plan(
                 source_format=source_format,
                 confidence=sum(confs) / len(confs) if confs else 0.0,
                 targets=sheet_targets,
+                relation_targets=[r for r in plan.relation_targets if r.from_sheet == sheet.sheet_name],
             )
         return (
             MultiSheetMappingPlan(

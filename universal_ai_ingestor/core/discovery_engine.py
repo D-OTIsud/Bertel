@@ -39,6 +39,26 @@ except ModuleNotFoundError:
     )
 
 
+def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert non-JSON-serializable types (datetime, Timestamp, etc.) to strings."""
+    import datetime as _dt
+
+    sanitized: list[dict[str, Any]] = []
+    for row in records:
+        clean: dict[str, Any] = {}
+        for k, v in row.items():
+            if isinstance(v, (_dt.datetime, _dt.date, _dt.time)):
+                clean[k] = v.isoformat()
+            elif hasattr(v, "isoformat"):
+                clean[k] = v.isoformat()
+            elif isinstance(v, float) and pd.isna(v):
+                clean[k] = None
+            else:
+                clean[k] = v
+        sanitized.append(clean)
+    return sanitized
+
+
 def _workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame]) -> WorkbookPayload:
     samples: list[SheetSample] = []
     for sheet_name, df in sheets.items():
@@ -46,7 +66,7 @@ def _workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame]) -> WorkbookPa
             SheetSample(
                 sheet_name=sheet_name,
                 incoming_columns=[str(c) for c in df.columns],
-                sample_rows=df.head(20).to_dict(orient="records"),
+                sample_rows=_sanitize_records(df.head(20).to_dict(orient="records")),
             )
         )
     return WorkbookPayload(workbook_name="discovery_workbook", sheets=samples)

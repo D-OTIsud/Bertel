@@ -93,10 +93,30 @@ def schema_snapshot_from_dataframe(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert non-JSON-serializable types (datetime, Timestamp, etc.) to strings."""
+    import datetime as _dt
+
+    sanitized: list[dict[str, Any]] = []
+    for row in records:
+        clean: dict[str, Any] = {}
+        for k, v in row.items():
+            if isinstance(v, (_dt.datetime, _dt.date, _dt.time)):
+                clean[k] = v.isoformat()
+            elif hasattr(v, "isoformat"):
+                clean[k] = v.isoformat()
+            elif isinstance(v, float) and pd.isna(v):
+                clean[k] = None
+            else:
+                clean[k] = v
+        sanitized.append(clean)
+    return sanitized
+
+
 def workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame], workbook_name: str | None = None) -> WorkbookPayload:
     samples: list[SheetSample] = []
     for sheet_name, df in sheets.items():
-        sample_rows = df.head(settings.sample_rows).to_dict(orient="records")
+        sample_rows = _sanitize_records(df.head(settings.sample_rows).to_dict(orient="records"))
         samples.append(
             SheetSample(
                 sheet_name=sheet_name,

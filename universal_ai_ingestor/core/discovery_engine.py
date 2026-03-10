@@ -79,6 +79,7 @@ def _enhance_with_ai_workbook(
     proposals: list[DiscoveryFieldProposal],
     scores: list[float],
     assumptions: list[str],
+    event_callback: Any = None,
 ) -> None:
     openai_key = os.getenv("OPENAI_API_KEY", "")
     if not openai_key.strip():
@@ -104,6 +105,7 @@ def _enhance_with_ai_workbook(
             sample_rows=global_sample_rows[:30],
             source_format=source_format,
             workbook_payload=workbook_payload,
+            event_callback=event_callback,
         )
     except Exception as exc:  # noqa: BLE001
         assumptions.append(f"AI discovery failed ({exc.__class__.__name__}); kept rule-based mappings.")
@@ -313,7 +315,7 @@ def _detect_join_tables(
         scores.append(0.8)
 
 
-def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFrame]) -> DiscoveryContract:
+def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFrame], event_callback: Any = None) -> DiscoveryContract:
     sheet_profiles: list[DiscoverySheetProfile] = []
     field_proposals: list[DiscoveryFieldProposal] = []
     relation_hypotheses: list[DiscoveryRelationHypothesis] = []
@@ -360,6 +362,7 @@ def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFra
         proposals=field_proposals,
         scores=scores,
         assumptions=assumptions,
+        event_callback=event_callback,
     )
 
     sheet_cols = {s.sheet_name: set(s.profile.get("columns", {}).keys()) for s in sheet_profiles}

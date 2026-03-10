@@ -88,6 +88,60 @@ class BatchRecord(BaseModel):
     sheet_progress: dict[str, Any] | None = None
 
 
+# ---------------------------------------------------------------------------
+# LangGraph multi-node structured outputs
+# ---------------------------------------------------------------------------
+
+
+class SheetEntity(BaseModel):
+    sheet_name: str
+    inferred_object_type: str = Field(
+        description="Bertel object_type code: HOT, RES, ORG, ITI, FMA, HPA, HLO, DEG, COM, LOI, PCU, ASC, or UNKNOWN",
+    )
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+    rationale: str = ""
+
+
+class EntityIdentification(BaseModel):
+    sheets: list[SheetEntity] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class ColumnVerdict(BaseModel):
+    source_column: str
+    keep: bool = True
+    target_table: str = "object_temp"
+    target_column: str = "name"
+    transform: str = "identity"
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+
+
+class ColumnSelection(BaseModel):
+    per_sheet: dict[str, list[ColumnVerdict]] = Field(default_factory=dict)
+
+
+class RelationHypothesisLLM(BaseModel):
+    from_sheet: str
+    from_column: str
+    to_sheet: str = ""
+    separator: str = ","
+    target_entity_type: str = Field(
+        default="",
+        description="org, amenity, payment, media, language, environment_tag, or empty",
+    )
+    is_join_table: bool = False
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+
+
+class RelationAnalysis(BaseModel):
+    relations: list[RelationHypothesisLLM] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Discovery contract models
+# ---------------------------------------------------------------------------
+
+
 class DiscoveryFieldProposal(BaseModel):
     sheet_name: str
     source_column: str

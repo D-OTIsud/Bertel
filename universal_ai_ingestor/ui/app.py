@@ -67,6 +67,13 @@ SKIP_PATTERNS: set[str] = {
     "date_import",
 }
 
+DISCOVERY_PHASES = [
+    ("discovery_entities", "Identification des entites"),
+    ("discovery_profiling", "Profilage des colonnes"),
+    ("discovery_relations", "Analyse des relations"),
+    ("discovery_validation", "Validation du mapping"),
+]
+
 STATUS_LABELS = {
     "received": "Recu",
     "discovering": "Analyse IA",
@@ -254,24 +261,41 @@ status = batch_data.get("status", "received")
 
 # STEP 2
 if st.session_state.step == 2:
-    st.markdown("### L'IA profile vos donnees")
-    fields = batch_data.get("fields", [])
-    total_cols = len(fields)
-    item1 = "OK" if total_cols > 0 else "..."
-    item2 = "OK" if status in {"mapping_review_required", "mapping_approved"} else "..."
-    item3 = "OK" if status in {"mapping_review_required", "mapping_approved"} else "..."
-    st.write(f"{item1} Lecture des {total_cols} colonnes detectees")
-    st.write(f"{item2} Analyse semantique des echantillons")
-    st.write(f"{item3} Generation du mapping vers Tourisme CRM")
-    st.caption(f"Statut: {STATUS_LABELS.get(status, status)}")
-    if status in {"mapping_review_required", "mapping_approved"}:
-        st.session_state.step = 3
-        st.rerun()
-    if status in {"failed", "failed_permanent"}:
-        st.error(batch_data.get("error") or "Echec lors de l'analyse.")
-        st.stop()
-    time.sleep(1.0)
-    st.rerun()
+    st.markdown("### L'IA profile vos donnees...")
+    with st.status("Analyse en cours...", expanded=True) as status_widget:
+        while True:
+            batch = _fetch_batch()
+            if not batch:
+                status_widget.update(label="Erreur", state="error")
+                st.error("Impossible de charger le batch.")
+                st.stop()
+            cur_status = batch.get("status", "received")
+            events = batch.get("events", [])
+            phases_done = {e.get("phase") for e in events if e.get("phase")}
+            total_cols = len(batch.get("fields", []))
+
+            for phase_key, phase_label in DISCOVERY_PHASES:
+                phase_events = [e for e in events if e.get("phase") == phase_key]
+                if phase_events:
+                    last_msg = phase_events[-1].get("message", "")
+                    st.write(f"OK {phase_label}: {last_msg}")
+                else:
+                    st.write(f"... {phase_label}")
+
+            if total_cols > 0:
+                st.caption(f"{total_cols} colonnes detectees")
+
+            if cur_status in {"mapping_review_required", "mapping_approved"}:
+                status_widget.update(label="Analyse terminee", state="complete")
+                time.sleep(0.5)
+                st.session_state.step = 3
+                st.rerun()
+            if cur_status in {"failed", "failed_permanent"}:
+                status_widget.update(label="Echec", state="error")
+                st.error(batch.get("error") or "Echec lors de l'analyse.")
+                st.stop()
+            time.sleep(2.0)
+            st.rerun()
 
 # STEP 3
 if st.session_state.step == 3:

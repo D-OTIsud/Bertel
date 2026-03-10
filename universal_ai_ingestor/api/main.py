@@ -176,7 +176,7 @@ def _approve_and_validate(sb, batch_id: str, contract_id: str) -> None:
     update_import_batch_row(sb, batch_id, status="mapping_approved")
 
 
-def _run_full_pipeline(batch_id: str) -> None:
+def _run_full_pipeline(batch_id: str, *, use_cleaner: bool = False) -> None:
     """Background task: approve mapping -> ETL -> dedup -> resolve -> commit."""
     sb = get_supabase()
     batch = find_batch_by_id(sb, batch_id)
@@ -211,7 +211,7 @@ def _run_full_pipeline(batch_id: str) -> None:
     for attempt in range(1, MAX_ETL_ATTEMPTS + 1):
         update_import_batch_row(sb, batch_id, attempt_delta=1)
         try:
-            run_batch_pipeline_sync(
+            pipeline_stats = run_batch_pipeline_sync(
                 sb=sb,
                 batch_id=batch_id,
                 payload=payload,
@@ -219,9 +219,27 @@ def _run_full_pipeline(batch_id: str) -> None:
                 source_name=source_name,
                 default_org_object_id=org_id or None,
                 default_org_name=org_name,
+                use_cleaner=use_cleaner,
+            )
+            refreshed = find_batch_by_id(sb, batch_id) or {}
+            metadata_now = dict(refreshed.get("metadata") or metadata or {})
+            metadata_now["sheet_progress"] = pipeline_stats or {}
+            (
+                sb.schema("staging")
+                .table("import_batches")
+                .update({"metadata": metadata_now})
+                .eq("batch_id", batch_id)
+                .execute()
             )
             update_import_batch_row(sb, batch_id, status="staging_loaded")
-            append_import_event(sb, batch_id=batch_id, phase="etl", level="info", message="ETL completed", payload={"attempt": attempt})
+            append_import_event(
+                sb,
+                batch_id=batch_id,
+                phase="etl",
+                level="info",
+                message="ETL completed",
+                payload={"attempt": attempt, "stats": pipeline_stats or {}},
+            )
             break
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
@@ -401,6 +419,71 @@ def batch_status(batch_id: str) -> JSONResponse:
     })
 
 
+@app.get("/api/v1/ingest/{batch_id}/preview", dependencies=[Depends(verify_token)])
+def batch_preview(batch_id: str) -> JSONResponse:
+    sb = get_supabase()
+    batch = find_batch_by_id(sb, batch_id)
+    if not batch:
+        return JSONResponse(status_code=404, content={"error": "batch not found"})
+
+    objects = (
+        sb.schema("staging")
+        .table("object_temp")
+        .select("staging_object_key,name,object_type,org_name,external_id,source_sheet")
+        .eq("import_batch_id", batch_id)
+        .limit(5)
+        .execute()
+    ).data or []
+    object_keys = [str(r.get("staging_object_key")) for r in objects if r.get("staging_object_key")]
+    if not object_keys:
+        return JSONResponse(content={"rows": []})
+
+    locations = (
+        sb.schema("staging")
+        .table("object_location_temp")
+        .select("staging_object_key,address1,city,postcode,latitude,longitude")
+        .eq("import_batch_id", batch_id)
+        .in_("staging_object_key", object_keys)
+        .execute()
+    ).data or []
+    contacts = (
+        sb.schema("staging")
+        .table("contact_channel_temp")
+        .select("staging_object_key,kind_code,value,is_primary")
+        .eq("import_batch_id", batch_id)
+        .in_("staging_object_key", object_keys)
+        .execute()
+    ).data or []
+    descriptions = (
+        sb.schema("staging")
+        .table("object_description_temp")
+        .select("staging_object_key,description,description_chapo")
+        .eq("import_batch_id", batch_id)
+        .in_("staging_object_key", object_keys)
+        .execute()
+    ).data or []
+
+    location_by_key = {str(r.get("staging_object_key")): r for r in locations}
+    description_by_key = {str(r.get("staging_object_key")): r for r in descriptions}
+    contacts_by_key: dict[str, list[dict[str, Any]]] = {}
+    for row in contacts:
+        k = str(row.get("staging_object_key"))
+        contacts_by_key.setdefault(k, []).append(row)
+
+    rows: list[dict[str, Any]] = []
+    for obj in objects:
+        key = str(obj.get("staging_object_key"))
+        rows.append(
+            {
+                "object": obj,
+                "object_location": location_by_key.get(key),
+                "contact_channel": contacts_by_key.get(key, []),
+                "object_description": description_by_key.get(key),
+            }
+        )
+    return JSONResponse(content={"rows": rows})
+
+
 # ---------------------------------------------------------------------------
 # 5. Update field mappings
 # ---------------------------------------------------------------------------
@@ -476,7 +559,11 @@ def update_mapping(batch_id: str, body: MappingCorrections) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/ingest/{batch_id}/execute", dependencies=[Depends(verify_token)])
-def execute_pipeline(batch_id: str, background_tasks: BackgroundTasks) -> JSONResponse:
+def execute_pipeline(
+    batch_id: str,
+    background_tasks: BackgroundTasks,
+    use_cleaner: bool = Query(default=False),
+) -> JSONResponse:
     sb = get_supabase()
     batch = find_batch_by_id(sb, batch_id)
     if not batch:
@@ -484,9 +571,9 @@ def execute_pipeline(batch_id: str, background_tasks: BackgroundTasks) -> JSONRe
     if batch.get("status") == "committed":
         return JSONResponse(status_code=409, content={"error": "Batch already committed"})
 
-    background_tasks.add_task(_run_full_pipeline, batch_id)
+    background_tasks.add_task(_run_full_pipeline, batch_id, use_cleaner=use_cleaner)
     update_import_batch_row(sb, batch_id, status="profiling")
-    return JSONResponse(content={"batch_id": batch_id, "status": "pipeline_started"})
+    return JSONResponse(content={"batch_id": batch_id, "status": "pipeline_started", "use_cleaner": use_cleaner})
 
 
 # ---------------------------------------------------------------------------

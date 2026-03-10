@@ -81,11 +81,11 @@ def _enhance_with_ai_workbook(
     scores: list[float],
     assumptions: list[str],
     event_callback: Any = None,
-) -> None:
+) -> list[DiscoveryRelationHypothesis]:
     openai_key = os.getenv("OPENAI_API_KEY", "")
     if not openai_key.strip():
         assumptions.append("AI discovery skipped: OPENAI_API_KEY is missing.")
-        return
+        return []
     try:
         from core.ai_graph import generate_mapping_plan
     except ModuleNotFoundError:
@@ -93,7 +93,7 @@ def _enhance_with_ai_workbook(
             from universal_ai_ingestor.core.ai_graph import generate_mapping_plan  # type: ignore
         except ModuleNotFoundError:
             assumptions.append("AI discovery skipped: mapping agent module unavailable.")
-            return
+            return []
 
     workbook_payload = _workbook_payload_from_sheets(sheets)
     global_sample_rows: list[dict[str, Any]] = []
@@ -101,7 +101,7 @@ def _enhance_with_ai_workbook(
         global_sample_rows.extend(sheet.sample_rows[:10])
 
     try:
-        plan_bundle = generate_mapping_plan(
+        plan_bundle, analysed_relations = generate_mapping_plan(
             schema_snapshot=build_target_schema_context(),
             sample_rows=global_sample_rows[:30],
             source_format=source_format,
@@ -110,7 +110,7 @@ def _enhance_with_ai_workbook(
         )
     except Exception as exc:  # noqa: BLE001
         assumptions.append(f"AI discovery failed ({exc.__class__.__name__}); kept rule-based mappings.")
-        return
+        return []
 
     ai_by_sheet_and_source: dict[tuple[str, str], Any] = {}
     if isinstance(plan_bundle, MultiSheetMappingPlan):
@@ -150,6 +150,42 @@ def _enhance_with_ai_workbook(
         f"AI discovery applied across workbook for {updated} fields." if updated else
         "AI discovery run produced no valid upgrades."
     )
+    ai_relations: list[DiscoveryRelationHypothesis] = []
+    if analysed_relations:
+        for rel in analysed_relations.relations:
+            from_sheet = str(rel.from_sheet or "").strip()
+            from_column = str(rel.from_column or "").strip()
+            if not from_sheet or not from_column:
+                continue
+            target_entity_type = str(rel.target_entity_type or "").strip().lower()
+            target_staging_table = _ENTITY_TYPE_TO_STAGING.get(target_entity_type, "")
+            ai_relations.append(
+                DiscoveryRelationHypothesis(
+                    from_sheet=from_sheet,
+                    from_column=from_column,
+                    to_sheet=str(rel.to_sheet or "").strip(),
+                    to_column="",
+                    relation_type="foreign_key_candidate" if rel.is_join_table else "multi_value",
+                    separator=str(rel.separator or ","),
+                    is_join_table=bool(rel.is_join_table),
+                    target_staging_table=target_staging_table,
+                    target_entity_type=target_entity_type,
+                    confidence=float(rel.confidence),
+                    rationale="AI-detected relation from analyse_relations node.",
+                    status="proposed",
+                )
+            )
+    return ai_relations
+
+
+_ENTITY_TYPE_TO_STAGING: dict[str, str] = {
+    "org": "object_org_link_temp",
+    "amenity": "object_amenity_temp",
+    "payment": "object_payment_method_temp",
+    "media": "media_temp",
+    "language": "object_language_temp",
+    "environment_tag": "object_environment_tag_temp",
+}
 
 
 _ENTITY_KEYWORD_MAP: dict[str, tuple[str, str]] = {
@@ -357,7 +393,7 @@ def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFra
                 )
             )
             scores.append(conf)
-    _enhance_with_ai_workbook(
+    ai_relation_hypotheses = _enhance_with_ai_workbook(
         source_format=source_format,
         sheets=sheets,
         proposals=field_proposals,
@@ -393,6 +429,38 @@ def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFra
 
     _detect_delimiter_relations(sheet_profiles, relation_hypotheses, scores)
     _detect_join_tables(sheet_profiles, relation_hypotheses, scores)
+
+    existing_relation_keys = {
+        (
+            rel.from_sheet,
+            rel.from_column,
+            rel.to_sheet,
+            rel.to_column,
+            rel.target_entity_type,
+            rel.relation_type,
+            rel.separator,
+        )
+        for rel in relation_hypotheses
+    }
+    ai_merged = 0
+    for rel in ai_relation_hypotheses:
+        rel_key = (
+            rel.from_sheet,
+            rel.from_column,
+            rel.to_sheet,
+            rel.to_column,
+            rel.target_entity_type,
+            rel.relation_type,
+            rel.separator,
+        )
+        if rel_key in existing_relation_keys:
+            continue
+        relation_hypotheses.append(rel)
+        existing_relation_keys.add(rel_key)
+        scores.append(rel.confidence)
+        ai_merged += 1
+    if ai_relation_hypotheses:
+        assumptions.append(f"AI relation hypotheses merged: {ai_merged}/{len(ai_relation_hypotheses)}")
 
     overall = sum(scores) / len(scores) if scores else 0.0
     if overall < 0.8:

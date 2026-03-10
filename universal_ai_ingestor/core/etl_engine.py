@@ -564,7 +564,7 @@ async def run_batch_pipeline(
     plan_bundle = _load_approved_contract_plan(sb, batch_id, parsed.source_format)
     if plan_bundle is None:
         try:
-            plan_bundle = generate_mapping_plan(
+            plan_bundle, _ = generate_mapping_plan(
                 schema_snapshot=schema_snapshot,
                 sample_rows=sample_rows,
                 source_format=parsed.source_format,

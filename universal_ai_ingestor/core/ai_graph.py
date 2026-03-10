@@ -45,7 +45,18 @@ def _mapping_node(state: MappingState) -> MappingState:
     obj_types_str = ", ".join(f"{k}={v}" for k, v in obj_types.items()) if obj_types else ""
 
     prompt = (
-        "You are an expert data-mapping architect for the Bertel tourism CRM.\n\n"
+        "You are an expert Data Engineer and mapping architect for the Bertel tourism CRM.\n"
+        "You act as a **Data Profiler**: you analyse dumps (CSV, JSON, XML, Excel) and deduce "
+        "the relational target schema.\n\n"
+        "## Business Domain Intelligence\n"
+        "Source data is almost always in FRENCH. Key domain vocabulary:\n"
+        "  - 'Prestataire', 'Propriétaire', 'Gérant', 'Gestionnaire', 'Mandataire', "
+        "'Fournisseur', 'Partenaire' → refer to our ORG (Organisation) entity.\n"
+        "  - 'Interlocuteur', 'Responsable', 'Contact' (when a person name) → ACTOR entity.\n"
+        "  - A column containing comma/pipe/semicolon-separated IDs or names is a "
+        "**One-to-Many or Many-to-Many relation** (e.g. 'Prestataires' = 'id1, id2').\n"
+        "  - A sheet/node containing ONLY pairs of IDs (e.g. formulaire_id + prestataire_id) "
+        "is a **pure junction table**.\n\n"
         "## Data Model\n"
         f"{overview}\n\n"
         f"Object type codes: {obj_types_str}\n\n"
@@ -56,7 +67,7 @@ def _mapping_node(state: MappingState) -> MappingState:
         "## Relationship Rules\n"
         f"{hints}\n\n"
         "## Mapping Instructions\n"
-        "1. Source data is often in FRENCH. Key translations:\n"
+        "1. French translations:\n"
         "   Nom -> name | Adresse/Rue -> address1 | Ville -> city | CP -> postcode\n"
         "   Téléphone -> phone | Courriel -> email | Site web -> website\n"
         "   Latitude -> latitude | Type -> object_type | Identifiant -> external_id\n"
@@ -73,11 +84,13 @@ def _mapping_node(state: MappingState) -> MappingState:
         "9. Pricing -> object_price_temp. Capacity -> object_capacity_temp.\n"
         "10. Opening hours -> opening_period_temp.\n"
         "11. Event dates -> object_fma_temp. Itinerary -> object_iti_temp. Rooms -> object_room_type_temp.\n"
-        "12. Delimited lists (commas/pipes) -> use split_list transform.\n"
+        "12. Delimited lists (commas/pipes/semicolons) -> use split_list transform.\n"
         "13. 'lat,lon' as single text -> use split_gps transform.\n"
         "14. Metadata (date_creation, user, moderator) -> OMIT.\n"
         "15. ONLY use table+column names from the schema above. Do NOT invent.\n"
         "16. Confidence 0.0-1.0: >0.8 clear match, <0.5 uncertain.\n"
+        "17. When sample values contain delimited lists (e.g. 'wifi, piscine, parking'), "
+        "identify the delimiter and map to the appropriate M:N staging table.\n"
     )
 
     incoming = schema.get("incoming_columns", [])

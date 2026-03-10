@@ -102,9 +102,25 @@ class DiscoveryFieldProposal(BaseModel):
 class DiscoveryRelationHypothesis(BaseModel):
     from_sheet: str
     from_column: str
-    to_sheet: str
-    to_column: str
+    to_sheet: str = ""
+    to_column: str = ""
     relation_type: str = "foreign_key_candidate"
+    separator: str = Field(
+        default=",",
+        description="Delimiter found in the source column (e.g. ',', ';', '|')",
+    )
+    is_join_table: bool = Field(
+        default=False,
+        description="True when the entire sheet/node is a pure junction table linking two entities",
+    )
+    target_staging_table: str = Field(
+        default="",
+        description="Staging table to route resolved tokens to (e.g. 'object_org_link_temp', 'object_amenity_temp')",
+    )
+    target_entity_type: str = Field(
+        default="",
+        description="Semantic entity type of the target (org, amenity, payment, media, language, environment_tag)",
+    )
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     rationale: str = ""
     status: str = "proposed"

@@ -164,6 +164,7 @@ SELECT api.list_objects_with_validated_changes_since(
 
 - Recherche full-text: `name_search_vector` et `city_search_vector` (GIN).
 - Geospatial: indexes GiST sur `geog2`.
+- Projection filtree: `mv_filtered_objects` (vue materialisee hot-path pour endpoints filtres).
 - Index keyset ajoutes pour synchronisation:
   - `idx_object_updated_at_id`
   - `idx_object_updated_at_source_id`
@@ -190,6 +191,55 @@ SELECT api.list_objects_with_validated_changes_since(
 ```sql
 \i maintenance.sql
 ```
+
+Recommandation de rafraichissement `mv_filtered_objects`:
+
+```sql
+-- Toutes les 5 minutes (SLA listing/filtrage)
+SELECT cron.schedule(
+  'refresh-mv-filtered-objects',
+  '*/5 * * * *',
+  $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects$$
+);
+```
+
+Points de stale possibles pour `mv_filtered_objects`:
+- changements de localisation principale (`object_location`)
+- transitions de statut editorial (`object.status`)
+- changements de nom / index de recherche (`object.name*`)
+- evolution des caches denormalises (`cached_*`)
+
+Mitigation en place:
+- refresh `CONCURRENTLY` planifie via `pg_cron` toutes les 5 minutes.
+- compromis accepte: les endpoints listing/filtrage peuvent renvoyer des donnees avec un retard maximum cible de 5 minutes.
+
+Recommandation de rafraichissement `cached_is_open_now`:
+
+```sql
+SELECT cron.schedule(
+  'refresh-open-status',
+  '*/5 * * * *',
+  $$SELECT api.refresh_open_status()$$
+);
+```
+
+Fenetre de staleness cible:
+- API de listing/filtrage basee sur la MV: <= 10 minutes.
+- Champ `object.cached_is_open_now`: <= 5 minutes.
+- Endpoints detail objet: temps reel (tables source).
+
+## Gouvernance timezone (open_now)
+
+- Source de verite: `object.business_timezone` (IANA timezone name), default `Indian/Reunion`.
+- Validation: la valeur est verifiee contre `pg_timezone_names` a l'ecriture.
+- Calcul metier: `api.is_object_open_now()` et `api.refresh_open_status()` comparent les plages `opening_time_frame` a l'heure locale objet (`CURRENT_TIMESTAMP AT TIME ZONE object.business_timezone`), pas au timezone serveur.
+- Frontieres horaires: avec un refresh cron toutes les 5 minutes, un changement d'etat (ex: fermeture a 18:00) est reflechi au plus tard sous ~5 minutes.
+
+## Gouvernance i18n
+
+- Canonique: colonnes JSONB `*_i18n` (lecture standard via `api.i18n_pick` / `api.i18n_pick_strict`).
+- Overflow/extension: table EAV `i18n_translation` (cas sans colonne `*_i18n` native).
+- Garde-fou actif: insertion/mise a jour dans `i18n_translation` est bloquee quand `target_table.target_column_i18n` existe deja.
 
 ## Notes
 

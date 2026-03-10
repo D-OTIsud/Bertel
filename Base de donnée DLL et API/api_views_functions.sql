@@ -1,13 +1,34 @@
 -- =====================================================
 -- Helper: check if an object is currently open using rich opening system
 -- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'api'
+      AND p.proname = 'can_read_extended'
+      AND pg_get_function_identity_arguments(p.oid) = 'p_object_id text'
+  ) THEN
+    EXECUTE $f$
+      CREATE FUNCTION api.can_read_extended(p_object_id text)
+      RETURNS boolean
+      LANGUAGE sql
+      STABLE
+      SECURITY DEFINER
+      SET search_path = public, api, auth
+      AS $$ SELECT FALSE; $$;
+    $f$;
+  END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION api.is_object_open_now(p_object_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 AS $$
-  -- Check if there's any current opening period that indicates the object is open
-  -- Note: trim(lower(to_char(..., 'FMDay'))) avoids trailing-space padding from to_char
+  -- Locale-independent weekday check via ISO day-of-week (1=Mon..7=Sun).
   SELECT EXISTS (
     SELECT 1
     FROM opening_period p
@@ -16,13 +37,25 @@ AS $$
     JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
     JOIN opening_time_frame tf ON tf.time_period_id = tp.id
     JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+    CROSS JOIN LATERAL api.get_object_local_now(p_object_id) ln
     WHERE p.object_id = p_object_id
       AND tp.closed = FALSE
-      AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
-      AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
-      AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
-      AND (tf.start_time IS NULL OR tf.start_time <= LOCALTIME)
-      AND (tf.end_time IS NULL OR tf.end_time > LOCALTIME)
+      AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+      AND COALESCE(
+        wd.dow_number,
+        CASE wd.code
+          WHEN 'monday' THEN 1
+          WHEN 'tuesday' THEN 2
+          WHEN 'wednesday' THEN 3
+          WHEN 'thursday' THEN 4
+          WHEN 'friday' THEN 5
+          WHEN 'saturday' THEN 6
+          WHEN 'sunday' THEN 7
+          ELSE NULL
+        END
+      ) = ln.local_isodow
+      AND (tf.start_time IS NULL OR tf.start_time <= ln.local_time)
+      AND (tf.end_time IS NULL OR tf.end_time > ln.local_time)
   )
   -- Also check for 24/7 periods (no time frames means always open)
   OR EXISTS (
@@ -32,11 +65,23 @@ AS $$
     JOIN opening_time_period tp ON tp.schedule_id = s.id
     JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
     JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+    CROSS JOIN LATERAL api.get_object_local_now(p_object_id) ln
     WHERE p.object_id = p_object_id
       AND tp.closed = FALSE
-      AND (p.date_start IS NULL OR p.date_start <= CURRENT_DATE)
-      AND (p.date_end IS NULL OR p.date_end >= CURRENT_DATE)
-      AND wd.code = trim(lower(to_char(CURRENT_TIMESTAMP, 'FMDay')))
+      AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+      AND COALESCE(
+        wd.dow_number,
+        CASE wd.code
+          WHEN 'monday' THEN 1
+          WHEN 'tuesday' THEN 2
+          WHEN 'wednesday' THEN 3
+          WHEN 'thursday' THEN 4
+          WHEN 'friday' THEN 5
+          WHEN 'saturday' THEN 6
+          WHEN 'sunday' THEN 7
+          ELSE NULL
+        END
+      ) = ln.local_isodow
       AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
   );
 $$;
@@ -48,7 +93,8 @@ CREATE OR REPLACE FUNCTION api.build_opening_period_json(
   p_period_id UUID,
   p_object_id TEXT,
   p_date_start DATE,
-  p_date_end DATE
+  p_date_end DATE,
+  p_order INTEGER DEFAULT 1
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -63,7 +109,7 @@ BEGIN
   -- Build the complete JSON in one go
   RETURN json_build_object(
     'id', p_period_id::text,
-    'order', 1,
+    'order', p_order,
     'object_id', p_object_id,
     'date_start', p_date_start,
     'date_end', p_date_end,
@@ -214,8 +260,8 @@ LANGUAGE plpgsql
 STABLE
 AS $$
 DECLARE
-  v_start_local TIMESTAMPTZ;
-  v_end_local   TIMESTAMPTZ;
+  v_start_local TIMESTAMP;
+  v_end_local   TIMESTAMP;
   v_start_date TEXT;
   v_end_date   TEXT;
   v_start_time TEXT;
@@ -546,7 +592,7 @@ RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
 AS $$
-  SELECT regexp_replace(p::text, E'[\\n\\r\\s]+', '', 'g')::jsonb;
+  SELECT COALESCE(p, '{}'::jsonb);
 $$;
 
 -- Langue préférée (première en minuscules)
@@ -820,6 +866,9 @@ AS $$
   params AS (
     SELECT
       n.filters,
+      CASE WHEN n.filters ? 'commercial_visibility_any'
+        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'commercial_visibility_any'))
+      END AS commercial_visibility_any,
       CASE WHEN n.filters ? 'amenities_any'
         THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenities_any'))
       END AS amenities_any,
@@ -878,6 +927,7 @@ AS $$
       m.id AS object_id,
       m.object_type,
       m.status,
+      m.commercial_visibility,
       m.name_search_vector,
       m.city_search_vector,
       m.geog2,
@@ -897,6 +947,7 @@ AS $$
       o.id AS object_id,
       o.object_type,
       o.status,
+      o.commercial_visibility,
       o.name_search_vector,
       ol.city_search_vector,
       ol.geog2,
@@ -923,6 +974,8 @@ AS $$
   CROSS JOIN params
   WHERE (p_types IS NULL OR src.object_type = ANY(p_types))
     AND (p_status IS NULL OR src.status = ANY(p_status))
+    AND (NOT (params.filters ? 'commercial_visibility') OR src.commercial_visibility = (params.filters->>'commercial_visibility'))
+    AND (params.commercial_visibility_any IS NULL OR src.commercial_visibility = ANY(params.commercial_visibility_any))
     AND (
       p_search IS NULL OR
       src.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)) OR
@@ -1056,12 +1109,16 @@ AS $$
     ))
     AND (NOT (params.filters ? 'bbox') OR (
       src.geog2 IS NOT NULL
-      AND ST_Covers(
+      AND src.geog2::geometry && ST_MakeEnvelope(
+        (params.filters->'bbox'->>0)::float8, (params.filters->'bbox'->>1)::float8,
+        (params.filters->'bbox'->>2)::float8, (params.filters->'bbox'->>3)::float8, 4326
+      )
+      AND ST_Within(
+        src.geog2::geometry,
         ST_MakeEnvelope(
           (params.filters->'bbox'->>0)::float8, (params.filters->'bbox'->>1)::float8,
           (params.filters->'bbox'->>2)::float8, (params.filters->'bbox'->>3)::float8, 4326
-        )::geography,
-        src.geog2
+        )
       )
     ))
     AND (NOT (params.filters ? 'open_now') OR src.cached_is_open_now = TRUE);
@@ -1125,6 +1182,207 @@ END;
 $$;
 
 -- =====================================================
+-- Lightweight card read model (single + batch)
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_card(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT jsonb_build_object(
+    'id',           o.id,
+    'type',         o.object_type::text,
+    'name',         o.name,
+    'status',       o.status::text,
+    'commercial_visibility', o.commercial_visibility,
+    'image',        o.cached_main_image_url,
+    'rating',       o.cached_rating,
+    'review_count', o.cached_review_count,
+    'min_price',    o.cached_min_price,
+    'open_now',     o.cached_is_open_now,
+    'location',     jsonb_build_object(
+      'lat',      ol.latitude,
+      'lon',      ol.longitude,
+      'city',     ol.city,
+      'postcode', ol.postcode
+    ),
+    'description',  LEFT(COALESCE(
+      api.i18n_pick(d.description_chapo_i18n, api.pick_lang(p_lang_prefs), 'fr'),
+      d.description_chapo,
+      LEFT(d.description, 200)
+    ), 200),
+    'updated_at',   o.updated_at
+  )
+  FROM object o
+  LEFT JOIN object_location ol
+    ON ol.object_id = o.id
+   AND ol.is_main_location IS TRUE
+  LEFT JOIN object_description d
+    ON d.object_id = o.id
+   AND d.org_object_id IS NULL
+  WHERE o.id = p_object_id;
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_object_cards_batch(
+  p_ids TEXT[],
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSON
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT COALESCE(
+    json_agg(api.get_object_card(t.id, p_lang_prefs) ORDER BY t.ord),
+    '[]'::json
+  )
+  FROM unnest(COALESCE(p_ids, ARRAY[]::text[])) WITH ORDINALITY AS t(id, ord)
+  WHERE t.id IS NOT NULL;
+$$;
+
+-- =====================================================
+-- Object resource block helpers (decomposition layer)
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.jsonb_pick_keys(p_payload JSONB, p_keys TEXT[])
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT COALESCE(
+    (
+      SELECT jsonb_object_agg(k, p_payload -> k)
+      FROM unnest(COALESCE(p_keys, ARRAY[]::TEXT[])) AS t(k)
+      WHERE p_payload ? k
+    ),
+    '{}'::jsonb
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_base(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY[
+    'id','type','status','is_editing','name','region_code',
+    'created_at','updated_at','updated_at_source','published_at','commercial_visibility','current_membership'
+  ]);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_location(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['address','location','opening_times','places']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_descriptions(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['description','descriptions','private_note','private_notes']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_contacts(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['external_ids','contacts','languages','actors']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_media(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['media','meeting_rooms']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_pricing(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY[
+    'capacity','amenities','environment_tags','payment_methods',
+    'prices','discounts','group_policies','classifications','tags',
+    'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types'
+  ]);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_legal(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['legal_records','pet_policy','origins','org_links']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_itinerary(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY[
+    'itinerary_details','itinerary','outgoing_relations','incoming_relations',
+    'fma','fma_occurrences','sustainability_labels','sustainability_actions','sustainability_action_labels'
+  ]);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_render(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['render']);
+$$;
+
+CREATE OR REPLACE FUNCTION api.resource_block_misc(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT p_payload - ARRAY[
+    'id','type','status','is_editing','name','region_code',
+    'created_at','updated_at','updated_at_source','published_at','current_membership',
+    'address','location','opening_times','places',
+    'description','descriptions','private_note','private_notes',
+    'external_ids','contacts','languages','actors',
+    'media','meeting_rooms',
+    'capacity','amenities','environment_tags','payment_methods',
+    'prices','discounts','group_policies','classifications','tags',
+    'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types',
+    'legal_records','pet_policy','origins','org_links',
+    'itinerary_details','itinerary','outgoing_relations','incoming_relations',
+    'fma','fma_occurrences','sustainability_labels','sustainability_actions','sustainability_action_labels',
+    'render'
+  ];
+$$;
+
+CREATE OR REPLACE FUNCTION api.compose_object_resource_blocks(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT
+    api.resource_block_base(p_payload)
+    || api.resource_block_location(p_payload)
+    || api.resource_block_descriptions(p_payload)
+    || api.resource_block_contacts(p_payload)
+    || api.resource_block_media(p_payload)
+    || api.resource_block_pricing(p_payload)
+    || api.resource_block_legal(p_payload)
+    || api.resource_block_itinerary(p_payload)
+    || api.resource_block_render(p_payload)
+    || api.resource_block_misc(p_payload);
+$$;
+
+-- =====================================================
 -- 3) Ressource unifiée (toutes typologies) + icônes étendues
 --     Améliorations: ORDRES plus logiques et stables dans les tableaux
 --     - Priorité aux flags (ex: is_primary), puis position si dispo,
@@ -1165,7 +1423,10 @@ DECLARE
   v_render JSONB := '{}'::jsonb;
   v_tmp_json JSONB;
   v_omit_empty BOOLEAN := COALESCE((p_options->>'omit_empty')::boolean, FALSE);
+  v_can_read_extended BOOLEAN := FALSE;
 BEGIN
+  v_can_read_extended := api.can_read_extended(p_object_id);
+
   -- Check if user can access this object (RLS-aware)
   -- First check if object exists and user has access
   SELECT o.* INTO obj
@@ -1176,7 +1437,7 @@ BEGIN
       o.status = 'published' 
       OR 
       -- Extended access: user is actor for this object or parent org
-      api.can_read_extended(p_object_id)
+      v_can_read_extended
     );
 
   IF NOT FOUND THEN
@@ -1218,6 +1479,9 @@ BEGIN
   END IF;
   IF v_fields IS NULL OR 'status' = ANY(v_fields) THEN
     js := js || jsonb_build_object('status', obj.status::text);
+  END IF;
+  IF v_fields IS NULL OR 'commercial_visibility' = ANY(v_fields) THEN
+    js := js || jsonb_build_object('commercial_visibility', obj.commercial_visibility);
   END IF;
   IF v_fields IS NULL OR 'is_editing' = ANY(v_fields) THEN
     js := js || jsonb_build_object('is_editing', obj.is_editing);
@@ -1267,7 +1531,7 @@ BEGIN
   END IF;
 
   -- Private notes (by preferred organization, optional)
-  IF v_inc_private THEN
+  IF v_inc_private AND v_can_read_extended THEN
     -- Primary private note
     js := js || COALESCE((
       SELECT jsonb_build_object('private_note', (to_jsonb(pn) - 'object_id' - 'language_id') || jsonb_build_object('lang', rl.code))
@@ -1340,6 +1604,7 @@ BEGIN
         WHERE d.object_id = obj.id
           AND v_prefer_org IS NOT NULL
           AND d.org_object_id IS NOT DISTINCT FROM v_prefer_org
+          AND (v_can_read_extended OR d.visibility IS NULL OR d.visibility = 'public')
         ORDER BY d.created_at DESC, d.id
         LIMIT 1
       ),
@@ -1348,6 +1613,7 @@ BEGIN
         FROM object_description d
         WHERE d.object_id = obj.id
           AND d.org_object_id IS NULL
+          AND (v_can_read_extended OR d.visibility IS NULL OR d.visibility = 'public')
         ORDER BY d.created_at DESC, d.id
         LIMIT 1
       )
@@ -1461,31 +1727,35 @@ BEGIN
         )
         FROM object_description d
         WHERE d.object_id = obj.id
+          AND (v_can_read_extended OR d.visibility IS NULL OR d.visibility = 'public')
       ), '[]'::jsonb)
     );
   END IF;
 
 
   -- External IDs
-  js := js || jsonb_build_object(
-    'external_ids',
-    COALESCE((
-      SELECT jsonb_agg(to_jsonb(e) - 'object_id'
-             ORDER BY
-               NULLIF((to_jsonb(e)->>'system'),'') NULLS LAST,
-               NULLIF((to_jsonb(e)->>'value'),'')  NULLS LAST,
-               NULLIF((to_jsonb(e)->>'created_at'),'')::timestamptz NULLS LAST,
-               NULLIF((to_jsonb(e)->>'id'),'') NULLS LAST,
-               e.ctid)
-      FROM object_external_id e
-      WHERE e.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+  IF v_fields IS NULL OR 'external_ids' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'external_ids',
+      COALESCE((
+        SELECT jsonb_agg(to_jsonb(e) - 'object_id'
+               ORDER BY
+                 NULLIF((to_jsonb(e)->>'system'),'') NULLS LAST,
+                 NULLIF((to_jsonb(e)->>'value'),'')  NULLS LAST,
+                 NULLIF((to_jsonb(e)->>'created_at'),'')::timestamptz NULLS LAST,
+                 NULLIF((to_jsonb(e)->>'id'),'') NULLS LAST,
+                 e.ctid)
+        FROM object_external_id e
+        WHERE e.object_id = obj.id
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Contacts (enriched) - ensure only one is marked as primary
-  js := js || jsonb_build_object(
-    'contacts',
-    COALESCE((
+  IF v_fields IS NULL OR 'contacts' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'contacts',
+      COALESCE((
       SELECT jsonb_agg(
               jsonb_build_object(
                 'kind_code', rc.code,
@@ -1507,13 +1777,16 @@ BEGIN
       FROM contact_channel c
       JOIN ref_code_contact_kind rc ON rc.id = c.kind_id
       WHERE c.object_id = obj.id
+        AND (v_can_read_extended OR c.is_public = TRUE)
     ), '[]'::jsonb)
-  );
+    );
+  END IF;
 
   -- Languages (enriched)
-  js := js || jsonb_build_object(
-    'languages',
-    COALESCE((
+  IF v_fields IS NULL OR 'languages' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'languages',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object('code', rl.code, 'name', rl.name)
                ORDER BY rl.name, rl.code
@@ -1521,14 +1794,16 @@ BEGIN
       FROM object_language ol
       JOIN ref_language rl ON rl.id = ol.language_id
       WHERE ol.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Media (enriched) - with org-specific fallback to canonical
   -- Optimized: Use DISTINCT ON instead of CTEs for better performance
-  js := js || jsonb_build_object(
-    'media',
-    COALESCE((
+  IF v_fields IS NULL OR 'media' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'media',
+      COALESCE((
       SELECT jsonb_agg(
               jsonb_build_object(
                  'id',        m.id,
@@ -1562,6 +1837,7 @@ BEGIN
         FROM media m
         WHERE m.object_id = obj.id
           AND m.is_published = TRUE
+          AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
           AND (m.org_object_id = v_prefer_org OR m.org_object_id IS NULL)
         ORDER BY 
           m.id,
@@ -1570,13 +1846,15 @@ BEGIN
           m.position NULLS LAST
       ) m
       JOIN ref_code_media_type mt ON mt.id = m.media_type_id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Capacity (enriched)
-  js := js || jsonb_build_object(
-    'capacity',
-    COALESCE((
+  IF v_fields IS NULL OR 'capacity' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'capacity',
+      COALESCE((
       SELECT jsonb_agg(
               jsonb_build_object(
                 'metric_code', rm.code,
@@ -1591,13 +1869,15 @@ BEGIN
       FROM object_capacity oc
       JOIN ref_capacity_metric rm ON rm.id = oc.metric_id
       WHERE oc.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Amenities (enriched)
-  js := js || jsonb_build_object(
-    'amenities',
-    COALESCE((
+  IF v_fields IS NULL OR 'amenities' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'amenities',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
                  'code',     ra.code,
@@ -1615,13 +1895,15 @@ BEGIN
       JOIN ref_amenity ra ON ra.id = oa.amenity_id
       JOIN ref_code_amenity_family rf ON rf.id = ra.family_id
       WHERE oa.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Environment tags (enriched)
-  js := js || jsonb_build_object(
-    'environment_tags',
-    COALESCE((
+  IF v_fields IS NULL OR 'environment_tags' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'environment_tags',
+      COALESCE((
       SELECT jsonb_agg(
              jsonb_build_object(
                'code', et.code,
@@ -1634,13 +1916,15 @@ BEGIN
       FROM object_environment_tag oet
       JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
       WHERE oet.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Payment methods (enriched)
-  js := js || jsonb_build_object(
-    'payment_methods',
-    COALESCE((
+  IF v_fields IS NULL OR 'payment_methods' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'payment_methods',
+      COALESCE((
       SELECT jsonb_agg(
              jsonb_build_object(
                'code', pm.code,
@@ -1653,20 +1937,24 @@ BEGIN
       FROM object_payment_method opm
       JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
       WHERE opm.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Pet policy (single)
-  js := js || COALESCE((
-    SELECT jsonb_build_object('pet_policy', to_jsonb(pp) - 'object_id')
-    FROM object_pet_policy pp
-    WHERE pp.object_id = obj.id
-  ), '{}'::jsonb);
+  IF v_fields IS NULL OR 'pet_policy' = ANY(v_fields) THEN
+    js := js || COALESCE((
+      SELECT jsonb_build_object('pet_policy', to_jsonb(pp) - 'object_id')
+      FROM object_pet_policy pp
+      WHERE pp.object_id = obj.id
+    ), '{}'::jsonb);
+  END IF;
 
   -- Prices (enriched) + nested periods as JSON array
-  js := js || jsonb_build_object(
-    'prices',
-    COALESCE((
+  IF v_fields IS NULL OR 'prices' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'prices',
+      COALESCE((
       SELECT jsonb_agg(
         (
           jsonb_build_object(
@@ -1705,13 +1993,15 @@ BEGIN
       )
       FROM object_price p
       WHERE p.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Classifications (enriched)
-  js := js || jsonb_build_object(
-    'classifications',
-    COALESCE((
+  IF v_fields IS NULL OR 'classifications' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'classifications',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
                  'scheme',      (SELECT code FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
@@ -1732,13 +2022,15 @@ BEGIN
              )
       FROM object_classification oc
       WHERE oc.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Tags (enriched)
-  js := js || jsonb_build_object(
-    'tags',
-    COALESCE((
+  IF v_fields IS NULL OR 'tags' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'tags',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object('slug', t.slug, 'name', t.name, 'color', t.color, 'icon', t.icon, 'icon_url', t.icon_url)
                ORDER BY t.name, t.slug
@@ -1746,13 +2038,15 @@ BEGIN
       FROM tag_link tl
       JOIN ref_tag t ON t.id = tl.tag_id
       WHERE tl.target_table = 'object' AND tl.target_pk = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Discounts
-  js := js || jsonb_build_object(
-    'discounts',
-    COALESCE((
+  IF v_fields IS NULL OR 'discounts' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'discounts',
+      COALESCE((
       SELECT jsonb_agg(
         (to_jsonb(d) - 'object_id')
              ORDER BY
@@ -1762,26 +2056,30 @@ BEGIN
       )
       FROM object_discount d
       WHERE d.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Group policies
-  js := js || jsonb_build_object(
-    'group_policies',
-    COALESCE((
+  IF v_fields IS NULL OR 'group_policies' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'group_policies',
+      COALESCE((
       SELECT jsonb_agg(to_jsonb(gp) - 'object_id'
              ORDER BY
                NULLIF((to_jsonb(gp)->>'created_at'),'')::timestamptz NULLS LAST,
                gp.ctid)
       FROM object_group_policy gp
       WHERE gp.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Origins
-  js := js || jsonb_build_object(
-    'origins',
-    COALESCE((
+  IF v_fields IS NULL OR 'origins' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'origins',
+      COALESCE((
       SELECT jsonb_agg(to_jsonb(og) - 'object_id'
              ORDER BY
                NULLIF((to_jsonb(og)->>'created_at'),'')::timestamptz NULLS LAST,
@@ -1789,13 +2087,15 @@ BEGIN
                og.ctid)
       FROM object_origin og
       WHERE og.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Organization links
-  js := js || jsonb_build_object(
-    'org_links',
-    COALESCE((
+  IF v_fields IS NULL OR 'org_links' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'org_links',
+      COALESCE((
       SELECT jsonb_agg(to_jsonb(ol) - 'object_id'
              ORDER BY
                NULLIF((to_jsonb(ol)->>'role'),'') NULLS LAST,
@@ -1805,8 +2105,9 @@ BEGIN
                ol.ctid)
       FROM object_org_link ol
       WHERE ol.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Current membership snapshot (organization-level or object-level)
   IF v_fields IS NULL OR 'current_membership' = ANY(v_fields) THEN
@@ -1859,9 +2160,10 @@ BEGIN
   END IF;
 
   -- Actors (enriched with contacts)
-  js := js || jsonb_build_object(
-    'actors',
-    COALESCE((
+  IF v_fields IS NULL OR 'actors' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'actors',
+      COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
           'id', a.id,
@@ -1912,13 +2214,16 @@ BEGIN
       JOIN actor_object_role aor ON aor.actor_id = a.id
       LEFT JOIN ref_actor_role rar ON rar.id = aor.role_id
       WHERE aor.object_id = obj.id
+        AND (v_can_read_extended OR aor.visibility = 'public')
     ), '[]'::jsonb)
-  );
+    );
+  END IF;
 
   -- Legal records (enriched)
-  js := js || jsonb_build_object(
-    'legal_records',
-    COALESCE((
+  IF v_fields IS NULL OR 'legal_records' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'legal_records',
+      COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
           'id', ol.id,
@@ -1948,13 +2253,16 @@ BEGIN
       FROM object_legal ol
       JOIN ref_legal_type rlt ON rlt.id = ol.type_id
       WHERE ol.object_id = obj.id
+        AND (v_can_read_extended OR rlt.is_public = TRUE)
     ), '[]'::jsonb)
-  );
+    );
+  END IF;
 
   -- Meeting rooms (+ equipment)
-  js := js || jsonb_build_object(
-    'meeting_rooms',
-    COALESCE((
+  IF v_fields IS NULL OR 'meeting_rooms' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'meeting_rooms',
+      COALESCE((
       SELECT jsonb_agg(
                (to_jsonb(r) - 'object_id')
                ||
@@ -1978,13 +2286,15 @@ BEGIN
              )
       FROM object_meeting_room r
       WHERE r.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- FMA & occurrences
-  js := js || jsonb_build_object(
-    'fma',
-    COALESCE((
+  IF v_fields IS NULL OR 'fma' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'fma',
+      COALESCE((
       SELECT jsonb_agg(
         (to_jsonb(f) - 'object_id')
              ORDER BY
@@ -1994,12 +2304,14 @@ BEGIN
                f.object_id)
       FROM object_fma f
       WHERE f.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
-  js := js || jsonb_build_object(
-    'fma_occurrences',
-    COALESCE((
+  IF v_fields IS NULL OR 'fma_occurrences' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'fma_occurrences',
+      COALESCE((
       SELECT jsonb_agg(to_jsonb(fo) - 'object_id'
              ORDER BY
                NULLIF((to_jsonb(fo)->>'start_at'),'')::timestamptz NULLS LAST,
@@ -2008,13 +2320,15 @@ BEGIN
                fo.ctid)
       FROM object_fma_occurrence fo
       WHERE fo.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Places + nested place_descriptions
-  js := js || jsonb_build_object(
-    'places',
-    COALESCE((
+  IF v_fields IS NULL OR 'places' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'places',
+      COALESCE((
       SELECT jsonb_agg(
                (to_jsonb(p) - 'object_id')
                ||
@@ -2029,6 +2343,7 @@ BEGIN
                               pd.ctid)
                    FROM object_place_description pd
                    WHERE pd.place_id IS NOT DISTINCT FROM p.id
+                     AND (v_can_read_extended OR pd.visibility IS NULL OR pd.visibility = 'public')
                  ), '[]'::jsonb),
                  'location', (
                    SELECT jsonb_build_object(
@@ -2055,14 +2370,16 @@ BEGIN
              )
       FROM object_place p
       WHERE p.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Sustainability: Full labels, actions, and their associations
   -- First, get all full labels the object has
-  js := js || jsonb_build_object(
-    'sustainability_labels',
-    COALESCE((
+  IF v_fields IS NULL OR 'sustainability_labels' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'sustainability_labels',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
                  'scheme_code', sc.code,
@@ -2082,13 +2399,15 @@ BEGIN
       JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
       JOIN ref_classification_value cv ON cv.id = oc.value_id
       WHERE oc.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Then, get all sustainability actions with their associated labels (if any)
-  js := js || jsonb_build_object(
-    'sustainability_actions',
-    COALESCE((
+  IF v_fields IS NULL OR 'sustainability_actions' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'sustainability_actions',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
                  'object_action_id', sa.id,
@@ -2138,13 +2457,15 @@ BEGIN
       JOIN ref_sustainability_action rsa ON rsa.id = sa.action_id
       JOIN ref_sustainability_action_category rac ON rac.id = rsa.category_id
       WHERE sa.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- Legacy field for backward compatibility (actions linked to labels)
-  js := js || jsonb_build_object(
-    'sustainability_action_labels',
-    COALESCE((
+  IF v_fields IS NULL OR 'sustainability_action_labels' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'sustainability_action_labels',
+      COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
                  'object_action_id', sa.id,
@@ -2191,8 +2512,9 @@ BEGIN
       JOIN ref_classification_value  cv
         ON cv.id = oc.value_id
       WHERE sa.object_id = obj.id
-    ), '[]'::jsonb)
-  );
+      ), '[]'::jsonb)
+    );
+  END IF;
 
   -- ITI: details (info, profiles, practices, sections, stages(+media), associated objects)
   IF obj.object_type = 'ITI' THEN
@@ -2355,7 +2677,19 @@ BEGIN
           END,
           'track',
             CASE WHEN v_fmt IN ('kml','gpx')
-                 THEN api.build_iti_track(obj.id, v_fmt, v_inc, v_color)
+                 THEN CASE
+                        WHEN v_inc = FALSE THEN
+                          COALESCE(
+                            CASE
+                              WHEN v_fmt = 'gpx' THEN i.cached_gpx
+                              WHEN v_fmt = 'kml' THEN i.cached_kml
+                              ELSE NULL
+                            END,
+                            api.build_iti_track(obj.id, v_fmt, v_inc, v_color)
+                          )
+                        ELSE
+                          api.build_iti_track(obj.id, v_fmt, v_inc, v_color)
+                      END
                  ELSE NULL
             END,
           'track_format',
@@ -2477,6 +2811,7 @@ BEGIN
                                      JOIN ref_code_media_type mt ON mt.id = m.media_type_id
                                      WHERE mim.menu_item_id = mi.id
                                        AND m.is_published = TRUE
+                                      AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
                                    ), '[]'::jsonb)
                               )
                               ORDER BY
@@ -2502,6 +2837,7 @@ BEGIN
                )
         FROM object_menu m
         WHERE m.object_id = obj.id
+          AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
       ), '[]'::jsonb)
     );
 
@@ -2518,7 +2854,9 @@ BEGIN
           JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
           JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
           JOIN ref_code_cuisine_type ct ON ct.id = mct2.cuisine_type_id
-          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+          WHERE m2.object_id = obj.id
+            AND m2.is_active = TRUE
+            AND (v_can_read_extended OR m2.visibility IS NULL OR m2.visibility = 'public')
         ) ct
       ), '[]'::jsonb),
       'dietary_tags', COALESCE((
@@ -2532,7 +2870,9 @@ BEGIN
           JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
           JOIN object_menu_item_dietary_tag mdt2 ON mdt2.menu_item_id = mi2.id
           JOIN ref_code_dietary_tag dt ON dt.id = mdt2.dietary_tag_id
-          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+          WHERE m2.object_id = obj.id
+            AND m2.is_active = TRUE
+            AND (v_can_read_extended OR m2.visibility IS NULL OR m2.visibility = 'public')
         ) dt
       ), '[]'::jsonb),
       'allergens', COALESCE((
@@ -2546,7 +2886,9 @@ BEGIN
           JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
           JOIN object_menu_item_allergen mia2 ON mia2.menu_item_id = mi2.id
           JOIN ref_code_allergen al ON al.id = mia2.allergen_id
-          WHERE m2.object_id = obj.id AND m2.is_active = TRUE
+          WHERE m2.object_id = obj.id
+            AND m2.is_active = TRUE
+            AND (v_can_read_extended OR m2.visibility IS NULL OR m2.visibility = 'public')
         ) al
       ), '[]'::jsonb)
     );
@@ -2565,7 +2907,9 @@ BEGIN
           FROM object_relation r
           JOIN ref_object_relation_type rt ON rt.id = r.relation_type_id
           JOIN object o_restaurant ON o_restaurant.id = r.target_object_id AND o_restaurant.object_type = 'RES'
-          JOIN object_menu m ON m.object_id = o_restaurant.id AND m.is_active = TRUE
+          JOIN object_menu m ON m.object_id = o_restaurant.id
+                             AND m.is_active = TRUE
+                             AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
           JOIN object_menu_item mi ON mi.menu_id = m.id AND mi.is_available = TRUE
           JOIN object_menu_item_cuisine_type mct ON mct.menu_item_id = mi.id
           JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
@@ -2581,22 +2925,40 @@ BEGIN
            'periods_next_year',
            COALESCE((
              SELECT json_agg(
-                      api.build_opening_period_json(p.id, obj.id, p.date_start, p.date_end)
+                      api.build_opening_period_json(p.id, obj.id, p.date_start, p.date_end, p.period_order)
                       ORDER BY p.date_start NULLS FIRST, p.name, p.created_at
                     )
-             FROM opening_period p
-             WHERE p.object_id = obj.id
-               AND p.date_start >= CURRENT_DATE + INTERVAL '1 year'
+             FROM (
+               SELECT
+                 op.id,
+                 op.date_start,
+                 op.date_end,
+                 op.name,
+                 op.created_at,
+                 ROW_NUMBER() OVER (ORDER BY op.date_start NULLS FIRST, op.name, op.created_at)::INT AS period_order
+               FROM opening_period op
+               WHERE op.object_id = obj.id
+                 AND op.date_start >= CURRENT_DATE + INTERVAL '1 year'
+             ) p
            ), '[]'::json),
            'periods_current',
            COALESCE((
              SELECT json_agg(
-                      api.build_opening_period_json(p.id, obj.id, p.date_start, p.date_end)
+                      api.build_opening_period_json(p.id, obj.id, p.date_start, p.date_end, p.period_order)
                       ORDER BY p.date_start NULLS FIRST, p.name, p.created_at
                     )
-             FROM opening_period p
-             WHERE p.object_id = obj.id
-               AND (p.date_start < CURRENT_DATE + INTERVAL '1 year' OR p.date_start IS NULL)
+             FROM (
+               SELECT
+                 op.id,
+                 op.date_start,
+                 op.date_end,
+                 op.name,
+                 op.created_at,
+                 ROW_NUMBER() OVER (ORDER BY op.date_start NULLS FIRST, op.name, op.created_at)::INT AS period_order
+               FROM opening_period op
+               WHERE op.object_id = obj.id
+                 AND (op.date_start < CURRENT_DATE + INTERVAL '1 year' OR op.date_start IS NULL)
+             ) p
            ), '[]'::json)
          )
   INTO v_opening_times;
@@ -2653,6 +3015,7 @@ BEGIN
         JOIN ref_code_media_type mt ON mt.id = m.media_type_id
         WHERE m.object_id = obj.id
           AND m.is_published = TRUE
+          AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
       ) lines;
       v_render := v_render || jsonb_build_object('media_lines', COALESCE(v_tmp_json, '[]'::jsonb));
     END IF;
@@ -2972,7 +3335,9 @@ BEGIN
         FROM object_menu m
         JOIN object_menu_item mi ON mi.menu_id = m.id
         LEFT JOIN ref_code_price_unit u ON u.id = mi.unit_id
-        WHERE m.object_id = obj.id AND mi.is_available = TRUE
+        WHERE m.object_id = obj.id
+          AND mi.is_available = TRUE
+          AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
       ) lines;
       v_render := v_render || jsonb_build_object('menu_item_lines', COALESCE(v_tmp_json, '[]'::jsonb));
     END IF;
@@ -2986,57 +3351,17 @@ BEGIN
     FROM jsonb_each(js)
     WHERE value IS NOT NULL AND value != 'null'::jsonb
   );
-  
+
+  js := js || jsonb_build_object('opening_times', to_jsonb(v_opening_times));
+
   IF v_omit_empty THEN
     js := api.jsonb_prune_empty_top(js);
-    js := js || jsonb_build_object('opening_times', v_opening_times);
-    RETURN js::json;
   END IF;
-  
-  RETURN json_build_object(
-    'id',                   (js->'id')::json,
-    'type',                 (js->'type')::json,
-    'status',               (js->'status')::json,
-    'is_editing',           (js->'is_editing')::json,
-    'name',                 (js->'name')::json,
-    'region_code',          (js->'region_code')::json,
-    'created_at',           (js->'created_at')::json,
-    'updated_at',           (js->'updated_at')::json,
-    'updated_at_source',    (js->'updated_at_source')::json,
-    'published_at',         (js->'published_at')::json,
-    'address',              (js->'address')::json,
-    'location',             (js->'location')::json,
-    'descriptions',         (js->'descriptions')::json,
-    'external_ids',         (js->'external_ids')::json,
-    'contacts',             (js->'contacts')::json,
-    'languages',            (js->'languages')::json,
-    'media',                (js->'media')::json,
-    'capacity',             (js->'capacity')::json,
-    'amenities',            (js->'amenities')::json,
-    'payment_methods',      (js->'payment_methods')::json,
-    'pet_policy',           (js->'pet_policy')::json,
-    'prices',               (js->'prices')::json,
-    'classifications',      (js->'classifications')::json,
-    'tags',                 (js->'tags')::json,
-    'discounts',            (js->'discounts')::json,
-    'group_policies',       (js->'group_policies')::json,
-    'origins',              (js->'origins')::json,
-    'org_links',            (js->'org_links')::json,
-    'current_membership',   (js->'current_membership')::json,
-    'actors',               (js->'actors')::json,
-    'legal_records',        (js->'legal_records')::json, -- NEWLY ADDED
-    'meeting_rooms',        (js->'meeting_rooms')::json,
-    'fma',                  (js->'fma')::json,
-    'fma_occurrences',      (js->'fma_occurrences')::json,
-    'places',               (js->'places')::json,
-    'sustainability_action_labels', (js->'sustainability_action_labels')::json,
-    'itinerary_details',    (js->'itinerary_details')::json,
-    'incoming_relations',   (js->'incoming_relations')::json,
-    'outgoing_relations',   (js->'outgoing_relations')::json,
-    'menus',                (js->'menus')::json,
-    'opening_times',        v_opening_times,
-    'render',               (js->'render')::json
-  );
+
+  -- Keep get_object_resource as orchestrator over specialized payload blocks.
+  js := api.compose_object_resource_blocks(js);
+
+  RETURN js::json;
 END;
 $$;
 
@@ -3282,6 +3607,7 @@ $$;
 --      - Options propagées via curseur (inchangé)
 -- =====================================================
 DROP FUNCTION IF EXISTS api.list_object_resources_page(TEXT, TEXT[], INTEGER, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_page(TEXT, TEXT[], INTEGER, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN, TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION api.list_object_resources_page(
   p_cursor         TEXT DEFAULT NULL,
@@ -3293,7 +3619,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_page(
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
   p_stage_color    TEXT DEFAULT NULL,
-  p_omit_empty     BOOLEAN DEFAULT NULL
+  p_omit_empty     BOOLEAN DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3320,6 +3647,7 @@ DECLARE
   v_render_tz TEXT := 'UTC';
   v_render_version TEXT := '1.0';
   v_omit_empty BOOLEAN := COALESCE(p_omit_empty, FALSE);
+  v_view TEXT := lower(COALESCE(p_view, 'card'));
   v_current_cursor TEXT;
 BEGIN
   v_render_locale := CASE
@@ -3357,6 +3685,15 @@ BEGIN
     IF cur ? 'render_tz' THEN v_render_tz := cur->>'render_tz'; END IF;
     IF cur ? 'render_version' THEN v_render_version := cur->>'render_version'; END IF;
     IF cur ? 'omit_empty' THEN v_omit_empty := (cur->>'omit_empty')::boolean; END IF;
+    IF cur ? 'view' THEN v_view := lower(cur->>'view'); END IF;
+  END IF;
+
+  IF v_status IS NULL THEN
+    v_status := ARRAY['published']::object_status[];
+  END IF;
+
+  IF v_view NOT IN ('card', 'full') THEN
+    v_view := 'card';
   END IF;
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
@@ -3404,6 +3741,7 @@ BEGIN
       'include_stages', v_inc,
       'stage_color', v_color,
       'omit_empty', v_omit_empty,
+      'view', v_view,
       'lang', to_jsonb(p_lang_prefs),
       'render', v_render_enabled,
       'render_locale', v_render_locale,
@@ -3423,6 +3761,7 @@ BEGIN
     'include_stages', v_inc,
     'stage_color', v_color,
     'omit_empty', v_omit_empty,
+    'view', v_view,
     'lang', to_jsonb(p_lang_prefs),
     'render', v_render_enabled,
     'render_locale', v_render_locale,
@@ -3445,20 +3784,25 @@ BEGIN
       'cursor', v_current_cursor,
       'next_cursor', next_cursor
     ),
-    'data', api.get_object_resources_batch(
-      ids,
-      p_lang_prefs,
-      v_track,
-      jsonb_build_object(
-        'include_stages', v_inc,
-        'stage_color', v_color,
-        'render', v_render_enabled,
-        'render_locale', v_render_locale,
-        'render_tz', v_render_tz,
-        'render_version', v_render_version,
-        'omit_empty', v_omit_empty
-      )
-    )
+    'data', CASE
+      WHEN v_view = 'full' THEN
+        api.get_object_resources_batch(
+          ids,
+          p_lang_prefs,
+          v_track,
+          jsonb_build_object(
+            'include_stages', v_inc,
+            'stage_color', v_color,
+            'render', v_render_enabled,
+            'render_locale', v_render_locale,
+            'render_tz', v_render_tz,
+            'render_version', v_render_version,
+            'omit_empty', v_omit_empty
+          )
+        )
+      ELSE
+        api.get_object_cards_batch(ids, p_lang_prefs)
+    END
   );
 END;
 $$;
@@ -3467,6 +3811,7 @@ $$;
 
 -- Convenience alias: accept TEXT[] for p_types/p_status (page)
 DROP FUNCTION IF EXISTS api.list_object_resources_page_text(TEXT, TEXT[], INTEGER, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_page_text(TEXT, TEXT[], INTEGER, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT, BOOLEAN, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION api.list_object_resources_page_text(
   p_cursor         TEXT DEFAULT NULL,
   p_lang_prefs     TEXT[] DEFAULT ARRAY['fr']::text[],
@@ -3477,7 +3822,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_page_text(
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
   p_stage_color    TEXT DEFAULT NULL,
-  p_omit_empty     BOOLEAN DEFAULT NULL
+  p_omit_empty     BOOLEAN DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3494,7 +3840,8 @@ BEGIN
     p_track_format,
     p_include_stages,
     p_stage_color,
-    p_omit_empty
+    p_omit_empty,
+    p_view
   );
 END;
 $$;
@@ -3505,6 +3852,7 @@ $$;
 --      - Options propagées via curseur (inchangé)
 -- =====================================================
 DROP FUNCTION IF EXISTS api.list_object_resources_since_fast(timestamptz, TEXT, boolean, TEXT[], integer, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_since_fast(timestamptz, TEXT, boolean, TEXT[], integer, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast(
   p_since          TIMESTAMPTZ,
@@ -3517,7 +3865,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast(
   p_search         TEXT DEFAULT NULL,
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
-  p_stage_color    TEXT DEFAULT NULL
+  p_stage_color    TEXT DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3543,6 +3892,7 @@ DECLARE
   v_render_locale TEXT := NULL;
   v_render_tz TEXT := 'UTC';
   v_render_version TEXT := '1.0';
+  v_view TEXT := lower(COALESCE(p_view, 'card'));
   v_current_cursor TEXT;
 BEGIN
   v_render_locale := CASE
@@ -3585,6 +3935,15 @@ BEGIN
     IF cur ? 'since'        THEN p_since := (cur->>'since')::timestamptz; END IF;
     IF cur ? 'last_ts'      THEN last_ts := (cur->>'last_ts')::timestamptz; END IF;
     IF cur ? 'last_id'      THEN last_id := cur->>'last_id'; END IF;
+    IF cur ? 'view'         THEN v_view := lower(cur->>'view'); END IF;
+  END IF;
+
+  IF v_status IS NULL THEN
+    v_status := ARRAY['published']::object_status[];
+  END IF;
+
+  IF v_view NOT IN ('card', 'full') THEN
+    v_view := 'card';
   END IF;
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
@@ -3647,6 +4006,7 @@ BEGIN
       'track_format', v_track,
       'include_stages', v_inc,
       'stage_color', v_color,
+      'view', v_view,
       'lang', to_jsonb(p_lang_prefs),
       'render', v_render_enabled,
       'render_locale', v_render_locale,
@@ -3668,6 +4028,7 @@ BEGIN
     'track_format', v_track,
     'include_stages', v_inc,
     'stage_color', v_color,
+    'view', v_view,
     'lang', to_jsonb(p_lang_prefs),
     'render', v_render_enabled,
     'render_locale', v_render_locale,
@@ -3691,19 +4052,24 @@ BEGIN
       'cursor', v_current_cursor,
       'next_cursor', next_cursor
     ),
-    'data', api.get_object_resources_batch(
-      ids,
-      p_lang_prefs,
-      v_track,
-      jsonb_build_object(
-        'include_stages', v_inc,
-        'stage_color', v_color,
-        'render', v_render_enabled,
-        'render_locale', v_render_locale,
-        'render_tz', v_render_tz,
-        'render_version', v_render_version
-      )
-    )
+    'data', CASE
+      WHEN v_view = 'full' THEN
+        api.get_object_resources_batch(
+          ids,
+          p_lang_prefs,
+          v_track,
+          jsonb_build_object(
+            'include_stages', v_inc,
+            'stage_color', v_color,
+            'render', v_render_enabled,
+            'render_locale', v_render_locale,
+            'render_tz', v_render_tz,
+            'render_version', v_render_version
+          )
+        )
+      ELSE
+        api.get_object_cards_batch(ids, p_lang_prefs)
+    END
   );
 END;
 $$;
@@ -3712,6 +4078,7 @@ $$;
 
 -- Convenience alias: accept TEXT[] for p_types/p_status (since)
 DROP FUNCTION IF EXISTS api.list_object_resources_since_fast_text(timestamptz, TEXT, boolean, TEXT[], integer, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_since_fast_text(timestamptz, TEXT, boolean, TEXT[], integer, TEXT[], TEXT[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast_text(
   p_since          TIMESTAMPTZ,
   p_cursor         TEXT DEFAULT NULL,
@@ -3723,7 +4090,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast_text(
   p_search         TEXT DEFAULT NULL,
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
-  p_stage_color    TEXT DEFAULT NULL
+  p_stage_color    TEXT DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3741,7 +4109,8 @@ BEGIN
     p_search,
     p_track_format,
     p_include_stages,
-    p_stage_color
+    p_stage_color,
+    p_view
   );
 END;
 $$;
@@ -3752,6 +4121,7 @@ $$;
 --      - Options propagées via curseur (inchangé)
 -- =====================================================
 DROP FUNCTION IF EXISTS api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_page(
   p_cursor         TEXT DEFAULT NULL,
   p_lang_prefs     TEXT[] DEFAULT ARRAY['fr']::text[],
@@ -3762,7 +4132,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_page(
   p_search         TEXT DEFAULT NULL,
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
-  p_stage_color    TEXT DEFAULT NULL
+  p_stage_color    TEXT DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3773,6 +4144,11 @@ DECLARE
   v_cur JSONB;
   v_offset INTEGER := 0;
   v_limit  INTEGER := LEAST(GREATEST(COALESCE(p_page_size,50),1), 200);
+  v_filters JSONB := COALESCE(p_filters, '{}'::jsonb);
+  v_types object_type[] := p_types;
+  v_status object_status[] := p_status;
+  v_search TEXT := p_search;
+  v_lang_prefs TEXT[] := p_lang_prefs;
   v_total BIGINT;
   v_cursor JSONB;
   v_next TEXT;
@@ -3784,6 +4160,7 @@ DECLARE
   v_render_locale TEXT := NULL;
   v_render_tz TEXT := 'UTC';
   v_render_version TEXT := '1.0';
+  v_view TEXT := lower(COALESCE(p_view, 'card'));
   v_current_cursor TEXT;
 BEGIN
   v_render_locale := CASE
@@ -3800,6 +4177,17 @@ BEGIN
     v_cur := api.cursor_unpack(p_cursor);
     v_offset := COALESCE((v_cur->>'offset')::INT, 0);
     v_limit  := LEAST(GREATEST(COALESCE((v_cur->>'page_size')::INT, v_limit),1),200);
+    IF v_cur ? 'filters'      THEN v_filters := v_cur->'filters'; END IF;
+    IF v_cur ? 'types'        THEN v_types := ARRAY(SELECT jsonb_array_elements_text(v_cur->'types'))::object_type[]; END IF;
+    IF v_cur ? 'status' THEN
+      IF (v_cur->'status') IS NULL OR jsonb_typeof(v_cur->'status') <> 'array' THEN
+        v_status := NULL;
+      ELSE
+        v_status := ARRAY(SELECT jsonb_array_elements_text(v_cur->'status'))::object_status[];
+      END IF;
+    END IF;
+    IF v_cur ? 'search'       THEN v_search := v_cur->>'search'; END IF;
+    IF v_cur ? 'lang'         THEN v_lang_prefs := ARRAY(SELECT jsonb_array_elements_text(v_cur->'lang')); END IF;
     IF v_cur ? 'track_format'   THEN v_track := lower(v_cur->>'track_format'); END IF;
     IF v_cur ? 'include_stages' THEN v_inc   := (v_cur->>'include_stages')::boolean; END IF;
     IF v_cur ? 'stage_color'    THEN v_color := v_cur->>'stage_color'; END IF;
@@ -3807,6 +4195,15 @@ BEGIN
     IF v_cur ? 'render_locale'  THEN v_render_locale := v_cur->>'render_locale'; END IF;
     IF v_cur ? 'render_tz'      THEN v_render_tz := v_cur->>'render_tz'; END IF;
     IF v_cur ? 'render_version' THEN v_render_version := v_cur->>'render_version'; END IF;
+    IF v_cur ? 'view'           THEN v_view := lower(v_cur->>'view'); END IF;
+  END IF;
+
+  IF v_status IS NULL THEN
+    v_status := ARRAY['published']::object_status[];
+  END IF;
+
+  IF v_view NOT IN ('card', 'full') THEN
+    v_view := 'card';
   END IF;
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
@@ -3822,7 +4219,7 @@ BEGIN
       o.name_normalized, 
       o.updated_at, 
       o.updated_at_source
-    FROM api.get_filtered_object_ids(p_filters, p_types, p_status, p_search) fids
+    FROM api.get_filtered_object_ids(v_filters, v_types, v_status, v_search) fids
     JOIN object o ON o.id = fids.object_id
   ),
   paged AS (
@@ -3833,28 +4230,42 @@ BEGIN
   )
   SELECT
     (SELECT COUNT(*) FROM filt) AS total,
-    api.get_object_resources_batch(
-      (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
-      p_lang_prefs,
-      v_track,
-      jsonb_build_object(
-        'include_stages', v_inc,
-        'stage_color', v_color,
-        'render', v_render_enabled,
-        'render_locale', v_render_locale,
-        'render_tz', v_render_tz,
-        'render_version', v_render_version
-      )
-    ) AS data
+    CASE
+      WHEN v_view = 'full' THEN
+        api.get_object_resources_batch(
+          (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+          v_lang_prefs,
+          v_track,
+          jsonb_build_object(
+            'include_stages', v_inc,
+            'stage_color', v_color,
+            'render', v_render_enabled,
+            'render_locale', v_render_locale,
+            'render_tz', v_render_tz,
+            'render_version', v_render_version
+          )
+        )
+      ELSE
+        api.get_object_cards_batch(
+          (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+          v_lang_prefs
+        )
+    END AS data
   INTO v_total, v_data;
 
   v_cursor := jsonb_build_object(
     'kind','page',
     'offset', v_offset,
     'page_size', v_limit,
+    'filters', v_filters,
+    'types', CASE WHEN v_types IS NULL THEN NULL ELSE to_jsonb(v_types) END,
+    'status', CASE WHEN v_status IS NULL THEN NULL ELSE to_jsonb(v_status) END,
+    'search', v_search,
+    'lang', to_jsonb(v_lang_prefs),
     'track_format', v_track,
     'include_stages', v_inc,
     'stage_color', v_color,
+    'view', v_view,
     'render', v_render_enabled,
     'render_locale', v_render_locale,
     'render_tz', v_render_tz,
@@ -3866,8 +4277,8 @@ BEGIN
   RETURN json_build_object(
     'meta', json_build_object(
       'kind','page',
-      'language', COALESCE(p_lang_prefs[1],'fr'),
-      'language_fallbacks', p_lang_prefs,
+      'language', COALESCE(v_lang_prefs[1],'fr'),
+      'language_fallbacks', v_lang_prefs,
       'page_size', v_limit,
       'offset', v_offset,
       'total', v_total,
@@ -3891,6 +4302,7 @@ $$;
 --      - Toutes les options (filters/types/status/search/lang/track) propagées via curseur
 -- =====================================================
 DROP FUNCTION IF EXISTS api.list_object_resources_filtered_since_fast(timestamptz, TEXT, boolean, TEXT[], integer, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS api.list_object_resources_filtered_since_fast(timestamptz, TEXT, boolean, TEXT[], integer, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) CASCADE;
 
 CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_since_fast(
   p_since          TIMESTAMPTZ,
@@ -3904,7 +4316,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_since_fast(
   p_search         TEXT DEFAULT NULL,
   p_track_format   TEXT DEFAULT 'none',
   p_include_stages BOOLEAN DEFAULT NULL,
-  p_stage_color    TEXT DEFAULT NULL
+  p_stage_color    TEXT DEFAULT NULL,
+  p_view           TEXT DEFAULT 'card'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -3932,6 +4345,7 @@ DECLARE
   v_render_locale TEXT := NULL;
   v_render_tz TEXT := 'UTC';
   v_render_version TEXT := '1.0';
+  v_view TEXT := lower(COALESCE(p_view, 'card'));
 BEGIN
   IF p_since IS NULL THEN
     RAISE EXCEPTION 'p_since is required';
@@ -3957,6 +4371,11 @@ BEGIN
     IF v_cur ? 'last_ts'      THEN v_last_ts   := (v_cur->>'last_ts')::timestamptz; END IF;
     IF v_cur ? 'last_id'      THEN v_last_id   := v_cur->>'last_id'; END IF;
     IF v_cur ? 'lang'         THEN p_lang_prefs:= ARRAY(SELECT jsonb_array_elements_text(v_cur->'lang')); v_lang := api.pick_lang(p_lang_prefs); END IF;
+    IF v_cur ? 'view'         THEN v_view := lower(v_cur->>'view'); END IF;
+  END IF;
+
+  IF v_view NOT IN ('card', 'full') THEN
+    v_view := 'card';
   END IF;
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
@@ -3998,19 +4417,24 @@ BEGIN
   FROM page p;
 
   -- Charger les ressources (sans track par défaut)
-  v_data := api.get_object_resources_batch(
-    v_ids,
-    p_lang_prefs,
-    v_track,
-    jsonb_build_object(
-      'include_stages', v_inc,
-      'stage_color', v_color,
-      'render', v_render_enabled,
-      'render_locale', v_render_locale,
-      'render_tz', v_render_tz,
-      'render_version', v_render_version
-    )
-  );
+  v_data := CASE
+    WHEN v_view = 'full' THEN
+      api.get_object_resources_batch(
+        v_ids,
+        p_lang_prefs,
+        v_track,
+        jsonb_build_object(
+          'include_stages', v_inc,
+          'stage_color', v_color,
+          'render', v_render_enabled,
+          'render_locale', v_render_locale,
+          'render_tz', v_render_tz,
+          'render_version', v_render_version
+        )
+      )::jsonb
+    ELSE
+      api.get_object_cards_batch(v_ids, p_lang_prefs)::jsonb
+  END;
 
   -- Construire le curseur + next_cursor (propagation complète)
   v_cursor := jsonb_build_object(
@@ -4027,6 +4451,7 @@ BEGIN
     'track_format', v_track,
     'include_stages', v_inc,
     'stage_color', v_color,
+    'view', v_view,
     'render', v_render_enabled,
     'render_locale', v_render_locale,
     'render_tz', v_render_tz,
@@ -4715,13 +5140,17 @@ DECLARE
   v_result JSON;
 BEGIN
   -- Get object IDs by type
-  SELECT ARRAY_AGG(id ORDER BY name)
+  SELECT ARRAY_AGG(sub.id ORDER BY sub.name)
   INTO v_object_ids
-  FROM object
-  WHERE object_type::text = p_object_type
-    AND status = 'published'
-  LIMIT p_limit
-  OFFSET p_offset;
+  FROM (
+    SELECT id, name
+    FROM object
+    WHERE object_type::text = p_object_type
+      AND status = 'published'
+    ORDER BY name
+    LIMIT p_limit
+    OFFSET p_offset
+  ) sub;
   
   -- Get deep data for all objects
   SELECT api.get_objects_with_deep_data(v_object_ids, p_languages, p_include_media, p_filters)
@@ -4752,23 +5181,27 @@ DECLARE
   v_result JSON;
 BEGIN
   -- Search for objects
-  SELECT ARRAY_AGG(o.id ORDER BY o.name)
+  SELECT ARRAY_AGG(sub.id ORDER BY sub.name)
   INTO v_object_ids
-  FROM object o
-  WHERE o.status = 'published'
-    AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
-    AND (
-      o.name_search_vector @@ plainto_tsquery('french', p_search_term)
-      OR EXISTS (
-        SELECT 1 FROM object_location ol
-        WHERE ol.object_id = o.id
-          AND ol.is_main_location = TRUE
-          AND (ol.city_search_vector @@ plainto_tsquery('french', p_search_term)
-               OR ol.address1 ILIKE '%' || replace(replace(replace(p_search_term, '\', '\\'), '%', '\%'), '_', '\_') || '%')
+  FROM (
+    SELECT o.id, o.name
+    FROM object o
+    WHERE o.status = 'published'
+      AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
+      AND (
+        o.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search_term))
+        OR EXISTS (
+          SELECT 1 FROM object_location ol
+          WHERE ol.object_id = o.id
+            AND ol.is_main_location = TRUE
+            AND (ol.city_search_vector @@ plainto_tsquery('french', api.norm_search(p_search_term))
+                 OR ol.address1 ILIKE '%' || replace(replace(replace(p_search_term, '\', '\\'), '%', '\%'), '_', '\_') || '%')
+        )
       )
-    )
-  LIMIT p_limit
-  OFFSET p_offset;
+    ORDER BY o.name
+    LIMIT p_limit
+    OFFSET p_offset
+  ) sub;
   
   -- Get deep data for found objects
   SELECT api.get_objects_with_deep_data(v_object_ids, p_languages, p_include_media, p_filters)
@@ -4781,6 +5214,51 @@ $$;
 -- =====================================================
 -- Lightweight map view API - returns minimal object data
 -- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_map_item(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT jsonb_build_object(
+    'id', o.id,
+    'name', o.name,
+    'type', o.object_type::text,
+    'location', jsonb_build_object(
+      'lat', ol.latitude,
+      'lon', ol.longitude,
+      'address', CONCAT_WS(', ',
+        NULLIF(ol.address1, ''),
+        NULLIF(ol.postcode, ''),
+        NULLIF(ol.city, '')
+      )
+    ),
+    'description', LEFT(COALESCE(
+      api.i18n_pick(d.description_chapo_i18n, api.pick_lang(p_lang_prefs), 'fr'),
+      d.description_chapo,
+      LEFT(d.description, 200)
+    ), 200),
+    'rating', o.cached_rating,
+    'price', CASE
+      WHEN o.cached_min_price IS NOT NULL THEN jsonb_build_object('amount', o.cached_min_price, 'currency', 'EUR')
+      ELSE NULL
+    END,
+    'image', o.cached_main_image_url
+  )
+  FROM object o
+  LEFT JOIN object_location ol
+    ON ol.object_id = o.id
+   AND ol.is_main_location IS TRUE
+  LEFT JOIN object_description d
+    ON d.object_id = o.id
+   AND d.org_object_id IS NULL
+  WHERE o.id = p_object_id
+    AND ol.latitude IS NOT NULL
+    AND ol.longitude IS NOT NULL;
+$$;
+
 CREATE OR REPLACE FUNCTION api.list_objects_map_view(
   p_types TEXT[] DEFAULT NULL,
   p_status TEXT[] DEFAULT ARRAY['published'],
@@ -4797,89 +5275,28 @@ AS $$
 DECLARE
   v_data JSON;
   v_total INTEGER;
-  v_lang TEXT;
 BEGIN
-  v_lang := api.pick_lang(p_lang_prefs);
-
   WITH filtered_objects AS (
-    SELECT 
-      o.id,
-      o.name,
-      o.object_type,
-      ol.latitude,
-      ol.longitude,
-      ol.address1,
-      ol.postcode,
-      ol.city,
-      o.cached_min_price,
-      o.cached_main_image_url,
-      o.cached_rating
+    SELECT o.id
     FROM api.get_filtered_object_ids(p_filters, p_types::object_type[], p_status::object_status[], NULL) fids
     JOIN object o ON o.id = fids.object_id
-    LEFT JOIN LATERAL (
-      SELECT latitude, longitude, address1, postcode, city
-      FROM object_location
-      WHERE object_id = o.id AND is_main_location = TRUE
-      LIMIT 1
-    ) ol ON TRUE
+    JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location = TRUE
     WHERE ol.latitude IS NOT NULL
       AND ol.longitude IS NOT NULL
   ),
-  enriched AS (
-    SELECT 
-      fo.id,
-      fo.name,
-      fo.object_type,
-      fo.latitude,
-      fo.longitude,
-      CONCAT_WS(', ', 
-        NULLIF(fo.address1, ''),
-        NULLIF(fo.postcode, ''),
-        NULLIF(fo.city, '')
-      ) as normalized_address,
-      -- Short description (chapo only, 200 chars max)
-      LEFT(COALESCE(
-        api.i18n_pick(d.description_chapo_i18n, v_lang, 'fr'),
-        d.description_chapo,
-        LEFT(d.description, 200)
-      ), 200) as short_description,
-      -- Use cached columns instead of correlated subqueries
-      fo.cached_min_price as min_price,
-      'EUR' as currency,
-      fo.cached_main_image_url as main_image_url,
-      fo.cached_rating as classification_rating
-    FROM filtered_objects fo
-    LEFT JOIN object_description d ON d.object_id = fo.id AND d.org_object_id IS NULL
-  ),
   paginated AS (
-    SELECT * FROM enriched
-    ORDER BY id
+    SELECT f.id
+    FROM filtered_objects f
+    ORDER BY f.id
     LIMIT p_limit OFFSET p_offset
   )
-  SELECT 
+  SELECT
     json_build_object(
       'total', (SELECT COUNT(*) FROM filtered_objects),
-      'objects', COALESCE(json_agg(
-        json_build_object(
-          'id', p.id,
-          'name', p.name,
-          'type', p.object_type::text,
-          'location', json_build_object(
-            'lat', p.latitude,
-            'lon', p.longitude,
-            'address', p.normalized_address
-          ),
-          'description', p.short_description,
-          'rating', p.classification_rating,
-          'price', CASE 
-            WHEN p.min_price IS NOT NULL 
-            THEN json_build_object('amount', p.min_price, 'currency', p.currency)
-            ELSE NULL
-          END,
-          'image', p.main_image_url
-        )
-        ORDER BY p.id
-      ), '[]'::json)
+      'objects', COALESCE(
+        json_agg(api.get_object_map_item(p.id, p_lang_prefs) ORDER BY p.id),
+        '[]'::json
+      )
     ),
     (SELECT COUNT(*) FROM filtered_objects)
   INTO v_data, v_total

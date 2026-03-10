@@ -129,6 +129,43 @@ def _enhance_with_ai_workbook(
     )
 
 
+_ENTITY_KEYWORD_MAP: dict[str, tuple[str, str]] = {
+    "prestataire": ("org", "object_org_link_temp"),
+    "proprietaire": ("org", "object_org_link_temp"),
+    "gerant": ("org", "object_org_link_temp"),
+    "gestionnaire": ("org", "object_org_link_temp"),
+    "fournisseur": ("org", "object_org_link_temp"),
+    "partenaire": ("org", "object_org_link_temp"),
+    "collaborateur": ("org", "object_org_link_temp"),
+    "mandataire": ("org", "object_org_link_temp"),
+    "org": ("org", "object_org_link_temp"),
+    "organisation": ("org", "object_org_link_temp"),
+    "societe": ("org", "object_org_link_temp"),
+    "amenity": ("amenity", "object_amenity_temp"),
+    "amenities": ("amenity", "object_amenity_temp"),
+    "equipement": ("amenity", "object_amenity_temp"),
+    "prestation": ("amenity", "object_amenity_temp"),
+    "installation": ("amenity", "object_amenity_temp"),
+    "commodite": ("amenity", "object_amenity_temp"),
+    "paiement": ("payment", "object_payment_method_temp"),
+    "payment": ("payment", "object_payment_method_temp"),
+    "moyen_paiement": ("payment", "object_payment_method_temp"),
+    "mode_paiement": ("payment", "object_payment_method_temp"),
+    "media": ("media", "media_temp"),
+    "photo": ("media", "media_temp"),
+    "image": ("media", "media_temp"),
+    "galerie": ("media", "media_temp"),
+    "visuel": ("media", "media_temp"),
+    "langue": ("language", "object_language_temp"),
+    "language": ("language", "object_language_temp"),
+    "langues_parlees": ("language", "object_language_temp"),
+    "environnement": ("environment_tag", "object_environment_tag_temp"),
+    "situation": ("environment_tag", "object_environment_tag_temp"),
+}
+
+_MULTI_VALUE_DELIMITER_THRESHOLD = 0.3
+
+
 def _norm(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", text.strip().lower()).strip("_")
 
@@ -171,6 +208,89 @@ def _profile_column(series: pd.Series) -> dict[str, Any]:
         "samples": sample,
         "delimiter_counts": delimiter_counts,
     }
+
+
+def _resolve_entity_from_column(column_name: str) -> tuple[str, str]:
+    """Match column name against semantic keywords to identify entity type and staging table."""
+    norm = _norm(column_name)
+    for keyword, (entity_type, staging_table) in _ENTITY_KEYWORD_MAP.items():
+        if keyword in norm:
+            return entity_type, staging_table
+    return "", ""
+
+
+def _detect_delimiter_relations(
+    sheet_profiles: list[DiscoverySheetProfile],
+    relation_hypotheses: list[DiscoveryRelationHypothesis],
+    scores: list[float],
+) -> None:
+    """Detect multi-value columns using delimiter frequency from column profiles."""
+    for sheet_profile in sheet_profiles:
+        columns_data = sheet_profile.profile.get("columns", {})
+        total_rows = sheet_profile.profile.get("rows", 0)
+        if total_rows == 0:
+            continue
+        for col_name, col_profile in columns_data.items():
+            delimiter_counts: dict[str, int] = col_profile.get("delimiter_counts", {})
+            best_sep, best_count = None, 0
+            for sep, count in delimiter_counts.items():
+                if count > best_count:
+                    best_sep = sep
+                    best_count = count
+            if not best_sep or best_count / total_rows < _MULTI_VALUE_DELIMITER_THRESHOLD:
+                continue
+            entity_type, staging_table = _resolve_entity_from_column(col_name)
+            conf = 0.7 if entity_type else 0.5
+            relation_hypotheses.append(
+                DiscoveryRelationHypothesis(
+                    from_sheet=sheet_profile.sheet_name,
+                    from_column=col_name,
+                    separator=best_sep,
+                    relation_type="multi_value_list",
+                    target_entity_type=entity_type,
+                    target_staging_table=staging_table,
+                    is_join_table=False,
+                    confidence=conf,
+                    rationale=(
+                        f"Delimiter '{best_sep}' in {best_count}/{total_rows} rows"
+                        + (f"; column name maps to entity '{entity_type}'." if entity_type else "; entity type unknown, needs review.")
+                    ),
+                    status="proposed",
+                )
+            )
+            scores.append(conf)
+
+
+def _detect_join_tables(
+    sheet_profiles: list[DiscoverySheetProfile],
+    relation_hypotheses: list[DiscoveryRelationHypothesis],
+    scores: list[float],
+) -> None:
+    """Detect sheets that look like pure junction tables (only 2-3 ID-like columns)."""
+    for sheet_profile in sheet_profiles:
+        columns_data = sheet_profile.profile.get("columns", {})
+        col_names = list(columns_data.keys())
+        if not (2 <= len(col_names) <= 3):
+            continue
+        id_cols = [c for c in col_names if _norm(c).endswith(("_id", "_ids", "_code", "_codes"))]
+        if len(id_cols) < 2:
+            continue
+        entity_type, staging_table = _resolve_entity_from_column(sheet_profile.sheet_name)
+        relation_hypotheses.append(
+            DiscoveryRelationHypothesis(
+                from_sheet=sheet_profile.sheet_name,
+                from_column=id_cols[0],
+                to_column=id_cols[1],
+                relation_type="join_table",
+                is_join_table=True,
+                target_entity_type=entity_type,
+                target_staging_table=staging_table,
+                confidence=0.8,
+                rationale=f"Sheet has {len(col_names)} columns with {len(id_cols)} ID-like fields; likely a junction table.",
+                status="proposed",
+            )
+        )
+        scores.append(0.8)
 
 
 def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFrame]) -> DiscoveryContract:
@@ -246,6 +366,9 @@ def build_discovery_contract(*, source_format: str, sheets: dict[str, pd.DataFra
                         )
                     )
                     scores.append(0.75)
+
+    _detect_delimiter_relations(sheet_profiles, relation_hypotheses, scores)
+    _detect_join_tables(sheet_profiles, relation_hypotheses, scores)
 
     overall = sum(scores) / len(scores) if scores else 0.0
     if overall < 0.8:
@@ -337,6 +460,10 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
                     "to_sheet": r.to_sheet,
                     "to_column": r.to_column,
                     "relation_type": r.relation_type,
+                    "separator": r.separator,
+                    "is_join_table": r.is_join_table,
+                    "target_staging_table": r.target_staging_table,
+                    "target_entity_type": r.target_entity_type,
                     "confidence": r.confidence,
                     "rationale": r.rationale,
                     "status": r.status if status != "review_required" else "proposed",

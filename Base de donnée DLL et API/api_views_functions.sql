@@ -18,7 +18,7 @@ BEGIN
       STABLE
       SECURITY DEFINER
       SET search_path = public, api, auth
-      AS $$ SELECT FALSE; $$;
+      AS $body$ SELECT FALSE; $body$;
     $f$;
   END IF;
 END $$;

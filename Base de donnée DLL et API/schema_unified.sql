@@ -3005,6 +3005,7 @@ CREATE TABLE IF NOT EXISTS object_version_default PARTITION OF object_version DE
 CREATE INDEX IF NOT EXISTS idx_object_version_object_id_created
 ON object_version(object_id, created_at DESC);
 
+DROP TRIGGER IF EXISTS trg_audit_object_version ON object_version;
 CREATE TRIGGER trg_audit_object_version AFTER UPDATE OR DELETE ON object_version FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
 
 CREATE OR REPLACE FUNCTION save_object_version()
@@ -3779,25 +3780,25 @@ FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
 UPDATE object o
 SET
   cached_amenity_codes = COALESCE((
-    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    SELECT array_agg(DISTINCT ra.code::text ORDER BY ra.code::text)
     FROM object_amenity oa
     JOIN ref_amenity ra ON ra.id = oa.amenity_id
     WHERE oa.object_id = o.id
   ), ARRAY[]::TEXT[]),
   cached_payment_codes = COALESCE((
-    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    SELECT array_agg(DISTINCT pm.code::text ORDER BY pm.code::text)
     FROM object_payment_method opm
     JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
     WHERE opm.object_id = o.id
   ), ARRAY[]::TEXT[]),
   cached_environment_tags = COALESCE((
-    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    SELECT array_agg(DISTINCT et.code::text ORDER BY et.code::text)
     FROM object_environment_tag oet
     JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
     WHERE oet.object_id = o.id
   ), ARRAY[]::TEXT[]),
   cached_language_codes = COALESCE((
-    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    SELECT array_agg(DISTINCT rl.code::text ORDER BY rl.code::text)
     FROM object_language ol
     JOIN ref_language rl ON rl.id = ol.language_id
     WHERE ol.object_id = o.id
@@ -3812,25 +3813,25 @@ SET
   ), ARRAY[]::TEXT[])
 WHERE
   o.cached_amenity_codes IS DISTINCT FROM COALESCE((
-    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    SELECT array_agg(DISTINCT ra.code::text ORDER BY ra.code::text)
     FROM object_amenity oa
     JOIN ref_amenity ra ON ra.id = oa.amenity_id
     WHERE oa.object_id = o.id
   ), ARRAY[]::TEXT[])
   OR o.cached_payment_codes IS DISTINCT FROM COALESCE((
-    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    SELECT array_agg(DISTINCT pm.code::text ORDER BY pm.code::text)
     FROM object_payment_method opm
     JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
     WHERE opm.object_id = o.id
   ), ARRAY[]::TEXT[])
   OR o.cached_environment_tags IS DISTINCT FROM COALESCE((
-    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    SELECT array_agg(DISTINCT et.code::text ORDER BY et.code::text)
     FROM object_environment_tag oet
     JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
     WHERE oet.object_id = o.id
   ), ARRAY[]::TEXT[])
   OR o.cached_language_codes IS DISTINCT FROM COALESCE((
-    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    SELECT array_agg(DISTINCT rl.code::text ORDER BY rl.code::text)
     FROM object_language ol
     JOIN ref_language rl ON rl.id = ol.language_id
     WHERE ol.object_id = o.id

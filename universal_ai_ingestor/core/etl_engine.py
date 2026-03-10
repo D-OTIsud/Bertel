@@ -502,9 +502,10 @@ def _resolve_relations_for_row(
                 )
 
 
-async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> tuple[pd.DataFrame, int]:
     if not columns:
-        return df
+        return df, 0
+    corrected_count = 0
     for col in columns:
         if col not in df.columns:
             continue
@@ -514,8 +515,9 @@ async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> pd.DataFra
             batch = values[i : i + settings.cleaner_batch_size]
             response = await run_cleaner_batch(batch)
             cleaned.extend([it.normalized for it in response.items])
+            corrected_count += sum(1 for it in response.items if bool(it.normalized))
         df[f"{col}_cleaned"] = cleaned[: len(df)]
-    return df
+    return df, corrected_count
 
 
 async def run_batch_pipeline(
@@ -527,6 +529,7 @@ async def run_batch_pipeline(
     source_name: str | None = None,
     default_org_object_id: str | None = None,
     default_org_name: str | None = None,
+    use_cleaner: bool = False,
 ) -> dict[str, Any]:
     update_import_batch_row(sb, batch_id, status="profiling")
     parsed = parse_payload(content_type, payload, source_name=source_name)
@@ -615,11 +618,13 @@ async def run_batch_pipeline(
             if col not in transformed.columns:
                 transformed[col] = table_df[col]
 
-    try:
-        transformed = await clean_unstructured(transformed, unstructured_fields)
-    except Exception:  # noqa: BLE001
-        # Keep pipeline progressing with deterministic output if cleaner fails.
-        pass
+    ai_corrections = 0
+    if use_cleaner:
+        try:
+            transformed, ai_corrections = await clean_unstructured(transformed, unstructured_fields)
+        except Exception:  # noqa: BLE001
+            # Keep pipeline progressing with deterministic output if cleaner fails.
+            pass
     transformed = transformed.fillna("")
     required_object_fields = flatten_required_columns().get("object_temp", set())
     missing_required = [field for field in required_object_fields if field not in transformed.columns]
@@ -911,7 +916,12 @@ async def run_batch_pipeline(
     )
 
     update_import_batch_row(sb, batch_id, status="staging_loaded")
-    return {"rows_loaded": len(object_rows)}
+    return {
+        "rows_loaded": len(object_rows),
+        "locations": len(location_rows),
+        "contacts": len(contact_rows),
+        "ai_corrections": ai_corrections,
+    }
 
 
 def run_batch_pipeline_sync(**kwargs):

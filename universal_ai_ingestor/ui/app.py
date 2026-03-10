@@ -1,9 +1,4 @@
-"""Bertel Data Ingestor v2 -- Streamlit UI.
-
-Single-page, two-step workflow:
-  Step 1: Pick org + upload file  ->  auto-discovery
-  Step 2: Review / correct mapping  ->  one-click pipeline execution
-"""
+"""Bertel Data Ingestor v2 -- 5-step wizard UI."""
 from __future__ import annotations
 
 import os
@@ -17,595 +12,433 @@ API_BASE = os.getenv("API_BASE_URL", "http://api:8000").rstrip("/")
 TOKEN = os.getenv("API_BEARER_TOKEN", "")
 
 TARGET_SCHEMA: dict[str, dict[str, Any]] = {
-    # --- Part 1: Core & Identity ---
-    "object_temp": {
-        "label": "1. Object (HOT, RES, ORG, ITI...)",
-        "columns": ["name", "object_type", "external_id", "source_org_object_id", "org_name", "email", "phone", "latitude", "longitude"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "object_external_id_temp": {
-        "label": "1. External ID (upsert key)",
-        "columns": ["external_id", "organization_object_id"],
-        "transforms": ["identity"],
-    },
-    "object_origin_temp": {
-        "label": "1. Origin (source system)",
-        "columns": ["source_system", "source_object_id"],
-        "transforms": ["identity", "lowercase"],
-    },
-    # --- Part 2: Governance ---
-    "org_temp": {
-        "label": "2. Organization (ORG)",
-        "columns": ["name", "source_org_object_id", "external_id"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "object_org_link_temp": {
-        "label": "2. Object-Org link",
-        "columns": ["role_code", "is_primary", "note"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "actor_temp": {
-        "label": "2. Actor (human contact)",
-        "columns": ["display_name", "first_name", "last_name", "gender"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "actor_channel_temp": {
-        "label": "2. Actor contact (personal)",
-        "columns": ["kind_code", "value", "is_primary"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "actor_object_role_temp": {
-        "label": "2. Actor role on object",
-        "columns": ["role_code", "is_primary", "note"],
-        "transforms": ["identity", "lowercase"],
-    },
-    # --- Part 3: Core Satellites ---
-    "object_location_temp": {
-        "label": "3. Location (address + GPS)",
-        "columns": ["latitude", "longitude", "address1", "city", "postcode"],
-        "transforms": ["identity", "split_gps"],
-    },
-    "object_description_temp": {
-        "label": "3. Description (texts)",
-        "columns": ["description", "description_chapo", "description_mobile", "sanitary_measures"],
-        "transforms": ["identity"],
-    },
-    "contact_channel_temp": {
-        "label": "3. Establishment contact",
-        "columns": ["value", "kind_code"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "media_temp": {
-        "label": "3. Media (photos, URLs)",
-        "columns": ["source_url"],
-        "transforms": ["identity", "split_list"],
-    },
-    # --- Part 4: Characteristics ---
-    "object_classification_temp": {
-        "label": "4. Classification (stars, labels)",
-        "columns": ["scheme_code", "value_code"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "object_amenity_temp": {
-        "label": "4. Amenities / equipment",
-        "columns": ["amenity_code"],
-        "transforms": ["identity", "split_list"],
-    },
-    "object_payment_method_temp": {
-        "label": "4. Payment methods",
-        "columns": ["payment_code"],
-        "transforms": ["identity", "split_list"],
-    },
-    "object_language_temp": {
-        "label": "4. Languages spoken",
-        "columns": ["language_code", "level_code"],
-        "transforms": ["identity", "split_list", "lowercase"],
-    },
-    "object_environment_tag_temp": {
-        "label": "4. Environment (mountain, sea...)",
-        "columns": ["environment_tag_code"],
-        "transforms": ["identity", "split_list", "lowercase"],
-    },
-    "object_legal_temp": {
-        "label": "4. Legal (SIRET, license...)",
-        "columns": ["type_code", "value", "valid_from", "valid_to", "note"],
-        "transforms": ["identity"],
-    },
-    # --- Part 5: Time & Money ---
-    "object_price_temp": {
-        "label": "5. Pricing",
-        "columns": ["kind_code", "unit_code", "amount", "amount_max", "currency", "conditions", "valid_from", "valid_to"],
-        "transforms": ["identity"],
-    },
-    "object_capacity_temp": {
-        "label": "5. Capacity (rooms, beds...)",
-        "columns": ["metric_code", "value_integer", "unit"],
-        "transforms": ["identity"],
-    },
-    "opening_period_temp": {
-        "label": "5. Opening hours",
-        "columns": ["period_name", "date_start", "date_end", "schedule_text", "weekdays", "start_time", "end_time"],
-        "transforms": ["identity"],
-    },
-    # --- Part 6: Typologies ---
-    "object_fma_temp": {
-        "label": "6. Event (FMA) dates",
-        "columns": ["event_start_date", "event_end_date", "event_start_time", "event_end_time", "is_recurring", "recurrence_pattern"],
-        "transforms": ["identity"],
-    },
-    "object_iti_temp": {
-        "label": "6. Itinerary (ITI) details",
-        "columns": ["distance_km", "duration_hours", "difficulty_level", "elevation_gain", "is_loop", "gpx_data"],
-        "transforms": ["identity"],
-    },
-    "object_room_type_temp": {
-        "label": "6. Room type (HOT/HPA)",
-        "columns": ["code", "name", "capacity_adults", "capacity_children", "capacity_total", "size_sqm", "bed_config", "total_rooms", "base_price"],
-        "transforms": ["identity"],
-    },
-    # --- Part 7: CRM ---
-    "crm_interaction_temp": {
-        "label": "7. CRM interaction (calls, emails)",
-        "columns": ["interaction_type", "direction", "subject", "body", "source", "occurred_at", "duration_min", "demand_topic_code", "status"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "crm_task_temp": {
-        "label": "7. CRM task (follow-up)",
-        "columns": ["title", "description", "status", "priority", "due_at"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "object_membership_temp": {
-        "label": "7. Membership (adhesion)",
-        "columns": ["campaign_code", "tier_code", "status", "starts_at", "ends_at", "payment_date"],
-        "transforms": ["identity", "lowercase"],
-    },
-    "object_review_temp": {
-        "label": "7. Review (avis client)",
-        "columns": ["source_code", "rating", "rating_max", "title", "content", "author_name", "review_date", "traveler_type"],
-        "transforms": ["identity", "lowercase"],
-    },
+    "object_temp": {"columns": ["name", "object_type", "external_id", "source_org_object_id", "org_name", "email", "phone", "latitude", "longitude"], "transforms": ["identity", "lowercase"]},
+    "object_external_id_temp": {"columns": ["external_id", "organization_object_id"], "transforms": ["identity"]},
+    "object_origin_temp": {"columns": ["source_system", "source_object_id"], "transforms": ["identity", "lowercase"]},
+    "org_temp": {"columns": ["name", "source_org_object_id", "external_id"], "transforms": ["identity", "lowercase"]},
+    "object_org_link_temp": {"columns": ["role_code", "is_primary", "note"], "transforms": ["identity", "lowercase"]},
+    "actor_temp": {"columns": ["display_name", "first_name", "last_name", "gender"], "transforms": ["identity", "lowercase"]},
+    "actor_channel_temp": {"columns": ["kind_code", "value", "is_primary"], "transforms": ["identity", "lowercase"]},
+    "actor_object_role_temp": {"columns": ["role_code", "is_primary", "note"], "transforms": ["identity", "lowercase"]},
+    "object_location_temp": {"columns": ["latitude", "longitude", "address1", "city", "postcode"], "transforms": ["identity", "split_gps"]},
+    "object_description_temp": {"columns": ["description", "description_chapo", "description_mobile", "sanitary_measures"], "transforms": ["identity"]},
+    "contact_channel_temp": {"columns": ["value", "kind_code"], "transforms": ["identity", "lowercase"]},
+    "media_temp": {"columns": ["source_url"], "transforms": ["identity", "split_list"]},
+    "object_classification_temp": {"columns": ["scheme_code", "value_code"], "transforms": ["identity", "lowercase"]},
+    "object_amenity_temp": {"columns": ["amenity_code"], "transforms": ["identity", "split_list"]},
+    "object_payment_method_temp": {"columns": ["payment_code"], "transforms": ["identity", "split_list"]},
+    "object_language_temp": {"columns": ["language_code", "level_code"], "transforms": ["identity", "split_list", "lowercase"]},
+    "object_environment_tag_temp": {"columns": ["environment_tag_code"], "transforms": ["identity", "split_list", "lowercase"]},
+    "object_legal_temp": {"columns": ["type_code", "value", "valid_from", "valid_to", "note"], "transforms": ["identity"]},
+    "object_price_temp": {"columns": ["kind_code", "unit_code", "amount", "amount_max", "currency", "conditions", "valid_from", "valid_to"], "transforms": ["identity"]},
+    "object_capacity_temp": {"columns": ["metric_code", "value_integer", "unit"], "transforms": ["identity"]},
+    "opening_period_temp": {"columns": ["period_name", "date_start", "date_end", "schedule_text", "weekdays", "start_time", "end_time"], "transforms": ["identity"]},
+    "object_fma_temp": {"columns": ["event_start_date", "event_end_date", "event_start_time", "event_end_time", "is_recurring", "recurrence_pattern"], "transforms": ["identity"]},
+    "object_iti_temp": {"columns": ["distance_km", "duration_hours", "difficulty_level", "elevation_gain", "is_loop", "gpx_data"], "transforms": ["identity"]},
+    "object_room_type_temp": {"columns": ["code", "name", "capacity_adults", "capacity_children", "capacity_total", "size_sqm", "bed_config", "total_rooms", "base_price"], "transforms": ["identity"]},
+    "crm_interaction_temp": {"columns": ["interaction_type", "direction", "subject", "body", "source", "occurred_at", "duration_min", "demand_topic_code", "status"], "transforms": ["identity", "lowercase"]},
+    "crm_task_temp": {"columns": ["title", "description", "status", "priority", "due_at"], "transforms": ["identity", "lowercase"]},
+    "object_membership_temp": {"columns": ["campaign_code", "tier_code", "status", "starts_at", "ends_at", "payment_date"], "transforms": ["identity", "lowercase"]},
+    "object_review_temp": {"columns": ["source_code", "rating", "rating_max", "title", "content", "author_name", "review_date", "traveler_type"], "transforms": ["identity", "lowercase"]},
 }
-
 ALL_TABLES = list(TARGET_SCHEMA.keys())
-TABLE_LABELS = {k: v["label"] for k, v in TARGET_SCHEMA.items()}
 
 SKIP_PATTERNS: set[str] = {
-    "source_sheet", "source_row_index", "formulaire", "source_row",
-    "row_number", "row_index", "index", "unnamed",
-    "moderer", "moderateur", "moderator",
-    "date_creation", "date_modification", "created_at", "updated_at",
-    "user", "utilisateur", "auteur", "author",
-    "date_saisie", "date_maj", "date_import",
+    "source_sheet",
+    "source_row_index",
+    "formulaire",
+    "row_number",
+    "row_index",
+    "index",
+    "unnamed",
+    "moderer",
+    "moderateur",
+    "moderator",
+    "date_creation",
+    "date_modification",
+    "created_at",
+    "updated_at",
+    "user",
+    "utilisateur",
+    "auteur",
+    "author",
+    "date_saisie",
+    "date_maj",
+    "date_import",
 }
 
-TRANSFORM_HELP = {
-    "identity": "Keep value as-is",
-    "lowercase": "Convert to lowercase",
-    "split_gps": "Split 'lat,lon' string into two fields",
-    "split_list": "Split delimited list (comma, pipe, semicolon) into rows",
+STATUS_LABELS = {
+    "received": "Recu",
+    "discovering": "Analyse IA",
+    "mapping_review_required": "Mapping & correction",
+    "mapping_approved": "Mapping valide",
+    "profiling": "Validation & import",
+    "transforming": "Validation & import",
+    "staging_loaded": "Validation & import",
+    "deduplicated": "Validation & import",
+    "committed": "Importation reussie",
+    "failed": "Echec",
+    "failed_permanent": "Echec",
 }
 
-
-# ---------------------------------------------------------------------------
-# API helpers
-# ---------------------------------------------------------------------------
 
 def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {TOKEN}"}
 
 
-def _api_get(path: str, params: dict | None = None) -> dict | list | None:
+def _api_get(path: str, params: dict[str, Any] | None = None, *, quiet: bool = False) -> dict[str, Any] | list[Any] | None:
     try:
-        r = requests.get(f"{API_BASE}{path}", headers=_headers(), params=params, timeout=30)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        st.error(f"API error: {exc}")
+        resp = requests.get(f"{API_BASE}{path}", headers=_headers(), params=params, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:  # noqa: BLE001
+        if not quiet:
+            st.error(f"API error: {exc}")
         return None
 
 
-def _api_post(path: str, **kwargs) -> dict | None:
+def _api_post(path: str, *, params: dict[str, Any] | None = None, files: Any = None, quiet: bool = False) -> dict[str, Any] | None:
     try:
-        r = requests.post(f"{API_BASE}{path}", headers=_headers(), timeout=60, **kwargs)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        st.error(f"API error: {exc}")
+        resp = requests.post(f"{API_BASE}{path}", headers=_headers(), params=params, files=files, timeout=120)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:  # noqa: BLE001
+        if not quiet:
+            st.error(f"API error: {exc}")
         return None
 
 
-def _api_patch(path: str, json_body: Any) -> dict | None:
+def _api_patch(path: str, json_body: Any) -> dict[str, Any] | None:
     try:
-        r = requests.patch(f"{API_BASE}{path}", headers=_headers(), json=json_body, timeout=30)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
+        resp = requests.patch(f"{API_BASE}{path}", headers=_headers(), json=json_body, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:  # noqa: BLE001
         st.error(f"API error: {exc}")
         return None
 
 
 def _check_health() -> bool:
     try:
-        r = requests.get(f"{API_BASE}/health", timeout=5)
-        return r.status_code == 200
+        resp = requests.get(f"{API_BASE}/health", timeout=5)
+        return resp.status_code == 200
     except Exception:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Page config
-# ---------------------------------------------------------------------------
+def _reset_wizard() -> None:
+    st.session_state.step = 1
+    st.session_state.batch_id = None
+    st.session_state.batch_data = None
+    st.session_state.ai_correction = True
+    st.session_state.demo_filename = "restaurants_2026.xlsx"
+
+
+def _fetch_batch() -> dict[str, Any] | None:
+    if not st.session_state.batch_id:
+        return None
+    data = _api_get(f"/api/v1/ingest/{st.session_state.batch_id}", quiet=True)
+    if isinstance(data, dict):
+        st.session_state.batch_data = data
+        return data
+    return None
+
+
+def _render_stepper(step: int) -> None:
+    labels = ["Import source", "Analyse IA", "Mapping & Correction", "Validation & Import"]
+    parts: list[str] = ["<div class='stepper'>"]
+    for idx, label in enumerate(labels, start=1):
+        active = "step-active" if idx <= min(step, 4) else "step-inactive"
+        parts.append(
+            "<div class='step-item'>"
+            f"<div class='step-circle {active}'>{idx}</div>"
+            f"<div class='step-label'>{label}</div>"
+            "</div>"
+        )
+    parts.append("</div>")
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
+
+def _field_icon(target_table: str) -> str:
+    if target_table == "object_location_temp":
+        return "Location"
+    if target_table in {"contact_channel_temp", "actor_channel_temp"}:
+        return "Phone"
+    return "Field"
+
 
 st.set_page_config(page_title="Bertel Data Ingestor", page_icon="database", layout="wide")
-
-st.markdown("""
+st.markdown(
+    """
 <style>
-    .block-container { max-width: 1400px; padding-top: 1.5rem; }
-    .confidence-high { color: #4caf50; font-weight: 700; }
-    .confidence-mid  { color: #ff9800; font-weight: 700; }
-    .confidence-low  { color: #f44336; font-weight: 700; }
-    .mapping-header  { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-                       letter-spacing: 0.05em; opacity: 0.6; padding-bottom: 4px; }
-    .field-source    { font-weight: 600; font-size: 0.95rem; }
-    .field-sheet     { font-size: 0.75rem; opacity: 0.5; }
-    hr { margin: 0.5rem 0; }
-    div[data-baseweb="select"] { min-width: 0 !important; }
+    .block-container { max-width: 1200px; padding-top: 1.0rem; }
+    .stepper { display: flex; justify-content: space-between; margin: 0.5rem 0 1.2rem 0; }
+    .step-item { text-align: center; width: 24%; }
+    .step-circle { width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 0.4rem auto; line-height: 34px; font-weight: 700; border: 2px solid #d9d9d9; }
+    .step-active { background: #5b5bd6; color: #fff; border-color: #5b5bd6; }
+    .step-inactive { color: #777; }
+    .step-label { font-size: 0.82rem; color: #6a6a6a; font-weight: 600; }
+    .import-card { border: 1px solid #e6e6ee; border-radius: 12px; padding: 1.2rem; background: #fff; }
+    .drop-hint { border: 1px dashed #c9c9d9; border-radius: 12px; padding: 1.0rem; text-align: center; color: #666; margin: 0.6rem 0; }
+    .mapping-card { border: 1px solid #ececf4; border-radius: 10px; padding: 0.7rem; margin-bottom: 0.5rem; }
+    .conf-high { color: #1e9d57; font-weight: 700; }
+    .conf-mid { color: #c68712; font-weight: 700; }
+    .conf-low { color: #ce4040; font-weight: 700; }
+    .pill { border-radius: 10px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+    .pill-ok { background: #e8f8ee; color: #1e9d57; }
+    .pill-warn { background: #fff7e4; color: #c68712; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# ---------------------------------------------------------------------------
-# Header with inline health
-# ---------------------------------------------------------------------------
-
-col_title, col_health = st.columns([5, 1])
-with col_title:
-    st.markdown("# Bertel Data Ingestor")
-with col_health:
-    healthy = _check_health()
-    st.markdown(
-        f"<div style='text-align:right;padding-top:12px;'>"
-        f"{'🟢 API online' if healthy else '🔴 API offline'}</div>",
-        unsafe_allow_html=True,
-    )
-
-if not healthy:
-    st.error("Cannot reach the API backend. Check that the API service is running.")
-    st.stop()
-
-# ---------------------------------------------------------------------------
-# Session state
-# ---------------------------------------------------------------------------
-
+if "step" not in st.session_state:
+    st.session_state.step = 1
 if "batch_id" not in st.session_state:
     st.session_state.batch_id = None
 if "batch_data" not in st.session_state:
     st.session_state.batch_data = None
+if "ai_correction" not in st.session_state:
+    st.session_state.ai_correction = True
+if "demo_filename" not in st.session_state:
+    st.session_state.demo_filename = "restaurants_2026.xlsx"
 
-# ---------------------------------------------------------------------------
-# Step 1: Organization + File Upload
-# ---------------------------------------------------------------------------
+st.title("Bertel Data Ingestor")
+healthy = _check_health()
+st.caption("API online" if healthy else "API offline")
+if not healthy:
+    st.error("Cannot reach the API backend.")
+    st.stop()
+if not TOKEN:
+    st.warning("API_BEARER_TOKEN is empty. Authentication may fail.")
 
-step1_disabled = st.session_state.batch_id is not None
+_render_stepper(st.session_state.step)
 
-st.markdown("---")
-st.markdown("### Step 1 -- Select organization and upload data")
-
-orgs_data = _api_get("/api/v1/orgs")
-org_list: list[dict] = (orgs_data or {}).get("orgs", []) if isinstance(orgs_data, dict) else []
-org_options = {f"{o['name']}  ({o['object_id'][:8]}...)": o["object_id"] for o in org_list}
-
-col_org, col_file = st.columns([1, 2])
-
-with col_org:
-    if org_options:
-        org_keys = list(org_options.keys())
-        org_choice = st.selectbox("Organization", options=org_keys, disabled=step1_disabled)
-        selected_org_id = org_options.get(org_choice, "")
+# STEP 1
+if st.session_state.step == 1:
+    st.markdown("### Importez vos donnees brutes")
+    st.caption("Glissez-deposez un fichier. L'IA lira la structure et adaptera le mapping.")
+    st.markdown("<div class='import-card'>", unsafe_allow_html=True)
+    orgs_data = _api_get("/api/v1/orgs", quiet=True)
+    orgs = (orgs_data or {}).get("orgs", []) if isinstance(orgs_data, dict) else []
+    options = {f"{o['name']} ({o['object_id'][:8]}...)": o["object_id"] for o in orgs}
+    if options:
+        selected_org_label = st.selectbox("Organisation", list(options.keys()))
+        selected_org_id = options[selected_org_label]
         org_name_input = ""
     else:
-        st.caption("No organizations found -- enter ID manually")
-        org_id_input = st.text_input("Organization ID", disabled=step1_disabled, placeholder="paste-org-uuid-here")
-        org_name_input = st.text_input("Organization name", disabled=step1_disabled)
-        selected_org_id = org_id_input.strip()
-
-with col_file:
-    uploaded_file = st.file_uploader(
-        "Data file (CSV, Excel, JSON, XML)",
-        type=["csv", "xlsx", "xlsm", "json", "xml"],
-        disabled=step1_disabled,
+        selected_org_id = st.text_input("Organisation ID", placeholder="UUID")
+        org_name_input = st.text_input("Nom de l'organisation")
+    st.markdown(
+        "<div class='drop-hint'>Cliquez pour parcourir ou glissez un fichier<br>"
+        "Excel (.xlsx), CSV, JSON ou XML supportes</div>",
+        unsafe_allow_html=True,
     )
-
-col_btn1, col_btn2 = st.columns([1, 1])
-with col_btn1:
-    if st.button(
-        "Upload and analyze",
-        disabled=step1_disabled or not uploaded_file or not selected_org_id,
-        type="primary",
-        use_container_width=True,
-    ):
-        with st.spinner("Uploading and running discovery..."):
+    uploaded_file = st.file_uploader("Fichier source", type=["csv", "xlsx", "xlsm", "json", "xml"], label_visibility="collapsed")
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        if st.button(f"Simuler l'ajout de '{st.session_state.demo_filename}'", use_container_width=True):
+            st.info("Simulation active. Chargez ensuite un fichier reel pour lancer l'import.")
+    with col_b:
+        can_upload = bool(uploaded_file and selected_org_id)
+        if st.button("Analyser avec l'IA", type="primary", use_container_width=True, disabled=not can_upload):
             files = {"upload_file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-            params: dict[str, str] = {"organization_object_id": selected_org_id}
+            params = {"organization_object_id": selected_org_id}
             if org_name_input:
                 params["organization_name"] = org_name_input
-            try:
-                r = requests.post(
-                    f"{API_BASE}/api/v1/ingest",
-                    headers=_headers(),
-                    files=files,
-                    params=params,
-                    timeout=120,
-                )
-                r.raise_for_status()
-                result = r.json()
+            result = _api_post("/api/v1/ingest", params=params, files=files)
+            if result:
                 st.session_state.batch_id = result["batch_id"]
+                st.session_state.step = 2
                 st.rerun()
-            except Exception as exc:
-                st.error(f"Upload failed: {exc}")
-
-with col_btn2:
-    if st.session_state.batch_id and st.button("Start new import", use_container_width=True):
-        st.session_state.batch_id = None
-        st.session_state.batch_data = None
-        st.rerun()
-
-if not st.session_state.batch_id:
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# ---------------------------------------------------------------------------
-# Fetch batch data
-# ---------------------------------------------------------------------------
-
-batch_data = _api_get(f"/api/v1/ingest/{st.session_state.batch_id}")
+batch_data = _fetch_batch()
 if not batch_data:
-    st.error("Could not load batch data.")
+    st.error("Impossible de charger le batch courant.")
     st.stop()
-st.session_state.batch_data = batch_data
+status = batch_data.get("status", "received")
 
-batch_status_val = batch_data.get("status", "unknown")
-fields: list[dict] = batch_data.get("fields", [])
-
-STATUS_LABELS = {
-    "mapping_review_required": "Mapping review",
-    "mapping_approved": "Mapping approved",
-    "discovering": "Discovering...",
-    "profiling": "Pipeline running...",
-    "transforming": "Transforming...",
-    "staging_loaded": "Staged",
-    "deduplicated": "Deduplicated",
-    "committed": "Committed",
-    "failed": "Failed",
-    "failed_permanent": "Failed (permanent)",
-}
-
-# ---------------------------------------------------------------------------
-# Step 2: Mapping review
-# ---------------------------------------------------------------------------
-
-st.markdown("---")
-st.markdown("### Step 2 -- Review and correct mapping")
-
-filename = (batch_data.get("metadata") or {}).get("filename", "?")
-st.caption(
-    f"Batch `{st.session_state.batch_id[:12]}...`  |  "
-    f"Status: **{STATUS_LABELS.get(batch_status_val, batch_status_val)}**  |  "
-    f"File: {filename}"
-)
-
-if batch_status_val == "committed":
-    st.success("This batch has been committed to production.")
-    st.stop()
-elif batch_status_val in ("failed", "failed_permanent"):
-    st.error(f"Pipeline failed: {batch_data.get('error', 'unknown error')}")
-elif batch_status_val in ("profiling", "transforming"):
-    st.info("Pipeline is running... Click below to refresh.")
-    if st.button("Refresh status"):
+# STEP 2
+if st.session_state.step == 2:
+    st.markdown("### L'IA profile vos donnees")
+    fields = batch_data.get("fields", [])
+    total_cols = len(fields)
+    item1 = "OK" if total_cols > 0 else "..."
+    item2 = "OK" if status in {"mapping_review_required", "mapping_approved"} else "..."
+    item3 = "OK" if status in {"mapping_review_required", "mapping_approved"} else "..."
+    st.write(f"{item1} Lecture des {total_cols} colonnes detectees")
+    st.write(f"{item2} Analyse semantique des echantillons")
+    st.write(f"{item3} Generation du mapping vers Tourisme CRM")
+    st.caption(f"Statut: {STATUS_LABELS.get(status, status)}")
+    if status in {"mapping_review_required", "mapping_approved"}:
+        st.session_state.step = 3
         st.rerun()
+    if status in {"failed", "failed_permanent"}:
+        st.error(batch_data.get("error") or "Echec lors de l'analyse.")
+        st.stop()
+    time.sleep(1.0)
+    st.rerun()
 
-# ---------------------------------------------------------------------------
-# Mapping table
-# ---------------------------------------------------------------------------
+# STEP 3
+if st.session_state.step == 3:
+    st.markdown("### Validation du Mapping IA")
+    fields: list[dict[str, Any]] = batch_data.get("fields", [])
+    if not fields:
+        st.warning("Aucun champ detecte.")
+        if st.button("Rafraichir"):
+            st.rerun()
+        st.stop()
+    visible_fields = [f for f in fields if f.get("field_id") is not None or f.get("id") is not None]
+    perfect = sum(1 for f in visible_fields if float(f.get("confidence", 0)) >= 0.8)
+    to_review = max(0, len(visible_fields) - perfect)
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.markdown(f"<span class='pill pill-ok'>{perfect} correspondances parfaites</span>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"<span class='pill pill-warn'>{to_review} a verifier</span>", unsafe_allow_html=True)
 
-if fields and batch_status_val not in ("committed", "profiling", "transforming"):
-    visible_fields = [
-        f for f in fields
-        if not (f.get("status") == "rejected" and (f.get("review_reason") or "").startswith("auto_invalid"))
-    ]
-
-    # Column headers
-    hdr = st.columns([2, 3, 2, 1.5, 0.6, 0.5])
-    with hdr[0]:
-        st.markdown("<div class='mapping-header'>Source field</div>", unsafe_allow_html=True)
-    with hdr[1]:
-        st.markdown("<div class='mapping-header'>Target table</div>", unsafe_allow_html=True)
-    with hdr[2]:
-        st.markdown("<div class='mapping-header'>Target column</div>", unsafe_allow_html=True)
-    with hdr[3]:
-        st.markdown("<div class='mapping-header'>Transform</div>", unsafe_allow_html=True)
-    with hdr[4]:
-        st.markdown("<div class='mapping-header'>Conf.</div>", unsafe_allow_html=True)
-    with hdr[5]:
-        st.markdown("<div class='mapping-header'>Skip</div>", unsafe_allow_html=True)
-
-    corrections_made = False
-    correction_payload: list[dict] = []
-
-    for i, field in enumerate(visible_fields):
-        source_col = field.get("source_column", "?")
-        sheet_name = field.get("sheet_name", "default")
-        current_table = field.get("target_table", "object_temp")
-        current_column = field.get("target_column", source_col)
-        current_transform = field.get("transform", "identity")
-        confidence = float(field.get("confidence", 0))
-        field_id = field.get("id", "")
-        field_status = field.get("status", "proposed")
-
-        norm_source = source_col.lower().strip().replace(" ", "_")
-        auto_skip = (
-            field_status == "rejected"
-            or any(pat in norm_source for pat in SKIP_PATTERNS)
-            or norm_source.startswith("unnamed")
-            or confidence <= 0.15
-        )
-
+    corrections: list[dict[str, Any]] = []
+    changed_any = False
+    for idx, field in enumerate(visible_fields):
+        source_col = str(field.get("source_column", "?"))
+        sheet_name = str(field.get("sheet_name", "default"))
+        current_table = str(field.get("target_table", "object_temp"))
+        current_column = str(field.get("target_column", "name"))
+        current_transform = str(field.get("transform", "identity"))
+        field_id = str(field.get("id", ""))
+        confidence = float(field.get("confidence", 0.0))
         if confidence >= 0.8:
-            conf_html = f"<span class='confidence-high'>{confidence:.0%}</span>"
+            conf_class = "conf-high"
         elif confidence >= 0.5:
-            conf_html = f"<span class='confidence-mid'>{confidence:.0%}</span>"
+            conf_class = "conf-mid"
         else:
-            conf_html = f"<span class='confidence-low'>{confidence:.0%}</span>"
-
-        cols = st.columns([2, 3, 2, 1.5, 0.6, 0.5])
-
-        with cols[0]:
-            st.markdown(
-                f"<span class='field-source'>{source_col}</span>"
-                f"<br><span class='field-sheet'>{sheet_name}</span>",
-                unsafe_allow_html=True,
-            )
-
-        current_table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
-        with cols[1]:
-            new_table = st.selectbox(
-                "tbl", options=ALL_TABLES, index=current_table_idx,
-                format_func=lambda t: t,
-                key=f"tbl_{i}", label_visibility="collapsed",
-            )
-
+            conf_class = "conf-low"
+        auto_skip = any(pattern in source_col.lower().replace(" ", "_") for pattern in SKIP_PATTERNS) or confidence <= 0.15
+        st.markdown("<div class='mapping-card'>", unsafe_allow_html=True)
+        left, mid, right, chip, conf, sk = st.columns([2.2, 2.0, 2.0, 1.0, 0.8, 0.6])
+        with left:
+            st.write(f"{_field_icon(current_table)} **{source_col}**")
+            st.caption(f"Feuille: {sheet_name}")
+        table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
+        with mid:
+            new_table = st.selectbox("Table", ALL_TABLES, index=table_idx, key=f"tbl_{idx}", label_visibility="collapsed")
         col_options = TARGET_SCHEMA.get(new_table, {}).get("columns", [])
-        current_col_idx = col_options.index(current_column) if current_column in col_options else 0
-        with cols[2]:
-            new_column = st.selectbox(
-                "col", options=col_options if col_options else [current_column],
-                index=min(current_col_idx, max(0, len(col_options) - 1)),
-                key=f"col_{i}_{new_table}", label_visibility="collapsed",
-            )
-
-        transform_options = TARGET_SCHEMA.get(new_table, {}).get("transforms", ["identity"])
-        current_tr_idx = transform_options.index(current_transform) if current_transform in transform_options else 0
-        with cols[3]:
-            new_transform = st.selectbox(
-                "tr", options=transform_options,
-                index=min(current_tr_idx, max(0, len(transform_options) - 1)),
-                key=f"tr_{i}_{new_table}", label_visibility="collapsed",
-            )
-
-        with cols[4]:
-            st.markdown(conf_html, unsafe_allow_html=True)
-
-        with cols[5]:
-            skip = st.checkbox("x", key=f"skip_{i}", value=auto_skip, label_visibility="collapsed")
-
+        col_idx = col_options.index(current_column) if current_column in col_options else 0
+        with right:
+            new_column = st.selectbox("Champ", col_options if col_options else [current_column], index=col_idx, key=f"col_{idx}", label_visibility="collapsed")
+        tr_options = TARGET_SCHEMA.get(new_table, {}).get("transforms", ["identity"])
+        tr_idx = tr_options.index(current_transform) if current_transform in tr_options else 0
+        with chip:
+            new_transform = st.selectbox("Transform", tr_options, index=tr_idx, key=f"tr_{idx}", label_visibility="collapsed")
+            if new_transform in {"split_gps", "split_list"}:
+                st.caption("Separation auto")
+        with conf:
+            st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
+        with sk:
+            skip = st.checkbox("skip", value=auto_skip, key=f"skip_{idx}", label_visibility="collapsed")
+        st.markdown("</div>", unsafe_allow_html=True)
         changed = (
             new_table != current_table
             or new_column != current_column
             or new_transform != current_transform
-            or skip != (field_status == "rejected")
+            or skip != (field.get("status") == "rejected")
         )
         if changed:
-            corrections_made = True
-        correction_payload.append({
-            "field_id": field_id,
-            "target_table": new_table,
-            "target_column": new_column,
-            "transform": new_transform,
-            "skip": skip,
-        })
+            changed_any = True
+        corrections.append(
+            {
+                "field_id": field_id,
+                "target_table": new_table,
+                "target_column": new_column,
+                "transform": new_transform,
+                "skip": skip,
+            }
+        )
 
-    st.markdown("---")
+    b1, b2 = st.columns([1, 1])
+    with b1:
+        if st.button("Enregistrer corrections", use_container_width=True):
+            result = _api_patch(f"/api/v1/ingest/{st.session_state.batch_id}/mapping", {"corrections": corrections})
+            if result:
+                st.success(f"Corrections enregistrees: {result.get('updated', 0)}")
+                if result.get("errors"):
+                    for item in result.get("errors", []):
+                        st.warning(item)
+                time.sleep(0.6)
+                st.rerun()
+    with b2:
+        if st.button("Continuer", type="primary", use_container_width=True):
+            if changed_any:
+                result = _api_patch(f"/api/v1/ingest/{st.session_state.batch_id}/mapping", {"corrections": corrections})
+                if result and result.get("errors"):
+                    st.error("Corrigez les erreurs avant de continuer.")
+                    st.stop()
+            st.session_state.step = 4
+            st.rerun()
+    st.stop()
 
-    st.caption(
-        "**Transforms:** "
-        + " | ".join(f"`{k}` = {v}" for k, v in TRANSFORM_HELP.items())
-    )
-
-    col_save, col_run = st.columns(2)
-    can_run = batch_status_val not in ("committed", "profiling", "transforming", "failed_permanent")
-
-    with col_save:
-        if corrections_made and st.button("Save corrections", use_container_width=True):
-            result = _api_patch(
-                f"/api/v1/ingest/{st.session_state.batch_id}/mapping",
-                {"corrections": correction_payload},
+# STEP 4
+if st.session_state.step == 4:
+    st.markdown("### Apercu avant Importation")
+    st.session_state.ai_correction = st.toggle("Correction orthographique IA", value=bool(st.session_state.ai_correction))
+    preview = _api_get(f"/api/v1/ingest/{st.session_state.batch_id}/preview")
+    rows = (preview or {}).get("rows", []) if isinstance(preview, dict) else []
+    if not rows:
+        st.warning("Aucune ligne de previsualisation disponible.")
+    for idx, row in enumerate(rows[:5], start=1):
+        st.markdown(f"#### Ligne {idx}")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.caption("OBJECT")
+            st.json(row.get("object") or {})
+            st.caption("CONTACT_CHANNEL")
+            st.json(row.get("contact_channel") or [])
+        with c2:
+            st.caption("OBJECT_LOCATION")
+            st.json(row.get("object_location") or {})
+            st.caption("OBJECT_DESCRIPTION")
+            st.json(row.get("object_description") or {})
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        if st.button("Retour mapping", use_container_width=True):
+            st.session_state.step = 3
+            st.rerun()
+    with c2:
+        if st.button("Lancer l'importation", type="primary", use_container_width=True):
+            result = _api_post(
+                f"/api/v1/ingest/{st.session_state.batch_id}/execute",
+                params={"use_cleaner": str(bool(st.session_state.ai_correction)).lower()},
             )
             if result:
-                st.success(f"Saved {result.get('updated', 0)} corrections.")
-                if result.get("errors"):
-                    for err in result["errors"]:
-                        st.warning(err)
-                time.sleep(0.5)
+                st.session_state.step = 5
                 st.rerun()
+    st.stop()
 
-    with col_run:
-        if st.button("Start Import", type="primary", use_container_width=True, disabled=not can_run):
-            if corrections_made:
-                save_result = _api_patch(
-                    f"/api/v1/ingest/{st.session_state.batch_id}/mapping",
-                    {"corrections": correction_payload},
-                )
-                if save_result and save_result.get("errors"):
-                    st.error("Fix mapping errors before running pipeline.")
-                    st.stop()
-            result = _api_post(f"/api/v1/ingest/{st.session_state.batch_id}/execute")
-            if result:
-                st.success("Pipeline started. Refreshing...")
-                time.sleep(1.5)
-                st.rerun()
-
-elif not fields and batch_status_val not in ("committed", "profiling", "transforming"):
-    st.warning("No mapping fields found. Discovery may have failed.")
-
-
-# ---------------------------------------------------------------------------
-# Pipeline progress / events
-# ---------------------------------------------------------------------------
-
-if batch_status_val in ("profiling", "transforming", "staging_loaded", "deduplicated", "committed", "failed", "failed_permanent"):
-    st.markdown("---")
-    st.markdown("### Pipeline progress")
-
-    events: list[dict] = batch_data.get("events", [])
-    if events:
-        with st.expander("Event log", expanded=batch_status_val in ("failed", "failed_permanent")):
-            for ev in events:
-                level = ev.get("level", "info")
-                ts = (ev.get("created_at") or "")[:19]
-                phase = ev.get("phase", "?")
-                msg = ev.get("message", "")
-                if level == "error":
-                    st.error(f"**[{ts}]** `{phase}` -- {msg}")
-                elif level == "warning":
-                    st.warning(f"**[{ts}]** `{phase}` -- {msg}")
-                else:
-                    st.info(f"**[{ts}]** `{phase}` -- {msg}")
-
-    if batch_status_val in ("profiling", "transforming"):
-        if st.button("Refresh", key="refresh_progress"):
+# STEP 5
+if st.session_state.step == 5:
+    st.markdown("### Importation reussie")
+    batch = _fetch_batch() or {}
+    status = batch.get("status", "unknown")
+    if status in {"failed", "failed_permanent"}:
+        st.error(batch.get("error") or "Le pipeline a echoue.")
+    elif status != "committed":
+        st.info(f"Import en cours: {STATUS_LABELS.get(status, status)}")
+        events = batch.get("events", [])
+        for event in events[:8]:
+            st.caption(f"[{(event.get('created_at') or '')[:19]}] {event.get('phase', '?')}: {event.get('message', '')}")
+        time.sleep(1.0)
+        st.rerun()
+    else:
+        stats = (batch.get("metadata") or {}).get("sheet_progress", {})
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Objets crees (object)", int(stats.get("rows_loaded", 0)))
+            st.metric("Adresses liees", int(stats.get("locations", 0)))
+        with c2:
+            st.metric("Contacts lies", int(stats.get("contacts", 0)))
+            st.metric("Fautes corrigees par l'IA", int(stats.get("ai_corrections", 0)))
+        if st.button("Nouvelle importation", type="primary", use_container_width=True):
+            _reset_wizard()
             st.rerun()
-
-
-# ---------------------------------------------------------------------------
-# Advanced panel
-# ---------------------------------------------------------------------------
-
-with st.expander("Advanced", expanded=False):
-    adv1, adv2 = st.columns(2)
-    with adv1:
-        if st.button("Rollback batch", use_container_width=True):
-            result = _api_post(f"/api/v1/ingest/{st.session_state.batch_id}/rollback?force=true")
-            if result:
-                st.success("Rollback complete.")
-                time.sleep(1)
-                st.rerun()
-    with adv2:
-        if st.button("Purge batch", use_container_width=True):
-            result = _api_post(f"/api/v1/ingest/{st.session_state.batch_id}/purge?force=true")
-            if result:
-                st.success("Purge complete.")
-                st.session_state.batch_id = None
-                st.session_state.batch_data = None
-                time.sleep(1)
-                st.rerun()
-
-    st.markdown("#### Raw batch data")
-    st.json(batch_data)

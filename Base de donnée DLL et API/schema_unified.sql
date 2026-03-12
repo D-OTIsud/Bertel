@@ -1202,6 +1202,8 @@ ALTER TABLE IF EXISTS object_description
   ADD COLUMN IF NOT EXISTS description_edition_i18n JSONB,
   ADD COLUMN IF NOT EXISTS description_offre_hors_zone_i18n JSONB,
   ADD COLUMN IF NOT EXISTS sanitary_measures_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_adapted TEXT,
+  ADD COLUMN IF NOT EXISTS description_adapted_i18n JSONB,
   ADD COLUMN IF NOT EXISTS extra JSONB;
 
 -- Backfill duplicates: keep most recent canonical row per object and delete older duplicates.
@@ -1245,6 +1247,7 @@ CREATE TABLE IF NOT EXISTS object_place_description (
   description_edition TEXT,
   description_offre_hors_zone TEXT,
   sanitary_measures TEXT,
+  description_adapted TEXT,
   visibility TEXT,
   position INTEGER DEFAULT 0,
   extra JSONB,
@@ -1257,8 +1260,13 @@ CREATE TABLE IF NOT EXISTS object_place_description (
   description_edition_i18n JSONB,
   description_offre_hors_zone_i18n JSONB,
   sanitary_measures_i18n JSONB,
+  description_adapted_i18n JSONB,
   CONSTRAINT chk_object_place_description_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners'))
 );
+ALTER TABLE IF EXISTS object_place_description
+  ADD COLUMN IF NOT EXISTS description_adapted TEXT,
+  ADD COLUMN IF NOT EXISTS description_adapted_i18n JSONB;
+
 CREATE TABLE IF NOT EXISTS object_private_description (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,

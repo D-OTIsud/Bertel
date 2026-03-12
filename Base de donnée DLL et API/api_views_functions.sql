@@ -1654,6 +1654,12 @@ BEGIN
           THEN api.i18n_pick(d.sanitary_measures_i18n, lang, 'fr')
           ELSE d.sanitary_measures
         END,
+        'description_adapted',
+        CASE 
+          WHEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr') IS NOT NULL 
+          THEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr')
+          ELSE d.description_adapted
+        END,
         'visibility', d.visibility,
         'position', d.position,
         'created_at', d.created_at,
@@ -1712,6 +1718,12 @@ BEGIN
               WHEN api.i18n_pick(d.sanitary_measures_i18n, lang, 'fr') IS NOT NULL 
               THEN api.i18n_pick(d.sanitary_measures_i18n, lang, 'fr')
               ELSE d.sanitary_measures
+            END,
+            'description_adapted',
+            CASE 
+              WHEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr') IS NOT NULL 
+              THEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr')
+              ELSE d.description_adapted
             END,
             'visibility', d.visibility,
             'position', d.position,
@@ -6868,3 +6880,140 @@ $$;
 
 COMMENT ON FUNCTION api.list_objects_with_validated_changes_since IS 
 'Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at.';
+
+-- =====================================================
+-- Adapted / FALC resource (simplified, accessibility-friendly)
+-- Returns essential fields with description_adapted preferred
+-- over regular description (fallback when adapted is NULL).
+-- =====================================================
+DROP FUNCTION IF EXISTS api.get_object_resource_adapted(text, text[]);
+CREATE OR REPLACE FUNCTION api.get_object_resource_adapted(
+  p_object_id  TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  lang TEXT := api.pick_lang(p_lang_prefs);
+  v_result JSONB;
+BEGIN
+  SELECT jsonb_build_object(
+    'id',    o.id,
+    'type',  o.object_type::text,
+    'name',  o.name,
+    'status', o.status::text,
+    'image', o.cached_main_image_url,
+    'open_now', o.cached_is_open_now,
+
+    -- Prefer description_adapted, fallback to description
+    'description', COALESCE(
+      api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
+      d.description_adapted,
+      api.i18n_pick(d.description_i18n, lang, 'fr'),
+      d.description
+    ),
+
+    -- Prefer description_adapted (short) for chapo, fallback to description_chapo
+    'description_chapo', COALESCE(
+      api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
+      d.description_adapted,
+      api.i18n_pick(d.description_chapo_i18n, lang, 'fr'),
+      d.description_chapo
+    ),
+
+    -- Simplified location
+    'location', jsonb_build_object(
+      'city',     ol.city,
+      'postcode', ol.postcode,
+      'latitude', ol.latitude,
+      'longitude', ol.longitude,
+      'address1', ol.address1
+    ),
+
+    -- Primary phone + email only
+    'contact', jsonb_build_object(
+      'phone', (
+        SELECT c.value
+        FROM contact_channel c
+        JOIN ref_code_contact_kind ck ON ck.id = c.kind_id
+        WHERE c.object_id = o.id
+          AND lower(ck.code) = 'phone'
+          AND c.is_public = TRUE
+        ORDER BY c.is_primary DESC, c.position NULLS LAST
+        LIMIT 1
+      ),
+      'email', (
+        SELECT c.value
+        FROM contact_channel c
+        JOIN ref_code_contact_kind ck ON ck.id = c.kind_id
+        WHERE c.object_id = o.id
+          AND lower(ck.code) = 'email'
+          AND c.is_public = TRUE
+        ORDER BY c.is_primary DESC, c.position NULLS LAST
+        LIMIT 1
+      )
+    ),
+
+    -- Accessibility labels (tourisme & handicap classifications)
+    'accessibility_labels', COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'code',  cv.code,
+          'label', COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name)
+        )
+        ORDER BY cv.position NULLS LAST, cv.code
+      )
+      FROM object_classification oc
+      JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+      JOIN ref_classification_value  cv ON cv.id = oc.value_id
+      WHERE oc.object_id = o.id
+        AND cs.code = 'tourisme_handicap'
+        AND oc.status = 'granted'
+    ), '[]'::jsonb),
+
+    'updated_at', o.updated_at
+  )
+  INTO v_result
+  FROM object o
+  LEFT JOIN object_location ol
+    ON ol.object_id = o.id
+   AND ol.is_main_location IS TRUE
+  LEFT JOIN object_description d
+    ON d.object_id = o.id
+   AND d.org_object_id IS NULL
+  WHERE o.id = p_object_id
+    AND o.status = 'published';
+
+  RETURN v_result;
+END;
+$$;
+
+COMMENT ON FUNCTION api.get_object_resource_adapted IS
+'FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
+description_adapted preferred over regular description, essential location,
+primary phone/email contacts, main image, and tourisme_handicap accessibility labels.';
+
+-- Batch wrapper
+DROP FUNCTION IF EXISTS api.get_object_cards_adapted_batch(text[], text[]);
+CREATE OR REPLACE FUNCTION api.get_object_cards_adapted_batch(
+  p_ids        TEXT[],
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSON
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT COALESCE(
+    json_agg(api.get_object_resource_adapted(t.id, p_lang_prefs) ORDER BY t.ord),
+    '[]'::json
+  )
+  FROM unnest(COALESCE(p_ids, ARRAY[]::text[])) WITH ORDINALITY AS t(id, ord)
+  WHERE t.id IS NOT NULL;
+$$;
+
+COMMENT ON FUNCTION api.get_object_cards_adapted_batch IS
+'Batch wrapper for get_object_resource_adapted. Returns adapted/FALC resources for multiple objects, preserving input order.';

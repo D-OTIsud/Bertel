@@ -20,7 +20,12 @@ ETL execution order (to respect FK constraints):
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
+
+try:
+    from core.generated_schema_catalog import AUTO_TARGET_TABLE_SPECS
+except ImportError:  # pragma: no cover
+    from universal_ai_ingestor.core.generated_schema_catalog import AUTO_TARGET_TABLE_SPECS
 
 
 @dataclass(frozen=True)
@@ -40,6 +45,26 @@ class TargetTableRule:
     allowed_transforms: tuple[str, ...]
     columns: tuple[TargetColumnRule, ...]
 
+
+def _build_generated_rule(table: str, spec: dict[str, object]) -> TargetTableRule:
+    columns = tuple(
+        TargetColumnRule(column=str(name), aliases=tuple(str(alias) for alias in aliases))
+        for name, aliases in spec["columns"]
+    )
+    return TargetTableRule(
+        table=table,
+        entity=str(spec["entity"]),
+        description=str(spec["description"]),
+        production_table=str(spec["production_table"]),
+        allowed_transforms=tuple(str(t) for t in spec["allowed_transforms"]),
+        columns=columns,
+    )
+
+
+GENERATED_TARGET_TABLE_RULES: tuple[TargetTableRule, ...] = tuple(
+    _build_generated_rule(table, spec)
+    for table, spec in sorted(AUTO_TARGET_TABLE_SPECS.items())
+)
 
 KNOWN_OBJECT_TYPES = {
     "HOT": "Hôtel", "RES": "Restaurant", "ITI": "Itinéraire",
@@ -745,6 +770,48 @@ _object_review_temp = TargetTableRule(
 
 
 # ─────────────────────────────────────────────────────────────────────
+
+_ref_code_temp = TargetTableRule(
+    table="ref_code_temp",
+    entity="ref_code",
+    production_table="ref_code",
+    description="Reference codes imported into staging for domain lookups and exhaustive manual mapping.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("domain", ("domain",)),
+        TargetColumnRule("code", ("code",)),
+        TargetColumnRule("name", ("name",)),
+        TargetColumnRule("description", ("description",)),
+    ),
+)
+
+_ref_classification_scheme_temp = TargetTableRule(
+    table="ref_classification_scheme_temp",
+    entity="ref_classification_scheme",
+    production_table="ref_classification_scheme",
+    description="Classification scheme staging table used for labels, stars, and taxonomy setup.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("scheme_code", ("scheme_code",)),
+        TargetColumnRule("scheme_name", ("scheme_name",)),
+        TargetColumnRule("description", ("description",)),
+        TargetColumnRule("selection", ("selection",)),
+    ),
+)
+
+_ref_classification_value_temp = TargetTableRule(
+    table="ref_classification_value_temp",
+    entity="ref_classification_value",
+    production_table="ref_classification_value",
+    description="Classification values staged per scheme for exhaustive manual mapping coverage.",
+    allowed_transforms=("identity", "lowercase"),
+    columns=(
+        TargetColumnRule("scheme_code", ("scheme_code",)),
+        TargetColumnRule("value_code", ("value_code",)),
+        TargetColumnRule("value_name", ("value_name",)),
+    ),
+)
+
 # Registry
 # ─────────────────────────────────────────────────────────────────────
 
@@ -769,6 +836,8 @@ TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
         # Part 7: CRM
         _crm_interaction_temp, _crm_task_temp,
         _object_membership_temp, _object_review_temp,
+        _ref_code_temp, _ref_classification_scheme_temp, _ref_classification_value_temp,
+        *GENERATED_TARGET_TABLE_RULES,
     ]
 }
 
@@ -897,3 +966,7 @@ def validate_mapping_target(target_table: str, target_column: str, transform: st
     if transform not in rule.allowed_transforms:
         return False, f"Transform '{transform}' not allowed for '{target_table}'"
     return True, "ok"
+
+
+
+

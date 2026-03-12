@@ -1619,6 +1619,27 @@ const json = await res.json();</pre>
     "status": "published"
   }
 ]</pre>
+
+            <h3>2.7.3 Vue adaptée (FALC) : <code>get_object_resource_adapted</code></h3>
+            <p>Retourne une ressource simplifiée optimisée pour les personnes avec handicap (FALC - Facile à Lire et à Comprendre). Le champ <code>description</code> utilise <code>description_adapted</code> en priorité (fallback sur la description standard).</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_object_id</code></td><td><code>text</code></td><td>✅</td><td>—</td><td>Identifiant de l'objet.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+              </tbody>
+            </table>
+            <p><strong>Réponse :</strong> Objet JSON simplifié avec <code>description</code>, <code>location</code> (city, postcode), <code>contact</code> (primary phone + email), <code>image</code>, <code>open_now</code> et <code>accessibility_labels</code>.</p>
+
+            <h3>2.7.4 Vue adaptée batch : <code>get_object_cards_adapted_batch</code></h3>
+            <p>Version batch de <code>get_object_resource_adapted</code> pour charger plusieurs fiches adaptées en un seul appel.</p>
+            <table>
+              <thead><tr><th>Paramètre</th><th>Type</th><th>Obligatoire</th><th>Défaut</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td><code>p_ids</code></td><td><code>array&lt;text&gt;</code></td><td>✅</td><td>—</td><td>IDs des objets.</td></tr>
+                <tr><td><code>p_lang_prefs</code></td><td><code>array&lt;string&gt;</code></td><td>❌</td><td><code>["fr"]</code></td><td>Préférences de langue.</td></tr>
+              </tbody>
+            </table>
           </div>
         </details>
 
@@ -2073,7 +2094,7 @@ const json = await res.json();</pre>
                 <tr><td><code>created_at / updated_at / updated_at_source / published_at</code></td><td><code>timestamp</code></td><td>Suivi de vie (technique + source amont)</td><td><code>"2024-03-18T09:30:00Z"</code></td></tr>
                 <tr><td><code>address</code></td><td><code>object</code></td><td>Adresse postale (si connue)</td><td><code>{ "street": "...", "city": "..." }</code></td></tr>
                 <tr><td><code>location</code></td><td><code>object</code></td><td>Position WGS84</td><td><code>{ "latitude": 45.76, "longitude": 4.84, "altitude_m": 250 }</code></td></tr>
-                <tr><td><code>descriptions</code></td><td><code>object</code></td><td>Descriptions multilingues enrichies (description, description_chapo, description_mobile, description_edition, description_offre_hors_zone, sanitary_measures)</td><td>voir §3.2</td></tr>
+                <tr><td><code>descriptions</code></td><td><code>object</code></td><td>Descriptions multilingues enrichies (description, description_adapted, description_chapo, description_mobile, description_edition, description_offre_hors_zone, sanitary_measures)</td><td>voir §3.2</td></tr>
                 <tr><td><code>external_ids</code></td><td><code>array&lt;object&gt;</code></td><td>Identifiants externes (SIT, DMS…)</td><td><code>[{ "system":"X", "value":"1234" }]</code></td></tr>
                 <tr><td><code>contacts</code></td><td><code>array&lt;object&gt;</code></td><td>Moyens de contact enrichis</td><td>voir §3.3</td></tr>
                 <tr><td><code>languages</code></td><td><code>array&lt;object&gt;</code></td><td>Langues parlées</td><td><code>[{ "code":"fr", "name":"Français" }]</code></td></tr>
@@ -2119,6 +2140,7 @@ const json = await res.json();</pre>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>
               <tbody>
                 <tr><td><code>description</code></td><td><code>string</code></td><td>Description principale multilingue</td><td><code>"Restaurant gastronomique avec vue sur mer..."</code></td></tr>
+                <tr><td><code>description_adapted</code></td><td><code>string</code></td><td><b>[NOUVEAU]</b> Description simplifiée/FALC pour personnes handicapées</td><td><code>"Hôtel simple avec ascenseur et parking réservé."</code></td></tr>
                 <tr><td><code>description_chapo</code></td><td><code>string</code></td><td>Chapô/accroche multilingue</td><td><code>"Une expérience culinaire unique..."</code></td></tr>
                 <tr><td><code>description_mobile</code></td><td><code>string</code></td><td>Description optimisée pour mobile</td><td><code>"Resto vue mer, spécialités locales"</code></td></tr>
                 <tr><td><code>description_edition</code></td><td><code>string</code></td><td>Description pour édition papier</td><td><code>"Établissement familial depuis 1950..."</code></td></tr>

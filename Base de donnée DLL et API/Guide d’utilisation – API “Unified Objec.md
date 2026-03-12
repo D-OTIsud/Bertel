@@ -57,6 +57,9 @@ Chaque entrée de data[] suit ce schéma (champs présents si disponibles) :
   "address": { "address1": "15 Rue …", "postcode": "97400", "city": "Saint-Denis", "code_insee": "97411" },
 
   "location": { "latitude": -20.88, "longitude": 55.45, "altitude_m": 120 },
+  
+  "description_adapted": "Hôtel simple avec ascenseur et parking réservé.",
+
 
   "contacts": [
     { "kind_code": "phone", "kind_name": "Téléphone", "icon_url": "https://…/phone.svg", "value": "+262 …", "is_primary": true },
@@ -231,6 +234,17 @@ Body:
 C. Page suivante (dans les deux cas)
 Body:
 { "p_cursor": "{{info.next_cursor}}" }
+
+10) Endpoints Accessibilité (FALC)
+
+Pour les interfaces destinées aux personnes avec handicap, deux fonctions dédiées retournent une ressource simplifiée :
+
+**api.get_object_resource_adapted(p_object_id, p_lang_prefs)**
+Retourne un objet simplifié où le champ `description` utilise `description_adapted` en priorité (fallback sur la description standard). Contient aussi : contacts simplifiés, horaires, image principale et labels d'accessibilité (ex. Qualité Tourisme Handicap).
+
+**api.get_object_cards_adapted_batch(p_ids, p_lang_prefs)**
+Version batch de la fonction précédente pour charger plusieurs fiches adaptées.
+
 
 9) Dépannage
 

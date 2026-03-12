@@ -25,12 +25,17 @@ except ModuleNotFoundError:
         flatten_required_columns,
     )
 
+try:
+    from core.generated_schema_catalog import AUTO_TARGET_TABLE_SPECS
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.generated_schema_catalog import AUTO_TARGET_TABLE_SPECS  # type: ignore
+
+_GENERATED_TEMP_TABLES = frozenset(AUTO_TARGET_TABLE_SPECS.keys())
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _URL_PATTERN = re.compile(r"^(https?://|www\.)", re.IGNORECASE)
 _GPS_PATTERN = re.compile(r"^\s*-?\d{1,3}(?:\.\d+)?\s*[,;]\s*-?\d{1,3}(?:\.\d+)?\s*$")
 _ID_LIKE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
 _PROFILE_DELIMITERS = (",", ";", "|")
-
 
 def _normalize_profile_value(value: Any) -> str:
     if value is None or pd.isna(value):
@@ -475,6 +480,71 @@ def _chunked_insert(
             upsert=upsert,
             on_conflict=on_conflict,
         )
+
+
+def _is_empty_staging_value(value: Any) -> bool:
+    if value is None:
+        return True
+    try:
+        if pd.isna(value):
+            return True
+    except TypeError:
+        pass
+    return isinstance(value, str) and value.strip() == ""
+
+
+def _normalize_generic_staging_value(value: Any) -> Any:
+    if _is_empty_staging_value(value):
+        return None
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+
+def _build_generated_table_rows(
+    *,
+    batch_id: str,
+    table_name: str,
+    table_df: pd.DataFrame,
+    object_keys: list[str],
+    mapping_source_label: str,
+) -> list[dict[str, Any]]:
+    rule = TARGET_SCHEMA_RULES.get(table_name)
+    if rule is None or table_name not in _GENERATED_TEMP_TABLES or table_df.empty:
+        return []
+    rows: list[dict[str, Any]] = []
+    business_columns = [column.column for column in rule.columns]
+    for idx, row in enumerate(table_df.to_dict(orient="records")):
+        payload = {
+            column: _normalize_generic_staging_value(row.get(column))
+            for column in business_columns
+            if column in row and not _is_empty_staging_value(row.get(column))
+        }
+        staging_object_key = object_keys[idx] if idx < len(object_keys) else None
+        if staging_object_key:
+            payload["staging_object_key"] = staging_object_key
+            if "object_id" in business_columns and "object_id" not in payload:
+                payload["object_id"] = staging_object_key
+            if "parent_object_id" in business_columns and "parent_object_id" not in payload:
+                payload["parent_object_id"] = staging_object_key
+        payload = {k: v for k, v in payload.items() if v is not None}
+        non_link_fields = set(payload.keys()) - {"staging_object_key", "object_id", "parent_object_id"}
+        if not non_link_fields:
+            continue
+        payload.update(
+            {
+                "import_batch_id": batch_id,
+                "source_sheet": row.get("source_sheet"),
+                "raw_source_data": {
+                    "mapping_source": mapping_source_label,
+                    "table": table_name,
+                },
+                "resolution_status": "pending",
+                "is_approved": False,
+            }
+        )
+        rows.append(payload)
+    return rows
 
 
 def _resolve_relations_for_row(
@@ -1070,6 +1140,20 @@ async def run_batch_pipeline(
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,source_url",
     )
+
+
+    object_keys = [str(row.get("staging_object_key") or "") for row in staging_collections["object_rows"]]
+    for table_name, table_df in transformed_by_table.items():
+        if table_name not in _GENERATED_TEMP_TABLES:
+            continue
+        generic_rows = _build_generated_table_rows(
+            batch_id=batch_id,
+            table_name=table_name,
+            table_df=table_df,
+            object_keys=object_keys,
+            mapping_source_label=mapping_source_label,
+        )
+        _chunked_insert(sb, table_name, generic_rows)
 
     update_import_batch_row(sb, batch_id, status="staging_loaded")
     return {

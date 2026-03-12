@@ -430,7 +430,7 @@ async def ingest(
     def on_discovery_event(phase: str, message: str) -> None:
         append_import_event(sb, batch_id=batch_id, phase=phase, level="info", message=message)
 
-    contract = build_discovery_contract(
+    contract = await build_discovery_contract(
         source_format=parsed.source_format,
         sheets=sheets,
         custom_rules=custom_rules_value,
@@ -662,5 +662,6 @@ def purge_batch(batch_id: str, force: bool = Query(default=True)) -> JSONRespons
     except Exception as exc:  # noqa: BLE001
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
+
 
 

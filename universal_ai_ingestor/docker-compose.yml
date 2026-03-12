@@ -1,12 +1,11 @@
 services:
   vector-db:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=bertel_vectors
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
     volumes:
       - vector_db_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,13 +19,14 @@ services:
       context: .
       dockerfile: Dockerfile
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
     environment:
       - SUPABASE_URL=${SUPABASE_URL:?}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:?}
       - OPENAI_API_KEY=${OPENAI_API_KEY:?}
       - API_BEARER_TOKEN=${API_BEARER_TOKEN:?}
       - RAW_IMPORT_BUCKET=${RAW_IMPORT_BUCKET:-raw_imports}
-      - APP_ENV=${APP_ENV:-development}
+      - APP_ENV=production
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
       - INGEST_SAMPLE_ROWS=${INGEST_SAMPLE_ROWS:-5}
       - ETL_CHUNK_SIZE=${ETL_CHUNK_SIZE:-500}
@@ -37,7 +37,7 @@ services:
       - MIN_SHEET_CONFIDENCE_THRESHOLD=${MIN_SHEET_CONFIDENCE_THRESHOLD:-0.5}
       - VECTOR_DB_URL=postgresql://postgres:postgres@vector-db:5432/bertel_vectors
     ports:
-      - "8000:8000"
+      - "${API_BIND_IP:-127.0.0.1}:${API_PORT:-8000}:8000"
     depends_on:
       vector-db:
         condition: service_healthy
@@ -52,11 +52,12 @@ services:
       context: .
       dockerfile: Dockerfile
     command: streamlit run ui/app.py --server.port=8501 --server.address=0.0.0.0
+    restart: unless-stopped
     environment:
       - API_BASE_URL=${API_BASE_URL:-http://api:8000}
       - API_BEARER_TOKEN=${API_BEARER_TOKEN:?}
     ports:
-      - "8501:8501"
+      - "${UI_BIND_IP:-127.0.0.1}:${UI_PORT:-8501}:8501"
     depends_on:
       api:
         condition: service_healthy

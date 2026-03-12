@@ -5,10 +5,10 @@ import io
 import json
 import hashlib
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 from xml.etree import ElementTree as ET
-
 import pandas as pd
 
 from core.ai_graph import generate_mapping_plan, run_cleaner_batch
@@ -36,6 +36,89 @@ _URL_PATTERN = re.compile(r"^(https?://|www\.)", re.IGNORECASE)
 _GPS_PATTERN = re.compile(r"^\s*-?\d{1,3}(?:\.\d+)?\s*[,;]\s*-?\d{1,3}(?:\.\d+)?\s*$")
 _ID_LIKE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
 _PROFILE_DELIMITERS = (",", ";", "|")
+
+def _normalize_lookup_key(value: Any) -> str:
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except TypeError:
+        pass
+    text = str(value).strip().lower()
+    if not text:
+        return ""
+    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    ascii_text = ascii_text.replace("&", " and ").replace("/", " ")
+    ascii_text = re.sub(r"[^a-z0-9]+", " ", ascii_text)
+    return re.sub(r"\s+", " ", ascii_text).strip()
+
+
+_SEMANTIC_CODE_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
+    "amenity": {
+        "wifi": ("wifi", "wi fi", "wi-fi", "free wifi", "free wi fi", "internet", "free internet", "internet access", "acces internet", "acces wifi", "wireless", "internet gratuit"),
+        "parking": ("parking", "free parking", "parking gratuit", "stationnement", "stationnement gratuit", "car park", "car parking", "private parking", "parking prive"),
+        "pet_friendly": ("pet friendly", "pets allowed", "pet accepted", "animaux acceptes", "animaux autorises", "chiens acceptes", "dogs allowed"),
+        "swimming_pool": ("pool", "swimming pool", "piscine"),
+        "air_conditioning": ("air conditioning", "air conditioned", "clim", "climatisation"),
+        "wheelchair_access": ("wheelchair access", "wheelchair accessible", "pmr", "acces pmr", "acces fauteuil roulant", "accessible wheelchair"),
+        "accessible_parking": ("accessible parking", "parking accessible", "parking pmr"),
+        "electric_charging": ("electric charging", "ev charging", "borne electrique", "recharge electrique", "charging station"),
+        "breakfast": ("breakfast", "petit dejeuner", "petit-dejeuner"),
+        "restaurant": ("restaurant",),
+        "bar": ("bar",),
+        "public_toilets": ("public toilets", "toilettes publiques", "wc public"),
+        "drinking_water": ("drinking water", "eau potable", "point d eau", "fontaine eau"),
+    },
+    "payment_method": {
+        "especes": ("cash", "especes", "espece", "liquide", "argent liquide"),
+        "cheque": ("cheque", "cheques", "check", "checks"),
+        "cheque_vacances": ("ancv", "cheque vacances", "cheques vacances", "holiday vouchers", "voucher ancv"),
+        "carte_bleue": ("cb", "carte bleue", "carte bancaire", "credit card", "carte de credit", "bank card", "card payment"),
+        "visa": ("visa",),
+        "mastercard": ("mastercard", "master card"),
+        "american_express": ("american express", "amex"),
+        "maestro": ("maestro",),
+        "virement": ("virement", "bank transfer", "wire transfer", "transfer bancaire"),
+        "paypal": ("paypal",),
+        "apple_pay": ("apple pay",),
+        "google_pay": ("google pay",),
+        "vacaf": ("vacaf",),
+        "crypto": ("crypto", "cryptomonnaie", "cryptocurrency", "bitcoin"),
+    },
+}
+
+
+def _build_semantic_alias_index() -> dict[str, dict[str, str]]:
+    alias_index: dict[str, dict[str, str]] = {}
+    for domain, mappings in _SEMANTIC_CODE_ALIASES.items():
+        domain_index: dict[str, str] = {}
+        for code, aliases in mappings.items():
+            domain_index[_normalize_lookup_key(code)] = code
+            for alias in aliases:
+                domain_index[_normalize_lookup_key(alias)] = code
+        alias_index[domain] = domain_index
+    return alias_index
+
+
+_SEMANTIC_ALIAS_INDEX = _build_semantic_alias_index()
+
+
+def _canonicalize_reference_token(domain: str, token: Any) -> str:
+    normalized = _normalize_lookup_key(token)
+    if not normalized:
+        return ""
+    mapped = _SEMANTIC_ALIAS_INDEX.get(domain, {}).get(normalized)
+    if mapped:
+        return mapped
+    return normalized.replace(" ", "_")
+
+
+_SEMANTIC_SPLIT_TABLES: dict[str, dict[str, str]] = {
+    "object_amenity_temp": {"column": "amenity_code", "domain": "amenity"},
+    "object_payment_method_temp": {"column": "payment_code", "domain": "payment_method"},
+}
+
 
 def _normalize_profile_value(value: Any) -> str:
     if value is None or pd.isna(value):
@@ -547,6 +630,55 @@ def _build_generated_table_rows(
     return rows
 
 
+
+def _build_semantic_split_rows(
+    *,
+    batch_id: str,
+    table_name: str,
+    table_df: pd.DataFrame,
+    object_keys: list[str],
+    mapping_source_label: str,
+) -> list[dict[str, Any]]:
+    config = _SEMANTIC_SPLIT_TABLES.get(table_name)
+    if config is None or table_df.empty:
+        return []
+    value_column = config["column"]
+    if value_column not in table_df.columns:
+        return []
+    domain = config["domain"]
+    rows: list[dict[str, Any]] = []
+    for idx, row in enumerate(table_df.to_dict(orient="records")):
+        raw_value = row.get(value_column)
+        tokens = _to_pipe_list(raw_value)
+        if not tokens:
+            continue
+        staging_object_key = object_keys[idx] if idx < len(object_keys) else None
+        if not staging_object_key:
+            continue
+        seen_codes: set[str] = set()
+        for token in tokens:
+            code = _canonicalize_reference_token(domain, token)
+            if not code or code in seen_codes:
+                continue
+            seen_codes.add(code)
+            rows.append(
+                {
+                    "import_batch_id": batch_id,
+                    "staging_object_key": staging_object_key,
+                    value_column: code,
+                    "source_sheet": row.get("source_sheet"),
+                    "raw_relation_token": token,
+                    "raw_source_data": {
+                        "mapping_source": mapping_source_label,
+                        "table": table_name,
+                        "source_value": raw_value,
+                    },
+                    "resolution_status": "pending",
+                    "is_approved": True,
+                }
+            )
+    return rows
+
 def _resolve_relations_for_row(
     *,
     row: dict[str, Any],
@@ -629,7 +761,7 @@ def _resolve_relations_for_row(
                     {
                         "import_batch_id": batch_id,
                         "staging_object_key": staging_object_key,
-                        "amenity_code": token.lower(),
+                        "amenity_code": _canonicalize_reference_token("amenity", token),
                         "source_sheet": source_sheet,
                         "source_column": source_col,
                         "raw_relation_token": token,
@@ -644,7 +776,7 @@ def _resolve_relations_for_row(
                     {
                         "import_batch_id": batch_id,
                         "staging_object_key": staging_object_key,
-                        "payment_code": token.lower(),
+                        "payment_code": _canonicalize_reference_token("payment_method", token),
                         "source_sheet": source_sheet,
                         "source_column": source_col,
                         "raw_relation_token": token,
@@ -1155,6 +1287,37 @@ async def run_batch_pipeline(
         )
         _chunked_insert(sb, table_name, generic_rows)
 
+
+    object_keys = [str(row.get("staging_object_key") or "") for row in staging_collections["object_rows"]]
+    amenity_split_rows = _build_semantic_split_rows(
+        batch_id=batch_id,
+        table_name="object_amenity_temp",
+        table_df=transformed_by_table.get("object_amenity_temp", pd.DataFrame()),
+        object_keys=object_keys,
+        mapping_source_label=mapping_source_label,
+    )
+    payment_split_rows = _build_semantic_split_rows(
+        batch_id=batch_id,
+        table_name="object_payment_method_temp",
+        table_df=transformed_by_table.get("object_payment_method_temp", pd.DataFrame()),
+        object_keys=object_keys,
+        mapping_source_label=mapping_source_label,
+    )
+    _chunked_insert(
+        sb,
+        "object_amenity_temp",
+        amenity_split_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,amenity_code",
+    )
+    _chunked_insert(
+        sb,
+        "object_payment_method_temp",
+        payment_split_rows,
+        upsert=True,
+        on_conflict="import_batch_id,staging_object_key,payment_code",
+    )
+
     update_import_batch_row(sb, batch_id, status="staging_loaded")
     return {
         "rows_loaded": len(staging_collections["object_rows"]),
@@ -1166,6 +1329,7 @@ async def run_batch_pipeline(
 
 def run_batch_pipeline_sync(**kwargs):
     return asyncio.run(run_batch_pipeline(**kwargs))
+
 
 
 

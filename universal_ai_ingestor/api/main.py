@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import hmac
 import logging
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -29,9 +31,11 @@ from core.supabase_client import (
     update_import_batch_row,
 )
 from core.target_schema import TARGET_SCHEMA_RULES, validate_mapping_target
+try:
+    from core.vector_store import save_approved_field_examples_sync
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.vector_store import save_approved_field_examples_sync  # type: ignore
 
-app = FastAPI(title="Bertel Data Ingestor", version="2.0.0")
-security = HTTPBearer(auto_error=False)
 logger = logging.getLogger("ingestor.api")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -41,14 +45,35 @@ MAX_ETL_ATTEMPTS = settings.etl_max_attempts
 RETRY_BACKOFF = settings.etl_retry_backoff_seconds
 
 
+def _validate_startup_config() -> None:
+    if settings.app_env.lower() not in {"production", "staging"}:
+        return
+    missing = settings.missing_required_settings(require_openai=True)
+    if missing:
+        raise RuntimeError(
+            "Missing required settings for production startup: " + ", ".join(sorted(missing))
+        )
+
+
+@asynccontextmanager
+async def _app_lifespan(_: FastAPI):
+    _validate_startup_config()
+    yield
+
+
+app = FastAPI(title="Bertel Data Ingestor", version="2.0.0", lifespan=_app_lifespan)
+security = HTTPBearer(auto_error=False)
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> None:
+    configured_token = settings.api_bearer_token or os.getenv("API_BEARER_TOKEN", "")
     if credentials is None:
         raise HTTPException(status_code=401, detail="Missing bearer token")
-    if not hmac.compare_digest(credentials.credentials, settings.api_bearer_token):
+    if not hmac.compare_digest(credentials.credentials, configured_token):
         raise HTTPException(status_code=401, detail="Invalid bearer token")
 
 
@@ -190,6 +215,11 @@ def _approve_and_validate(sb, batch_id: str, contract_id: str) -> None:
         .execute()
     )
     update_import_batch_row(sb, batch_id, status="mapping_approved")
+    approved_rows = _contract_fields(sb, contract_id)
+    try:
+        save_approved_field_examples_sync(approved_rows)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist approved mapping examples to vector store: %s", exc)
 
 
 def _run_full_pipeline(batch_id: str, *, use_cleaner: bool = False) -> None:
@@ -632,3 +662,5 @@ def purge_batch(batch_id: str, force: bool = Query(default=True)) -> JSONRespons
     except Exception as exc:  # noqa: BLE001
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
+
+

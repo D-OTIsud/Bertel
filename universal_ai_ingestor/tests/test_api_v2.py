@@ -44,6 +44,8 @@ if "langgraph.graph" not in sys.modules:
             return None
         def add_edge(self, *a, **kw):
             return None
+        def add_conditional_edges(self, *a, **kw):
+            return None
         def compile(self):
             return self
 
@@ -107,11 +109,13 @@ class _FakeSupabase:
         return SimpleNamespace(execute=lambda: _FakeExecute({"ok": True}))
 
 
+
 def test_health():
     client = TestClient(api_main.app)
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+
 
 
 def test_auth_rejects_bad_token():
@@ -120,10 +124,30 @@ def test_auth_rejects_bad_token():
     assert r.status_code == 401
 
 
+
 def test_auth_rejects_missing_token():
     client = TestClient(api_main.app)
     r = client.get("/api/v1/orgs")
     assert r.status_code == 401
+
+
+
+def test_startup_config_skips_validation_outside_production(monkeypatch):
+    monkeypatch.setattr(api_main.settings, "app_env", "development")
+    monkeypatch.setattr(api_main.settings, "supabase_url", "")
+    api_main._validate_startup_config()
+
+
+
+def test_startup_config_requires_secrets_in_production(monkeypatch):
+    monkeypatch.setattr(api_main.settings, "app_env", "production")
+    monkeypatch.setattr(api_main.settings, "supabase_url", "")
+    monkeypatch.setattr(api_main.settings, "supabase_service_key", "")
+    monkeypatch.setattr(api_main.settings, "api_bearer_token", "")
+    monkeypatch.setattr(api_main.settings, "openai_api_key", "")
+    with pytest.raises(RuntimeError):
+        api_main._validate_startup_config()
+
 
 
 def test_list_orgs(monkeypatch):
@@ -134,6 +158,7 @@ def test_list_orgs(monkeypatch):
     r = client.get("/api/v1/orgs", headers=AUTH)
     assert r.status_code == 200
     assert len(r.json()["orgs"]) == 1
+
 
 
 def test_ingest_rejects_oversized(monkeypatch):
@@ -148,11 +173,13 @@ def test_ingest_rejects_oversized(monkeypatch):
     assert r.status_code == 413
 
 
+
 def test_batch_status_404(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([]))
     client = TestClient(api_main.app)
     r = client.get("/api/v1/ingest/nonexistent", headers=AUTH)
     assert r.status_code == 404
+
 
 
 def test_mapping_patch_404_no_contract(monkeypatch):
@@ -166,11 +193,13 @@ def test_mapping_patch_404_no_contract(monkeypatch):
     assert r.status_code == 404
 
 
+
 def test_rollback(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase())
     client = TestClient(api_main.app)
     r = client.post("/api/v1/ingest/batch-1/rollback", headers=AUTH)
     assert r.status_code == 200
+
 
 
 def test_purge(monkeypatch):

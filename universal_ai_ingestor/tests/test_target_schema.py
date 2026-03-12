@@ -81,6 +81,16 @@ def test_target_schema_rules_expose_all_staging_columns() -> None:
             missing_by_table[table] = missing
     assert missing_by_table == {}
 
+
+def test_target_schema_rules_do_not_expose_non_staging_columns() -> None:
+    extra_by_table: dict[str, list[str]] = {}
+    for table, rule in TARGET_SCHEMA_RULES.items():
+        staging_columns = set(_STAGING_TABLE_COLUMNS.get(table, ()))
+        extras = sorted(column.column for column in rule.columns if column.column not in staging_columns)
+        if extras:
+            extra_by_table[table] = extras
+    assert extra_by_table == {}
+
 def test_object_pet_policy_available_for_manual_mapping() -> None:
     rule = TARGET_SCHEMA_RULES['object_pet_policy_temp']
     assert {column.column for column in rule.columns} >= {'accepted', 'conditions'}
@@ -100,5 +110,7 @@ def test_staging_v3_sql_has_no_comment_artifact_columns() -> None:
     content = (ROOT / 'universal_ai_ingestor' / 'sql' / 'staging_v3_tables.sql').read_text(encoding='utf-8')
     assert re.search(r"^\s*'[^\n]*'\s+[A-Z]+", content, re.MULTILINE) is None
     assert re.search(r'^\s*how\s+[A-Z]+', content, re.MULTILINE) is None
+
+
 
 

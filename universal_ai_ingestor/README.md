@@ -22,6 +22,8 @@ Le flux inclut maintenant un **Discovery Agent** pre-ingest: profilage des feuil
 - `ui/app.py` : upload manuel et validation des lignes staging
 - `core/` : moteur ETL, mapping IA (LangGraph), pipeline media URL->bucket, schemas Pydantic, client Supabase
 - `sql/staging_ingestor.sql` : schema/tables staging pour imports
+- `sql/staging_v2_tables.sql` : tables staging additionnelles
+- `sql/staging_v3_tables.sql` : miroir exhaustif des tables manquantes du schema unifie pour le mapping manuel
 
 ## Prerequis
 
@@ -31,8 +33,9 @@ Le flux inclut maintenant un **Discovery Agent** pre-ingest: profilage des feuil
 
 ```sql
 \i sql/staging_ingestor.sql
+\i sql/staging_v2_tables.sql
+\i sql/staging_v3_tables.sql
 ```
-
 4. Verifier la migration et la securite:
 
 ```sql

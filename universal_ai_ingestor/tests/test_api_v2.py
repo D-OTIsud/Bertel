@@ -6,6 +6,7 @@ import sys
 import types
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
@@ -21,17 +22,32 @@ if "multipart" not in sys.modules:
 
 if "langchain_openai" not in sys.modules:
     langchain_openai = types.ModuleType("langchain_openai")
-
-    class _DummyChatOpenAI:
-        def __init__(self, *a, **kw):
-            pass
-        def with_structured_output(self, *a, **kw):
-            return self
-        def invoke(self, *a, **kw):
-            return {}
-
-    langchain_openai.ChatOpenAI = _DummyChatOpenAI
     sys.modules["langchain_openai"] = langchain_openai
+else:
+    langchain_openai = sys.modules["langchain_openai"]
+
+
+class _DummyChatOpenAI:
+    def __init__(self, *a, **kw):
+        pass
+
+    def with_structured_output(self, *a, **kw):
+        return self
+
+    def invoke(self, *a, **kw):
+        return {}
+
+
+class _DummyOpenAIEmbeddings:
+    def __init__(self, *a, **kw):
+        pass
+
+    async def aembed_query(self, *a, **kw):
+        return [0.0]
+
+
+langchain_openai.ChatOpenAI = _DummyChatOpenAI
+langchain_openai.OpenAIEmbeddings = _DummyOpenAIEmbeddings
 
 if "langgraph.graph" not in sys.modules:
     langgraph = types.ModuleType("langgraph")
@@ -40,12 +56,16 @@ if "langgraph.graph" not in sys.modules:
     class _DummyStateGraph:
         def __init__(self, *a, **kw):
             pass
+
         def add_node(self, *a, **kw):
             return None
+
         def add_edge(self, *a, **kw):
             return None
+
         def add_conditional_edges(self, *a, **kw):
             return None
+
         def compile(self):
             return self
 
@@ -69,24 +89,34 @@ class _FakeExecute:
 class _FakeTableQuery:
     def __init__(self, data=None):
         self._data = data or []
+
     def select(self, *a, **kw):
         return self
+
     def eq(self, *a, **kw):
         return self
+
     def order(self, *a, **kw):
         return self
+
     def limit(self, *a, **kw):
         return self
+
     def ilike(self, *a, **kw):
         return self
+
     def update(self, *a, **kw):
         return self
+
     def in_(self, *a, **kw):
         return self
+
     def insert(self, *a, **kw):
         return self
+
     def upsert(self, *a, **kw):
         return self
+
     def execute(self):
         return _FakeExecute(self._data)
 
@@ -94,6 +124,7 @@ class _FakeTableQuery:
 class _FakeSchema:
     def __init__(self, data=None):
         self._data = data or []
+
     def table(self, name):
         return _FakeTableQuery(self._data)
 
@@ -101,13 +132,15 @@ class _FakeSchema:
 class _FakeSupabase:
     def __init__(self, data=None):
         self._data = data or []
+
     def schema(self, name):
         return _FakeSchema(self._data)
+
     def table(self, name):
         return _FakeTableQuery(self._data)
+
     def rpc(self, name, payload=None):
         return SimpleNamespace(execute=lambda: _FakeExecute({"ok": True}))
-
 
 
 def test_health():
@@ -117,12 +150,10 @@ def test_health():
     assert r.json()["status"] == "ok"
 
 
-
 def test_auth_rejects_bad_token():
     client = TestClient(api_main.app)
     r = client.get("/api/v1/orgs", headers={"Authorization": "Bearer wrong"})
     assert r.status_code == 401
-
 
 
 def test_auth_rejects_missing_token():
@@ -131,12 +162,10 @@ def test_auth_rejects_missing_token():
     assert r.status_code == 401
 
 
-
 def test_startup_config_skips_validation_outside_production(monkeypatch):
     monkeypatch.setattr(api_main.settings, "app_env", "development")
     monkeypatch.setattr(api_main.settings, "supabase_url", "")
     api_main._validate_startup_config()
-
 
 
 def test_startup_config_requires_secrets_in_production(monkeypatch):
@@ -149,7 +178,6 @@ def test_startup_config_requires_secrets_in_production(monkeypatch):
         api_main._validate_startup_config()
 
 
-
 def test_list_orgs(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([
         {"id": "org-1", "name": "Test Org", "object_type": "ORG"},
@@ -159,6 +187,56 @@ def test_list_orgs(monkeypatch):
     assert r.status_code == 200
     assert len(r.json()["orgs"]) == 1
 
+
+def test_ingest_accepts_valid_upload(monkeypatch):
+    async def _fake_build_discovery_contract(**kwargs):
+        return SimpleNamespace(
+            fields=[],
+            relations=[],
+            source_format="xlsx",
+            overall_confidence=0.95,
+            assumptions=[],
+            sheets=[],
+        )
+
+    monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase())
+    monkeypatch.setattr(api_main, "find_batch_by_idempotency", lambda *a, **kw: None)
+    monkeypatch.setattr(api_main, "hash_payload", lambda payload: "sha256")
+    monkeypatch.setattr(api_main, "store_raw_payload", lambda *a, **kw: "raw/path.xlsx")
+    monkeypatch.setattr(api_main, "ensure_import_batch_row_extended", lambda *a, **kw: None)
+    monkeypatch.setattr(api_main, "append_import_event", lambda *a, **kw: None)
+    monkeypatch.setattr(api_main, "update_import_batch_row", lambda *a, **kw: None)
+    monkeypatch.setattr(
+        api_main,
+        "parse_payload",
+        lambda *a, **kw: SimpleNamespace(
+            source_format="xlsx",
+            dataframe=pd.DataFrame({"Nom": ["Hotel A"]}),
+            workbook_sheets=None,
+        ),
+    )
+    monkeypatch.setattr(api_main, "build_discovery_contract", _fake_build_discovery_contract)
+    monkeypatch.setattr(
+        api_main,
+        "persist_discovery_contract",
+        lambda *a, **kw: {"contract_id": "c1", "status": "review_required"},
+    )
+
+    client = TestClient(api_main.app)
+    r = client.post(
+        "/api/v1/ingest",
+        headers=AUTH,
+        params={"organization_object_id": "ORGGEN0000000001"},
+        files={
+            "upload_file": (
+                "sample.xlsx",
+                b"fake-bytes",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert r.status_code == 202
+    assert r.json()["status"] == "mapping_review_required"
 
 
 def test_ingest_rejects_oversized(monkeypatch):
@@ -173,13 +251,11 @@ def test_ingest_rejects_oversized(monkeypatch):
     assert r.status_code == 413
 
 
-
 def test_batch_status_404(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([]))
     client = TestClient(api_main.app)
     r = client.get("/api/v1/ingest/nonexistent", headers=AUTH)
     assert r.status_code == 404
-
 
 
 def test_mapping_patch_404_no_contract(monkeypatch):
@@ -193,13 +269,11 @@ def test_mapping_patch_404_no_contract(monkeypatch):
     assert r.status_code == 404
 
 
-
 def test_rollback(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase())
     client = TestClient(api_main.app)
     r = client.post("/api/v1/ingest/batch-1/rollback", headers=AUTH)
     assert r.status_code == 200
-
 
 
 def test_purge(monkeypatch):

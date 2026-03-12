@@ -8,14 +8,17 @@ import pytest
 from universal_ai_ingestor.core.ai_graph import (
     SemanticReview,
     _check_confidence_node,
+    _profile_columns_node,
     _semantic_critic_node,
     build_mapping_graph,
 )
 from universal_ai_ingestor.core.schemas import (
     ColumnSelection,
+    EntityIdentification,
     MappingPlan,
     MappingTarget,
     RelationAnalysis,
+    SheetEntity,
 )
 
 
@@ -89,6 +92,149 @@ async def test_semantic_critic_no_errors_when_llm_approves(base_state) -> None:
 
         result = await _semantic_critic_node(base_state)
         assert result.get("validation_errors", []) == []
+@pytest.mark.asyncio
+async def test_semantic_prompts_include_structured_schema_guidance(base_state) -> None:
+    captured: dict[str, str] = {}
+    base_state["identified_entities"] = EntityIdentification(
+        sheets=[SheetEntity(sheet_name="Hotels", inferred_object_type="HOT", confidence=0.95, rationale="hotel sheet")]
+    )
+    base_state["schema_snapshot"] = {
+        "data_model_overview": "Bertel objects are central and satellites carry specialized data.",
+        "required_columns_by_table": {"object_amenity_temp": ["amenity_code"]},
+        "relationship_hints": ["Delimited amenities -> object_amenity_temp."],
+        "target_tables": [
+            {
+                "table": "object_amenity_temp",
+                "entity": "amenity",
+                "production_table": "object_amenity",
+                "description": "Amenity link table.",
+                "allowed_transforms": ["identity", "lowercase", "split_list"],
+                "columns": [
+                    {
+                        "column": "amenity_code",
+                        "aliases": ["amenity_code", "equipements", "amenities"],
+                        "required": True,
+                        "default_transform": "identity",
+                    }
+                ],
+            },
+            {
+                "table": "object_temp",
+                "entity": "object",
+                "production_table": "object",
+                "description": "Main object row.",
+                "allowed_transforms": ["identity", "lowercase"],
+                "columns": [
+                    {
+                        "column": "name",
+                        "aliases": ["name", "nom"],
+                        "required": True,
+                        "default_transform": "identity",
+                    }
+                ],
+            },
+        ],
+        "sheets_summary": [
+            {
+                "sheet_name": "Hotels",
+                "columns": ["Equipements"],
+                "sample_rows": [{"Equipements": "Wi-Fi;Parking"}],
+                "column_stats": {
+                    "Equipements": {
+                        "semantic_type_hint": "amenity",
+                        "multi_value_ratio": 1.0,
+                        "dominant_delimiter": ";",
+                    }
+                },
+            }
+        ],
+    }
+
+    async def _capture(messages):
+        captured["system"] = messages[0][1]
+        return ColumnSelection(per_sheet={"Hotels": []})
+
+    with patch("universal_ai_ingestor.core.ai_graph._get_llm") as mock_llm:
+        mock_chain = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.ainvoke = AsyncMock(side_effect=_capture)
+        mock_chain.with_structured_output.return_value = mock_agent
+        mock_llm.return_value = mock_chain
+
+        await _profile_columns_node(base_state)
+
+    prompt = captured["system"]
+    assert "Focused schema cross-check" in prompt
+    assert "required_columns: amenity_code" in prompt
+    assert "allowed_transforms: identity, lowercase, split_list" in prompt
+    assert "Delimited amenities -> object_amenity_temp." in prompt
+    assert "aliases=equipements, amenities" in prompt
+
+
+@pytest.mark.asyncio
+async def test_semantic_critic_prompt_includes_schema_cross_checks(base_state) -> None:
+    captured: dict[str, str] = {}
+    base_state["mapping_plan"] = MappingPlan(
+        source_format="xlsx",
+        confidence=0.8,
+        targets=[
+            MappingTarget(
+                table="object_amenity_temp",
+                column="amenity_code",
+                transform="split_list",
+                source_key="Equipements",
+                source_sheet="Hotels",
+            )
+        ],
+    )
+    base_state["schema_snapshot"] = {
+        "required_columns_by_table": {"object_amenity_temp": ["amenity_code"]},
+        "relationship_hints": ["Delimited amenities -> object_amenity_temp."],
+        "target_tables": [
+            {
+                "table": "object_amenity_temp",
+                "entity": "amenity",
+                "production_table": "object_amenity",
+                "description": "Amenity link table.",
+                "allowed_transforms": ["identity", "lowercase", "split_list"],
+                "columns": [
+                    {
+                        "column": "amenity_code",
+                        "aliases": ["amenity_code", "equipements"],
+                        "required": True,
+                        "default_transform": "identity",
+                    }
+                ],
+            }
+        ],
+        "sheets_summary": [
+            {
+                "sheet_name": "Hotels",
+                "columns": ["Equipements"],
+                "sample_rows": [{"Equipements": "Wi-Fi;Parking"}],
+                "column_stats": {"Equipements": {"semantic_type_hint": "amenity"}},
+            }
+        ],
+    }
+
+    async def _capture(messages):
+        captured["system"] = messages[0][1]
+        return SemanticReview(issues=[])
+
+    with patch("universal_ai_ingestor.core.ai_graph._get_llm") as mock_llm:
+        mock_chain = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.ainvoke = AsyncMock(side_effect=_capture)
+        mock_chain.with_structured_output.return_value = mock_agent
+        mock_llm.return_value = mock_chain
+
+        await _semantic_critic_node(base_state)
+
+    prompt = captured["system"]
+    assert "focused schema" in prompt.lower()
+    assert "required_columns: amenity_code" in prompt
+    assert "Delimited amenities -> object_amenity_temp." in prompt
+    assert "Choosing a transform that is not allowed for the target table" in prompt
 
 
 @pytest.mark.asyncio
@@ -139,3 +285,5 @@ def test_build_mapping_graph_includes_semantic_critic_and_check_confidence() -> 
     graph = build_mapping_graph()
     assert graph is not None
     assert callable(getattr(graph, "ainvoke", None)) or hasattr(graph, "get_graph")
+
+

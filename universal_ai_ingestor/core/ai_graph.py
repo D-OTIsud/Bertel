@@ -25,14 +25,19 @@ from core.schemas import (
 from core.constants import ENTITY_TYPE_TO_STAGING
 
 try:
-    from core.target_schema import TARGET_SCHEMA_RULES, KNOWN_OBJECT_TYPES, validate_mapping_target
+    from core.target_schema import (
+        TARGET_SCHEMA_RULES,
+        KNOWN_OBJECT_TYPES,
+        build_target_schema_context,
+        validate_mapping_target,
+    )
 except ModuleNotFoundError:
     from universal_ai_ingestor.core.target_schema import (  # type: ignore
         TARGET_SCHEMA_RULES,
         KNOWN_OBJECT_TYPES,
+        build_target_schema_context,
         validate_mapping_target,
     )
-
 try:
     from core.vector_store import query_similar_few_shots
 except ModuleNotFoundError:
@@ -86,18 +91,195 @@ def _emit(state: MappingState, phase: str, message: str) -> None:
             pass
 
 
-def _tables_summary() -> str:
-    lines: list[str] = []
-    for r in TARGET_SCHEMA_RULES.values():
-        cols = ", ".join(c.column for c in r.columns)
-        lines.append(f"  {r.table}: {r.description[:80]}  columns=[{cols}]")
-    return "\n".join(lines)
+def _schema_tables(schema: dict[str, Any]) -> list[dict[str, Any]]:
+    tables = schema.get("target_tables")
+    if isinstance(tables, list) and tables:
+        return [table for table in tables if isinstance(table, dict) and table.get("table")]
+    fallback = build_target_schema_context().get("target_tables", [])
+    return [table for table in fallback if isinstance(table, dict) and table.get("table")]
+
+
+def _normalize_prompt_token(value: str) -> str:
+    cleaned: list[str] = []
+    for char in str(value).lower():
+        if char.isalnum():
+            cleaned.append(char)
+        elif not cleaned or cleaned[-1] != "_":
+            cleaned.append("_")
+    return "".join(cleaned).strip("_")
+
+
+def _core_prompt_tables() -> tuple[str, ...]:
+    return (
+        "object_temp",
+        "object_location_temp",
+        "object_description_temp",
+        "contact_channel_temp",
+        "actor_temp",
+        "actor_channel_temp",
+        "object_org_link_temp",
+        "object_external_id_temp",
+        "object_origin_temp",
+    )
+
+
+def _entity_priority_tables(entity_type: str) -> tuple[str, ...]:
+    entity = str(entity_type or "").upper()
+    common = _core_prompt_tables()
+    mapping: dict[str, tuple[str, ...]] = {
+        "ORG": common + ("org_temp", "object_legal_temp"),
+        "MEDIA": ("media_temp", "object_temp", "object_description_temp"),
+        "JUNCTION": tuple(ENTITY_TYPE_TO_STAGING.values()) + ("object_org_link_temp",),
+        "FMA": common + ("object_fma_temp", "opening_period_temp", "object_price_temp"),
+        "ITI": common + ("object_iti_temp", "object_iti_info_temp", "object_iti_section_temp"),
+        "HOT": common + ("object_room_type_temp", "object_capacity_temp", "object_amenity_temp"),
+        "HPA": common + ("object_room_type_temp", "object_capacity_temp", "object_amenity_temp"),
+        "HLO": common + ("object_room_type_temp", "object_capacity_temp", "object_amenity_temp"),
+    }
+    return mapping.get(entity, common)
+
+
+def _rank_schema_tables(
+    schema: dict[str, Any],
+    source_columns: list[str],
+    entity_type: str = "",
+    *,
+    extra_tables: tuple[str, ...] | None = None,
+    limit: int = 12,
+) -> list[dict[str, Any]]:
+    tables = _schema_tables(schema)
+    if not tables:
+        return []
+    normalized_columns = [_normalize_prompt_token(column) for column in source_columns if str(column).strip()]
+    core_tables = set(_core_prompt_tables())
+    priority_tables = set(_entity_priority_tables(entity_type))
+    if extra_tables:
+        priority_tables.update(extra_tables)
+
+    scored: list[tuple[int, str, dict[str, Any]]] = []
+    for table in tables:
+        table_name = str(table.get("table", ""))
+        if not table_name:
+            continue
+        score = 0
+        if table_name in core_tables:
+            score += 4
+        if table_name in priority_tables:
+            score += 8
+        for schema_column in table.get("columns", []):
+            column_name = _normalize_prompt_token(str(schema_column.get("column", "")))
+            aliases = {
+                _normalize_prompt_token(str(alias))
+                for alias in schema_column.get("aliases", [])
+                if str(alias).strip()
+            }
+            candidates = {column_name, *aliases}
+            for source in normalized_columns:
+                if not source:
+                    continue
+                if source in candidates:
+                    score += 14
+                elif any(
+                    candidate and len(candidate) >= 3 and (candidate in source or source in candidate)
+                    for candidate in candidates
+                ):
+                    score += 4
+        if score > 0 or table_name in priority_tables:
+            scored.append((score, table_name, table))
+
+    if not scored:
+        return tables[:limit]
+
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    ordered: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for _score, table_name, table in scored:
+        if table_name in seen:
+            continue
+        ordered.append(table)
+        seen.add(table_name)
+        if len(ordered) >= limit:
+            break
+    return ordered
+
+
+def _format_table_columns_for_prompt(table: dict[str, Any], *, max_columns: int = 12) -> str:
+    parts: list[str] = []
+    columns = table.get("columns", [])
+    for column in columns[:max_columns]:
+        name = str(column.get("column", ""))
+        if not name:
+            continue
+        aliases = [
+            str(alias)
+            for alias in column.get("aliases", [])
+            if str(alias).strip() and str(alias) != name
+        ][:2]
+        segment = name
+        if column.get("required"):
+            segment += " (required)"
+        if aliases:
+            segment += f" aliases={', '.join(aliases)}"
+        default_transform = str(column.get("default_transform", "identity") or "identity")
+        if default_transform != "identity":
+            segment += f" default={default_transform}"
+        parts.append(segment)
+    if len(columns) > max_columns:
+        parts.append(f"... +{len(columns) - max_columns} more")
+    return "; ".join(parts) if parts else "-"
+
+
+def _format_schema_focus_for_prompt(
+    schema: dict[str, Any],
+    source_columns: list[str],
+    entity_type: str = "",
+    *,
+    extra_tables: tuple[str, ...] | None = None,
+    limit: int = 12,
+) -> str:
+    focus_tables = _rank_schema_tables(
+        schema,
+        source_columns,
+        entity_type,
+        extra_tables=extra_tables,
+        limit=limit,
+    )
+    required_by_table = schema.get("required_columns_by_table", {})
+    overview = str(schema.get("data_model_overview", "")).strip()
+    table_lines: list[str] = []
+    for table in focus_tables:
+        table_name = str(table.get("table", ""))
+        required = ", ".join(required_by_table.get(table_name, [])[:6]) or "-"
+        transforms = ", ".join(str(t) for t in table.get("allowed_transforms", [])) or "identity"
+        description = str(table.get("description", "")).strip() or "No description."
+        table_lines.append(
+            f"- {table_name}: {description}\n"
+            f"  required_columns: {required}\n"
+            f"  allowed_transforms: {transforms}\n"
+            f"  columns: {_format_table_columns_for_prompt(table)}"
+        )
+    hints = schema.get("relationship_hints", [])[:10]
+    hints_block = "\n".join(f"- {hint}" for hint in hints) or "- No relationship hints available."
+    overview_block = f"Model overview: {overview}\n\n" if overview else ""
+    table_block = "\n".join(table_lines) if table_lines else "- No relevant schema tables found."
+    return (
+        "## Focused schema cross-check:\n"
+        f"{overview_block}"
+        f"{table_block}\n\n"
+        "## Relationship hints:\n"
+        f"{hints_block}"
+    )
+
+
+def _format_relation_targets_for_prompt() -> str:
+    return "\n".join(
+        f"- {entity_type} -> {table_name}"
+        for entity_type, table_name in sorted(ENTITY_TYPE_TO_STAGING.items())
+    )
 
 
 def _obj_types_str() -> str:
     return ", ".join(f"{k}={v}" for k, v in KNOWN_OBJECT_TYPES.items())
-
-
 def _format_stats_for_prompt(col_stat: dict[str, Any]) -> str:
     if not col_stat:
         return ""
@@ -182,16 +364,15 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
     ) or "- No global workbook entity context available."
     user_rules = (state.get("custom_rules") or "").strip() or "No user business rules provided."
     validation_errors = state.get("validation_errors", [])
-    
+
     reflection_context = ""
     if validation_errors:
         reflection_context = (
             "## PREVIOUS ATTEMPT FAILED. FIX THESE ERRORS:\n"
             + "\n".join(f"- {e}" for e in validation_errors)
-            + "\n\nYou MUST NOT repeat these mistakes. Double-check your chosen target_table and target_column.\n\n"
+            + "\n\nYou MUST NOT repeat these mistakes. Double-check your chosen target_table, target_column, and transform against the schema.\n\n"
         )
 
-    tables_desc = _tables_summary()
     sheets_info: list[dict[str, Any]] = schema.get("sheets_summary", [])
     if not sheets_info:
         incoming = schema.get("incoming_columns", [])
@@ -218,7 +399,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
             "- Column 'Date_Import_Tech' -> keep: false"
         )
     )
-    prompt = (
+    base_prompt = (
         "You are a data mapping expert for the Bertel tourism CRM.\n"
         f"{reflection_context}"
         "Source data is in FRENCH. Key translations:\n"
@@ -230,23 +411,23 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
         "  Contact/Interlocuteur (person)->actor, SIRET->legal\n\n"
         "## Domain Glossary:\n"
         f"{_load_glossary()}\n\n"
-        "## Staging tables:\n"
-        f"{tables_desc}\n\n"
-        "## Rules:\n"
-        "- Address/GPS -> object_location_temp (NEVER object_temp)\n"
-        "- Descriptions -> object_description_temp\n"
-        "- Establishment contacts -> contact_channel_temp\n"
-        "- Person contacts -> actor_channel_temp\n"
-        "- Human names -> actor_temp\n"
-        "- Metadata columns (date_creation, user, moderator) -> keep=false\n"
-        "- Delimited lists -> transform=split_list\n"
-        "- 'lat,lon' text -> transform=split_gps\n"
-        "- ONLY use table+column names from the schema. Do NOT invent.\n"
-        "- Confidence 0-1: >0.8 clear, <0.5 uncertain.\n"
         "## Global workbook context (critical for foreign keys and join tables):\n"
         f"{global_context}\n\n"
         "## STRICT USER BUSINESS RULES (priority):\n"
         f"{user_rules}\n\n"
+        "## Mandatory cross-check rules:\n"
+        "- Use ONLY table and column names that exist in the focused schema block. Do NOT invent names.\n"
+        "- Prefer exact alias matches from the schema over generic guesses.\n"
+        "- Respect allowed_transforms for each table.\n"
+        "- Keep=false only for clear metadata/technical columns, duplicates, or empty noise. Do NOT ignore business columns by default.\n"
+        "- Address/GPS -> object_location_temp (NEVER object_temp).\n"
+        "- Descriptions -> object_description_temp.\n"
+        "- Establishment contacts -> contact_channel_temp.\n"
+        "- Person contacts -> actor_channel_temp.\n"
+        "- Human identity -> actor_temp.\n"
+        "- Delimited lists -> transform=split_list.\n"
+        "- 'lat,lon' text -> transform=split_gps.\n"
+        "- Confidence 0-1: >0.8 clear, <0.5 uncertain.\n\n"
         "Apply valid user rules with priority.\n"
         "If a user rule points to a table/column not in schema, ignore that invalid part and continue with best valid mapping.\n\n"
         "### FEW-SHOT EXAMPLES ###\n"
@@ -261,6 +442,13 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
         cols = info.get("columns", [])
         samples = info.get("sample_rows", [])[:5]
         entity_type = entity_map.get(sheet_name, "UNKNOWN")
+        schema_focus = _format_schema_focus_for_prompt(
+            schema,
+            [str(col) for col in cols],
+            entity_type,
+            extra_tables=_entity_priority_tables(entity_type),
+        )
+        prompt = base_prompt + "\n" + schema_focus + "\n"
 
         col_profiles = ""
         stats = info.get("column_stats", {})
@@ -275,6 +463,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
             f"Sheet: '{sheet_name}' (entity type: {entity_type})\n"
             f"Columns ({len(cols)}):{col_profiles}\n\n"
             "For EACH column, decide: keep (true/false), target_table, target_column, transform, confidence.\n"
+            "Cross-check each choice against the focused schema block before returning it.\n"
             "Return results in per_sheet with key=sheet name."
         )
         try:
@@ -291,7 +480,6 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
     total = sum(len(v) for v in all_verdicts.values())
     _emit(state, "discovery_profiling", f"Profilage termine: {total} colonnes analysees")
     return state
-
 
 # ---------------------------------------------------------------------------
 # Node 3: Relation Analysis
@@ -328,18 +516,28 @@ async def _analyse_relations_node(state: MappingState) -> MappingState:
             "- Column 'Langues Parlees' with value 'FR;EN;ES' -> separator=';', target_entity_type='language'"
         )
     )
+    relation_schema = _format_schema_focus_for_prompt(
+        schema,
+        [str(column) for column in all_cols[:30]],
+        "JUNCTION",
+        extra_tables=tuple(ENTITY_TYPE_TO_STAGING.values()),
+        limit=10,
+    )
     prompt = (
         "You are a data relationship analyst for the Bertel tourism CRM.\n"
-        "Identify cross-sheet foreign key relationships, delimiter-separated multi-value columns, "
-        "and pure junction tables.\n\n"
+        "Identify cross-sheet foreign key relationships, delimiter-separated multi-value columns, and pure junction tables.\n\n"
         "Business vocabulary:\n"
         "  Prestataire/Proprietaire/Gerant/Gestionnaire -> ORG entity\n"
         "  Comma/pipe/semicolon-separated values in a column -> One-to-Many relation\n"
         "  A sheet with only 2-3 ID columns -> junction table\n\n"
-        "target_entity_type must be one of: org, amenity, payment, media, language, environment_tag, "
-        "or empty string if unknown.\n\n"
+        "target_entity_type must be one of the available relation targets below, or empty string if unknown.\n"
+        "Only propose relation targets whose staging table exists in the focused schema block.\n"
+        "Use schema relationship hints before inventing a cross-sheet link.\n\n"
+        "## Available relation targets:\n"
+        f"{_format_relation_targets_for_prompt()}\n\n"
         "## Domain Glossary:\n"
         f"{_load_glossary()}\n\n"
+        f"{relation_schema}\n\n"
         "### FEW-SHOT EXAMPLES ###\n"
         f"{rel_few_shot_block}\n"
     )
@@ -349,8 +547,7 @@ async def _analyse_relations_node(state: MappingState) -> MappingState:
         sheet_cols = columns.per_sheet.get(entity.sheet_name, [])
         kept_cols = [v.source_column for v in sheet_cols if v.keep]
         sheets_summary.append(
-            f"Sheet '{entity.sheet_name}' (type={entity.inferred_object_type}): "
-            f"kept columns={kept_cols[:20]}"
+            f"Sheet '{entity.sheet_name}' (type={entity.inferred_object_type}): kept columns={kept_cols[:20]}"
         )
 
     sheets_info: list[dict[str, Any]] = schema.get("sheets_summary", [])
@@ -364,7 +561,7 @@ async def _analyse_relations_node(state: MappingState) -> MappingState:
     user_msg = (
         "Sheets in this workbook:\n"
         + "\n".join(sheets_summary)
-        + "\n\nIdentify all relationships."
+        + "\n\nIdentify all relationships and cross-check them against the focused schema block."
     )
 
     agent = _get_llm().with_structured_output(RelationAnalysis)
@@ -377,7 +574,6 @@ async def _analyse_relations_node(state: MappingState) -> MappingState:
     state["analysed_relations"] = result
     _emit(state, "discovery_relations", f"Relations detectees: {len(result.relations)}")
     return state
-
 
 # ---------------------------------------------------------------------------
 # Node 4: Validation (pure Python, no LLM)
@@ -500,7 +696,7 @@ async def _semantic_critic_node(state: MappingState) -> MappingState:
 
     targets_desc = "\n".join(
         f"- '{t.source_key}' -> {t.table}.{t.column} (transform={t.transform})"
-        for t in plan.targets[:30]
+        for t in plan.targets[:40]
     )
     sample_summary: list[str] = []
     for info in sheets_info:
@@ -512,16 +708,25 @@ async def _semantic_critic_node(state: MappingState) -> MappingState:
             sample_vals = [str(r.get(col, ""))[:50] for r in samples if col in r][:3]
             sample_summary.append(f"  '{col}'{_format_stats_for_prompt(s)}: samples={sample_vals}")
 
+    schema_focus = _format_schema_focus_for_prompt(
+        schema,
+        [str(target.source_key) for target in plan.targets],
+        extra_tables=tuple(sorted({str(target.table) for target in plan.targets if str(target.table).strip()})),
+        limit=14,
+    )
     prompt = (
         "You are a semantic validator for data mapping in the Bertel tourism CRM.\n"
-        "Review the proposed column mappings against the source data samples and stats.\n"
-        "Flag ONLY clear semantic errors, e.g.:\n"
+        "Review the proposed column mappings against the source data samples, stats, and focused schema.\n"
+        "Flag ONLY clear semantic or schema-grounding errors, e.g.:\n"
         "- Mapping a numeric column to 'name' (text expected)\n"
         "- Mapping 'Equipements' (list of amenities) to object_temp instead of object_amenity_temp\n"
         "- Using identity for GPS when values look like '45.1, -1.2' (should use split_gps)\n"
         "- Mapping an ID column to 'description' or 'email'\n"
+        "- Choosing a transform that is not allowed for the target table\n"
+        "- Choosing a column that exists but is semantically wrong given the focused schema hints\n"
         "Do NOT flag: correct mappings, uncertain cases, or minor naming variations.\n"
-        "Return an empty issues list if the plan looks semantically sound.\n"
+        "Return an empty issues list if the plan looks semantically sound.\n\n"
+        f"{schema_focus}\n"
     )
     user_msg = (
         f"Proposed mappings:\n{targets_desc}\n\n"
@@ -541,7 +746,6 @@ async def _semantic_critic_node(state: MappingState) -> MappingState:
         logger.warning("Semantic critic LLM failed: %s", exc)
 
     return state
-
 
 # ---------------------------------------------------------------------------
 # Node 6: Confidence Check
@@ -729,6 +933,10 @@ async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutpu
         ]
     )
     return result
+
+
+
+
 
 
 

@@ -157,6 +157,28 @@ def _field_icon(target_table: str) -> str:
     return "Field"
 
 
+TRANSFORM_LABELS = {
+    "identity": "Conserver tel quel",
+    "lowercase": "Mettre en minuscules",
+    "split_list": "Decouper une liste",
+    "split_gps": "Separer latitude / longitude",
+}
+
+
+def _transform_label(transform: str) -> str:
+    return TRANSFORM_LABELS.get(transform, transform)
+
+
+def _transform_hint(transform: str) -> str:
+    hints = {
+        "identity": "Aucune transformation de la valeur.",
+        "lowercase": "Convertit le texte en minuscules.",
+        "split_list": "Separe plusieurs valeurs dans une meme cellule.",
+        "split_gps": "Separe des coordonnees GPS en latitude et longitude.",
+    }
+    return hints.get(transform, "")
+
+
 st.set_page_config(page_title="Bertel Data Ingestor", page_icon="database", layout="wide")
 st.markdown(
     """
@@ -323,6 +345,20 @@ if st.session_state.step == 3:
 
     corrections: list[dict[str, Any]] = []
     changed_any = False
+    h_left, h_mid, h_right, h_chip, h_conf, h_skip = st.columns([2.2, 2.0, 2.0, 1.0, 0.8, 0.6])
+    with h_left:
+        st.caption("Champ source")
+    with h_mid:
+        st.caption("Table cible")
+    with h_right:
+        st.caption("Colonne cible")
+    with h_chip:
+        st.caption("Transformation")
+    with h_conf:
+        st.caption("Confiance")
+    with h_skip:
+        st.caption("Ignorer")
+
     for idx, field in enumerate(visible_fields):
         source_col = str(field.get("source_column", "?"))
         sheet_name = str(field.get("sheet_name", "default"))
@@ -337,7 +373,6 @@ if st.session_state.step == 3:
             conf_class = "conf-mid"
         else:
             conf_class = "conf-low"
-        auto_skip = any(pattern in source_col.lower().replace(" ", "_") for pattern in SKIP_PATTERNS) or confidence <= 0.15
         st.markdown("<div class='mapping-card'>", unsafe_allow_html=True)
         left, mid, right, chip, conf, sk = st.columns([2.2, 2.0, 2.0, 1.0, 0.8, 0.6])
         with left:
@@ -345,21 +380,28 @@ if st.session_state.step == 3:
             st.caption(f"Feuille: {sheet_name}")
         table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
         with mid:
-            new_table = st.selectbox("Table", ALL_TABLES, index=table_idx, key=f"tbl_{idx}", label_visibility="collapsed")
+            new_table = st.selectbox("Table cible", ALL_TABLES, index=table_idx, key=f"tbl_{idx}", label_visibility="collapsed")
         col_options = TARGET_SCHEMA.get(new_table, {}).get("columns", [])
         col_idx = col_options.index(current_column) if current_column in col_options else 0
         with right:
-            new_column = st.selectbox("Champ", col_options if col_options else [current_column], index=col_idx, key=f"col_{idx}", label_visibility="collapsed")
+            new_column = st.selectbox("Colonne cible", col_options if col_options else [current_column], index=col_idx, key=f"col_{idx}", label_visibility="collapsed")
         tr_options = TARGET_SCHEMA.get(new_table, {}).get("transforms", ["identity"])
         tr_idx = tr_options.index(current_transform) if current_transform in tr_options else 0
         with chip:
-            new_transform = st.selectbox("Transform", tr_options, index=tr_idx, key=f"tr_{idx}", label_visibility="collapsed")
-            if new_transform in {"split_gps", "split_list"}:
-                st.caption("Separation auto")
+            new_transform = st.selectbox(
+                "Transformation",
+                tr_options,
+                index=tr_idx,
+                key=f"tr_{idx}",
+                format_func=_transform_label,
+                label_visibility="collapsed",
+            )
+            st.caption(_transform_hint(new_transform))
         with conf:
             st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
         with sk:
-            skip = st.checkbox("skip", value=auto_skip, key=f"skip_{idx}", label_visibility="collapsed")
+            default_skip = field.get("status") == "rejected"
+            skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{idx}", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
         changed = (
             new_table != current_table

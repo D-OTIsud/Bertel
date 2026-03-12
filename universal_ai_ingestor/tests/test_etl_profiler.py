@@ -1,10 +1,12 @@
-"""Unit tests for ETL profiler and column stats."""
+"""Unit tests for ETL profiler and semantic split-list normalization."""
 from __future__ import annotations
 
 import pandas as pd
 
 from universal_ai_ingestor.core.etl_engine import (
+    _build_semantic_split_rows,
     _calculate_column_stats,
+    _canonicalize_reference_token,
     workbook_payload_from_sheets,
 )
 
@@ -69,3 +71,57 @@ def test_workbook_payload_includes_column_stats() -> None:
     assert payload.sheets[0].column_stats["Nom"]["null_percent"] == 0.0
     assert payload.sheets[0].column_stats["Nom"]["unique_count"] == 2
     assert payload.sheets[0].column_stats["Nom"]["min_length"] == 1
+
+
+def test_canonicalize_reference_token_folds_common_synonyms() -> None:
+    assert _canonicalize_reference_token("amenity", "Wi-Fi") == "wifi"
+    assert _canonicalize_reference_token("amenity", "free internet") == "wifi"
+    assert _canonicalize_reference_token("amenity", "parking gratuit") == "parking"
+    assert _canonicalize_reference_token("payment_method", "ANCV") == "cheque_vacances"
+    assert _canonicalize_reference_token("payment_method", "cash") == "especes"
+
+
+def test_build_semantic_split_rows_deduplicates_semantic_matches() -> None:
+    table_df = pd.DataFrame(
+        {
+            "amenity_code": ["Wi-Fi;free internet;parking gratuit"],
+            "source_sheet": ["Feuil1"],
+        }
+    )
+    rows = _build_semantic_split_rows(
+        batch_id="batch-1",
+        table_name="object_amenity_temp",
+        table_df=table_df,
+        object_keys=["obj::1"],
+        mapping_source_label="approved_contract",
+    )
+    assert rows == [
+        {
+            "import_batch_id": "batch-1",
+            "staging_object_key": "obj::1",
+            "amenity_code": "wifi",
+            "source_sheet": "Feuil1",
+            "raw_relation_token": "Wi-Fi",
+            "raw_source_data": {
+                "mapping_source": "approved_contract",
+                "table": "object_amenity_temp",
+                "source_value": "Wi-Fi;free internet;parking gratuit",
+            },
+            "resolution_status": "pending",
+            "is_approved": True,
+        },
+        {
+            "import_batch_id": "batch-1",
+            "staging_object_key": "obj::1",
+            "amenity_code": "parking",
+            "source_sheet": "Feuil1",
+            "raw_relation_token": "parking gratuit",
+            "raw_source_data": {
+                "mapping_source": "approved_contract",
+                "table": "object_amenity_temp",
+                "source_value": "Wi-Fi;free internet;parking gratuit",
+            },
+            "resolution_status": "pending",
+            "is_approved": True,
+        },
+    ]

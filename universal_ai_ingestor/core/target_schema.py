@@ -21,6 +21,8 @@ ETL execution order (to respect FK constraints):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+import re
 
 try:
     from core.generated_schema_catalog import AUTO_TARGET_TABLE_SPECS
@@ -66,6 +68,84 @@ GENERATED_TARGET_TABLE_RULES: tuple[TargetTableRule, ...] = tuple(
     for table, spec in sorted(AUTO_TARGET_TABLE_SPECS.items())
 )
 
+_STAGING_SQL_FILES: tuple[str, ...] = (
+    "staging_ingestor.sql",
+    "staging_v2_tables.sql",
+    "staging_v3_tables.sql",
+)
+_CREATE_TABLE_RE = re.compile(
+    r"CREATE TABLE IF NOT EXISTS\s+staging\.([a-z0-9_]+)\s*\((.*?)\);",
+    re.IGNORECASE | re.DOTALL,
+)
+_ALTER_TABLE_RE = re.compile(
+    r"ALTER TABLE\s+staging\.([a-z0-9_]+)\s+(.*?);",
+    re.IGNORECASE | re.DOTALL,
+)
+_COLUMN_LINE_RE = re.compile(r'^\s*"?([a-z0-9_]+)"?\s+[a-z]', re.IGNORECASE)
+
+
+def _extract_column_names(block: str) -> tuple[str, ...]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for raw_line in block.splitlines():
+        line = raw_line.split("--", 1)[0].strip()
+        if not line:
+            continue
+        match = _COLUMN_LINE_RE.match(line)
+        if not match:
+            continue
+        name = match.group(1)
+        if name.lower() in {"constraint", "primary", "foreign", "unique", "check"}:
+            continue
+        if name not in seen:
+            names.append(name)
+            seen.add(name)
+    return tuple(names)
+
+
+def _load_staging_table_columns() -> dict[str, tuple[str, ...]]:
+    sql_root = Path(__file__).resolve().parents[1] / "sql"
+    table_columns: dict[str, list[str]] = {}
+
+    def append_column(table: str, column: str) -> None:
+        bucket = table_columns.setdefault(table, [])
+        if column not in bucket:
+            bucket.append(column)
+
+    for file_name in _STAGING_SQL_FILES:
+        path = sql_root / file_name
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8")
+        for table, block in _CREATE_TABLE_RE.findall(content):
+            for column in _extract_column_names(block):
+                append_column(table, column)
+        for table, block in _ALTER_TABLE_RE.findall(content):
+            for match in re.finditer(r"ADD COLUMN IF NOT EXISTS\s+([a-z0-9_]+)\b", block, re.IGNORECASE):
+                append_column(table, match.group(1))
+
+    return {table: tuple(columns) for table, columns in table_columns.items()}
+
+
+def _augment_rule_with_staging_columns(rule: TargetTableRule, staging_columns: tuple[str, ...]) -> TargetTableRule:
+    existing = {column.column for column in rule.columns}
+    missing = [column for column in staging_columns if column not in existing]
+    if not missing:
+        return rule
+    return TargetTableRule(
+        table=rule.table,
+        entity=rule.entity,
+        description=rule.description,
+        production_table=rule.production_table,
+        allowed_transforms=rule.allowed_transforms,
+        columns=rule.columns + tuple(
+            TargetColumnRule(column=column, aliases=(column,))
+            for column in missing
+        ),
+    )
+
+
+_STAGING_TABLE_COLUMNS: dict[str, tuple[str, ...]] = _load_staging_table_columns()
 KNOWN_OBJECT_TYPES = {
     "HOT": "Hôtel", "RES": "Restaurant", "ITI": "Itinéraire",
     "FMA": "Fête/Événement", "ORG": "Organisation", "HPA": "Camping",
@@ -815,7 +895,7 @@ _ref_classification_value_temp = TargetTableRule(
 # Registry
 # ─────────────────────────────────────────────────────────────────────
 
-TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
+_BASE_TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
     r.table: r for r in [
         # Part 1: Core
         _object_temp, _object_external_id_temp, _object_origin_temp,
@@ -841,6 +921,10 @@ TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
     ]
 }
 
+TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
+    table: _augment_rule_with_staging_columns(rule, _STAGING_TABLE_COLUMNS.get(table, ()))
+    for table, rule in _BASE_TARGET_SCHEMA_RULES.items()
+}
 VALID_TRANSFORMS: set[str] = {"identity", "lowercase", "split_list", "split_gps"}
 
 # Pre-built alias index: normalized_alias -> (table, column, default_transform)
@@ -966,6 +1050,7 @@ def validate_mapping_target(target_table: str, target_column: str, transform: st
     if transform not in rule.allowed_transforms:
         return False, f"Transform '{transform}' not allowed for '{target_table}'"
     return True, "ok"
+
 
 
 

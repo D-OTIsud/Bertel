@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from universal_ai_ingestor.core.target_schema import TARGET_SCHEMA_RULES, find_best_target, validate_mapping_target
+from universal_ai_ingestor.core.target_schema import _STAGING_TABLE_COLUMNS, TARGET_SCHEMA_RULES, find_best_target, validate_mapping_target
 
 ROOT = Path(__file__).resolve().parents[2]
 UNIFIED_SCHEMA_PATH = ROOT / 'Base de donnée DLL et API' / 'schema_unified.sql'
@@ -70,6 +70,17 @@ def test_unified_schema_tables_have_mapping_rules() -> None:
     assert missing == []
 
 
+def test_target_schema_rules_expose_all_staging_columns() -> None:
+    missing_by_table: dict[str, list[str]] = {}
+    for table, staging_columns in _STAGING_TABLE_COLUMNS.items():
+        if table not in TARGET_SCHEMA_RULES:
+            continue
+        mapped_columns = {column.column for column in TARGET_SCHEMA_RULES[table].columns}
+        missing = sorted(column for column in staging_columns if column not in mapped_columns)
+        if missing:
+            missing_by_table[table] = missing
+    assert missing_by_table == {}
+
 def test_object_pet_policy_available_for_manual_mapping() -> None:
     rule = TARGET_SCHEMA_RULES['object_pet_policy_temp']
     assert {column.column for column in rule.columns} >= {'accepted', 'conditions'}
@@ -89,4 +100,5 @@ def test_staging_v3_sql_has_no_comment_artifact_columns() -> None:
     content = (ROOT / 'universal_ai_ingestor' / 'sql' / 'staging_v3_tables.sql').read_text(encoding='utf-8')
     assert re.search(r"^\s*'[^\n]*'\s+[A-Z]+", content, re.MULTILINE) is None
     assert re.search(r'^\s*how\s+[A-Z]+', content, re.MULTILINE) is None
+
 

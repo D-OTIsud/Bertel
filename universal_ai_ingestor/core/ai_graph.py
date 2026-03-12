@@ -394,8 +394,8 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
         if rag_examples
         else (
             "- Column 'Id_Prestataire' -> target_table: 'object_temp', target_column: 'source_org_object_id'\n"
-            "- Column 'Coordonnees_GPS' -> target_table: 'object_location_temp', target_column: 'latlon', transform: 'split_gps'\n"
-            "- Column 'Equipements' -> target_table: 'object_amenity_temp', target_column: 'name', transform: 'split_list'\n"
+            "- Column 'Coordonnees_GPS' -> target_table: 'object_location_temp', target_column: 'latitude', transform: 'split_gps'\n"
+            "- Column 'Equipements' -> target_table: 'object_amenity_temp', target_column: 'amenity_code', transform: 'split_list'\n"
             "- Column 'Date_Import_Tech' -> keep: false"
         )
     )
@@ -933,6 +933,7 @@ async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutpu
         ]
     )
     return result
+
 
 
 

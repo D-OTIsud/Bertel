@@ -127,21 +127,25 @@ def _load_staging_table_columns() -> dict[str, tuple[str, ...]]:
     return {table: tuple(columns) for table, columns in table_columns.items()}
 
 
-def _augment_rule_with_staging_columns(rule: TargetTableRule, staging_columns: tuple[str, ...]) -> TargetTableRule:
-    existing = {column.column for column in rule.columns}
-    missing = [column for column in staging_columns if column not in existing]
-    if not missing:
+def _reconcile_rule_with_staging_columns(rule: TargetTableRule, staging_columns: tuple[str, ...]) -> TargetTableRule:
+    if not staging_columns:
         return rule
+    curated_by_column = {
+        column.column: column
+        for column in rule.columns
+        if column.column in staging_columns
+    }
+    ordered_columns = tuple(
+        curated_by_column.get(column, TargetColumnRule(column=column, aliases=(column,)))
+        for column in staging_columns
+    )
     return TargetTableRule(
         table=rule.table,
         entity=rule.entity,
         description=rule.description,
         production_table=rule.production_table,
         allowed_transforms=rule.allowed_transforms,
-        columns=rule.columns + tuple(
-            TargetColumnRule(column=column, aliases=(column,))
-            for column in missing
-        ),
+        columns=ordered_columns,
     )
 
 
@@ -251,7 +255,7 @@ _org_temp = TargetTableRule(
     allowed_transforms=("identity", "lowercase"),
     columns=(
         TargetColumnRule("name", (
-            "org_name", "organization", "organisme", "structure",
+            "org_name", "organization", "organization_name", "owner_org_name", "organisme", "structure",
             "nom_organisation", "nom_organisme", "societe", "company",
             "proprietaire", "gestionnaire", "mandataire", "groupe",
         ), required_for_entity=True),
@@ -922,7 +926,7 @@ _BASE_TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
 }
 
 TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
-    table: _augment_rule_with_staging_columns(rule, _STAGING_TABLE_COLUMNS.get(table, ()))
+    table: _reconcile_rule_with_staging_columns(rule, _STAGING_TABLE_COLUMNS.get(table, ()))
     for table, rule in _BASE_TARGET_SCHEMA_RULES.items()
 }
 VALID_TRANSFORMS: set[str] = {"identity", "lowercase", "split_list", "split_gps"}
@@ -1050,6 +1054,8 @@ def validate_mapping_target(target_table: str, target_column: str, transform: st
     if transform not in rule.allowed_transforms:
         return False, f"Transform '{transform}' not allowed for '{target_table}'"
     return True, "ok"
+
+
 
 
 

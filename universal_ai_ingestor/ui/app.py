@@ -122,6 +122,8 @@ def _reset_wizard() -> None:
     st.session_state.batch_id = None
     st.session_state.batch_data = None
     st.session_state.ai_correction = True
+    st.session_state.mapping_field_order = {}
+    st.session_state.mapping_field_order_batch_id = None
 
 
 def _fetch_batch() -> dict[str, Any] | None:
@@ -155,6 +157,30 @@ def _field_icon(target_table: str) -> str:
     if target_table in {"contact_channel_temp", "actor_channel_temp"}:
         return "Phone"
     return "Field"
+
+
+def _mapping_field_key(field: dict[str, Any]) -> str:
+    field_id = field.get("field_id") or field.get("id")
+    if field_id is not None:
+        return str(field_id)
+    sheet_name = str(field.get("sheet_name", "default"))
+    source_column = str(field.get("source_column", "?"))
+    return f"{sheet_name}::{source_column}"
+
+
+def _ordered_visible_fields(fields: list[dict[str, Any]], batch_id: str | None) -> list[dict[str, Any]]:
+    visible_fields = [f for f in fields if f.get("field_id") is not None or f.get("id") is not None]
+    if st.session_state.get("mapping_field_order_batch_id") != batch_id:
+        st.session_state.mapping_field_order = {}
+        st.session_state.mapping_field_order_batch_id = batch_id
+    order_map: dict[str, int] = st.session_state.setdefault("mapping_field_order", {})
+    next_index = len(order_map)
+    for field in visible_fields:
+        field_key = _mapping_field_key(field)
+        if field_key not in order_map:
+            order_map[field_key] = next_index
+            next_index += 1
+    return sorted(visible_fields, key=lambda field: order_map[_mapping_field_key(field)])
 
 
 TRANSFORM_LABELS = {
@@ -212,6 +238,10 @@ if "batch_data" not in st.session_state:
     st.session_state.batch_data = None
 if "ai_correction" not in st.session_state:
     st.session_state.ai_correction = True
+if "mapping_field_order" not in st.session_state:
+    st.session_state.mapping_field_order = {}
+if "mapping_field_order_batch_id" not in st.session_state:
+    st.session_state.mapping_field_order_batch_id = None
 
 st.title("Bertel Data Ingestor")
 healthy = _check_health()
@@ -320,7 +350,7 @@ if st.session_state.step == 3:
         if st.button("Rafraichir"):
             st.rerun()
         st.stop()
-    visible_fields = [f for f in fields if f.get("field_id") is not None or f.get("id") is not None]
+    visible_fields = _ordered_visible_fields(fields, st.session_state.batch_id)
     perfect = sum(1 for f in visible_fields if float(f.get("confidence", 0)) >= 0.8)
     to_review = max(0, len(visible_fields) - perfect)
     c1, c2 = st.columns([1, 1])
@@ -359,13 +389,14 @@ if st.session_state.step == 3:
     with h_skip:
         st.caption("Ignorer")
 
-    for idx, field in enumerate(visible_fields):
+    for field in visible_fields:
         source_col = str(field.get("source_column", "?"))
         sheet_name = str(field.get("sheet_name", "default"))
         current_table = str(field.get("target_table", "object_temp"))
         current_column = str(field.get("target_column", "name"))
         current_transform = str(field.get("transform", "identity"))
         field_id = str(field.get("id", ""))
+        field_key = _mapping_field_key(field)
         confidence = float(field.get("confidence", 0.0))
         if confidence >= 0.8:
             conf_class = "conf-high"
@@ -380,11 +411,17 @@ if st.session_state.step == 3:
             st.caption(f"Feuille: {sheet_name}")
         table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
         with mid:
-            new_table = st.selectbox("Table cible", ALL_TABLES, index=table_idx, key=f"tbl_{idx}", label_visibility="collapsed")
+            new_table = st.selectbox("Table cible", ALL_TABLES, index=table_idx, key=f"tbl_{field_key}", label_visibility="collapsed")
         col_options = TARGET_SCHEMA.get(new_table, {}).get("columns", [])
         col_idx = col_options.index(current_column) if current_column in col_options else 0
         with right:
-            new_column = st.selectbox("Colonne cible", col_options if col_options else [current_column], index=col_idx, key=f"col_{idx}", label_visibility="collapsed")
+            new_column = st.selectbox(
+                "Colonne cible",
+                col_options if col_options else [current_column],
+                index=col_idx,
+                key=f"col_{field_key}",
+                label_visibility="collapsed",
+            )
         tr_options = TARGET_SCHEMA.get(new_table, {}).get("transforms", ["identity"])
         tr_idx = tr_options.index(current_transform) if current_transform in tr_options else 0
         with chip:
@@ -392,7 +429,7 @@ if st.session_state.step == 3:
                 "Transformation",
                 tr_options,
                 index=tr_idx,
-                key=f"tr_{idx}",
+                key=f"tr_{field_key}",
                 format_func=_transform_label,
                 label_visibility="collapsed",
             )
@@ -401,7 +438,7 @@ if st.session_state.step == 3:
             st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
         with sk:
             default_skip = field.get("status") == "rejected"
-            skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{idx}", label_visibility="collapsed")
+            skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{field_key}", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
         changed = (
             new_table != current_table

@@ -8,40 +8,22 @@ from typing import Any
 import requests
 import streamlit as st
 
+try:
+    from core.target_schema import TARGET_SCHEMA_RULES
+except ImportError:  # pragma: no cover
+    from universal_ai_ingestor.core.target_schema import TARGET_SCHEMA_RULES
+
 API_BASE = os.getenv("API_BASE_URL", "http://api:8000").rstrip("/")
 TOKEN = os.getenv("API_BEARER_TOKEN", "")
 
 TARGET_SCHEMA: dict[str, dict[str, Any]] = {
-    "object_temp": {"columns": ["name", "object_type", "external_id", "source_org_object_id", "org_name", "email", "phone", "latitude", "longitude"], "transforms": ["identity", "lowercase"]},
-    "object_external_id_temp": {"columns": ["external_id", "organization_object_id"], "transforms": ["identity"]},
-    "object_origin_temp": {"columns": ["source_system", "source_object_id"], "transforms": ["identity", "lowercase"]},
-    "org_temp": {"columns": ["name", "source_org_object_id", "external_id"], "transforms": ["identity", "lowercase"]},
-    "object_org_link_temp": {"columns": ["role_code", "is_primary", "note"], "transforms": ["identity", "lowercase"]},
-    "actor_temp": {"columns": ["display_name", "first_name", "last_name", "gender"], "transforms": ["identity", "lowercase"]},
-    "actor_channel_temp": {"columns": ["kind_code", "value", "is_primary"], "transforms": ["identity", "lowercase"]},
-    "actor_object_role_temp": {"columns": ["role_code", "is_primary", "note"], "transforms": ["identity", "lowercase"]},
-    "object_location_temp": {"columns": ["latitude", "longitude", "address1", "city", "postcode"], "transforms": ["identity", "split_gps"]},
-    "object_description_temp": {"columns": ["description", "description_chapo", "description_mobile", "sanitary_measures"], "transforms": ["identity"]},
-    "contact_channel_temp": {"columns": ["value", "kind_code"], "transforms": ["identity", "lowercase"]},
-    "media_temp": {"columns": ["source_url"], "transforms": ["identity", "split_list"]},
-    "object_classification_temp": {"columns": ["scheme_code", "value_code"], "transforms": ["identity", "lowercase"]},
-    "object_amenity_temp": {"columns": ["amenity_code"], "transforms": ["identity", "split_list"]},
-    "object_payment_method_temp": {"columns": ["payment_code"], "transforms": ["identity", "split_list"]},
-    "object_language_temp": {"columns": ["language_code", "level_code"], "transforms": ["identity", "split_list", "lowercase"]},
-    "object_environment_tag_temp": {"columns": ["environment_tag_code"], "transforms": ["identity", "split_list", "lowercase"]},
-    "object_legal_temp": {"columns": ["type_code", "value", "valid_from", "valid_to", "note"], "transforms": ["identity"]},
-    "object_price_temp": {"columns": ["kind_code", "unit_code", "amount", "amount_max", "currency", "conditions", "valid_from", "valid_to"], "transforms": ["identity"]},
-    "object_capacity_temp": {"columns": ["metric_code", "value_integer", "unit"], "transforms": ["identity"]},
-    "opening_period_temp": {"columns": ["period_name", "date_start", "date_end", "schedule_text", "weekdays", "start_time", "end_time"], "transforms": ["identity"]},
-    "object_fma_temp": {"columns": ["event_start_date", "event_end_date", "event_start_time", "event_end_time", "is_recurring", "recurrence_pattern"], "transforms": ["identity"]},
-    "object_iti_temp": {"columns": ["distance_km", "duration_hours", "difficulty_level", "elevation_gain", "is_loop", "gpx_data"], "transforms": ["identity"]},
-    "object_room_type_temp": {"columns": ["code", "name", "capacity_adults", "capacity_children", "capacity_total", "size_sqm", "bed_config", "total_rooms", "base_price"], "transforms": ["identity"]},
-    "crm_interaction_temp": {"columns": ["interaction_type", "direction", "subject", "body", "source", "occurred_at", "duration_min", "demand_topic_code", "status"], "transforms": ["identity", "lowercase"]},
-    "crm_task_temp": {"columns": ["title", "description", "status", "priority", "due_at"], "transforms": ["identity", "lowercase"]},
-    "object_membership_temp": {"columns": ["campaign_code", "tier_code", "status", "starts_at", "ends_at", "payment_date"], "transforms": ["identity", "lowercase"]},
-    "object_review_temp": {"columns": ["source_code", "rating", "rating_max", "title", "content", "author_name", "review_date", "traveler_type"], "transforms": ["identity", "lowercase"]},
+    table: {
+        "columns": [column.column for column in rule.columns],
+        "transforms": list(rule.allowed_transforms),
+    }
+    for table, rule in TARGET_SCHEMA_RULES.items()
 }
-ALL_TABLES = list(TARGET_SCHEMA.keys())
+ALL_TABLES = sorted(TARGET_SCHEMA.keys())
 
 SKIP_PATTERNS: set[str] = {
     "source_sheet",

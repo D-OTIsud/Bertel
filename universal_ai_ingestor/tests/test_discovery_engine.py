@@ -4,12 +4,14 @@ import sys
 import types
 
 import pandas as pd
+import pytest
 
 from universal_ai_ingestor.core.discovery_engine import build_discovery_contract
 from universal_ai_ingestor.core.schemas import MappingPlan, MappingTarget, RelationAnalysis, RelationHypothesisLLM
 
 
-def test_discovery_contract_profiles_sheet_and_fields() -> None:
+@pytest.mark.asyncio
+async def test_discovery_contract_profiles_sheet_and_fields() -> None:
     sheets = {
         "ObjetLegacy": pd.DataFrame(
             [
@@ -18,7 +20,7 @@ def test_discovery_contract_profiles_sheet_and_fields() -> None:
             ]
         )
     }
-    contract = build_discovery_contract(source_format="xlsx", sheets=sheets)
+    contract = await build_discovery_contract(source_format="xlsx", sheets=sheets)
     assert contract.sheets
     assert contract.fields
     assert contract.sheets[0].sheet_name == "ObjetLegacy"
@@ -26,22 +28,24 @@ def test_discovery_contract_profiles_sheet_and_fields() -> None:
     assert ("object_temp", "email") in mapped_targets
 
 
-def test_discovery_detects_media_sheet_entity() -> None:
+@pytest.mark.asyncio
+async def test_discovery_detects_media_sheet_entity() -> None:
     sheets = {
         "galerie": pd.DataFrame(
             [{"photo_urls": "https://example.com/a.jpg", "object_id": "obj-1"}]
         )
     }
-    contract = build_discovery_contract(source_format="xlsx", sheets=sheets)
+    contract = await build_discovery_contract(source_format="xlsx", sheets=sheets)
     assert contract.sheets[0].inferred_entity_type == "media"
     media_fields = [f for f in contract.fields if f.target_table == "media_temp"]
     assert media_fields
 
 
-def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
+@pytest.mark.asyncio
+async def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
     captured: dict[str, str | None] = {"custom_rules": None}
 
-    def _fake_generate_mapping_plan(**kwargs):
+    async def _fake_generate_mapping_plan(**kwargs):
         captured["custom_rules"] = kwargs.get("custom_rules")
         return (
             MappingPlan(
@@ -69,6 +73,7 @@ def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
                     )
                 ]
             ),
+            False,  # needs_human_review
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
@@ -88,7 +93,7 @@ def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
     }
 
     custom_rules = "La colonne 'id OTI' va toujours vers external_id."
-    contract = build_discovery_contract(source_format="xlsx", sheets=sheets, custom_rules=custom_rules)
+    contract = await build_discovery_contract(source_format="xlsx", sheets=sheets, custom_rules=custom_rules)
 
     assert captured["custom_rules"] == custom_rules
     assert any(r.from_column == "prestataires" and r.target_entity_type == "org" for r in contract.relations)

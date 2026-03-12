@@ -39,6 +39,13 @@ except ModuleNotFoundError:
         WorkbookPayload,
     )
 
+from core.constants import ENTITY_TYPE_TO_STAGING, ENTITY_KEYWORD_MAP, MULTI_VALUE_DELIMITER_THRESHOLD
+from core.etl_engine import _smart_sample, _calculate_column_stats
+try:
+    from core.vector_store import save_approved_field_examples_sync
+except ModuleNotFoundError:
+    from universal_ai_ingestor.core.vector_store import save_approved_field_examples_sync  # type: ignore
+
 
 def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert non-JSON-serializable types (datetime, Timestamp, etc.) to strings."""
@@ -63,17 +70,20 @@ def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame]) -> WorkbookPayload:
     samples: list[SheetSample] = []
     for sheet_name, df in sheets.items():
+        sampled_df = _smart_sample(df, 20)
+        stats = _calculate_column_stats(df)
         samples.append(
             SheetSample(
                 sheet_name=sheet_name,
                 incoming_columns=[str(c) for c in df.columns],
-                sample_rows=_sanitize_records(df.head(20).to_dict(orient="records")),
+                sample_rows=_sanitize_records(sampled_df.to_dict(orient="records")),
+                column_stats=stats,
             )
         )
     return WorkbookPayload(workbook_name="discovery_workbook", sheets=samples)
 
 
-def _enhance_with_ai_workbook(
+async def _enhance_with_ai_workbook(
     *,
     source_format: str,
     sheets: dict[str, pd.DataFrame],
@@ -102,7 +112,7 @@ def _enhance_with_ai_workbook(
         global_sample_rows.extend(sheet.sample_rows[:10])
 
     try:
-        plan_bundle, analysed_relations = generate_mapping_plan(
+        plan_bundle, analysed_relations, _ = await generate_mapping_plan(
             schema_snapshot=build_target_schema_context(),
             sample_rows=global_sample_rows[:30],
             source_format=source_format,
@@ -160,7 +170,7 @@ def _enhance_with_ai_workbook(
             if not from_sheet or not from_column:
                 continue
             target_entity_type = str(rel.target_entity_type or "").strip().lower()
-            target_staging_table = _ENTITY_TYPE_TO_STAGING.get(target_entity_type, "")
+            target_staging_table = ENTITY_TYPE_TO_STAGING.get(target_entity_type, "")
             ai_relations.append(
                 DiscoveryRelationHypothesis(
                     from_sheet=from_sheet,
@@ -178,53 +188,6 @@ def _enhance_with_ai_workbook(
                 )
             )
     return ai_relations
-
-
-_ENTITY_TYPE_TO_STAGING: dict[str, str] = {
-    "org": "object_org_link_temp",
-    "amenity": "object_amenity_temp",
-    "payment": "object_payment_method_temp",
-    "media": "media_temp",
-    "language": "object_language_temp",
-    "environment_tag": "object_environment_tag_temp",
-}
-
-
-_ENTITY_KEYWORD_MAP: dict[str, tuple[str, str]] = {
-    "prestataire": ("org", "object_org_link_temp"),
-    "proprietaire": ("org", "object_org_link_temp"),
-    "gerant": ("org", "object_org_link_temp"),
-    "gestionnaire": ("org", "object_org_link_temp"),
-    "fournisseur": ("org", "object_org_link_temp"),
-    "partenaire": ("org", "object_org_link_temp"),
-    "collaborateur": ("org", "object_org_link_temp"),
-    "mandataire": ("org", "object_org_link_temp"),
-    "org": ("org", "object_org_link_temp"),
-    "organisation": ("org", "object_org_link_temp"),
-    "societe": ("org", "object_org_link_temp"),
-    "amenity": ("amenity", "object_amenity_temp"),
-    "amenities": ("amenity", "object_amenity_temp"),
-    "equipement": ("amenity", "object_amenity_temp"),
-    "prestation": ("amenity", "object_amenity_temp"),
-    "installation": ("amenity", "object_amenity_temp"),
-    "commodite": ("amenity", "object_amenity_temp"),
-    "paiement": ("payment", "object_payment_method_temp"),
-    "payment": ("payment", "object_payment_method_temp"),
-    "moyen_paiement": ("payment", "object_payment_method_temp"),
-    "mode_paiement": ("payment", "object_payment_method_temp"),
-    "media": ("media", "media_temp"),
-    "photo": ("media", "media_temp"),
-    "image": ("media", "media_temp"),
-    "galerie": ("media", "media_temp"),
-    "visuel": ("media", "media_temp"),
-    "langue": ("language", "object_language_temp"),
-    "language": ("language", "object_language_temp"),
-    "langues_parlees": ("language", "object_language_temp"),
-    "environnement": ("environment_tag", "object_environment_tag_temp"),
-    "situation": ("environment_tag", "object_environment_tag_temp"),
-}
-
-_MULTI_VALUE_DELIMITER_THRESHOLD = 0.3
 
 
 def _norm(text: str) -> str:
@@ -274,7 +237,7 @@ def _profile_column(series: pd.Series) -> dict[str, Any]:
 def _resolve_entity_from_column(column_name: str) -> tuple[str, str]:
     """Match column name against semantic keywords to identify entity type and staging table."""
     norm = _norm(column_name)
-    for keyword, (entity_type, staging_table) in _ENTITY_KEYWORD_MAP.items():
+    for keyword, (entity_type, staging_table) in ENTITY_KEYWORD_MAP.items():
         if keyword in norm:
             return entity_type, staging_table
     return "", ""
@@ -298,7 +261,7 @@ def _detect_delimiter_relations(
                 if count > best_count:
                     best_sep = sep
                     best_count = count
-            if not best_sep or best_count / total_rows < _MULTI_VALUE_DELIMITER_THRESHOLD:
+            if not best_sep or best_count / total_rows < MULTI_VALUE_DELIMITER_THRESHOLD:
                 continue
             entity_type, staging_table = _resolve_entity_from_column(col_name)
             conf = 0.7 if entity_type else 0.5
@@ -354,7 +317,7 @@ def _detect_join_tables(
         scores.append(0.8)
 
 
-def build_discovery_contract(
+async def build_discovery_contract(
     *,
     source_format: str,
     sheets: dict[str, pd.DataFrame],
@@ -401,7 +364,7 @@ def build_discovery_contract(
                 )
             )
             scores.append(conf)
-    ai_relation_hypotheses = _enhance_with_ai_workbook(
+    ai_relation_hypotheses = await _enhance_with_ai_workbook(
         source_format=source_format,
         sheets=sheets,
         proposals=field_proposals,
@@ -587,6 +550,24 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
                 ).execute()
             else:
                 raise
+
+    if status == "approved":
+        try:
+            save_approved_field_examples_sync(
+                [
+                    {
+                        "sheet_name": f.sheet_name,
+                        "source_column": f.source_column,
+                        "target_table": f.target_table,
+                        "target_column": f.target_column,
+                        "transform": f.transform,
+                        "status": "approved",
+                    }
+                    for f in contract.fields
+                ]
+            )
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("Failed to persist approved mapping examples to vector store: %s", exc)
 
     return {
         "contract_id": contract_id,

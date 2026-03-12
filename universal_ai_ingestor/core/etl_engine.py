@@ -14,6 +14,7 @@ import pandas as pd
 from core.ai_graph import generate_mapping_plan, run_cleaner_batch
 from core.config import settings
 from core.schemas import MappingPlan, MappingTarget, MultiSheetMappingPlan, SheetSample, WorkbookPayload
+from core.constants import LEGACY_RELATION_FALLBACKS
 from core.supabase_client import insert_staging_table_rows, update_import_batch_row
 try:
     from core.target_schema import TARGET_SCHEMA_RULES, VALID_TRANSFORMS, flatten_required_columns
@@ -24,6 +25,47 @@ except ModuleNotFoundError:
         flatten_required_columns,
     )
 
+_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_URL_PATTERN = re.compile(r"^(https?://|www\.)", re.IGNORECASE)
+_GPS_PATTERN = re.compile(r"^\s*-?\d{1,3}(?:\.\d+)?\s*[,;]\s*-?\d{1,3}(?:\.\d+)?\s*$")
+_ID_LIKE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$")
+_PROFILE_DELIMITERS = (",", ";", "|")
+
+
+def _normalize_profile_value(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def _safe_ratio(matches: int, total: int) -> float:
+    if total <= 0:
+        return 0.0
+    return round(matches / total, 3)
+
+
+def _match_ratio(values: list[str], pattern: re.Pattern[str]) -> float:
+    return _safe_ratio(sum(1 for value in values if pattern.match(value)), len(values))
+
+
+def _infer_semantic_type(*, email_ratio: float, url_ratio: float, gps_ratio: float, date_ratio: float, numeric_ratio: float, id_like_ratio: float, multi_value_ratio: float) -> str:
+    if gps_ratio >= 0.6:
+        return "gps_pair"
+    if email_ratio >= 0.6:
+        return "email"
+    if url_ratio >= 0.6:
+        return "url"
+    if date_ratio >= 0.6:
+        return "date"
+    if multi_value_ratio >= 0.5:
+        return "multi_value_text"
+    if id_like_ratio >= 0.75:
+        return "identifier"
+    if numeric_ratio >= 0.85:
+        return "numeric"
+    return "text"
 
 @dataclass
 class ParsedPayload:
@@ -113,15 +155,86 @@ def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sanitized
 
 
+def _calculate_column_stats(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    """Compute profiling metadata that helps the mapping LLM reason about each column."""
+    stats = {}
+    if df.empty:
+        return stats
+    total_rows = len(df)
+    for col in df.columns:
+        series = df[col]
+        null_count = int(series.isna().sum())
+        unique_count = int(series.nunique(dropna=True))
+        normalized_values = [
+            _normalize_profile_value(value)
+            for value in series.tolist()
+            if _normalize_profile_value(value)
+        ]
+        lengths = pd.Series(normalized_values, dtype="string").str.len() if normalized_values else pd.Series(dtype="int64")
+        numeric_ratio = _safe_ratio(int(pd.to_numeric(series, errors="coerce").notna().sum()), total_rows)
+        parsed_dates = pd.to_datetime(pd.Series(normalized_values, dtype="string"), errors="coerce", format="mixed") if normalized_values else pd.Series(dtype="datetime64[ns]")
+        date_ratio = _safe_ratio(int(parsed_dates.notna().sum()), total_rows)
+        email_ratio = _match_ratio(normalized_values, _EMAIL_PATTERN)
+        url_ratio = _match_ratio(normalized_values, _URL_PATTERN)
+        gps_ratio = _match_ratio(normalized_values, _GPS_PATTERN)
+        id_like_ratio = _match_ratio(normalized_values, _ID_LIKE_PATTERN)
+        delimiter_counts = {sep: sum(1 for value in normalized_values if sep in value) for sep in _PROFILE_DELIMITERS}
+        dominant_delimiter = max(delimiter_counts, key=delimiter_counts.get) if delimiter_counts else ""
+        dominant_delimiter_count = delimiter_counts.get(dominant_delimiter, 0) if dominant_delimiter else 0
+        multi_value_ratio = _safe_ratio(dominant_delimiter_count, len(normalized_values)) if dominant_delimiter else 0.0
+        stats[str(col)] = {
+            "null_percent": round((null_count / total_rows) * 100, 1) if total_rows else 100.0,
+            "unique_count": unique_count,
+            "min_length": int(lengths.min()) if not lengths.empty else 0,
+            "max_length": int(lengths.max()) if not lengths.empty else 0,
+            "numeric_ratio": numeric_ratio,
+            "date_ratio": date_ratio,
+            "email_ratio": email_ratio,
+            "url_ratio": url_ratio,
+            "gps_ratio": gps_ratio,
+            "id_like_ratio": id_like_ratio,
+            "dominant_delimiter": dominant_delimiter,
+            "multi_value_ratio": multi_value_ratio,
+            "semantic_type_hint": _infer_semantic_type(
+                email_ratio=email_ratio,
+                url_ratio=url_ratio,
+                gps_ratio=gps_ratio,
+                date_ratio=date_ratio,
+                numeric_ratio=numeric_ratio,
+                id_like_ratio=id_like_ratio,
+                multi_value_ratio=multi_value_ratio,
+            ),
+        }
+    return stats
+
+
+def _smart_sample(df: pd.DataFrame, n: int) -> pd.DataFrame:
+    """Return the `n` rows with the fewest NaN/empty values to give the LLM best context."""
+    if df.empty:
+        return df
+
+    # Count non-null, non-empty string values per row
+    def _count_valid(row):
+        return sum(1 for v in row if pd.notna(v) and str(v).strip() != "")
+    
+    counts = df.apply(_count_valid, axis=1)
+    # Sort by valid field count descending, take top `n`
+    best_indices = counts.nlargest(n).index
+    return df.loc[best_indices].copy()
+
+
 def workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame], workbook_name: str | None = None) -> WorkbookPayload:
     samples: list[SheetSample] = []
     for sheet_name, df in sheets.items():
-        sample_rows = _sanitize_records(df.head(settings.sample_rows).to_dict(orient="records"))
+        sampled_df = _smart_sample(df, settings.sample_rows)
+        sample_rows = _sanitize_records(sampled_df.to_dict(orient="records"))
+        stats = _calculate_column_stats(df)
         samples.append(
             SheetSample(
                 sheet_name=sheet_name,
                 incoming_columns=list(df.columns),
                 sample_rows=sample_rows,
+                column_stats=stats,
             )
         )
     return WorkbookPayload(workbook_name=workbook_name, sheets=samples)
@@ -284,38 +397,6 @@ def _load_approved_contract_relations(sb, batch_id: str) -> list[dict[str, Any]]
         .execute()
     )
     return relation_resp.data or []
-
-
-_LEGACY_RELATION_FALLBACKS: list[dict[str, Any]] = [
-    {
-        "from_sheet": "*",
-        "from_column_candidates": ["related_org_ids", "org_ids", "organization_ids", "associated_org_ids"],
-        "separator": ",",
-        "target_entity_type": "org",
-        "target_staging_table": "object_org_link_temp",
-    },
-    {
-        "from_sheet": "*",
-        "from_column_candidates": ["amenity_codes", "amenities", "amenities_any", "amenity"],
-        "separator": ",",
-        "target_entity_type": "amenity",
-        "target_staging_table": "object_amenity_temp",
-    },
-    {
-        "from_sheet": "*",
-        "from_column_candidates": ["payment_codes", "payment_methods", "payments_any", "payment"],
-        "separator": ",",
-        "target_entity_type": "payment",
-        "target_staging_table": "object_payment_method_temp",
-    },
-    {
-        "from_sheet": "*",
-        "from_column_candidates": ["media_urls", "media_url", "photo_urls", "image_urls", "photos"],
-        "separator": ",",
-        "target_entity_type": "media",
-        "target_staging_table": "media_temp",
-    },
-]
 
 
 def _pick_from_row(row: dict[str, Any], candidates: list[str]) -> Any:
@@ -522,142 +603,14 @@ def _resolve_relations_for_row(
                 )
 
 
-async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> tuple[pd.DataFrame, int]:
-    if not columns:
-        return df, 0
-    corrected_count = 0
-    for col in columns:
-        if col not in df.columns:
-            continue
-        values = df[col].fillna("").astype(str).tolist()
-        cleaned: list[dict[str, Any]] = []
-        for i in range(0, len(values), settings.cleaner_batch_size):
-            batch = values[i : i + settings.cleaner_batch_size]
-            response = await run_cleaner_batch(batch)
-            cleaned.extend([it.normalized for it in response.items])
-            corrected_count += sum(1 for it in response.items if bool(it.normalized))
-        df[f"{col}_cleaned"] = cleaned[: len(df)]
-    return df, corrected_count
-
-
-async def run_batch_pipeline(
-    *,
-    sb,
+def _build_staging_rows(
+    transformed: pd.DataFrame,
     batch_id: str,
-    payload: bytes,
-    content_type: str | None,
-    source_name: str | None = None,
+    contract_relations: list[dict[str, Any]],
+    mapping_source_label: str,
     default_org_object_id: str | None = None,
     default_org_name: str | None = None,
-    use_cleaner: bool = False,
 ) -> dict[str, Any]:
-    update_import_batch_row(sb, batch_id, status="profiling")
-    parsed = parse_payload(content_type, payload, source_name=source_name)
-    schema_snapshot = schema_snapshot_from_dataframe(parsed.dataframe)
-    sample_rows = parsed.dataframe.head(settings.sample_rows).to_dict(orient="records")
-    workbook_payload = None
-    if parsed.workbook_sheets:
-        workbook_payload = workbook_payload_from_sheets(parsed.workbook_sheets, workbook_name=source_name)
-
-    update_import_batch_row(sb, batch_id, status="mapping")
-    mapping_source_label = "llm_plan"
-    plan_bundle = _load_approved_contract_plan(sb, batch_id, parsed.source_format)
-    if plan_bundle is None:
-        try:
-            plan_bundle, _ = generate_mapping_plan(
-                schema_snapshot=schema_snapshot,
-                sample_rows=sample_rows,
-                source_format=parsed.source_format,
-                workbook_payload=workbook_payload,
-            )
-        except Exception:  # noqa: BLE001
-            # Deterministic fallback if LLM mapping fails.
-            if workbook_payload is not None and workbook_payload.sheets:
-                plan_bundle = MultiSheetMappingPlan(
-                    source_format=parsed.source_format,
-                    confidence=0.0,
-                    per_sheet={
-                        s.sheet_name: MappingPlan(
-                            source_format=parsed.source_format,
-                            confidence=0.0,
-                            targets=[],
-                            assumptions=[f"llm_fallback_for_sheet:{s.sheet_name}"],
-                        )
-                        for s in workbook_payload.sheets
-                    },
-                    assumptions=["llm_workbook_fallback"],
-                )
-            else:
-                plan_bundle = MappingPlan(
-                    source_format=parsed.source_format,
-                    confidence=0.0,
-                    targets=[],
-                    assumptions=["llm_fallback"],
-                )
-    else:
-        mapping_source_label = "approved_contract"
-    update_import_batch_row(sb, batch_id, mapping_rules=plan_bundle.model_dump())
-
-    update_import_batch_row(sb, batch_id, status="transforming")
-    transformed_by_table: dict[str, pd.DataFrame] = {}
-    if isinstance(plan_bundle, MultiSheetMappingPlan) and parsed.workbook_sheets:
-        merged_tables: dict[str, list[pd.DataFrame]] = {}
-        for sheet_name, sheet_df in parsed.workbook_sheets.items():
-            sheet_plan = plan_bundle.per_sheet.get(sheet_name) or MappingPlan(
-                source_format=parsed.source_format,
-                confidence=0.0,
-                targets=[],
-                assumptions=[f"missing_sheet_plan:{sheet_name}"],
-            )
-            table_outputs = apply_mapping_by_table(sheet_df, sheet_plan)
-            for table_name, table_df in table_outputs.items():
-                tagged = table_df.copy()
-                tagged["source_sheet"] = sheet_name
-                merged_tables.setdefault(table_name, []).append(tagged)
-        transformed_by_table = {
-            table_name: pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
-            for table_name, parts in merged_tables.items()
-        }
-        unstructured_fields = sorted(
-            {
-                field
-                for per_sheet_plan in plan_bundle.per_sheet.values()
-                for field in per_sheet_plan.unstructured_fields
-            }
-        )
-    else:
-        single_plan = plan_bundle if isinstance(plan_bundle, MappingPlan) else MappingPlan(source_format=parsed.source_format, confidence=0.0, targets=[])
-        transformed_by_table = apply_mapping_by_table(parsed.dataframe, single_plan)
-        unstructured_fields = single_plan.unstructured_fields
-
-    transformed = transformed_by_table.get("object_temp", pd.DataFrame()).copy()
-    for table_name, table_df in transformed_by_table.items():
-        if table_name == "object_temp":
-            continue
-        for col in table_df.columns:
-            if col not in transformed.columns:
-                transformed[col] = table_df[col]
-
-    ai_corrections = 0
-    if use_cleaner:
-        try:
-            transformed, ai_corrections = await clean_unstructured(transformed, unstructured_fields)
-        except Exception:  # noqa: BLE001
-            # Keep pipeline progressing with deterministic output if cleaner fails.
-            pass
-    transformed = transformed.fillna("")
-    required_object_fields = flatten_required_columns().get("object_temp", set())
-    missing_required = [field for field in required_object_fields if field not in transformed.columns]
-    if missing_required:
-        raise ValueError(f"Approved mapping missing required object fields: {', '.join(sorted(missing_required))}")
-    empty_required = [
-        field
-        for field in required_object_fields
-        if transformed[field].astype(str).str.strip().eq("").all()
-    ]
-    if empty_required:
-        raise ValueError(f"Required object fields contain no values: {', '.join(sorted(empty_required))}")
-
     object_rows: list[dict[str, Any]] = []
     org_rows: dict[str, dict[str, Any]] = {}
     location_rows: list[dict[str, Any]] = []
@@ -669,10 +622,6 @@ async def run_batch_pipeline(
     amenity_rows: list[dict[str, Any]] = []
     payment_rows: list[dict[str, Any]] = []
     media_rows: list[dict[str, Any]] = []
-
-    contract_relations = _load_approved_contract_relations(sb, batch_id)
-    if not contract_relations:
-        contract_relations = _LEGACY_RELATION_FALLBACKS
 
     for row in transformed.to_dict(orient="records"):
         lineage_row = dict(row)
@@ -865,84 +814,276 @@ async def run_batch_pipeline(
             media_rows=media_rows,
         )
 
+    return {
+        "object_rows": object_rows,
+        "org_rows": list(org_rows.values()),
+        "location_rows": location_rows,
+        "contact_rows": contact_rows,
+        "org_link_rows": org_link_rows,
+        "class_scheme_rows": list(class_scheme_rows.values()),
+        "class_value_rows": list(class_value_rows.values()),
+        "object_class_rows": object_class_rows,
+        "amenity_rows": amenity_rows,
+        "payment_rows": payment_rows,
+        "media_rows": media_rows,
+    }
+
+
+async def clean_unstructured(df: pd.DataFrame, columns: list[str]) -> tuple[pd.DataFrame, int]:
+    if not columns:
+        return df, 0
+    corrected_count = 0
+    for col in columns:
+        if col not in df.columns:
+            continue
+        values = df[col].fillna("").astype(str).tolist()
+        cleaned: list[dict[str, Any]] = []
+        for i in range(0, len(values), settings.cleaner_batch_size):
+            batch = values[i : i + settings.cleaner_batch_size]
+            response = await run_cleaner_batch(batch)
+            cleaned.extend([it.normalized for it in response.items])
+            corrected_count += sum(1 for it in response.items if bool(it.normalized))
+        df[f"{col}_cleaned"] = cleaned[: len(df)]
+    return df, corrected_count
+
+
+async def run_batch_pipeline(
+    *,
+    sb,
+    batch_id: str,
+    payload: bytes,
+    content_type: str | None,
+    source_name: str | None = None,
+    default_org_object_id: str | None = None,
+    default_org_name: str | None = None,
+    use_cleaner: bool = False,
+) -> dict[str, Any]:
+    update_import_batch_row(sb, batch_id, status="profiling")
+    parsed = parse_payload(content_type, payload, source_name=source_name)
+    schema_snapshot = schema_snapshot_from_dataframe(parsed.dataframe)
+    sample_rows = _sanitize_records(_smart_sample(parsed.dataframe, settings.sample_rows).to_dict(orient="records"))
+    workbook_payload = None
+    if parsed.workbook_sheets:
+        workbook_payload = workbook_payload_from_sheets(parsed.workbook_sheets, workbook_name=source_name)
+
+    update_import_batch_row(sb, batch_id, status="mapping")
+    mapping_source_label = "llm_plan"
+    plan_bundle = _load_approved_contract_plan(sb, batch_id, parsed.source_format)
+    needs_human_review = False
+    if plan_bundle is None:
+        try:
+            plan_bundle, _, needs_human_review = await generate_mapping_plan(
+                schema_snapshot=schema_snapshot,
+                sample_rows=sample_rows,
+                source_format=parsed.source_format,
+                workbook_payload=workbook_payload,
+            )
+        except Exception:  # noqa: BLE001
+            # Deterministic fallback if LLM mapping fails.
+            if workbook_payload is not None and workbook_payload.sheets:
+                plan_bundle = MultiSheetMappingPlan(
+                    source_format=parsed.source_format,
+                    confidence=0.0,
+                    per_sheet={
+                        s.sheet_name: MappingPlan(
+                            source_format=parsed.source_format,
+                            confidence=0.0,
+                            targets=[],
+                            assumptions=[f"llm_fallback_for_sheet:{s.sheet_name}"],
+                        )
+                        for s in workbook_payload.sheets
+                    },
+                    assumptions=["llm_workbook_fallback"],
+                )
+            else:
+                plan_bundle = MappingPlan(
+                    source_format=parsed.source_format,
+                    confidence=0.0,
+                    targets=[],
+                    assumptions=["llm_fallback"],
+                )
+    else:
+        mapping_source_label = "approved_contract"
+    update_import_batch_row(sb, batch_id, mapping_rules=plan_bundle.model_dump())
+
+    if needs_human_review:
+        update_import_batch_row(sb, batch_id, status="mapping_review_required")
+        return {
+            "rows_loaded": 0,
+            "locations": 0,
+            "contacts": 0,
+            "ai_corrections": 0,
+            "needs_human_review": True,
+        }
+
+    update_import_batch_row(sb, batch_id, status="transforming")
+    transformed_by_table: dict[str, pd.DataFrame] = {}
+    if isinstance(plan_bundle, MultiSheetMappingPlan) and parsed.workbook_sheets:
+        merged_tables: dict[str, list[pd.DataFrame]] = {}
+        for sheet_name, sheet_df in parsed.workbook_sheets.items():
+            sheet_plan = plan_bundle.per_sheet.get(sheet_name) or MappingPlan(
+                source_format=parsed.source_format,
+                confidence=0.0,
+                targets=[],
+                assumptions=[f"missing_sheet_plan:{sheet_name}"],
+            )
+            table_outputs = apply_mapping_by_table(sheet_df, sheet_plan)
+            for table_name, table_df in table_outputs.items():
+                tagged = table_df.copy()
+                tagged["source_sheet"] = sheet_name
+                merged_tables.setdefault(table_name, []).append(tagged)
+        transformed_by_table = {
+            table_name: pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+            for table_name, parts in merged_tables.items()
+        }
+        unstructured_fields = sorted(
+            {
+                field
+                for per_sheet_plan in plan_bundle.per_sheet.values()
+                for field in per_sheet_plan.unstructured_fields
+            }
+        )
+    else:
+        single_plan = plan_bundle if isinstance(plan_bundle, MappingPlan) else MappingPlan(source_format=parsed.source_format, confidence=0.0, targets=[])
+        transformed_by_table = apply_mapping_by_table(parsed.dataframe, single_plan)
+        unstructured_fields = single_plan.unstructured_fields
+
+    transformed = transformed_by_table.get("object_temp", pd.DataFrame()).copy()
+    for table_name, table_df in transformed_by_table.items():
+        if table_name == "object_temp":
+            continue
+        for col in table_df.columns:
+            if col not in transformed.columns:
+                transformed[col] = table_df[col]
+
+    ai_corrections = 0
+    if use_cleaner:
+        try:
+            transformed, ai_corrections = await clean_unstructured(transformed, unstructured_fields)
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.warning("AI cleaner failed, keeping original fields: %s", exc)
+            pass
+    transformed = transformed.fillna("")
+    required_object_fields = flatten_required_columns().get("object_temp", set())
+    missing_required = [field for field in required_object_fields if field not in transformed.columns]
+    if missing_required:
+        raise ValueError(f"Approved mapping missing required object fields: {', '.join(sorted(missing_required))}")
+    empty_required = [
+        field
+        for field in required_object_fields
+        if transformed[field].astype(str).str.strip().eq("").all()
+    ]
+    if empty_required:
+        raise ValueError(f"Required object fields contain no values: {', '.join(sorted(empty_required))}")
+
+    contract_relations = _load_approved_contract_relations(sb, batch_id)
+    if not contract_relations:
+        contract_relations = LEGACY_RELATION_FALLBACKS
+
+    staging_collections = _build_staging_rows(
+        transformed=transformed,
+        batch_id=batch_id,
+        contract_relations=contract_relations,
+        mapping_source_label=mapping_source_label,
+        default_org_object_id=default_org_object_id,
+        default_org_name=default_org_name,
+    )
+
+    update_import_batch_row(
+        sb,
+        batch_id,
+        status="transforming",
+        stats={
+            "rows_processed": len(transformed),
+            "relations_resolved": len(staging_collections["org_link_rows"]) + len(staging_collections["amenity_rows"]) + len(staging_collections["payment_rows"]),
+            "ai_corrections": ai_corrections,
+        },
+    )
+
     # Base object staging load.
-    enriched_objects = [{"import_batch_id": batch_id, **r} for r in object_rows]
+    enriched_objects = [{"import_batch_id": batch_id, **r} for r in staging_collections["object_rows"]]
     _chunked_insert(sb, "object_temp", enriched_objects)
 
     # Typed staging entities.
-    _chunked_insert(sb, "org_temp", list(org_rows.values()), upsert=True, on_conflict="import_batch_id,staging_org_key")
+    _chunked_insert(sb, "org_temp", staging_collections["org_rows"], upsert=True, on_conflict="import_batch_id,staging_org_key")
     _chunked_insert(
         sb,
         "object_location_temp",
-        location_rows,
+        staging_collections["location_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,is_main_location",
     )
     _chunked_insert(
         sb,
         "contact_channel_temp",
-        contact_rows,
+        staging_collections["contact_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,kind_code,value",
     )
     _chunked_insert(
         sb,
         "object_org_link_temp",
-        org_link_rows,
+        staging_collections["org_link_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,staging_org_key,role_code",
     )
     _chunked_insert(
         sb,
         "ref_classification_scheme_temp",
-        list(class_scheme_rows.values()),
+        staging_collections["class_scheme_rows"],
         upsert=True,
         on_conflict="import_batch_id,scheme_code",
     )
     _chunked_insert(
         sb,
         "ref_classification_value_temp",
-        list(class_value_rows.values()),
+        staging_collections["class_value_rows"],
         upsert=True,
         on_conflict="import_batch_id,scheme_code,value_code",
     )
     _chunked_insert(
         sb,
         "object_classification_temp",
-        object_class_rows,
+        staging_collections["object_class_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,scheme_code,value_code",
     )
     _chunked_insert(
         sb,
         "object_amenity_temp",
-        amenity_rows,
+        staging_collections["amenity_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,amenity_code",
     )
     _chunked_insert(
         sb,
         "object_payment_method_temp",
-        payment_rows,
+        staging_collections["payment_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,payment_code",
     )
     _chunked_insert(
         sb,
         "media_temp",
-        media_rows,
+        staging_collections["media_rows"],
         upsert=True,
         on_conflict="import_batch_id,staging_object_key,source_url",
     )
 
     update_import_batch_row(sb, batch_id, status="staging_loaded")
     return {
-        "rows_loaded": len(object_rows),
-        "locations": len(location_rows),
-        "contacts": len(contact_rows),
+        "rows_loaded": len(staging_collections["object_rows"]),
+        "locations": len(staging_collections["location_rows"]),
+        "contacts": len(staging_collections["contact_rows"]),
         "ai_corrections": ai_corrections,
     }
 
 
 def run_batch_pipeline_sync(**kwargs):
     return asyncio.run(run_batch_pipeline(**kwargs))
+
+
+
+
+

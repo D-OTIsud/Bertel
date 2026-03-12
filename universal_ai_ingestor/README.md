@@ -85,6 +85,12 @@ Variables minimales a renseigner:
 - `SUPABASE_URL`: URL projet Supabase (`https://<project-ref>.supabase.co`).
 - `SUPABASE_SERVICE_KEY`: cle serveur Supabase (service role / secret backend selon compatibilite client).
 
+Variables avancees utiles pour le mapping IA:
+- `MIN_CONFIDENCE_THRESHOLD`: seuil sous lequel la confiance globale du workbook passe en `mapping_review_required`.
+- `MIN_SHEET_CONFIDENCE_THRESHOLD`: seuil minimum par feuille; une seule feuille fragile suffit a declencher la revue humaine.
+- `VECTOR_DB_URL`: chaine de connexion d'une base pgvector dediee pour les few-shots RAG dynamiques, separee de la base Supabase principale.
+- `APP_ENV`: mettez `production` ou `staging` pour activer la validation stricte des secrets au demarrage de l'API.
+
 ## Ordre d'utilisation UI (workflow recommande)
 
 1. `Upload`: envoyer le fichier avec `organization_object_id` obligatoire.
@@ -243,3 +249,6 @@ Purge en lot les batches terminaux expires (`retention_until < now()`), sans uti
 - Benchmark script: `scripts/benchmark_ingestor.py`
 - Preflight script: `scripts/preflight_check.py`
 - Dry-run script: `scripts/dry_run_ingestor.py`
+
+
+

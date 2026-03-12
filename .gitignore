@@ -27,3 +27,15 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+.npm-cache/
+
+# Test artifacts
+test_results.txt

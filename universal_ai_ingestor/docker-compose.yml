@@ -1,4 +1,20 @@
 services:
+  vector-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=bertel_vectors
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - vector_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bertel_vectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -10,14 +26,21 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:?}
       - API_BEARER_TOKEN=${API_BEARER_TOKEN:?}
       - RAW_IMPORT_BUCKET=${RAW_IMPORT_BUCKET:-raw_imports}
+      - APP_ENV=${APP_ENV:-development}
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
       - INGEST_SAMPLE_ROWS=${INGEST_SAMPLE_ROWS:-5}
       - ETL_CHUNK_SIZE=${ETL_CHUNK_SIZE:-500}
       - ETL_MAX_ATTEMPTS=${ETL_MAX_ATTEMPTS:-3}
       - ETL_RETRY_BACKOFF_SECONDS=${ETL_RETRY_BACKOFF_SECONDS:-2}
       - INGEST_MAX_BYTES=${INGEST_MAX_BYTES:-25000000}
+      - MIN_CONFIDENCE_THRESHOLD=${MIN_CONFIDENCE_THRESHOLD:-0.5}
+      - MIN_SHEET_CONFIDENCE_THRESHOLD=${MIN_SHEET_CONFIDENCE_THRESHOLD:-0.5}
+      - VECTOR_DB_URL=postgresql://postgres:postgres@vector-db:5432/bertel_vectors
     ports:
       - "8000:8000"
+    depends_on:
+      vector-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 20s
@@ -37,3 +60,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  vector_db_data:

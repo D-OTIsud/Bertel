@@ -25,7 +25,7 @@ Le flux inclut maintenant un **Discovery Agent** pre-ingest: profilage des feuil
 
 ## Prérequis
 
-1. Copier `.env.example` vers `.env` et renseigner les variables.
+1. Copier `.env.example` vers `.env` et renseigner les variables. Pour Docker local, la base vectorielle pgvector est deja fournie par `docker-compose` et `VECTOR_DB_URL` pointe dessus par defaut.
 2. Créer le bucket Supabase Storage `raw_imports` (ou ajuster `RAW_IMPORT_BUCKET`).
 3. Exécuter la migration SQL:
 
@@ -70,6 +70,8 @@ GRANT USAGE, SELECT ON SEQUENCES TO service_role;
 docker compose up --build
 ```
 
+Le service `vector-db` demarre automatiquement avec pgvector et stocke ses donnees dans le volume Docker `vector_db_data`.
+
 - API: `http://localhost:8000`
 - UI: `http://localhost:8501`
 
@@ -88,7 +90,7 @@ Variables minimales a renseigner:
 Variables avancees utiles pour le mapping IA:
 - `MIN_CONFIDENCE_THRESHOLD`: seuil sous lequel la confiance globale du workbook passe en `mapping_review_required`.
 - `MIN_SHEET_CONFIDENCE_THRESHOLD`: seuil minimum par feuille; une seule feuille fragile suffit a declencher la revue humaine.
-- `VECTOR_DB_URL`: chaine de connexion d'une base pgvector dediee pour les few-shots RAG dynamiques, separee de la base Supabase principale.
+- `VECTOR_DB_URL`: chaine de connexion de la base pgvector dediee. En Docker local, elle est definie directement dans `docker-compose.yml` vers `postgresql://postgres:postgres@vector-db:5432/bertel_vectors`.
 - `APP_ENV`: mettez `production` ou `staging` pour activer la validation stricte des secrets au demarrage de l'API.
 
 ## Ordre d'utilisation UI (workflow recommande)
@@ -249,6 +251,10 @@ Purge en lot les batches terminaux expires (`retention_until < now()`), sans uti
 - Benchmark script: `scripts/benchmark_ingestor.py`
 - Preflight script: `scripts/preflight_check.py`
 - Dry-run script: `scripts/dry_run_ingestor.py`
+
+
+
+
 
 
 

@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
 
 import requests
 import streamlit as st
 
-try:
-    from core.target_schema import TARGET_SCHEMA_RULES
-except ImportError:  # pragma: no cover
-    from universal_ai_ingestor.core.target_schema import TARGET_SCHEMA_RULES
+APP_ROOT = Path(__file__).resolve().parents[1]
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 
+from core.target_schema import TARGET_SCHEMA_RULES
 API_BASE = os.getenv("API_BASE_URL", "http://api:8000").rstrip("/")
 TOKEN = os.getenv("API_BEARER_TOKEN", "")
 

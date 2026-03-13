@@ -127,3 +127,4 @@ def test_staging_v3_sql_has_no_comment_artifact_columns() -> None:
     content = (ROOT / 'universal_ai_ingestor' / 'sql' / 'staging_v3_tables.sql').read_text(encoding='utf-8')
     assert re.search(r"^\s*'[^\n]*'\s+[A-Z]+", content, re.MULTILINE) is None
     assert re.search(r'^\s*how\s+[A-Z]+', content, re.MULTILINE) is None
+

@@ -78,7 +78,7 @@ _CREATE_TABLE_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _ALTER_TABLE_RE = re.compile(
-    r"ALTER TABLE\s+staging\.([a-z0-9_]+)\s+(.*?);",
+    r"ALTER TABLE(?:\s+IF\s+EXISTS)?\s+staging\.([a-z0-9_]+)\s+(.*?);",
     re.IGNORECASE | re.DOTALL,
 )
 _COLUMN_LINE_RE = re.compile(r'^\s*"?([a-z0-9_]+)"?\s+[a-z]', re.IGNORECASE)
@@ -1054,6 +1054,7 @@ def validate_mapping_target(target_table: str, target_column: str, transform: st
     if transform not in rule.allowed_transforms:
         return False, f"Transform '{transform}' not allowed for '{target_table}'"
     return True, "ok"
+
 
 
 

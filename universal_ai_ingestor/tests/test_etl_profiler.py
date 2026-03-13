@@ -7,8 +7,10 @@ from universal_ai_ingestor.core.etl_engine import (
     _build_semantic_split_rows,
     _calculate_column_stats,
     _canonicalize_reference_token,
+    apply_mapping_by_table,
     workbook_payload_from_sheets,
 )
+from universal_ai_ingestor.core.schemas import MappingPlan, MappingTarget
 
 
 def test_calculate_column_stats_empty_dataframe() -> None:
@@ -125,3 +127,26 @@ def test_build_semantic_split_rows_deduplicates_semantic_matches() -> None:
             "is_approved": True,
         },
     ]
+
+
+def test_apply_mapping_by_table_concat_text_recomposes_address() -> None:
+    df = pd.DataFrame({
+        "Numero": ["12", "8"],
+        "TypeVoie": ["rue", "avenue"],
+        "NomVoie": ["de la Paix", "Victor Hugo"],
+        "Ville": ["Paris", "Lyon"],
+    })
+    plan = MappingPlan(
+        source_format="xlsx",
+        confidence=1.0,
+        targets=[
+            MappingTarget(table="object_location_temp", column="address1", transform="concat_text", source_key="Numero"),
+            MappingTarget(table="object_location_temp", column="address1", transform="concat_text", source_key="TypeVoie"),
+            MappingTarget(table="object_location_temp", column="address1", transform="concat_text", source_key="NomVoie"),
+            MappingTarget(table="object_location_temp", column="city", transform="identity", source_key="Ville"),
+        ],
+    )
+    table_outputs = apply_mapping_by_table(df, plan)
+    location_df = table_outputs["object_location_temp"]
+    assert location_df["address1"].tolist() == ["12 rue de la Paix", "8 avenue Victor Hugo"]
+    assert location_df["city"].tolist() == ["Paris", "Lyon"]

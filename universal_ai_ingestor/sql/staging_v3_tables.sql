@@ -1925,3 +1925,6 @@ ALTER TABLE IF EXISTS staging.tag_link_temp
   ADD COLUMN IF NOT EXISTS id TEXT;
 
 
+
+ALTER TABLE IF EXISTS staging.mapping_contract_field
+  ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0;

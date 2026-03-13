@@ -125,15 +125,26 @@ async def _enhance_with_ai_workbook(
         return []
 
     ai_by_sheet_and_source: dict[tuple[str, str], Any] = {}
+    plan_relations_by_key: dict[tuple[str, str, str], Any] = {}
+    plan_assumptions = list(getattr(plan_bundle, "assumptions", []) or [])
+    for assumption in plan_assumptions:
+        if assumption not in assumptions:
+            assumptions.append(assumption)
     if isinstance(plan_bundle, MultiSheetMappingPlan):
         for sheet_name, plan in plan_bundle.per_sheet.items():
             for target in plan.targets:
                 ai_by_sheet_and_source[(sheet_name, str(target.source_key))] = target
+            for relation_target in plan.relation_targets:
+                plan_relations_by_key[(relation_target.from_sheet, relation_target.from_column, relation_target.target_entity_type)] = relation_target
+            for assumption in plan.assumptions:
+                if assumption not in assumptions:
+                    assumptions.append(assumption)
     elif isinstance(plan_bundle, MappingPlan):
         default_sheet = next(iter(sheets.keys()), "default")
         for target in plan_bundle.targets:
             ai_by_sheet_and_source[(default_sheet, str(target.source_key))] = target
-
+        for relation_target in plan_bundle.relation_targets:
+            plan_relations_by_key[(relation_target.from_sheet, relation_target.from_column, relation_target.target_entity_type)] = relation_target
     updated = 0
     for idx, proposal in enumerate(proposals):
         ai_target = ai_by_sheet_and_source.get((proposal.sheet_name, proposal.source_column))
@@ -153,7 +164,7 @@ async def _enhance_with_ai_workbook(
             target_column=ai_target.column,
             transform=ai_target.transform or "identity",
             confidence=max(float(proposal.confidence), float(getattr(plan_bundle, "confidence", 0.0)), 0.7),
-            rationale=f"AI-assisted mapping from source sample for {proposal.source_column}.",
+            rationale=str(ai_target.notes or f"AI-assisted mapping from source sample for {proposal.source_column}."),
             status="proposed",
         )
         scores.append(max(float(getattr(plan_bundle, "confidence", 0.0)), 0.7))
@@ -183,7 +194,7 @@ async def _enhance_with_ai_workbook(
                     target_staging_table=target_staging_table,
                     target_entity_type=target_entity_type,
                     confidence=float(rel.confidence),
-                    rationale="AI-detected relation from analyse_relations node.",
+                    rationale=str(getattr(plan_relations_by_key.get((from_sheet, from_column, target_entity_type)), "rationale", "") or getattr(rel, "reasoning_steps", "") or "AI-detected relation from analyse_relations node."),
                     status="proposed",
                 )
             )
@@ -509,8 +520,9 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
                     "confidence": f.confidence,
                     "rationale": f.rationale,
                     "status": f.status if status != "review_required" else "proposed",
+                    "position": idx,
                 }
-                for f in contract.fields
+                for idx, f in enumerate(contract.fields)
             ]
         ).execute()
 

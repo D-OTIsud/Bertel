@@ -10,6 +10,11 @@ from typing import Any
 import requests
 import streamlit as st
 
+try:
+    from streamlit_sortables import sort_items
+except Exception:  # noqa: BLE001
+    sort_items = None
+
 APP_ROOT = Path(__file__).resolve().parents[1]
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
@@ -174,6 +179,18 @@ def _ordered_visible_fields(fields: list[dict[str, Any]], batch_id: str | None) 
         st.session_state.mapping_field_order = {}
         st.session_state.mapping_field_order_batch_id = batch_id
     order_map: dict[str, int] = st.session_state.setdefault("mapping_field_order", {})
+    if not order_map:
+        seeded: list[tuple[int, dict[str, Any]]] = []
+        fallback_index = 0
+        for field in visible_fields:
+            raw_position = field.get("position")
+            try:
+                seeded.append((int(raw_position), field))
+            except (TypeError, ValueError):
+                seeded.append((100000 + fallback_index, field))
+                fallback_index += 1
+        for index, (_position, field) in enumerate(sorted(seeded, key=lambda item: item[0])):
+            order_map[_mapping_field_key(field)] = index
     next_index = len(order_map)
     for field in visible_fields:
         field_key = _mapping_field_key(field)
@@ -188,6 +205,7 @@ TRANSFORM_LABELS = {
     "lowercase": "Mettre en minuscules",
     "split_list": "Decouper une liste",
     "split_gps": "Separer latitude / longitude",
+    "concat_text": "Agreger plusieurs champs texte",
 }
 
 
@@ -201,8 +219,75 @@ def _transform_hint(transform: str) -> str:
         "lowercase": "Convertit le texte en minuscules.",
         "split_list": "Separe plusieurs valeurs dans une meme cellule.",
         "split_gps": "Separe des coordonnees GPS en latitude et longitude.",
+        "concat_text": "Assemble plusieurs colonnes source vers une meme colonne cible, utile pour recomposer une adresse.",
     }
     return hints.get(transform, "")
+
+
+def _field_sort_label(field: dict[str, Any]) -> str:
+    source_col = str(field.get("source_column", "?"))
+    sheet_name = str(field.get("sheet_name", "default"))
+    target_table = str(field.get("target_table", "object_temp"))
+    target_column = str(field.get("target_column", "name"))
+    return f"{source_col} [{sheet_name}] -> {target_table}.{target_column}"
+
+
+def _apply_field_order(field_keys: list[str]) -> None:
+    st.session_state.mapping_field_order = {
+        field_key: index
+        for index, field_key in enumerate(field_keys)
+    }
+
+
+def _render_mapping_order_control(fields: list[dict[str, Any]]) -> None:
+    if not fields:
+        return
+    if sort_items is None:
+        st.caption("Drag-and-drop indisponible tant que le composant Streamlit n'est pas installe dans le conteneur UI.")
+        return
+    label_to_key = {
+        f"{_field_sort_label(field)} :: {_mapping_field_key(field)}": _mapping_field_key(field)
+        for field in fields
+    }
+    current_labels = [
+        f"{_field_sort_label(field)} :: {_mapping_field_key(field)}"
+        for field in fields
+    ]
+    reordered_labels = sort_items(current_labels, direction="vertical", key=f"mapping_sort_{st.session_state.batch_id}")
+    reordered_keys = [label_to_key[label] for label in reordered_labels if label in label_to_key]
+    if reordered_keys and reordered_keys != [_mapping_field_key(field) for field in fields]:
+        _apply_field_order(reordered_keys)
+        st.rerun()
+
+
+def _format_assumption_label(assumption: str) -> str:
+    value = str(assumption or "").strip()
+    if not value:
+        return ""
+    if value.startswith("ai_mode:"):
+        return "Mode IA: mapping LLM guide par schema + candidats semantiques."
+    if value.startswith("semantic_candidates:"):
+        return "Candidats semantiques utilises: " + value.split(":", 1)[1]
+    if value.startswith("reflection_rounds:"):
+        return "Allers-retours de verification: " + value.split(":", 1)[1]
+    if value.startswith("sheet_confidence:"):
+        return "Confiance faible detectee sur: " + value.split(":", 1)[1]
+    if value.startswith("overall_confidence:"):
+        return "Confiance globale insuffisante: " + value.split(":", 1)[1]
+    if value.startswith("semantic_candidates_sheet:"):
+        return "Candidats semantiques recuperes pour la feuille: " + value.split(":", 1)[1]
+    return value
+
+
+def _format_event_trace(event: dict[str, Any]) -> str:
+    phase = str(event.get("phase", "?")).strip()
+    message = str(event.get("message", "")).strip()
+    timestamp = str(event.get("created_at", "")).strip()
+    prefix = f"[{timestamp[:19]}] " if timestamp else ""
+    if phase:
+        return f"{prefix}{phase}: {message}"
+    return prefix + message
+
 
 
 st.set_page_config(page_title="Bertel Data Ingestor", page_icon="database", layout="wide")
@@ -345,12 +430,23 @@ if st.session_state.step == 3:
     st.markdown("### Validation du Mapping IA")
     fields: list[dict[str, Any]] = batch_data.get("fields", [])
     relations: list[dict[str, Any]] = batch_data.get("relations", [])
+    contract = batch_data.get("contract") or {}
+    contract_assumptions = [
+        _format_assumption_label(item)
+        for item in contract.get("assumptions", [])
+        if _format_assumption_label(item)
+    ]
+    discovery_events = [
+        event for event in batch_data.get("events", [])
+        if str(event.get("phase", "")).startswith("discovery")
+    ]
     if not fields:
         st.warning("Aucun champ detecte.")
         if st.button("Rafraichir"):
             st.rerun()
         st.stop()
     visible_fields = _ordered_visible_fields(fields, st.session_state.batch_id)
+    field_positions = {_mapping_field_key(field): index for index, field in enumerate(visible_fields)}
     perfect = sum(1 for f in visible_fields if float(f.get("confidence", 0)) >= 0.8)
     to_review = max(0, len(visible_fields) - perfect)
     c1, c2 = st.columns([1, 1])
@@ -358,6 +454,20 @@ if st.session_state.step == 3:
         st.markdown(f"<span class='pill pill-ok'>{perfect} correspondances parfaites</span>", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<span class='pill pill-warn'>{to_review} a verifier</span>", unsafe_allow_html=True)
+    if contract_assumptions or discovery_events:
+        with st.expander("Trace IA et contexte", expanded=False):
+            if contract_assumptions:
+                st.caption("Synthese des choix IA")
+                for item in contract_assumptions:
+                    st.write(f"- {item}")
+            if discovery_events:
+                st.caption("Evenements d'analyse")
+                for event in discovery_events[-12:]:
+                    st.write(f"- {_format_event_trace(event)}")
+    if any(str(field.get("transform", "identity")) == "concat_text" for field in visible_fields):
+        with st.expander("Ordre d'agregation des champs source", expanded=False):
+            st.caption("Faites glisser les entrees. L'ordre affiche ici sera l'ordre utilise par concat_text quand plusieurs champs alimentent la meme colonne cible.")
+            _render_mapping_order_control(visible_fields)
     if relations:
         with st.expander(f"Relations detectees par l'IA ({len(relations)})", expanded=False):
             for rel in relations:
@@ -372,6 +482,9 @@ if st.session_state.step == 3:
                     f"- `{from_sheet}.{from_col}` -> `{target_entity}` / `{target_table}` "
                     f"(sep=`{sep}`, {join_label}, conf={conf:.0%})"
                 )
+                rel_rationale = str(rel.get("rationale", "")).strip()
+                if rel_rationale:
+                    st.caption(rel_rationale)
 
     corrections: list[dict[str, Any]] = []
     changed_any = False
@@ -397,6 +510,7 @@ if st.session_state.step == 3:
         current_transform = str(field.get("transform", "identity"))
         field_id = str(field.get("id", ""))
         field_key = _mapping_field_key(field)
+        rationale = str(field.get("rationale", "")).strip()
         confidence = float(field.get("confidence", 0.0))
         if confidence >= 0.8:
             conf_class = "conf-high"
@@ -440,6 +554,9 @@ if st.session_state.step == 3:
             default_skip = field.get("status") == "rejected"
             skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{field_key}", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
+        if rationale:
+            with st.expander(f"Trace IA pour {source_col}", expanded=False):
+                st.write(rationale)
         changed = (
             new_table != current_table
             or new_column != current_column
@@ -455,6 +572,7 @@ if st.session_state.step == 3:
                 "target_column": new_column,
                 "transform": new_transform,
                 "skip": skip,
+                "position": field_positions.get(field_key, 0),
             }
         )
 
@@ -543,3 +661,8 @@ if st.session_state.step == 5:
         if st.button("Nouvelle importation", type="primary", use_container_width=True):
             _reset_wizard()
             st.rerun()
+
+
+
+
+

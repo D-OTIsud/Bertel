@@ -2016,3 +2016,4 @@ GRANT EXECUTE ON FUNCTION api.retry_failed_media_downloads(INTEGER) TO service_r
 GRANT EXECUTE ON FUNCTION api.watchdog_mark_stale_batches(INTEGER, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION api.get_ingestor_metrics() TO service_role;
 GRANT EXECUTE ON FUNCTION api.get_ingestor_scheduler_health() TO service_role;
+

@@ -328,8 +328,27 @@ def workbook_payload_from_sheets(sheets: dict[str, pd.DataFrame], workbook_name:
     return WorkbookPayload(workbook_name=workbook_name, sheets=samples)
 
 
+def _clean_concat_series(value: pd.Series) -> pd.Series:
+    return value.fillna("").astype(str).str.replace(r"\s+", " ", regex=True).str.strip()
+
+
+def _concat_text_series(existing: pd.Series | None, incoming: pd.Series) -> pd.Series:
+    incoming_clean = _clean_concat_series(incoming)
+    if existing is None:
+        return incoming_clean
+    existing_clean = _clean_concat_series(existing).reindex(incoming_clean.index, fill_value="")
+    result = existing_clean.copy()
+    incoming_non_empty = incoming_clean.ne("")
+    existing_empty = existing_clean.eq("")
+    same_value = existing_clean.eq(incoming_clean)
+    result.loc[existing_empty & incoming_non_empty] = incoming_clean.loc[existing_empty & incoming_non_empty]
+    both_mask = (~existing_empty) & incoming_non_empty & (~same_value)
+    result.loc[both_mask] = (existing_clean.loc[both_mask] + " " + incoming_clean.loc[both_mask]).str.replace(r"\s+", " ", regex=True).str.strip()
+    return result
+
+
 def apply_mapping(df: pd.DataFrame, plan: MappingPlan) -> pd.DataFrame:
-    out = pd.DataFrame()
+    out = pd.DataFrame(index=df.index)
     for target in plan.targets:
         if target.source_key not in df.columns:
             continue
@@ -342,6 +361,9 @@ def apply_mapping(df: pd.DataFrame, plan: MappingPlan) -> pd.DataFrame:
                 out[target.column] = pd.to_numeric(split[1], errors="coerce")
         elif target.transform == "lowercase":
             out[target.column] = value.astype(str).str.lower()
+        elif target.transform == "concat_text":
+            existing = out[target.column] if target.column in out.columns else None
+            out[target.column] = _concat_text_series(existing, value)
         else:
             out[target.column] = value
     if "name" not in out.columns and len(df.columns) > 0:
@@ -349,7 +371,6 @@ def apply_mapping(df: pd.DataFrame, plan: MappingPlan) -> pd.DataFrame:
     if "object_type" not in out.columns:
         out["object_type"] = "ORG"
     return out
-
 
 def apply_mapping_by_table(df: pd.DataFrame, plan: MappingPlan) -> dict[str, pd.DataFrame]:
     table_outputs: dict[str, pd.DataFrame] = {}
@@ -367,6 +388,9 @@ def apply_mapping_by_table(df: pd.DataFrame, plan: MappingPlan) -> dict[str, pd.
                 table_df[target.column] = pd.to_numeric(split[1], errors="coerce")
         elif target.transform == "lowercase":
             table_df[target.column] = value.astype(str).str.lower()
+        elif target.transform == "concat_text":
+            existing = table_df[target.column] if target.column in table_df.columns else None
+            table_df[target.column] = _concat_text_series(existing, value)
         else:
             table_df[target.column] = value
 
@@ -376,7 +400,6 @@ def apply_mapping_by_table(df: pd.DataFrame, plan: MappingPlan) -> dict[str, pd.
     if "object_type" not in object_df.columns:
         object_df["object_type"] = "ORG"
     return table_outputs
-
 
 def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> MappingPlan | MultiSheetMappingPlan | None:
     contract_resp = (
@@ -397,9 +420,12 @@ def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> Mappi
     field_resp = (
         sb.schema("staging")
         .table("mapping_contract_field")
-        .select("sheet_name,source_column,target_table,target_column,transform,confidence")
+        .select("sheet_name,source_column,target_table,target_column,transform,confidence,position")
         .eq("contract_id", contract_row["id"])
         .eq("status", "approved")
+        .order("sheet_name")
+        .order("position")
+        .order("source_column")
         .execute()
     )
     field_rows = field_resp.data or []
@@ -1329,6 +1355,7 @@ async def run_batch_pipeline(
 
 def run_batch_pipeline_sync(**kwargs):
     return asyncio.run(run_batch_pipeline(**kwargs))
+
 
 
 

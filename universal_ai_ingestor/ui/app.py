@@ -127,6 +127,7 @@ def _reset_wizard() -> None:
     st.session_state.batch_id = None
     st.session_state.batch_data = None
     st.session_state.ai_correction = True
+    st.session_state.batch_reused = False
     st.session_state.mapping_field_order = {}
     st.session_state.mapping_field_order_batch_id = None
 
@@ -273,16 +274,18 @@ def _render_mapping_order_control(fields: list[dict[str, Any]]) -> None:
         st.caption("Astuce: l'ordre ici pilote concat_text. Si plusieurs champs alimentent la meme colonne cible, ils seront agreges du haut vers le bas.")
         return
 
-    st.caption("Drag-and-drop indisponible dans ce conteneur. Utilisez Monter/Descendre pour definir l'ordre d'agregation.")
+    st.caption("Drag-and-drop indisponible dans ce conteneur. Utilisez les mini boutons pour definir l'ordre d'agregation.")
     for index, field in enumerate(fields, start=1):
         field_key = _mapping_field_key(field)
-        row_left, row_up, row_down = st.columns([12, 1, 1])
+        row_left, row_pos, row_up, row_down = st.columns([10, 1, 0.9, 0.9], gap="small")
         with row_left:
             st.markdown(f"<div class='mapping-order-row'><span class='mapping-order-index'>{index}</span>{_field_sort_label(field)}</div>", unsafe_allow_html=True)
+        with row_pos:
+            st.markdown(f"<div class='mapping-order-mini'>{index}</div>", unsafe_allow_html=True)
         with row_up:
-            st.button("↑", key=f"ord_up_{field_key}", disabled=index == 1, use_container_width=True, on_click=_move_field, args=(fields, field_key, -1))
+            st.button("▲", key=f"ord_up_{field_key}", disabled=index == 1, help="Monter", on_click=_move_field, args=(fields, field_key, -1))
         with row_down:
-            st.button("↓", key=f"ord_down_{field_key}", disabled=index == len(fields), use_container_width=True, on_click=_move_field, args=(fields, field_key, 1))
+            st.button("▼", key=f"ord_down_{field_key}", disabled=index == len(fields), help="Descendre", on_click=_move_field, args=(fields, field_key, 1))
 
 
 def _candidate_aggregate_groups(fields: list[dict[str, Any]]) -> list[tuple[str, str, list[dict[str, Any]]]]:
@@ -358,6 +361,7 @@ st.markdown(
     .mapping-hint { font-size: 0.68rem; color: #7a7f8f; line-height: 1.05; margin-top: 0.15rem; }
     .mapping-order-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.82rem; padding: 0.2rem 0; }
     .mapping-order-index { min-width: 1.35rem; height: 1.35rem; border-radius: 999px; background: #eef1f9; color: #445; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .mapping-order-mini { font-size: 0.72rem; color: #6f7687; line-height: 1.6; text-align: center; }
     .trace-summary { border: 1px solid #ececf4; border-radius: 10px; background: #fafbff; padding: 0.5rem 0.7rem; margin: 0.5rem 0 0.65rem 0; }
     .trace-summary strong { font-size: 0.82rem; color: #283046; }
     .trace-summary span { font-size: 0.74rem; color: #6f7687; }
@@ -370,7 +374,7 @@ st.markdown(
     div[data-testid="stSelectbox"] > div[data-baseweb="select"] > div { min-height: 2rem; }
     div[data-testid="stSelectbox"] * { font-size: 0.85rem; }
     div[data-testid="stCheckbox"] label { margin-top: 0.2rem; }
-    div[data-testid="stButton"] button[kind="secondary"] { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    div[data-testid="stButton"] button[kind="secondary"] { padding-top: 0.16rem; padding-bottom: 0.16rem; min-height: 1.75rem; border-radius: 8px; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -384,6 +388,8 @@ if "batch_data" not in st.session_state:
     st.session_state.batch_data = None
 if "ai_correction" not in st.session_state:
     st.session_state.ai_correction = True
+if "batch_reused" not in st.session_state:
+    st.session_state.batch_reused = False
 if "mapping_field_order" not in st.session_state:
     st.session_state.mapping_field_order = {}
 if "mapping_field_order_batch_id" not in st.session_state:
@@ -427,6 +433,11 @@ if st.session_state.step == 1:
             "Les reseaux sociaux vont dans contact_channel_temp."
         ),
     )
+    force_reanalyze = st.checkbox(
+        "Relancer l'analyse meme si ce fichier a deja ete importe",
+        value=True,
+        help="Pratique apres un redeploiement ou quand vous voulez un nouveau diagnostic IA pour le meme fichier.",
+    )
     can_upload = bool(uploaded_file and selected_org_id)
     if st.button("Analyser avec l'IA", type="primary", use_container_width=True, disabled=not can_upload):
         files = {"upload_file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
@@ -435,9 +446,11 @@ if st.session_state.step == 1:
             params["organization_name"] = org_name_input
         if custom_rules.strip():
             params["custom_rules"] = custom_rules.strip()
+        params["force_reanalyze"] = str(bool(force_reanalyze)).lower()
         result = _api_post("/api/v1/ingest", params=params, files=files)
         if result:
             st.session_state.batch_id = result["batch_id"]
+            st.session_state.batch_reused = bool(result.get("reused_existing_batch"))
             st.session_state.step = 2
             st.rerun()
     st.stop()
@@ -515,6 +528,8 @@ if st.session_state.step == 3:
         st.markdown(f"<span class='pill pill-ok'>{perfect} correspondances parfaites</span>", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<span class='pill pill-warn'>{to_review} a verifier</span>", unsafe_allow_html=True)
+    if st.session_state.get("batch_reused"):
+        st.info("Ce batch provient d'une analyse deja existante. Relancez l'import avec l'option de reanalyse si vous voulez un nouveau diagnostic IA.")
     if contract_assumptions or discovery_events:
         trace_lines = contract_assumptions[:2] + [_format_event_trace(event) for event in discovery_events[-2:]]
         trace_label = _short_trace_line(" | ".join(line for line in trace_lines if line))
@@ -522,15 +537,10 @@ if st.session_state.step == 3:
             f"<div class='trace-summary'><strong>Resume IA</strong><br><span>{trace_label or 'Trace disponible dans les details.'}</span></div>",
             unsafe_allow_html=True,
         )
-        with st.expander("Details IA", expanded=False):
-            if contract_assumptions:
-                st.caption("Synthese des choix IA")
-                for item in contract_assumptions[:6]:
-                    st.write(f"- {item}")
-            if discovery_events:
-                st.caption("Evenements d'analyse")
-                for event in discovery_events[-6:]:
-                    st.write(f"- {_format_event_trace(event)}")
+        with st.expander("Voir la trace IA", expanded=False):
+            compact_lines = contract_assumptions[:3] + [_format_event_trace(event) for event in discovery_events[-4:]]
+            for item in compact_lines:
+                st.caption(item)
     aggregate_groups = _candidate_aggregate_groups(visible_fields)
     if aggregate_groups:
         with st.expander("Ordre des champs source", expanded=False):
@@ -568,7 +578,7 @@ if st.session_state.step == 3:
 
     corrections: list[dict[str, Any]] = []
     changed_any = False
-    h_left, h_mid, h_right, h_chip, h_order, h_conf, h_skip = st.columns([2.8, 1.8, 1.9, 1.25, 0.65, 0.55, 0.45])
+    h_left, h_mid, h_right, h_chip, h_order, h_conf, h_skip = st.columns([2.8, 1.8, 1.9, 1.25, 0.9, 0.55, 0.45])
     with h_left:
         st.caption("Champ source")
     with h_mid:
@@ -592,7 +602,6 @@ if st.session_state.step == 3:
         current_transform = str(field.get("transform", "identity"))
         field_id = str(field.get("id", ""))
         field_key = _mapping_field_key(field)
-        rationale = str(field.get("rationale", "")).strip()
         confidence = float(field.get("confidence", 0.0))
         if confidence >= 0.8:
             conf_class = "conf-high"
@@ -601,7 +610,7 @@ if st.session_state.step == 3:
         else:
             conf_class = "conf-low"
         st.markdown("<div class='mapping-card'>", unsafe_allow_html=True)
-        left, mid, right, chip, order_col, conf, sk = st.columns([2.8, 1.8, 1.9, 1.25, 0.65, 0.55, 0.45])
+        left, mid, right, chip, order_col, conf, sk = st.columns([2.8, 1.8, 1.9, 1.25, 0.9, 0.55, 0.45])
         order_label = f"#{field_positions.get(field_key, 0) + 1} • {sheet_name}"
         with left:
             st.markdown(
@@ -638,31 +647,36 @@ if st.session_state.step == 3:
         with order_col:
             up_disabled = field_positions.get(field_key, 0) == 0
             down_disabled = field_positions.get(field_key, 0) >= len(visible_fields) - 1
-            st.button(
-                "↑",
-                key=f"inline_up_{field_key}",
-                disabled=up_disabled,
-                use_container_width=True,
-                on_click=_move_field,
-                args=(visible_fields, field_key, -1),
-            )
-            st.button(
-                "↓",
-                key=f"inline_down_{field_key}",
-                disabled=down_disabled,
-                use_container_width=True,
-                on_click=_move_field,
-                args=(visible_fields, field_key, 1),
-            )
+            ord_idx, ord_up, ord_down = st.columns([0.85, 0.65, 0.65], gap="small")
+            with ord_idx:
+                st.markdown(
+                    f"<div class='mapping-order-mini'>#{field_positions.get(field_key, 0) + 1}</div>",
+                    unsafe_allow_html=True,
+                )
+            with ord_up:
+                st.button(
+                    "▲",
+                    key=f"inline_up_{field_key}",
+                    disabled=up_disabled,
+                    help="Monter",
+                    on_click=_move_field,
+                    args=(visible_fields, field_key, -1),
+                )
+            with ord_down:
+                st.button(
+                    "▼",
+                    key=f"inline_down_{field_key}",
+                    disabled=down_disabled,
+                    help="Descendre",
+                    on_click=_move_field,
+                    args=(visible_fields, field_key, 1),
+                )
         with conf:
             st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
         with sk:
             default_skip = field.get("status") == "rejected"
             skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{field_key}", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
-        if rationale:
-            with st.expander(f"Details IA: {source_col}", expanded=False):
-                st.write(rationale)
         changed = (
             new_table != current_table
             or new_column != current_column

@@ -155,6 +155,7 @@ async def _enhance_with_ai_workbook(
         for relation_target in plan_bundle.relation_targets:
             plan_relations_by_key[(relation_target.from_sheet, relation_target.from_column, relation_target.target_entity_type)] = relation_target
     updated = 0
+    invalid = 0
     for idx, proposal in enumerate(proposals):
         ai_target = ai_by_sheet_and_source.get((proposal.sheet_name, proposal.source_column))
         if ai_target is None:
@@ -165,6 +166,7 @@ async def _enhance_with_ai_workbook(
             transform=ai_target.transform or "identity",
         )
         if not ok:
+            invalid += 1
             continue
         proposals[idx] = DiscoveryFieldProposal(
             sheet_name=proposal.sheet_name,
@@ -178,10 +180,19 @@ async def _enhance_with_ai_workbook(
         )
         scores.append(max(float(getattr(plan_bundle, "confidence", 0.0)), 0.7))
         updated += 1
-    assumptions.append(
-        f"AI discovery applied across workbook for {updated} fields." if updated else
-        "AI discovery run produced no valid upgrades."
-    )
+    analysed_fields = len(ai_by_sheet_and_source)
+    if analysed_fields == 0:
+        assumptions.append("AI discovery returned no usable field analyses; baseline schema mappings were kept.")
+    elif updated == 0:
+        assumptions.append(
+            f"AI discovery analysed {analysed_fields} fields but none could be merged into the discovery contract"
+            + (f" ({invalid} invalid against schema)." if invalid else ".")
+        )
+    else:
+        assumptions.append(
+            f"AI discovery merged {updated}/{analysed_fields} field analyses into the discovery contract."
+            + (f" {invalid} schema-invalid suggestions were ignored." if invalid else "")
+        )
     ai_relations: list[DiscoveryRelationHypothesis] = []
     if analysed_relations:
         for rel in analysed_relations.relations:

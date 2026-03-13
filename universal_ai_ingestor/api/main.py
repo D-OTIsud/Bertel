@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from postgrest.exceptions import APIError
 
 from core.config import settings
 from core.discovery_engine import build_discovery_contract, persist_discovery_contract
@@ -110,8 +111,17 @@ def _latest_contract(sb, batch_id: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
+def _is_missing_position_column_error(exc: Exception) -> bool:
+    if isinstance(exc, APIError):
+        payload = getattr(exc, "json", lambda: {})()
+        message = str(payload.get("message") or "")
+        code = str(payload.get("code") or "")
+        return code == "42703" and "mapping_contract_field.position" in message
+    return "mapping_contract_field.position" in str(exc)
+
+
 def _contract_fields(sb, contract_id: str) -> list[dict[str, Any]]:
-    resp = (
+    query = (
         sb.schema("staging")
         .table("mapping_contract_field")
         .select("id,sheet_name,source_column,target_table,target_column,transform,confidence,rationale,status,position")
@@ -119,9 +129,24 @@ def _contract_fields(sb, contract_id: str) -> list[dict[str, Any]]:
         .order("sheet_name")
         .order("position")
         .order("source_column")
-        .execute()
     )
-    return resp.data or []
+    try:
+        return query.execute().data or []
+    except Exception as exc:  # noqa: BLE001
+        if not _is_missing_position_column_error(exc):
+            raise
+        logger.warning("mapping_contract_field.position unavailable, falling back to legacy ordering: %s", exc)
+        resp = (
+            sb.schema("staging")
+            .table("mapping_contract_field")
+            .select("id,sheet_name,source_column,target_table,target_column,transform,confidence,rationale,status")
+            .eq("contract_id", contract_id)
+            .order("sheet_name")
+            .order("source_column")
+            .execute()
+        )
+        return [dict(row, position=index) for index, row in enumerate(resp.data or [])]
+
 
 
 def _contract_relations(sb, contract_id: str) -> list[dict[str, Any]]:
@@ -585,14 +610,28 @@ def update_mapping(batch_id: str, body: MappingCorrections) -> JSONResponse:
 
         if corr.skip:
             update_payload.update({"status": "rejected", "review_reason": "user_skipped"})
-            (
-                sb.schema("staging")
-                .table("mapping_contract_field")
-                .update(update_payload)
-                .eq("id", field_id)
-                .eq("contract_id", contract["id"])
-                .execute()
-            )
+            try:
+                (
+                    sb.schema("staging")
+                    .table("mapping_contract_field")
+                    .update(update_payload)
+                    .eq("id", field_id)
+                    .eq("contract_id", contract["id"])
+                    .execute()
+                )
+            except Exception as exc:  # noqa: BLE001
+                if not ("position" in update_payload and _is_missing_position_column_error(exc)):
+                    raise
+                legacy_payload = dict(update_payload)
+                legacy_payload.pop("position", None)
+                (
+                    sb.schema("staging")
+                    .table("mapping_contract_field")
+                    .update(legacy_payload)
+                    .eq("id", field_id)
+                    .eq("contract_id", contract["id"])
+                    .execute()
+                )
             updated += 1
             continue
 
@@ -609,14 +648,28 @@ def update_mapping(batch_id: str, body: MappingCorrections) -> JSONResponse:
                 "reviewed_by": "user",
                 "reviewed_at": datetime.now(timezone.utc).isoformat(),
             })
-            (
-                sb.schema("staging")
-                .table("mapping_contract_field")
-                .update(update_payload)
-                .eq("id", field_id)
-                .eq("contract_id", contract["id"])
-                .execute()
-            )
+            try:
+                (
+                    sb.schema("staging")
+                    .table("mapping_contract_field")
+                    .update(update_payload)
+                    .eq("id", field_id)
+                    .eq("contract_id", contract["id"])
+                    .execute()
+                )
+            except Exception as exc:  # noqa: BLE001
+                if not ("position" in update_payload and _is_missing_position_column_error(exc)):
+                    raise
+                legacy_payload = dict(update_payload)
+                legacy_payload.pop("position", None)
+                (
+                    sb.schema("staging")
+                    .table("mapping_contract_field")
+                    .update(legacy_payload)
+                    .eq("id", field_id)
+                    .eq("contract_id", contract["id"])
+                    .execute()
+                )
             updated += 1
 
     return JSONResponse(content={"updated": updated, "errors": errors})

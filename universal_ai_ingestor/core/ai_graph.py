@@ -29,6 +29,7 @@ try:
         TARGET_SCHEMA_RULES,
         KNOWN_OBJECT_TYPES,
         build_target_schema_context,
+        find_best_target,
         validate_mapping_target,
     )
 except ModuleNotFoundError:
@@ -36,6 +37,7 @@ except ModuleNotFoundError:
         TARGET_SCHEMA_RULES,
         KNOWN_OBJECT_TYPES,
         build_target_schema_context,
+        find_best_target,
         validate_mapping_target,
     )
 try:
@@ -368,6 +370,179 @@ def _candidate_mode_summary(candidates_by_sheet: dict[str, dict[str, list[dict[s
     return "semantic_candidates:" + ",".join(parts)
 
 
+def _deterministic_transform_for_fallback(
+    source_column: str,
+    col_stat: dict[str, Any],
+    allowed_transforms: list[str],
+    default_transform: str,
+) -> str:
+    normalized = _normalize_prompt_token(source_column)
+    if "split_gps" in allowed_transforms:
+        if float(col_stat.get("gps_ratio", 0.0) or 0.0) >= 0.4 or "gps" in normalized:
+            return "split_gps"
+    if "split_list" in allowed_transforms:
+        if float(col_stat.get("multi_value_ratio", 0.0) or 0.0) >= 0.25 or col_stat.get("dominant_delimiter"):
+            return "split_list"
+    if default_transform in allowed_transforms:
+        return default_transform
+    if "identity" in allowed_transforms:
+        return "identity"
+    return allowed_transforms[0] if allowed_transforms else "identity"
+
+
+def _semantic_type_direct_fallback(source_column: str, col_stat: dict[str, Any]) -> tuple[str, str, str, float, str] | None:
+    normalized = _normalize_prompt_token(source_column)
+    semantic_type = str(col_stat.get("semantic_type_hint", "") or "")
+    if semantic_type == "email" or any(token in normalized for token in ("email", "mail", "courriel")):
+        return (
+            "contact_channel_temp",
+            "value",
+            "lowercase",
+            0.72,
+            "Direct semantic fallback: email/contact column routed to contact_channel_temp.value.",
+        )
+    if any(token in normalized for token in ("phone", "telephone", "tel", "mobile", "gsm")):
+        return (
+            "contact_channel_temp",
+            "value",
+            "identity",
+            0.7,
+            "Direct semantic fallback: phone/contact column routed to contact_channel_temp.value.",
+        )
+    if semantic_type == "url" and any(token in normalized for token in ("photo", "image", "media", "galerie", "gallery", "video")):
+        return (
+            "media_temp",
+            "source_url",
+            "split_list",
+            0.74,
+            "Direct semantic fallback: media URL column routed to media_temp.source_url.",
+        )
+    if semantic_type == "url" or any(token in normalized for token in ("site", "website", "url", "web")):
+        return (
+            "contact_channel_temp",
+            "value",
+            "lowercase",
+            0.66,
+            "Direct semantic fallback: URL/web column routed to contact_channel_temp.value.",
+        )
+    return None
+
+def _fallback_verdict_for_column(
+    source_column: str,
+    col_stat: dict[str, Any],
+    candidates: list[dict[str, Any]],
+) -> ColumnVerdict:
+    direct = _semantic_type_direct_fallback(source_column, col_stat)
+    if direct is not None:
+        target_table, target_column, default_transform, confidence, rationale = direct
+        rule = TARGET_SCHEMA_RULES.get(target_table)
+        allowed_transforms = list(rule.allowed_transforms) if rule else [default_transform, "identity"]
+        transform = _deterministic_transform_for_fallback(source_column, col_stat, allowed_transforms, default_transform)
+        return ColumnVerdict(
+            source_column=source_column,
+            keep=True,
+            target_table=target_table,
+            target_column=target_column,
+            transform=transform,
+            confidence=confidence,
+            reasoning_steps=rationale,
+        )
+
+    if candidates:
+        top = candidates[0]
+        target_table = str(top.get("target_table") or "object_temp")
+        target_column = str(top.get("target_column") or "name")
+        allowed_transforms = [str(item) for item in top.get("allowed_transforms", []) if str(item).strip()]
+        default_transform = str(top.get("default_transform") or "identity")
+        similarity = float(top.get("similarity", 0.0) or 0.0)
+        if similarity >= 0.55:
+            transform = _deterministic_transform_for_fallback(source_column, col_stat, allowed_transforms or ["identity"], default_transform)
+            ok, _ = validate_mapping_target(target_table, target_column, transform)
+            if not ok:
+                transform = default_transform if default_transform else "identity"
+            confidence = max(0.35, min(similarity, 0.89))
+            reasoning = (
+                f"Deterministic fallback used the top semantic candidate {target_table}.{target_column} "
+                f"because the LLM returned no usable mapping for this column."
+            )
+            return ColumnVerdict(
+                source_column=source_column,
+                keep=True,
+                target_table=target_table,
+                target_column=target_column,
+                transform=transform,
+                confidence=confidence,
+                reasoning_steps=reasoning,
+            )
+
+    normalized = _normalize_prompt_token(source_column)
+    target_table, target_column, default_transform, confidence, rationale = find_best_target(normalized)
+    rule = TARGET_SCHEMA_RULES.get(target_table)
+    allowed_transforms = list(rule.allowed_transforms) if rule else [default_transform, "identity"]
+    transform = _deterministic_transform_for_fallback(source_column, col_stat, allowed_transforms, default_transform)
+    ok, _ = validate_mapping_target(target_table, target_column, transform)
+    if not ok:
+        transform = "identity"
+    return ColumnVerdict(
+        source_column=source_column,
+        keep=True,
+        target_table=target_table,
+        target_column=target_column,
+        transform=transform,
+        confidence=max(float(confidence), 0.2),
+        reasoning_steps=f"Deterministic schema fallback: {rationale}",
+    )
+
+
+def _complete_profile_verdicts(
+    *,
+    sheet_name: str,
+    source_columns: list[str],
+    column_stats: dict[str, dict[str, Any]],
+    llm_verdicts: list[ColumnVerdict],
+    candidate_map: dict[str, list[dict[str, Any]]],
+) -> tuple[list[ColumnVerdict], dict[str, int | str]]:
+    by_source = {
+        str(verdict.source_column): verdict
+        for verdict in llm_verdicts
+        if str(verdict.source_column).strip()
+    }
+    completed: list[ColumnVerdict] = []
+    fallback_added = 0
+    fallback_repaired = 0
+    for source_column in source_columns:
+        col_stat = column_stats.get(source_column, {})
+        fallback = _fallback_verdict_for_column(source_column, col_stat, candidate_map.get(source_column, []))
+        verdict = by_source.get(source_column)
+        if verdict is None:
+            completed.append(fallback)
+            fallback_added += 1
+            continue
+        ok, _ = validate_mapping_target(verdict.target_table, verdict.target_column, verdict.transform)
+        if not ok:
+            completed.append(fallback)
+            fallback_repaired += 1
+            continue
+        if not str(verdict.reasoning_steps or "").strip():
+            verdict.reasoning_steps = fallback.reasoning_steps
+        if float(verdict.confidence or 0.0) <= 0.0:
+            verdict.confidence = fallback.confidence
+        completed.append(verdict)
+
+    mode = "llm_full"
+    if not llm_verdicts:
+        mode = "fallback_only"
+    elif fallback_added or fallback_repaired:
+        mode = "llm_plus_fallback"
+    return completed, {
+        "sheet": sheet_name,
+        "source_columns": len(source_columns),
+        "llm_verdicts": len(llm_verdicts),
+        "fallback_added": fallback_added,
+        "fallback_repaired": fallback_repaired,
+        "mode": mode,
+    }
+
 async def _discover_entities_node(state: MappingState) -> MappingState:
     _emit(state, "discovery_entities", "Identification des entites en cours...")
     schema = state["schema_snapshot"]
@@ -430,6 +605,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
     ) or "- No global workbook entity context available."
     user_rules = (state.get("custom_rules") or "").strip() or "No user business rules provided."
     validation_errors = state.get("validation_errors", [])
+    state["profiling_modes"] = {}
 
     reflection_context = ""
     if validation_errors:
@@ -556,21 +732,40 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
             "Use the semantic target candidates first, then cross-check each choice against the focused schema block before returning it.\n"
             "Return results in per_sheet with key=sheet name."
         )
+        raw_verdicts: list[ColumnVerdict] = []
         try:
             result: ColumnSelection = await agent.ainvoke([("system", prompt), ("user", user_msg)])
-            verdicts = result.per_sheet.get(sheet_name, [])
-            if not verdicts:
-                verdicts = next(iter(result.per_sheet.values()), [])
-            all_verdicts[sheet_name] = verdicts
+            raw_verdicts = list(result.per_sheet.get(sheet_name, []))
+            if not raw_verdicts:
+                raw_verdicts = list(next(iter(result.per_sheet.values()), []))
         except Exception as exc:  # noqa: BLE001
             logger.warning("Column profiling failed for sheet %s: %s", sheet_name, exc)
-            all_verdicts[sheet_name] = []
+            _emit(state, "discovery_profiling", f"Feuille '{sheet_name}': reponse LLM indisponible ({exc.__class__.__name__}), bascule sur le fallback schema + semantique.")
+
+        completed_verdicts, diagnostics = _complete_profile_verdicts(
+            sheet_name=sheet_name,
+            source_columns=[str(col) for col in cols],
+            column_stats=stats,
+            llm_verdicts=raw_verdicts,
+            candidate_map=semantic_candidates,
+        )
+        all_verdicts[sheet_name] = completed_verdicts
+        state["profiling_modes"][sheet_name] = str(diagnostics["mode"])
+        _emit(
+            state,
+            "discovery_profiling",
+            (
+                f"Feuille '{sheet_name}': {diagnostics['source_columns']} colonnes source, "
+                f"{diagnostics['llm_verdicts']} verdicts LLM, "
+                f"{diagnostics['fallback_added']} ajouts fallback, "
+                f"{diagnostics['fallback_repaired']} corrections schema."
+            ),
+        )
 
     state["selected_columns"] = ColumnSelection(per_sheet=all_verdicts)
     total = sum(len(v) for v in all_verdicts.values())
     _emit(state, "discovery_profiling", f"Profilage termine: {total} colonnes analysees")
     return state
-
 # Node 3: Relation Analysis
 # ---------------------------------------------------------------------------
 
@@ -752,6 +947,8 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
         per_sheet_plans[from_sheet].relation_targets.append(relation_target)
 
     plan_assumptions = ["ai_mode:llm_schema_semantic_mapping", _candidate_mode_summary(semantic_candidates_by_sheet)]
+    for sheet_name, mode in sorted(state.get("profiling_modes", {}).items()):
+        plan_assumptions.append(f"profiling_mode:{sheet_name}={mode}")
     if state.get("reflection_count", 0):
         plan_assumptions.append(f"reflection_rounds:{state['reflection_count']}")
 
@@ -980,6 +1177,7 @@ async def generate_mapping_plan(
         "per_sheet_confidence": {},
         "low_confidence_sheets": {},
         "review_reasons": [],
+        "profiling_modes": {},
         "semantic_candidates_by_sheet": {},
     }
 
@@ -1040,6 +1238,9 @@ async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutpu
         ]
     )
     return result
+
+
+
 
 
 

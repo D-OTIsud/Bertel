@@ -14,6 +14,19 @@ services:
       timeout: 5s
       retries: 10
 
+  vector-prewarm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m universal_ai_ingestor.scripts.prewarm_vector_schema
+    restart: "no"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?}
+      - VECTOR_DB_URL=postgresql://postgres:postgres@vector-db:5432/bertel_vectors
+    depends_on:
+      vector-db:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -41,6 +54,8 @@ services:
     depends_on:
       vector-db:
         condition: service_healthy
+      vector-prewarm:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 20s
@@ -64,3 +79,4 @@ services:
 
 volumes:
   vector_db_data:
+

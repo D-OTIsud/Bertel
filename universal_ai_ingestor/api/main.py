@@ -114,9 +114,11 @@ def _contract_fields(sb, contract_id: str) -> list[dict[str, Any]]:
     resp = (
         sb.schema("staging")
         .table("mapping_contract_field")
-        .select("id,sheet_name,source_column,target_table,target_column,transform,confidence,rationale,status")
+        .select("id,sheet_name,source_column,target_table,target_column,transform,confidence,rationale,status,position")
         .eq("contract_id", contract_id)
         .order("sheet_name")
+        .order("position")
+        .order("source_column")
         .execute()
     )
     return resp.data or []
@@ -554,6 +556,7 @@ class FieldCorrection(BaseModel):
     target_column: str = ""
     transform: str = "identity"
     skip: bool = False
+    position: int | None = None
 
 
 class MappingCorrections(BaseModel):
@@ -576,12 +579,16 @@ def update_mapping(batch_id: str, body: MappingCorrections) -> JSONResponse:
         target_table = corr.target_table.strip()
         target_column = corr.target_column.strip()
         transform = corr.transform.strip()
+        update_payload: dict[str, Any] = {}
+        if corr.position is not None:
+            update_payload["position"] = int(corr.position)
 
         if corr.skip:
+            update_payload.update({"status": "rejected", "review_reason": "user_skipped"})
             (
                 sb.schema("staging")
                 .table("mapping_contract_field")
-                .update({"status": "rejected", "review_reason": "user_skipped"})
+                .update(update_payload)
                 .eq("id", field_id)
                 .eq("contract_id", contract["id"])
                 .execute()
@@ -594,17 +601,18 @@ def update_mapping(batch_id: str, body: MappingCorrections) -> JSONResponse:
             if not ok:
                 errors.append(f"Field {field_id}: {reason}")
                 continue
+            update_payload.update({
+                "target_table": target_table,
+                "target_column": target_column,
+                "transform": transform,
+                "status": "approved",
+                "reviewed_by": "user",
+                "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            })
             (
                 sb.schema("staging")
                 .table("mapping_contract_field")
-                .update({
-                    "target_table": target_table,
-                    "target_column": target_column,
-                    "transform": transform,
-                    "status": "approved",
-                    "reviewed_by": "user",
-                    "reviewed_at": datetime.now(timezone.utc).isoformat(),
-                })
+                .update(update_payload)
                 .eq("id", field_id)
                 .eq("contract_id", contract["id"])
                 .execute()
@@ -662,6 +670,7 @@ def purge_batch(batch_id: str, force: bool = Query(default=True)) -> JSONRespons
     except Exception as exc:  # noqa: BLE001
         return JSONResponse(status_code=400, content={"error": str(exc)})
     return JSONResponse(content={"batch_id": batch_id, "result": result.data})
+
 
 
 

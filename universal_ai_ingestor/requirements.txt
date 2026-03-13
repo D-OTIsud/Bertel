@@ -13,3 +13,4 @@ asyncpg==0.30.0
 lxml==5.3.0
 openpyxl==3.1.5
 pytest==8.3.4
+streamlit-sortables==0.3.1

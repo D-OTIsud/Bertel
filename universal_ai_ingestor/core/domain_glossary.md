@@ -20,3 +20,4 @@ This document outlines strict business logic definition for the Bertel system. T
 - Always use `split_gps` when latitude and longitude are combined in a single cell (e.g., "45.123, -1.456").
 - Always use `lowercase` for emails and website URLs.
 - ID columns (like `id_prestataire`) should use the `identity` transform but must map strictly to `external_id` or `source_org_object_id`.
+

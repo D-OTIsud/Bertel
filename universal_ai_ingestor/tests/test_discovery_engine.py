@@ -5,7 +5,7 @@ import types
 
 import pandas as pd
 import pytest
-
+from universal_ai_ingestor.core import discovery_engine as discovery_engine_module
 from universal_ai_ingestor.core.discovery_engine import build_discovery_contract
 from universal_ai_ingestor.core.schemas import MappingPlan, MappingTarget, RelationAnalysis, RelationHypothesisLLM
 
@@ -48,13 +48,13 @@ async def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
     async def _fake_generate_mapping_plan(**kwargs):
         captured["custom_rules"] = kwargs.get("custom_rules")
         return (
-            MappingPlan(
+            discovery_engine_module.MappingPlan(
                 source_format="xlsx",
                 confidence=0.9,
                 targets=[
-                    MappingTarget(
+                    discovery_engine_module.MappingTarget(
                         table="object_temp",
-                        column="external_id",
+                        column="name",
                         transform="identity",
                         source_key="id OTI",
                         source_sheet="ObjetLegacy",
@@ -83,6 +83,7 @@ async def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
     fake_core.ai_graph = fake_ai_graph
     monkeypatch.setitem(sys.modules, "core", fake_core)
     monkeypatch.setitem(sys.modules, "core.ai_graph", fake_ai_graph)
+    monkeypatch.setitem(sys.modules, "universal_ai_ingestor.core.ai_graph", fake_ai_graph)
 
     sheets = {
         "ObjetLegacy": pd.DataFrame(
@@ -97,3 +98,39 @@ async def test_custom_rules_are_forwarded_to_ai_graph(monkeypatch) -> None:
 
     assert captured["custom_rules"] == custom_rules
     assert any(r.from_column == "prestataires" and r.target_entity_type == "org" for r in contract.relations)
+
+
+@pytest.mark.asyncio
+async def test_ai_mapping_notes_and_assumptions_propagate(monkeypatch) -> None:
+    async def _fake_enhance_with_ai_workbook(**kwargs):
+        proposals = kwargs["proposals"]
+        assumptions = kwargs["assumptions"]
+        proposals[0] = discovery_engine_module.DiscoveryFieldProposal(
+            sheet_name="ObjetLegacy",
+            source_column="id OTI",
+            target_table="object_temp",
+            target_column="name",
+            transform="identity",
+            confidence=0.91,
+            rationale="AI selected object_temp.name with transform=identity and confidence=91%. Close semantic candidates: object_temp.name (score=0.99, mode=vector_semantic)",
+            status="proposed",
+        )
+        assumptions.extend([
+            "ai_mode:llm_schema_semantic_mapping",
+            "semantic_candidates:vector_semantic=1",
+        ])
+        return []
+
+    monkeypatch.setattr(discovery_engine_module, "_enhance_with_ai_workbook", _fake_enhance_with_ai_workbook)
+
+    sheets = {
+        "ObjetLegacy": pd.DataFrame([{"id OTI": "OTI-1"}])
+    }
+
+    contract = await build_discovery_contract(source_format="xlsx", sheets=sheets)
+
+    field = next(f for f in contract.fields if f.source_column == "id OTI")
+    assert "AI selected object_temp.name" in field.rationale
+    assert "ai_mode:llm_schema_semantic_mapping" in contract.assumptions
+    assert any(item.startswith("semantic_candidates:") for item in contract.assumptions)
+

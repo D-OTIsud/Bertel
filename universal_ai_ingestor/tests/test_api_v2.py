@@ -121,6 +121,16 @@ class _FakeTableQuery:
         return _FakeExecute(self._data)
 
 
+class _RecordingTableQuery(_FakeTableQuery):
+    def __init__(self, data=None):
+        super().__init__(data)
+        self.updated_payloads: list[dict[str, object]] = []
+
+    def update(self, payload, *a, **kw):
+        self.updated_payloads.append(dict(payload))
+        return self
+
+
 class _FakeSchema:
     def __init__(self, data=None):
         self._data = data or []
@@ -141,6 +151,25 @@ class _FakeSupabase:
 
     def rpc(self, name, payload=None):
         return SimpleNamespace(execute=lambda: _FakeExecute({"ok": True}))
+
+
+class _RecordingSchema:
+    def __init__(self, query: _RecordingTableQuery):
+        self._query = query
+
+    def table(self, name):
+        return self._query
+
+
+class _RecordingSupabase(_FakeSupabase):
+    def __init__(self, query: _RecordingTableQuery):
+        self._query = query
+
+    def schema(self, name):
+        return _RecordingSchema(self._query)
+
+    def table(self, name):
+        return self._query
 
 
 def test_health():
@@ -269,6 +298,35 @@ def test_mapping_patch_404_no_contract(monkeypatch):
     assert r.status_code == 404
 
 
+def test_mapping_patch_persists_position(monkeypatch):
+    query = _RecordingTableQuery()
+    monkeypatch.setattr(api_main, "get_supabase", lambda: _RecordingSupabase(query))
+    monkeypatch.setattr(api_main, "_latest_contract", lambda *a, **kw: {"id": "contract-1"})
+
+    client = TestClient(api_main.app)
+    r = client.patch(
+        "/api/v1/ingest/batch-1/mapping",
+        headers=AUTH,
+        json={
+            "corrections": [
+                {
+                    "field_id": "f1",
+                    "target_table": "object_location_temp",
+                    "target_column": "address1",
+                    "transform": "concat_text",
+                    "position": 2,
+                }
+            ]
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["updated"] == 1
+    assert query.updated_payloads
+    assert query.updated_payloads[0]["position"] == 2
+    assert query.updated_payloads[0]["transform"] == "concat_text"
+
+
 def test_rollback(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase())
     client = TestClient(api_main.app)
@@ -281,3 +339,4 @@ def test_purge(monkeypatch):
     client = TestClient(api_main.app)
     r = client.post("/api/v1/ingest/batch-1/purge", headers=AUTH)
     assert r.status_code == 200
+

@@ -128,3 +128,10 @@ def test_staging_v3_sql_has_no_comment_artifact_columns() -> None:
     assert re.search(r"^\s*'[^\n]*'\s+[A-Z]+", content, re.MULTILINE) is None
     assert re.search(r'^\s*how\s+[A-Z]+', content, re.MULTILINE) is None
 
+
+
+def test_validate_mapping_target_accepts_concat_text_for_address_tables() -> None:
+    ok, reason = validate_mapping_target("object_location_temp", "address1", "concat_text")
+    assert ok
+    assert reason == "ok"
+

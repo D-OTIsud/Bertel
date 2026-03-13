@@ -127,9 +127,23 @@ def _load_staging_table_columns() -> dict[str, tuple[str, ...]]:
     return {table: tuple(columns) for table, columns in table_columns.items()}
 
 
+def _augment_allowed_transforms(rule: TargetTableRule) -> TargetTableRule:
+    transforms = list(rule.allowed_transforms)
+    if "identity" in transforms and "concat_text" not in transforms:
+        transforms.append("concat_text")
+    return TargetTableRule(
+        table=rule.table,
+        entity=rule.entity,
+        description=rule.description,
+        production_table=rule.production_table,
+        allowed_transforms=tuple(transforms),
+        columns=rule.columns,
+    )
+
+
 def _reconcile_rule_with_staging_columns(rule: TargetTableRule, staging_columns: tuple[str, ...]) -> TargetTableRule:
     if not staging_columns:
-        return rule
+        return _augment_allowed_transforms(rule)
     curated_by_column = {
         column.column: column
         for column in rule.columns
@@ -139,14 +153,14 @@ def _reconcile_rule_with_staging_columns(rule: TargetTableRule, staging_columns:
         curated_by_column.get(column, TargetColumnRule(column=column, aliases=(column,)))
         for column in staging_columns
     )
-    return TargetTableRule(
+    return _augment_allowed_transforms(TargetTableRule(
         table=rule.table,
         entity=rule.entity,
         description=rule.description,
         production_table=rule.production_table,
         allowed_transforms=rule.allowed_transforms,
         columns=ordered_columns,
-    )
+    ))
 
 
 _STAGING_TABLE_COLUMNS: dict[str, tuple[str, ...]] = _load_staging_table_columns()
@@ -929,7 +943,7 @@ TARGET_SCHEMA_RULES: dict[str, TargetTableRule] = {
     table: _reconcile_rule_with_staging_columns(rule, _STAGING_TABLE_COLUMNS.get(table, ()))
     for table, rule in _BASE_TARGET_SCHEMA_RULES.items()
 }
-VALID_TRANSFORMS: set[str] = {"identity", "lowercase", "split_list", "split_gps"}
+VALID_TRANSFORMS: set[str] = {"identity", "lowercase", "split_list", "split_gps", "concat_text"}
 
 # Pre-built alias index: normalized_alias -> (table, column, default_transform)
 _ALIAS_INDEX: dict[str, tuple[str, str, str]] = {}
@@ -1013,6 +1027,7 @@ def build_target_schema_context() -> dict[str, object]:
             "Memberships/subscriptions (adhesion, cotisation) -> object_membership_temp.",
             "External reviews (TripAdvisor, Google, Booking ratings) -> object_review_temp.",
             "Metadata (date_creation, user, moderator) -> SKIP.",
+            "Use concat_text when several source columns must be recomposed into one text field, e.g. street number + street type + street name -> object_location_temp.address1.",
         ],
     }
 
@@ -1054,6 +1069,8 @@ def validate_mapping_target(target_table: str, target_column: str, transform: st
     if transform not in rule.allowed_transforms:
         return False, f"Transform '{transform}' not allowed for '{target_table}'"
     return True, "ok"
+
+
 
 
 

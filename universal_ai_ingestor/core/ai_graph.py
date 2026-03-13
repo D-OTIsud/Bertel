@@ -70,6 +70,7 @@ class MappingState(TypedDict):
     per_sheet_confidence: dict[str, float]
     low_confidence_sheets: dict[str, float]
     review_reasons: list[str]
+    semantic_candidates_by_sheet: dict[str, dict[str, list[dict[str, Any]]]]
 
 
 def _get_llm() -> ChatOpenAI:
@@ -319,13 +320,52 @@ def _format_semantic_candidates_for_prompt(candidates_by_column: dict[str, list[
             alias_text = f" aliases={', '.join(aliases[:3])}" if aliases else ""
             transforms = ", ".join(str(item) for item in candidate.get("allowed_transforms", []) if str(item).strip()) or "identity"
             similarity = float(candidate.get("similarity", 0.0))
+            retrieval_mode = str(candidate.get("retrieval_mode", "semantic") or "semantic")
             formatted.append(
                 f"{candidate.get('target_table')}.{candidate.get('target_column')} "
-                f"(score={similarity:.2f}, default={candidate.get('default_transform', 'identity')}, "
+                f"(score={similarity:.2f}, mode={retrieval_mode}, default={candidate.get('default_transform', 'identity')}, "
                 f"allowed={transforms}{alias_text})"
             )
         lines.append(f"- {source_column}: " + " | ".join(formatted))
     return "\n".join(lines)
+
+
+def _summarize_candidate_matches(candidates: list[dict[str, Any]], *, limit: int = 3) -> str:
+    if not candidates:
+        return "No close semantic alternatives were retrieved for this field."
+    parts: list[str] = []
+    for candidate in candidates[:limit]:
+        parts.append(
+            f"{candidate.get('target_table')}.{candidate.get('target_column')} "
+            f"(score={float(candidate.get('similarity', 0.0)):.2f}, mode={candidate.get('retrieval_mode', 'unknown')})"
+        )
+    return "; ".join(parts)
+
+
+def _build_mapping_note(verdict: ColumnVerdict, candidates: list[dict[str, Any]]) -> str:
+    reasoning = str(verdict.reasoning_steps or "").strip()
+    chosen = (
+        f"AI selected {verdict.target_table}.{verdict.target_column} "
+        f"with transform={verdict.transform} and confidence={float(verdict.confidence):.0%}."
+    )
+    alternatives = _summarize_candidate_matches(candidates)
+    if reasoning:
+        return f"{chosen} Reasoning: {reasoning} Close semantic candidates: {alternatives}"
+    return f"{chosen} Close semantic candidates: {alternatives}"
+
+
+def _candidate_mode_summary(candidates_by_sheet: dict[str, dict[str, list[dict[str, Any]]]]) -> str:
+    counts: dict[str, int] = {}
+    for per_column in candidates_by_sheet.values():
+        for candidates in per_column.values():
+            if not candidates:
+                continue
+            mode = str(candidates[0].get("retrieval_mode", "unknown") or "unknown")
+            counts[mode] = counts.get(mode, 0) + 1
+    if not counts:
+        return "semantic_candidates:none"
+    parts = [f"{mode}={counts[mode]}" for mode in sorted(counts)]
+    return "semantic_candidates:" + ",".join(parts)
 
 
 async def _discover_entities_node(state: MappingState) -> MappingState:
@@ -454,6 +494,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
         "- Person contacts -> actor_channel_temp.\n"
         "- Human identity -> actor_temp.\n"
         "- Delimited lists -> transform=split_list.\n"
+        "- Split address components that belong to one destination text field -> transform=concat_text.\n"
         "- 'lat,lon' text -> transform=split_gps.\n"
         "- Confidence 0-1: >0.8 clear, <0.5 uncertain.\n\n"
         "Apply valid user rules with priority.\n"
@@ -463,6 +504,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
     )
 
     all_verdicts: dict[str, list[ColumnVerdict]] = {}
+    state["semantic_candidates_by_sheet"] = {}
     agent = _get_llm().with_structured_output(ColumnSelection)
 
     for info in sheets_info:
@@ -502,6 +544,7 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
             entity_type=entity_type,
             top_k=4,
         )
+        state["semantic_candidates_by_sheet"][sheet_name] = semantic_candidates
         semantic_candidate_block = _format_semantic_candidates_for_prompt(semantic_candidates)
 
         user_msg = (
@@ -630,14 +673,16 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
     columns = state.get("selected_columns") or ColumnSelection()
     relations = state.get("analysed_relations") or RelationAnalysis(relations=[])
     source_format = state["source_format"]
-    
+
     state["validation_errors"] = []
     current_errors: list[str] = []
 
     per_sheet_plans: dict[str, MappingPlan] = {}
+    semantic_candidates_by_sheet = state.get("semantic_candidates_by_sheet", {})
     for sheet_name, verdicts in columns.per_sheet.items():
         targets: list[MappingTarget] = []
         confidences: list[float] = []
+        candidate_map = semantic_candidates_by_sheet.get(sheet_name, {})
         for v in verdicts:
             if not v.keep:
                 continue
@@ -645,19 +690,23 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
             if not ok:
                 current_errors.append(f"Sheet '{sheet_name}' column '{v.source_column}': {err_msg}")
                 continue
+            mapping_note = _build_mapping_note(v, candidate_map.get(v.source_column, []))
             targets.append(MappingTarget(
                 table=v.target_table,
                 column=v.target_column,
                 transform=v.transform,
                 source_key=v.source_column,
                 source_sheet=sheet_name,
+                notes=mapping_note,
             ))
             confidences.append(v.confidence)
         conf = sum(confidences) / len(confidences) if confidences else 0.0
+        per_sheet_assumptions = [f"semantic_candidates_sheet:{sheet_name}"] if candidate_map else []
         per_sheet_plans[sheet_name] = MappingPlan(
             source_format=source_format,
             confidence=conf,
             targets=targets,
+            assumptions=per_sheet_assumptions,
         )
 
     state["per_sheet_confidence"] = {
@@ -692,7 +741,7 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
             target_staging_table=ENTITY_TYPE_TO_STAGING.get(target_entity_type, ""),
             is_join_table=bool(rel.is_join_table),
             confidence=float(rel.confidence),
-            rationale="AI relation hypothesis validated for mapping output.",
+            rationale=(str(rel.reasoning_steps or "").strip() or "AI relation hypothesis validated for mapping output."),
         )
         if from_sheet not in per_sheet_plans:
             per_sheet_plans[from_sheet] = MappingPlan(
@@ -702,8 +751,17 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
             )
         per_sheet_plans[from_sheet].relation_targets.append(relation_target)
 
+    plan_assumptions = ["ai_mode:llm_schema_semantic_mapping", _candidate_mode_summary(semantic_candidates_by_sheet)]
+    if state.get("reflection_count", 0):
+        plan_assumptions.append(f"reflection_rounds:{state['reflection_count']}")
+
     if len(per_sheet_plans) == 1:
         plan = next(iter(per_sheet_plans.values()))
+        existing_assumptions = list(plan.assumptions)
+        for assumption in plan_assumptions:
+            if assumption not in existing_assumptions:
+                existing_assumptions.append(assumption)
+        plan.assumptions = existing_assumptions
         state["mapping_plan"] = plan
     else:
         all_confs = [p.confidence for p in per_sheet_plans.values()]
@@ -712,11 +770,12 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
             confidence=sum(all_confs) / len(all_confs) if all_confs else 0.0,
             targets=[t for p in per_sheet_plans.values() for t in p.targets],
             relation_targets=[r for p in per_sheet_plans.values() for r in p.relation_targets],
+            assumptions=plan_assumptions,
         )
 
     total_targets = len(state["mapping_plan"].targets)
     total_relations = len(state["mapping_plan"].relation_targets)
-    
+
     if current_errors:
         state["validation_errors"] = current_errors
         state["reflection_count"] = state.get("reflection_count", 0) + 1
@@ -724,7 +783,6 @@ async def _validate_plan_node(state: MappingState) -> MappingState:
     else:
         _emit(state, "discovery_validation", f"Validation terminee: {total_targets} mappings et {total_relations} relations valides")
     return state
-
 
 # ---------------------------------------------------------------------------
 # Node 5: Semantic Critic
@@ -767,6 +825,7 @@ async def _semantic_critic_node(state: MappingState) -> MappingState:
         "- Mapping a numeric column to 'name' (text expected)\n"
         "- Mapping 'Equipements' (list of amenities) to object_temp instead of object_amenity_temp\n"
         "- Using identity for GPS when values look like '45.1, -1.2' (should use split_gps)\n"
+        "- Leaving split address components separate when they should be recomposed into one address field with concat_text\n"
         "- Mapping an ID column to 'description' or 'email'\n"
         "- Choosing a transform that is not allowed for the target table\n"
         "- Choosing a column that exists but is semantically wrong given the focused schema hints\n"
@@ -921,6 +980,7 @@ async def generate_mapping_plan(
         "per_sheet_confidence": {},
         "low_confidence_sheets": {},
         "review_reasons": [],
+        "semantic_candidates_by_sheet": {},
     }
 
     compiled = build_mapping_graph()
@@ -933,6 +993,7 @@ async def generate_mapping_plan(
         columns_result = final_state.get("selected_columns") or ColumnSelection()
         per_sheet_confidence = final_state.get("per_sheet_confidence", {})
         low_confidence_sheets = final_state.get("low_confidence_sheets", {})
+        semantic_candidates_by_sheet = final_state.get("semantic_candidates_by_sheet", {})
         per_sheet: dict[str, MappingPlan] = {}
         for sheet in workbook_payload.sheets:
             sheet_targets = [t for t in plan.targets if t.source_sheet == sheet.sheet_name]
@@ -941,7 +1002,7 @@ async def generate_mapping_plan(
                 for v in columns_result.per_sheet.get(sheet.sheet_name, [])
                 if v.keep
             ]
-            assumptions = []
+            assumptions = [f"semantic_candidates_sheet:{sheet.sheet_name}"] if semantic_candidates_by_sheet.get(sheet.sheet_name) else []
             if sheet.sheet_name in low_confidence_sheets:
                 assumptions.append(f"sheet_confidence:{sheet.sheet_name}:{low_confidence_sheets[sheet.sheet_name]:.2f}")
             per_sheet[sheet.sheet_name] = MappingPlan(
@@ -979,6 +1040,21 @@ async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutpu
         ]
     )
     return result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

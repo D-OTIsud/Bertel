@@ -388,6 +388,7 @@ def _fallback_target_column_candidates(
                 "aliases": [str(alias) for alias in column.get("aliases", []) if str(alias).strip()],
                 "allowed_transforms": allowed_transforms,
                 "default_transform": str(column.get("default_transform", "identity") or "identity"),
+                "retrieval_mode": "fallback_lexical",
             }
             candidate["similarity"] = round(_semantic_overlap_score(source_column, sample_values, column_stats, candidate), 4)
             ranked.append(candidate)
@@ -541,6 +542,7 @@ async def query_target_column_candidates(
                     "aliases": [str(alias) for alias in (row["aliases"] or [])],
                     "allowed_transforms": [str(item) for item in (row["allowed_transforms"] or [])],
                     "default_transform": str(row["default_transform"] or "identity"),
+                    "retrieval_mode": "vector_semantic",
                     "similarity": round(float(row["similarity"] or 0.0), 4),
                 }
             )
@@ -610,4 +612,5 @@ def prewarm_target_schema_sync(schema_context: dict[str, Any]) -> bool:
     except RuntimeError:
         logger.warning("Skipping sync target-schema prewarm because an event loop is already running.")
         return False
+
 

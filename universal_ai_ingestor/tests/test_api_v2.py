@@ -304,7 +304,7 @@ def test_ingest_accepts_valid_upload(monkeypatch):
         },
     )
     assert r.status_code == 202
-    assert r.json()["status"] == "mapping_review_required"
+    assert r.json()["status"] == "discovering"
     assert r.json()["reused_existing_batch"] is False
 
 
@@ -449,5 +449,6 @@ def test_purge(monkeypatch):
     client = TestClient(api_main.app)
     r = client.post("/api/v1/ingest/batch-1/purge", headers=AUTH)
     assert r.status_code == 200
+
 
 

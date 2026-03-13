@@ -25,7 +25,7 @@ async def test_discovery_contract_profiles_sheet_and_fields() -> None:
     assert contract.fields
     assert contract.sheets[0].sheet_name == "ObjetLegacy"
     mapped_targets = {(f.target_table, f.target_column) for f in contract.fields}
-    assert ("object_temp", "email") in mapped_targets
+    assert ("contact_channel_temp", "value") in mapped_targets
 
 
 @pytest.mark.asyncio
@@ -133,4 +133,5 @@ async def test_ai_mapping_notes_and_assumptions_propagate(monkeypatch) -> None:
     assert "AI selected object_temp.name" in field.rationale
     assert "ai_mode:llm_schema_semantic_mapping" in contract.assumptions
     assert any(item.startswith("semantic_candidates:") for item in contract.assumptions)
+
 

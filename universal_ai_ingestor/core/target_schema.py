@@ -209,16 +209,6 @@ _object_temp = TargetTableRule(
             "organization_name", "org_name", "owner_org_name", "nom_organisme",
             "nom_organisation", "structure", "proprietaire", "gestionnaire",
         )),
-        TargetColumnRule("email", (
-            "email", "mail", "courriel", "e_mail", "adresse_email",
-            "contact_email", "email_address", "mel",
-        )),
-        TargetColumnRule("phone", (
-            "phone", "telephone", "mobile", "tel", "fax",
-            "tel_fixe", "tel_mobile", "gsm", "portable",
-        )),
-        TargetColumnRule("latitude", ("latitude", "lat", "coord_lat", "y", "geo_lat")),
-        TargetColumnRule("longitude", ("longitude", "lon", "lng", "coord_lon", "x", "geo_lon")),
     ),
 )
 

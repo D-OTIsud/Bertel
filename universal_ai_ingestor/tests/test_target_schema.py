@@ -107,6 +107,16 @@ def test_target_schema_rules_do_not_expose_non_staging_columns() -> None:
     assert extra_by_table == {}
 
 
+def test_object_temp_no_longer_exposes_contact_or_location_columns() -> None:
+    rule = TARGET_SCHEMA_RULES["object_temp"]
+    columns = {column.column for column in rule.columns}
+    assert "email" not in columns
+    assert "phone" not in columns
+    assert "latitude" not in columns
+    assert "longitude" not in columns
+    assert {"name", "object_type", "external_id"} <= columns
+
+
 def test_object_pet_policy_available_for_manual_mapping() -> None:
     rule = TARGET_SCHEMA_RULES['object_pet_policy_temp']
     assert {column.column for column in rule.columns} >= {'accepted', 'conditions'}

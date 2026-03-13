@@ -152,9 +152,34 @@ async def test_semantic_prompts_include_structured_schema_guidance(base_state) -
 
     async def _capture(messages):
         captured["system"] = messages[0][1]
+        captured["user"] = messages[1][1]
         return ColumnSelection(per_sheet={"Hotels": []})
 
-    with patch("universal_ai_ingestor.core.ai_graph._get_llm") as mock_llm:
+    semantic_candidates = {
+        "Equipements": [
+            {
+                "target_table": "object_amenity_temp",
+                "target_column": "amenity_code",
+                "similarity": 0.93,
+                "default_transform": "identity",
+                "allowed_transforms": ["identity", "lowercase", "split_list"],
+                "aliases": ["equipements", "amenities"],
+            },
+            {
+                "target_table": "object_temp",
+                "target_column": "name",
+                "similarity": 0.31,
+                "default_transform": "identity",
+                "allowed_transforms": ["identity", "lowercase"],
+                "aliases": ["name", "nom"],
+            },
+        ]
+    }
+
+    with patch("universal_ai_ingestor.core.ai_graph._get_llm") as mock_llm, patch(
+        "universal_ai_ingestor.core.ai_graph.query_target_column_candidates_for_sheet",
+        AsyncMock(return_value=semantic_candidates),
+    ):
         mock_chain = MagicMock()
         mock_agent = MagicMock()
         mock_agent.ainvoke = AsyncMock(side_effect=_capture)
@@ -164,12 +189,15 @@ async def test_semantic_prompts_include_structured_schema_guidance(base_state) -
         await _profile_columns_node(base_state)
 
     prompt = captured["system"]
+    user_prompt = captured["user"]
     assert "Focused schema cross-check" in prompt
     assert "required_columns: amenity_code" in prompt
     assert "allowed_transforms: identity, lowercase, split_list" in prompt
     assert "Delimited amenities -> object_amenity_temp." in prompt
     assert "aliases=equipements, amenities" in prompt
-
+    assert "Semantic target candidates (ranked from semantic/vector retrieval):" in user_prompt
+    assert "object_amenity_temp.amenity_code" in user_prompt
+    assert "allowed=identity, lowercase, split_list aliases=equipements, amenities" in user_prompt
 
 @pytest.mark.asyncio
 async def test_semantic_critic_prompt_includes_schema_cross_checks(base_state) -> None:
@@ -285,5 +313,6 @@ def test_build_mapping_graph_includes_semantic_critic_and_check_confidence() -> 
     graph = build_mapping_graph()
     assert graph is not None
     assert callable(getattr(graph, "ainvoke", None)) or hasattr(graph, "get_graph")
+
 
 

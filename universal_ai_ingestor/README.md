@@ -79,6 +79,7 @@ Le `docker-compose.yml` est maintenant configure pour un usage prod simple:
 - `APP_ENV=production` est force pour activer la validation stricte des secrets au demarrage
 - `api` et `ui` sont bindes sur `127.0.0.1` par defaut
 - la base pgvector est interne au reseau Docker et l'API utilise directement `postgresql://postgres:postgres@vector-db:5432/bertel_vectors`
+- un service `vector-prewarm` precharge les embeddings semantiques du schema cible avant que l'API ne serve les premieres requetes
 
 Tu peux exposer explicitement l'API ou l'UI en changeant `API_BIND_IP`, `UI_BIND_IP`, `API_PORT` et `UI_PORT` si tu ne passes pas par un reverse proxy.
 
@@ -132,3 +133,4 @@ Important:
   - genere un contrat discovery/mapping
   - met le batch en `mapping_review_required` ou `mapping_approved`
   - l'ETL ne demarre pas tant que le mapping n'est pas approuve
+

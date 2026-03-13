@@ -39,9 +39,12 @@ except ModuleNotFoundError:
         validate_mapping_target,
     )
 try:
-    from core.vector_store import query_similar_few_shots
+    from core.vector_store import query_similar_few_shots, query_target_column_candidates_for_sheet
 except ModuleNotFoundError:
-    from universal_ai_ingestor.core.vector_store import query_similar_few_shots  # type: ignore
+    from universal_ai_ingestor.core.vector_store import (  # type: ignore
+        query_similar_few_shots,
+        query_target_column_candidates_for_sheet,
+    )
 
 logger = logging.getLogger("ingestor.ai_graph")
 
@@ -302,6 +305,29 @@ def _format_stats_for_prompt(col_stat: dict[str, Any]) -> str:
         )
     return " [" + ", ".join(segments) + "]"
 
+def _format_semantic_candidates_for_prompt(candidates_by_column: dict[str, list[dict[str, Any]]]) -> str:
+    if not candidates_by_column:
+        return "- No semantic candidates available."
+    lines: list[str] = []
+    for source_column, candidates in candidates_by_column.items():
+        if not candidates:
+            lines.append(f"- {source_column}: no ranked target candidates.")
+            continue
+        formatted: list[str] = []
+        for candidate in candidates[:4]:
+            aliases = [str(alias) for alias in candidate.get("aliases", []) if str(alias).strip()]
+            alias_text = f" aliases={', '.join(aliases[:3])}" if aliases else ""
+            transforms = ", ".join(str(item) for item in candidate.get("allowed_transforms", []) if str(item).strip()) or "identity"
+            similarity = float(candidate.get("similarity", 0.0))
+            formatted.append(
+                f"{candidate.get('target_table')}.{candidate.get('target_column')} "
+                f"(score={similarity:.2f}, default={candidate.get('default_transform', 'identity')}, "
+                f"allowed={transforms}{alias_text})"
+            )
+        lines.append(f"- {source_column}: " + " | ".join(formatted))
+    return "\n".join(lines)
+
+
 async def _discover_entities_node(state: MappingState) -> MappingState:
     _emit(state, "discovery_entities", "Identification des entites en cours...")
     schema = state["schema_snapshot"]
@@ -418,7 +444,9 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
         "## Mandatory cross-check rules:\n"
         "- Use ONLY table and column names that exist in the focused schema block. Do NOT invent names.\n"
         "- Prefer exact alias matches from the schema over generic guesses.\n"
+        "- Use the semantic target candidates as your first-pass search space; only go outside them when the source evidence clearly contradicts them.\n"
         "- Respect allowed_transforms for each table.\n"
+        "- Choose transforms from the candidate default/allowed transforms plus the observed source value shape.\n"
         "- Keep=false only for clear metadata/technical columns, duplicates, or empty noise. Do NOT ignore business columns by default.\n"
         "- Address/GPS -> object_location_temp (NEVER object_temp).\n"
         "- Descriptions -> object_description_temp.\n"
@@ -452,18 +480,37 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
 
         col_profiles = ""
         stats = info.get("column_stats", {})
+        column_contexts: list[dict[str, Any]] = []
         for col_name in cols:
             vals = [str(r.get(col_name, "")) for r in samples if r.get(col_name) not in (None, "", "nan")]
             unique_vals = list(dict.fromkeys(vals))[:4]
             col_stat = stats.get(col_name, {})
             stat_str = _format_stats_for_prompt(col_stat)
             col_profiles += f"\n  - '{col_name}'{stat_str}: samples={unique_vals}"
+            column_contexts.append(
+                {
+                    "source_column": col_name,
+                    "sample_values": unique_vals,
+                    "column_stats": col_stat,
+                }
+            )
+
+        semantic_candidates = await query_target_column_candidates_for_sheet(
+            schema_context=schema,
+            sheet_name=sheet_name,
+            columns=column_contexts,
+            entity_type=entity_type,
+            top_k=4,
+        )
+        semantic_candidate_block = _format_semantic_candidates_for_prompt(semantic_candidates)
 
         user_msg = (
             f"Sheet: '{sheet_name}' (entity type: {entity_type})\n"
             f"Columns ({len(cols)}):{col_profiles}\n\n"
+            "Semantic target candidates (ranked from semantic/vector retrieval):\n"
+            f"{semantic_candidate_block}\n\n"
             "For EACH column, decide: keep (true/false), target_table, target_column, transform, confidence.\n"
-            "Cross-check each choice against the focused schema block before returning it.\n"
+            "Use the semantic target candidates first, then cross-check each choice against the focused schema block before returning it.\n"
             "Return results in per_sheet with key=sheet name."
         )
         try:
@@ -481,7 +528,6 @@ async def _profile_columns_node(state: MappingState) -> MappingState:
     _emit(state, "discovery_profiling", f"Profilage termine: {total} colonnes analysees")
     return state
 
-# ---------------------------------------------------------------------------
 # Node 3: Relation Analysis
 # ---------------------------------------------------------------------------
 
@@ -933,6 +979,10 @@ async def run_cleaner_batch(unstructured_values: list[str]) -> CleanerBatchOutpu
         ]
     )
     return result
+
+
+
+
 
 
 

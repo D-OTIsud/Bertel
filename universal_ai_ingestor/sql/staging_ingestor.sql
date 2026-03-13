@@ -173,15 +173,11 @@ CREATE TABLE IF NOT EXISTS staging.object_temp (
     import_batch_id TEXT NOT NULL REFERENCES staging.import_batches(batch_id) ON DELETE CASCADE,
     raw_source_data JSONB NOT NULL DEFAULT '{}'::jsonb,
 
-    -- Business fields (Phase 1 base set)
+    -- Business fields mirrored from public.object only.
     object_type TEXT,
     name TEXT,
     external_id TEXT,
     source_org_object_id TEXT,
-    email TEXT,
-    phone TEXT,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
 
     -- Dedup workflow metadata
     deduplication_status VARCHAR(32) NOT NULL DEFAULT 'pending'
@@ -202,12 +198,6 @@ CREATE INDEX IF NOT EXISTS idx_object_temp_is_approved
     ON staging.object_temp(is_approved);
 CREATE INDEX IF NOT EXISTS idx_object_temp_external_id
     ON staging.object_temp(external_id);
-CREATE INDEX IF NOT EXISTS idx_object_temp_email
-    ON staging.object_temp(lower(email));
-CREATE INDEX IF NOT EXISTS idx_object_temp_phone
-    ON staging.object_temp(phone);
-CREATE INDEX IF NOT EXISTS idx_object_temp_latlon
-    ON staging.object_temp(latitude, longitude);
 
 CREATE OR REPLACE FUNCTION staging.touch_updated_at()
 RETURNS TRIGGER
@@ -434,7 +424,6 @@ DECLARE v_exact_count INTEGER := 0;
 DECLARE v_conflict_count INTEGER := 0;
 DECLARE v_new_count INTEGER := 0;
 BEGIN
-    -- Reset only unresolved rows.
     UPDATE staging.object_temp
     SET deduplication_status = 'pending',
         matched_public_object_id = NULL,
@@ -442,8 +431,18 @@ BEGIN
     WHERE import_batch_id = p_batch_id
       AND deduplication_status IN ('pending', 'new', 'exact_update', 'ai_conflict');
 
-    -- Exact matches: external_id, then email, then phone.
-    WITH exact_candidates AS (
+    WITH staging_contact_values AS (
+        SELECT
+            o.import_row_id,
+            MAX(CASE WHEN lower(c.kind_code) = 'email' THEN lower(c.value) END) AS email_value,
+            MAX(CASE WHEN lower(c.kind_code) IN ('phone', 'telephone', 'mobile') THEN staging.normalize_phone(c.value) END) AS phone_value
+        FROM staging.object_temp o
+        LEFT JOIN staging.contact_channel_temp c
+          ON c.import_batch_id = o.import_batch_id
+         AND c.staging_object_key = o.staging_object_key
+        WHERE o.import_batch_id = p_batch_id
+        GROUP BY o.import_row_id
+    ), exact_candidates AS (
         SELECT
             s.import_row_id,
             COALESCE(
@@ -460,22 +459,23 @@ BEGIN
                     SELECT cc.object_id
                     FROM contact_channel cc
                     JOIN ref_code_contact_kind k ON k.id = cc.kind_id
-                    WHERE s.email IS NOT NULL
+                    WHERE sc.email_value IS NOT NULL
                       AND lower(k.code) = 'email'
-                      AND lower(cc.value) = lower(s.email)
+                      AND lower(cc.value) = sc.email_value
                     LIMIT 1
                 ),
                 (
                     SELECT cc2.object_id
                     FROM contact_channel cc2
                     JOIN ref_code_contact_kind k2 ON k2.id = cc2.kind_id
-                    WHERE s.phone IS NOT NULL
+                    WHERE sc.phone_value IS NOT NULL
                       AND lower(k2.code) IN ('phone', 'telephone', 'mobile')
-                      AND staging.normalize_phone(cc2.value) = staging.normalize_phone(s.phone)
+                      AND staging.normalize_phone(cc2.value) = sc.phone_value
                     LIMIT 1
                 )
             ) AS matched_id
         FROM staging.object_temp s
+        LEFT JOIN staging_contact_values sc ON sc.import_row_id = s.import_row_id
         WHERE s.import_batch_id = p_batch_id
     )
     UPDATE staging.object_temp s
@@ -487,23 +487,36 @@ BEGIN
 
     GET DIAGNOSTICS v_exact_count = ROW_COUNT;
 
-    -- Candidate conflicts from fuzzy+distance.
-    WITH fuzzy_candidates AS (
+    WITH staging_main_location AS (
+        SELECT DISTINCT ON (o.import_row_id)
+            o.import_row_id,
+            l.latitude,
+            l.longitude
+        FROM staging.object_temp o
+        JOIN staging.object_location_temp l
+          ON l.import_batch_id = o.import_batch_id
+         AND l.staging_object_key = o.staging_object_key
+        WHERE o.import_batch_id = p_batch_id
+          AND l.latitude IS NOT NULL
+          AND l.longitude IS NOT NULL
+        ORDER BY o.import_row_id, l.is_main_location DESC, l.updated_at DESC, l.created_at DESC
+    ), fuzzy_candidates AS (
         SELECT
             s.import_row_id,
             o.id AS candidate_id,
             similarity(o.name_normalized, immutable_unaccent(lower(COALESCE(s.name, '')))) AS name_sim,
             ST_Distance(
                 ol.geog2,
-                ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326)::geography
+                ST_SetSRID(ST_MakePoint(loc.longitude, loc.latitude), 4326)::geography
             ) AS distance_m,
             ROW_NUMBER() OVER (
                 PARTITION BY s.import_row_id
                 ORDER BY
                     similarity(o.name_normalized, immutable_unaccent(lower(COALESCE(s.name, '')))) DESC,
-                    ST_Distance(ol.geog2, ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326)::geography) ASC
+                    ST_Distance(ol.geog2, ST_SetSRID(ST_MakePoint(loc.longitude, loc.latitude), 4326)::geography) ASC
             ) AS rn
         FROM staging.object_temp s
+        JOIN staging_main_location loc ON loc.import_row_id = s.import_row_id
         JOIN object o ON TRUE
         JOIN object_location ol
           ON ol.object_id = o.id
@@ -511,12 +524,10 @@ BEGIN
         WHERE s.import_batch_id = p_batch_id
           AND s.deduplication_status = 'pending'
           AND s.name IS NOT NULL
-          AND s.latitude IS NOT NULL
-          AND s.longitude IS NOT NULL
           AND ol.geog2 IS NOT NULL
           AND ST_DWithin(
               ol.geog2,
-              ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(loc.longitude, loc.latitude), 4326)::geography,
               p_distance_meters
           )
           AND similarity(o.name_normalized, immutable_unaccent(lower(COALESCE(s.name, '')))) >= p_name_similarity

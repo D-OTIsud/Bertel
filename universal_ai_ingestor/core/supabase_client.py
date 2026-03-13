@@ -195,10 +195,6 @@ def insert_staging_rows(sb: Client, batch_id: str, rows: list[dict[str, Any]]) -
                 "name": r.get("name"),
                 "external_id": r.get("external_id"),
                 "source_org_object_id": r.get("source_org_object_id"),
-                "email": r.get("email"),
-                "phone": r.get("phone"),
-                "latitude": r.get("latitude"),
-                "longitude": r.get("longitude"),
                 "deduplication_status": r.get("deduplication_status", "pending"),
                 "matched_public_object_id": r.get("matched_public_object_id"),
                 "ai_merge_proposal": r.get("ai_merge_proposal"),
@@ -225,3 +221,4 @@ def insert_staging_table_rows(
         query.upsert(rows, on_conflict=on_conflict).execute()
         return
     query.insert(rows).execute()
+

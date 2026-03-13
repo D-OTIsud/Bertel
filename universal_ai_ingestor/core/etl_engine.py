@@ -912,10 +912,6 @@ def _build_staging_rows(
                 "org_name": org_name,
                 "external_id": external_id,
                 "source_org_object_id": source_org,
-                "email": email,
-                "phone": phone,
-                "latitude": latitude,
-                "longitude": longitude,
                 "deduplication_status": "pending",
                 "resolution_status": "pending",
                 "is_approved": False,
@@ -1379,6 +1375,7 @@ async def run_batch_pipeline(
 
 def run_batch_pipeline_sync(**kwargs):
     return asyncio.run(run_batch_pipeline(**kwargs))
+
 
 
 

@@ -239,25 +239,50 @@ def _apply_field_order(field_keys: list[str]) -> None:
     }
 
 
+def _move_field(fields: list[dict[str, Any]], field_key: str, delta: int) -> None:
+    ordered_keys = [_mapping_field_key(field) for field in fields]
+    if field_key not in ordered_keys:
+        return
+    index = ordered_keys.index(field_key)
+    new_index = index + delta
+    if new_index < 0 or new_index >= len(ordered_keys):
+        return
+    ordered_keys[index], ordered_keys[new_index] = ordered_keys[new_index], ordered_keys[index]
+    _apply_field_order(ordered_keys)
+    st.rerun()
+
+
 def _render_mapping_order_control(fields: list[dict[str, Any]]) -> None:
     if not fields:
         return
-    if sort_items is None:
-        st.caption("Drag-and-drop indisponible tant que le composant Streamlit n'est pas installe dans le conteneur UI.")
+    current_keys = [_mapping_field_key(field) for field in fields]
+    if sort_items is not None:
+        label_to_key = {
+            f"{_field_sort_label(field)} :: {_mapping_field_key(field)}": _mapping_field_key(field)
+            for field in fields
+        }
+        current_labels = [
+            f"{_field_sort_label(field)} :: {_mapping_field_key(field)}"
+            for field in fields
+        ]
+        reordered_labels = sort_items(current_labels, direction="vertical", key=f"mapping_sort_{st.session_state.batch_id}")
+        reordered_keys = [label_to_key[label] for label in reordered_labels if label in label_to_key]
+        if reordered_keys and reordered_keys != current_keys:
+            _apply_field_order(reordered_keys)
+            st.rerun()
+        st.caption("Astuce: l'ordre ici pilote concat_text. Si plusieurs champs alimentent la meme colonne cible, ils seront agreges du haut vers le bas.")
         return
-    label_to_key = {
-        f"{_field_sort_label(field)} :: {_mapping_field_key(field)}": _mapping_field_key(field)
-        for field in fields
-    }
-    current_labels = [
-        f"{_field_sort_label(field)} :: {_mapping_field_key(field)}"
-        for field in fields
-    ]
-    reordered_labels = sort_items(current_labels, direction="vertical", key=f"mapping_sort_{st.session_state.batch_id}")
-    reordered_keys = [label_to_key[label] for label in reordered_labels if label in label_to_key]
-    if reordered_keys and reordered_keys != [_mapping_field_key(field) for field in fields]:
-        _apply_field_order(reordered_keys)
-        st.rerun()
+
+    st.caption("Drag-and-drop indisponible dans ce conteneur. Utilisez Monter/Descendre pour definir l'ordre d'agregation.")
+    for index, field in enumerate(fields, start=1):
+        field_key = _mapping_field_key(field)
+        row_left, row_up, row_down = st.columns([12, 1, 1])
+        with row_left:
+            st.markdown(f"<div class='mapping-order-row'><span class='mapping-order-index'>{index}</span>{_field_sort_label(field)}</div>", unsafe_allow_html=True)
+        with row_up:
+            st.button("↑", key=f"ord_up_{field_key}", disabled=index == 1, use_container_width=True, on_click=_move_field, args=(fields, field_key, -1))
+        with row_down:
+            st.button("↓", key=f"ord_down_{field_key}", disabled=index == len(fields), use_container_width=True, on_click=_move_field, args=(fields, field_key, 1))
 
 
 def _format_assumption_label(assumption: str) -> str:
@@ -294,22 +319,32 @@ st.set_page_config(page_title="Bertel Data Ingestor", page_icon="database", layo
 st.markdown(
     """
 <style>
-    .block-container { max-width: 1200px; padding-top: 1.0rem; }
-    .stepper { display: flex; justify-content: space-between; margin: 0.5rem 0 1.2rem 0; }
+    .block-container { max-width: 1240px; padding-top: 0.75rem; padding-bottom: 1rem; }
+    .stepper { display: flex; justify-content: space-between; margin: 0.35rem 0 0.9rem 0; }
     .step-item { text-align: center; width: 24%; }
-    .step-circle { width: 34px; height: 34px; border-radius: 50%; margin: 0 auto 0.4rem auto; line-height: 34px; font-weight: 700; border: 2px solid #d9d9d9; }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 0.25rem auto; line-height: 32px; font-weight: 700; border: 2px solid #d9d9d9; }
     .step-active { background: #5b5bd6; color: #fff; border-color: #5b5bd6; }
     .step-inactive { color: #777; }
-    .step-label { font-size: 0.82rem; color: #6a6a6a; font-weight: 600; }
-    .import-card { border: 1px solid #e6e6ee; border-radius: 12px; padding: 1.2rem; background: #fff; }
-    .drop-hint { border: 1px dashed #c9c9d9; border-radius: 12px; padding: 1.0rem; text-align: center; color: #666; margin: 0.6rem 0; }
-    .mapping-card { border: 1px solid #ececf4; border-radius: 10px; padding: 0.7rem; margin-bottom: 0.5rem; }
+    .step-label { font-size: 0.78rem; color: #6a6a6a; font-weight: 600; }
+    .import-card { border: 1px solid #e6e6ee; border-radius: 12px; padding: 1rem; background: #fff; }
+    .drop-hint { border: 1px dashed #c9c9d9; border-radius: 12px; padding: 0.85rem; text-align: center; color: #666; margin: 0.5rem 0; }
+    .mapping-card { border: 1px solid #ececf4; border-radius: 10px; padding: 0.45rem 0.6rem; margin-bottom: 0.35rem; background: #fff; }
+    .mapping-source { display: flex; flex-direction: column; gap: 0.05rem; line-height: 1.1; }
+    .mapping-source strong { font-size: 0.93rem; color: #1f2430; }
+    .mapping-source span { font-size: 0.72rem; color: #7a7f8f; }
+    .mapping-hint { font-size: 0.68rem; color: #7a7f8f; line-height: 1.05; margin-top: 0.15rem; }
+    .mapping-order-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.82rem; padding: 0.2rem 0; }
+    .mapping-order-index { min-width: 1.35rem; height: 1.35rem; border-radius: 999px; background: #eef1f9; color: #445; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
     .conf-high { color: #1e9d57; font-weight: 700; }
     .conf-mid { color: #c68712; font-weight: 700; }
     .conf-low { color: #ce4040; font-weight: 700; }
-    .pill { border-radius: 10px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+    .pill { border-radius: 10px; padding: 2px 8px; font-size: 0.72rem; font-weight: 600; display: inline-block; }
     .pill-ok { background: #e8f8ee; color: #1e9d57; }
     .pill-warn { background: #fff7e4; color: #c68712; }
+    div[data-testid="stSelectbox"] > div[data-baseweb="select"] > div { min-height: 2rem; }
+    div[data-testid="stSelectbox"] * { font-size: 0.85rem; }
+    div[data-testid="stCheckbox"] label { margin-top: 0.2rem; }
+    div[data-testid="stButton"] button[kind="secondary"] { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -464,10 +499,15 @@ if st.session_state.step == 3:
                 st.caption("Evenements d'analyse")
                 for event in discovery_events[-12:]:
                     st.write(f"- {_format_event_trace(event)}")
-    if any(str(field.get("transform", "identity")) == "concat_text" for field in visible_fields):
+    aggregate_fields = [
+        field for field in visible_fields
+        if str(field.get("transform", "identity")) == "concat_text"
+    ]
+    if aggregate_fields:
         with st.expander("Ordre d'agregation des champs source", expanded=False):
-            st.caption("Faites glisser les entrees. L'ordre affiche ici sera l'ordre utilise par concat_text quand plusieurs champs alimentent la meme colonne cible.")
+            st.caption("L'ordre ci-dessous est celui utilise par concat_text. S'il n'y a pas de drag-and-drop disponible, utilisez Monter/Descendre.")
             _render_mapping_order_control(visible_fields)
+
     if relations:
         with st.expander(f"Relations detectees par l'IA ({len(relations)})", expanded=False):
             for rel in relations:
@@ -488,7 +528,7 @@ if st.session_state.step == 3:
 
     corrections: list[dict[str, Any]] = []
     changed_any = False
-    h_left, h_mid, h_right, h_chip, h_conf, h_skip = st.columns([2.2, 2.0, 2.0, 1.0, 0.8, 0.6])
+    h_left, h_mid, h_right, h_chip, h_conf, h_skip = st.columns([2.8, 1.8, 1.9, 1.25, 0.55, 0.45])
     with h_left:
         st.caption("Champ source")
     with h_mid:
@@ -519,10 +559,13 @@ if st.session_state.step == 3:
         else:
             conf_class = "conf-low"
         st.markdown("<div class='mapping-card'>", unsafe_allow_html=True)
-        left, mid, right, chip, conf, sk = st.columns([2.2, 2.0, 2.0, 1.0, 0.8, 0.6])
+        left, mid, right, chip, conf, sk = st.columns([2.8, 1.8, 1.9, 1.25, 0.55, 0.45])
+        order_label = f"Ordre agg.: {field_positions.get(field_key, 0) + 1}" if current_transform == "concat_text" else sheet_name
         with left:
-            st.write(f"{_field_icon(current_table)} **{source_col}**")
-            st.caption(f"Feuille: {sheet_name}")
+            st.markdown(
+                f"<div class='mapping-source'><strong>{_field_icon(current_table)} {source_col}</strong><span>Feuille: {order_label}</span></div>",
+                unsafe_allow_html=True,
+            )
         table_idx = ALL_TABLES.index(current_table) if current_table in ALL_TABLES else 0
         with mid:
             new_table = st.selectbox("Table cible", ALL_TABLES, index=table_idx, key=f"tbl_{field_key}", label_visibility="collapsed")
@@ -547,7 +590,9 @@ if st.session_state.step == 3:
                 format_func=_transform_label,
                 label_visibility="collapsed",
             )
-            st.caption(_transform_hint(new_transform))
+            hint = _transform_hint(new_transform)
+            if hint and new_transform != "identity":
+                st.markdown(f"<div class='mapping-hint'>{hint}</div>", unsafe_allow_html=True)
         with conf:
             st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
         with sk:

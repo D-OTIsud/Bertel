@@ -18,7 +18,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python -m universal_ai_ingestor.scripts.prewarm_vector_schema
+    command: python -m scripts.prewarm_vector_schema
     restart: "no"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:?}
@@ -79,4 +79,5 @@ services:
 
 volumes:
   vector_db_data:
+
 

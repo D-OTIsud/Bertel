@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import asyncio
 import hmac
 import logging
 import time
@@ -249,6 +250,39 @@ def _approve_and_validate(sb, batch_id: str, contract_id: str) -> None:
         logger.warning("Failed to persist approved mapping examples to vector store: %s", exc)
 
 
+def _run_discovery_pipeline(
+    batch_id: str,
+    *,
+    payload: bytes,
+    content_type: str | None,
+    filename: str | None,
+    custom_rules_value: str | None,
+) -> None:
+    sb = get_supabase()
+    try:
+        update_import_batch_row(sb, batch_id, status="discovering")
+        parsed = parse_payload(content_type, payload, source_name=filename)
+        sheets = parsed.workbook_sheets if parsed.workbook_sheets and len(parsed.workbook_sheets) > 0 else {"default": parsed.dataframe}
+
+        def on_discovery_event(phase: str, message: str) -> None:
+            append_import_event(sb, batch_id=batch_id, phase=phase, level="info", message=message)
+
+        contract = asyncio.run(build_discovery_contract(
+            source_format=parsed.source_format,
+            sheets=sheets,
+            custom_rules=custom_rules_value,
+            event_callback=on_discovery_event,
+        ))
+        stored = persist_discovery_contract(sb, batch_id=batch_id, contract=contract)
+        batch_status = "mapping_review_required"
+        update_import_batch_row(sb, batch_id, status=batch_status, mapping_rules={"discovery": stored})
+        append_import_event(sb, batch_id=batch_id, phase="discovery", level="info", message="Discovery complete", payload=stored)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("discovery pipeline failed for batch %s", batch_id)
+        update_import_batch_row(sb, batch_id, status="failed", error_message=f"Discovery failed: {exc}")
+        append_import_event(sb, batch_id=batch_id, phase="discovery", level="error", message=f"Discovery failed: {exc}")
+
+
 def _run_full_pipeline(batch_id: str, *, use_cleaner: bool = False) -> None:
     """Background task: approve mapping -> ETL -> dedup -> resolve -> commit."""
     sb = get_supabase()
@@ -395,6 +429,7 @@ def list_orgs(search: str = Query(default="", max_length=200)) -> JSONResponse:
 
 @app.post("/api/v1/ingest", dependencies=[Depends(verify_token)], response_model=IngestAccepted, status_code=202)
 async def ingest(
+    background_tasks: BackgroundTasks,
     request: Request,
     upload_file: UploadFile | None = File(default=None),
     organization_object_id: str = Query(..., min_length=1),
@@ -453,27 +488,17 @@ async def ingest(
     append_import_event(sb, batch_id=batch_id, phase="ingest", level="info", message="Payload accepted")
 
     update_import_batch_row(sb, batch_id, status="discovering")
-    parsed = parse_payload(content_type, payload, source_name=filename)
-    sheets = parsed.workbook_sheets if parsed.workbook_sheets and len(parsed.workbook_sheets) > 0 else {"default": parsed.dataframe}
-
-    def on_discovery_event(phase: str, message: str) -> None:
-        append_import_event(sb, batch_id=batch_id, phase=phase, level="info", message=message)
-
-    contract = await build_discovery_contract(
-        source_format=parsed.source_format,
-        sheets=sheets,
-        custom_rules=custom_rules_value,
-        event_callback=on_discovery_event,
+    background_tasks.add_task(
+        _run_discovery_pipeline,
+        batch_id,
+        payload=payload,
+        content_type=content_type,
+        filename=filename,
+        custom_rules_value=custom_rules_value,
     )
-    stored = persist_discovery_contract(sb, batch_id=batch_id, contract=contract)
-
-    batch_status = "mapping_review_required"
-    update_import_batch_row(sb, batch_id, status=batch_status, mapping_rules={"discovery": stored})
-    append_import_event(sb, batch_id=batch_id, phase="discovery", level="info", message="Discovery complete", payload=stored)
-
     return IngestAccepted(
         batch_id=batch_id,
-        status=BatchStatus(batch_status),
+        status=BatchStatus("discovering"),
         status_url=f"/api/v1/ingest/{batch_id}",
         reused_existing_batch=False,
     )

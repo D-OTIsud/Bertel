@@ -285,12 +285,29 @@ def _render_mapping_order_control(fields: list[dict[str, Any]]) -> None:
             st.button("↓", key=f"ord_down_{field_key}", disabled=index == len(fields), use_container_width=True, on_click=_move_field, args=(fields, field_key, 1))
 
 
+def _candidate_aggregate_groups(fields: list[dict[str, Any]]) -> list[tuple[str, str, list[dict[str, Any]]]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for field in fields:
+        table = str(field.get("target_table", "")).strip()
+        column = str(field.get("target_column", "")).strip()
+        if not table or not column:
+            continue
+        grouped.setdefault((table, column), []).append(field)
+    groups: list[tuple[str, str, list[dict[str, Any]]]] = []
+    for (table, column), group_fields in grouped.items():
+        if len(group_fields) > 1 or any(str(item.get("transform", "identity")) == "concat_text" for item in group_fields):
+            groups.append((table, column, group_fields))
+    groups.sort(key=lambda item: (-len(item[2]), item[0], item[1]))
+    return groups
+
 def _format_assumption_label(assumption: str) -> str:
     value = str(assumption or "").strip()
     if not value:
         return ""
     if value.startswith("ai_mode:"):
         return "Mode IA: mapping LLM guide par schema + candidats semantiques."
+    if value.startswith("profiling_mode:"):
+        return "Mode de profilage: " + value.split(":", 1)[1]
     if value.startswith("semantic_candidates:"):
         return "Candidats semantiques utilises: " + value.split(":", 1)[1]
     if value.startswith("reflection_rounds:"):
@@ -303,6 +320,12 @@ def _format_assumption_label(assumption: str) -> str:
         return "Candidats semantiques recuperes pour la feuille: " + value.split(":", 1)[1]
     return value
 
+
+def _short_trace_line(value: str, *, limit: int = 160) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "..."
 
 def _format_event_trace(event: dict[str, Any]) -> str:
     phase = str(event.get("phase", "?")).strip()
@@ -335,6 +358,9 @@ st.markdown(
     .mapping-hint { font-size: 0.68rem; color: #7a7f8f; line-height: 1.05; margin-top: 0.15rem; }
     .mapping-order-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.82rem; padding: 0.2rem 0; }
     .mapping-order-index { min-width: 1.35rem; height: 1.35rem; border-radius: 999px; background: #eef1f9; color: #445; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .trace-summary { border: 1px solid #ececf4; border-radius: 10px; background: #fafbff; padding: 0.5rem 0.7rem; margin: 0.5rem 0 0.65rem 0; }
+    .trace-summary strong { font-size: 0.82rem; color: #283046; }
+    .trace-summary span { font-size: 0.74rem; color: #6f7687; }
     .conf-high { color: #1e9d57; font-weight: 700; }
     .conf-mid { color: #c68712; font-weight: 700; }
     .conf-low { color: #ce4040; font-weight: 700; }
@@ -490,23 +516,37 @@ if st.session_state.step == 3:
     with c2:
         st.markdown(f"<span class='pill pill-warn'>{to_review} a verifier</span>", unsafe_allow_html=True)
     if contract_assumptions or discovery_events:
-        with st.expander("Trace IA et contexte", expanded=False):
+        trace_lines = contract_assumptions[:2] + [_format_event_trace(event) for event in discovery_events[-2:]]
+        trace_label = _short_trace_line(" | ".join(line for line in trace_lines if line))
+        st.markdown(
+            f"<div class='trace-summary'><strong>Resume IA</strong><br><span>{trace_label or 'Trace disponible dans les details.'}</span></div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander("Details IA", expanded=False):
             if contract_assumptions:
                 st.caption("Synthese des choix IA")
-                for item in contract_assumptions:
+                for item in contract_assumptions[:6]:
                     st.write(f"- {item}")
             if discovery_events:
                 st.caption("Evenements d'analyse")
-                for event in discovery_events[-12:]:
+                for event in discovery_events[-6:]:
                     st.write(f"- {_format_event_trace(event)}")
-    aggregate_fields = [
-        field for field in visible_fields
-        if str(field.get("transform", "identity")) == "concat_text"
-    ]
-    if aggregate_fields:
-        with st.expander("Ordre d'agregation des champs source", expanded=False):
-            st.caption("L'ordre ci-dessous est celui utilise par concat_text. S'il n'y a pas de drag-and-drop disponible, utilisez Monter/Descendre.")
-            _render_mapping_order_control(visible_fields)
+    aggregate_groups = _candidate_aggregate_groups(visible_fields)
+    if aggregate_groups:
+        with st.expander("Ordre des champs source", expanded=False):
+            st.caption("Le reordonnancement ci-dessous pilote concat_text et tout regroupement de plusieurs champs vers une meme destination.")
+            selected_group_labels = [
+                f"{table}.{column} ({len(group_fields)} champs)"
+                for table, column, group_fields in aggregate_groups
+            ]
+            selected_group = st.selectbox(
+                "Groupe a reordonner",
+                selected_group_labels,
+                key=f"agg_group_{st.session_state.batch_id}",
+                label_visibility="collapsed",
+            )
+            selected_index = selected_group_labels.index(selected_group)
+            _render_mapping_order_control(aggregate_groups[selected_index][2])
 
     if relations:
         with st.expander(f"Relations detectees par l'IA ({len(relations)})", expanded=False):
@@ -528,7 +568,7 @@ if st.session_state.step == 3:
 
     corrections: list[dict[str, Any]] = []
     changed_any = False
-    h_left, h_mid, h_right, h_chip, h_conf, h_skip = st.columns([2.8, 1.8, 1.9, 1.25, 0.55, 0.45])
+    h_left, h_mid, h_right, h_chip, h_order, h_conf, h_skip = st.columns([2.8, 1.8, 1.9, 1.25, 0.65, 0.55, 0.45])
     with h_left:
         st.caption("Champ source")
     with h_mid:
@@ -537,6 +577,8 @@ if st.session_state.step == 3:
         st.caption("Colonne cible")
     with h_chip:
         st.caption("Transformation")
+    with h_order:
+        st.caption("Ordre")
     with h_conf:
         st.caption("Confiance")
     with h_skip:
@@ -559,8 +601,8 @@ if st.session_state.step == 3:
         else:
             conf_class = "conf-low"
         st.markdown("<div class='mapping-card'>", unsafe_allow_html=True)
-        left, mid, right, chip, conf, sk = st.columns([2.8, 1.8, 1.9, 1.25, 0.55, 0.45])
-        order_label = f"Ordre agg.: {field_positions.get(field_key, 0) + 1}" if current_transform == "concat_text" else sheet_name
+        left, mid, right, chip, order_col, conf, sk = st.columns([2.8, 1.8, 1.9, 1.25, 0.65, 0.55, 0.45])
+        order_label = f"#{field_positions.get(field_key, 0) + 1} • {sheet_name}"
         with left:
             st.markdown(
                 f"<div class='mapping-source'><strong>{_field_icon(current_table)} {source_col}</strong><span>Feuille: {order_label}</span></div>",
@@ -593,6 +635,25 @@ if st.session_state.step == 3:
             hint = _transform_hint(new_transform)
             if hint and new_transform != "identity":
                 st.markdown(f"<div class='mapping-hint'>{hint}</div>", unsafe_allow_html=True)
+        with order_col:
+            up_disabled = field_positions.get(field_key, 0) == 0
+            down_disabled = field_positions.get(field_key, 0) >= len(visible_fields) - 1
+            st.button(
+                "↑",
+                key=f"inline_up_{field_key}",
+                disabled=up_disabled,
+                use_container_width=True,
+                on_click=_move_field,
+                args=(visible_fields, field_key, -1),
+            )
+            st.button(
+                "↓",
+                key=f"inline_down_{field_key}",
+                disabled=down_disabled,
+                use_container_width=True,
+                on_click=_move_field,
+                args=(visible_fields, field_key, 1),
+            )
         with conf:
             st.markdown(f"<div class='{conf_class}'>{confidence:.0%}</div>", unsafe_allow_html=True)
         with sk:
@@ -600,7 +661,7 @@ if st.session_state.step == 3:
             skip = st.checkbox("Ignorer", value=bool(default_skip), key=f"skip_{field_key}", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
         if rationale:
-            with st.expander(f"Trace IA pour {source_col}", expanded=False):
+            with st.expander(f"Details IA: {source_col}", expanded=False):
                 st.write(rationale)
         changed = (
             new_table != current_table
@@ -706,6 +767,8 @@ if st.session_state.step == 5:
         if st.button("Nouvelle importation", type="primary", use_container_width=True):
             _reset_wizard()
             st.rerun()
+
+
 
 
 

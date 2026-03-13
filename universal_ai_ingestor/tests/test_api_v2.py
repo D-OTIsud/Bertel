@@ -305,7 +305,71 @@ def test_ingest_accepts_valid_upload(monkeypatch):
     )
     assert r.status_code == 202
     assert r.json()["status"] == "mapping_review_required"
+    assert r.json()["reused_existing_batch"] is False
 
+
+def test_ingest_reuses_existing_batch_unless_force_reanalyze(monkeypatch):
+    monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase())
+    monkeypatch.setattr(
+        api_main,
+        "find_batch_by_idempotency",
+        lambda *a, **kw: {"batch_id": "existing-batch", "status": "mapping_review_required"},
+    )
+    client = TestClient(api_main.app)
+
+    reused = client.post(
+        "/api/v1/ingest",
+        headers=AUTH,
+        params={"organization_object_id": "ORGGEN0000000001"},
+        files={"upload_file": ("sample.csv", b"nom\nHotel A\n", "text/csv")},
+    )
+    assert reused.status_code == 202
+    assert reused.json()["batch_id"] == "existing-batch"
+    assert reused.json()["reused_existing_batch"] is True
+
+    async def _fake_build_discovery_contract(**kwargs):
+        return SimpleNamespace(
+            fields=[],
+            relations=[],
+            source_format="csv",
+            overall_confidence=0.95,
+            assumptions=[],
+            sheets=[],
+        )
+
+    monkeypatch.setattr(api_main, "hash_payload", lambda payload: "sha256")
+    monkeypatch.setattr(api_main, "store_raw_payload", lambda *a, **kw: "raw/path.csv")
+    monkeypatch.setattr(api_main, "ensure_import_batch_row_extended", lambda *a, **kw: None)
+    monkeypatch.setattr(api_main, "append_import_event", lambda *a, **kw: None)
+    monkeypatch.setattr(api_main, "update_import_batch_row", lambda *a, **kw: None)
+    monkeypatch.setattr(
+        api_main,
+        "parse_payload",
+        lambda *a, **kw: SimpleNamespace(
+            source_format="csv",
+            dataframe=pd.DataFrame({"Nom": ["Hotel A"]}),
+            workbook_sheets=None,
+        ),
+    )
+    monkeypatch.setattr(api_main, "build_discovery_contract", _fake_build_discovery_contract)
+    monkeypatch.setattr(
+        api_main,
+        "persist_discovery_contract",
+        lambda *a, **kw: {"contract_id": "c1", "status": "review_required"},
+    )
+
+    forced = client.post(
+        "/api/v1/ingest",
+        headers=AUTH,
+        params={
+            "organization_object_id": "ORGGEN0000000001",
+            "force_reanalyze": "true",
+        },
+        files={"upload_file": ("sample.csv", b"nom\nHotel A\n", "text/csv")},
+    )
+    assert forced.status_code == 202
+    assert forced.json()["batch_id"] != "existing-batch"
+    assert forced.json()["reused_existing_batch"] is False
 
 def test_ingest_rejects_oversized(monkeypatch):
     monkeypatch.setattr(api_main, "MAX_INGEST_BYTES", 10)

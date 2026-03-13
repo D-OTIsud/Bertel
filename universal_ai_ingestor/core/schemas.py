@@ -87,6 +87,7 @@ class IngestAccepted(BaseModel):
     batch_id: str
     status: BatchStatus
     status_url: str
+    reused_existing_batch: bool = False
 
 
 class BatchRecord(BaseModel):
@@ -216,5 +217,6 @@ class DiscoveryContract(BaseModel):
     fields: list[DiscoveryFieldProposal] = Field(default_factory=list)
     relations: list[DiscoveryRelationHypothesis] = Field(default_factory=list)
     sheets: list[DiscoverySheetProfile] = Field(default_factory=list)
+
 
 

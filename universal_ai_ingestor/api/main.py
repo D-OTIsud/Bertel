@@ -400,6 +400,7 @@ async def ingest(
     organization_object_id: str = Query(..., min_length=1),
     organization_name: str | None = Query(default=None),
     custom_rules: str | None = Query(default=None),
+    force_reanalyze: bool = Query(default=False),
 ) -> IngestAccepted:
     batch_id = str(uuid4())
 
@@ -423,12 +424,13 @@ async def ingest(
 
     sb = get_supabase()
     payload_sha = hash_payload(payload)
-    existing = find_batch_by_idempotency(sb, payload_sha256=payload_sha)
+    existing = None if force_reanalyze else find_batch_by_idempotency(sb, payload_sha256=payload_sha)
     if existing and existing.get("status") not in ("failed", "failed_permanent"):
         return IngestAccepted(
             batch_id=existing["batch_id"],
             status=BatchStatus(existing["status"]),
             status_url=f"/api/v1/ingest/{existing['batch_id']}",
+            reused_existing_batch=True,
         )
 
     extension = _detect_extension(content_type, filename)
@@ -473,6 +475,7 @@ async def ingest(
         batch_id=batch_id,
         status=BatchStatus(batch_status),
         status_url=f"/api/v1/ingest/{batch_id}",
+        reused_existing_batch=False,
     )
 
 

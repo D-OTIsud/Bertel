@@ -172,6 +172,45 @@ class _RecordingSupabase(_FakeSupabase):
         return self._query
 
 
+class _LegacyFieldQuery(_FakeTableQuery):
+    def __init__(self):
+        super().__init__([
+            {
+                "id": "f1",
+                "sheet_name": "default",
+                "source_column": "Nom",
+                "target_table": "object_temp",
+                "target_column": "name",
+                "transform": "identity",
+                "confidence": 0.9,
+                "rationale": "ok",
+                "status": "proposed",
+            }
+        ])
+        self.fail_with_position = True
+
+    def execute(self):
+        if self.fail_with_position:
+            self.fail_with_position = False
+            raise Exception("column mapping_contract_field.position does not exist")
+        return _FakeExecute(self._data)
+
+
+class _LegacyFieldSchema:
+    def __init__(self, query: _LegacyFieldQuery):
+        self._query = query
+
+    def table(self, name):
+        return self._query
+
+
+class _LegacyFieldSupabase:
+    def __init__(self, query: _LegacyFieldQuery):
+        self._query = query
+
+    def schema(self, name):
+        return _LegacyFieldSchema(self._query)
+
 def test_health():
     client = TestClient(api_main.app)
     r = client.get("/health")
@@ -287,6 +326,13 @@ def test_batch_status_404(monkeypatch):
     assert r.status_code == 404
 
 
+def test_contract_fields_falls_back_when_position_column_is_missing():
+    rows = api_main._contract_fields(_LegacyFieldSupabase(_LegacyFieldQuery()), "contract-1")
+    assert len(rows) == 1
+    assert rows[0]["source_column"] == "Nom"
+    assert rows[0]["position"] == 0
+
+
 def test_mapping_patch_404_no_contract(monkeypatch):
     monkeypatch.setattr(api_main, "get_supabase", lambda: _FakeSupabase([]))
     client = TestClient(api_main.app)
@@ -339,4 +385,5 @@ def test_purge(monkeypatch):
     client = TestClient(api_main.app)
     r = client.post("/api/v1/ingest/batch-1/purge", headers=AUTH)
     assert r.status_code == 200
+
 

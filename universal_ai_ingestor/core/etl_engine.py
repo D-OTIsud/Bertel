@@ -9,6 +9,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 from xml.etree import ElementTree as ET
+from postgrest.exceptions import APIError
 import pandas as pd
 
 from core.ai_graph import generate_mapping_plan, run_cleaner_batch
@@ -401,6 +402,15 @@ def apply_mapping_by_table(df: pd.DataFrame, plan: MappingPlan) -> dict[str, pd.
         object_df["object_type"] = "ORG"
     return table_outputs
 
+
+def _is_missing_position_column_error(exc: Exception) -> bool:
+    if isinstance(exc, APIError):
+        payload = getattr(exc, "json", lambda: {})()
+        message = str(payload.get("message") or "")
+        code = str(payload.get("code") or "")
+        return code == "42703" and "mapping_contract_field.position" in message
+    return "mapping_contract_field.position" in str(exc)
+
 def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> MappingPlan | MultiSheetMappingPlan | None:
     contract_resp = (
         sb.schema("staging")
@@ -417,7 +427,7 @@ def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> Mappi
     contract_row = contract_rows[0]
     if contract_row.get("status") != "approved":
         return None
-    field_resp = (
+    field_query = (
         sb.schema("staging")
         .table("mapping_contract_field")
         .select("sheet_name,source_column,target_table,target_column,transform,confidence,position")
@@ -426,9 +436,23 @@ def _load_approved_contract_plan(sb, batch_id: str, source_format: str) -> Mappi
         .order("sheet_name")
         .order("position")
         .order("source_column")
-        .execute()
     )
-    field_rows = field_resp.data or []
+    try:
+        field_rows = field_query.execute().data or []
+    except Exception as exc:  # noqa: BLE001
+        if not _is_missing_position_column_error(exc):
+            raise
+        field_resp = (
+            sb.schema("staging")
+            .table("mapping_contract_field")
+            .select("sheet_name,source_column,target_table,target_column,transform,confidence")
+            .eq("contract_id", contract_row["id"])
+            .eq("status", "approved")
+            .order("sheet_name")
+            .order("source_column")
+            .execute()
+        )
+        field_rows = [dict(row, position=index) for index, row in enumerate(field_resp.data or [])]
     if not field_rows:
         return None
     per_sheet_targets: dict[str, list[MappingTarget]] = {}

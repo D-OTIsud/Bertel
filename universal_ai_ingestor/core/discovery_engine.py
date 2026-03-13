@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 import pandas as pd
+from postgrest.exceptions import APIError
 
 try:
     from core.target_schema import build_target_schema_context, find_best_target, validate_mapping_target
@@ -46,6 +47,14 @@ try:
 except ModuleNotFoundError:
     from universal_ai_ingestor.core.vector_store import save_approved_field_examples_sync  # type: ignore
 
+
+def _is_missing_position_column_error(exc: Exception) -> bool:
+    if isinstance(exc, APIError):
+        payload = getattr(exc, "json", lambda: {})()
+        message = str(payload.get("message") or "")
+        code = str(payload.get("code") or "")
+        return code == "42703" and "mapping_contract_field.position" in message
+    return "mapping_contract_field.position" in str(exc)
 
 def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert non-JSON-serializable types (datetime, Timestamp, etc.) to strings."""
@@ -508,23 +517,33 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
         ).execute()
 
     if contract.fields:
-        sb.schema("staging").table("mapping_contract_field").insert(
-            [
-                {
-                    "contract_id": contract_id,
-                    "sheet_name": f.sheet_name,
-                    "source_column": f.source_column,
-                    "target_table": f.target_table,
-                    "target_column": f.target_column,
-                    "transform": f.transform,
-                    "confidence": f.confidence,
-                    "rationale": f.rationale,
-                    "status": f.status if status != "review_required" else "proposed",
-                    "position": idx,
-                }
-                for idx, f in enumerate(contract.fields)
-            ]
-        ).execute()
+        field_rows = [
+            {
+                "contract_id": contract_id,
+                "sheet_name": f.sheet_name,
+                "source_column": f.source_column,
+                "target_table": f.target_table,
+                "target_column": f.target_column,
+                "transform": f.transform,
+                "confidence": f.confidence,
+                "rationale": f.rationale,
+                "status": f.status if status != "review_required" else "proposed",
+                "position": idx,
+            }
+            for idx, f in enumerate(contract.fields)
+        ]
+        try:
+            sb.schema("staging").table("mapping_contract_field").insert(field_rows).execute()
+        except Exception as exc:  # noqa: BLE001
+            if not _is_missing_position_column_error(exc):
+                raise
+            legacy_rows = []
+            for row in field_rows:
+                legacy_row = dict(row)
+                legacy_row.pop("position", None)
+                legacy_rows.append(legacy_row)
+            sb.schema("staging").table("mapping_contract_field").insert(legacy_rows).execute()
+
 
     if contract.relations:
         _EXTENDED_RELATION_COLS = ("separator", "is_join_table", "target_staging_table", "target_entity_type")
@@ -588,3 +607,4 @@ def persist_discovery_contract(sb, *, batch_id: str, contract: DiscoveryContract
         "review_required": review_required,
         "overall_confidence": contract.overall_confidence,
     }
+

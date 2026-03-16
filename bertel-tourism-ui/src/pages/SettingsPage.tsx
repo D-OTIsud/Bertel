@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { buildMarkerDataUri, defaultMarkerStyles, markerIconCatalog, markerIconChoicesByType, objectTypeOptions, sanitizeCustomMarkerSvg } from '../config/map-markers';
 import { env } from '../lib/env';
+import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schemas';
 import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl, readFileAsDataUrl } from '../lib/theme';
 import { saveBrandingSettings } from '../services/branding';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
 import type { ObjectTypeCode, UserRole } from '../types/domain';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const roles: UserRole[] = ['super_admin', 'tourism_agent', 'owner'];
 
@@ -46,21 +53,39 @@ export function SettingsPage() {
   );
   const [customSvgDrafts, setCustomSvgDrafts] = useState<Record<ObjectTypeCode, string>>(() => buildDrafts(markerStyles));
   const [customSvgErrors, setCustomSvgErrors] = useState<Partial<Record<ObjectTypeCode, string>>>({});
-  const [themeDraft, setThemeDraft] = useState(theme);
   const [themeBusy, setThemeBusy] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
-  const [themeError, setThemeError] = useState<string | null>(null);
-  const [themeMessage, setThemeMessage] = useState<string | null>(null);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [pendingLogoCleared, setPendingLogoCleared] = useState(false);
+
+  const themeForm = useForm<SettingsThemeFormValues>({
+    resolver: zodResolver(settingsThemeSchema),
+    defaultValues: {
+      brandName: theme.brandName,
+      logoUrl: theme.logoUrl ?? '',
+      primaryColor: theme.primaryColor,
+      accentColor: theme.accentColor,
+      textColor: theme.textColor,
+      backgroundColor: theme.backgroundColor,
+      surfaceColor: theme.surfaceColor,
+    },
+  });
+
+  useEffect(() => {
+    themeForm.reset({
+      brandName: theme.brandName,
+      logoUrl: theme.logoUrl ?? '',
+      primaryColor: theme.primaryColor,
+      accentColor: theme.accentColor,
+      textColor: theme.textColor,
+      backgroundColor: theme.backgroundColor,
+      surfaceColor: theme.surfaceColor,
+    });
+  }, [theme.brandName, theme.logoUrl, theme.primaryColor, theme.accentColor, theme.textColor, theme.backgroundColor, theme.surfaceColor]);
 
   useEffect(() => {
     setCustomSvgDrafts(buildDrafts(markerStyles));
   }, [customSvgSignature, markerStyles]);
-
-  useEffect(() => {
-    setThemeDraft(theme);
-  }, [theme]);
 
   const applyCustomSvg = (type: ObjectTypeCode) => {
     const draft = customSvgDrafts[type] ?? '';
@@ -77,7 +102,6 @@ export function SettingsPage() {
     setCustomMarkerSvg(type, sanitized);
     setCustomSvgDrafts((current) => ({ ...current, [type]: sanitized }));
     setCustomSvgErrors((current) => ({ ...current, [type]: undefined }));
-    setThemeMessage(null);
   };
 
   const handleCustomSvgUpload = async (type: ObjectTypeCode, file: File | null) => {
@@ -100,51 +124,40 @@ export function SettingsPage() {
     setCustomMarkerSvg(type, sanitized);
     setCustomSvgDrafts((current) => ({ ...current, [type]: sanitized }));
     setCustomSvgErrors((current) => ({ ...current, [type]: undefined }));
-    setThemeMessage(null);
   };
 
   const handleResetMarkers = () => {
     resetMarkerStyles();
     setCustomSvgDrafts(buildDrafts(defaultMarkerStyles));
     setCustomSvgErrors({});
-    setThemeMessage(null);
   };
 
   const handleClearCustomSvg = (type: ObjectTypeCode) => {
     clearCustomMarkerSvg(type);
     setCustomSvgDrafts((current) => ({ ...current, [type]: '' }));
     setCustomSvgErrors((current) => ({ ...current, [type]: undefined }));
-    setThemeMessage(null);
   };
 
   const handleThemeColorChange = (field: 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', value: string) => {
-    setThemeDraft((current) => coerceThemeSettings({ ...current, [field]: value }));
-    setThemeMessage(null);
+    themeForm.setValue(field, value, { shouldDirty: true });
   };
 
   const handleThemeReset = () => {
-    setThemeDraft(defaultThemeSettings);
+    themeForm.reset({ ...defaultThemeSettings, logoUrl: defaultThemeSettings.logoUrl ?? '' });
     resetMarkerStyles();
     setCustomSvgDrafts(buildDrafts(defaultMarkerStyles));
     setCustomSvgErrors({});
     setPendingLogoFile(null);
     setPendingLogoCleared(true);
-    setThemeError(null);
-    setThemeMessage(null);
   };
 
-  const handleThemeSave = async () => {
-    if (!canManageBrandTheme) {
-      return;
-    }
+  const handleThemeSave = themeForm.handleSubmit(async (values) => {
+    if (!canManageBrandTheme) return;
 
     setThemeSaving(true);
-    setThemeError(null);
-    setThemeMessage(null);
-
     try {
       const snapshot = await saveBrandingSettings({
-        theme: coerceThemeSettings(themeDraft),
+        theme: coerceThemeSettings(values),
         markerStyles,
         logoFile: pendingLogoFile,
         clearLogo: pendingLogoCleared,
@@ -152,49 +165,42 @@ export function SettingsPage() {
 
       setTheme(snapshot.theme);
       setMarkerStyles(snapshot.markerStyles);
-      setThemeDraft(snapshot.theme);
+      themeForm.reset({ ...snapshot.theme, logoUrl: snapshot.theme.logoUrl ?? '' });
       setPendingLogoFile(null);
       setPendingLogoCleared(false);
-      setThemeMessage(demoMode ? 'Theme applique localement en mode demo.' : 'Branding enregistre dans la base principale.');
+      toast.success(demoMode ? 'Theme applique localement en mode demo.' : 'Branding enregistre.');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['branding', 'public'] }),
         queryClient.invalidateQueries({ queryKey: ['branding', 'authenticated'] }),
       ]);
     } catch (error) {
-      setThemeError((error as Error).message);
+      toast.error((error as Error).message);
     } finally {
       setThemeSaving(false);
     }
-  };
+  });
 
   const handleLogoUpload = async (file: File | null) => {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     setThemeBusy(true);
-    setThemeError(null);
-    setThemeMessage(null);
-
     try {
       const dataUrl = await readFileAsDataUrl(file);
       const extracted = await extractThemeFromLogoDataUrl(dataUrl);
       setPendingLogoFile(file);
       setPendingLogoCleared(false);
-      setThemeDraft((current) =>
-        coerceThemeSettings({
-          ...current,
-          ...extracted,
-          logoUrl: dataUrl,
-        }),
-      );
+      themeForm.setValue('logoUrl', dataUrl);
+      const current = themeForm.getValues();
+      const next = coerceThemeSettings({ ...current, ...extracted, logoUrl: dataUrl });
+      themeForm.reset({ ...next, logoUrl: next.logoUrl ?? dataUrl });
     } catch (error) {
-      setThemeError((error as Error).message);
+      toast.error((error as Error).message);
     } finally {
       setThemeBusy(false);
     }
   };
 
+  const themeDraft = themeForm.watch();
   const logoSourceLabel = !theme.logoUrl
     ? 'aucun logo'
     : theme.logoUrl.startsWith('data:image/')
@@ -241,17 +247,14 @@ export function SettingsPage() {
             <p>Logo, palette et styles de marqueurs appliques globalement via variables CSS et RPC Supabase.</p>
           </div>
           <div className="inline-actions">
-            <button type="button" className="ghost-button" onClick={handleThemeReset} disabled={!canManageBrandTheme || themeSaving}>
+            <Button type="button" variant="ghost" onClick={handleThemeReset} disabled={!canManageBrandTheme || themeSaving}>
               Reinitialiser
-            </button>
-            <button type="button" className="primary-button" onClick={() => void handleThemeSave()} disabled={!canManageBrandTheme || themeSaving}>
+            </Button>
+            <Button type="button" onClick={() => void handleThemeSave()} disabled={!canManageBrandTheme || themeSaving}>
               {themeSaving ? 'Enregistrement...' : 'Enregistrer le branding'}
-            </button>
+            </Button>
           </div>
         </div>
-
-        {themeError ? <div className="inline-alert inline-alert--danger">{themeError}</div> : null}
-        {themeMessage ? <div className="inline-alert">{themeMessage}</div> : null}
 
         <div className="theme-settings-grid">
           <article className="panel-card panel-card--nested theme-preview-card">
@@ -281,80 +284,79 @@ export function SettingsPage() {
           </article>
 
           <article className="panel-card panel-card--nested theme-form-card">
-            <label className="field-block">
-              <span>Nom de marque</span>
-              <input
-                type="text"
-                value={themeDraft.brandName}
-                onChange={(event) => {
-                  setThemeDraft((current) => ({ ...current, brandName: event.target.value }));
-                  setThemeMessage(null);
-                }}
-                disabled={!canManageBrandTheme}
-              />
-            </label>
+            <form onSubmit={handleThemeSave} className="space-y-4">
+              <div className="field-block">
+                <Label htmlFor="brandName">Nom de marque</Label>
+                <Input
+                  id="brandName"
+                  {...themeForm.register('brandName')}
+                  disabled={!canManageBrandTheme}
+                />
+                {themeForm.formState.errors.brandName && (
+                  <p className="text-sm text-destructive">{themeForm.formState.errors.brandName.message}</p>
+                )}
+              </div>
 
-            <div className="field-block">
-              <span>Logo</span>
-              {canManageBrandTheme ? (
-                <div className="inline-actions">
-                  <label className="ghost-button marker-upload-button">
-                    {themeBusy ? 'Extraction...' : 'Importer un logo'}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                      className="sr-only"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        void handleLogoUpload(file);
-                        event.currentTarget.value = '';
+              <div className="field-block">
+                <span className="text-sm font-medium">Logo</span>
+                {canManageBrandTheme ? (
+                  <div className="inline-actions">
+                    <Label className="ghost-button marker-upload-button cursor-pointer">
+                      {themeBusy ? 'Extraction...' : 'Importer un logo'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          void handleLogoUpload(file);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setPendingLogoFile(null);
+                        setPendingLogoCleared(true);
+                        themeForm.setValue('logoUrl', '');
                       }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => {
-                      setPendingLogoFile(null);
-                      setPendingLogoCleared(true);
-                      setThemeDraft((current) => ({ ...current, logoUrl: null }));
-                      setThemeMessage(null);
-                    }}
-                  >
-                    Enlever le logo
-                  </button>
-                </div>
-              ) : (
-                <p>Seuls les super-admins peuvent modifier le branding et lancer l extraction automatique de palette.</p>
-              )}
-            </div>
+                    >
+                      Enlever le logo
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Seuls les super-admins peuvent modifier le branding.</p>
+                )}
+              </div>
 
-            {[
-              ['primaryColor', 'Couleur primaire'],
-              ['accentColor', 'Couleur accent'],
-              ['textColor', 'Couleur texte'],
-              ['backgroundColor', 'Couleur fond'],
-              ['surfaceColor', 'Couleur surface'],
-            ].map(([field, label]) => (
-              <label key={field} className="field-block">
-                <span>{label}</span>
-                <div className="marker-settings-input-row">
-                  <input
-                    type="color"
-                    value={themeDraft[field as keyof typeof themeDraft] as string}
-                    onChange={(event) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', event.target.value)}
-                    className="color-input"
-                    disabled={!canManageBrandTheme}
-                  />
-                  <input
-                    type="text"
-                    value={themeDraft[field as keyof typeof themeDraft] as string}
-                    onChange={(event) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', event.target.value)}
-                    disabled={!canManageBrandTheme}
-                  />
+              {[
+                ['primaryColor', 'Couleur primaire'],
+                ['accentColor', 'Couleur accent'],
+                ['textColor', 'Couleur texte'],
+                ['backgroundColor', 'Couleur fond'],
+                ['surfaceColor', 'Couleur surface'],
+              ].map(([field, label]) => (
+                <div key={field} className="field-block">
+                  <Label>{label}</Label>
+                  <div className="marker-settings-input-row">
+                    <input
+                      type="color"
+                      value={themeForm.watch(field as keyof SettingsThemeFormValues) as string}
+                      onChange={(e) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', e.target.value)}
+                      className="color-input"
+                      disabled={!canManageBrandTheme}
+                    />
+                    <Input
+                      value={themeForm.watch(field as keyof SettingsThemeFormValues) as string}
+                      onChange={(e) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', e.target.value)}
+                      disabled={!canManageBrandTheme}
+                    />
+                  </div>
                 </div>
-              </label>
-            ))}
+              ))}
+            </form>
           </article>
         </div>
       </article>
@@ -460,7 +462,6 @@ export function SettingsPage() {
                           const nextValue = event.target.value;
                           setCustomSvgDrafts((current) => ({ ...current, [typeOption.code]: nextValue }));
                           setCustomSvgErrors((current) => ({ ...current, [typeOption.code]: undefined }));
-                          setThemeMessage(null);
                         }}
                         rows={7}
                         placeholder="Collez ici un SVG simple avec une balise <svg>..."

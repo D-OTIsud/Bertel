@@ -1,21 +1,20 @@
-import { Suspense, lazy } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { useUiStore } from '../../store/ui-store';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
 const ObjectDrawer = lazy(async () => ({ default: (await import('../editor/ObjectDrawer')).ObjectDrawer }));
 
-export function AppShell() {
+export function AppShell({ children }: { children: ReactNode }) {
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
 
   return (
-    <div className="app-shell">
+    <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)]">
       <Sidebar />
-      <div className="app-shell__main">
+      <div className="min-w-0">
         <TopBar />
-        <main className="workspace">
-          <Outlet />
+        <main className="p-5">
+          {children}
         </main>
       </div>
       <Suspense fallback={null}>

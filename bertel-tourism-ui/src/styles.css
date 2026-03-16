@@ -1,7 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  /* High-tech dark theme (not overridden by applyThemeToDocument) */
+  --bg-base: #0a0a0f;
+  --bg-surface: #12121a;
+  --bg-elevated: #1a1a24;
+  --text-primary: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --accent-cyan: #22d3ee;
+  --accent-violet: #a78bfa;
+  --accent-emerald: #10b981;
+  /* Legacy theme (branding can override these) */
   --theme-primary: #0c7d75;
   --theme-primary-rgb: 12 125 117;
   --theme-accent: #e4703c;
@@ -32,6 +47,21 @@
   box-sizing: border-box;
 }
 
+@layer components {
+  .glass {
+    @apply rounded-xl border border-white/10 backdrop-blur-md;
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+  .glass-panel {
+    @apply rounded-xl border border-white/10 backdrop-blur-md;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  .glass-strong {
+    @apply rounded-xl border border-white/10 backdrop-blur-lg;
+    background-color: rgba(0, 0, 0, 0.35);
+  }
+}
+
 html,
 body,
 #root {
@@ -41,11 +71,12 @@ body,
 body {
   margin: 0;
   font-family: 'IBM Plex Sans', sans-serif;
-  color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgb(var(--theme-accent-rgb) / 0.14), transparent 30%),
-    radial-gradient(circle at bottom right, rgb(var(--theme-primary-rgb) / 0.12), transparent 35%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg) 82%, white) 0%, var(--bg) 100%);
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.06), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(167, 139, 250, 0.05), transparent 35%),
+    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-surface) 100%);
 }
 
 button,

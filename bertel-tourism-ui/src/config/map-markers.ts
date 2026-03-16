@@ -80,12 +80,13 @@ export const markerIconChoicesByType: Record<ObjectTypeCode, MarkerIconKey[]> = 
   EVT: ['calendar', 'spark', 'camera'],
 };
 
+/** Accents alignés sur le thème high-tech (cyan, violet, emerald) */
 export const defaultMarkerStyles: Record<ObjectTypeCode, MarkerStyle> = {
-  HOT: { color: '#ef7a49', icon: 'bed', mode: 'preset', customSvg: null },
-  RES: { color: '#0d9488', icon: 'utensils', mode: 'preset', customSvg: null },
-  ACT: { color: '#8b5cf6', icon: 'spark', mode: 'preset', customSvg: null },
-  ITI: { color: '#3b82f6', icon: 'route', mode: 'preset', customSvg: null },
-  EVT: { color: '#475569', icon: 'calendar', mode: 'preset', customSvg: null },
+  HOT: { color: '#22d3ee', icon: 'bed', mode: 'preset', customSvg: null },
+  RES: { color: '#10b981', icon: 'utensils', mode: 'preset', customSvg: null },
+  ACT: { color: '#a78bfa', icon: 'spark', mode: 'preset', customSvg: null },
+  ITI: { color: '#06b6d4', icon: 'route', mode: 'preset', customSvg: null },
+  EVT: { color: '#a78bfa', icon: 'calendar', mode: 'preset', customSvg: null },
 };
 
 export function getMarkerImageId(type: string): string {

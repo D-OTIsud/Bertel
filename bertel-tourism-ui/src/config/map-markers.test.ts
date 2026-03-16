@@ -26,7 +26,7 @@ describe('map marker config', () => {
       customSvg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>',
     });
 
-    expect(presetSvg).toContain('#ef7a49');
+    expect(presetSvg).toContain('#22d3ee');
     expect(presetSvg).toContain('<title>Lit</title>');
     expect(customSvg).toContain('SVG personnalise');
     expect(customSvg).toContain('<circle cx="12" cy="12" r="8"/>');

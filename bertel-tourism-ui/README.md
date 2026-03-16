@@ -2,6 +2,10 @@
 
 Application front-end dediee a la gestion touristique et CRM collaborative de Bertel 3.0.
 
+## Prérequis
+
+- **Node.js 20+** recommandé (certaines dépendances comme Supabase et un futur passage à Tailwind v4 le demandent). En Node 18 le projet peut encore builder avec Tailwind v3.
+
 ## Choix techniques
 
 - React + TypeScript + Vite

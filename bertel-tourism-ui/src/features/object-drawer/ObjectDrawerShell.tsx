@@ -3,7 +3,6 @@ import { AvatarStack } from '../../components/common/AvatarStack';
 import { useObjectDetailQuery } from '../../hooks/useExplorerQueries';
 import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
-import { useUiStore } from '../../store/ui-store';
 import { ObjectContactsPanel } from './ObjectContactsPanel';
 import { ObjectDrawerNav } from './ObjectDrawerNav';
 import { ObjectExternalSyncPanel } from './ObjectExternalSyncPanel';
@@ -16,13 +15,14 @@ import { ObjectOpeningsPanel } from './ObjectOpeningsPanel';
 import { ObjectPricingPanel } from './ObjectPricingPanel';
 import { ObjectRoomsPanel } from './ObjectRoomsPanel';
 import { readObjectRecord, readString } from './utils';
+import { Button } from '@/components/ui/button';
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
+  onClose: () => void;
 }
 
-export function ObjectDrawerShell({ objectId }: ObjectDrawerShellProps) {
-  const closeDrawer = useUiStore((state) => state.closeDrawer);
+export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
   const { data, isLoading, isError, error } = useObjectDetailQuery(objectId);
   const { peers, me, lockedFields, typingUsers, lockField, unlockField } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
@@ -64,17 +64,17 @@ export function ObjectDrawerShell({ objectId }: ObjectDrawerShellProps) {
   const address = readString((raw.location as { address?: string } | undefined)?.address);
 
   return (
-    <aside key={objectId} className="drawer drawer--open drawer--modular">
-      <div className="drawer__header">
+    <div key={objectId} className="flex h-full flex-col">
+      <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <span className="eyebrow">Edition collaborative</span>
-          <h2>{data?.id === objectId ? data.name : objectId}</h2>
+          <h2 className="font-display text-lg font-semibold">{data?.id === objectId ? data.name : objectId}</h2>
         </div>
-        <div className="drawer__header-actions">
+        <div className="flex items-center gap-2">
           <AvatarStack people={peers} />
-          <button type="button" className="ghost-button" onClick={closeDrawer}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             Fermer
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -83,9 +83,9 @@ export function ObjectDrawerShell({ objectId }: ObjectDrawerShellProps) {
       {isLoading && <div className="panel-card">Chargement de la fiche...</div>}
       {isError && <div className="panel-card panel-card--warning">{(error as Error).message}</div>}
 
-      <div className="drawer__content drawer__content--modular">
+      <div className="drawer__content drawer__content--modular flex flex-1 flex-col overflow-hidden">
         <ObjectDrawerNav />
-        <section className="drawer__panel-area">
+        <section className="drawer__panel-area flex-1 overflow-y-auto">
           {activeSection === 'general' && (
             <ObjectGeneralPanel
               name={name}
@@ -112,6 +112,6 @@ export function ObjectDrawerShell({ objectId }: ObjectDrawerShellProps) {
           {activeSection === 'external-sync' && <ObjectExternalSyncPanel raw={raw} />}
         </section>
       </div>
-    </aside>
+    </div>
   );
 }

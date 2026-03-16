@@ -8,9 +8,9 @@ Application front-end dediee a la gestion touristique et CRM collaborative de Be
 
 ## Choix techniques
 
-- React + TypeScript + Vite
+- **Next.js 16** (App Router) + React 19 + TypeScript
 - Supabase JS pour RPC et Realtime
-- React Query pour les requetes et la pagination keyset
+- TanStack Query pour les requetes et la pagination keyset
 - Zustand pour l'etat UI, session et filtres
 - MapLibre GL JS + Mapbox Draw pour la carte et le lasso
 - Docker + Nginx avec injection runtime des variables pour Coolify
@@ -25,14 +25,16 @@ npm run dev
 
 ## Variables d'environnement
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_ENABLE_DEMO_MODE`
-- `VITE_MAP_STYLE_CLASSIC`
-- `VITE_MAP_STYLE_SATELLITE`
-- `VITE_MAP_STYLE_TOPO`
+Pour Next.js (`npm run dev` / `npm run build`), utilisez les variables **NEXT_PUBLIC_*** (exposees au client) :
 
-`VITE_ENABLE_DEMO_MODE` est desactive par defaut. Le mode mock doit etre active explicitement.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_ENABLE_DEMO_MODE`
+- `NEXT_PUBLIC_MAP_STYLE_CLASSIC`
+- `NEXT_PUBLIC_MAP_STYLE_SATELLITE`
+- `NEXT_PUBLIC_MAP_STYLE_TOPO`
+
+`NEXT_PUBLIC_ENABLE_DEMO_MODE` est desactive par defaut. Le mode mock doit etre active explicitement. Les equivalents `VITE_*` restent utilisables pour `npm run dev:vite` / `npm run build:vite` (legacy).
 
 ## Demarrage Docker
 

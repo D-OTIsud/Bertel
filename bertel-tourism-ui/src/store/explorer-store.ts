@@ -4,6 +4,7 @@ import type { ExplorerFilters, GeoPolygon, ObjectTypeCode } from '../types/domai
 interface ExplorerState extends ExplorerFilters {
   toggleType: (type: ObjectTypeCode) => void;
   setSearch: (search: string) => void;
+  setView: (view: 'card' | 'full') => void;
   toggleLabel: (label: string) => void;
   toggleAmenity: (amenity: string) => void;
   setOpenNow: (value: boolean) => void;
@@ -14,6 +15,8 @@ interface ExplorerState extends ExplorerFilters {
   setPolygon: (polygon: GeoPolygon | null, bbox?: [number, number, number, number] | null) => void;
   resetSpatialFilter: () => void;
   resetAll: () => void;
+  /** Apply partial filters from URL (e.g. after navigation) */
+  setFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
 }
 
 const initialState: ExplorerFilters = {
@@ -42,6 +45,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         : [...state.selectedTypes, type],
     })),
   setSearch: (search) => set({ search }),
+  setView: (view) => set({ view }),
   toggleLabel: (label) =>
     set((state) => ({
       labels: state.labels.includes(label)
@@ -62,4 +66,20 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setPolygon: (polygon, bbox = null) => set({ polygon, bbox }),
   resetSpatialFilter: () => set({ polygon: null, bbox: null }),
   resetAll: () => set(initialState),
+  setFiltersFromUrl: (partial) =>
+    set((state) => ({
+      ...state,
+      ...(partial.selectedTypes !== undefined && { selectedTypes: partial.selectedTypes }),
+      ...(partial.search !== undefined && { search: partial.search }),
+      ...(partial.view !== undefined && { view: partial.view }),
+      ...(partial.labels !== undefined && { labels: partial.labels }),
+      ...(partial.amenities !== undefined && { amenities: partial.amenities }),
+      ...(partial.openNow !== undefined && { openNow: partial.openNow }),
+      ...(partial.capacityMetricCode !== undefined && { capacityMetricCode: partial.capacityMetricCode }),
+      ...(partial.capacityMin !== undefined && { capacityMin: partial.capacityMin }),
+      ...(partial.capacityMax !== undefined && { capacityMax: partial.capacityMax }),
+      ...(partial.itineraryDifficultyMin !== undefined && { itineraryDifficultyMin: partial.itineraryDifficultyMin }),
+      ...(partial.itineraryDifficultyMax !== undefined && { itineraryDifficultyMax: partial.itineraryDifficultyMax }),
+      ...(partial.elevationGainMin !== undefined && { elevationGainMin: partial.elevationGainMin }),
+    })),
 }));

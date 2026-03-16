@@ -1,32 +1,46 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { env } from '../lib/env';
+import { loginSchema, type LoginFormValues } from '../lib/schemas';
 import { signInWithGoogle } from '../services/auth';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
+import { Button } from '@/components/ui/button';
 
 export function LoginPage() {
+  const router = useRouter();
   const status = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
   const errorMessage = useSessionStore((state) => state.errorMessage);
   const setGuest = useSessionStore((state) => state.setGuest);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  if (status === 'ready') {
-    return <Navigate to="/" replace />;
-  }
+  const [submitting, setSubmitting] = useState(false);
+  useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  useEffect(() => {
+    if (status === 'ready') router.replace('/');
+  }, [status, router]);
+
+  useEffect(() => {
+    if (errorMessage) toast.error(errorMessage);
+  }, [errorMessage]);
+
+  if (status === 'ready') return null;
 
   async function handleGoogleLogin() {
     setSubmitting(true);
-    setAuthError(null);
-
     try {
       await signInWithGoogle();
     } catch (error) {
-      setAuthError((error as Error).message);
+      toast.error((error as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -53,14 +67,17 @@ export function LoginPage() {
 
         {!demoMode ? (
           <>
-            <button type="button" className="primary-button auth-google-button" onClick={() => void handleGoogleLogin()} disabled={submitting}>
+            <Button
+              type="button"
+              className="auth-google-button w-full"
+              onClick={() => void handleGoogleLogin()}
+              disabled={submitting}
+            >
               {submitting ? 'Redirection Google...' : 'Continuer avec Google'}
-            </button>
+            </Button>
             <p className="auth-note">
-              Assurez-vous que le provider Google est active dans Supabase Auth et que l URL de redirection de cette application est autorisee.
+              Assurez-vous que le provider Google est actif dans Supabase Auth et que l URL de redirection de cette application est autorisee.
             </p>
-            {errorMessage ? <div className="panel-card panel-card--warning">{errorMessage}</div> : null}
-            {authError ? <div className="panel-card panel-card--warning">{authError}</div> : null}
             <div className="stack-list auth-runtime-list">
               <span>Supabase URL: {env.supabaseUrl || 'non configure'}</span>
               <span>Mode demo: non</span>
@@ -71,9 +88,9 @@ export function LoginPage() {
             <div className="panel-card">
               <p>Le mode demo est actif. Vous pouvez entrer dans l application sans OAuth pour travailler le design et les parcours.</p>
             </div>
-            <button type="button" className="primary-button" onClick={() => setGuest(null)}>
+            <Button type="button" className="w-full" onClick={() => setGuest(null)}>
               Revenir a l ecran d accueil demo
-            </button>
+            </Button>
           </>
         )}
       </article>

@@ -1,6 +1,8 @@
 import { objectTypeOptions } from '../../config/map-markers';
 import { useExplorerStore } from '../../store/explorer-store';
 import { getVisibleFacets } from '../../utils/facets';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const labelOptions = ['famille', 'ecolabel', 'prestige'];
 const amenityOptions = ['wifi', 'spa', 'parking', 'pmr'];
@@ -37,16 +39,16 @@ export function FiltersPanel({ compact = false }: FiltersPanelProps) {
           <span className="eyebrow">Panneau 1</span>
           <h2>Filtres intelligents</h2>
         </div>
-        <button className="ghost-button" type="button" onClick={resetAll}>
+        <Button type="button" variant="ghost" onClick={resetAll}>
           Reinitialiser
-        </button>
+        </Button>
       </div>
 
       <label className="field-block">
         <span>Recherche</span>
-        <input
+        <Input
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Nom, ville, fiche..."
         />
       </label>

@@ -84,7 +84,7 @@ function assertObjectPayload(data: unknown): ObjectResourceRpcPayload {
 }
 
 async function tryGetObjectWithDeepData(objectId: string, langPrefs: string[], client: NonNullable<ReturnType<typeof getSupabaseClient>>): Promise<ObjectDetail> {
-  const { data, error } = await client.rpc('get_object_with_deep_data', {
+  const { data, error } = await client.schema('api').rpc('get_object_with_deep_data', {
     p_object_id: objectId,
     p_languages: langPrefs,
   });
@@ -105,7 +105,7 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
     return paginateMock(filterMockCards(input.filters), input.cursor, pageSize);
   }
 
-  const { data, error } = await client.rpc('list_object_resources_filtered_page', {
+  const { data, error } = await client.schema('api').rpc('list_object_resources_filtered_page', {
     p_cursor: input.cursor ?? null,
     p_lang_prefs: input.langPrefs,
     p_page_size: pageSize,
@@ -141,7 +141,7 @@ export async function listMapObjects(filters: ExplorerFilters, langPrefs: string
     );
   }
 
-  const { data, error } = await client.rpc('list_objects_map_view', {
+  const { data, error } = await client.schema('api').rpc('list_objects_map_view', {
     p_types: filters.selectedTypes.length > 0 ? filters.selectedTypes : null,
     p_status: ['published'],
     p_filters: buildRpcFilters(filters),
@@ -176,7 +176,7 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
     console.warn('Deep data indisponible, fallback sur get_object_resource.', deepError);
   }
 
-  const { data, error } = await client.rpc('get_object_resource', {
+  const { data, error } = await client.schema('api').rpc('get_object_resource', {
     p_object_id: objectId,
     p_lang_prefs: langPrefs,
     p_track_format: 'geojson',

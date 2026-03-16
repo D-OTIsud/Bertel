@@ -49,3 +49,42 @@ docker compose up --build
 - En mode normal, le role UI est attendu depuis la session Supabase, pas depuis un switch local.
 - Les modules CRM, moderation, audits et publications affichent maintenant une erreur explicite tant que leurs RPC dedies ne sont pas branches.
 - Les formats d'affichage doivent idealement reutiliser les blocs `render` emis par l'API.
+
+## Supabase et schema `api`
+
+L'API PostgreSQL est organisee avec une separation stricte :
+
+- **Tables** : dans le schema par defaut `public`
+- **Fonctions / endpoints RPC** : dans le schema `api`
+
+Dans `src/lib/supabase.ts`, le client Supabase est cree sans changer le schema global. Cela signifie :
+
+- **Acces tables** (inchangé) :
+
+```ts
+client.from('object').select('*');
+```
+
+- **Appels RPC** (nouvelle convention) : toujours cibler explicitement le schema `api` :
+
+```ts
+// Mauvais : chercherait la fonction dans le schema public
+// const { data, error } = await client.rpc('get_public_branding');
+
+// Bon : cible explicitement le schema api
+const { data, error } = await client.schema('api').rpc('get_public_branding');
+```
+
+Cette regle est appliquee partout dans le front :
+
+- `src/services/rpc.ts` :
+  - `client.schema('api').rpc('get_object_with_deep_data', ...)`
+  - `client.schema('api').rpc('list_object_resources_filtered_page', ...)`
+  - `client.schema('api').rpc('list_objects_map_view', ...)`
+  - `client.schema('api').rpc('get_object_resource', ...)`
+- `src/services/branding.ts` :
+  - `client.schema('api').rpc('get_public_branding')`
+  - `client.schema('api').rpc('get_app_branding')`
+  - `client.schema('api').rpc('upsert_app_branding', ...)`
+
+Cette convention evite les erreurs de type PGRST202/404 lorsque les fonctions sont definies dans `api` mais appelees par defaut sur `public`.

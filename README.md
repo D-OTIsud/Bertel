@@ -119,6 +119,32 @@ Ce repository contient :
 - **🧪 Collection Postman** : Tests et exemples d'utilisation des fonctions RPC
 - **📹 Vidéos** : Explications techniques du système unifié
 
+### Branding public et schema `api`
+
+Le branding white-label de l'UI est gere par une migration SQL dediee :
+
+- Fichier : `Base de donnée DLL et API/ui_whitelabel_branding.sql`
+- Table singleton : `public.app_branding_settings`
+- Fonctions definies dans le schema `api` :
+  - `api.get_public_branding()` : payload public pour la page de login / shell anonyme
+  - `api.get_app_branding()` : payload complet pour l'application authentifiee (theme + styles de marqueurs)
+  - `api.upsert_app_branding(...)` : mise a jour admin des reglages de branding
+
+Dans le front-end (`bertel-tourism-ui`), ces fonctions sont appelees via Supabase en ciblant explicitement le schema `api` :
+
+```ts
+// Lecture du branding public
+client.schema('api').rpc('get_public_branding');
+
+// Lecture du branding authentifie
+client.schema('api').rpc('get_app_branding');
+
+// Mise a jour du branding
+client.schema('api').rpc('upsert_app_branding', { ... });
+```
+
+Le schema par defaut `public` reste utilise pour les tables (`client.from('table').select('*')`), tandis que tous les appels RPC doivent suivre le pattern `client.schema('api').rpc('nom_de_la_fonction', ...)`.
+
 ## 🏢 Organisation
 
 Projet développé par **OTI du Sud** - Office de Tourisme Intercommunal du Sud.

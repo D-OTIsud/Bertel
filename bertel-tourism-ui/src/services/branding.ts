@@ -1,5 +1,5 @@
 import { coerceMarkerStyles, type MarkerStyle } from '../config/map-markers';
-import { getSupabaseClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { coerceThemeSettings, type ThemeSettings } from '../lib/theme';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectTypeCode } from '../types/domain';
@@ -94,13 +94,13 @@ export async function getPublicBranding(): Promise<BrandingSnapshot | null> {
     return null;
   }
 
-  const client = getSupabaseClient();
+  const client = getApiClient();
   if (!client) {
     return null;
   }
 
   try {
-    const { data, error } = await client.schema('api').rpc('get_public_branding');
+    const { data, error } = await client.rpc('get_public_branding');
     if (error) {
       throw error;
     }
@@ -120,13 +120,13 @@ export async function getAppBranding(): Promise<BrandingSnapshot | null> {
     return null;
   }
 
-  const client = getSupabaseClient();
+  const client = getApiClient();
   if (!client) {
     return null;
   }
 
   try {
-    const { data, error } = await client.schema('api').rpc('get_app_branding');
+    const { data, error } = await client.rpc('get_app_branding');
     if (error) {
       throw error;
     }
@@ -151,8 +151,8 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
     };
   }
 
-  const client = getSupabaseClient();
-  if (!client) {
+  const dbClient = getSupabaseClient();
+  if (!dbClient) {
     throw new Error('Supabase non configure pour enregistrer le branding.');
   }
 
@@ -161,14 +161,19 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
   let logoMimeType: string | null | undefined;
 
   if (input.logoFile) {
-    const uploaded = await uploadBrandLogo(input.logoFile, client);
+    const uploaded = await uploadBrandLogo(input.logoFile, dbClient);
     logoStoragePath = uploaded.logoStoragePath;
     logoPublicUrl = uploaded.logoPublicUrl;
     logoMimeType = uploaded.logoMimeType;
   }
 
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Supabase non configure pour enregistrer le branding.');
+  }
+
   try {
-    const { data, error } = await client.schema('api').rpc('upsert_app_branding', {
+    const { data, error } = await apiClient.rpc('upsert_app_branding', {
       p_brand_name: input.theme.brandName,
       p_logo_storage_path: logoStoragePath ?? null,
       p_logo_public_url: logoPublicUrl ?? null,

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@/styles.css';
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <Providers>{children}</Providers>
       </body>
     </html>

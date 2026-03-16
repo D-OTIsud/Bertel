@@ -7,17 +7,23 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM node:22-alpine AS runner
 RUN apk add --no-cache gettext
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
 COPY docker/entrypoint.sh /entrypoint.sh
-COPY public/runtime-config.template.js /usr/share/nginx/html/runtime-config.template.js
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/.next/standalone /app
+COPY --from=builder /app/.next/static /app/.next/static
+COPY --from=builder /app/public /app/public
 
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 80
+WORKDIR /app
+
+EXPOSE 3000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]

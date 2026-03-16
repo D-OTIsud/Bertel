@@ -1,6 +1,23 @@
 #!/bin/sh
 set -eu
 
-envsubst < /usr/share/nginx/html/runtime-config.template.js > /usr/share/nginx/html/runtime-config.js
+: "${VITE_ENABLE_DEMO_MODE:=true}"
+: "${VITE_MAP_STYLE_CLASSIC:=https://demotiles.maplibre.org/style.json}"
+: "${VITE_MAP_STYLE_SATELLITE:=https://tiles.openfreemap.org/styles/liberty}"
+: "${VITE_MAP_STYLE_TOPO:=https://tiles.openfreemap.org/styles/bright}"
+
+: "${NEXT_PUBLIC_SUPABASE_URL:=${VITE_SUPABASE_URL:-}}"
+: "${NEXT_PUBLIC_SUPABASE_ANON_KEY:=${VITE_SUPABASE_ANON_KEY:-}}"
+: "${NEXT_PUBLIC_ENABLE_DEMO_MODE:=${VITE_ENABLE_DEMO_MODE}}"
+: "${NEXT_PUBLIC_MAP_STYLE_CLASSIC:=${VITE_MAP_STYLE_CLASSIC}}"
+: "${NEXT_PUBLIC_MAP_STYLE_SATELLITE:=${VITE_MAP_STYLE_SATELLITE}}"
+: "${NEXT_PUBLIC_MAP_STYLE_TOPO:=${VITE_MAP_STYLE_TOPO}}"
+
+export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_ENABLE_DEMO_MODE
+export VITE_MAP_STYLE_CLASSIC VITE_MAP_STYLE_SATELLITE VITE_MAP_STYLE_TOPO
+export NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_ENABLE_DEMO_MODE
+export NEXT_PUBLIC_MAP_STYLE_CLASSIC NEXT_PUBLIC_MAP_STYLE_SATELLITE NEXT_PUBLIC_MAP_STYLE_TOPO
+
+envsubst < /app/public/runtime-config.template.js > /app/public/runtime-config.js
 
 exec "$@"

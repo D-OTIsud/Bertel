@@ -2,7 +2,7 @@
 
 import { useUiStore } from '../../store/ui-store';
 import { ObjectDrawerShell } from '../../features/object-drawer/ObjectDrawerShell';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 
 interface ObjectDrawerProps {
   objectId: string | null;
@@ -14,7 +14,14 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) closeDrawer(); }}>
-      <SheetContent side="right" className="w-full max-w-2xl overflow-y-auto sm:max-w-2xl">
+      <SheetContent
+        side="right"
+        showClose={false}
+        aria-describedby={undefined}
+        className="drawer-panel w-full max-w-[1180px] border-0 p-0 sm:max-w-[1180px]"
+      >
+        <SheetTitle className="sr-only">Edition fiche objet</SheetTitle>
+        <SheetDescription className="sr-only">Panneau lateral pour modifier les details d un objet touristique.</SheetDescription>
         {objectId ? <ObjectDrawerShell objectId={objectId} onClose={closeDrawer} /> : null}
       </SheetContent>
     </Sheet>

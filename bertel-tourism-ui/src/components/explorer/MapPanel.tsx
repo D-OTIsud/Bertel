@@ -2,14 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import {
-  Map,
-  Source,
-  Layer,
-  Popup,
-  NavigationControl,
-  useMap,
-} from 'react-map-gl/maplibre';
+import { Layer, Map, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   buildMarkerSvg,
@@ -22,42 +15,34 @@ import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, MapObject, ObjectTypeCode } from '../../types/domain';
-import {
-  buildObjectFeatureCollection,
-  type MapFeatureProperties,
-} from './map-source';
+import { buildObjectFeatureCollection, type MapFeatureProperties } from './map-source';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_ICON_LAYER_ID = 'objects-icons';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
+const mapLayerLabels = {
+  classic: 'Plan',
+  satellite: 'Satellite',
+  topo: 'Topo',
+} as const;
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
   const coords = polygon.coordinates[0] ?? [];
   const lons = coords.map((coord) => coord[0]);
   const lats = coords.map((coord) => coord[1]);
-  return [
-    Math.min(...lons),
-    Math.min(...lats),
-    Math.max(...lons),
-    Math.max(...lats),
-  ];
+  return [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
 }
 
 function loadSvgImage(svg: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image(64, 80);
     image.onload = () => resolve(image);
-    image.onerror = () =>
-      reject(new Error('Impossible de charger l icone SVG du marker.'));
+    image.onerror = () => reject(new Error('Impossible de charger l icone SVG du marker.'));
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   });
 }
 
-function MapMarkerImages({
-  markerStyles,
-}: {
-  markerStyles: Record<ObjectTypeCode, MarkerStyle>;
-}) {
+function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode, MarkerStyle> }) {
   const { map } = useMap();
 
   const syncImages = useCallback(async () => {
@@ -175,21 +160,13 @@ export function MapPanel({ objects }: MapPanelProps) {
     properties: MapFeatureProperties;
   } | null>(null);
 
-  const geojsonData = useMemo(
-    () => buildObjectFeatureCollection(objects),
-    [objects],
-  );
-
+  const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
 
   const handleClick = useCallback(
-    (e: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown }; properties?: unknown }>; lngLat: { lng: number; lat: number } }) => {
+    (e: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown }; properties?: unknown }> }) => {
       const feature = e.features?.[0];
-      if (
-        !feature ||
-        feature.geometry?.type !== 'Point' ||
-        !Array.isArray(feature.geometry.coordinates)
-      ) {
+      if (!feature || feature.geometry?.type !== 'Point' || !Array.isArray(feature.geometry.coordinates)) {
         return;
       }
       const [lon, lat] = feature.geometry.coordinates as [number, number];
@@ -217,33 +194,23 @@ export function MapPanel({ objects }: MapPanelProps) {
     <section className="map-panel panel-card panel-card--map">
       <div className="panel-heading panel-heading--overlay">
         <div>
-          <span className="eyebrow">Panneau 3</span>
+          <span className="eyebrow">Atlas cartographique</span>
           <h2>Carte interactive</h2>
+          <p>Changez de fond, dessinez une zone, puis ouvrez une fiche sans quitter le contexte spatial.</p>
         </div>
         <div className="segmented-control">
-          <button
-            type="button"
-            className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'}
-            onClick={() => setMapLayer('classic')}
-          >
+          <button type="button" className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('classic')}>
             Plan
           </button>
-          <button
-            type="button"
-            className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'}
-            onClick={() => setMapLayer('satellite')}
-          >
+          <button type="button" className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('satellite')}>
             Satellite
           </button>
-          <button
-            type="button"
-            className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'}
-            onClick={() => setMapLayer('topo')}
-          >
+          <button type="button" className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('topo')}>
             Topo
           </button>
         </div>
       </div>
+
       <div className="map-canvas">
         <Map
           mapStyle={mapStyle}
@@ -267,17 +234,7 @@ export function MapPanel({ objects }: MapPanelProps) {
               type="symbol"
               layout={{
                 'icon-image': ['get', 'markerIcon'],
-                'icon-size': [
-                  'interpolate',
-                  ['linear'],
-                  ['zoom'],
-                  7,
-                  0.55,
-                  11,
-                  0.72,
-                  15,
-                  0.92,
-                ],
+                'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 0.55, 11, 0.72, 15, 0.92],
                 'icon-allow-overlap': true,
                 'icon-ignore-placement': true,
               }}
@@ -294,8 +251,8 @@ export function MapPanel({ objects }: MapPanelProps) {
                 'text-optional': true,
               }}
               paint={{
-                'text-color': '#2b1f18',
-                'text-halo-color': '#fffaf4',
+                'text-color': '#18313B',
+                'text-halo-color': '#FFFDF8',
                 'text-halo-width': 1.2,
               }}
             />
@@ -309,22 +266,32 @@ export function MapPanel({ objects }: MapPanelProps) {
               closeButton
               closeOnClick={false}
             >
-              <div>
+              <div className="map-popup">
                 <strong>{popupState.properties.name}</strong>
-                <div>
-                  {popupState.properties.address || 'Sans adresse'}
-                </div>
-                {popupState.properties.price && (
-                  <div>{popupState.properties.price}</div>
-                )}
-                {popupState.properties.rating && (
-                  <div>Note: {popupState.properties.rating}</div>
-                )}
+                <span>{popupState.properties.address || 'Sans adresse'}</span>
+                {popupState.properties.price ? <div>{popupState.properties.price}</div> : null}
+                {popupState.properties.rating ? <div>Note: {popupState.properties.rating}</div> : null}
               </div>
             </Popup>
           )}
         </Map>
       </div>
+
+      <div className="map-panel__meta">
+        <div>
+          <strong>{objects.length}</strong>
+          <span>points visibles</span>
+        </div>
+        <div>
+          <strong>{mapLayerLabels[mapLayer]}</strong>
+          <span>fond actif</span>
+        </div>
+        <div>
+          <strong>Zone libre</strong>
+          <span>dessinez un polygone pour filtrer</span>
+        </div>
+      </div>
     </section>
   );
 }
+

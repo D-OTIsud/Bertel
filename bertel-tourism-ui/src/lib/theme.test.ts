@@ -19,10 +19,10 @@ describe('theme helpers', () => {
       brandName: 'Mon Office',
       logoUrl: 'https://example.com/logo.svg',
       primaryColor: '#123456',
-      accentColor: '#E4703C',
-      textColor: '#2B1F18',
-      backgroundColor: '#F7F0E8',
-      surfaceColor: '#FFFAF4',
+      accentColor: '#F28B54',
+      textColor: '#18313B',
+      backgroundColor: '#F4EEE5',
+      surfaceColor: '#FFFDF8',
     });
   });
 
@@ -40,6 +40,8 @@ describe('theme helpers', () => {
     expect(rootStyle.getPropertyValue('--theme-primary')).toBe('#2255AA');
     expect(rootStyle.getPropertyValue('--theme-accent')).toBe('#EE7744');
     expect(rootStyle.getPropertyValue('--theme-text')).toBe('#111111');
-    /* Shell background vars (--bg, --panel) are intentionally not set so the app keeps the dark topbar theme. */
+    expect(rootStyle.getPropertyValue('--theme-bg')).toBe('#FAF7F0');
+    expect(rootStyle.getPropertyValue('--theme-surface')).toBe('#FFFFFF');
+    expect(rootStyle.getPropertyValue('--background')).toBe('#FAF7F0');
   });
 });

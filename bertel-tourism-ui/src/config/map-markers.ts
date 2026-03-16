@@ -80,13 +80,12 @@ export const markerIconChoicesByType: Record<ObjectTypeCode, MarkerIconKey[]> = 
   EVT: ['calendar', 'spark', 'camera'],
 };
 
-/** Accents alignés sur le thème high-tech (cyan, violet, emerald) */
 export const defaultMarkerStyles: Record<ObjectTypeCode, MarkerStyle> = {
-  HOT: { color: '#22d3ee', icon: 'bed', mode: 'preset', customSvg: null },
-  RES: { color: '#10b981', icon: 'utensils', mode: 'preset', customSvg: null },
-  ACT: { color: '#a78bfa', icon: 'spark', mode: 'preset', customSvg: null },
-  ITI: { color: '#06b6d4', icon: 'route', mode: 'preset', customSvg: null },
-  EVT: { color: '#a78bfa', icon: 'calendar', mode: 'preset', customSvg: null },
+  HOT: { color: '#E27B55', icon: 'bed', mode: 'preset', customSvg: null },
+  RES: { color: '#CF9440', icon: 'utensils', mode: 'preset', customSvg: null },
+  ACT: { color: '#1E7F78', icon: 'spark', mode: 'preset', customSvg: null },
+  ITI: { color: '#327090', icon: 'route', mode: 'preset', customSvg: null },
+  EVT: { color: '#C75E48', icon: 'calendar', mode: 'preset', customSvg: null },
 };
 
 export function getMarkerImageId(type: string): string {
@@ -184,15 +183,15 @@ function buildCustomMarkerGlyph(customSvg: string): string | null {
 }
 
 export function buildMarkerSvg(style: MarkerStyle): string {
-  const color = sanitizeMarkerColor(style.color, '#475569');
+  const color = sanitizeMarkerColor(style.color, '#327090');
   const icon = markerIconCatalog[normalizeMarkerIcon(style.icon, 'spark')];
   const customGlyph = style.mode === 'custom' && style.customSvg ? buildCustomMarkerGlyph(style.customSvg) : null;
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="80" viewBox="0 0 64 80" fill="none">
       <path d="M32 4C19.297 4 9 14.297 9 27c0 16.76 18.92 34.4 22.034 37.204a1.5 1.5 0 0 0 1.932 0C36.08 61.4 55 43.76 55 27 55 14.297 44.703 4 32 4Z" fill="${color}"/>
-      <circle cx="32" cy="27" r="16" fill="#FFF7ED"/>
-      ${customGlyph ?? `<g transform="translate(20 15)" stroke="#2B1F18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">${icon.glyph}</g>`}
+      <circle cx="32" cy="27" r="16" fill="#FFFCF7"/>
+      ${customGlyph ?? `<g transform="translate(20 15)" stroke="#18313B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">${icon.glyph}</g>`}
       <title>${escapeXml(customGlyph ? 'SVG personnalise' : icon.label)}</title>
     </svg>
   `.trim();

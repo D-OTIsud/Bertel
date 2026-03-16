@@ -9,13 +9,13 @@ export interface ThemeSettings {
 }
 
 export const defaultThemeSettings: ThemeSettings = {
-  brandName: 'Tourism UI',
+  brandName: 'Bertel Tourism',
   logoUrl: null,
-  primaryColor: '#0c7d75',
-  accentColor: '#e4703c',
-  textColor: '#2b1f18',
-  backgroundColor: '#f7f0e8',
-  surfaceColor: '#fffaf4',
+  primaryColor: '#176B6A',
+  accentColor: '#F28B54',
+  textColor: '#18313B',
+  backgroundColor: '#F4EEE5',
+  surfaceColor: '#FFFDF8',
 };
 
 function clamp(value: number, min = 0, max = 255): number {
@@ -78,7 +78,7 @@ function luminance(hex: string): number {
 }
 
 function contrastText(background: string): string {
-  return luminance(background) > 0.52 ? '#2B1F18' : '#FFF9F3';
+  return luminance(background) > 0.52 ? '#18313B' : '#FFFDF8';
 }
 
 function dominantColorsFromPixels(pixels: Uint8ClampedArray): string[] {
@@ -148,8 +148,8 @@ export async function extractThemeFromLogoDataUrl(dataUrl: string): Promise<Part
   const pixels = context.getImageData(0, 0, width, height).data;
   const palette = dominantColorsFromPixels(pixels);
   const primaryColor = palette[0] ?? defaultThemeSettings.primaryColor;
-  const accentColor = palette[1] ?? mixColors(primaryColor, '#FFFFFF', 0.22);
-  const backgroundColor = mixColors(primaryColor, '#FFF8F1', 0.92);
+  const accentColor = palette[1] ?? mixColors(primaryColor, '#FFF6EE', 0.46);
+  const backgroundColor = mixColors(primaryColor, '#FFF8F1', 0.9);
   const surfaceColor = mixColors(primaryColor, '#FFFFFF', 0.96);
 
   return {
@@ -167,12 +167,18 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
   const primary = sanitizeHexColor(theme.primaryColor, defaultThemeSettings.primaryColor);
   const accent = sanitizeHexColor(theme.accentColor, defaultThemeSettings.accentColor);
   const text = sanitizeHexColor(theme.textColor, defaultThemeSettings.textColor);
-  const line = mixColors(text, '#FFFFFF', 0.78);
-  const accentStrong = mixColors(accent, '#2B1F18', 0.18);
-  const muted = mixColors(text, '#FFFFFF', 0.36);
+  const background = sanitizeHexColor(theme.backgroundColor, defaultThemeSettings.backgroundColor);
+  const surface = sanitizeHexColor(theme.surfaceColor, defaultThemeSettings.surfaceColor);
+  const bgStrong = mixColors(background, primary, 0.08);
+  const panel = mixColors(surface, background, 0.18);
+  const surfaceSoft = mixColors(surface, primary, 0.06);
+  const line = mixColors(text, background, 0.82);
+  const accentSoft = mixColors(accent, surface, 0.86);
+  const accentStrong = mixColors(accent, text, 0.18);
+  const muted = mixColors(text, background, 0.54);
+  const primaryForeground = contrastText(primary);
+  const shadowColor = rgbChannels(mixColors(text, '#000000', 0.12)).replace(/ /g, ', ');
 
-  /* Shell background vars (--bg, --panel, etc.) are not set here so the app always uses the
-   * dark base + topbar-style surfaces from styles.css. Theme preview in Settings uses inline styles. */
   const variables: Record<string, string> = {
     '--theme-primary': primary,
     '--theme-primary-rgb': rgbChannels(primary),
@@ -180,18 +186,54 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--theme-accent-rgb': rgbChannels(accent),
     '--theme-text': text,
     '--theme-text-rgb': rgbChannels(text),
+    '--theme-bg': background,
+    '--theme-bg-rgb': rgbChannels(background),
+    '--theme-surface': surface,
+    '--theme-surface-rgb': rgbChannels(surface),
+    '--bg': background,
+    '--bg-strong': bgStrong,
+    '--panel': panel,
+    '--panel-strong': surface,
+    '--surface-soft': surfaceSoft,
     '--line': line,
     '--text': text,
-    '--muted': muted,
-    '--accent': accent,
-    '--accent-strong': accentStrong,
+    '--text-muted': muted,
+    '--accent-soft': accentSoft,
+    '--accent-brand': accent,
+    '--accent-brand-strong': accentStrong,
     '--teal': primary,
-    '--warning': '#F4C36A',
+    '--warning': '#D6933A',
+    '--shadow-soft': `0 18px 48px rgba(${shadowColor}, 0.08)`,
+    '--shadow': `0 30px 80px rgba(${shadowColor}, 0.14)`,
+    '--background': background,
+    '--foreground': text,
+    '--card': surface,
+    '--card-foreground': text,
+    '--popover': surface,
+    '--popover-foreground': text,
+    '--primary': primary,
+    '--primary-foreground': primaryForeground,
+    '--secondary': surfaceSoft,
+    '--secondary-foreground': text,
+    '--muted': surfaceSoft,
+    '--muted-foreground': muted,
+    '--accent': accentSoft,
+    '--accent-foreground': text,
+    '--border': line,
+    '--input': line,
+    '--ring': primary,
+    '--radius': '1rem',
+    '--radius-xl': '32px',
+    '--radius-lg': '24px',
+    '--radius-md': '18px',
+    '--radius-sm': '14px',
   };
 
   Object.entries(variables).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+
+  root.style.colorScheme = 'light';
 }
 
 export function coerceThemeSettings(value: unknown): ThemeSettings {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { StatusPill } from '../components/common/StatusPill';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { listCrmTasks, listCrmTimeline } from '../services/rpc';
 import type { CrmTask } from '../types/domain';
@@ -33,6 +34,8 @@ export function CrmPage() {
     [tasks],
   );
 
+  const activeTasks = tasks.filter((task) => task.status !== 'done').length;
+
   const moveTask = (taskId: string) => {
     setTasks((current) =>
       current.map((task) => {
@@ -58,17 +61,36 @@ export function CrmPage() {
   }
 
   return (
-    <section className="page-grid">
-      <article className="hero-panel">
-        <span className="eyebrow">CRM live</span>
-        <h2>Annuaire, interactions et kanban synchronise</h2>
-        <p>{peers.length} collaborateurs suivent actuellement ce flux.</p>
+    <section className="page-grid crm-page">
+      <article className="hero-panel crm-hero">
+        <div>
+          <span className="eyebrow">CRM live</span>
+          <h2>Coordination terrain et relation objet dans le meme flux</h2>
+          <p>{peers.length} collaborateurs suivent actuellement ce pipeline et {typingUsers.length} personnes sont en train de saisir une note.</p>
+        </div>
+        <div className="crm-hero__stats">
+          <article className="dashboard-metric-card">
+            <span>Taches actives</span>
+            <strong>{activeTasks}</strong>
+          </article>
+          <article className="dashboard-metric-card">
+            <span>Contributeurs</span>
+            <strong>{peers.length}</strong>
+          </article>
+          <article className="dashboard-metric-card">
+            <span>Notes en cours</span>
+            <strong>{typingUsers.length}</strong>
+          </article>
+        </div>
       </article>
 
       <div className="crm-layout">
         <article className="panel-card">
           <div className="panel-heading">
-            <h2>Timeline</h2>
+            <div>
+              <span className="eyebrow">Timeline</span>
+              <h2>Flux de relation</h2>
+            </div>
             <button type="button" className="ghost-button" onClick={() => void announceTyping()}>
               Simuler une note
             </button>
@@ -87,17 +109,28 @@ export function CrmPage() {
 
         <article className="panel-card panel-card--wide">
           <div className="panel-heading">
-            <h2>Kanban des taches</h2>
+            <div>
+              <span className="eyebrow">Pipeline</span>
+              <h2>Kanban des taches</h2>
+            </div>
           </div>
           <div className="kanban-grid">
             {grouped.map((group) => (
               <section key={group.lane} className="kanban-column">
-                <h3>{laneLabels[group.lane]}</h3>
+                <div className="kanban-column__header">
+                  <h3>{laneLabels[group.lane]}</h3>
+                  <span>{group.items.length}</span>
+                </div>
                 {group.items.map((task) => (
                   <article key={task.id} className="kanban-card">
-                    <strong>{task.title}</strong>
+                    <div className="kanban-card__header">
+                      <strong>{task.title}</strong>
+                      <StatusPill tone={task.status === 'done' ? 'green' : task.status === 'doing' ? 'orange' : 'neutral'}>
+                        {laneLabels[task.status]}
+                      </StatusPill>
+                    </div>
                     <p>{task.actor}</p>
-                    <small>{task.assignee} · {task.dueLabel}</small>
+                    <small className="kanban-card__meta">{task.assignee} · {task.dueLabel}</small>
                     <button type="button" className="ghost-button" onClick={() => moveTask(task.id)}>
                       Deplacer
                     </button>

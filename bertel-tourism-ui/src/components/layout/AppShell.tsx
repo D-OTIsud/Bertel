@@ -9,13 +9,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
 
   return (
-    <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)]">
+    <div className="app-shell">
       <Sidebar />
-      <div className="min-w-0">
+      <div className="workspace-shell">
         <TopBar />
-        <main className="p-5">
-          {children}
-        </main>
+        <main className="workspace">{children}</main>
       </div>
       <Suspense fallback={null}>
         <ObjectDrawer objectId={drawerObjectId} />

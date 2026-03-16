@@ -39,6 +39,8 @@ const envSchema = z
     }
   });
 
+export type AppEnv = z.infer<typeof envSchema>;
+
 function getRuntimeConfig(): Record<string, string | undefined> {
   return typeof window === 'undefined' ? {} : (window.__APP_CONFIG__ ?? {});
 }
@@ -72,10 +74,14 @@ const NEXT_PUBLIC_ALIAS: Record<string, string> = {
   VITE_MAP_STYLE_TOPO: 'NEXT_PUBLIC_MAP_STYLE_TOPO',
 };
 
-function readConfigValue(
-  key: string,
-  sources: EnvSources,
-): string {
+function resolveSources(sources: EnvSources = {}): EnvSources {
+  return {
+    runtime: sources.runtime ?? getRuntimeConfig(),
+    build: sources.build ?? getBuildConfig(),
+  };
+}
+
+function readConfigValue(key: string, sources: EnvSources): string {
   const runtimeValue = sources.runtime?.[key];
   const buildValue = sources.build?.[key];
   const nextKey = NEXT_PUBLIC_ALIAS[key];
@@ -90,23 +96,28 @@ function readBoolean(value: string, fallback: boolean): boolean {
   return value.toLowerCase() === 'true';
 }
 
-export function createEnv(sources: EnvSources = {}) {
-  const mergedSources: EnvSources = {
-    runtime: sources.runtime ?? getRuntimeConfig(),
-    build: sources.build ?? getBuildConfig(),
-  };
-
-  return envSchema.parse({
-    supabaseUrl: readConfigValue('VITE_SUPABASE_URL', mergedSources) || undefined,
-    supabaseAnonKey: readConfigValue('VITE_SUPABASE_ANON_KEY', mergedSources) || undefined,
-    demoMode: readBoolean(readConfigValue('VITE_ENABLE_DEMO_MODE', mergedSources), false),
+function buildEnvPayload(sources: EnvSources): AppEnv {
+  return {
+    supabaseUrl: readConfigValue('VITE_SUPABASE_URL', sources) || undefined,
+    supabaseAnonKey: readConfigValue('VITE_SUPABASE_ANON_KEY', sources) || undefined,
+    demoMode: readBoolean(readConfigValue('VITE_ENABLE_DEMO_MODE', sources), false),
     mapStyles: {
-      classic: readConfigValue('VITE_MAP_STYLE_CLASSIC', mergedSources) || DEFAULT_MAP_STYLES.classic,
-      satellite: readConfigValue('VITE_MAP_STYLE_SATELLITE', mergedSources) || DEFAULT_MAP_STYLES.satellite,
-      topo: readConfigValue('VITE_MAP_STYLE_TOPO', mergedSources) || DEFAULT_MAP_STYLES.topo,
+      classic: readConfigValue('VITE_MAP_STYLE_CLASSIC', sources) || DEFAULT_MAP_STYLES.classic,
+      satellite: readConfigValue('VITE_MAP_STYLE_SATELLITE', sources) || DEFAULT_MAP_STYLES.satellite,
+      topo: readConfigValue('VITE_MAP_STYLE_TOPO', sources) || DEFAULT_MAP_STYLES.topo,
     },
-  });
+  };
 }
 
-export const env = createEnv();
+export function createEnv(sources: EnvSources = {}): AppEnv {
+  return envSchema.parse(buildEnvPayload(resolveSources(sources)));
+}
+
+export function readEnv(sources: EnvSources = {}): AppEnv {
+  const payload = buildEnvPayload(resolveSources(sources));
+  const parsed = envSchema.safeParse(payload);
+  return parsed.success ? parsed.data : payload;
+}
+
+export const env = readEnv();
 export const hasSupabaseConfig = Boolean(env.supabaseUrl && env.supabaseAnonKey);

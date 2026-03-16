@@ -10,12 +10,12 @@ export interface ThemeSettings {
 
 export const defaultThemeSettings: ThemeSettings = {
   brandName: 'Bertel Tourism',
-  logoUrl: null,
-  primaryColor: '#176B6A',
-  accentColor: '#F28B54',
-  textColor: '#18313B',
-  backgroundColor: '#F4EEE5',
-  surfaceColor: '#FFFDF8',
+  logoUrl: '/Logo/image.png',
+  primaryColor: '#0F6B6D',
+  accentColor: '#C79A4A',
+  textColor: '#16323A',
+  backgroundColor: '#EDF4F3',
+  surfaceColor: '#FCFEFD',
 };
 
 function clamp(value: number, min = 0, max = 255): number {
@@ -78,7 +78,7 @@ function luminance(hex: string): number {
 }
 
 function contrastText(background: string): string {
-  return luminance(background) > 0.52 ? '#18313B' : '#FFFDF8';
+  return luminance(background) > 0.52 ? defaultThemeSettings.textColor : defaultThemeSettings.surfaceColor;
 }
 
 function dominantColorsFromPixels(pixels: Uint8ClampedArray): string[] {
@@ -241,7 +241,7 @@ export function coerceThemeSettings(value: unknown): ThemeSettings {
 
   return {
     brandName: String(raw.brandName ?? defaultThemeSettings.brandName).trim() || defaultThemeSettings.brandName,
-    logoUrl: sanitizeLogoUrl(raw.logoUrl ?? raw.logoDataUrl),
+    logoUrl: sanitizeLogoUrl(raw.logoUrl ?? raw.logoDataUrl ?? defaultThemeSettings.logoUrl),
     primaryColor: sanitizeHexColor(String(raw.primaryColor ?? ''), defaultThemeSettings.primaryColor),
     accentColor: sanitizeHexColor(String(raw.accentColor ?? ''), defaultThemeSettings.accentColor),
     textColor: sanitizeHexColor(String(raw.textColor ?? ''), defaultThemeSettings.textColor),
@@ -249,3 +249,4 @@ export function coerceThemeSettings(value: unknown): ThemeSettings {
     surfaceColor: sanitizeHexColor(String(raw.surfaceColor ?? ''), defaultThemeSettings.surfaceColor),
   };
 }
+

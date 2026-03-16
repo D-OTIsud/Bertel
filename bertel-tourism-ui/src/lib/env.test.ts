@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEnv } from './env';
+import { createEnv, readEnv } from './env';
 
 describe('createEnv', () => {
   it('throws when demo mode is disabled and Supabase config is missing', () => {
@@ -37,5 +37,18 @@ describe('createEnv', () => {
 
     expect(env.demoMode).toBe(false);
     expect(env.supabaseUrl).toBe('https://demo.supabase.co');
+  });
+
+  it('falls back to a non-throwing runtime-safe env shape when config is incomplete', () => {
+    const env = readEnv({
+      runtime: {
+        VITE_ENABLE_DEMO_MODE: 'false',
+      },
+      build: {},
+    });
+
+    expect(env.demoMode).toBe(false);
+    expect(env.supabaseUrl).toBeUndefined();
+    expect(env.mapStyles.satellite).toContain('openfreemap');
   });
 });

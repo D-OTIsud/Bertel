@@ -19,10 +19,10 @@ describe('theme helpers', () => {
       brandName: 'Mon Office',
       logoUrl: 'https://example.com/logo.svg',
       primaryColor: '#123456',
-      accentColor: '#F28B54',
-      textColor: '#18313B',
-      backgroundColor: '#F4EEE5',
-      surfaceColor: '#FFFDF8',
+      accentColor: '#C79A4A',
+      textColor: '#16323A',
+      backgroundColor: '#EDF4F3',
+      surfaceColor: '#FCFEFD',
     });
   });
 
@@ -45,3 +45,4 @@ describe('theme helpers', () => {
     expect(rootStyle.getPropertyValue('--background')).toBe('#FAF7F0');
   });
 });
+

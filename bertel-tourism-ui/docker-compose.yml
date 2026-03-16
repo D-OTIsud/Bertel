@@ -6,11 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8081:80"
+      - "8081:3000"
     environment:
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      VITE_ENABLE_DEMO_MODE: ${VITE_ENABLE_DEMO_MODE:-false}
+      VITE_ENABLE_DEMO_MODE: ${VITE_ENABLE_DEMO_MODE:-true}
       VITE_MAP_STYLE_CLASSIC: ${VITE_MAP_STYLE_CLASSIC:-https://demotiles.maplibre.org/style.json}
       VITE_MAP_STYLE_SATELLITE: ${VITE_MAP_STYLE_SATELLITE:-https://tiles.openfreemap.org/styles/liberty}
       VITE_MAP_STYLE_TOPO: ${VITE_MAP_STYLE_TOPO:-https://tiles.openfreemap.org/styles/bright}

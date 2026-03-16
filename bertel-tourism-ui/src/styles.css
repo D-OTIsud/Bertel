@@ -94,14 +94,20 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   padding: 0.85rem 0.95rem;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgb(var(--theme-primary-rgb) / 0.06);
+  color: var(--text-primary);
 }
 
 textarea {
   resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
 }
 
 a {
@@ -117,9 +123,9 @@ a {
 
 .sidebar {
   padding: 1.5rem;
-  border-right: 1px solid var(--line);
-  background: rgb(var(--theme-accent-rgb) / 0.04);
-  backdrop-filter: blur(18px);
+  border-right: 1px solid var(--border-subtle);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -128,8 +134,9 @@ a {
 .brand-block {
   padding: 1.2rem;
   border-radius: var(--radius-lg);
-  background: linear-gradient(145deg, rgb(var(--theme-accent-rgb) / 0.16), rgba(255, 255, 255, 0.68));
-  box-shadow: var(--shadow);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .brand-block__identity {
@@ -146,9 +153,9 @@ a {
   height: 54px;
   object-fit: contain;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
   padding: 0.45rem;
-  border: 1px solid rgb(var(--theme-primary-rgb) / 0.12);
+  border: 1px solid var(--border-subtle);
 }
 
 .brand-logo--fallback,
@@ -180,7 +187,7 @@ a {
 .timeline-item p,
 .dashboard-brand-card span,
 .topbar-brand__copy span {
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .brand-kicker,
@@ -192,7 +199,7 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .sidebar-nav {
@@ -204,28 +211,29 @@ a {
 .sidebar-link {
   padding: 0.95rem 1rem;
   border-radius: 16px;
-  color: var(--muted);
+  color: var(--text-muted);
   transition: 150ms ease;
 }
 
 .sidebar-link:hover,
 .sidebar-link--active {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 24px rgba(98, 61, 28, 0.08);
+  color: var(--text-primary);
+  background: rgb(var(--theme-primary-rgb) / 0.12);
+  border: 1px solid var(--border-subtle);
 }
 
 .app-shell__main {
   min-width: 0;
 }
 
+/* Shared “topbar” theme: subtle primary tint + blur + subtle border — reused for sidebar, panels, cards */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.4rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-subtle);
   backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
@@ -253,7 +261,7 @@ a {
 .omnibar span,
 .field-block span {
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .topbar-statuses {
@@ -276,7 +284,8 @@ a {
 
 .status-pill {
   font-size: 0.82rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .status-pill--green { color: #165c43; }
@@ -285,8 +294,9 @@ a {
 .status-pill--neutral { color: var(--muted); }
 
 .user-pill {
-  background: rgb(var(--theme-primary-rgb) / 0.09);
-  color: var(--teal);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
 }
 
 .workspace {
@@ -312,10 +322,9 @@ a {
 .kanban-column,
 .drawer,
 .split-card {
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .filters-panel,
@@ -363,9 +372,11 @@ a {
 }
 
 .panel-heading--overlay > * {
-  background: rgba(255, 250, 244, 0.88);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
   padding: 0.75rem 0.9rem;
+  backdrop-filter: blur(14px);
 }
 
 .results-count {
@@ -400,8 +411,8 @@ a {
 
 .chip,
 .ghost-button {
-  background: rgba(255, 255, 255, 0.75);
-  border-color: var(--line);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .chip--active,
@@ -437,9 +448,10 @@ a {
 .result-card,
 .quick-list__item,
 .dropzone-card {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-subtle);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
 }
 
 .result-card {
@@ -481,13 +493,14 @@ a {
 .open-pill {
   display: inline-flex;
   justify-content: center;
-  background: rgba(228, 112, 60, 0.1);
-  color: var(--accent-strong);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
 
 .open-pill--open {
-  background: rgba(12, 125, 117, 0.11);
-  color: var(--teal);
+  background: rgb(var(--theme-primary-rgb) / 0.12);
+  color: var(--accent-cyan);
 }
 
 .list-sentinel {
@@ -524,9 +537,9 @@ a {
 .hero-panel {
   padding: 1.4rem;
   border-radius: 34px;
-  background:
-    linear-gradient(135deg, rgb(var(--theme-accent-rgb) / 0.18), rgba(255, 255, 255, 0.7)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgb(var(--theme-primary-rgb) / 0.08));
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .dashboard-hero {
@@ -542,8 +555,9 @@ a {
   align-content: start;
   padding: 1rem;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--line);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .dashboard-brand-card__logo {
@@ -588,7 +602,9 @@ a {
 }
 
 .stat-card--highlight {
-  background: linear-gradient(135deg, rgb(var(--theme-primary-rgb) / 0.12), rgba(255, 255, 255, 0.9));
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .dashboard-card-grid {
@@ -599,10 +615,11 @@ a {
   display: grid;
   gap: 0.8rem;
   text-align: left;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-subtle);
   border-radius: 26px;
   padding: 0.8rem;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
 }
 
 .dashboard-object-card__body {
@@ -635,8 +652,9 @@ a {
 .checklist-row {
   padding: 0.9rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid var(--line);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .kanban-grid {
@@ -672,8 +690,9 @@ a {
   margin-bottom: 1rem;
   padding: 0.8rem 0.9rem;
   border-radius: 16px;
-  background: rgba(244, 195, 106, 0.2);
-  color: #8b5b12;
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--warning);
+  color: var(--text-primary);
 }
 
 .split-card {
@@ -698,7 +717,9 @@ a {
   z-index: 40;
   padding: 1.25rem;
   border-radius: 32px 0 0 32px;
-  background: rgba(255, 250, 244, 0.94);
+  background: rgb(var(--theme-primary-rgb) / 0.06);
+  border-left: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 1rem;
@@ -727,7 +748,9 @@ a {
 }
 
 .panel-card--warning {
-  background: rgba(244, 195, 106, 0.18);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--warning);
+  backdrop-filter: blur(14px);
 }
 
 .fab-button {
@@ -755,8 +778,9 @@ a {
   gap: 1rem;
   padding: 0.75rem;
   border-radius: 28px;
-  background: rgba(255, 250, 244, 0.96);
-  box-shadow: var(--shadow);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 @media (max-width: 1200px) {
@@ -782,7 +806,7 @@ a {
     position: static;
     height: auto;
     border-right: none;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .topbar {
@@ -866,10 +890,9 @@ a {
 
 .auth-hero,
 .auth-card {
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
   border-radius: 34px;
   padding: 1.5rem;
 }
@@ -925,8 +948,9 @@ a {
   text-align: left;
   padding: 0.95rem 1rem;
   border-radius: 18px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border-subtle);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
 }
 
 .object-drawer-nav__item strong {
@@ -939,8 +963,8 @@ a {
 }
 
 .object-drawer-nav__item--active {
-  background: linear-gradient(135deg, rgba(228, 112, 60, 0.15), rgba(255, 255, 255, 0.9));
-  border-color: rgba(228, 112, 60, 0.35);
+  background: rgb(var(--theme-primary-rgb) / 0.12);
+  border-color: var(--border-subtle);
 }
 
 .drawer__panel-area {
@@ -954,14 +978,17 @@ a {
 .panel-card--nested {
   min-height: auto;
   box-shadow: none;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(14px);
 }
 
 .legal-card {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
 }
 
 .legal-card__header {
@@ -1096,9 +1123,10 @@ a {
 }
 
 .marker-icon-option {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--theme-primary-rgb) / 0.05);
+  backdrop-filter: blur(14px);
   padding: 0.65rem;
   display: grid;
   gap: 0.4rem;
@@ -1107,8 +1135,8 @@ a {
 }
 
 .marker-icon-option--active {
-  border-color: rgba(228, 112, 60, 0.45);
-  background: linear-gradient(135deg, rgba(228, 112, 60, 0.15), rgba(255, 255, 255, 0.92));
+  border-color: var(--accent-cyan);
+  background: rgb(var(--theme-primary-rgb) / 0.12);
 }
 
 .marker-icon-option__image {

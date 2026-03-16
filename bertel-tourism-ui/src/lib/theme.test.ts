@@ -40,7 +40,6 @@ describe('theme helpers', () => {
     expect(rootStyle.getPropertyValue('--theme-primary')).toBe('#2255AA');
     expect(rootStyle.getPropertyValue('--theme-accent')).toBe('#EE7744');
     expect(rootStyle.getPropertyValue('--theme-text')).toBe('#111111');
-    expect(rootStyle.getPropertyValue('--bg')).toBe('#FAF7F0');
-    expect(rootStyle.getPropertyValue('--panel')).toBe('#FFFFFF');
+    /* Shell background vars (--bg, --panel) are intentionally not set so the app keeps the dark topbar theme. */
   });
 });

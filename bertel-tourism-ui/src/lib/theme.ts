@@ -167,14 +167,12 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
   const primary = sanitizeHexColor(theme.primaryColor, defaultThemeSettings.primaryColor);
   const accent = sanitizeHexColor(theme.accentColor, defaultThemeSettings.accentColor);
   const text = sanitizeHexColor(theme.textColor, defaultThemeSettings.textColor);
-  const background = sanitizeHexColor(theme.backgroundColor, defaultThemeSettings.backgroundColor);
-  const surface = sanitizeHexColor(theme.surfaceColor, defaultThemeSettings.surfaceColor);
-  const strongSurface = mixColors(surface, '#FFFFFF', 0.35);
-  const bgStrong = mixColors(background, primary, 0.08);
   const line = mixColors(text, '#FFFFFF', 0.78);
   const accentStrong = mixColors(accent, '#2B1F18', 0.18);
   const muted = mixColors(text, '#FFFFFF', 0.36);
 
+  /* Shell background vars (--bg, --panel, etc.) are not set here so the app always uses the
+   * dark base + topbar-style surfaces from styles.css. Theme preview in Settings uses inline styles. */
   const variables: Record<string, string> = {
     '--theme-primary': primary,
     '--theme-primary-rgb': rgbChannels(primary),
@@ -182,12 +180,6 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--theme-accent-rgb': rgbChannels(accent),
     '--theme-text': text,
     '--theme-text-rgb': rgbChannels(text),
-    '--theme-bg': background,
-    '--theme-surface': surface,
-    '--bg': background,
-    '--bg-strong': bgStrong,
-    '--panel': surface,
-    '--panel-strong': strongSurface,
     '--line': line,
     '--text': text,
     '--muted': muted,

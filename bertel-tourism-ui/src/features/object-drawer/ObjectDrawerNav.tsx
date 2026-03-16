@@ -19,14 +19,17 @@ export function ObjectDrawerNav() {
 
   return (
     <nav className="object-drawer-nav" aria-label="Navigation fiche objet">
-      {sections.map((section) => (
+      {sections.map((section, index) => (
         <button
           key={section.id}
           type="button"
           className={activeSection === section.id ? 'object-drawer-nav__item object-drawer-nav__item--active' : 'object-drawer-nav__item'}
           onClick={() => setActiveSection(section.id)}
         >
-          <strong>{section.label}</strong>
+          <div className="object-drawer-nav__header">
+            <span className="object-drawer-nav__index">{String(index + 1).padStart(2, '0')}</span>
+            <strong>{section.label}</strong>
+          </div>
           <span>{section.description}</span>
         </button>
       ))}

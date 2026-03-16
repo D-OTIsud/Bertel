@@ -31,26 +31,36 @@ export function FiltersPanel({ compact = false }: FiltersPanelProps) {
   const resetAll = useExplorerStore((state) => state.resetAll);
 
   const visibleFacets = getVisibleFacets(selectedTypes);
+  const activeTypeCount = selectedTypes.length === 0 ? objectTypeOptions.length : selectedTypes.length;
+  const difficultyValue = itineraryDifficultyMin ?? 2;
 
   return (
     <div className={compact ? 'filters-panel filters-panel--compact' : 'filters-panel'}>
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Panneau 1</span>
+          <span className="eyebrow">Curation</span>
           <h2>Filtres intelligents</h2>
+          <p>Affinez le corpus avec les criteres les plus utiles au terrain et au pilotage.</p>
         </div>
         <Button type="button" variant="ghost" onClick={resetAll}>
           Reinitialiser
         </Button>
       </div>
 
+      <div className="filters-summary">
+        <div className="filters-summary__item">
+          <strong>{activeTypeCount}</strong>
+          <span>typologies actives</span>
+        </div>
+        <div className="filters-summary__item">
+          <strong>{openNow ? 'Oui' : 'Non'}</strong>
+          <span>ouvert maintenant</span>
+        </div>
+      </div>
+
       <label className="field-block">
-        <span>Recherche</span>
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Nom, ville, fiche..."
-        />
+        <span>Recherche libre</span>
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom, ville, fiche ou acteur..." />
       </label>
 
       <section className="facet-group">
@@ -115,26 +125,28 @@ export function FiltersPanel({ compact = false }: FiltersPanelProps) {
       {visibleFacets.includes('capacity') && (
         <label className="field-block">
           <span>Capacite minimale</span>
-          <input
+          <Input
             type="number"
             min={0}
             value={capacityMin ?? ''}
-            onChange={(event) =>
-              setCapacityRange(event.target.value ? Number(event.target.value) : undefined, undefined)
-            }
-            placeholder="ex: 12 lits"
+            onChange={(event) => setCapacityRange(event.target.value ? Number(event.target.value) : undefined, undefined)}
+            placeholder="Ex: 12 lits"
           />
         </label>
       )}
 
       {visibleFacets.includes('itineraryDifficulty') && (
         <label className="field-block">
-          <span>Difficulte minimale</span>
+          <div className="field-block__header">
+            <span>Difficulte minimale</span>
+            <strong>Niveau {difficultyValue}</strong>
+          </div>
           <input
             type="range"
             min={1}
             max={5}
-            value={itineraryDifficultyMin ?? 2}
+            value={difficultyValue}
+            className="range-field"
             onChange={(event) => setItineraryDifficulty(Number(event.target.value), undefined)}
           />
         </label>
@@ -142,13 +154,13 @@ export function FiltersPanel({ compact = false }: FiltersPanelProps) {
 
       {visibleFacets.includes('elevationGain') && (
         <label className="field-block">
-          <span>Denivele min.</span>
-          <input
+          <span>Denivele minimum</span>
+          <Input
             type="number"
             min={0}
             value={elevationGainMin ?? ''}
             onChange={(event) => setElevationGainMin(event.target.value ? Number(event.target.value) : undefined)}
-            placeholder="ex: 450 m"
+            placeholder="Ex: 450 m"
           />
         </label>
       )}

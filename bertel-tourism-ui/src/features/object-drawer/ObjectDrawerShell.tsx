@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AvatarStack } from '../../components/common/AvatarStack';
+import { StatusPill } from '../../components/common/StatusPill';
 import { useObjectDetailQuery } from '../../hooks/useExplorerQueries';
 import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
@@ -62,15 +63,19 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const descriptionBlocked = Boolean(descriptionLock && descriptionLock.userId !== me.userId);
   const nameBlocked = Boolean(nameLock && nameLock.userId !== me.userId);
   const address = readString((raw.location as { address?: string } | undefined)?.address);
+  const title = data?.id === objectId ? data.name : objectId;
+  const typeLabel = data?.type ?? 'Fiche';
 
   return (
-    <div key={objectId} className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+    <div key={objectId} className="drawer-shell__inner">
+      <div className="drawer-header">
         <div>
           <span className="eyebrow">Edition collaborative</span>
-          <h2 className="font-display text-lg font-semibold">{data?.id === objectId ? data.name : objectId}</h2>
+          <h2 className="font-display text-2xl font-semibold">{title}</h2>
+          <p>{typeLabel} · {address || 'Adresse a completer'}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="drawer-header__actions">
+          <StatusPill tone="neutral">{peers.length} live</StatusPill>
           <AvatarStack people={peers} />
           <Button variant="ghost" size="sm" onClick={onClose}>
             Fermer
@@ -78,14 +83,16 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         </div>
       </div>
 
-      {isDirty && <div className="inline-alert">Brouillon local non sauvegarde.</div>}
-      {typingUsers.length > 0 && <div className="inline-alert">{typingUsers.join(' · ')}</div>}
-      {isLoading && <div className="panel-card">Chargement de la fiche...</div>}
-      {isError && <div className="panel-card panel-card--warning">{(error as Error).message}</div>}
+      <div className="drawer-status-row">
+        {isDirty && <div className="inline-alert">Brouillon local non sauvegarde.</div>}
+        {typingUsers.length > 0 && <div className="inline-alert">{typingUsers.join(' · ')}</div>}
+      </div>
+      {isLoading && <div className="panel-card panel-card--nested">Chargement de la fiche...</div>}
+      {isError && <div className="panel-card panel-card--warning panel-card--nested">{(error as Error).message}</div>}
 
-      <div className="drawer__content drawer__content--modular flex flex-1 flex-col overflow-hidden">
+      <div className="drawer__content drawer__content--modular">
         <ObjectDrawerNav />
-        <section className="drawer__panel-area flex-1 overflow-y-auto">
+        <section className="drawer__panel-area">
           {activeSection === 'general' && (
             <ObjectGeneralPanel
               name={name}

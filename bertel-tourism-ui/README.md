@@ -57,23 +57,31 @@ L'API PostgreSQL est organisee avec une separation stricte :
 - **Tables** : dans le schema par defaut `public`
 - **Fonctions / endpoints RPC** : dans le schema `api`
 
-Dans `src/lib/supabase.ts`, le client Supabase est cree sans changer le schema global. Cela signifie :
+Le front expose maintenant **deux clients Supabase distincts** dans `src/lib/supabase.ts` :
 
-- **Acces tables** (inchangé) :
+- `getSupabaseClient()` : client standard pour les tables du schema `public` et le storage
+- `getApiClient()` : client dedie aux RPC du schema `api` avec `db: { schema: 'api' }`
+
+Convention a appliquer :
+
+- **Acces tables** :
 
 ```ts
-client.from('object').select('*');
+const db = getSupabaseClient();
+const { data, error } = await db.from('object').select('*');
 ```
 
-- **Appels RPC** (nouvelle convention) : toujours cibler explicitement le schema `api` :
+- **Appels RPC** :
 
 ```ts
-// Mauvais : chercherait la fonction dans le schema public
-// const { data, error } = await client.rpc('get_public_branding');
-
-// Bon : cible explicitement le schema api
-const { data, error } = await client.schema('api').rpc('get_public_branding');
+const api = getApiClient();
+const { data, error } = await api.schema('api').rpc('get_public_branding');
 ```
+
+En pratique, le projet combine les deux :
+
+- `getApiClient()` pour separer clairement les appels RPC du client base de donnees standard
+- `.schema('api')` devant `.rpc()` pour forcer le bon schema au moment de l'appel et eviter les erreurs 404/PGRST202
 
 Cette regle est appliquee partout dans le front :
 
@@ -85,6 +93,6 @@ Cette regle est appliquee partout dans le front :
 - `src/services/branding.ts` :
   - `client.schema('api').rpc('get_public_branding')`
   - `client.schema('api').rpc('get_app_branding')`
-  - `client.schema('api').rpc('upsert_app_branding', ...)`
+  - `apiClient.schema('api').rpc('upsert_app_branding', ...)`
 
-Cette convention evite les erreurs de type PGRST202/404 lorsque les fonctions sont definies dans `api` mais appelees par defaut sur `public`.
+Cette architecture evite les erreurs de type PGRST202/404 lorsque les fonctions sont definies dans `api`, tout en conservant les acces standards aux tables dans `public`.

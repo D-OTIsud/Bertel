@@ -130,20 +130,22 @@ Le branding white-label de l'UI est gere par une migration SQL dediee :
   - `api.get_app_branding()` : payload complet pour l'application authentifiee (theme + styles de marqueurs)
   - `api.upsert_app_branding(...)` : mise a jour admin des reglages de branding
 
-Dans le front-end (`bertel-tourism-ui`), ces fonctions sont appelees via Supabase en ciblant explicitement le schema `api` :
+Dans le front-end (`bertel-tourism-ui`), ces fonctions sont appelees via **un client Supabase dedie au schema `api`** :
 
 ```ts
+const api = getApiClient();
+
 // Lecture du branding public
-client.schema('api').rpc('get_public_branding');
+api.schema('api').rpc('get_public_branding');
 
 // Lecture du branding authentifie
-client.schema('api').rpc('get_app_branding');
+api.schema('api').rpc('get_app_branding');
 
 // Mise a jour du branding
-client.schema('api').rpc('upsert_app_branding', { ... });
+api.schema('api').rpc('upsert_app_branding', { ... });
 ```
 
-Le schema par defaut `public` reste utilise pour les tables (`client.from('table').select('*')`), tandis que tous les appels RPC doivent suivre le pattern `client.schema('api').rpc('nom_de_la_fonction', ...)`.
+Le schema par defaut `public` reste utilise pour les tables via `getSupabaseClient()` et `client.from('table').select('*')`, tandis que les appels RPC passent par `getApiClient()` puis `client.schema('api').rpc(...)` pour garantir que le bon schema est effectivement cible.
 
 ## 🏢 Organisation
 

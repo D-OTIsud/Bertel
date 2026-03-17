@@ -100,7 +100,7 @@ export async function getPublicBranding(): Promise<BrandingSnapshot | null> {
   }
 
   try {
-    const { data, error } = await client.rpc('get_public_branding');
+    const { data, error } = await client.schema('api').rpc('get_public_branding');
     if (error) {
       throw error;
     }
@@ -126,7 +126,7 @@ export async function getAppBranding(): Promise<BrandingSnapshot | null> {
   }
 
   try {
-    const { data, error } = await client.rpc('get_app_branding');
+    const { data, error } = await client.schema('api').rpc('get_app_branding');
     if (error) {
       throw error;
     }
@@ -173,7 +173,7 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
   }
 
   try {
-    const { data, error } = await apiClient.rpc('upsert_app_branding', {
+    const { data, error } = await apiClient.schema('api').rpc('upsert_app_branding', {
       p_brand_name: input.theme.brandName,
       p_logo_storage_path: logoStoragePath ?? null,
       p_logo_public_url: logoPublicUrl ?? null,

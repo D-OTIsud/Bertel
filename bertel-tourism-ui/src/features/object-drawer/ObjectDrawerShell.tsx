@@ -90,9 +90,9 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       {isLoading && <div className="panel-card panel-card--nested">Chargement de la fiche...</div>}
       {isError && <div className="panel-card panel-card--warning panel-card--nested">{(error as Error).message}</div>}
 
-      <div className="drawer__content drawer__content--modular">
+      <div className="drawer__content drawer__content--modular flex h-full w-full flex-col items-start gap-6 md:flex-row">
         <ObjectDrawerNav />
-        <section className="drawer__panel-area">
+        <section className="drawer__panel-area min-w-0 w-full flex-1">
           {activeSection === 'general' && (
             <ObjectGeneralPanel
               name={name}

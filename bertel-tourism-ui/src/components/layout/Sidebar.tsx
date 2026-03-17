@@ -62,6 +62,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="left"
+        showClose={false}
         aria-describedby={undefined}
         className="sidebar-shell w-full max-w-[420px] border-0 p-0 sm:max-w-[420px]"
       >

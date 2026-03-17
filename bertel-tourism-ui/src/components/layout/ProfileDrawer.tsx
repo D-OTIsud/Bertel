@@ -47,6 +47,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        showClose={false}
         aria-describedby={undefined}
         className="profile-drawer w-full max-w-[420px] border-0 p-0 sm:max-w-[420px]"
       >

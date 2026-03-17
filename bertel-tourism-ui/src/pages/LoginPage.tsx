@@ -12,7 +12,7 @@ import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { Button } from '@/components/ui/button';
 
-export function LoginPage() {
+export default function LoginPage() {
   const router = useRouter();
   const status = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
@@ -100,4 +100,4 @@ export function LoginPage() {
   );
 }
 
-export default LoginPage;
+export { LoginPage };

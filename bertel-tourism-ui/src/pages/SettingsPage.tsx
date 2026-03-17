@@ -27,7 +27,7 @@ function buildDrafts(markerStyles: ReturnType<typeof useUiStore.getState>['marke
   }, {} as Record<ObjectTypeCode, string>);
 }
 
-export function SettingsPage() {
+export default function SettingsPage() {
   const queryClient = useQueryClient();
   const role = useSessionStore((state) => state.role);
   const langPrefs = useSessionStore((state) => state.langPrefs);
@@ -534,4 +534,4 @@ export function SettingsPage() {
   );
 }
 
-export default SettingsPage;
+export { SettingsPage };

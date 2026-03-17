@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { StatusPill } from '../components/common/StatusPill';
@@ -13,7 +15,7 @@ const laneLabels: Record<CrmTask['status'], string> = {
   done: 'Termine',
 };
 
-export function CrmPage() {
+export default function CrmPage() {
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   const timelineQuery = useQuery({ queryKey: ['crm-timeline'], queryFn: listCrmTimeline });
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -145,4 +147,4 @@ export function CrmPage() {
   );
 }
 
-export default CrmPage;
+export { CrmPage };

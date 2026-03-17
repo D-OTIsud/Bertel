@@ -1,7 +1,9 @@
+"use client";
+
 import { useQuery } from '@tanstack/react-query';
 import { listAuditTemplate } from '../services/rpc';
 
-export function AuditsPage() {
+export default function AuditsPage() {
   const query = useQuery({ queryKey: ['audit-template'], queryFn: listAuditTemplate });
 
   if (query.isLoading) {
@@ -58,4 +60,4 @@ export function AuditsPage() {
   );
 }
 
-export default AuditsPage;
+export { AuditsPage };

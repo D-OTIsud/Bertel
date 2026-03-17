@@ -1,16 +1,16 @@
 import { useObjectDrawerStore, type ObjectDrawerSection } from '../../store/object-drawer-store';
 
-const sections: Array<{ id: ObjectDrawerSection; label: string; description: string }> = [
-  { id: 'general', label: 'General', description: 'Nom, description, localisation' },
-  { id: 'contacts', label: 'Contacts', description: 'Acteurs, organisations, canaux' },
-  { id: 'media', label: 'Media', description: 'Photos, tags, visibilite' },
-  { id: 'legal', label: 'Legal', description: 'Conformite, documents, alertes' },
-  { id: 'pricing', label: 'Tarifs', description: 'Prix, periodes, remises' },
-  { id: 'openings', label: 'Ouvertures', description: 'Periodes, horaires, creneaux' },
-  { id: 'rooms', label: 'Chambres', description: 'Types, capacites, inventaire' },
-  { id: 'mice', label: 'MICE', description: 'Salles, equipements, capacites' },
-  { id: 'memberships', label: 'Adhesions', description: 'Cotisations, factures, visibilite' },
-  { id: 'external-sync', label: 'Sync', description: 'APIDAE, Tourinsoft, connecteurs' },
+const sections: Array<{ id: ObjectDrawerSection; label: string }> = [
+  { id: 'general', label: 'General' },
+  { id: 'contacts', label: 'Contacts' },
+  { id: 'media', label: 'Media' },
+  { id: 'legal', label: 'Legal' },
+  { id: 'pricing', label: 'Tarifs' },
+  { id: 'openings', label: 'Ouvertures' },
+  { id: 'rooms', label: 'Chambres' },
+  { id: 'mice', label: 'MICE' },
+  { id: 'memberships', label: 'Adhesions' },
+  { id: 'external-sync', label: 'Sync' },
 ];
 
 export function ObjectDrawerNav() {
@@ -30,7 +30,6 @@ export function ObjectDrawerNav() {
             <span className="object-drawer-nav__index">{String(index + 1).padStart(2, '0')}</span>
             <strong>{section.label}</strong>
           </div>
-          <span>{section.description}</span>
         </button>
       ))}
     </nav>

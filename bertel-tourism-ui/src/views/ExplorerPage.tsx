@@ -4,6 +4,7 @@ import { Suspense, lazy } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { useExplorerInfiniteQuery, useMapObjectsQuery } from '../hooks/useExplorerQueries';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { useUiStore } from '../store/ui-store';
 
@@ -23,7 +24,10 @@ function MapFallback() {
   );
 }
 
+const MOBILE_BREAKPOINT = '(max-width: 768px)';
+
 export default function ExplorerPage() {
+  const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
   const mobileSheetOpen = useUiStore((state) => state.mobileSheetOpen);
   const setMobileSheetOpen = useUiStore((state) => state.setMobileSheetOpen);
   const pageQuery = useExplorerInfiniteQuery();
@@ -65,42 +69,44 @@ export default function ExplorerPage() {
         </div>
       </article>
 
-      <section className="explorer-layout desktop-explorer-layout">
-        <FiltersPanel />
-        <ResultsList
-          cards={cards}
-          loading={pageQuery.isLoading}
-          hasNextPage={Boolean(pageQuery.hasNextPage)}
-          fetchNextPage={pageQuery.fetchNextPage}
-          isFetchingNextPage={pageQuery.isFetchingNextPage}
-          peers={peers}
-        />
-        <Suspense fallback={<MapFallback />}>
-          <MapPanel objects={mapQuery.data ?? []} />
-        </Suspense>
-      </section>
-
-      <section className="explorer-layout mobile-explorer-layout">
-        <Suspense fallback={<MapFallback />}>
-          <MapPanel objects={mapQuery.data ?? []} />
-        </Suspense>
-        <button type="button" className="fab-button" onClick={() => setMobileSheetOpen(!mobileSheetOpen)}>
-          {mobileSheetOpen ? 'Fermer la liste' : 'Liste & filtres'}
-        </button>
-        {mobileSheetOpen && (
-          <div className="mobile-sheet">
-            <FiltersPanel compact />
-            <ResultsList
-              cards={cards}
-              loading={pageQuery.isLoading}
-              hasNextPage={Boolean(pageQuery.hasNextPage)}
-              fetchNextPage={pageQuery.fetchNextPage}
-              isFetchingNextPage={pageQuery.isFetchingNextPage}
-              peers={peers}
-            />
-          </div>
-        )}
-      </section>
+      {isMobile ? (
+        <section className="explorer-layout mobile-explorer-layout">
+          <Suspense fallback={<MapFallback />}>
+            <MapPanel objects={mapQuery.data ?? []} />
+          </Suspense>
+          <button type="button" className="fab-button" onClick={() => setMobileSheetOpen(!mobileSheetOpen)}>
+            {mobileSheetOpen ? 'Fermer la liste' : 'Liste & filtres'}
+          </button>
+          {mobileSheetOpen && (
+            <div className="mobile-sheet">
+              <FiltersPanel compact />
+              <ResultsList
+                cards={cards}
+                loading={pageQuery.isLoading}
+                hasNextPage={Boolean(pageQuery.hasNextPage)}
+                fetchNextPage={pageQuery.fetchNextPage}
+                isFetchingNextPage={pageQuery.isFetchingNextPage}
+                peers={peers}
+              />
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="explorer-layout desktop-explorer-layout">
+          <FiltersPanel />
+          <ResultsList
+            cards={cards}
+            loading={pageQuery.isLoading}
+            hasNextPage={Boolean(pageQuery.hasNextPage)}
+            fetchNextPage={pageQuery.fetchNextPage}
+            isFetchingNextPage={pageQuery.isFetchingNextPage}
+            peers={peers}
+          />
+          <Suspense fallback={<MapFallback />}>
+            <MapPanel objects={mapQuery.data ?? []} />
+          </Suspense>
+        </section>
+      )}
     </section>
   );
 }

@@ -57,3 +57,5 @@ export function AuditsPage() {
     </section>
   );
 }
+
+export default AuditsPage;

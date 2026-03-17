@@ -8,7 +8,7 @@ const labels = {
   ready: 'Pret a exporter',
 };
 
-export function PublicationsPage() {
+export export function PublicationsPage() {
   const query = useQuery({ queryKey: ['publication-board'], queryFn: listPublicationBoard });
 
   if (query.isLoading) {
@@ -49,3 +49,5 @@ export function PublicationsPage() {
     </section>
   );
 }
+
+export default PublicationsPage;

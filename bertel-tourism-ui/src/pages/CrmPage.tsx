@@ -144,3 +144,5 @@ export function CrmPage() {
     </section>
   );
 }
+
+export default CrmPage;

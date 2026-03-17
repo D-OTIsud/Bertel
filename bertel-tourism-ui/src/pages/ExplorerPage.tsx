@@ -102,3 +102,5 @@ export function ExplorerPage() {
     </section>
   );
 }
+
+export default ExplorerPage;

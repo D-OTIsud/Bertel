@@ -45,35 +45,41 @@ function loadSvgImage(svg: string): Promise<HTMLImageElement> {
 function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode, MarkerStyle> }) {
   const { map } = useMap();
 
-  const syncImages = useCallback(async () => {
-    if (!map?.getStyle()) return;
-    await Promise.all(
-      objectTypeOptions.map(async ({ code }) => {
-        const imageId = getMarkerImageId(code);
-        const style = markerStyles[code] ?? defaultMarkerStyles[code];
-        const svg = buildMarkerSvg(style);
-        const image = await loadSvgImage(svg);
-        if (map.hasImage(imageId)) {
-          map.updateImage(imageId, image);
-        } else {
-          map.addImage(imageId, image, { pixelRatio: 2 });
-        }
-      }),
-    );
-  }, [map, markerStyles]);
-
   useEffect(() => {
     if (!map) return;
+    let isMounted = true;
+
+    const syncImages = async () => {
+      if (!isMounted || !map?.getStyle()) return;
+      await Promise.all(
+        objectTypeOptions.map(async ({ code }) => {
+          if (!isMounted) return;
+          const imageId = getMarkerImageId(code);
+          const style = markerStyles[code] ?? defaultMarkerStyles[code];
+          const svg = buildMarkerSvg(style);
+          const image = await loadSvgImage(svg);
+          if (!isMounted) return;
+          if (map.hasImage(imageId)) {
+            map.updateImage(imageId, image);
+          } else {
+            map.addImage(imageId, image, { pixelRatio: 2 });
+          }
+        }),
+      );
+    };
+
+    const onLoad = () => void syncImages();
     if (map.isStyleLoaded()) {
       void syncImages();
-      return;
+    } else {
+      map.once('styledata', onLoad);
     }
-    const onLoad = () => void syncImages();
-    map.once('styledata', onLoad);
+
     return () => {
+      isMounted = false;
       map.off('styledata', onLoad);
     };
-  }, [map, syncImages]);
+  }, [map, markerStyles]);
 
   return null;
 }
@@ -87,6 +93,7 @@ function MapDrawControl() {
 
   useEffect(() => {
     if (!map) return;
+    let isMounted = true;
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
@@ -95,6 +102,7 @@ function MapDrawControl() {
     drawRef.current = draw;
 
     const syncDraw = () => {
+      if (!isMounted) return;
       const features = draw.getAll().features;
       const geom = features[0]?.geometry;
       if (!geom || geom.type !== 'Polygon') {
@@ -109,6 +117,7 @@ function MapDrawControl() {
     };
 
     const onLoad = () => {
+      if (!isMounted) return;
       map.addControl(draw as unknown as { onAdd: () => HTMLElement; onRemove: () => void }, 'top-left');
       (map as unknown as { on: (e: string, cb: () => void) => void }).on('draw.create', syncDraw);
       (map as unknown as { on: (e: string, cb: () => void) => void }).on('draw.update', syncDraw);
@@ -123,6 +132,7 @@ function MapDrawControl() {
     else map.once('load', onLoad);
 
     return () => {
+      isMounted = false;
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.create', syncDraw);
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.update', syncDraw);
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.delete', resetSpatialFilter);

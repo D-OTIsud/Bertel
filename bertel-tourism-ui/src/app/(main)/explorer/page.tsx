@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ExplorerPage as ExplorerPageComponent } from '@/pages/ExplorerPage';
+import ExplorerPageComponent from '@/pages/ExplorerPage';
 import { useExplorerUrlSync } from '@/hooks/useExplorerUrlSync';
 import { useSessionStore } from '@/store/session-store';
 

@@ -20,7 +20,7 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || !hasNextPage) {
+    if (!node || !hasNextPage || isFetchingNextPage) {
       return undefined;
     }
 
@@ -35,7 +35,7 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const liveCardIds = useMemo(() => new Set(cards.slice(0, peers.length).map((card) => card.id)), [cards, peers.length]);
 

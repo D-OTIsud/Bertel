@@ -36,6 +36,7 @@ __pycache__/
 # Node
 node_modules/
 .npm-cache/
+.next/
 
 # Test artifacts
 test_results.txt

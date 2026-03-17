@@ -90,6 +90,8 @@ function MapDrawControl() {
   const setPolygon = useExplorerStore((state) => state.setPolygon);
   const resetSpatialFilter = useExplorerStore((state) => state.resetSpatialFilter);
   const drawRef = useRef<MapboxDraw | null>(null);
+  const lastPolygonRef = useRef<string | null>(null);
+  const drawDebounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!map) return;
@@ -103,6 +105,11 @@ function MapDrawControl() {
 
     const syncDraw = () => {
       if (!isMounted) return;
+      if (drawDebounceRef.current != null) {
+        window.clearTimeout(drawDebounceRef.current);
+      }
+      drawDebounceRef.current = window.setTimeout(() => {
+        if (!isMounted) return;
       const features = draw.getAll().features;
       const geom = features[0]?.geometry;
       if (!geom || geom.type !== 'Polygon') {
@@ -113,7 +120,13 @@ function MapDrawControl() {
         type: 'Polygon',
         coordinates: geom.coordinates as number[][][],
       };
-      setPolygon(typed, polygonToBounds(typed));
+        const nextKey = JSON.stringify(typed.coordinates);
+        if (lastPolygonRef.current === nextKey) {
+          return;
+        }
+        lastPolygonRef.current = nextKey;
+        setPolygon(typed, polygonToBounds(typed));
+      }, 150);
     };
 
     const onLoad = () => {
@@ -133,6 +146,10 @@ function MapDrawControl() {
 
     return () => {
       isMounted = false;
+      if (drawDebounceRef.current != null) {
+        window.clearTimeout(drawDebounceRef.current);
+        drawDebounceRef.current = null;
+      }
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.create', syncDraw);
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.update', syncDraw);
       (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.delete', resetSpatialFilter);

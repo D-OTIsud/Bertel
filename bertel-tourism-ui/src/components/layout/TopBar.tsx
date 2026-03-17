@@ -90,7 +90,6 @@ export function TopBar() {
 
   async function handleSignOut() {
     await signOut();
-    router.replace('/login');
   }
 
   const statusTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';

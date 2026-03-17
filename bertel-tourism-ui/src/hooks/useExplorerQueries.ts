@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { getObjectResource, listExplorerPage, listMapObjects } from '../services/rpc';
+import { shallow } from 'zustand/shallow';
 
 export function useExplorerInfiniteQuery() {
   const filters = useExplorerStore((state) => ({
@@ -19,7 +20,7 @@ export function useExplorerInfiniteQuery() {
     bbox: state.bbox,
     polygon: state.polygon,
     view: state.view,
-  }));
+  }), shallow);
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
   return useInfiniteQuery({
@@ -52,7 +53,7 @@ export function useMapObjectsQuery() {
     bbox: state.bbox,
     polygon: state.polygon,
     view: state.view,
-  }));
+  }), shallow);
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
   return useQuery({

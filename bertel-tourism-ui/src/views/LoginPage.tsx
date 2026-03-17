@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { env } from '../lib/env';
 import { loginSchema, type LoginFormValues } from '../lib/schemas';
 import { signInWithGoogle } from '../services/auth';
@@ -14,7 +14,9 @@ import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const status = useSessionStore((state) => state.status);
+  const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
   const errorMessage = useSessionStore((state) => state.errorMessage);
   const setGuest = useSessionStore((state) => state.setGuest);
@@ -28,8 +30,14 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (status === 'ready') router.replace('/');
-  }, [status, router]);
+    if (status !== 'ready') return;
+    const from = searchParams?.get('from');
+    if (from) {
+      router.replace(from);
+      return;
+    }
+    router.replace(role === 'owner' ? '/dashboard' : '/explorer');
+  }, [role, router, searchParams, status]);
 
   useEffect(() => {
     if (errorMessage) toast.error(errorMessage);

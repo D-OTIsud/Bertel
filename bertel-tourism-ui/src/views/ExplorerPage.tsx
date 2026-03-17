@@ -25,7 +25,7 @@ function MapFallback() {
   );
 }
 
-const MOBILE_BREAKPOINT = '(max-width: 768px)';
+const COMPACT_EXPLORER_BREAKPOINT = '(max-width: 1180px)';
 type ExplorerPanelKey = 'filters' | 'results' | 'map';
 
 const panelLabels: Record<ExplorerPanelKey, string> = {
@@ -61,7 +61,7 @@ function PanelPlaceholder({ label, onRestore }: { label: string; onRestore: () =
 }
 
 export default function ExplorerPage() {
-  const isMobile = useMediaQuery(MOBILE_BREAKPOINT);
+  const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   const [expandedPanel, setExpandedPanel] = useState<ExplorerPanelKey | null>(null);
   const pageQuery = useExplorerInfiniteQuery();
@@ -88,7 +88,7 @@ export default function ExplorerPage() {
       : null;
 
     if (panel === 'filters') {
-      return <FiltersPanel headerActions={headerActions} compact={isMobile} />;
+      return <FiltersPanel headerActions={headerActions} compact={isCompactExplorer} />;
     }
 
     if (panel === 'results') {
@@ -134,7 +134,7 @@ export default function ExplorerPage() {
         </article>
       </div>
 
-      {isMobile ? (
+      {isCompactExplorer ? (
         <section className="explorer-layout explorer-layout--mobile">
           <nav className="explorer-mobile-tabs" aria-label="Panneaux mobile explorateur">
             {(['filters', 'results', 'map'] as ExplorerPanelKey[]).map((panel) => (

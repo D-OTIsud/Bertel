@@ -20,11 +20,6 @@ import { buildObjectFeatureCollection, type MapFeatureProperties } from './map-s
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_ICON_LAYER_ID = 'objects-icons';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
-const mapLayerLabels = {
-  classic: 'Plan',
-  satellite: 'Satellite',
-  topo: 'Topo',
-} as const;
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
   const coords = polygon.coordinates[0] ?? [];
@@ -229,11 +224,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   return (
     <section className="map-panel panel-card panel-card--map">
       <div className="panel-heading panel-heading--overlay">
-        <div>
-          <span className="eyebrow">Atlas cartographique</span>
-          <h2>Carte interactive</h2>
-          <p>Changez de fond, dessinez une zone, puis ouvrez une fiche sans quitter le contexte spatial.</p>
-        </div>
         <div className="map-panel__header-actions">
           {headerActions}
           <div className="segmented-control">
@@ -314,21 +304,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             </Popup>
           )}
         </Map>
-      </div>
-
-      <div className="map-panel__meta">
-        <div>
-          <strong>{objects.length}</strong>
-          <span>points visibles</span>
-        </div>
-        <div>
-          <strong>{mapLayerLabels[mapLayer]}</strong>
-          <span>fond actif</span>
-        </div>
-        <div>
-          <strong>Zone libre</strong>
-          <span>dessinez un polygone pour filtrer</span>
-        </div>
       </div>
     </section>
   );

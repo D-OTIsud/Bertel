@@ -23,20 +23,27 @@ export function useExplorerUrlSync() {
   }, [searchParams, setFiltersFromUrl]);
 
   // 2. Store -> URL : On s'abonne au store Zustand DIRECTEMENT (évite les boucles React)
+  // Debounce 300ms pour ne pas lancer router.replace sur chaque frappe du champ recherche
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
     const unsubscribe = useExplorerStore.subscribe((state) => {
       const next = buildSearchParams(state);
       const str = next.toString();
 
-      // La sécurité anti-boucle : si l'URL est la même, on s'arrête
       if (lastUrlRef.current === str) return;
 
-      lastUrlRef.current = str;
-      const url = str ? `/explorer?${str}` : '/explorer';
-      router.replace(url, { scroll: false });
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        lastUrlRef.current = str;
+        const url = str ? `/explorer?${str}` : '/explorer';
+        router.replace(url, { scroll: false });
+      }, 300);
     });
 
-    // Nettoyage de l'abonnement quand le composant est démonté
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(debounceTimer);
+    };
   }, [router]);
 }

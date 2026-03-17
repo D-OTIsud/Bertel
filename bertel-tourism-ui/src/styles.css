@@ -175,7 +175,6 @@ a {
 .sidebar-brand p,
 .topbar-heading p,
 .result-card__footer-copy span,
-.map-panel__meta span,
 .theme-preview-card span,
 .marker-settings-card__header p,
 .object-drawer-nav__item span {
@@ -270,7 +269,6 @@ a {
 .filters-summary__item,
 .dashboard-metric-card,
 .dashboard-brand-card__stats > div,
-.map-panel__meta > div,
 .status-pill,
 .open-pill,
 .ghost-button,
@@ -417,7 +415,6 @@ a {
 
 .sidebar-meta span,
 .dashboard-brand-card__stats span,
-.map-panel__meta span,
 .filters-summary__item span,
 .dashboard-metric-card span,
 .topbar-user span,
@@ -436,7 +433,6 @@ a {
 
 .sidebar-meta strong,
 .dashboard-brand-card__stats strong,
-.map-panel__meta strong,
 .filters-summary__item strong,
 .dashboard-metric-card strong,
 .topbar-user strong {
@@ -575,7 +571,6 @@ a {
 .crm-hero__stats,
 .explorer-hero__stats,
 .dashboard-brand-card__stats,
-.map-panel__meta,
 .filters-summary,
 .quick-list,
 .legal-card__grid,
@@ -599,7 +594,6 @@ a {
 
 .filters-summary,
 .dashboard-brand-card__stats,
-.map-panel__meta,
 .stats-grid,
 .dashboard-stats-grid,
 .kanban-grid {
@@ -608,8 +602,7 @@ a {
 
 .filters-summary__item,
 .dashboard-metric-card,
-.stat-card,
-.map-panel__meta > div {
+.stat-card {
   padding: 0.95rem 1rem;
   border-radius: 22px;
 }
@@ -943,16 +936,6 @@ a {
 .map-canvas {
   position: relative;
   min-height: 660px;
-}
-
-.map-panel__meta {
-  position: absolute;
-  inset: auto 1rem 1rem 1rem;
-  z-index: 3;
-}
-
-.map-panel__meta > div {
-  border-radius: 20px;
 }
 
 .map-popup {
@@ -1355,7 +1338,6 @@ a {
   .dashboard-hero__metrics,
   .crm-hero__stats,
   .filters-summary,
-  .map-panel__meta,
   .stats-grid,
   .dashboard-stats-grid,
   .crm-layout,
@@ -1997,7 +1979,6 @@ body::after {
 .filters-summary__item,
 .dashboard-metric-card,
 .stat-card,
-.map-panel__meta > div,
 .sidebar-brand,
 .sidebar-meta,
 .profile-drawer__card,

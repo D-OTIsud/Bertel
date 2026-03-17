@@ -1,26 +1,58 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { getObjectResource, listExplorerPage, listMapObjects } from '../services/rpc';
-import { shallow } from 'zustand/shallow';
 
 export function useExplorerInfiniteQuery() {
-  const filters = useExplorerStore((state) => ({
-    selectedTypes: state.selectedTypes,
-    search: state.search,
-    labels: state.labels,
-    amenities: state.amenities,
-    openNow: state.openNow,
-    capacityMetricCode: state.capacityMetricCode,
-    capacityMin: state.capacityMin,
-    capacityMax: state.capacityMax,
-    itineraryDifficultyMin: state.itineraryDifficultyMin,
-    itineraryDifficultyMax: state.itineraryDifficultyMax,
-    elevationGainMin: state.elevationGainMin,
-    bbox: state.bbox,
-    polygon: state.polygon,
-    view: state.view,
-  }), shallow);
+  const selectedTypes = useExplorerStore((state) => state.selectedTypes);
+  const search = useExplorerStore((state) => state.search);
+  const labels = useExplorerStore((state) => state.labels);
+  const amenities = useExplorerStore((state) => state.amenities);
+  const openNow = useExplorerStore((state) => state.openNow);
+  const capacityMetricCode = useExplorerStore((state) => state.capacityMetricCode);
+  const capacityMin = useExplorerStore((state) => state.capacityMin);
+  const capacityMax = useExplorerStore((state) => state.capacityMax);
+  const itineraryDifficultyMin = useExplorerStore((state) => state.itineraryDifficultyMin);
+  const itineraryDifficultyMax = useExplorerStore((state) => state.itineraryDifficultyMax);
+  const elevationGainMin = useExplorerStore((state) => state.elevationGainMin);
+  const bbox = useExplorerStore((state) => state.bbox);
+  const polygon = useExplorerStore((state) => state.polygon);
+  const view = useExplorerStore((state) => state.view);
+  const filters = useMemo(
+    () => ({
+      selectedTypes,
+      search,
+      labels,
+      amenities,
+      openNow,
+      capacityMetricCode,
+      capacityMin,
+      capacityMax,
+      itineraryDifficultyMin,
+      itineraryDifficultyMax,
+      elevationGainMin,
+      bbox,
+      polygon,
+      view,
+    }),
+    [
+      amenities,
+      bbox,
+      capacityMax,
+      capacityMetricCode,
+      capacityMin,
+      elevationGainMin,
+      itineraryDifficultyMax,
+      itineraryDifficultyMin,
+      labels,
+      openNow,
+      polygon,
+      search,
+      selectedTypes,
+      view,
+    ],
+  );
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
   return useInfiniteQuery({
@@ -38,22 +70,54 @@ export function useExplorerInfiniteQuery() {
 }
 
 export function useMapObjectsQuery() {
-  const filters = useExplorerStore((state) => ({
-    selectedTypes: state.selectedTypes,
-    search: state.search,
-    labels: state.labels,
-    amenities: state.amenities,
-    openNow: state.openNow,
-    capacityMetricCode: state.capacityMetricCode,
-    capacityMin: state.capacityMin,
-    capacityMax: state.capacityMax,
-    itineraryDifficultyMin: state.itineraryDifficultyMin,
-    itineraryDifficultyMax: state.itineraryDifficultyMax,
-    elevationGainMin: state.elevationGainMin,
-    bbox: state.bbox,
-    polygon: state.polygon,
-    view: state.view,
-  }), shallow);
+  const selectedTypes = useExplorerStore((state) => state.selectedTypes);
+  const search = useExplorerStore((state) => state.search);
+  const labels = useExplorerStore((state) => state.labels);
+  const amenities = useExplorerStore((state) => state.amenities);
+  const openNow = useExplorerStore((state) => state.openNow);
+  const capacityMetricCode = useExplorerStore((state) => state.capacityMetricCode);
+  const capacityMin = useExplorerStore((state) => state.capacityMin);
+  const capacityMax = useExplorerStore((state) => state.capacityMax);
+  const itineraryDifficultyMin = useExplorerStore((state) => state.itineraryDifficultyMin);
+  const itineraryDifficultyMax = useExplorerStore((state) => state.itineraryDifficultyMax);
+  const elevationGainMin = useExplorerStore((state) => state.elevationGainMin);
+  const bbox = useExplorerStore((state) => state.bbox);
+  const polygon = useExplorerStore((state) => state.polygon);
+  const view = useExplorerStore((state) => state.view);
+  const filters = useMemo(
+    () => ({
+      selectedTypes,
+      search,
+      labels,
+      amenities,
+      openNow,
+      capacityMetricCode,
+      capacityMin,
+      capacityMax,
+      itineraryDifficultyMin,
+      itineraryDifficultyMax,
+      elevationGainMin,
+      bbox,
+      polygon,
+      view,
+    }),
+    [
+      amenities,
+      bbox,
+      capacityMax,
+      capacityMetricCode,
+      capacityMin,
+      elevationGainMin,
+      itineraryDifficultyMax,
+      itineraryDifficultyMin,
+      labels,
+      openNow,
+      polygon,
+      search,
+      selectedTypes,
+      view,
+    ],
+  );
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
   return useQuery({

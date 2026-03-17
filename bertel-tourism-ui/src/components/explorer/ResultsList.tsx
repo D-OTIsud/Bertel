@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
-import type { ObjectCard, PresenceMember } from '../../types/domain';
-import { formatObjectPrice, formatObjectRating } from '../../utils/format';
-import { AvatarStack } from '../common/AvatarStack';
+import type { ObjectCard } from '../../types/domain';
 
 interface ResultsListProps {
   cards: ObjectCard[];
@@ -11,11 +9,10 @@ interface ResultsListProps {
   hasNextPage: boolean;
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
-  peers: PresenceMember[];
   headerActions?: ReactNode;
 }
 
-export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetchingNextPage, peers, headerActions }: ResultsListProps) {
+export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetchingNextPage, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -37,8 +34,6 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
     observer.observe(node);
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
-
-  const liveCardIds = useMemo(() => new Set(cards.slice(0, peers.length).map((card) => card.id)), [cards, peers.length]);
 
   return (
     <section className="results-panel">
@@ -73,23 +68,15 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
             <div className="result-card__body">
               <div className="result-card__title-row">
                 <div>
-                  <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                   <h3>{card.name}</h3>
+                  <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                 </div>
-                {liveCardIds.has(card.id) ? <AvatarStack people={peers.slice(0, 2)} /> : null}
-              </div>
-              <p className="result-card__excerpt">{card.description}</p>
-              <div className="result-meta-grid">
-                <span>{formatObjectRating(card)}</span>
-                <span>{formatObjectPrice(card)}</span>
-                <span>{card.review_count ? `${card.review_count} avis` : 'Sans volume avis'}</span>
-                <span>{card.render?.updated_at ?? 'Mise a jour recente'}</span>
+                {Array.isArray(card.labels) && card.labels.length > 0 ? (
+                  <span className="result-card__label-badge">{card.labels[0]}</span>
+                ) : null}
               </div>
               <div className="result-card__footer">
-                <div className="result-card__footer-copy">
-                  <strong>{card.location?.address ?? 'Adresse a completer'}</strong>
-                  <span>Ouvrir la fiche detaillee</span>
-                </div>
+                <strong className="result-card__location">{card.location?.address ?? 'Adresse a completer'}</strong>
                 <StatusPill tone={card.open_now ? 'green' : 'neutral'}>{card.open_now ? 'Ouvert' : 'Fermeture'}</StatusPill>
               </div>
             </div>

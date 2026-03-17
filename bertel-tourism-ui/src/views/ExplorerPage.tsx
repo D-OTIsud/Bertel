@@ -66,7 +66,7 @@ export default function ExplorerPage() {
   const [expandedPanel, setExpandedPanel] = useState<ExplorerPanelKey | null>(null);
   const pageQuery = useExplorerInfiniteQuery();
   const mapQuery = useMapObjectsQuery();
-  const { peers } = usePresenceRoom('room:explorer', { syncGlobalStatus: true });
+  usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
   const cards = useMemo(
     () => pageQuery.data?.pages.flatMap((page) => page.data) ?? [],
@@ -98,7 +98,6 @@ export default function ExplorerPage() {
           hasNextPage={Boolean(pageQuery.hasNextPage)}
           fetchNextPage={pageQuery.fetchNextPage}
           isFetchingNextPage={pageQuery.isFetchingNextPage}
-          peers={peers}
           headerActions={headerActions}
         />
       );

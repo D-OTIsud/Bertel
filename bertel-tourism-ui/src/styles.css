@@ -55,6 +55,8 @@
   --radius-lg: 24px;
   --radius-md: 18px;
   --radius-sm: 14px;
+  --shell-chrome-height: 140px;
+  --workspace-padding-y: 2.25rem;
 }
 
 * {
@@ -1914,12 +1916,20 @@ body::after {
 .explorer-layout--desktop {
   display: grid;
   width: 100%;
-  height: 100%;
+  height: calc(100vh - var(--shell-chrome-height) - var(--workspace-padding-y));
+  max-height: calc(100vh - var(--shell-chrome-height) - var(--workspace-padding-y));
   min-height: 0;
   min-width: 0;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 4fr);
   gap: 0.9rem;
   align-items: stretch;
+}
+
+@supports (height: 100dvh) {
+  .explorer-layout--desktop {
+    height: calc(100dvh - var(--shell-chrome-height) - var(--workspace-padding-y));
+    max-height: calc(100dvh - var(--shell-chrome-height) - var(--workspace-padding-y));
+  }
 }
 
 .explorer-layout__panel {

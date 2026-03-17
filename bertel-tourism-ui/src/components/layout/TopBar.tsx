@@ -1,60 +1,11 @@
-import { usePathname } from 'next/navigation';
-import { CalendarDays, LogOut, Search, Users, Wifi, WifiOff } from 'lucide-react';
-import { signOut } from '../../services/auth';
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { Clock3, Menu, Search, UserCircle2 } from 'lucide-react';
 import { useSessionStore } from '../../store/session-store';
-import { useUiStore } from '../../store/ui-store';
-import { StatusPill } from '../common/StatusPill';
-import { Button } from '@/components/ui/button';
+import { useThemeStore } from '../../store/theme-store';
 import { Input } from '@/components/ui/input';
-
-const pageMeta = [
-  {
-    path: '/explorer',
-    eyebrow: 'Atlas',
-    title: 'Explorateur tourisme',
-    description: 'Recherchez les fiches, comparez les offres et ouvrez les objets directement depuis la carte.',
-  },
-  {
-    path: '/dashboard',
-    eyebrow: 'Overview',
-    title: 'Tableau de bord reseau',
-    description: 'Suivez le portefeuille, la collaboration live et la preparation des publications.',
-  },
-  {
-    path: '/crm',
-    eyebrow: 'CRM',
-    title: 'Pipeline de suivi',
-    description: 'Coordonnez les relances, les notes et les prochaines actions avec les equipes terrain.',
-  },
-  {
-    path: '/moderation',
-    eyebrow: 'Moderation',
-    title: 'Validation editoriale',
-    description: 'Revoyez les changements entrants et gardez le catalogue public parfaitement aligne.',
-  },
-  {
-    path: '/audits',
-    eyebrow: 'Audits',
-    title: 'Operations terrain',
-    description: 'Auditez, signalez et faites circuler les observations plus vite entre les equipes.',
-  },
-  {
-    path: '/publications',
-    eyebrow: 'Publishing',
-    title: 'Board publications',
-    description: 'Faites passer les contenus du brief a lexport dans un flux plus leger.',
-  },
-  {
-    path: '/settings',
-    eyebrow: 'Settings',
-    title: 'Branding et runtime',
-    description: 'Ajustez le theme, les marqueurs et les comportements de la plateforme.',
-  },
-];
-
-function resolvePageMeta(pathname: string | null) {
-  return pageMeta.find((entry) => pathname?.startsWith(entry.path)) ?? pageMeta[0];
-}
 
 function initialsFromName(value: string | null | undefined): string {
   const parts = String(value ?? '')
@@ -70,76 +21,93 @@ function initialsFromName(value: string | null | undefined): string {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
-export function TopBar() {
-  const pathname = usePathname();
-  const role = useSessionStore((state) => state.role);
+interface TopBarProps {
+  onOpenMenu: () => void;
+  onOpenProfile: () => void;
+}
+
+export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
   const userName = useSessionStore((state) => state.userName);
-  const sessionStatus = useSessionStore((state) => state.status);
-  const demoMode = useSessionStore((state) => state.demoMode);
-  const networkStatus = useUiStore((state) => state.networkStatus);
-  const liveUsersCount = useUiStore((state) => state.liveUsersCount);
-  const meta = resolvePageMeta(pathname);
+  const brandName = useThemeStore((state) => state.theme.brandName);
+  const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
-  const currentDate = new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-  }).format(new Date());
+  const [now, setNow] = useState(() => new Date());
 
-  async function handleSignOut() {
-    await signOut();
-  }
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const statusTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
+  const dateLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }).format(now),
+    [now],
+  );
+  const timeLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(now),
+    [now],
+  );
 
   return (
     <header className="topbar-shell">
-      <div className="topbar-heading">
-        <span className="eyebrow">{meta.eyebrow}</span>
-        <div className="topbar-heading__row">
-          <h1>{meta.title}</h1>
-          <span className="topbar-date">
-            <CalendarDays className="h-4 w-4" />
-            {currentDate}
-          </span>
-        </div>
-        <p>{meta.description}</p>
+      <div className="topbar-zone topbar-zone--menu">
+        <button type="button" className="topbar-icon-button" aria-label="Ouvrir le menu principal" onClick={onOpenMenu}>
+          <Menu className="h-5 w-5" />
+        </button>
       </div>
 
-      <label className="topbar-search" aria-label="Recherche globale">
-        <Search className="h-4 w-4" />
-        <Input
-          type="search"
-          placeholder="Rechercher une fiche, une ville, un acteur ou une publication..."
-          className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
-      </label>
+      <div className="topbar-zone topbar-zone--brand">
+        <Link href="/explorer" className="topbar-brand" aria-label="Retour a l explorateur">
+          {logoUrl ? (
+            <img src={logoUrl} alt={brandName} className="topbar-brand__logo" />
+          ) : (
+            <span className="topbar-brand__mark">{brandName.slice(0, 1)}</span>
+          )}
+          <div className="topbar-brand__copy">
+            <strong>{brandName}</strong>
+            <span>Explorer</span>
+          </div>
+        </Link>
+      </div>
 
-      <div className="topbar-actions">
-        <StatusPill tone={statusTone}>{networkStatus}</StatusPill>
-        <StatusPill tone="neutral">{liveUsersCount} live</StatusPill>
-        <div className="topbar-user">
-          <span className="topbar-user__avatar">{initials}</span>
+      <div className="topbar-zone topbar-zone--search">
+        <label className="topbar-search" aria-label="Recherche globale">
+          <Search className="h-4 w-4" />
+          <Input
+            type="search"
+            placeholder="Rechercher une fiche, une ville ou une action..."
+            className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+        </label>
+      </div>
+
+      <div className="topbar-zone topbar-zone--clock">
+        <div className="topbar-clock">
+          <Clock3 className="h-4 w-4" />
           <div>
-            <strong>{userLabel}</strong>
-            <span>
-              <Users className="h-3.5 w-3.5" />
-              {role ?? 'guest'} · {sessionStatus}
-            </span>
+            <strong>{timeLabel}</strong>
+            <span>{dateLabel}</span>
           </div>
         </div>
-        {!demoMode && sessionStatus === 'ready' ? (
-          <Button variant="ghost" size="sm" onClick={() => void handleSignOut()}>
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
-        ) : (
-          <span className="topbar-mode">
-            {networkStatus === 'connected' ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-            {demoMode ? 'Demo workspace' : 'Secure workspace'}
+      </div>
+
+      <div className="topbar-zone topbar-zone--profile">
+        <button type="button" className="topbar-user-button" aria-label="Ouvrir le profil et les parametres" onClick={onOpenProfile}>
+          <span className="topbar-user__avatar">{initials}</span>
+          <span className="sr-only">
+            Profil de {userLabel}
           </span>
-        )}
+          <UserCircle2 className="h-4 w-4" />
+        </button>
       </div>
     </header>
   );

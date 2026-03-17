@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { Layer, Map, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -182,9 +182,10 @@ function MapDrawControl() {
 
 interface MapPanelProps {
   objects: MapObject[];
+  headerActions?: ReactNode;
 }
 
-export function MapPanel({ objects }: MapPanelProps) {
+export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const mapLayer = useUiStore((state) => state.mapLayer);
   const markerStyles = useUiStore((state) => state.markerStyles);
   const setMapLayer = useUiStore((state) => state.setMapLayer);
@@ -233,16 +234,19 @@ export function MapPanel({ objects }: MapPanelProps) {
           <h2>Carte interactive</h2>
           <p>Changez de fond, dessinez une zone, puis ouvrez une fiche sans quitter le contexte spatial.</p>
         </div>
-        <div className="segmented-control">
-          <button type="button" className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('classic')}>
-            Plan
-          </button>
-          <button type="button" className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('satellite')}>
-            Satellite
-          </button>
-          <button type="button" className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('topo')}>
-            Topo
-          </button>
+        <div className="map-panel__header-actions">
+          {headerActions}
+          <div className="segmented-control">
+            <button type="button" className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('classic')}>
+              Plan
+            </button>
+            <button type="button" className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('satellite')}>
+              Satellite
+            </button>
+            <button type="button" className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('topo')}>
+              Topo
+            </button>
+          </div>
         </div>
       </div>
 

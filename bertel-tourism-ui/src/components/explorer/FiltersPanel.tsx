@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { objectTypeOptions } from '../../config/map-markers';
 import { useExplorerStore } from '../../store/explorer-store';
 import { getVisibleFacets } from '../../utils/facets';
@@ -9,9 +10,10 @@ const amenityOptions = ['wifi', 'spa', 'parking', 'pmr'];
 
 interface FiltersPanelProps {
   compact?: boolean;
+  headerActions?: ReactNode;
 }
 
-export function FiltersPanel({ compact = false }: FiltersPanelProps) {
+export function FiltersPanel({ compact = false, headerActions }: FiltersPanelProps) {
   const selectedTypes = useExplorerStore((state) => state.selectedTypes);
   const search = useExplorerStore((state) => state.search);
   const labels = useExplorerStore((state) => state.labels);
@@ -42,9 +44,12 @@ export function FiltersPanel({ compact = false }: FiltersPanelProps) {
           <h2>Filtres intelligents</h2>
           <p>Affinez le corpus avec les criteres les plus utiles au terrain et au pilotage.</p>
         </div>
-        <Button type="button" variant="ghost" onClick={resetAll}>
-          Reinitialiser
-        </Button>
+        <div className="inline-actions">
+          {headerActions}
+          <Button type="button" variant="ghost" onClick={resetAll}>
+            Reinitialiser
+          </Button>
+        </div>
       </div>
 
       <div className="filters-summary">

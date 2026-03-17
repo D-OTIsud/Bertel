@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard, PresenceMember } from '../../types/domain';
@@ -12,9 +12,10 @@ interface ResultsListProps {
   fetchNextPage: () => void;
   isFetchingNextPage: boolean;
   peers: PresenceMember[];
+  headerActions?: ReactNode;
 }
 
-export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetchingNextPage, peers }: ResultsListProps) {
+export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetchingNextPage, peers, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -48,6 +49,7 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
           <p>Conservez une lecture dense des fiches sans perdre les signaux importants.</p>
         </div>
         <div className="results-panel__meta">
+          {headerActions}
           <span className="results-count">{cards.length} fiches</span>
           {peers.length > 0 ? <AvatarStack people={peers.slice(0, 3)} /> : null}
         </div>

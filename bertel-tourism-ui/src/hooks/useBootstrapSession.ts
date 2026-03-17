@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import type { AuthChangeEvent, User } from '@supabase/supabase-js';
+import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
+import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
 import { useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
 
@@ -20,14 +21,6 @@ function initialsFromName(name: string): string {
   }
 
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
-}
-
-function readLangPrefs(user: User): string[] {
-  const fromMetadata = user.user_metadata?.lang_prefs ?? user.user_metadata?.langPrefs;
-  if (Array.isArray(fromMetadata) && fromMetadata.every((item) => typeof item === 'string')) {
-    return fromMetadata;
-  }
-  return ['fr', 'en'];
 }
 
 export function useBootstrapSession() {
@@ -79,19 +72,31 @@ export function useBootstrapSession() {
       }
 
       const user = data.user;
-      const role = normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role);
+      const metadataRole = normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role);
+      const fallbackName = String(user.user_metadata?.full_name ?? user.email ?? user.id);
+      const fallbackLangPrefs = readLangPrefsFromAuth(user);
+      const profile = await getOrCreateUserProfile(user, {
+        role: metadataRole,
+        displayName: fallbackName,
+        langPrefs: fallbackLangPrefs,
+      });
+      const profileRole = normalizeRole(profile?.role);
+      const role = profileRole ?? metadataRole;
       if (!role) {
-        setSessionError('Le role Supabase est absent de la session. Attendez un claim role dans app_metadata ou user_metadata.');
+        setSessionError('Le role utilisateur est absent (session Supabase et table app_user_profile).');
         return;
       }
 
-      const userName = String(user.user_metadata?.full_name ?? user.email ?? user.id);
+      const userName = String(profile?.display_name ?? fallbackName);
+      const langPrefs = Array.isArray(profile?.lang_prefs) && profile.lang_prefs.every((item) => typeof item === 'string')
+        ? profile.lang_prefs
+        : fallbackLangPrefs;
       hydrateFromAuth({
         role,
         userId: user.id,
         userName,
         avatar: initialsFromName(userName),
-        langPrefs: readLangPrefs(user),
+        langPrefs,
       });
     }
 

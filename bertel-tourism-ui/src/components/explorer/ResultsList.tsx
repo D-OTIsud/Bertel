@@ -44,14 +44,11 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
     <section className="results-panel">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Shortlist</span>
-          <h2>Liste des resultats</h2>
-          <p>Conservez une lecture dense des fiches sans perdre les signaux importants.</p>
+          <span className="eyebrow">Resultats</span>
         </div>
         <div className="results-panel__meta">
           {headerActions}
           <span className="results-count">{cards.length} fiches</span>
-          {peers.length > 0 ? <AvatarStack people={peers.slice(0, 3)} /> : null}
         </div>
       </div>
 

@@ -62,6 +62,7 @@ ALTER TABLE object_group_policy ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promotion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promotion_object ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promotion_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_user_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type_amenity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type_media ENABLE ROW LEVEL SECURITY;
@@ -138,6 +139,23 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
   OR auth.uid() IN (
     SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin'
   );
+$$;
+
+-- Vérifie si l'utilisateur courant est owner plateforme (ou admin/service)
+CREATE OR REPLACE FUNCTION api.is_platform_owner()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
+  SELECT
+    auth.role() IN ('service_role', 'admin')
+    OR auth.uid() IN (
+      SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin'
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM app_user_profile p
+      WHERE p.id = auth.uid()
+        AND p.role = 'owner'
+    );
 $$;
 
 -- =====================================================
@@ -238,6 +256,10 @@ DROP POLICY IF EXISTS "Lecture étendue des types de chambre" ON object_room_typ
 DROP POLICY IF EXISTS "Écriture types de chambre par propriétaire" ON object_room_type;
 DROP POLICY IF EXISTS "Lecture publique amenities chambre" ON object_room_type_amenity;
 DROP POLICY IF EXISTS "Écriture amenities chambre par propriétaire" ON object_room_type_amenity;
+DROP POLICY IF EXISTS "Lecture de son profil utilisateur" ON app_user_profile;
+DROP POLICY IF EXISTS "Insertion de son profil utilisateur" ON app_user_profile;
+DROP POLICY IF EXISTS "Mise à jour de son profil utilisateur" ON app_user_profile;
+DROP POLICY IF EXISTS "Administration des profils utilisateur" ON app_user_profile;
 DROP POLICY IF EXISTS "Lecture publique médias chambre" ON object_room_type_media;
 DROP POLICY IF EXISTS "Écriture médias chambre par propriétaire" ON object_room_type_media;
 DROP POLICY IF EXISTS "Lecture publique des promotions" ON promotion;
@@ -503,6 +525,35 @@ CREATE POLICY "Écriture admin des types de vue" ON ref_code_view_type
 -- =====================================================
 -- 3. POLITIQUES POUR LES TABLES PRINCIPALES
 -- =====================================================
+
+-- Profil utilisateur applicatif: self-service + admin/service_role
+CREATE POLICY "Lecture de son profil utilisateur" ON app_user_profile
+  FOR SELECT USING (
+    id = auth.uid()
+    OR api.is_platform_owner()
+  );
+
+CREATE POLICY "Insertion de son profil utilisateur" ON app_user_profile
+  FOR INSERT WITH CHECK (
+    id = auth.uid()
+    OR api.is_platform_owner()
+  );
+
+CREATE POLICY "Mise à jour de son profil utilisateur" ON app_user_profile
+  FOR UPDATE
+  USING (
+    id = auth.uid()
+    OR api.is_platform_owner()
+  )
+  WITH CHECK (
+    id = auth.uid()
+    OR api.is_platform_owner()
+  );
+
+CREATE POLICY "Administration des profils utilisateur" ON app_user_profile
+  FOR DELETE USING (
+    api.is_platform_owner()
+  );
 
 -- Objets: published pour tous, sinon accès étendu (acteur org)
 DO $$ BEGIN

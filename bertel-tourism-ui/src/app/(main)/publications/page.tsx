@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useSessionStore } from '@/store/session-store';
 import { isDemoOnlyModule } from '@/utils/features';
-import { PublicationsPage as PublicationsPageComponent } from '@/pages/PublicationsPage';
+import PublicationsPageComponent from '@/pages/PublicationsPage';
 
 function FeatureUnavailable({ path }: { path: string }) {
   return (

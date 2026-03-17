@@ -1,5 +1,1 @@
-import { DashboardPage as DashboardPageComponent } from '@/pages/DashboardPage';
-
-export default function DashboardPage() {
-  return <DashboardPageComponent />;
-}
+export { default } from '@/pages/DashboardPage';

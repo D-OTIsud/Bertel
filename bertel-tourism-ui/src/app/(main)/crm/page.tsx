@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useSessionStore } from '@/store/session-store';
 import { isDemoOnlyModule } from '@/utils/features';
-import { CrmPage as CrmPageComponent } from '@/pages/CrmPage';
+import CrmPageComponent from '@/pages/CrmPage';
 
 function FeatureUnavailable({ path }: { path: string }) {
   return (

@@ -76,13 +76,17 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
 
       const nextExpiry = Math.min(...expiries);
       lockExpiryTimerRef.current = window.setTimeout(() => {
+        let nextSweepLocks: Record<string, LockEntry> | null = null;
         setLockedFieldEntries((current) => {
           const now = Date.now();
           const nextEntries = Object.entries(current).filter(([, entry]) => entry.expiresAt > now);
           const nextLocks = Object.fromEntries(nextEntries) as Record<string, LockEntry>;
-          scheduleLockSweep(nextLocks);
+          nextSweepLocks = nextLocks;
           return nextLocks;
         });
+        if (nextSweepLocks !== null) {
+          scheduleLockSweep(nextSweepLocks);
+        }
       }, Math.max(nextExpiry - Date.now(), 0) + 25);
     };
 
@@ -142,13 +146,17 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
         }));
 
       setPeers(nextPeers);
+      let nextLocksToSweep: Record<string, LockEntry> | null = null;
       setLockedFieldEntries((current) => {
         const liveUserIds = new Set(nextPeers.map((peer) => peer.userId));
         const nextEntries = Object.entries(current).filter(([, entry]) => liveUserIds.has(entry.userId));
         const nextLocks = Object.fromEntries(nextEntries) as Record<string, LockEntry>;
-        scheduleLockSweep(nextLocks);
+        nextLocksToSweep = nextLocks;
         return nextLocks;
       });
+      if (nextLocksToSweep !== null) {
+        scheduleLockSweep(nextLocksToSweep);
+      }
       if (syncGlobalStatus) {
         setLiveUsersCount(nextPeers.length);
       }
@@ -156,6 +164,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
 
     channel.on('broadcast', { event: 'field:lock' }, ({ payload }) => {
       const nextLock = payload as FieldLock;
+      let nextLocksToSweep: Record<string, LockEntry> | null = null;
       setLockedFieldEntries((current) => {
         const nextLocks = {
           ...current,
@@ -164,19 +173,26 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
             expiresAt: Date.now() + PRESENCE_LOCK_TTL_MS,
           },
         };
-        scheduleLockSweep(nextLocks);
+        nextLocksToSweep = nextLocks;
         return nextLocks;
       });
+      if (nextLocksToSweep !== null) {
+        scheduleLockSweep(nextLocksToSweep);
+      }
     });
 
     channel.on('broadcast', { event: 'field:unlock' }, ({ payload }) => {
       const field = String((payload as { field?: string }).field ?? '');
+      let nextLocksToSweep: Record<string, LockEntry> | null = null;
       setLockedFieldEntries((current) => {
         const copy = { ...current };
         delete copy[field];
-        scheduleLockSweep(copy);
+        nextLocksToSweep = copy;
         return copy;
       });
+      if (nextLocksToSweep !== null) {
+        scheduleLockSweep(nextLocksToSweep);
+      }
     });
 
     channel.on('broadcast', { event: 'typing' }, ({ payload }) => {

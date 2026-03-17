@@ -1,0 +1,18 @@
+---
+description: Git commits and pushes default to master branch
+alwaysApply: true
+---
+
+# Git Default Branch
+
+When performing git commits or pushes:
+
+1. **Default branch**: Use `master` unless the user explicitly names another branch (e.g. "commit on feature-xyz").
+2. **Before committing**: Run `git branch --show-current`. If not on `master` and the user did not ask for another branch, run `git checkout master` before staging and committing.
+3. **Before pushing**: Ensure you are pushing `master` to `origin` when the user says "push" or similar, unless they specify a different branch.
+4. **Explicit override**: If the user says something like "commit on chore/upgrade-stack" or "push to feature-branch", follow their instruction.
+
+**Example flow for "commit and push"**:
+- `git branch --show-current` → if not master, `git checkout master`
+- `git add -A && git commit -m "..."` 
+- `git push origin master`

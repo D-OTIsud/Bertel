@@ -1,7 +1,9 @@
+"use client";
+
 import { useQuery } from '@tanstack/react-query';
 import { listPendingChanges } from '../services/rpc';
 
-export function ModerationPage() {
+export default function ModerationPage() {
   const query = useQuery({ queryKey: ['pending-changes'], queryFn: listPendingChanges });
 
   if (query.isLoading) {
@@ -45,4 +47,4 @@ export function ModerationPage() {
   );
 }
 
-export default ModerationPage;
+export { ModerationPage };

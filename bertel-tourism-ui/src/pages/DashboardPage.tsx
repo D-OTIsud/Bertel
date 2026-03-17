@@ -1,9 +1,11 @@
+"use client";
+
 import { mockCards, mockTimeline } from '../data/mock';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
 
-export function DashboardPage() {
+export default function DashboardPage() {
   const role = useSessionStore((state) => state.role);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
@@ -154,4 +156,4 @@ export function DashboardPage() {
   );
 }
 
-export default DashboardPage;
+export { DashboardPage };

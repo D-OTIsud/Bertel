@@ -1,3 +1,5 @@
+"use client";
+
 import { Suspense, lazy } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
@@ -21,7 +23,7 @@ function MapFallback() {
   );
 }
 
-export function ExplorerPage() {
+export default function ExplorerPage() {
   const mobileSheetOpen = useUiStore((state) => state.mobileSheetOpen);
   const setMobileSheetOpen = useUiStore((state) => state.setMobileSheetOpen);
   const pageQuery = useExplorerInfiniteQuery();
@@ -103,4 +105,4 @@ export function ExplorerPage() {
   );
 }
 
-export default ExplorerPage;
+export { ExplorerPage };

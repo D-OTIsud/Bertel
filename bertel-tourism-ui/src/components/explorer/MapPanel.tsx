@@ -44,23 +44,31 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     if (!map) return;
     let isMounted = true;
 
+    const upsertImage = async (code: ObjectTypeCode) => {
+      const imageId = getMarkerImageId(code);
+      const style = markerStyles[code] ?? defaultMarkerStyles[code];
+      const svg = buildMarkerSvg(style);
+      const image = await loadSvgImage(svg);
+      if (!isMounted) return;
+      if (map.hasImage(imageId)) {
+        map.updateImage(imageId, image);
+      } else {
+        map.addImage(imageId, image, { pixelRatio: 2 });
+      }
+    };
+
     const syncImages = async () => {
       if (!isMounted || !map?.getStyle()) return;
-      await Promise.all(
-        objectTypeOptions.map(async ({ code }) => {
-          if (!isMounted) return;
-          const imageId = getMarkerImageId(code);
-          const style = markerStyles[code] ?? defaultMarkerStyles[code];
-          const svg = buildMarkerSvg(style);
-          const image = await loadSvgImage(svg);
-          if (!isMounted) return;
-          if (map.hasImage(imageId)) {
-            map.updateImage(imageId, image);
-          } else {
-            map.addImage(imageId, image, { pixelRatio: 2 });
-          }
-        }),
-      );
+      await Promise.allSettled(objectTypeOptions.map(async ({ code }) => upsertImage(code)));
+    };
+
+    const onStyleImageMissing = (event: { id?: string }) => {
+      const missingId = String(event.id ?? '');
+      const type = objectTypeOptions.find((item) => getMarkerImageId(item.code) === missingId)?.code;
+      if (!type) {
+        return;
+      }
+      void upsertImage(type);
     };
 
     const onLoad = () => void syncImages();
@@ -69,10 +77,12 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     } else {
       map.once('styledata', onLoad);
     }
+    map.on('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
 
     return () => {
       isMounted = false;
       map.off('styledata', onLoad);
+      map.off('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
     };
   }, [map, markerStyles]);
 

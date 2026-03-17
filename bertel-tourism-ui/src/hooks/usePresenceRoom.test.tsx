@@ -1,11 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PRESENCE_LOCK_TTL_MS, usePresenceRoom } from './usePresenceRoom';
 import { useSessionStore } from '../store/session-store';
 
 describe('usePresenceRoom', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
     useSessionStore.setState({
       demoMode: true,
       userId: 'usr-local-marie',
@@ -28,7 +27,7 @@ describe('usePresenceRoom', () => {
     expect(result.current.lockedFields.description?.userId).toBe('usr-local-marie');
 
     await act(async () => {
-      vi.advanceTimersByTime(PRESENCE_LOCK_TTL_MS + 50);
+      jest.advanceTimersByTime(PRESENCE_LOCK_TTL_MS + 50);
     });
 
     expect(result.current.lockedFields.description).toBeUndefined();

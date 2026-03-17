@@ -19,7 +19,7 @@ Bertel/
 │   ├── rls_policies.sql           # Politiques de sécurité
 │   ├── README.md                  # Documentation technique complète
 │   └── erd_diagram.md             # Diagramme ER en Mermaid
-├── archive/                       # Archives documentaires (historique)
+├── bertel-tourism-ui/             # Application Next.js (front-end)
 └── README.md                      # Ce fichier
 ```
 

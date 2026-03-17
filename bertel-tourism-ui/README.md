@@ -34,7 +34,7 @@ Pour Next.js (`npm run dev` / `npm run build`), utilisez les variables **NEXT_PU
 - `NEXT_PUBLIC_MAP_STYLE_SATELLITE`
 - `NEXT_PUBLIC_MAP_STYLE_TOPO`
 
-`NEXT_PUBLIC_ENABLE_DEMO_MODE` est desactive par defaut. Le mode mock doit etre active explicitement. Les equivalents `VITE_*` restent utilisables pour `npm run dev:vite` / `npm run build:vite` (legacy).
+`NEXT_PUBLIC_ENABLE_DEMO_MODE` est desactive par defaut. Le mode mock doit etre active explicitement.
 
 ## Demarrage Docker
 

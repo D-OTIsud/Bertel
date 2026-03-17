@@ -44,7 +44,7 @@ export function useBootstrapSession() {
 
     const client = getSupabaseClient();
     if (!client) {
-      setSessionError('Supabase n est pas configure. Renseignez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY ou activez explicitement le mode demo.');
+      setSessionError('Supabase n est pas configure. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY ou activez explicitement le mode demo.');
       return undefined;
     }
 

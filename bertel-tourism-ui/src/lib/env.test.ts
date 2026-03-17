@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { createEnv, readEnv } from './env';
 
 describe('createEnv', () => {
@@ -6,7 +5,7 @@ describe('createEnv', () => {
     expect(() =>
       createEnv({
         runtime: {
-          VITE_ENABLE_DEMO_MODE: 'false',
+          NEXT_PUBLIC_ENABLE_DEMO_MODE: 'false',
         },
         build: {},
       }),
@@ -16,7 +15,7 @@ describe('createEnv', () => {
   it('accepts demo mode without Supabase config', () => {
     const env = createEnv({
       runtime: {
-        VITE_ENABLE_DEMO_MODE: 'true',
+        NEXT_PUBLIC_ENABLE_DEMO_MODE: 'true',
       },
       build: {},
     });
@@ -28,9 +27,9 @@ describe('createEnv', () => {
   it('accepts production config when Supabase credentials are present', () => {
     const env = createEnv({
       runtime: {
-        VITE_ENABLE_DEMO_MODE: 'false',
-        VITE_SUPABASE_URL: 'https://demo.supabase.co',
-        VITE_SUPABASE_ANON_KEY: 'anon-key',
+        NEXT_PUBLIC_ENABLE_DEMO_MODE: 'false',
+        NEXT_PUBLIC_SUPABASE_URL: 'https://demo.supabase.co',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
       },
       build: {},
     });
@@ -42,7 +41,7 @@ describe('createEnv', () => {
   it('falls back to a non-throwing runtime-safe env shape when config is incomplete', () => {
     const env = readEnv({
       runtime: {
-        VITE_ENABLE_DEMO_MODE: 'false',
+        NEXT_PUBLIC_ENABLE_DEMO_MODE: 'false',
       },
       build: {},
     });

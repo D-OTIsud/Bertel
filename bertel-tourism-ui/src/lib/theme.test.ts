@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { applyThemeToDocument, coerceThemeSettings, defaultThemeSettings, sanitizeHexColor } from './theme';
 
 describe('theme helpers', () => {

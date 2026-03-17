@@ -71,7 +71,7 @@ export default function ExplorerPage() {
           cards={cards}
           loading={pageQuery.isLoading}
           hasNextPage={Boolean(pageQuery.hasNextPage)}
-          fetchNextPage={() => void pageQuery.fetchNextPage()}
+          fetchNextPage={pageQuery.fetchNextPage}
           isFetchingNextPage={pageQuery.isFetchingNextPage}
           peers={peers}
         />
@@ -94,7 +94,7 @@ export default function ExplorerPage() {
               cards={cards}
               loading={pageQuery.isLoading}
               hasNextPage={Boolean(pageQuery.hasNextPage)}
-              fetchNextPage={() => void pageQuery.fetchNextPage()}
+              fetchNextPage={pageQuery.fetchNextPage}
               isFetchingNextPage={pageQuery.isFetchingNextPage}
               peers={peers}
             />

@@ -33,8 +33,11 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
   const [now, setNow] = useState(() => new Date());
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    setNow(new Date());
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -56,6 +59,8 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
       }).format(now),
     [now],
   );
+  const safeTimeLabel = isMounted ? timeLabel : '--:--';
+  const safeDateLabel = isMounted ? dateLabel : '--';
 
   return (
     <header className="topbar-shell">
@@ -94,8 +99,8 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
         <div className="topbar-clock">
           <Clock3 className="h-4 w-4" />
           <div>
-            <strong>{timeLabel}</strong>
-            <span>{dateLabel}</span>
+            <strong suppressHydrationWarning>{safeTimeLabel}</strong>
+            <span suppressHydrationWarning>{safeDateLabel}</span>
           </div>
         </div>
       </div>

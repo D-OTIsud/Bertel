@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { useExplorerInfiniteQuery, useMapObjectsQuery } from '../hooks/useExplorerQueries';
@@ -34,8 +34,11 @@ export default function ExplorerPage() {
   const mapQuery = useMapObjectsQuery();
   const { peers } = usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
-  const cards = pageQuery.data?.pages.flatMap((page) => page.data) ?? [];
-  const openNowCount = cards.filter((card) => card.open_now).length;
+  const cards = useMemo(
+    () => pageQuery.data?.pages.flatMap((page) => page.data) ?? [],
+    [pageQuery.data],
+  );
+  const openNowCount = useMemo(() => cards.filter((card) => card.open_now).length, [cards]);
 
   if (pageQuery.isError) {
     return <section className="panel-card panel-card--wide">{(pageQuery.error as Error).message}</section>;

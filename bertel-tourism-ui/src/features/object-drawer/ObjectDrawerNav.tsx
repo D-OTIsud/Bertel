@@ -18,7 +18,7 @@ export function ObjectDrawerNav() {
   const setActiveSection = useObjectDrawerStore((state) => state.setActiveSection);
 
   return (
-    <nav className="object-drawer-nav" aria-label="Navigation fiche objet">
+    <nav className="object-drawer-nav flex w-full flex-col gap-2 md:w-64 md:shrink-0" aria-label="Navigation fiche objet">
       {sections.map((section, index) => (
         <button
           key={section.id}

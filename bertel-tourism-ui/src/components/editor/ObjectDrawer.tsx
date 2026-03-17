@@ -18,7 +18,7 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
         side="right"
         showClose={false}
         aria-describedby={undefined}
-        className="drawer-panel w-full max-w-[1180px] border-0 p-0 sm:max-w-[1180px]"
+        className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
       >
         <SheetTitle className="sr-only">Edition fiche objet</SheetTitle>
         <SheetDescription className="sr-only">Panneau lateral pour modifier les details d un objet touristique.</SheetDescription>

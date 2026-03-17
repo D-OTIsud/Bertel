@@ -136,9 +136,17 @@ function MapDrawControl() {
   useEffect(() => {
     const draw = drawRef.current;
     if (!draw || !map) return;
-    draw.deleteAll();
-    if (polygon) {
-      draw.add({ type: 'Feature', properties: {}, geometry: polygon });
+
+    const currentFeatures = draw.getAll().features;
+    const currentGeom = currentFeatures[0]?.geometry;
+    const storeGeomString = polygon ? JSON.stringify(polygon.coordinates) : null;
+    const mapGeomString = currentGeom ? JSON.stringify((currentGeom as GeoPolygon).coordinates) : null;
+
+    if (storeGeomString !== mapGeomString) {
+      draw.deleteAll();
+      if (polygon) {
+        draw.add({ type: 'Feature', properties: {}, geometry: polygon });
+      }
     }
   }, [map, polygon]);
 

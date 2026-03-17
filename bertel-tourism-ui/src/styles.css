@@ -1088,22 +1088,31 @@ a {
 }
 
 .object-drawer-nav__item {
-  padding: 0.95rem 1rem;
-  border-radius: 22px;
+  padding: 0.65rem 0.8rem;
+  border-radius: 14px;
   text-align: left;
   background: rgba(255, 255, 255, 0.76);
+}
+
+.object-drawer-nav__header {
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .object-drawer-nav__index {
   display: inline-grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.55rem;
+  height: 1.55rem;
   border-radius: 999px;
   background: rgba(var(--theme-primary-rgb), 0.1);
   color: var(--theme-primary);
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
+}
+
+.object-drawer-nav__item strong {
+  font-size: 0.88rem;
 }
 
 .drawer__panel-area {
@@ -1421,8 +1430,7 @@ a {
 
   .sidebar-meta__row,
   .results-panel__meta,
-  .kanban-column__header,
-  .object-drawer-nav__header {
+  .kanban-column__header {
     flex-direction: column;
     align-items: flex-start;
   }

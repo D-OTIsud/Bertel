@@ -2030,6 +2030,76 @@ CREATE TABLE IF NOT EXISTS promotion_usage (
 );
 
 -- =====================================================
+-- Profil utilisateur applicatif (non-auth)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS app_user_profile (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  avatar_url TEXT,
+  locale TEXT NOT NULL DEFAULT 'fr',
+  timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
+  role TEXT CHECK (role IS NULL OR role IN ('owner', 'super_admin', 'tourism_agent')),
+  lang_prefs TEXT[] NOT NULL DEFAULT ARRAY['fr','en'],
+  preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION api.enforce_app_user_profile_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  requester_uid UUID := auth.uid();
+  requester_is_owner BOOLEAN := false;
+BEGIN
+  -- No JWT context (migration SQL / privileged direct connection): skip runtime guard.
+  IF current_setting('request.jwt.claims', true) IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  requester_is_owner :=
+    auth.role() IN ('service_role', 'admin')
+    OR EXISTS (
+      SELECT 1
+      FROM auth.users u
+      WHERE u.id = requester_uid
+        AND u.raw_user_meta_data->>'role' = 'admin'
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM app_user_profile me
+      WHERE me.id = requester_uid
+        AND me.role = 'owner'
+    );
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.role IN ('owner', 'super_admin') AND NOT requester_is_owner THEN
+      RAISE EXCEPTION 'Seul un owner peut attribuer le role owner ou super_admin.';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.role IS DISTINCT FROM OLD.role
+       AND NEW.role IN ('owner', 'super_admin')
+       AND NOT requester_is_owner THEN
+      RAISE EXCEPTION 'Seul un owner peut attribuer le role owner ou super_admin.';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_role ON app_user_profile(role);
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_locale ON app_user_profile(locale);
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_preferences_gin ON app_user_profile USING GIN (preferences);
+
+-- =====================================================
 -- Spécifiques FMA (événements)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS object_fma (
@@ -4288,6 +4358,13 @@ DROP TRIGGER IF EXISTS update_object_room_type_updated_at ON object_room_type;
 CREATE TRIGGER update_object_room_type_updated_at BEFORE UPDATE ON object_room_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_promotion_updated_at ON promotion;
 CREATE TRIGGER update_promotion_updated_at BEFORE UPDATE ON promotion FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_app_user_profile_updated_at ON app_user_profile;
+CREATE TRIGGER update_app_user_profile_updated_at BEFORE UPDATE ON app_user_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS enforce_app_user_profile_role_change ON app_user_profile;
+CREATE TRIGGER enforce_app_user_profile_role_change
+  BEFORE INSERT OR UPDATE ON app_user_profile
+  FOR EACH ROW
+  EXECUTE FUNCTION api.enforce_app_user_profile_role_change();
 DROP TRIGGER IF EXISTS update_object_iti_profile_updated_at ON object_iti_profile;
 CREATE TRIGGER update_object_iti_profile_updated_at BEFORE UPDATE ON object_iti_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

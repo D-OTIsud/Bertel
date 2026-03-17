@@ -10,6 +10,7 @@ import { env } from '../lib/env';
 import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schemas';
 import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl, readFileAsDataUrl } from '../lib/theme';
 import { saveBrandingSettings } from '../services/branding';
+import { updateCurrentUserProfile } from '../services/user-profile';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
@@ -59,6 +60,17 @@ export default function SettingsPage() {
   const [themeSaving, setThemeSaving] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [pendingLogoCleared, setPendingLogoCleared] = useState(false);
+
+  const toggleLanguage = (lang: string) => {
+    const nextLangPrefs = langPrefs.includes(lang) ? langPrefs.filter((item) => item !== lang) : [...langPrefs, lang];
+    setLangPrefs(nextLangPrefs);
+
+    if (!demoMode && status === 'ready') {
+      void updateCurrentUserProfile({ lang_prefs: nextLangPrefs }).catch((error: unknown) => {
+        toast.error((error as Error).message);
+      });
+    }
+  };
 
   const themeForm = useForm<SettingsThemeFormValues>({
     resolver: zodResolver(settingsThemeSchema),
@@ -511,7 +523,7 @@ export default function SettingsPage() {
               key={lang}
               type="button"
               className={langPrefs.includes(lang) ? 'chip chip--active' : 'chip'}
-              onClick={() => setLangPrefs(langPrefs.includes(lang) ? langPrefs.filter((item) => item !== lang) : [...langPrefs, lang])}
+              onClick={() => toggleLanguage(lang)}
             >
               {lang.toUpperCase()}
             </button>

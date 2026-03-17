@@ -32,6 +32,7 @@ export function useExplorerUrlSync() {
 
   // URL -> store: when searchParams change (e.g. initial load or back/forward)
   useEffect(() => {
+    if (!searchParams) return;
     const str = searchParams.toString();
     const parsed = parseSearchParams(searchParams);
     if (Object.keys(parsed).length > 0) {

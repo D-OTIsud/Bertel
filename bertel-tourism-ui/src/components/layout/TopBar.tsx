@@ -1,4 +1,4 @@
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { CalendarDays, LogOut, Search, Users, Wifi, WifiOff } from 'lucide-react';
 import { signOut } from '../../services/auth';
 import { useSessionStore } from '../../store/session-store';
@@ -71,7 +71,6 @@ function initialsFromName(value: string | null | undefined): string {
 }
 
 export function TopBar() {
-  const router = useRouter();
   const pathname = usePathname();
   const role = useSessionStore((state) => state.role);
   const userName = useSessionStore((state) => state.userName);

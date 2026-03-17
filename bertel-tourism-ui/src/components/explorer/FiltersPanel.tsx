@@ -15,7 +15,6 @@ interface FiltersPanelProps {
 
 export function FiltersPanel({ compact = false, headerActions }: FiltersPanelProps) {
   const selectedTypes = useExplorerStore((state) => state.selectedTypes);
-  const search = useExplorerStore((state) => state.search);
   const labels = useExplorerStore((state) => state.labels);
   const amenities = useExplorerStore((state) => state.amenities);
   const openNow = useExplorerStore((state) => state.openNow);
@@ -23,7 +22,6 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
   const itineraryDifficultyMin = useExplorerStore((state) => state.itineraryDifficultyMin);
   const elevationGainMin = useExplorerStore((state) => state.elevationGainMin);
   const toggleType = useExplorerStore((state) => state.toggleType);
-  const setSearch = useExplorerStore((state) => state.setSearch);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleAmenity = useExplorerStore((state) => state.toggleAmenity);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
@@ -33,16 +31,13 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
   const resetAll = useExplorerStore((state) => state.resetAll);
 
   const visibleFacets = getVisibleFacets(selectedTypes);
-  const activeTypeCount = selectedTypes.length === 0 ? objectTypeOptions.length : selectedTypes.length;
   const difficultyValue = itineraryDifficultyMin ?? 2;
 
   return (
     <div className={compact ? 'filters-panel filters-panel--compact' : 'filters-panel'}>
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">Curation</span>
-          <h2>Filtres intelligents</h2>
-          <p>Affinez le corpus avec les criteres les plus utiles au terrain et au pilotage.</p>
+          <span className="eyebrow">Filtres</span>
         </div>
         <div className="inline-actions">
           {headerActions}
@@ -51,22 +46,6 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
           </Button>
         </div>
       </div>
-
-      <div className="filters-summary">
-        <div className="filters-summary__item">
-          <strong>{activeTypeCount}</strong>
-          <span>typologies actives</span>
-        </div>
-        <div className="filters-summary__item">
-          <strong>{openNow ? 'Oui' : 'Non'}</strong>
-          <span>ouvert maintenant</span>
-        </div>
-      </div>
-
-      <label className="field-block">
-        <span>Recherche libre</span>
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom, ville, fiche ou acteur..." />
-      </label>
 
       <section className="facet-group">
         <span className="facet-title">Typologies</span>

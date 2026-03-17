@@ -72,7 +72,6 @@ export default function ExplorerPage() {
     () => pageQuery.data?.pages.flatMap((page) => page.data) ?? [],
     [pageQuery.data],
   );
-  const openNowCount = useMemo(() => cards.filter((card) => card.open_now).length, [cards]);
 
   if (pageQuery.isError) {
     return <section className="panel-card panel-card--wide">{(pageQuery.error as Error).message}</section>;
@@ -119,21 +118,6 @@ export default function ExplorerPage() {
 
   return (
     <section className="explorer-workspace">
-      <div className="explorer-workspace__summary">
-        <article className="stat-card stat-card--compact stat-card--highlight">
-          <span>Fiches chargees</span>
-          <strong>{cards.length}</strong>
-        </article>
-        <article className="stat-card stat-card--compact">
-          <span>Ouvertes maintenant</span>
-          <strong>{openNowCount}</strong>
-        </article>
-        <article className="stat-card stat-card--compact">
-          <span>Editeurs presents</span>
-          <strong>{peers.length}</strong>
-        </article>
-      </div>
-
       {isCompactExplorer ? (
         <section className="explorer-layout explorer-layout--mobile">
           <nav className="explorer-mobile-tabs" aria-label="Panneaux mobile explorateur">

@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import type { MapObject } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
 

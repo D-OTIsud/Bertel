@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { buildMarkerSvg, coerceMarkerStyles, defaultMarkerStyles, normalizeMarkerIcon, sanitizeCustomMarkerSvg, sanitizeMarkerColor } from './map-markers';
 
 describe('map marker config', () => {

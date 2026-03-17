@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { mockObjectDetails } from '../../data/mock';
 import { parseActors, parseExternalSyncs, parseMemberships, parseOpenings, parsePrices } from './utils';
 

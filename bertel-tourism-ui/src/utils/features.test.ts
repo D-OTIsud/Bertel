@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { isDemoOnlyModule } from './features';
 
 describe('isDemoOnlyModule', () => {

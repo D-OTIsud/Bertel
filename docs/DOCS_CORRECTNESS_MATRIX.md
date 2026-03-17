@@ -48,6 +48,5 @@ Status values:
 
 ## Cleanup notes
 
-- Historical matrix snapshot was archived to `archive/docs/DOCS_CORRECTNESS_MATRIX.md`.
+- Obsolete files have been removed from the repository.
 - Time-bound report references were removed from active docs and replaced with canonical runtime/runbook links.
-- `Base de donnée DLL et API/pgbouncer.ini` was retired from active scope and archived under `archive/configs/pgbouncer.ini.md`.

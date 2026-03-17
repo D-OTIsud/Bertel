@@ -1,24 +1,23 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ObjectDrawer } from './ObjectDrawer';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useUiStore } from '../../store/ui-store';
 
-const mockUseObjectDetailQuery = vi.fn();
+const mockUseObjectDetailQuery = jest.fn();
 
-vi.mock('../../hooks/useExplorerQueries', () => ({
+jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectDetailQuery: (...args: unknown[]) => mockUseObjectDetailQuery(...args),
 }));
 
-vi.mock('../../hooks/usePresenceRoom', () => ({
+jest.mock('../../hooks/usePresenceRoom', () => ({
   usePresenceRoom: () => ({
     peers: [],
     me: { userId: 'me', name: 'Me', avatar: 'ME', color: '#000' },
     lockedFields: {},
     typingUsers: [],
-    lockField: vi.fn(),
-    unlockField: vi.fn(),
-    announceTyping: vi.fn(),
+    lockField: jest.fn(),
+    unlockField: jest.fn(),
+    announceTyping: jest.fn(),
   }),
 }));
 
@@ -26,7 +25,7 @@ describe('ObjectDrawer drafts', () => {
   beforeEach(() => {
     useUiStore.setState({ drawerObjectId: 'obj-1' });
     useObjectDrawerStore.setState({ activeSection: 'general', draftsByObject: {} });
-    mockUseObjectDetailQuery.mockReset();
+    mockUseObjectDetailQuery.mockClear();
   });
 
   it('does not overwrite a local draft when the same object refetches', () => {

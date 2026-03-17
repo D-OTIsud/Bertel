@@ -47,7 +47,7 @@ export function getApiClient(): SupabaseClient | null {
       db: {
         schema: 'api',
       },
-    });
+    }) as unknown as SupabaseClient;
   }
 
   return apiClient;

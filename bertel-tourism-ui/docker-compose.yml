@@ -14,3 +14,6 @@ services:
       NEXT_PUBLIC_MAP_STYLE_CLASSIC: ${NEXT_PUBLIC_MAP_STYLE_CLASSIC:-https://demotiles.maplibre.org/style.json}
       NEXT_PUBLIC_MAP_STYLE_SATELLITE: ${NEXT_PUBLIC_MAP_STYLE_SATELLITE:-https://tiles.openfreemap.org/styles/liberty}
       NEXT_PUBLIC_MAP_STYLE_TOPO: ${NEXT_PUBLIC_MAP_STYLE_TOPO:-https://tiles.openfreemap.org/styles/bright}
+    # No persistent volumes - Next.js app is stateless, data lives in Supabase
+
+volumes: {}

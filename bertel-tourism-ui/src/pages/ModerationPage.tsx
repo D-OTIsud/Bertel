@@ -44,3 +44,5 @@ export function ModerationPage() {
     </section>
   );
 }
+
+export default ModerationPage;

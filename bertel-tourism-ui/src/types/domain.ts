@@ -27,6 +27,7 @@ export interface ObjectCard {
   min_price?: number | null;
   open_now?: boolean | null;
   description?: string | null;
+  labels?: string[];
   updated_at?: string | null;
   location?: LocationSummary;
   render?: {

@@ -31,7 +31,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (status === 'guest') {
-      router.replace(`/login?from=${encodeURIComponent(pathname ?? '/')}`);
+      const from = encodeURIComponent(pathname ?? '/');
+      router.replace(from ? `/login?from=${from}` : '/login');
     }
   }, [status, router, pathname]);
 

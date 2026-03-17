@@ -9,7 +9,7 @@ export function useExplorerUrlSync() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams?.toString() ?? '';
-  const setFiltersFromUrl = useExplorerStore((state) => state.setFiltersFromUrl);
+  const replaceFiltersFromUrl = useExplorerStore((state) => state.replaceFiltersFromUrl);
   const lastUrlRef = useRef<string | null>(null);
 
   // 1. URL -> Store : On lit l'URL au chargement ou lors d'un "Précédent / Suivant"
@@ -17,10 +17,8 @@ export function useExplorerUrlSync() {
     if (lastUrlRef.current === searchParamsString) return;
     const parsed = parseSearchParams(new URLSearchParams(searchParamsString));
     lastUrlRef.current = searchParamsString;
-    if (Object.keys(parsed).length > 0) {
-      setFiltersFromUrl(parsed);
-    }
-  }, [searchParamsString, setFiltersFromUrl]);
+    replaceFiltersFromUrl(parsed);
+  }, [searchParamsString, replaceFiltersFromUrl]);
 
   // 2. Store -> URL : On s'abonne au store Zustand DIRECTEMENT (évite les boucles React)
   // Debounce 300ms pour ne pas lancer router.replace sur chaque frappe du champ recherche

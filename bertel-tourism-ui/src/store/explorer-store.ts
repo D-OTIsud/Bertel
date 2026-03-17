@@ -17,6 +17,8 @@ interface ExplorerState extends ExplorerFilters {
   resetAll: () => void;
   /** Apply partial filters from URL (e.g. after navigation) */
   setFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
+  /** Replace URL-controlled filters (missing keys fall back to defaults). */
+  replaceFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
 }
 
 const initialState: ExplorerFilters = {
@@ -81,5 +83,24 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       ...(partial.itineraryDifficultyMin !== undefined && { itineraryDifficultyMin: partial.itineraryDifficultyMin }),
       ...(partial.itineraryDifficultyMax !== undefined && { itineraryDifficultyMax: partial.itineraryDifficultyMax }),
       ...(partial.elevationGainMin !== undefined && { elevationGainMin: partial.elevationGainMin }),
+    })),
+  replaceFiltersFromUrl: (partial) =>
+    set((state) => ({
+      ...state,
+      selectedTypes: partial.selectedTypes ?? initialState.selectedTypes,
+      search: partial.search ?? initialState.search,
+      view: partial.view ?? initialState.view,
+      labels: partial.labels ?? initialState.labels,
+      amenities: partial.amenities ?? initialState.amenities,
+      openNow: partial.openNow ?? initialState.openNow,
+      capacityMetricCode: partial.capacityMetricCode ?? initialState.capacityMetricCode,
+      capacityMin: partial.capacityMin ?? initialState.capacityMin,
+      capacityMax: partial.capacityMax ?? initialState.capacityMax,
+      itineraryDifficultyMin: partial.itineraryDifficultyMin ?? initialState.itineraryDifficultyMin,
+      itineraryDifficultyMax: partial.itineraryDifficultyMax ?? initialState.itineraryDifficultyMax,
+      elevationGainMin: partial.elevationGainMin ?? initialState.elevationGainMin,
+      // URL is the source of truth for filters; reset spatial-only state.
+      polygon: initialState.polygon,
+      bbox: initialState.bbox,
     })),
 }));

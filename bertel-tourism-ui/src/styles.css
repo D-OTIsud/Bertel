@@ -2354,6 +2354,59 @@ body::after {
   white-space: nowrap;
 }
 
+.label-stack {
+  position: relative;
+  display: inline-block;
+  height: 1.3rem;
+  min-width: 2.4rem;
+  align-self: start;
+  overflow: visible;
+}
+
+.label-stack__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(0, 0);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  box-shadow: 0 10px 22px rgba(24, 49, 59, 0.08);
+}
+
+.label-stack__badge:nth-child(1) { z-index: 6; }
+.label-stack__badge:nth-child(2) { z-index: 5; transform: translate(-6px, -2px); }
+.label-stack__badge:nth-child(3) { z-index: 4; transform: translate(-12px, -4px); }
+.label-stack__badge:nth-child(4) { z-index: 3; transform: translate(-18px, -6px); }
+.label-stack__badge:nth-child(5) { z-index: 2; transform: translate(-24px, -8px); }
+.label-stack__badge:nth-child(6) { z-index: 1; transform: translate(-30px, -10px); }
+
+.label-stack:hover .label-stack__badge,
+.label-stack:focus-within .label-stack__badge {
+  filter: saturate(1.08);
+}
+
+.label-stack:hover .label-stack__badge:nth-child(1),
+.label-stack:focus-within .label-stack__badge:nth-child(1) { transform: translate(0, 0); }
+.label-stack:hover .label-stack__badge:nth-child(2),
+.label-stack:focus-within .label-stack__badge:nth-child(2) { transform: translate(-4px, -18px); }
+.label-stack:hover .label-stack__badge:nth-child(3),
+.label-stack:focus-within .label-stack__badge:nth-child(3) { transform: translate(-8px, -36px); }
+.label-stack:hover .label-stack__badge:nth-child(4),
+.label-stack:focus-within .label-stack__badge:nth-child(4) { transform: translate(-12px, -54px); }
+.label-stack:hover .label-stack__badge:nth-child(5),
+.label-stack:focus-within .label-stack__badge:nth-child(5) { transform: translate(-16px, -72px); }
+.label-stack:hover .label-stack__badge:nth-child(6),
+.label-stack:focus-within .label-stack__badge:nth-child(6) { transform: translate(-20px, -90px); }
+
+.label-stack__badge--overflow {
+  background: rgba(24, 49, 59, 0.72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label-stack__badge {
+    transition: none;
+  }
+}
+
 @media (max-width: 760px) {
   .explorer-workspace .result-card {
     grid-template-columns: 1fr;

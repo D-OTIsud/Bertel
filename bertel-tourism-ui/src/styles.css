@@ -2369,6 +2369,7 @@ body::after {
   right: 0;
   transform: translate(0, 0);
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  transition-delay: 0s;
   box-shadow: 0 10px 22px rgba(24, 49, 59, 0.08);
 }
 
@@ -2382,6 +2383,7 @@ body::after {
 .label-stack:hover .label-stack__badge,
 .label-stack:focus-within .label-stack__badge {
   filter: saturate(1.08);
+  transition-delay: 2s;
 }
 
 .label-stack:hover .label-stack__badge:nth-child(1),

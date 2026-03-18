@@ -2210,6 +2210,15 @@ body::after {
   z-index: 3;
 }
 
+.map-panel__header-actions-wrap--expanded {
+  padding: 0.6rem;
+  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.72);
+  border: 1px solid rgba(24, 49, 59, 0.08);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
 .map-panel__header-trigger {
   display: inline-flex;
   align-items: center;
@@ -2233,12 +2242,12 @@ body::after {
 }
 
 .map-panel__header-actions-wrap--expanded .map-panel__header-actions {
-  padding: 0.9rem 1rem;
-  border-radius: 12px;
-  background: rgba(255, 253, 248, 0.88);
-  border: 1px solid rgba(24, 49, 59, 0.08);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(18px);
+  padding: 0.35rem 0.4rem;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .map-panel__header-actions {

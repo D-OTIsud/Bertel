@@ -199,7 +199,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       // Close only if the mouse is not over marker and not over the tooltip.
       if (popupHoveredRef.current || markerHoveredRef.current) return;
       setHoverPopupState(null);
-    }, 300);
+    }, 500);
   }, [clearHoverTimer]);
 
   useEffect(

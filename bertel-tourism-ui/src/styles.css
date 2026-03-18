@@ -1073,7 +1073,6 @@ a {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.2rem 0;
-  pointer-events: auto;
 }
 
 .map-hover-card__img {
@@ -1094,8 +1093,8 @@ a {
 }
 
 .map-marker-pin {
-  width: 33px;
-  height: 33px;
+  width: 48px;
+  height: 64px;
   border: none;
   background: transparent;
   box-shadow: none;
@@ -1105,7 +1104,7 @@ a {
   justify-content: center;
   overflow: visible;
   cursor: pointer;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
 .map-marker-pin__img {

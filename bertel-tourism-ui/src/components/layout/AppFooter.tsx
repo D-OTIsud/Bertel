@@ -10,12 +10,12 @@ import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import { StatusPill } from '../common/StatusPill';
 import { cn } from '@/lib/utils';
-import { exportSelectedObjectsCsv } from '../../services/selection-export';
+import { exportSelectedObjectsCsv } from '@/services/selection-export';
 import { getObjectResource } from '../../services/rpc';
 
 const footerLinks = [
-  { href: '/explorer', label: 'Accueil', icon: Compass },
-  { href: '/dashboard', label: 'Stats', icon: BarChart3 },
+  { href: '/explorer', label: 'Explorer', icon: Compass },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/crm', label: 'CRM', icon: Users },
 ];
 
@@ -165,7 +165,7 @@ export function AppFooter() {
         ) : (
           <>
             <span className="app-footer__chip">Shell</span>
-            <strong className="app-footer__label">{pathname?.replace('/', '') || 'Accueil'}</strong>
+            <strong className="app-footer__label">{pathname?.replace('/', '') || 'Explorer'}</strong>
           </>
         )}
       </div>

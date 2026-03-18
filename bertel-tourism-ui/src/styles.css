@@ -2579,17 +2579,16 @@ body::after {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 2px solid #fffdf8;
-  box-shadow: 0 4px 12px rgba(24, 49, 59, 0.18);
   padding: 0;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
-  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .map-marker-pin:hover {
   transform: scale(1.15) translateY(-2px);
-  box-shadow: 0 8px 20px rgba(24, 49, 59, 0.24);
   z-index: 10;
 }
 
@@ -2597,7 +2596,6 @@ body::after {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transform: scale(1.4);
 }
 
 .map-cluster-pin {

@@ -228,6 +228,12 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const geojsonData = useMemo(() => {
     const data = buildObjectFeatureCollection(objects);
+    // DEBUG FEATURE:
+    data.features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [55.536384, -21.130568] },
+      properties: { id: 'debug-1', name: 'DEBUG MARKER', type: 'HOT', address: '', city: 'Debug', price: '', rating: '', markerIcon: 'marker-HOT' }
+    });
     return data;
   }, [objects]);
   const cardById = useMemo(() => new globalThis.Map(objects.map((card) => [card.id, card] as const)), [objects]);
@@ -469,7 +475,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
-          <MapDrawControl />
+          {/* <MapDrawControl /> */}
           <StyleImageMissingBinder onMissing={handleImageMissing} />
           <MarkerImagesLoader onReady={setImagesLoaded} />
           {imagesLoaded ? (

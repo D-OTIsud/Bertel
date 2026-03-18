@@ -12,9 +12,9 @@ interface EnvSources {
 }
 
 const DEFAULT_MAP_STYLES = {
-  classic: 'https://demotiles.maplibre.org/style.json',
-  satellite: 'https://tiles.openfreemap.org/styles/liberty',
-  topo: 'https://tiles.openfreemap.org/styles/bright',
+  classic: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  satellite: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  topo: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 } as const;
 
 const envSchema = z

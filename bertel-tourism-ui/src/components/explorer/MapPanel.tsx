@@ -50,12 +50,17 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
       const imageId = getMarkerImageId(code);
       const style = markerStyles[code] ?? defaultMarkerStyles[code];
       const svg = buildMarkerSvg(style);
-      const image = await loadSvgImage(svg);
-      if (!isMounted) return;
-      if (map.hasImage(imageId)) {
-        map.updateImage(imageId, image);
-      } else {
-        map.addImage(imageId, image, { pixelRatio: 2 });
+      try {
+        const image = await loadSvgImage(svg);
+        if (!isMounted) return;
+        if (map.hasImage(imageId)) {
+          map.updateImage(imageId, image);
+        } else {
+          map.addImage(imageId, image, { pixelRatio: 2 });
+        }
+      } catch {
+        // If a specific marker SVG cannot be loaded, keep the map usable.
+        // The fallback circle layer will still render points.
       }
     };
 
@@ -81,7 +86,9 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
       void upsertImage(type);
     };
 
-    const onLoad = () => void syncImages();
+    const onLoad = () => {
+      void syncImages();
+    };
     // MapLibre reliably emits `load` on first style load; `styledata` can be missed on initial mount
     // depending on timing, so listen to both and also sync immediately when possible.
     if (map.isStyleLoaded()) void syncImages();

@@ -47,7 +47,18 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                   <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                 </div>
                 {Array.isArray(card.labels) && card.labels.length > 0 ? (
-                  <span className="result-card__label-badge">{card.labels[0]}</span>
+                  <span className="label-stack" aria-label={`Labels: ${card.labels.join(', ')}`}>
+                    {card.labels.slice(0, 5).map((label) => (
+                      <span key={label} className="label-stack__badge result-card__label-badge">
+                        {label}
+                      </span>
+                    ))}
+                    {card.labels.length > 5 ? (
+                      <span className="label-stack__badge label-stack__badge--overflow result-card__label-badge">
+                        +{card.labels.length - 5}
+                      </span>
+                    ) : null}
+                  </span>
                 ) : null}
               </div>
               <div className="result-card__footer">

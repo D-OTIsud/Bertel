@@ -53,18 +53,24 @@ function MarkerImagesLoader({ onReady }: { onReady: (ready: boolean) => void }) 
     let cancelled = false;
     const imageIds = objectTypeOptions.map((t) => getMarkerImageId(t.code));
 
-    const loadImageIfMissing = async (imageId: string) => {
-      if (map.hasImage(imageId)) return;
-      const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
-      try {
-        const image = await (map as unknown as { loadImage: (u: string) => Promise<any> }).loadImage(url);
-        if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image.data || image, { pixelRatio: 2 });
+    const loadImageIfMissing = (imageId: string) =>
+      new Promise<void>((resolve) => {
+        if (map.hasImage(imageId)) {
+          resolve();
+          return;
         }
-      } catch (err) {
-        console.warn(`Failed to preload map marker: ${url}`, err);
-      }
-    };
+
+        const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
+        (map as unknown as { loadImage: (u: string, cb: (err: any, img: any) => void) => void }).loadImage(
+          url,
+          (err, img) => {
+            if (!err && img && !map.hasImage(imageId)) {
+              map.addImage(imageId, img as any, { pixelRatio: 2 });
+            }
+            resolve();
+          },
+        );
+      });
 
     const loadAll = async () => {
       if (!map.isStyleLoaded()) return;
@@ -229,15 +235,15 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     if (map?.hasImage?.(imageId)) return;
 
     const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
-    (map as any).loadImage(url)
-      .then((image: any) => {
-        if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image.data || image);
-        }
-      })
-      .catch((error: any) => {
-        console.warn(`Could not load map marker: ${url}`, error);
-      });
+    map.loadImage(url, (error: any, image: any) => {
+      if (error) {
+        console.warn(`Could not load map marker: ${url}`);
+        return;
+      }
+      if (image && !map.hasImage(imageId)) {
+        map.addImage(imageId, image);
+      }
+    });
   }, []);
 
   const collapseHeader = useCallback(() => {

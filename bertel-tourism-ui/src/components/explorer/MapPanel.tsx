@@ -51,26 +51,37 @@ function MarkerImagesLoader({ onReady }: { onReady: (ready: boolean) => void }) 
     if (!map) return;
 
     let cancelled = false;
+    let loading = false;
     const imageIds = objectTypeOptions.map((t) => getMarkerImageId(t.code));
 
-    const loadImageIfMissing = async (imageId: string) => {
-      if (map.hasImage(imageId)) return;
-      const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
-      try {
-        const image = await (map as unknown as { loadImage: (u: string) => Promise<any> }).loadImage(url);
-        if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image, { pixelRatio: 2 });
-        }
-      } catch (err) {
-        console.warn(`Failed to preload map marker: ${url}`, err);
-      }
-    };
-
     const loadAll = async () => {
-      if (!map.getStyle()) return;
-      onReady(false);
+      if (!map.getStyle() || loading) return;
+      
+      const missingIds = imageIds.filter(id => !map.hasImage(id));
+      if (missingIds.length === 0) {
+        if (!cancelled) onReady(true);
+        return;
+      }
 
-      await Promise.all(imageIds.map((id) => loadImageIfMissing(id)));
+      loading = true;
+      try {
+        await Promise.all(
+          missingIds.map(async (imageId) => {
+            const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
+            try {
+              const response = await (map as any).loadImage(url);
+              const imgData = response?.data || response;
+              if (imgData && !map.hasImage(imageId)) {
+                map.addImage(imageId, imgData, { pixelRatio: 2 });
+              }
+            } catch (err) {
+              console.warn(`Failed to preload map marker: ${url}`, err);
+            }
+          })
+        );
+      } finally {
+        loading = false;
+      }
 
       if (!cancelled) onReady(true);
     };
@@ -233,9 +244,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
     const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
     (map as any).loadImage(url)
-      .then((image: any) => {
-        if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image);
+      .then((response: any) => {
+        const imgData = response?.data || response;
+        if (imgData && !map.hasImage(imageId)) {
+          map.addImage(imageId, imgData);
         }
       })
       .catch((error: any) => {

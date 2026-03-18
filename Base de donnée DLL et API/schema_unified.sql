@@ -16,12 +16,14 @@ CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+ALTER EXTENSION btree_gist SET SCHEMA extensions;
 
 -- Schémas
 CREATE SCHEMA IF NOT EXISTS api;
 CREATE SCHEMA IF NOT EXISTS audit;
 CREATE SCHEMA IF NOT EXISTS ref;
 CREATE SCHEMA IF NOT EXISTS crm;
+CREATE SCHEMA IF NOT EXISTS internal;
 
 -- Séquence pour ID fonctionnels
 CREATE SEQUENCE IF NOT EXISTS object_id_seq START 1;
@@ -33,7 +35,9 @@ CREATE SEQUENCE IF NOT EXISTS object_id_seq START 1;
 -- immutable_unaccent
 CREATE OR REPLACE FUNCTION public.immutable_unaccent(text)
 RETURNS text
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+LANGUAGE sql IMMUTABLE PARALLEL SAFE 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
   SELECT extensions.unaccent($1);
 $$;
 
@@ -42,6 +46,8 @@ CREATE OR REPLACE FUNCTION api.to_base36(n BIGINT)
 RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
     digits CONSTANT TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -65,6 +71,8 @@ $$;
 CREATE OR REPLACE FUNCTION api.generate_object_id(p_object_type TEXT, p_region_code TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
     digits CONSTANT TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -92,7 +100,9 @@ $$;
 
 -- update_updated_at_column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
@@ -101,7 +111,9 @@ $$ language 'plpgsql';
 
 -- Object-specific updated_at guard: ignore cache-only updates.
 CREATE OR REPLACE FUNCTION update_object_updated_at_business()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF (
     to_jsonb(NEW) - ARRAY[
@@ -486,7 +498,9 @@ CREATE TABLE IF NOT EXISTS ref_language (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_language_position ON ref_language(position) WHERE position IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION ref_language_set_position()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.position IS NULL THEN
     LOCK TABLE ref_language IN SHARE ROW EXCLUSIVE MODE;
@@ -637,7 +651,9 @@ CREATE TABLE IF NOT EXISTS i18n_translation (
 
 -- Governance guard: avoid dual source-of-truth when table already has a JSONB *_i18n column.
 CREATE OR REPLACE FUNCTION validate_i18n_translation_target()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_has_jsonb_i18n BOOLEAN;
 BEGIN
@@ -667,7 +683,9 @@ BEFORE INSERT OR UPDATE ON i18n_translation
 FOR EACH ROW EXECUTE FUNCTION validate_i18n_translation_target();
 
 CREATE OR REPLACE FUNCTION validate_org_object_type()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_column_name TEXT := TG_ARGV[0];
   v_org_id TEXT;
@@ -689,7 +707,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION enforce_classification_single_selection()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_scheme_code TEXT;
 BEGIN
@@ -847,7 +867,9 @@ ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_classification_code
 
 -- Génération d'ID si absent
 CREATE OR REPLACE FUNCTION api.before_insert_object_generate_id()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE v_region TEXT;
 BEGIN
   IF NEW.id IS NULL OR NEW.id = '' THEN
@@ -861,7 +883,9 @@ DROP TRIGGER IF EXISTS trg_before_insert_object_generate_id ON object;
 CREATE TRIGGER trg_before_insert_object_generate_id BEFORE INSERT ON object FOR EACH ROW EXECUTE FUNCTION api.before_insert_object_generate_id();
 
 CREATE OR REPLACE FUNCTION api.validate_object_business_timezone()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   NEW.business_timezone := COALESCE(NULLIF(btrim(NEW.business_timezone), ''), 'Indian/Reunion');
   IF NOT EXISTS (
@@ -883,7 +907,9 @@ EXECUTE FUNCTION api.validate_object_business_timezone();
 
 -- Mise à jour published_at
 CREATE OR REPLACE FUNCTION api.manage_object_published_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.status = 'published' AND OLD.status != 'published' AND NEW.published_at IS NULL THEN
     NEW.published_at := NOW();
@@ -1022,7 +1048,9 @@ CREATE TRIGGER update_pending_change_updated_at BEFORE UPDATE ON pending_change 
 
 -- Maintain object.is_editing based on pending changes lifecycle
 CREATE OR REPLACE FUNCTION pending_change_after_insert()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.status = 'pending' AND NEW.object_id IS NOT NULL THEN
     UPDATE object SET is_editing = TRUE WHERE id = NEW.object_id;
@@ -1032,7 +1060,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION pending_change_after_update()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   -- If becomes pending, mark editing
   IF NEW.status = 'pending' AND (OLD.status IS DISTINCT FROM 'pending') AND NEW.object_id IS NOT NULL THEN
@@ -1051,7 +1081,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION pending_change_after_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF OLD.status = 'pending' AND OLD.object_id IS NOT NULL THEN
     PERFORM 1 FROM pending_change pc WHERE pc.object_id = OLD.object_id AND pc.status = 'pending' LIMIT 1;
@@ -1148,7 +1180,9 @@ END $$;
 
 -- Valider dimensions médias selon type
 CREATE OR REPLACE FUNCTION validate_media_dimensions()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE is_photo_video BOOLEAN;
 BEGIN
   SELECT EXISTS (
@@ -1588,7 +1622,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_actor_object_role_primary ON actor_object_r
 
 -- Email shape enforcement (object + actor)
 CREATE OR REPLACE FUNCTION api.enforce_contact_email_shape()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE v_is_email BOOLEAN;
 BEGIN
   SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
@@ -1601,7 +1637,9 @@ DROP TRIGGER IF EXISTS trg_contact_channel_email ON contact_channel;
 CREATE TRIGGER trg_contact_channel_email BEFORE INSERT OR UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION api.enforce_contact_email_shape();
 
 CREATE OR REPLACE FUNCTION api.enforce_actor_channel_email_shape()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE v_is_email BOOLEAN;
 BEGIN
   SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
@@ -1615,7 +1653,9 @@ CREATE TRIGGER trg_actor_channel_email BEFORE INSERT OR UPDATE ON actor_channel 
 
 -- Unicité email cross-actors
 CREATE OR REPLACE FUNCTION api.prevent_duplicate_actor_email()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE v_is_email BOOLEAN; v_existing_actor_id UUID;
 BEGIN
   SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
@@ -1663,7 +1703,9 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   PRIMARY KEY (id)
 );
 CREATE OR REPLACE FUNCTION api.auto_populate_interaction_subject()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE topic_name TEXT; subtopic_name TEXT; generated_subject TEXT;
 BEGIN
   IF NEW.subject IS NOT NULL AND trim(NEW.subject) != '' THEN RETURN NEW; END IF;
@@ -1752,7 +1794,9 @@ CREATE TABLE IF NOT EXISTS object_capacity (
 );
 -- sync unit
 CREATE OR REPLACE FUNCTION sync_object_capacity_unit()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.metric_id IS NOT NULL THEN
     SELECT unit INTO STRICT NEW.unit FROM ref_capacity_metric WHERE id = NEW.metric_id;
@@ -1764,7 +1808,9 @@ CREATE TRIGGER trg_object_capacity_sync_unit_ins BEFORE INSERT ON object_capacit
 DROP TRIGGER IF EXISTS trg_object_capacity_sync_unit_upd ON object_capacity;
 CREATE TRIGGER trg_object_capacity_sync_unit_upd BEFORE UPDATE OF metric_id ON object_capacity FOR EACH ROW EXECUTE FUNCTION sync_object_capacity_unit();
 CREATE OR REPLACE FUNCTION propagate_capacity_unit_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF TG_OP = 'UPDATE' AND NEW.unit IS DISTINCT FROM OLD.unit THEN
     UPDATE object_capacity SET unit = NEW.unit WHERE metric_id = NEW.id;
@@ -2317,7 +2363,9 @@ ON object_membership(org_object_id, object_id, starts_at, ends_at)
 WHERE status IN ('invoiced','paid');
 
 CREATE OR REPLACE FUNCTION api.handle_membership_status_transition()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.status = 'lapsed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
     IF NEW.object_id IS NOT NULL THEN
@@ -2454,7 +2502,9 @@ CREATE INDEX IF NOT EXISTS idx_incident_report_geom ON incident_report USING GIS
 CREATE INDEX IF NOT EXISTS idx_incident_report_created_at ON incident_report(created_at DESC);
 
 CREATE OR REPLACE FUNCTION api.create_crm_artifacts_from_incident()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_interaction_id UUID;
   v_task_id UUID;
@@ -2577,7 +2627,9 @@ CREATE INDEX IF NOT EXISTS idx_publication_object_status ON publication_object(w
 CREATE INDEX IF NOT EXISTS idx_publication_object_object_id ON publication_object(object_id);
 
 CREATE OR REPLACE FUNCTION api.set_publication_workflow_timestamps()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
     NEW.proof_sent_at := NOW();
@@ -2595,7 +2647,9 @@ BEFORE UPDATE OF workflow_status ON publication_object
 FOR EACH ROW EXECUTE FUNCTION api.set_publication_workflow_timestamps();
 
 CREATE OR REPLACE FUNCTION api.log_publication_proof_interaction()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
     INSERT INTO crm_interaction (
@@ -2702,7 +2756,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_session_object_status ON audit_session(obje
 CREATE INDEX IF NOT EXISTS idx_audit_result_session ON audit_result(session_id);
 
 CREATE OR REPLACE FUNCTION api.validate_audit_result_points()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_max_points INTEGER;
 BEGIN
@@ -2726,7 +2782,9 @@ BEFORE INSERT OR UPDATE OF points_awarded, criteria_id ON audit_result
 FOR EACH ROW EXECUTE FUNCTION api.validate_audit_result_points();
 
 CREATE OR REPLACE FUNCTION api.recompute_audit_session_score()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_session_id UUID;
 BEGIN
@@ -2750,7 +2808,9 @@ AFTER INSERT OR UPDATE OR DELETE ON audit_result
 FOR EACH ROW EXECUTE FUNCTION api.recompute_audit_session_score();
 
 CREATE OR REPLACE FUNCTION api.sync_classification_from_audit_session()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_scheme_id UUID;
   v_value_id UUID;
@@ -2873,13 +2933,17 @@ CREATE TABLE IF NOT EXISTS audit.audit_log (
 ) PARTITION BY RANGE (changed_at);
 
 CREATE OR REPLACE FUNCTION audit.get_month_partition_name(partition_date TIMESTAMPTZ)
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   RETURN 'audit_log_' || to_char(partition_date, 'YYYY_MM');
 END; $$ LANGUAGE plpgsql STABLE;
 
 CREATE OR REPLACE FUNCTION audit.create_monthly_partition(partition_date TIMESTAMPTZ)
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; sql_stmt TEXT;
 BEGIN
   partition_name := audit.get_month_partition_name(partition_date);
@@ -2903,7 +2967,9 @@ SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERV
 CREATE TABLE IF NOT EXISTS audit.audit_log_default PARTITION OF audit.audit_log DEFAULT;
 
 CREATE OR REPLACE FUNCTION audit.ensure_future_partitions(months_ahead INTEGER DEFAULT 3)
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE i INTEGER; result_text TEXT := ''; partition_date TIMESTAMPTZ;
 BEGIN
   FOR i IN 0..months_ahead-1 LOOP
@@ -2914,7 +2980,9 @@ BEGIN
 END; $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION audit.drop_old_partitions(months_to_keep INTEGER DEFAULT 12)
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   cutoff_date DATE;
   result_text TEXT := '';
@@ -2952,7 +3020,9 @@ $$ LANGUAGE plpgsql;
 SELECT audit.ensure_future_partitions(3);
 
 CREATE OR REPLACE FUNCTION audit.maintain_partitions()
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE result_text TEXT := '';
 BEGIN
   result_text := result_text || '=== Creating future partitions ===' || E'\n' || audit.ensure_future_partitions(3) || E'\n';
@@ -3061,7 +3131,9 @@ CREATE TABLE IF NOT EXISTS object_version (
 ) PARTITION BY RANGE (created_at);
 
 CREATE OR REPLACE FUNCTION create_object_version_monthly_partition(partition_date TIMESTAMPTZ)
-RETURNS TEXT AS $$
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; sql_stmt TEXT;
 BEGIN
   partition_name := 'object_version_' || to_char(partition_date, 'YYYY_MM');
@@ -3087,7 +3159,9 @@ DROP TRIGGER IF EXISTS trg_audit_object_version ON object_version;
 CREATE TRIGGER trg_audit_object_version AFTER UPDATE OR DELETE ON object_version FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
 
 CREATE OR REPLACE FUNCTION save_object_version()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE v_version_number INTEGER; v_change_type TEXT; v_actor UUID;
 BEGIN
   IF TG_OP = 'INSERT' THEN 
@@ -3364,7 +3438,9 @@ CREATE INDEX IF NOT EXISTS idx_i18n_translation_column_language ON i18n_translat
 -- =====================================================
 
 -- Consolidated reference data cache for frequently accessed data
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_ref_data_json AS
+DROP MATERIALIZED VIEW IF EXISTS public.mv_ref_data_json CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS internal.mv_ref_data_json CASCADE;
+CREATE MATERIALIZED VIEW internal.mv_ref_data_json AS
 SELECT 
   'amenity' as ref_type,
   ra.id,
@@ -3416,16 +3492,17 @@ SELECT
   ) as json_data
 FROM ref_code_contact_kind ck;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_ref_data_type_id ON mv_ref_data_json(ref_type, id);
-CREATE INDEX IF NOT EXISTS idx_mv_ref_data_code ON mv_ref_data_json(ref_type, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_ref_data_type_id ON internal.mv_ref_data_json(ref_type, id);
+CREATE INDEX IF NOT EXISTS idx_mv_ref_data_code ON internal.mv_ref_data_json(ref_type, code);
 
 -- Note: Refresh this view daily or when reference data changes
--- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
 
 -- Hot-path filter projection for list/map endpoints (published + main location).
 -- Freshness strategy: REFRESH MATERIALIZED VIEW CONCURRENTLY via pg_cron every 5 minutes.
-DROP MATERIALIZED VIEW IF EXISTS mv_filtered_objects CASCADE;
-CREATE MATERIALIZED VIEW mv_filtered_objects AS
+DROP MATERIALIZED VIEW IF EXISTS public.mv_filtered_objects CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS internal.mv_filtered_objects CASCADE;
+CREATE MATERIALIZED VIEW internal.mv_filtered_objects AS
 SELECT
   o.id,
   o.object_type,
@@ -3454,25 +3531,25 @@ LEFT JOIN object_location ol
 WHERE o.status = 'published';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_filtered_objects_id
-ON mv_filtered_objects(id);
+ON internal.mv_filtered_objects(id);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_name_search_gin
-ON mv_filtered_objects USING GIN(name_search_vector);
+ON internal.mv_filtered_objects USING GIN(name_search_vector);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_city_search_gin
-ON mv_filtered_objects USING GIN(city_search_vector);
+ON internal.mv_filtered_objects USING GIN(city_search_vector);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_geog_gist
-ON mv_filtered_objects USING GIST(geog2);
+ON internal.mv_filtered_objects USING GIST(geog2);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_amenity_codes_gin
-ON mv_filtered_objects USING GIN(cached_amenity_codes);
+ON internal.mv_filtered_objects USING GIN(cached_amenity_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_payment_codes_gin
-ON mv_filtered_objects USING GIN(cached_payment_codes);
+ON internal.mv_filtered_objects USING GIN(cached_payment_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_environment_tags_gin
-ON mv_filtered_objects USING GIN(cached_environment_tags);
+ON internal.mv_filtered_objects USING GIN(cached_environment_tags);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_language_codes_gin
-ON mv_filtered_objects USING GIN(cached_language_codes);
+ON internal.mv_filtered_objects USING GIN(cached_language_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_classification_codes_gin
-ON mv_filtered_objects USING GIN(cached_classification_codes);
+ON internal.mv_filtered_objects USING GIN(cached_classification_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_updated_at_id
-ON mv_filtered_objects(updated_at, id);
+ON internal.mv_filtered_objects(updated_at, id);
 
 -- =====================================================
 -- Triggers for cached GPX/KML generation
@@ -3480,7 +3557,9 @@ ON mv_filtered_objects(updated_at, id);
 
 -- Regenerate GPX/KML when itinerary geometry changes
 CREATE OR REPLACE FUNCTION regenerate_iti_track_cache()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF (TG_OP = 'INSERT' AND NEW.geom IS NOT NULL)
      OR (TG_OP = 'UPDATE' AND NEW.geom IS DISTINCT FROM OLD.geom) THEN
@@ -3515,7 +3594,9 @@ FOR EACH ROW EXECUTE FUNCTION regenerate_iti_track_cache();
 
 -- Update cached min price when prices change
 CREATE OR REPLACE FUNCTION update_object_cached_min_price()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_new_object_id TEXT;
   v_old_object_id TEXT;
@@ -3572,7 +3653,9 @@ FOR EACH ROW EXECUTE FUNCTION update_object_cached_min_price();
 
 -- Update cached main image when media changes
 CREATE OR REPLACE FUNCTION update_object_cached_main_image()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_new_object_id TEXT;
   v_old_object_id TEXT;
@@ -3641,7 +3724,9 @@ FOR EACH ROW EXECUTE FUNCTION update_object_cached_main_image();
 
 -- Update cached rating metrics when reviews change
 CREATE OR REPLACE FUNCTION update_object_cached_rating_metrics()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 DECLARE
   v_new_object_id TEXT;
   v_old_object_id TEXT;
@@ -3962,6 +4047,8 @@ CREATE OR REPLACE FUNCTION api.is_opening_period_active_on_date(
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT
     CASE
@@ -3988,6 +4075,8 @@ CREATE OR REPLACE FUNCTION api.is_opening_period_active_today(
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.is_opening_period_active_on_date(
     p_all_years,
@@ -4008,6 +4097,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT
     (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name)::DATE AS local_date,
@@ -4037,6 +4128,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT ln.local_date, ln.local_time, ln.local_isodow, ln.business_timezone
   FROM object o
@@ -4047,6 +4140,8 @@ $$;
 CREATE OR REPLACE FUNCTION api.refresh_open_status()
 RETURNS void
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   WITH open_state AS (
@@ -4186,7 +4281,9 @@ CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXE
 
 -- Increment version number on INSERT/UPDATE (BEFORE trigger so version is available for save_object_version)
 CREATE OR REPLACE FUNCTION increment_object_version()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     NEW.current_version := 1;
@@ -4621,7 +4718,8 @@ CREATE TRIGGER update_object_legal_updated_at
 -- =====================================================
 
 -- View for active legal records
-CREATE OR REPLACE VIEW v_active_legal_records AS
+CREATE OR REPLACE VIEW v_active_legal_records
+WITH (security_invoker = true) AS
 SELECT 
   ol.id,
   ol.object_id,
@@ -4649,7 +4747,8 @@ JOIN ref_legal_type rlt ON rlt.id = ol.type_id
 WHERE ol.status = 'active';
 
 -- View for expiring legal records (next 30 days)
-CREATE OR REPLACE VIEW v_expiring_legal_records AS
+CREATE OR REPLACE VIEW v_expiring_legal_records
+WITH (security_invoker = true) AS
 SELECT *
 FROM v_active_legal_records
 WHERE valid_to IS NOT NULL 

@@ -80,6 +80,8 @@ ALTER TABLE audit.audit_log ENABLE ROW LEVEL SECURITY;
 -- Activation RLS sur les tables de référence (lecture publique)
 ALTER TABLE ref_language ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_code ENABLE ROW LEVEL SECURITY;
+-- Supabase peut linter la partition default séparément; on l'active explicitement.
+ALTER TABLE ref_code_other ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_code_payment_method ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_code_environment_tag ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_amenity ENABLE ROW LEVEL SECURITY;
@@ -95,13 +97,17 @@ ALTER TABLE ref_code_incident_category ENABLE ROW LEVEL SECURITY;
 
 -- Email courant (JWT claims)
 CREATE OR REPLACE FUNCTION api.current_user_email()
-RETURNS text LANGUAGE sql STABLE AS $$
+RETURNS text LANGUAGE sql STABLE 
+SET search_path = pg_catalog, public, api, extensions, auth
+AS $$
   SELECT lower((current_setting('request.jwt.claims', true)::json ->> 'email'))
 $$;
 
 -- Acteurs liés à l'utilisateur via email dans actor_channel.kind='email'
 CREATE OR REPLACE FUNCTION api.user_actor_ids()
-RETURNS SETOF uuid LANGUAGE sql STABLE AS $$
+RETURNS SETOF uuid LANGUAGE sql STABLE 
+SET search_path = pg_catalog, public, api, extensions, auth
+AS $$
   SELECT ac.actor_id
   FROM actor_channel ac
   JOIN ref_code_contact_kind ck ON ck.id = ac.kind_id AND ck.code = 'email'
@@ -348,6 +354,9 @@ DROP POLICY IF EXISTS "pub_tag_link_read" ON tag_link;
 DROP POLICY IF EXISTS "admin_tag_link_write" ON tag_link;
 DROP POLICY IF EXISTS "pub_ref_code_read" ON ref_code;
 DROP POLICY IF EXISTS "admin_ref_code_write" ON ref_code;
+-- Partition default ref_code_other (peut ne pas apparaître comme héritée selon l'état DB)
+DROP POLICY IF EXISTS "pub_ref_code_read" ON ref_code_other;
+DROP POLICY IF EXISTS "admin_ref_code_write" ON ref_code_other;
 
 -- Lecture publique pour toutes les tables de référence
 CREATE POLICY "Lecture publique des langues" ON ref_language
@@ -866,7 +875,7 @@ CREATE POLICY "Lecture audit (admin/service_role)" ON audit.audit_log
 -- Insertion autorisée par le rôle courant (triggers côté DB)
 -- Note: l'insertion est effectuée par les triggers en contexte de l'utilisateur courant
 CREATE POLICY "Insertion via triggers" ON audit.audit_log
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT TO service_role, postgres WITH CHECK (true);
 
 -- Aucune mise à jour/suppression par défaut (omise intentionnellement)
 -- (aucune policy UPDATE/DELETE)
@@ -1144,6 +1153,12 @@ CREATE POLICY "pub_ref_code_read" ON ref_code
 CREATE POLICY "admin_ref_code_write" ON ref_code
   FOR ALL USING (auth.role() IN ('service_role','admin'));
 
+-- Policies explicites sur la partition default ref_code_other
+CREATE POLICY "pub_ref_code_read" ON ref_code_other
+  FOR SELECT USING (true);
+CREATE POLICY "admin_ref_code_write" ON ref_code_other
+  FOR ALL USING (auth.role() IN ('service_role','admin'));
+
 -- Supabase Table Editor affiche les partitions séparément.
 -- On applique explicitement RLS + policies sur toutes les partitions ref_code
 -- pour éviter les états "UNRESTRICTED" sur ref_code_*.
@@ -1221,7 +1236,7 @@ BEGIN
     );
     EXECUTE format('DROP POLICY IF EXISTS "Insertion via triggers" ON %I.%I', v_part.schema_name, v_part.table_name);
     EXECUTE format(
-      'CREATE POLICY "Insertion via triggers" ON %I.%I FOR INSERT WITH CHECK (true)',
+      'CREATE POLICY "Insertion via triggers" ON %I.%I FOR INSERT TO service_role, postgres WITH CHECK (true)',
       v_part.schema_name, v_part.table_name
     );
   END LOOP;

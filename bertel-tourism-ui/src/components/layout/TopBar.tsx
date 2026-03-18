@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Menu, Search, UserCircle2 } from 'lucide-react';
+import { Clock3, Menu, Search } from 'lucide-react';
 import { useSessionStore } from '../../store/session-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useThemeStore } from '../../store/theme-store';
@@ -116,7 +116,6 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
           <span className="sr-only">
             Profil de {userLabel}
           </span>
-          <UserCircle2 className="h-4 w-4" />
         </button>
       </div>
     </header>

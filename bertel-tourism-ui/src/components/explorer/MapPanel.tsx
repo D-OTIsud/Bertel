@@ -5,7 +5,11 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { SlidersHorizontal } from 'lucide-react';
 import { Layer, Map, Marker, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { getMarkerImageId } from '../../config/map-markers';
+import {
+  defaultMarkerStyles,
+  getMarkerImageId,
+  objectTypeOptions,
+} from '../../config/map-markers';
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
@@ -14,6 +18,7 @@ import { buildObjectFeatureCollection } from './map-source';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 
 const OBJECT_SOURCE_ID = 'objects-source';
+const OBJECT_FALLBACK_LAYER_ID = 'objects-fallback';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
@@ -133,16 +138,20 @@ interface MapPanelProps {
 
 export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const mapLayer = useUiStore((state) => state.mapLayer);
+  const markerStyles = useUiStore((state) => state.markerStyles);
   const setMapLayer = useUiStore((state) => state.setMapLayer);
 
   const selectCard = useExplorerStore((state) => state.selectCard);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
-  const popupHoveredRef = useRef(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
+  const fallbackCircleColor = useMemo(() => {
+    const entries = objectTypeOptions.flatMap((item) => [item.code, (markerStyles[item.code] ?? defaultMarkerStyles[item.code]).color] as const);
+    return ['match', ['get', 'type'], ...entries, '#327090'] as const;
+  }, [markerStyles]);
   const markerPoints = useMemo(
     () =>
       objects.flatMap((card) => {
@@ -152,9 +161,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
         const type = normalizeExplorerObjectType(card.type);
         const imageId = getMarkerImageId(type);
-        return [{ card, lat, lon, imageSrc: `/markers/${imageId}.png` }];
+        const color = (markerStyles[type] ?? defaultMarkerStyles[type]).color;
+        return [{ card, lat, lon, imageSrc: `/markers/${imageId}.png`, color }];
       }),
-    [objects],
+    [markerStyles, objects],
   );
 
   const collapseHeader = useCallback(() => {
@@ -166,16 +176,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       hoverTimerRef.current = null;
     }
   }, []);
-  const schedulePopupClose = useCallback(
-    (markerId: string) => {
-      clearHoverTimer();
-      hoverTimerRef.current = window.setTimeout(() => {
-        if (popupHoveredRef.current) return;
-        setHoverPopupState((prev) => (prev?.id === markerId ? null : prev));
-      }, 140);
-    },
-    [clearHoverTimer],
-  );
 
   useEffect(
     () => () => {
@@ -201,9 +201,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const handleMarkerLeave = useCallback(
     (markerId: string) => {
-      schedulePopupClose(markerId);
+      clearHoverTimer();
+      setHoverPopupState((prev) => (prev?.id === markerId ? null : prev));
     },
-    [schedulePopupClose],
+    [clearHoverTimer],
   );
 
   const handleMarkerClick = useCallback(
@@ -214,15 +215,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     },
     [clearHoverTimer, selectCard],
   );
-  const handlePopupEnter = useCallback(() => {
-    popupHoveredRef.current = true;
-    clearHoverTimer();
-  }, [clearHoverTimer]);
-  const handlePopupLeave = useCallback(() => {
-    popupHoveredRef.current = false;
-    clearHoverTimer();
-    setHoverPopupState(null);
-  }, [clearHoverTimer]);
 
   return (
     <section className="map-panel panel-card panel-card--map">
@@ -273,6 +265,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               <button
                 type="button"
                 className="map-marker-pin"
+                style={{ backgroundColor: point.color }}
                 onMouseEnter={() => handleMarkerEnter(point.card, point.lon, point.lat)}
                 onMouseLeave={() => handleMarkerLeave(point.card.id)}
                 onClick={() => handleMarkerClick(point.card.id)}
@@ -283,6 +276,18 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             </Marker>
           ))}
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
+            <Layer
+              id={OBJECT_FALLBACK_LAYER_ID}
+              type="circle"
+              paint={{
+                'circle-color': fallbackCircleColor as unknown as string,
+                'circle-opacity': 0.22,
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 0.9,
+                // Make demo points easy to hover/click while pins are loading.
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 3, 11, 4, 15, 5],
+              }}
+            />
             <Layer
               id={OBJECT_LABEL_LAYER_ID}
               type="symbol"
@@ -310,7 +315,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               closeButton={false}
               closeOnClick={false}
             >
-              <div className="map-hover-card" onMouseEnter={handlePopupEnter} onMouseLeave={handlePopupLeave}>
+              <div className="map-hover-card">
                 <img
                   className="map-hover-card__img"
                   src={hoverPopupState.image ?? ''}

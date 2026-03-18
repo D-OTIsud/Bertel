@@ -1093,24 +1093,24 @@ a {
 }
 
 .map-marker-pin {
-  width: 48px;
-  height: 64px;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 20px rgba(24, 49, 59, 0.3);
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
   cursor: pointer;
-  transform: translateY(-3px);
+  transform: translateY(-12px);
 }
 
 .map-marker-pin__img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
 }
 

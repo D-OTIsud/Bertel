@@ -2490,6 +2490,16 @@ body::after {
 .label-stack__badge[data-tone="4"] { background: #b07a2a; }
 .label-stack__badge[data-tone="5"] { background: #1f6e57; }
 
+.result-card__title-row > div > .result-type {
+  margin-bottom: 0 !important;
+  height: 20px !important;
+  margin-top: 0 !important;
+  display: block;
+  line-height: 20px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .label-stack__deck:hover .label-stack__badge,
 .label-stack__deck:focus-within .label-stack__badge {
   filter: saturate(1.08);

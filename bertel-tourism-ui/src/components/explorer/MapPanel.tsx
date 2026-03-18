@@ -22,7 +22,7 @@ const CLUSTER_LAYER_ID = 'clusters';
 const CLUSTER_COUNT_LAYER_ID = 'cluster-count';
 const UNCLUSTERED_POINT_LAYER_ID = 'unclustered-points';
 
-function MarkerImagesPreloader() {
+function MarkerImagesPreloader({ setImagesReady }: { setImagesReady: (ready: boolean) => void }) {
   const { map } = useMap();
 
   useEffect(() => {
@@ -30,26 +30,37 @@ function MarkerImagesPreloader() {
 
     const imageIds = objectTypeOptions.map((t) => getMarkerImageId(t.code));
 
-    const loadAll = () => {
+    let cancelled = false;
+
+    const loadImageIfMissing = (imageId: string) => {
+      if (map.hasImage(imageId)) return Promise.resolve();
+
+      const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
+
+      return new Promise<void>((resolve) => {
+        // maplibre's loadImage signature is not fully typed via react-map-gl.
+        (map as unknown as {
+          loadImage: (u: string, cb: (err: unknown, img: unknown) => void) => void;
+        }).loadImage(url, (err, img) => {
+          if (!err && img && !map.hasImage(imageId)) {
+            map.addImage(imageId, img as any, { pixelRatio: 2 });
+          }
+          resolve();
+        });
+      });
+    };
+
+    const loadAll = async () => {
       if (!map.isStyleLoaded()) return;
+      setImagesReady(false);
 
       for (const imageId of imageIds) {
-        if (map.hasImage(imageId)) continue;
-        const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
-
-        // maplibre's loadImage signature is not fully typed via react-map-gl.
-        (map as unknown as { loadImage: (u: string, cb: (err: unknown, img: unknown) => void) => void }).loadImage(
-          url,
-          (err, img) => {
-            if (err) return;
-            if (!img) return;
-            // Add again only if style reload removed it in the meantime.
-            if (!map.hasImage(imageId)) {
-              map.addImage(imageId, img as any, { pixelRatio: 2 });
-            }
-          },
-        );
+        // Sequential to avoid bursty parallel loads; only 7 images total.
+        // eslint-disable-next-line no-await-in-loop
+        await loadImageIfMissing(imageId);
       }
+
+      if (!cancelled) setImagesReady(true);
     };
 
     loadAll();
@@ -59,6 +70,7 @@ function MarkerImagesPreloader() {
     map.on('styledata', onStyleData);
 
     return () => {
+      cancelled = true;
       map.off('styledata', onStyleData);
     };
   }, [map]);
@@ -199,6 +211,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const cardById = useMemo(() => new globalThis.Map(objects.map((card) => [card.id, card] as const)), [objects]);
+  const [markerImagesReady, setMarkerImagesReady] = useState(false);
   const mapStyle = env.mapStyles[mapLayer];
 
   const collapseHeader = useCallback(() => {
@@ -416,7 +429,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           <MapDrawControl />
-          <MarkerImagesPreloader />
+          <MarkerImagesPreloader setImagesReady={setMarkerImagesReady} />
           <Source
             id={OBJECT_SOURCE_ID}
             type="geojson"
@@ -435,7 +448,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                 'circle-stroke-width': 2,
                 'circle-radius': [
                   'step',
-                  ['get', 'point_count'],
+                  ['coalesce', ['get', 'point_count'], 0],
                   14,
                   10,
                   18,
@@ -462,18 +475,20 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                 'text-halo-width': 1,
               }}
             />
-            <Layer
-              id={UNCLUSTERED_POINT_LAYER_ID}
-              type="symbol"
-              filter={['!', ['has', 'point_count']]}
-              layout={{
-                'icon-image': ['get', 'markerIcon'],
-                'icon-size': 0.52,
-                'icon-anchor': 'bottom',
-                'icon-allow-overlap': true,
-                'icon-ignore-placement': true,
-              }}
-            />
+            {markerImagesReady ? (
+              <Layer
+                id={UNCLUSTERED_POINT_LAYER_ID}
+                type="symbol"
+                filter={['!', ['has', 'point_count']]}
+                layout={{
+                  'icon-image': ['get', 'markerIcon'],
+                  'icon-size': 0.52,
+                  'icon-anchor': 'bottom',
+                  'icon-allow-overlap': true,
+                  'icon-ignore-placement': true,
+                }}
+              />
+            ) : null}
             <Layer
               id={OBJECT_LABEL_LAYER_ID}
               type="symbol"

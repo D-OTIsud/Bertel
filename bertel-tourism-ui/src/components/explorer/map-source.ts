@@ -1,5 +1,6 @@
 import { getMarkerImageId } from '../../config/map-markers';
 import type { ObjectCard } from '../../types/domain';
+import { normalizeExplorerObjectType } from '../../utils/facets';
 
 export interface MapFeatureProperties {
   id: string;
@@ -37,6 +38,8 @@ export function buildObjectFeatureCollection(objects: ObjectCard[]): MapFeatureC
         return [];
       }
 
+      const normalizedType = normalizeExplorerObjectType(item.type);
+
       return [{
         type: 'Feature' as const,
         geometry: {
@@ -46,12 +49,12 @@ export function buildObjectFeatureCollection(objects: ObjectCard[]): MapFeatureC
         properties: {
           id: item.id,
           name: item.name,
-          type: item.type,
+          type: normalizedType,
           address: item.location?.address ?? 'Sans adresse',
           city: item.location?.city ?? '',
           price: item.render?.price ?? (item.min_price != null ? `${item.min_price} EUR` : ''),
           rating: item.rating == null ? '' : String(item.rating),
-          markerIcon: getMarkerImageId(item.type),
+          markerIcon: getMarkerImageId(normalizedType),
         },
       }];
     }),

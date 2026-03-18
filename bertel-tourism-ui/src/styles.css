@@ -2427,7 +2427,7 @@ body::after {
 .label-stack__deck:hover .label-stack__badge,
 .label-stack__deck:focus-within .label-stack__badge {
   filter: saturate(1.08);
-  transition-delay: 1s;
+  transition-delay: 0.5s;
 }
 
 .label-stack__deck:hover .label-stack__badge:nth-child(n + 2),

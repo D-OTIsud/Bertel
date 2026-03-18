@@ -2621,7 +2621,7 @@ body::after {
 }
 
 .map-hover-card {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 

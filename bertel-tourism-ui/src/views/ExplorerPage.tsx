@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
@@ -8,6 +8,7 @@ import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useE
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { useExplorerStore } from '../store/explorer-store';
 
 const MapPanel = lazy(async () => ({ default: (await import('../components/explorer/MapPanel')).MapPanel }));
 
@@ -69,6 +70,19 @@ export default function ExplorerPage() {
   usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
   const cards = cardsQuery.data ?? [];
+
+  const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
+  const clearSelection = useExplorerStore((state) => state.clearSelection);
+
+  useEffect(() => {
+    setVisibleObjectIds(cards.map((c) => c.id));
+  }, [cards, setVisibleObjectIds]);
+
+  useEffect(() => {
+    return () => {
+      clearSelection();
+    };
+  }, [clearSelection]);
 
   if (cardsQuery.isError) {
     return <section className="panel-card panel-card--wide">{(cardsQuery.error as Error).message}</section>;

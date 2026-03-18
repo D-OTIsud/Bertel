@@ -58,35 +58,40 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                 </div>
                 {Array.isArray(card.labels) && card.labels.length > 0 ? (() => {
                   const labels = card.labels;
+                  const visibleCount = Math.min(labels.length, 3);
+                  const showOverflow = labels.length > 3;
+                  const stackRows = visibleCount + (showOverflow ? 1 : 0);
                   return (
                     <span className="label-stack" aria-label={`Labels: ${labels.join(', ')}`}>
-                      {labels.slice(0, 5).map((label) => (
-                      <span
-                        key={label}
-                        className="label-stack__badge result-card__label-badge"
-                        data-tone={String(hashLabel(label) % 6)}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleLabel(label);
-                        }}
-                      >
-                        {label}
+                      <span className="label-stack__deck" style={{ ['--label-stack-rows' as never]: stackRows }}>
+                        {labels.slice(0, 3).map((label) => (
+                          <span
+                            key={label}
+                            className="label-stack__badge result-card__label-badge"
+                            data-tone={String(hashLabel(label) % 6)}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              toggleLabel(label);
+                            }}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                        {showOverflow ? (
+                          <span
+                            className="label-stack__badge label-stack__badge--overflow result-card__label-badge"
+                            data-tone="overflow"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              toggleLabel(labels[0] ?? '');
+                            }}
+                          >
+                            +{labels.length - 3}
+                          </span>
+                        ) : null}
                       </span>
-                      ))}
-                      {labels.length > 5 ? (
-                      <span
-                        className="label-stack__badge label-stack__badge--overflow result-card__label-badge"
-                        data-tone="overflow"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleLabel(labels[0] ?? '');
-                        }}
-                      >
-                        +{labels.length - 5}
-                      </span>
-                      ) : null}
                     </span>
                   );
                 })() : null}

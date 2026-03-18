@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
@@ -20,11 +21,24 @@ function hashLabel(value: string): number {
   return Math.abs(h);
 }
 
+function toResultCardDomId(cardId: string): string {
+  // HTML ids cannot contain every possible backend character; normalize to a safe subset.
+  return `result-card-${String(cardId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+}
+
 export function ResultsList({ cards, loading, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
+  const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+
+  useEffect(() => {
+    if (!selectedCardId) return;
+    const el = document.getElementById(toResultCardDomId(selectedCardId));
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [selectedCardId]);
 
   return (
     <section className="results-panel">
@@ -49,7 +63,12 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
         {cards.map((card) => (
           <div
             key={card.id}
-            className={cn('result-card', selectedObjectIds.includes(card.id) && 'result-card--selected')}
+            id={toResultCardDomId(card.id)}
+            className={cn(
+              'result-card',
+              selectedObjectIds.includes(card.id) && 'result-card--selected',
+              selectedCardId === card.id && 'result-card--selected',
+            )}
             role="button"
             tabIndex={0}
             onClick={() => openDrawer(card.id)}

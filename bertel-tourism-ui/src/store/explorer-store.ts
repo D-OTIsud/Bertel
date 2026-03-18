@@ -5,6 +5,7 @@ import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets'
 interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
   visibleObjectIds: string[];
+  selectedCardId: string | null;
 
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
@@ -19,6 +20,8 @@ interface ExplorerState extends ExplorerFilters {
   clearSelection: () => void;
   setVisibleObjectIds: (objectIds: string[]) => void;
   selectAllVisible: () => void;
+  selectCard: (id: string) => void;
+  clearSelectedCard: () => void;
 
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
   toggleHotClassification: (schemeCode: string, valueCode: string) => void;
@@ -90,6 +93,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   ...DEFAULT_EXPLORER_FILTERS,
   selectedObjectIds: [],
   visibleObjectIds: [],
+  selectedCardId: null,
 
   toggleBucket: (bucket) =>
     set((state) => ({
@@ -138,6 +142,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       ...state,
       selectedObjectIds: state.visibleObjectIds.length > 0 ? [...state.visibleObjectIds] : [],
     })),
+  selectCard: (id) => set({ selectedCardId: id }),
+  clearSelectedCard: () => set({ selectedCardId: null }),
 
   toggleHotSubtype: (type) =>
     set((state) => {

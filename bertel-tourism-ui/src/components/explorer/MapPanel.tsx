@@ -334,13 +334,12 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               );
             }
 
-            const { card, imageSrc, color } = props;
+            const { card, imageSrc } = props;
             return (
               <Marker key={card.id} longitude={longitude} latitude={latitude} anchor="bottom">
                 <button
                   type="button"
                   className="map-marker-pin"
-                  style={{ backgroundColor: color }}
                   onMouseEnter={() => handleMarkerEnter(card, longitude, latitude)}
                   onMouseLeave={() => handleMarkerLeave()}
                   onClick={() => handleMarkerClick(card.id)}

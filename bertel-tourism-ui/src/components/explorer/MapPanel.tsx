@@ -5,7 +5,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { SlidersHorizontal } from 'lucide-react';
 import { Layer, Map, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { getMarkerImageId, objectTypeOptions } from '../../config/map-markers';
+// Marker PNGs are injected into the WebGL symbol layer via `onStyleImageMissing`.
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
@@ -40,59 +40,6 @@ function StyleImageMissingBinder({ onMissing }: { onMissing: (e: any) => void })
       map.off('styleimagemissing', onMissing);
     };
   }, [map, onMissing]);
-
-  return null;
-}
-
-function MarkerImagesLoader({ onReady }: { onReady: (ready: boolean) => void }) {
-  const { map } = useMap();
-
-  useEffect(() => {
-    if (!map) return;
-
-    let cancelled = false;
-    const imageIds = objectTypeOptions.map((t) => getMarkerImageId(t.code));
-
-    const loadImageIfMissing = (imageId: string) =>
-      new Promise<void>((resolve) => {
-        if (map.hasImage(imageId)) {
-          resolve();
-          return;
-        }
-
-        const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
-        (map as unknown as { loadImage: (u: string, cb: (err: any, img: any) => void) => void }).loadImage(
-          url,
-          (err, img) => {
-            if (!err && img && !map.hasImage(imageId)) {
-              map.addImage(imageId, img as any, { pixelRatio: 2 });
-            }
-            resolve();
-          },
-        );
-      });
-
-    const loadAll = async () => {
-      if (!map.isStyleLoaded()) return;
-      onReady(false);
-
-      await Promise.all(imageIds.map((id) => loadImageIfMissing(id)));
-
-      if (!cancelled) onReady(true);
-    };
-
-    // Kick off once images can be loaded.
-    loadAll();
-
-    // Re-inject after style switches (Plan/Satellite/Topo).
-    const onStyleData = () => loadAll();
-    map.on('styledata', onStyleData);
-
-    return () => {
-      cancelled = true;
-      map.off('styledata', onStyleData);
-    };
-  }, [map, onReady]);
 
   return null;
 }
@@ -224,7 +171,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const cardById = useMemo(() => new globalThis.Map(objects.map((card) => [card.id, card] as const)), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
-  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   const handleImageMissing = useCallback((e: any) => {
     const map = e.target;
@@ -462,20 +408,18 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           <NavigationControl position="bottom-right" showCompass={false} />
           <MapDrawControl />
           <StyleImageMissingBinder onMissing={handleImageMissing} />
-          <MarkerImagesLoader onReady={setImagesLoaded} />
-          {imagesLoaded ? (
-            <Source
-              id={OBJECT_SOURCE_ID}
-              type="geojson"
-              data={geojsonData}
-              cluster={true}
-              clusterMaxZoom={14}
-              clusterRadius={50}
-            >
+          <Source
+            id={OBJECT_SOURCE_ID}
+            type="geojson"
+            data={geojsonData}
+            cluster={true}
+            clusterMaxZoom={14}
+            clusterRadius={50}
+          >
             <Layer
               id={CLUSTER_LAYER_ID}
               type="circle"
-              filter={['==', ['get', 'cluster'], true]}
+              filter={['has', 'point_count']}
               paint={{
                 'circle-color': '#18313B',
                 'circle-stroke-color': '#FFFDF8',
@@ -494,7 +438,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             <Layer
               id={CLUSTER_COUNT_LAYER_ID}
               type="symbol"
-              filter={['==', ['get', 'cluster'], true]}
+              filter={['has', 'point_count']}
               layout={{
                 'text-field': '{point_count_abbreviated}',
                 'text-size': 12,
@@ -537,8 +481,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                 'text-halo-width': 1.2,
               }}
             />
-            </Source>
-          ) : null}
+          </Source>
           {hoverPopupState && (
             <Popup
               longitude={hoverPopupState.lngLat[0]}

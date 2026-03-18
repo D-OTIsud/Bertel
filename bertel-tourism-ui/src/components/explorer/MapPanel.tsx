@@ -67,7 +67,7 @@ function MarkerImagesLoader({ onReady }: { onReady: (ready: boolean) => void }) 
     };
 
     const loadAll = async () => {
-      if (!map.isStyleLoaded()) return;
+      if (!map.getStyle()) return;
       onReady(false);
 
       await Promise.all(imageIds.map((id) => loadImageIfMissing(id)));
@@ -215,7 +215,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const hoveredPointIdRef = useRef<string | null>(null);
 
-  const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
+  const geojsonData = useMemo(() => {
+    const data = buildObjectFeatureCollection(objects);
+    return data;
+  }, [objects]);
   const cardById = useMemo(() => new globalThis.Map(objects.map((card) => [card.id, card] as const)), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
   const [imagesLoaded, setImagesLoaded] = useState(false);

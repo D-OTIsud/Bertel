@@ -43,7 +43,19 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
 
       <div className="results-list">
         {cards.map((card) => (
-          <button key={card.id} type="button" className="result-card" onClick={() => openDrawer(card.id)}>
+          <div
+            key={card.id}
+            className="result-card"
+            role="button"
+            tabIndex={0}
+            onClick={() => openDrawer(card.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openDrawer(card.id);
+              }
+            }}
+          >
             <div
               className="result-card__media"
               style={{ backgroundImage: `linear-gradient(180deg, rgba(24, 49, 59, 0.04), rgba(24, 49, 59, 0.18)), url(${card.image ?? ''})` }}
@@ -96,7 +108,7 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                 <StatusPill tone={card.open_now ? 'green' : 'neutral'}>{card.open_now ? 'Ouvert' : 'Fermeture'}</StatusPill>
               </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </section>

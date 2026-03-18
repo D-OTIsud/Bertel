@@ -320,7 +320,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                     className="map-cluster-pin"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(cluster.id as number), 20);
+                      const expansionZoom = Math.min(supercluster?.getClusterExpansionZoom(cluster.id as number) ?? 20, 20);
                       mapRef.current?.easeTo({
                         center: [longitude, latitude],
                         zoom: expansionZoom,

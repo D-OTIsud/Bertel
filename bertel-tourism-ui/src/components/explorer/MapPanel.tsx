@@ -59,7 +59,7 @@ function MarkerImagesLoader({ onReady }: { onReady: (ready: boolean) => void }) 
       try {
         const image = await (map as unknown as { loadImage: (u: string) => Promise<any> }).loadImage(url);
         if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image.data || image, { pixelRatio: 2 });
+          map.addImage(imageId, image, { pixelRatio: 2 });
         }
       } catch (err) {
         console.warn(`Failed to preload map marker: ${url}`, err);
@@ -232,7 +232,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     (map as any).loadImage(url)
       .then((image: any) => {
         if (image && !map.hasImage(imageId)) {
-          map.addImage(imageId, image.data || image);
+          map.addImage(imageId, image);
         }
       })
       .catch((error: any) => {
@@ -469,14 +469,14 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             <Layer
               id={CLUSTER_LAYER_ID}
               type="circle"
-              filter={['==', ['get', 'cluster'], true]}
+              filter={['has', 'point_count']}
               paint={{
                 'circle-color': '#18313B',
                 'circle-stroke-color': '#FFFDF8',
                 'circle-stroke-width': 2,
                 'circle-radius': [
                   'step',
-                  ['to-number', ['coalesce', ['get', 'point_count'], 0]],
+                  ['get', 'point_count'],
                   20,
                   100,
                   30,
@@ -488,7 +488,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             <Layer
               id={CLUSTER_COUNT_LAYER_ID}
               type="symbol"
-              filter={['==', ['get', 'cluster'], true]}
+              filter={['has', 'point_count']}
               layout={{
                 'text-field': '{point_count_abbreviated}',
                 'text-size': 12,

@@ -39,6 +39,15 @@ function loadSvgImage(svg: string): Promise<HTMLImageElement> {
   });
 }
 
+function loadPngImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image(64, 80);
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Impossible de charger l icone PNG du marker: ${url}`));
+    image.src = url;
+  });
+}
+
 function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode, MarkerStyle> }) {
   const { map } = useMap();
 
@@ -49,8 +58,21 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     const upsertImage = async (code: ObjectTypeCode) => {
       const imageId = getMarkerImageId(code);
       const style = markerStyles[code] ?? defaultMarkerStyles[code];
-      const svg = buildMarkerSvg(style);
       try {
+        // Prefer static PNG assets to avoid CSP issues with `data:image/svg+xml` in prod.
+        if (style.mode === 'preset') {
+          const pngUrl = `/markers/${imageId}.png`;
+          const pngImage = await loadPngImage(pngUrl);
+          if (!isMounted) return;
+          if (map.hasImage(imageId)) {
+            map.updateImage(imageId, pngImage);
+          } else {
+            map.addImage(imageId, pngImage, { pixelRatio: 2 });
+          }
+          return;
+        }
+
+        const svg = buildMarkerSvg(style);
         const image = await loadSvgImage(svg);
         if (!isMounted) return;
         if (map.hasImage(imageId)) {
@@ -429,6 +451,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             zoom: 10.2,
           }}
           attributionControl={false}
+          interactiveLayerIds={[OBJECT_FALLBACK_LAYER_ID, OBJECT_ICON_LAYER_ID, OBJECT_LABEL_LAYER_ID]}
           cursor="default"
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
@@ -449,7 +472,8 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                 'circle-opacity': 0.85,
                 'circle-stroke-color': '#ffffff',
                 'circle-stroke-width': 1.2,
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 4, 11, 6, 15, 8],
+                // Make demo points easy to hover/click while pins are loading.
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 8, 11, 10, 15, 12],
               }}
             />
             <Layer

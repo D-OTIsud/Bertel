@@ -706,6 +706,13 @@ a {
   justify-content: flex-end;
 }
 
+.results-panel__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .results-count {
   font-size: 0.86rem;
   color: var(--text-muted);
@@ -1085,6 +1092,7 @@ a {
   align-content: start;
   position: sticky;
   top: 0;
+  padding-bottom: 30px;
 }
 
 .object-drawer-nav__item {
@@ -1119,6 +1127,7 @@ a {
   min-width: 0;
   overflow: visible;
   padding-right: 0.25rem;
+  padding-bottom: 30px;
 }
 
 .drawer-form-stack,
@@ -2030,6 +2039,20 @@ body::after {
   padding: 0.6rem 0.9rem;
 }
 
+.filters-panel__reset {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  color: #fffdf8;
+  background: #b34b3d;
+  border-color: #b34b3d;
+}
+
+.filters-panel__reset:hover {
+  color: #fffdf8;
+  background: #9d4135;
+  border-color: #9d4135;
+}
+
 .explorer-workspace .result-card {
   grid-template-columns: 112px minmax(0, 1fr);
   gap: 0.65rem;
@@ -2051,10 +2074,53 @@ body::after {
   padding-top: 0;
 }
 
+.map-panel__header-actions-wrap {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  left: auto;
+  z-index: 3;
+}
+
+.map-panel__header-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(24, 49, 59, 0.08);
+  background: rgba(255, 253, 248, 0.88);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-panel__header-trigger:hover {
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 18px 48px rgba(24, 49, 59, 0.12);
+}
+
+.map-panel__header-actions-wrap--expanded .map-panel__header-actions {
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.88);
+  border: 1px solid rgba(24, 49, 59, 0.08);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
 .map-panel__header-actions {
   display: grid;
   justify-items: end;
   gap: 0.75rem;
+}
+
+.map-panel__header-actions .segmented-control {
+  justify-content: flex-end;
 }
 
 /* Tighten card radii to recover usable space */

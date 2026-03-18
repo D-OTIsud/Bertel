@@ -38,13 +38,11 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
   return (
     <section className="results-panel">
       <div className="panel-heading">
-        <div>
+        <div className="results-panel__title-row">
           <span className="eyebrow">Resultats</span>
-        </div>
-        <div className="results-panel__meta">
-          {headerActions}
           <span className="results-count">{cards.length} fiches</span>
         </div>
+        {headerActions ? <div className="results-panel__meta">{headerActions}</div> : null}
       </div>
 
       {loading && <div className="panel-card panel-card--nested">Chargement des cartes...</div>}

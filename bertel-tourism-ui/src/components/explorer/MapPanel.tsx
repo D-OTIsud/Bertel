@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { SlidersHorizontal } from 'lucide-react';
 import { Layer, Map, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -200,6 +201,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     lngLat: [number, number];
     properties: MapFeatureProperties;
   } | null>(null);
+  const [headerExpanded, setHeaderExpanded] = useState(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
@@ -231,23 +233,38 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     [openDrawer],
   );
 
+  const collapseHeader = useCallback(() => {
+    setHeaderExpanded(false);
+  }, []);
+
   return (
     <section className="map-panel panel-card panel-card--map">
-      <div className="panel-heading panel-heading--overlay">
-        <div className="map-panel__header-actions">
-          {headerActions}
-          <div className="segmented-control">
-            <button type="button" className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('classic')}>
-              Plan
-            </button>
-            <button type="button" className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('satellite')}>
-              Satellite
-            </button>
-            <button type="button" className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('topo')}>
-              Topo
-            </button>
+      <div className={`map-panel__header-actions-wrap ${headerExpanded ? 'map-panel__header-actions-wrap--expanded' : ''}`}>
+        {headerExpanded ? (
+          <div className="map-panel__header-actions" role="toolbar" onClick={collapseHeader}>
+            {headerActions}
+            <div className="segmented-control">
+              <button type="button" className={mapLayer === 'classic' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('classic')}>
+                Plan
+              </button>
+              <button type="button" className={mapLayer === 'satellite' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('satellite')}>
+                Satellite
+              </button>
+              <button type="button" className={mapLayer === 'topo' ? 'chip chip--active' : 'chip'} onClick={() => setMapLayer('topo')}>
+                Topo
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <button
+            type="button"
+            className="map-panel__header-trigger"
+            onClick={() => setHeaderExpanded(true)}
+            aria-label="Ouvrir les outils carte"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="map-canvas">
@@ -264,7 +281,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           cursor="default"
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
-          <NavigationControl position="top-right" showCompass={false} />
+          <NavigationControl position="bottom-right" showCompass={false} />
           <MapMarkerImages markerStyles={markerStyles} />
           <MapDrawControl />
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>

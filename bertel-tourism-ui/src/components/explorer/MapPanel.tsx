@@ -19,6 +19,7 @@ import type { GeoPolygon, ObjectCard, ObjectTypeCode } from '../../types/domain'
 import { buildObjectFeatureCollection, type MapFeatureProperties } from './map-source';
 
 const OBJECT_SOURCE_ID = 'objects-source';
+const OBJECT_FALLBACK_LAYER_ID = 'objects-fallback';
 const OBJECT_ICON_LAYER_ID = 'objects-icons';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
 
@@ -206,6 +207,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
+  const fallbackCircleColor = useMemo(() => {
+    const entries = objectTypeOptions.flatMap((item) => [item.code, (markerStyles[item.code] ?? defaultMarkerStyles[item.code]).color] as const);
+    return ['match', ['get', 'type'], ...entries, '#327090'] as const;
+  }, [markerStyles]);
 
   const handleClick = useCallback(
     (e: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown }; properties?: unknown }> }) => {
@@ -286,6 +291,17 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           <MapMarkerImages markerStyles={markerStyles} />
           <MapDrawControl />
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
+            <Layer
+              id={OBJECT_FALLBACK_LAYER_ID}
+              type="circle"
+              paint={{
+                'circle-color': fallbackCircleColor as unknown as string,
+                'circle-opacity': 0.85,
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 1.2,
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 4, 11, 6, 15, 8],
+              }}
+            />
             <Layer
               id={OBJECT_ICON_LAYER_ID}
               type="symbol"

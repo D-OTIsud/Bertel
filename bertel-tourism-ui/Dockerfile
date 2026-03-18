@@ -15,16 +15,20 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_MAP_STYLE_CLASSIC=$NEXT_PUBLIC_MAP_STYLE_CLASSIC \
     NEXT_PUBLIC_MAP_STYLE_SATELLITE=$NEXT_PUBLIC_MAP_STYLE_SATELLITE \
     NEXT_PUBLIC_MAP_STYLE_TOPO=$NEXT_PUBLIC_MAP_STYLE_TOPO \
-    NODE_OPTIONS="--max-old-space-size=4096"
+    NODE_OPTIONS="--max-old-space-size=4096" \
+    NEXT_TELEMETRY_DISABLED=1
 
-COPY package.json ./
-RUN npm install
+# Common runtime compatibility for Next.js deps on Alpine (e.g. sharp)
+RUN apk add --no-cache libc6-compat
+
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 RUN npm run build
 
 FROM node:22-alpine AS runner
-RUN apk add --no-cache gettext
+RUN apk add --no-cache gettext libc6-compat
 
 ENV NODE_ENV=production
 ENV PORT=3000

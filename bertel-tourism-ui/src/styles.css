@@ -2331,6 +2331,12 @@ body::after {
 
 .explorer-workspace .result-card__title-row {
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.explorer-workspace .result-card__title-row .label-stack {
+  flex-basis: 100%;
+  width: 100%;
 }
 
 .explorer-workspace .result-card__location {
@@ -2357,19 +2363,20 @@ body::after {
 
 .label-stack {
   position: relative;
-  display: inline-block;
+  display: block;
   --label-badge-h: 22px;
-  --label-arc-r: calc(var(--label-badge-h) + 2px);
-  height: 1.35rem;
-  min-width: 2.2rem;
-  align-self: start;
+  --label-gap: 6px;
+  min-height: var(--label-badge-h);
+  width: 100%;
+  margin-top: 0.35rem;
+  align-self: stretch;
   overflow: visible;
 }
 
 .label-stack__badge {
   position: absolute;
+  left: 0;
   top: 0;
-  right: 0;
   transform: translate(0, 0);
   opacity: 0;
   transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease, filter 180ms ease;
@@ -2381,12 +2388,14 @@ body::after {
 .label-stack__badge:nth-child(1) {
   z-index: 6;
   opacity: 1;
+  top: 0;
 }
 
-/* Keep collapsed state tidy: only top badge visible */
+/* Collapsed: only first badge visible */
 .label-stack__badge:nth-child(n + 2) {
-  transform: translate(0, 0) scale(0.98);
+  transform: translate(0, 0);
   opacity: 0;
+  top: 0;
 }
 
 .label-stack__badge[data-tone="0"] { background: #b34b3d; }
@@ -2403,17 +2412,17 @@ body::after {
 }
 
 .label-stack:hover .label-stack__badge:nth-child(1),
-.label-stack:focus-within .label-stack__badge:nth-child(1) { transform: translate(0, 0); }
+.label-stack:focus-within .label-stack__badge:nth-child(1) { transform: translate(0, 0); top: 0; }
 .label-stack:hover .label-stack__badge:nth-child(2),
-.label-stack:focus-within .label-stack__badge:nth-child(2) { transform: translate(calc(var(--label-arc-r) * -0.049), calc(var(--label-arc-r) * -0.309)); opacity: 1; }
+.label-stack:focus-within .label-stack__badge:nth-child(2) { transform: translate(0, 0); opacity: 1; top: calc(1 * (var(--label-badge-h) + var(--label-gap))); }
 .label-stack:hover .label-stack__badge:nth-child(3),
-.label-stack:focus-within .label-stack__badge:nth-child(3) { transform: translate(calc(var(--label-arc-r) * -0.191), calc(var(--label-arc-r) * -0.588)); opacity: 1; }
+.label-stack:focus-within .label-stack__badge:nth-child(3) { transform: translate(0, 0); opacity: 1; top: calc(2 * (var(--label-badge-h) + var(--label-gap))); }
 .label-stack:hover .label-stack__badge:nth-child(4),
-.label-stack:focus-within .label-stack__badge:nth-child(4) { transform: translate(calc(var(--label-arc-r) * -0.412), calc(var(--label-arc-r) * -0.809)); opacity: 1; }
+.label-stack:focus-within .label-stack__badge:nth-child(4) { transform: translate(0, 0); opacity: 1; top: calc(3 * (var(--label-badge-h) + var(--label-gap))); }
 .label-stack:hover .label-stack__badge:nth-child(5),
-.label-stack:focus-within .label-stack__badge:nth-child(5) { transform: translate(calc(var(--label-arc-r) * -0.691), calc(var(--label-arc-r) * -0.951)); opacity: 1; }
+.label-stack:focus-within .label-stack__badge:nth-child(5) { transform: translate(0, 0); opacity: 1; top: calc(4 * (var(--label-badge-h) + var(--label-gap))); }
 .label-stack:hover .label-stack__badge:nth-child(6),
-.label-stack:focus-within .label-stack__badge:nth-child(6) { transform: translate(calc(var(--label-arc-r) * -1), calc(var(--label-arc-r) * -1)); opacity: 1; }
+.label-stack:focus-within .label-stack__badge:nth-child(6) { transform: translate(0, 0); opacity: 1; top: calc(5 * (var(--label-badge-h) + var(--label-gap))); }
 
 .label-stack__badge--overflow {
   background: rgba(24, 49, 59, 0.68);

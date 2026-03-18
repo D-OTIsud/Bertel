@@ -8,17 +8,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   defaultMarkerStyles,
   getMarkerImageId,
-  objectTypeOptions,
 } from '../../config/map-markers';
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
+import useSupercluster from 'use-supercluster';
+import type { BBox } from 'geojson';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 
 const OBJECT_SOURCE_ID = 'objects-source';
-const OBJECT_FALLBACK_LAYER_ID = 'objects-fallback';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
@@ -145,13 +145,14 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
+  const popupHoveredRef = useRef(false);
+  const markerHoveredRef = useRef(false);
+  const mapRef = useRef<any>(null);
+  const [bounds, setBounds] = useState<BBox | null>(null);
+  const [zoom, setZoom] = useState<number>(10.2);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
-  const fallbackCircleColor = useMemo(() => {
-    const entries = objectTypeOptions.flatMap((item) => [item.code, (markerStyles[item.code] ?? defaultMarkerStyles[item.code]).color] as const);
-    return ['match', ['get', 'type'], ...entries, '#327090'] as const;
-  }, [markerStyles]);
   const markerPoints = useMemo(
     () =>
       objects.flatMap((card) => {
@@ -167,6 +168,21 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     [markerStyles, objects],
   );
 
+  const points = useMemo(() => {
+    return markerPoints.map((mp) => ({
+      type: 'Feature' as const,
+      properties: { cluster: false, cardId: mp.card.id, card: mp.card, imageSrc: mp.imageSrc, color: mp.color },
+      geometry: { type: 'Point' as const, coordinates: [mp.lon, mp.lat] as [number, number] },
+    }));
+  }, [markerPoints]);
+
+  const { clusters, supercluster } = useSupercluster({
+    points,
+    bounds: bounds || undefined,
+    zoom,
+    options: { radius: 50, maxZoom: 14 },
+  });
+
   const collapseHeader = useCallback(() => {
     setHeaderExpanded(false);
   }, []);
@@ -177,6 +193,15 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     }
   }, []);
 
+  const schedulePopupClose = useCallback(() => {
+    clearHoverTimer();
+    hoverTimerRef.current = window.setTimeout(() => {
+      // Close only if the mouse is not over marker and not over the tooltip.
+      if (popupHoveredRef.current || markerHoveredRef.current) return;
+      setHoverPopupState(null);
+    }, 300);
+  }, [clearHoverTimer]);
+
   useEffect(
     () => () => {
       clearHoverTimer();
@@ -186,6 +211,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const handleMarkerEnter = useCallback(
     (card: ObjectCard, lng: number, lat: number) => {
+      markerHoveredRef.current = true;
       clearHoverTimer();
       hoverTimerRef.current = window.setTimeout(() => {
         setHoverPopupState({
@@ -200,12 +226,22 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   );
 
   const handleMarkerLeave = useCallback(
-    (markerId: string) => {
-      clearHoverTimer();
-      setHoverPopupState((prev) => (prev?.id === markerId ? null : prev));
+    () => {
+      markerHoveredRef.current = false;
+      schedulePopupClose();
     },
-    [clearHoverTimer],
+    [schedulePopupClose],
   );
+
+  const handlePopupEnter = useCallback(() => {
+    popupHoveredRef.current = true;
+    clearHoverTimer();
+  }, [clearHoverTimer]);
+
+  const handlePopupLeave = useCallback(() => {
+    popupHoveredRef.current = false;
+    schedulePopupClose();
+  }, [schedulePopupClose]);
 
   const handleMarkerClick = useCallback(
     (cardId: string) => {
@@ -248,6 +284,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
       <div className="map-canvas">
         <Map
+          ref={mapRef}
           mapStyle={mapStyle}
           initialViewState={{
             longitude: 55.536384,
@@ -256,38 +293,65 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           }}
           attributionControl={false}
           cursor="default"
+          onLoad={(e) => {
+            const b = e.target.getBounds().toArray().flat() as BBox;
+            setBounds(b);
+            setZoom(e.target.getZoom());
+          }}
+          onMove={(e) => {
+            const b = e.target.getBounds().toArray().flat() as BBox;
+            setBounds(b);
+            setZoom(e.viewState.zoom);
+          }}
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           <MapDrawControl />
-          {markerPoints.map((point) => (
-            <Marker key={point.card.id} longitude={point.lon} latitude={point.lat} anchor="bottom">
-              <button
-                type="button"
-                className="map-marker-pin"
-                style={{ backgroundColor: point.color }}
-                onMouseEnter={() => handleMarkerEnter(point.card, point.lon, point.lat)}
-                onMouseLeave={() => handleMarkerLeave(point.card.id)}
-                onClick={() => handleMarkerClick(point.card.id)}
-                aria-label={`Ouvrir ${point.card.name}`}
-              >
-                <img src={point.imageSrc} alt={point.card.name} className="map-marker-pin__img" />
-              </button>
-            </Marker>
-          ))}
+          {clusters.map((cluster) => {
+            const [longitude, latitude] = cluster.geometry.coordinates;
+            const props = cluster.properties as any;
+            const isCluster = props.cluster;
+            const pointCount = props.point_count;
+
+            if (isCluster) {
+              return (
+                <Marker key={`cluster-${cluster.id}`} longitude={longitude} latitude={latitude}>
+                  <div
+                    className="map-cluster-pin"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(cluster.id as number), 20);
+                      mapRef.current?.easeTo({
+                        center: [longitude, latitude],
+                        zoom: expansionZoom,
+                        duration: 500,
+                      });
+                    }}
+                  >
+                    {pointCount}
+                  </div>
+                </Marker>
+              );
+            }
+
+            const { card, imageSrc, color } = props;
+            return (
+              <Marker key={card.id} longitude={longitude} latitude={latitude} anchor="bottom">
+                <button
+                  type="button"
+                  className="map-marker-pin"
+                  style={{ backgroundColor: color }}
+                  onMouseEnter={() => handleMarkerEnter(card, longitude, latitude)}
+                  onMouseLeave={() => handleMarkerLeave()}
+                  onClick={() => handleMarkerClick(card.id)}
+                  aria-label={`Ouvrir ${card.name}`}
+                >
+                  <img src={imageSrc} alt={card.name} className="map-marker-pin__img" />
+                </button>
+              </Marker>
+            );
+          })}
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
-            <Layer
-              id={OBJECT_FALLBACK_LAYER_ID}
-              type="circle"
-              paint={{
-                'circle-color': fallbackCircleColor as unknown as string,
-                'circle-opacity': 0.22,
-                'circle-stroke-color': '#ffffff',
-                'circle-stroke-width': 0.9,
-                // Make demo points easy to hover/click while pins are loading.
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 3, 11, 4, 15, 5],
-              }}
-            />
             <Layer
               id={OBJECT_LABEL_LAYER_ID}
               type="symbol"
@@ -315,7 +379,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               closeButton={false}
               closeOnClick={false}
             >
-              <div className="map-hover-card">
+              <div className="map-hover-card" onMouseEnter={handlePopupEnter} onMouseLeave={handlePopupLeave}>
                 <img
                   className="map-hover-card__img"
                   src={hoverPopupState.image ?? ''}

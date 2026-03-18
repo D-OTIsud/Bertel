@@ -10,6 +10,8 @@ interface ExplorerState extends ExplorerFilters {
   setPmr: (value: boolean) => void;
   setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
+  toggleLabel: (label: string) => void;
+  clearLabels: () => void;
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
   toggleHotClassification: (schemeCode: string, valueCode: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
@@ -90,6 +92,19 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setPmr: (value) => set((state) => ({ common: { ...state.common, pmr: value } })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
   setOpenNow: (value) => set((state) => ({ common: { ...state.common, openNow: value } })),
+  toggleLabel: (label) =>
+    set((state) => {
+      const needle = String(label).trim();
+      if (!needle) return state;
+      const exists = state.common.labelsAny.includes(needle);
+      return {
+        common: {
+          ...state.common,
+          labelsAny: exists ? state.common.labelsAny.filter((item) => item !== needle) : [...state.common.labelsAny, needle],
+        },
+      };
+    }),
+  clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
   toggleHotSubtype: (type) =>
     set((state) => {
       const nextSubtypes = state.hot.subtypes.includes(type)

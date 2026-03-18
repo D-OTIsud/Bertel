@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
+import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
 
 interface ResultsListProps {
@@ -9,8 +10,17 @@ interface ResultsListProps {
   headerActions?: ReactNode;
 }
 
+function hashLabel(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    h = (h * 31 + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 export function ResultsList({ cards, loading, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
+  const toggleLabel = useExplorerStore((state) => state.toggleLabel);
 
   return (
     <section className="results-panel">
@@ -46,20 +56,40 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                   <h3>{card.name}</h3>
                   <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                 </div>
-                {Array.isArray(card.labels) && card.labels.length > 0 ? (
-                  <span className="label-stack" aria-label={`Labels: ${card.labels.join(', ')}`}>
-                    {card.labels.slice(0, 5).map((label) => (
-                      <span key={label} className="label-stack__badge result-card__label-badge">
+                {Array.isArray(card.labels) && card.labels.length > 0 ? (() => {
+                  const labels = card.labels;
+                  return (
+                    <span className="label-stack" aria-label={`Labels: ${labels.join(', ')}`}>
+                      {labels.slice(0, 5).map((label) => (
+                      <span
+                        key={label}
+                        className="label-stack__badge result-card__label-badge"
+                        data-tone={String(hashLabel(label) % 6)}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleLabel(label);
+                        }}
+                      >
                         {label}
                       </span>
-                    ))}
-                    {card.labels.length > 5 ? (
-                      <span className="label-stack__badge label-stack__badge--overflow result-card__label-badge">
-                        +{card.labels.length - 5}
+                      ))}
+                      {labels.length > 5 ? (
+                      <span
+                        className="label-stack__badge label-stack__badge--overflow result-card__label-badge"
+                        data-tone="overflow"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleLabel(labels[0] ?? '');
+                        }}
+                      >
+                        +{labels.length - 5}
                       </span>
-                    ) : null}
-                  </span>
-                ) : null}
+                      ) : null}
+                    </span>
+                  );
+                })() : null}
               </div>
               <div className="result-card__footer">
                 <strong className="result-card__location">{card.location?.address ?? 'Adresse a completer'}</strong>

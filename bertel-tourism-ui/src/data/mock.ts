@@ -305,6 +305,7 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
   const search = filters.common.search.trim().toLowerCase();
   const city = filters.common.city.trim().toLowerCase();
   const lieuDit = filters.common.lieuDit.trim().toLowerCase();
+  const labelsAny = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
 
   const filtered = mockCards.filter((card) => {
     const bucketMatches = buckets.some((candidate) => matchesBucket(card, candidate));
@@ -318,8 +319,11 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
     const openMatches = !filters.common.openNow || card.open_now === true;
     const petsMatches = !filters.common.petsAccepted || card.id === 'HOTRUN0000000001';
     const pmrMatches = !filters.common.pmr || ['HOTRUN0000000001', 'RESRUN0000000002'].includes(card.id);
+    const labelsMatches =
+      labelsAny.length === 0 ||
+      (Array.isArray(card.labels) && card.labels.some((label) => labelsAny.includes(String(label).toLowerCase())));
 
-    if (!bucketMatches || !searchMatches || !cityMatches || !lieuDitMatches || !openMatches || !petsMatches || !pmrMatches) {
+    if (!bucketMatches || !searchMatches || !cityMatches || !lieuDitMatches || !openMatches || !petsMatches || !pmrMatches || !labelsMatches) {
       return false;
     }
 

@@ -41,6 +41,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       ? bucketsParam.split(',').filter((bucket): bucket is ExplorerBucketKey => EXPLORER_BUCKETS.includes(bucket as ExplorerBucketKey))
       : undefined;
 
+  const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const hotClassifications = searchParams.get('hotClassifications')?.split(',').filter(Boolean).flatMap((value) => {
     const [schemeCode = '', valueCode = ''] = value.split(':');
@@ -58,6 +59,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('pmr') != null && { pmr: searchParams.get('pmr') === 'true' }),
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
     ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
+    ...(labelsAny !== undefined && { labelsAny }),
   };
 
   const itiPatch = {
@@ -132,6 +134,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   const p = new URLSearchParams();
   if (filters.selectedBuckets.length > 0) {
     p.set('buckets', filters.selectedBuckets.join(','));
+  }
+  if (filters.common.labelsAny.length > 0) {
+    p.set('labels', filters.common.labelsAny.join(','));
   }
   if (filters.common.search) {
     p.set('search', filters.common.search);

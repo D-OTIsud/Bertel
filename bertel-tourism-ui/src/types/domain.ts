@@ -59,6 +59,7 @@ export interface ExplorerCommonFilters {
   pmr: boolean;
   petsAccepted: boolean;
   openNow: boolean;
+  labelsAny: string[];
   bbox?: [number, number, number, number] | null;
   polygon?: GeoPolygon | null;
 }

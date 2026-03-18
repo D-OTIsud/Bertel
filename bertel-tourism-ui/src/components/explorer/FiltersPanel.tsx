@@ -39,13 +39,12 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
         <div>
           <span className="eyebrow">Filtres</span>
         </div>
-        <div className="inline-actions">
-          {headerActions}
-          <Button type="button" variant="ghost" onClick={resetAll}>
-            Reinitialiser
-          </Button>
-        </div>
+        {headerActions ? <div className="inline-actions">{headerActions}</div> : null}
       </div>
+
+      <Button type="button" variant="ghost" className="filters-panel__reset" onClick={resetAll}>
+        Reinitialiser
+      </Button>
 
       <section className="facet-group">
         <span className="facet-title">Typologies</span>

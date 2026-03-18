@@ -6,17 +6,17 @@
 -- =====================================================
 -- Refresh Materialized Views
 -- =====================================================
-\echo 'Refreshing materialized views...'
+SELECT 'Refreshing materialized views...' AS info;
 
 -- Refresh reference data cache (concurrently to allow reads during refresh)
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;
+REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
 -- Refresh hot-path filtered object projection
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;
+REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;
 
 -- =====================================================
 -- Update Statistics
 -- =====================================================
-\echo 'Updating statistics...'
+SELECT 'Updating statistics...' AS info;
 
 ANALYZE object;
 ANALYZE object_location;
@@ -35,12 +35,16 @@ ANALYZE contact_channel;
 -- =====================================================
 -- Vacuum Tables
 -- =====================================================
-\echo 'Vacuuming tables...'
+SELECT 'Vacuuming tables...' AS info;
 
-VACUUM (ANALYZE, VERBOSE) object;
-VACUUM (ANALYZE, VERBOSE) object_location;
-VACUUM (ANALYZE, VERBOSE) media;
-VACUUM (ANALYZE, VERBOSE) object_price;
+-- NOTE (Supabase SQL Editor): VACUUM cannot run inside a transaction block.
+-- If you run this file as a single batch in Supabase, it may be wrapped in a transaction and fail with:
+--   ERROR: 25001: VACUUM cannot run inside a transaction block
+-- Run VACUUM separately using a non-transactional client (psql with autocommit) or vacuumdb.
+-- VACUUM (ANALYZE, VERBOSE) object;
+-- VACUUM (ANALYZE, VERBOSE) object_location;
+-- VACUUM (ANALYZE, VERBOSE) media;
+-- VACUUM (ANALYZE, VERBOSE) object_price;
 
 -- =====================================================
 -- Rebuild Indexes (if fragmented)
@@ -52,7 +56,7 @@ VACUUM (ANALYZE, VERBOSE) object_price;
 -- =====================================================
 -- Update Cached Aggregates (if needed)
 -- =====================================================
-\echo 'Updating cached aggregates...'
+SELECT 'Updating cached aggregates...' AS info;
 
 -- Update cached prices for all objects
 UPDATE object o
@@ -88,7 +92,7 @@ WHERE o.id = subq.object_id
 -- =====================================================
 -- Regenerate GPX Cache (if needed)
 -- =====================================================
-\echo 'Checking GPX cache...'
+SELECT 'Checking GPX cache...' AS info;
 
 -- Update any itineraries where GPX cache is missing
 UPDATE object_iti
@@ -99,7 +103,7 @@ WHERE geom IS NOT NULL
 -- =====================================================
 -- Check Database Health
 -- =====================================================
-\echo 'Database health check...'
+SELECT 'Database health check...' AS info;
 
 -- Table sizes
 SELECT 
@@ -116,27 +120,32 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 -- Index usage statistics
 SELECT
   schemaname,
-  tablename,
-  indexname,
+  relname AS tablename,
+  indexrelname AS indexname,
   idx_scan as scans,
   idx_tup_read as tuples_read,
   idx_tup_fetch as tuples_fetched,
   pg_size_pretty(pg_relation_size(indexrelid)) as index_size
 FROM pg_stat_user_indexes
 WHERE schemaname IN ('public', 'api')
-  AND tablename IN ('object', 'object_location')
+  AND relname IN ('object', 'object_location')
 ORDER BY idx_scan DESC
 LIMIT 20;
 
 -- Materialized view status
 SELECT 
-  schemaname,
-  matviewname,
-  pg_size_pretty(pg_total_relation_size(schemaname||'.'||matviewname)) as size,
-  last_vacuum,
-  last_analyze
-FROM pg_matviews
-WHERE schemaname IN ('public', 'api');
+  m.schemaname,
+  m.matviewname,
+  pg_size_pretty(pg_total_relation_size(m.schemaname||'.'||m.matviewname)) as size,
+  s.last_vacuum,
+  s.last_autovacuum,
+  s.last_analyze,
+  s.last_autoanalyze
+FROM pg_matviews m
+LEFT JOIN pg_stat_all_tables s
+  ON s.schemaname = m.schemaname
+ AND s.relname = m.matviewname
+WHERE m.schemaname IN ('public', 'api', 'internal');
 
 -- =====================================================
 -- Ensure pg_cron schedules are present (idempotent)
@@ -148,7 +157,7 @@ BEGIN
       PERFORM cron.schedule(
         'refresh-mv-filtered-objects',
         '*/5 * * * *',
-        $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects$$
+        $cron$REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects$cron$
       );
     END IF;
 
@@ -167,7 +176,7 @@ BEGIN
       PERFORM cron.schedule(
         'refresh-open-status',
         '*/5 * * * *',
-        $$SELECT api.refresh_open_status()$$
+        $cron$SELECT api.refresh_open_status()$cron$
       );
     END IF;
 
@@ -175,7 +184,7 @@ BEGIN
       PERFORM cron.schedule(
         'maintain-partitions',
         '0 2 * * *',
-        $$SELECT audit.maintain_partitions()$$
+        $cron$SELECT audit.maintain_partitions()$cron$
       );
     END IF;
   ELSE
@@ -186,5 +195,5 @@ EXCEPTION
     RAISE NOTICE 'cron.job table is unavailable; skipping schedule creation.';
 END $$;
 
-\echo 'Maintenance complete!'
+SELECT 'Maintenance complete!' AS info;
 

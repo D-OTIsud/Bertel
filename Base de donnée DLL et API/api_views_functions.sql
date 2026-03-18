@@ -27,6 +27,8 @@ CREATE OR REPLACE FUNCTION api.is_object_open_now(p_object_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   -- Locale-independent weekday check via ISO day-of-week (1=Mon..7=Sun).
   SELECT EXISTS (
@@ -99,6 +101,8 @@ CREATE OR REPLACE FUNCTION api.build_opening_period_json(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_weekday_slots JSONB;
@@ -126,6 +130,8 @@ CREATE OR REPLACE FUNCTION api.render_format_currency(p_amount NUMERIC, p_curren
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_symbol TEXT := COALESCE(p_currency, '');
@@ -155,6 +161,8 @@ CREATE OR REPLACE FUNCTION api.render_format_percent(p_percent NUMERIC, p_locale
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_value TEXT;
@@ -179,6 +187,8 @@ CREATE OR REPLACE FUNCTION api.render_format_date(p_date DATE, p_locale TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_month_names_fr TEXT[] := ARRAY['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -199,6 +209,8 @@ CREATE OR REPLACE FUNCTION api.render_format_time(p_time TIME, p_locale TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   IF p_time IS NULL THEN
@@ -217,6 +229,8 @@ CREATE OR REPLACE FUNCTION api.render_format_date_range(p_start DATE, p_end DATE
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_start TEXT;
@@ -258,6 +272,8 @@ CREATE OR REPLACE FUNCTION api.render_format_datetime_range(
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_start_local TIMESTAMP;
@@ -318,6 +334,8 @@ CREATE OR REPLACE FUNCTION api.i18n_pick(
 RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result TEXT;
@@ -365,6 +383,8 @@ CREATE OR REPLACE FUNCTION api.i18n_pick_strict(
 RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result TEXT;
@@ -407,6 +427,8 @@ CREATE OR REPLACE FUNCTION api.i18n_get_text(
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result TEXT;
@@ -473,6 +495,8 @@ CREATE OR REPLACE FUNCTION api.i18n_get_text_strict(
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result TEXT;
@@ -515,6 +539,8 @@ CREATE OR REPLACE FUNCTION api.jsonb_prune_empty_top(p JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(jsonb_object_agg(k, v), '{}'::jsonb)
   FROM (
@@ -534,6 +560,8 @@ CREATE OR REPLACE FUNCTION api.b64url_encode(p bytea)
 RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT regexp_replace(
            replace(
@@ -553,6 +581,8 @@ CREATE OR REPLACE FUNCTION api.b64url_decode(p TEXT)
 RETURNS bytea
 LANGUAGE plpgsql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   s TEXT := replace(replace(p, '-', '+'), '_', '/');
@@ -572,6 +602,8 @@ CREATE OR REPLACE FUNCTION api.cursor_pack(p jsonb)
 RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.b64url_encode(convert_to(p::text, 'UTF8'));
 $$;
@@ -582,6 +614,8 @@ CREATE OR REPLACE FUNCTION api.cursor_unpack(p TEXT)
 RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT convert_from(api.b64url_decode(p), 'UTF8')::jsonb;
 $$;
@@ -591,6 +625,8 @@ CREATE OR REPLACE FUNCTION api.json_clean(p jsonb)
 RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(p, '{}'::jsonb);
 $$;
@@ -601,6 +637,8 @@ CREATE OR REPLACE FUNCTION api.pick_lang(p_lang_prefs TEXT[] DEFAULT ARRAY['fr']
 RETURNS TEXT
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT lower(COALESCE(p_lang_prefs[1], 'fr'));
 $$;
@@ -611,6 +649,8 @@ CREATE OR REPLACE FUNCTION api.norm_search(p TEXT)
 RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT public.immutable_unaccent(lower(COALESCE(p,'')));
 $$;
@@ -632,6 +672,8 @@ CREATE OR REPLACE FUNCTION api.build_iti_track(
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_fmt              TEXT := lower(coalesce(p_format, 'kml'));
@@ -858,6 +900,8 @@ CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
 RETURNS TABLE(object_id TEXT)
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   -- Extract JSON arrays once into SQL arrays to avoid per-row JSON parsing.
   WITH normalized AS (
@@ -951,7 +995,7 @@ AS $$
       m.cached_environment_tags,
       m.cached_language_codes,
       m.cached_classification_codes
-    FROM mv_filtered_objects m
+    FROM internal.mv_filtered_objects m
     CROSS JOIN params
     WHERE params.use_mv
 
@@ -1155,6 +1199,8 @@ CREATE OR REPLACE FUNCTION api.get_object_resources_batch(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result JSON;
@@ -1209,6 +1255,8 @@ CREATE OR REPLACE FUNCTION api.get_object_card(
 RETURNS JSONB
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT jsonb_build_object(
     'id',           o.id,
@@ -1258,6 +1306,8 @@ CREATE OR REPLACE FUNCTION api.get_object_cards_batch(
 RETURNS JSON
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(
     json_agg(api.get_object_card(t.id, p_lang_prefs) ORDER BY t.ord),
@@ -1274,6 +1324,8 @@ CREATE OR REPLACE FUNCTION api.jsonb_pick_keys(p_payload JSONB, p_keys TEXT[])
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(
     (
@@ -1289,6 +1341,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_base(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
     'id','type','status','is_editing','name','region_code',
@@ -1300,6 +1354,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_location(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['address','location','opening_times','places']);
 $$;
@@ -1308,6 +1364,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_descriptions(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['description','descriptions','private_note','private_notes']);
 $$;
@@ -1316,6 +1374,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_contacts(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['external_ids','contacts','languages','actors']);
 $$;
@@ -1324,6 +1384,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_media(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['media','meeting_rooms']);
 $$;
@@ -1332,6 +1394,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_pricing(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
     'capacity','amenities','environment_tags','payment_methods',
@@ -1344,6 +1408,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_legal(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['legal_records','pet_policy','origins','org_links']);
 $$;
@@ -1352,6 +1418,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_itinerary(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
     'itinerary_details','itinerary','outgoing_relations','incoming_relations',
@@ -1363,6 +1431,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_render(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY['render']);
 $$;
@@ -1371,6 +1441,8 @@ CREATE OR REPLACE FUNCTION api.resource_block_misc(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT p_payload - ARRAY[
     'id','type','status','is_editing','name','region_code',
@@ -1393,6 +1465,8 @@ CREATE OR REPLACE FUNCTION api.compose_object_resource_blocks(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT
     api.resource_block_base(p_payload)
@@ -3413,6 +3487,8 @@ CREATE OR REPLACE FUNCTION api.export_publication_indesign(
 RETURNS JSON
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   WITH rows AS (
     SELECT
@@ -3517,6 +3593,8 @@ CREATE OR REPLACE FUNCTION api.get_opening_time_slots(
 RETURNS JSONB
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(
     jsonb_build_object(
@@ -3544,6 +3622,8 @@ CREATE OR REPLACE FUNCTION api.get_all_opening_time_slots(p_period_id UUID)
 RETURNS JSONB
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(
     jsonb_object_agg(
@@ -3610,6 +3690,8 @@ CREATE OR REPLACE FUNCTION api.get_opening_slots_by_day(p_period_id UUID)
 RETURNS JSONB
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   WITH weekdays AS (
     SELECT id, code, position
@@ -3663,6 +3745,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   lang TEXT := api.pick_lang(p_lang_prefs);
@@ -3865,6 +3949,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_page_text(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN api.list_object_resources_page(
@@ -3909,6 +3995,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   lang TEXT := api.pick_lang(p_lang_prefs);
@@ -4133,6 +4221,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_since_fast_text(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN api.list_object_resources_since_fast(
@@ -4176,6 +4266,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_cur JSONB;
@@ -4359,6 +4451,8 @@ CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_since_fast(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_cur        JSONB;
@@ -4533,6 +4627,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_data JSON;
@@ -4644,6 +4740,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_data JSON;
@@ -4773,6 +4871,8 @@ CREATE OR REPLACE FUNCTION api.get_parent_object_data(p_object_id TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_parent_data JSONB;
@@ -4816,6 +4916,8 @@ CREATE OR REPLACE FUNCTION api.get_actor_data(p_object_id TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_actor_data JSONB;
@@ -4905,6 +5007,8 @@ CREATE OR REPLACE FUNCTION api.get_organization_data(p_object_id TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_org_data JSONB;
@@ -4987,6 +5091,8 @@ CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result JSON;
@@ -5020,6 +5126,8 @@ CREATE OR REPLACE FUNCTION api.get_objects_with_deep_data(
 RETURNS JSON
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   -- Fully optimized: Single query with LATERAL joins instead of function calls per object
   SELECT COALESCE(json_agg(
@@ -5171,6 +5279,8 @@ CREATE OR REPLACE FUNCTION api.get_objects_by_type_with_deep_data(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_object_ids TEXT[];
@@ -5212,6 +5322,8 @@ CREATE OR REPLACE FUNCTION api.search_objects_with_deep_data(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_object_ids TEXT[];
@@ -5258,6 +5370,8 @@ CREATE OR REPLACE FUNCTION api.get_object_map_item(
 RETURNS JSONB
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT jsonb_build_object(
     'id', o.id,
@@ -5308,6 +5422,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_data JSON;
@@ -5355,6 +5471,8 @@ CREATE OR REPLACE FUNCTION api.get_media_for_web(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_lang TEXT;
@@ -5445,6 +5563,8 @@ CREATE OR REPLACE FUNCTION api.get_object_reviews(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_lang TEXT;
@@ -5518,6 +5638,8 @@ CREATE OR REPLACE FUNCTION api.get_object_room_types(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_lang TEXT;
@@ -5598,6 +5720,8 @@ CREATE OR REPLACE FUNCTION api.validate_promotion_code(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_promo JSON;
@@ -5661,6 +5785,8 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_data JSON;
@@ -5752,6 +5878,8 @@ CREATE OR REPLACE FUNCTION api.export_itinerary_gpx(
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_gpx TEXT;
@@ -5847,6 +5975,8 @@ RETURNS TABLE(
 )
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT 
     o.id,
@@ -5867,6 +5997,8 @@ CREATE OR REPLACE FUNCTION api.get_itinerary_track_simplified(
 RETURNS JSON
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT json_build_object(
     'type', 'LineString',
@@ -5889,6 +6021,8 @@ CREATE OR REPLACE FUNCTION api.get_itinerary_track_geojson(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_track JSON;
@@ -5980,6 +6114,8 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN QUERY
@@ -6029,6 +6165,8 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN QUERY
@@ -6074,6 +6212,8 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN QUERY
@@ -6116,6 +6256,8 @@ CREATE OR REPLACE FUNCTION api.add_legal_record(
 )
 RETURNS UUID
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_type_id UUID;
@@ -6183,6 +6325,8 @@ CREATE OR REPLACE FUNCTION api.update_legal_record(
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_updated BOOLEAN := FALSE;
@@ -6230,6 +6374,8 @@ CREATE OR REPLACE FUNCTION api.get_object_legal_data(p_object_id TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_legal_data JSONB := '[]'::jsonb;
@@ -6293,6 +6439,8 @@ CREATE OR REPLACE FUNCTION api.get_object_legal_compliance(p_object_id TEXT)
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_compliance_data JSONB;
@@ -6375,6 +6523,8 @@ CREATE OR REPLACE FUNCTION api.get_expiring_legal_records_api(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result JSONB;
@@ -6413,6 +6563,8 @@ CREATE OR REPLACE FUNCTION api.generate_legal_expiry_notifications(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_notifications JSONB;
@@ -6455,6 +6607,8 @@ CREATE OR REPLACE FUNCTION api.audit_legal_compliance(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_audit_data JSONB;
@@ -6564,6 +6718,8 @@ CREATE OR REPLACE FUNCTION api.request_legal_document(
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_updated BOOLEAN := FALSE;
@@ -6592,6 +6748,8 @@ CREATE OR REPLACE FUNCTION api.deliver_legal_document(
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_updated BOOLEAN := FALSE;
@@ -6635,6 +6793,8 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN QUERY
@@ -6669,6 +6829,8 @@ CREATE OR REPLACE FUNCTION api.get_pending_document_requests_api(
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_result JSONB;
@@ -6721,6 +6883,8 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
   RETURN QUERY
@@ -6758,6 +6922,8 @@ CREATE OR REPLACE FUNCTION api.get_object_public_legal_records(p_object_id TEXT)
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_legal_data JSONB := '[]'::jsonb;
@@ -6822,6 +6988,8 @@ CREATE OR REPLACE FUNCTION api.get_object_private_legal_records(p_object_id TEXT
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_legal_data JSONB := '[]'::jsonb;
@@ -7031,6 +7199,8 @@ CREATE OR REPLACE FUNCTION api.get_object_cards_adapted_batch(
 RETURNS JSON
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT COALESCE(
     json_agg(api.get_object_resource_adapted(t.id, p_lang_prefs) ORDER BY t.ord),

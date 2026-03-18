@@ -275,7 +275,7 @@ LIMIT 200;
 -- =====================================================
 \echo 'Test 18: MV health baseline'
 EXPLAIN ANALYZE
-SELECT COUNT(*) FROM mv_filtered_objects;
+SELECT COUNT(*) FROM internal.mv_filtered_objects;
 
 EXPLAIN ANALYZE
 SELECT COUNT(*)

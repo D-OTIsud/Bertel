@@ -202,6 +202,8 @@ CREATE INDEX IF NOT EXISTS idx_object_temp_external_id
 CREATE OR REPLACE FUNCTION staging.touch_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
 BEGIN
     NEW.updated_at := NOW();
@@ -378,6 +380,8 @@ CREATE OR REPLACE FUNCTION staging.log_import_event(
 )
 RETURNS VOID
 LANGUAGE sql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
     INSERT INTO staging.import_events(import_batch_id, phase, level, message, payload)
     VALUES (p_batch_id, p_phase, p_level, p_message, COALESCE(p_payload, '{}'::jsonb));
@@ -387,6 +391,8 @@ CREATE OR REPLACE FUNCTION staging.normalize_phone(p_value TEXT)
 RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
     SELECT CASE
         WHEN p_value IS NULL THEN NULL
@@ -397,6 +403,8 @@ $$;
 CREATE OR REPLACE FUNCTION staging.safe_object_type(p_text TEXT)
 RETURNS object_type
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
 DECLARE out_type object_type;
 BEGIN
@@ -419,6 +427,8 @@ CREATE OR REPLACE FUNCTION staging.run_dedup_for_batch(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
 DECLARE v_exact_count INTEGER := 0;
 DECLARE v_conflict_count INTEGER := 0;
@@ -574,6 +584,8 @@ CREATE OR REPLACE FUNCTION staging.assert_batch_integrity(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
 DECLARE v_missing_dependency INTEGER := 0;
 DECLARE v_orphan_location INTEGER := 0;
@@ -1018,6 +1030,8 @@ CREATE OR REPLACE FUNCTION staging.get_policy_action(
 RETURNS TEXT
 LANGUAGE sql
 STABLE
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
     SELECT COALESCE(
         (
@@ -1043,6 +1057,8 @@ CREATE OR REPLACE FUNCTION staging.resolve_batch_dependencies(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, staging, api, extensions, auth
 AS $$
 DECLARE v_resolved INTEGER := 0;
 DECLARE v_blocked INTEGER := 0;

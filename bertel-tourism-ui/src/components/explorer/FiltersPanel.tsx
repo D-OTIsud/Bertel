@@ -1,37 +1,72 @@
 import type { ReactNode } from 'react';
-import { objectTypeOptions } from '../../config/map-markers';
 import { useExplorerStore } from '../../store/explorer-store';
-import { getVisibleFacets } from '../../utils/facets';
+import type { BackendObjectTypeCode, ExplorerBucketKey, ExplorerReferences } from '../../types/domain';
+import { EXPLORER_BUCKET_OPTIONS, HOT_BUCKET_TYPES } from '../../utils/facets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const labelOptions = ['famille', 'ecolabel', 'prestige'];
-const amenityOptions = ['wifi', 'spa', 'parking', 'pmr'];
+const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
+  HOT: 'Hotels',
+  HPA: 'Hotellerie plein air',
+  HLO: 'Loisirs heberges',
+  CAMP: 'Campings',
+  RVA: 'Residences vacances',
+  RES: 'Restaurants',
+  ITI: 'Itineraires',
+  FMA: 'Evenements',
+  LOI: 'Loisirs',
+  PCU: 'Culture',
+  PNA: 'Nature',
+  VIL: 'Villages',
+  COM: 'Commerces',
+  PSV: 'Services',
+  ASC: 'Ascenseurs',
+};
 
 interface FiltersPanelProps {
   compact?: boolean;
   headerActions?: ReactNode;
+  references?: ExplorerReferences;
 }
 
-export function FiltersPanel({ compact = false, headerActions }: FiltersPanelProps) {
-  const selectedTypes = useExplorerStore((state) => state.selectedTypes);
-  const labels = useExplorerStore((state) => state.labels);
-  const amenities = useExplorerStore((state) => state.amenities);
-  const openNow = useExplorerStore((state) => state.openNow);
-  const capacityMin = useExplorerStore((state) => state.capacityMin);
-  const itineraryDifficultyMin = useExplorerStore((state) => state.itineraryDifficultyMin);
-  const elevationGainMin = useExplorerStore((state) => state.elevationGainMin);
-  const toggleType = useExplorerStore((state) => state.toggleType);
-  const toggleLabel = useExplorerStore((state) => state.toggleLabel);
-  const toggleAmenity = useExplorerStore((state) => state.toggleAmenity);
-  const setOpenNow = useExplorerStore((state) => state.setOpenNow);
-  const setCapacityRange = useExplorerStore((state) => state.setCapacityRange);
-  const setItineraryDifficulty = useExplorerStore((state) => state.setItineraryDifficulty);
-  const setElevationGainMin = useExplorerStore((state) => state.setElevationGainMin);
-  const resetAll = useExplorerStore((state) => state.resetAll);
+function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
+  return filters.find((filter) => filter.code === code)?.[key];
+}
 
-  const visibleFacets = getVisibleFacets(selectedTypes);
-  const difficultyValue = itineraryDifficultyMin ?? 2;
+function renderNumber(value?: number): string {
+  return value == null ? '' : String(value);
+}
+
+function isBucketSelected(selectedBuckets: ExplorerBucketKey[], bucket: ExplorerBucketKey): boolean {
+  return selectedBuckets.includes(bucket);
+}
+
+export function FiltersPanel({ compact = false, headerActions, references }: FiltersPanelProps) {
+  const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
+  const common = useExplorerStore((state) => state.common);
+  const hot = useExplorerStore((state) => state.hot);
+  const res = useExplorerStore((state) => state.res);
+  const iti = useExplorerStore((state) => state.iti);
+  const toggleBucket = useExplorerStore((state) => state.toggleBucket);
+  const setCity = useExplorerStore((state) => state.setCity);
+  const setLieuDit = useExplorerStore((state) => state.setLieuDit);
+  const setPmr = useExplorerStore((state) => state.setPmr);
+  const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
+  const setOpenNow = useExplorerStore((state) => state.setOpenNow);
+  const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
+  const toggleHotClassification = useExplorerStore((state) => state.toggleHotClassification);
+  const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
+  const setResCapacityFilter = useExplorerStore((state) => state.setResCapacityFilter);
+  const setHotMeetingRoom = useExplorerStore((state) => state.setHotMeetingRoom);
+  const setItiIsLoop = useExplorerStore((state) => state.setItiIsLoop);
+  const setItiDifficulty = useExplorerStore((state) => state.setItiDifficulty);
+  const setItiDistance = useExplorerStore((state) => state.setItiDistance);
+  const setItiDuration = useExplorerStore((state) => state.setItiDuration);
+  const toggleItiPractice = useExplorerStore((state) => state.toggleItiPractice);
+  const resetAll = useExplorerStore((state) => state.resetAll);
+  const showHot = isBucketSelected(selectedBuckets, 'HOT');
+  const showRes = isBucketSelected(selectedBuckets, 'RES');
+  const showIti = isBucketSelected(selectedBuckets, 'ITI');
 
   return (
     <div className={compact ? 'filters-panel filters-panel--compact' : 'filters-panel'}>
@@ -47,14 +82,14 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
       </Button>
 
       <section className="facet-group">
-        <span className="facet-title">Typologies</span>
+        <span className="facet-title">Categories</span>
         <div className="chip-grid">
-          {objectTypeOptions.map((option) => (
+          {EXPLORER_BUCKET_OPTIONS.map((option) => (
             <button
               key={option.code}
               type="button"
-              className={selectedTypes.includes(option.code) ? 'chip chip--active' : 'chip'}
-              onClick={() => toggleType(option.code)}
+              className={selectedBuckets.includes(option.code) ? 'chip chip--active' : 'chip'}
+              onClick={() => toggleBucket(option.code)}
             >
               {option.label}
             </button>
@@ -62,91 +97,271 @@ export function FiltersPanel({ compact = false, headerActions }: FiltersPanelPro
         </div>
       </section>
 
-      {visibleFacets.includes('labels') && (
+      <label className="field-block">
+        <span>Ville</span>
+        <Input type="text" value={common.city} onChange={(event) => setCity(event.target.value)} placeholder="Ex: Saint-Pierre" />
+      </label>
+
+      {common.city ? (
+        <label className="field-block">
+          <span>Lieu-dit</span>
+          <Input type="text" value={common.lieuDit} onChange={(event) => setLieuDit(event.target.value)} placeholder="Ex: Front de mer" />
+        </label>
+      ) : null}
+
+      <label className="switch-row">
+        <span>PMR</span>
+        <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
+      </label>
+
+      <label className="switch-row">
+        <span>Animaux acceptes</span>
+        <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
+      </label>
+
+      <label className="switch-row">
+        <span>Ouvert en ce moment</span>
+        <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
+      </label>
+
+      {showHot ? (
+        <>
+          <section className="facet-group">
+            <span className="facet-title">Sous-types hebergement</span>
+            <div className="chip-grid">
+              {HOT_BUCKET_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
+                  onClick={() => toggleHotSubtype(type)}
+                >
+                  {hotSubtypeLabels[type]}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {references?.hotClassifications.map((group) => (
+            <section key={group.schemeCode} className="facet-group">
+              <span className="facet-title">{group.schemeName}</span>
+              <div className="chip-grid">
+                {group.values.map((value) => {
+                  const active = hot.classifications.some((item) => item.schemeCode === group.schemeCode && item.valueCode === value.code);
+                  return (
+                    <button
+                      key={`${group.schemeCode}:${value.code}`}
+                      type="button"
+                      className={active ? 'chip chip--active' : 'chip'}
+                      onClick={() => toggleHotClassification(group.schemeCode, value.code)}
+                    >
+                      {value.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+
+          {references?.hotCapacityMetrics.length ? (
+            <section className="facet-group">
+              <span className="facet-title">Capacites hebergement</span>
+              <div className="filters-panel__metric-stack">
+                {references.hotCapacityMetrics.map((metric) => (
+                  <div key={metric.code} className="filters-panel__metric-row">
+                    <strong>{metric.name}</strong>
+                    <div className="filters-panel__range-grid">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
+                        onChange={(event) => setHotCapacityFilter(metric.code, event.target.value ? Number(event.target.value) : undefined, readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
+                        placeholder="Min"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
+                        onChange={(event) => setHotCapacityFilter(metric.code, readCapacityValue(hot.capacityFilters, metric.code, 'min'), event.target.value ? Number(event.target.value) : undefined)}
+                        placeholder="Max"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="facet-group">
+            <span className="facet-title">Salles de reunion</span>
+            <div className="filters-panel__range-grid">
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(hot.meetingRoom.minCount)}
+                onChange={(event) => setHotMeetingRoom({ minCount: event.target.value ? Number(event.target.value) : undefined })}
+                placeholder="Nb. salles min"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(hot.meetingRoom.minAreaM2)}
+                onChange={(event) => setHotMeetingRoom({ minAreaM2: event.target.value ? Number(event.target.value) : undefined })}
+                placeholder="Surface min m2"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(hot.meetingRoom.minCapTheatre)}
+                onChange={(event) => setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })}
+                placeholder="Cap. theatre min"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(hot.meetingRoom.minCapClassroom)}
+                onChange={(event) => setHotMeetingRoom({ minCapClassroom: event.target.value ? Number(event.target.value) : undefined })}
+                placeholder="Cap. classe min"
+              />
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {showRes && references?.resCapacityMetrics.length ? (
         <section className="facet-group">
-          <span className="facet-title">Labels</span>
-          <div className="chip-grid">
-            {labelOptions.map((label) => (
-              <button
-                key={label}
-                type="button"
-                className={labels.includes(label) ? 'chip chip--active' : 'chip'}
-                onClick={() => toggleLabel(label)}
-              >
-                {label}
-              </button>
+          <span className="facet-title">Capacites restaurant</span>
+          <div className="filters-panel__metric-stack">
+            {references.resCapacityMetrics.map((metric) => (
+              <div key={metric.code} className="filters-panel__metric-row">
+                <strong>{metric.name}</strong>
+                <div className="filters-panel__range-grid">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'min'))}
+                    onChange={(event) => setResCapacityFilter(metric.code, event.target.value ? Number(event.target.value) : undefined, readCapacityValue(res.capacityFilters, metric.code, 'max'))}
+                    placeholder="Min"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'max'))}
+                    onChange={(event) => setResCapacityFilter(metric.code, readCapacityValue(res.capacityFilters, metric.code, 'min'), event.target.value ? Number(event.target.value) : undefined)}
+                    placeholder="Max"
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {visibleFacets.includes('amenities') && (
-        <section className="facet-group">
-          <span className="facet-title">Equipements</span>
-          <div className="chip-grid">
-            {amenityOptions.map((amenity) => (
-              <button
-                key={amenity}
-                type="button"
-                className={amenities.includes(amenity) ? 'chip chip--active' : 'chip'}
-                onClick={() => toggleAmenity(amenity)}
-              >
-                {amenity}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      {showIti ? (
+        <>
+          <section className="facet-group">
+            <span className="facet-title">Boucle</span>
+            <div className="chip-grid">
+              {[
+                { label: 'Tous', value: null },
+                { label: 'Boucle', value: true },
+                { label: 'Aller-retour', value: false },
+              ].map((option) => (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  className={iti.isLoop === option.value ? 'chip chip--active' : 'chip'}
+                  onClick={() => setItiIsLoop(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      {visibleFacets.includes('openNow') && (
-        <label className="switch-row">
-          <span>Ouvert en ce moment</span>
-          <input type="checkbox" checked={openNow} onChange={(event) => setOpenNow(event.target.checked)} />
-        </label>
-      )}
+          <section className="facet-group">
+            <span className="facet-title">Difficulte</span>
+            <div className="filters-panel__range-grid">
+              <Input
+                type="number"
+                min={1}
+                max={5}
+                value={renderNumber(iti.difficultyMin)}
+                onChange={(event) => setItiDifficulty(event.target.value ? Number(event.target.value) : undefined, iti.difficultyMax)}
+                placeholder="Min"
+              />
+              <Input
+                type="number"
+                min={1}
+                max={5}
+                value={renderNumber(iti.difficultyMax)}
+                onChange={(event) => setItiDifficulty(iti.difficultyMin, event.target.value ? Number(event.target.value) : undefined)}
+                placeholder="Max"
+              />
+            </div>
+          </section>
 
-      {visibleFacets.includes('capacity') && (
-        <label className="field-block">
-          <span>Capacite minimale</span>
-          <Input
-            type="number"
-            min={0}
-            value={capacityMin ?? ''}
-            onChange={(event) => setCapacityRange(event.target.value ? Number(event.target.value) : undefined, undefined)}
-            placeholder="Ex: 12 lits"
-          />
-        </label>
-      )}
+          <section className="facet-group">
+            <span className="facet-title">Distance (km)</span>
+            <div className="filters-panel__range-grid">
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(iti.distanceMinKm)}
+                onChange={(event) => setItiDistance(event.target.value ? Number(event.target.value) : undefined, iti.distanceMaxKm)}
+                placeholder="Min"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={renderNumber(iti.distanceMaxKm)}
+                onChange={(event) => setItiDistance(iti.distanceMinKm, event.target.value ? Number(event.target.value) : undefined)}
+                placeholder="Max"
+              />
+            </div>
+          </section>
 
-      {visibleFacets.includes('itineraryDifficulty') && (
-        <label className="field-block">
-          <div className="field-block__header">
-            <span>Difficulte minimale</span>
-            <strong>Niveau {difficultyValue}</strong>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={5}
-            value={difficultyValue}
-            className="range-field"
-            onChange={(event) => setItineraryDifficulty(Number(event.target.value), undefined)}
-          />
-        </label>
-      )}
+          <section className="facet-group">
+            <span className="facet-title">Duree (h)</span>
+            <div className="filters-panel__range-grid">
+              <Input
+                type="number"
+                min={0}
+                step="0.5"
+                value={renderNumber(iti.durationMinH)}
+                onChange={(event) => setItiDuration(event.target.value ? Number(event.target.value) : undefined, iti.durationMaxH)}
+                placeholder="Min"
+              />
+              <Input
+                type="number"
+                min={0}
+                step="0.5"
+                value={renderNumber(iti.durationMaxH)}
+                onChange={(event) => setItiDuration(iti.durationMinH, event.target.value ? Number(event.target.value) : undefined)}
+                placeholder="Max"
+              />
+            </div>
+          </section>
 
-      {visibleFacets.includes('elevationGain') && (
-        <label className="field-block">
-          <span>Denivele minimum</span>
-          <Input
-            type="number"
-            min={0}
-            value={elevationGainMin ?? ''}
-            onChange={(event) => setElevationGainMin(event.target.value ? Number(event.target.value) : undefined)}
-            placeholder="Ex: 450 m"
-          />
-        </label>
-      )}
+          {references?.itiPractices.length ? (
+            <section className="facet-group">
+              <span className="facet-title">Pratiques</span>
+              <div className="chip-grid">
+                {references.itiPractices.map((practice) => (
+                  <button
+                    key={practice.code}
+                    type="button"
+                    className={iti.practicesAny.includes(practice.code) ? 'chip chip--active' : 'chip'}
+                    onClick={() => toggleItiPractice(practice.code)}
+                  >
+                    {practice.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

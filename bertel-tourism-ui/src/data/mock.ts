@@ -1,5 +1,7 @@
 import type {
   AuditQuestion,
+  BackendObjectTypeCode,
+  ExplorerBucketKey,
   ExplorerFilters,
   ObjectCard,
   ObjectDetail,
@@ -7,8 +9,8 @@ import type {
   PresenceMember,
   PublicationCard,
   CrmTask,
-  MapObject,
 } from '../types/domain';
+import { applyFrontendOnlyExplorerFilters, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 
 export const mockCards: ObjectCard[] = [
   {
@@ -60,7 +62,7 @@ export const mockCards: ObjectCard[] = [
   },
   {
     id: 'ACTRUN000000004',
-    type: 'ACT',
+    type: 'LOI',
     name: 'Kayak des Falaises Noires',
     status: 'published',
     image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
@@ -76,7 +78,7 @@ export const mockCards: ObjectCard[] = [
   },
   {
     id: 'EVTRUN000000005',
-    type: 'EVT',
+    type: 'FMA',
     name: 'Festival des Hauts en Lumiere',
     status: 'published',
     image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80',
@@ -90,22 +92,6 @@ export const mockCards: ObjectCard[] = [
     render: { price: 'Billets a partir de 12 EUR', rating: '4.3 / 5', updated_at: 'Mis a jour le 4 mars 2026' },
   },
 ];
-
-export const mockMapObjects: MapObject[] = mockCards.map((card) => ({
-  id: card.id,
-  name: card.name,
-  type: card.type,
-  image: card.image,
-  description: card.description,
-  rating: card.rating,
-  location: {
-    lat: card.location?.lat,
-    lon: card.location?.lon,
-    address: card.location?.address,
-    city: card.location?.city,
-  },
-  price: card.min_price == null ? null : { amount: card.min_price, currency: 'EUR', formatted: card.render?.price },
-}));
 
 export const mockObjectDetails: Record<string, ObjectDetail> = {
   HOTRUN0000000001: {
@@ -310,17 +296,64 @@ export const mockPresence: PresenceMember[] = [
   { userId: 'usr-3', name: 'Lina', avatar: 'LI', color: '#78c67a' },
 ];
 
-export function filterMockCards(filters: ExplorerFilters): ObjectCard[] {
-  const search = filters.search.trim().toLowerCase();
+function matchesBucket(card: ObjectCard, bucket: ExplorerBucketKey): boolean {
+  return getBackendTypesForBucket(bucket).includes(String(card.type).toUpperCase() as BackendObjectTypeCode);
+}
 
-  return mockCards.filter((card) => {
-    const typeMatches = filters.selectedTypes.length === 0 || filters.selectedTypes.includes(card.type as never);
+export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucketKey): ObjectCard[] {
+  const buckets = bucket ? [bucket] : getEffectiveSelectedBuckets(filters.selectedBuckets);
+  const search = filters.common.search.trim().toLowerCase();
+  const city = filters.common.city.trim().toLowerCase();
+  const lieuDit = filters.common.lieuDit.trim().toLowerCase();
+
+  const filtered = mockCards.filter((card) => {
+    const bucketMatches = buckets.some((candidate) => matchesBucket(card, candidate));
     const searchMatches =
       search.length === 0 ||
       card.name.toLowerCase().includes(search) ||
-      (card.description ?? '').toLowerCase().includes(search);
-    const openMatches = !filters.openNow || card.open_now === true;
+      (card.description ?? '').toLowerCase().includes(search) ||
+      (card.location?.city ?? '').toLowerCase().includes(search);
+    const cityMatches = city.length === 0 || (card.location?.city ?? '').toLowerCase() === city;
+    const lieuDitMatches = lieuDit.length === 0 || (card.location?.lieu_dit ?? '').toLowerCase().includes(lieuDit);
+    const openMatches = !filters.common.openNow || card.open_now === true;
+    const petsMatches = !filters.common.petsAccepted || card.id === 'HOTRUN0000000001';
+    const pmrMatches = !filters.common.pmr || ['HOTRUN0000000001', 'RESRUN0000000002'].includes(card.id);
 
-    return typeMatches && searchMatches && openMatches;
+    if (!bucketMatches || !searchMatches || !cityMatches || !lieuDitMatches || !openMatches || !petsMatches || !pmrMatches) {
+      return false;
+    }
+
+    if (bucket === 'ITI') {
+      const distance = card.id === 'ITIRUN000000003' ? 8.4 : null;
+      const duration = card.id === 'ITIRUN000000003' ? 3.2 : null;
+      const difficulty = card.id === 'ITIRUN000000003' ? 3 : null;
+      const isLoop = card.id === 'ITIRUN000000003';
+
+      if (filters.iti.isLoop != null && filters.iti.isLoop !== isLoop) {
+        return false;
+      }
+      if (filters.iti.difficultyMin != null && (difficulty == null || difficulty < filters.iti.difficultyMin)) {
+        return false;
+      }
+      if (filters.iti.difficultyMax != null && (difficulty == null || difficulty > filters.iti.difficultyMax)) {
+        return false;
+      }
+      if (filters.iti.distanceMinKm != null && (distance == null || distance < filters.iti.distanceMinKm)) {
+        return false;
+      }
+      if (filters.iti.distanceMaxKm != null && (distance == null || distance > filters.iti.distanceMaxKm)) {
+        return false;
+      }
+      if (filters.iti.durationMinH != null && (duration == null || duration < filters.iti.durationMinH)) {
+        return false;
+      }
+      if (filters.iti.durationMaxH != null && (duration == null || duration > filters.iti.durationMaxH)) {
+        return false;
+      }
+    }
+
+    return true;
   });
+
+  return sortExplorerCards(applyFrontendOnlyExplorerFilters(filtered, filters));
 }

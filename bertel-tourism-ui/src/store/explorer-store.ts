@@ -1,106 +1,160 @@
 import { create } from 'zustand';
-import type { ExplorerFilters, GeoPolygon, ObjectTypeCode } from '../types/domain';
+import type { BackendObjectTypeCode, CapacityFilter, ExplorerFilters, ExplorerBucketKey, GeoPolygon, MeetingRoomFilter } from '../types/domain';
+import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
-  toggleType: (type: ObjectTypeCode) => void;
+  toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
-  setView: (view: 'card' | 'full') => void;
-  toggleLabel: (label: string) => void;
-  toggleAmenity: (amenity: string) => void;
+  setCity: (city: string) => void;
+  setLieuDit: (lieuDit: string) => void;
+  setPmr: (value: boolean) => void;
+  setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
-  setCapacityMetricCode: (value?: string) => void;
-  setCapacityRange: (min?: number, max?: number) => void;
-  setItineraryDifficulty: (min?: number, max?: number) => void;
-  setElevationGainMin: (value?: number) => void;
+  toggleHotSubtype: (type: BackendObjectTypeCode) => void;
+  toggleHotClassification: (schemeCode: string, valueCode: string) => void;
+  setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
+  setResCapacityFilter: (code: string, min?: number, max?: number) => void;
+  setHotMeetingRoom: (patch: Partial<MeetingRoomFilter>) => void;
+  setItiIsLoop: (value: boolean | null) => void;
+  setItiDifficulty: (min?: number, max?: number) => void;
+  setItiDistance: (min?: number, max?: number) => void;
+  setItiDuration: (min?: number, max?: number) => void;
+  toggleItiPractice: (code: string) => void;
   setPolygon: (polygon: GeoPolygon | null, bbox?: [number, number, number, number] | null) => void;
   resetSpatialFilter: () => void;
   resetAll: () => void;
-  /** Apply partial filters from URL (e.g. after navigation) */
   setFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
-  /** Replace URL-controlled filters (missing keys fall back to defaults). */
   replaceFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
 }
 
-const initialState: ExplorerFilters = {
-  selectedTypes: ['HOT', 'RES', 'ITI'],
-  search: '',
-  labels: [],
-  amenities: [],
-  openNow: false,
-  capacityMetricCode: 'beds',
-  capacityMin: undefined,
-  capacityMax: undefined,
-  itineraryDifficultyMin: undefined,
-  itineraryDifficultyMax: undefined,
-  elevationGainMin: undefined,
-  bbox: null,
-  polygon: null,
-  view: 'card',
-};
+function upsertCapacityFilter(filters: CapacityFilter[], code: string, min?: number, max?: number): CapacityFilter[] {
+  const next = filters.filter((filter) => filter.code !== code);
+  if (min == null && max == null) {
+    return next;
+  }
+  return [...next, { code, min, max }];
+}
+
+function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters>, replace = false): ExplorerFilters {
+  const fallback = DEFAULT_EXPLORER_FILTERS;
+  const currentBase = replace ? fallback : current;
+
+  return {
+    selectedBuckets: partial.selectedBuckets ?? currentBase.selectedBuckets,
+    common: {
+      ...currentBase.common,
+      ...partial.common,
+      ...(replace ? { polygon: fallback.common.polygon, bbox: fallback.common.bbox } : {}),
+    },
+    hot: {
+      ...currentBase.hot,
+      ...partial.hot,
+      classifications: partial.hot?.classifications ?? currentBase.hot.classifications,
+      capacityFilters: partial.hot?.capacityFilters ?? currentBase.hot.capacityFilters,
+      meetingRoom: {
+        ...currentBase.hot.meetingRoom,
+        ...partial.hot?.meetingRoom,
+      },
+    },
+    res: {
+      ...currentBase.res,
+      ...partial.res,
+      capacityFilters: partial.res?.capacityFilters ?? currentBase.res.capacityFilters,
+    },
+    iti: {
+      ...currentBase.iti,
+      ...partial.iti,
+      practicesAny: partial.iti?.practicesAny ?? currentBase.iti.practicesAny,
+    },
+    act: {
+      ...currentBase.act,
+      ...partial.act,
+      environmentTagsAny: partial.act?.environmentTagsAny ?? currentBase.act.environmentTagsAny,
+    },
+    vis: currentBase.vis,
+    srv: currentBase.srv,
+  };
+}
 
 export const useExplorerStore = create<ExplorerState>((set) => ({
-  ...initialState,
-  toggleType: (type) =>
+  ...DEFAULT_EXPLORER_FILTERS,
+  toggleBucket: (bucket) =>
     set((state) => ({
-      selectedTypes: state.selectedTypes.includes(type)
-        ? state.selectedTypes.filter((item) => item !== type)
-        : [...state.selectedTypes, type],
+      selectedBuckets: state.selectedBuckets.includes(bucket)
+        ? state.selectedBuckets.filter((item) => item !== bucket)
+        : [...state.selectedBuckets, bucket],
     })),
-  setSearch: (search) => set({ search }),
-  setView: (view) => set({ view }),
-  toggleLabel: (label) =>
+  setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
+  setCity: (city) => set((state) => ({ common: { ...state.common, city, ...(city ? {} : { lieuDit: '' }) } })),
+  setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
+  setPmr: (value) => set((state) => ({ common: { ...state.common, pmr: value } })),
+  setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
+  setOpenNow: (value) => set((state) => ({ common: { ...state.common, openNow: value } })),
+  toggleHotSubtype: (type) =>
+    set((state) => {
+      const nextSubtypes = state.hot.subtypes.includes(type)
+        ? state.hot.subtypes.filter((item) => item !== type)
+        : [...state.hot.subtypes, type];
+
+      return {
+        hot: {
+          ...state.hot,
+          subtypes: nextSubtypes.length > 0 ? nextSubtypes : [...DEFAULT_HOT_SUBTYPES],
+        },
+      };
+    }),
+  toggleHotClassification: (schemeCode, valueCode) =>
+    set((state) => {
+      const exists = state.hot.classifications.some((item) => item.schemeCode === schemeCode && item.valueCode === valueCode);
+      return {
+        hot: {
+          ...state.hot,
+          classifications: exists
+            ? state.hot.classifications.filter((item) => !(item.schemeCode === schemeCode && item.valueCode === valueCode))
+            : [...state.hot.classifications, { schemeCode, valueCode }],
+        },
+      };
+    }),
+  setHotCapacityFilter: (code, min, max) =>
     set((state) => ({
-      labels: state.labels.includes(label)
-        ? state.labels.filter((item) => item !== label)
-        : [...state.labels, label],
+      hot: {
+        ...state.hot,
+        capacityFilters: upsertCapacityFilter(state.hot.capacityFilters, code, min, max),
+      },
     })),
-  toggleAmenity: (amenity) =>
+  setResCapacityFilter: (code, min, max) =>
     set((state) => ({
-      amenities: state.amenities.includes(amenity)
-        ? state.amenities.filter((item) => item !== amenity)
-        : [...state.amenities, amenity],
+      res: {
+        ...state.res,
+        capacityFilters: upsertCapacityFilter(state.res.capacityFilters, code, min, max),
+      },
     })),
-  setOpenNow: (value) => set({ openNow: value }),
-  setCapacityMetricCode: (value) => set({ capacityMetricCode: value }),
-  setCapacityRange: (min, max) => set({ capacityMin: min, capacityMax: max }),
-  setItineraryDifficulty: (min, max) => set({ itineraryDifficultyMin: min, itineraryDifficultyMax: max }),
-  setElevationGainMin: (value) => set({ elevationGainMin: value }),
-  setPolygon: (polygon, bbox = null) => set({ polygon, bbox }),
-  resetSpatialFilter: () => set({ polygon: null, bbox: null }),
-  resetAll: () => set(initialState),
-  setFiltersFromUrl: (partial) =>
+  setHotMeetingRoom: (patch) =>
     set((state) => ({
-      ...state,
-      ...(partial.selectedTypes !== undefined && { selectedTypes: partial.selectedTypes }),
-      ...(partial.search !== undefined && { search: partial.search }),
-      ...(partial.view !== undefined && { view: partial.view }),
-      ...(partial.labels !== undefined && { labels: partial.labels }),
-      ...(partial.amenities !== undefined && { amenities: partial.amenities }),
-      ...(partial.openNow !== undefined && { openNow: partial.openNow }),
-      ...(partial.capacityMetricCode !== undefined && { capacityMetricCode: partial.capacityMetricCode }),
-      ...(partial.capacityMin !== undefined && { capacityMin: partial.capacityMin }),
-      ...(partial.capacityMax !== undefined && { capacityMax: partial.capacityMax }),
-      ...(partial.itineraryDifficultyMin !== undefined && { itineraryDifficultyMin: partial.itineraryDifficultyMin }),
-      ...(partial.itineraryDifficultyMax !== undefined && { itineraryDifficultyMax: partial.itineraryDifficultyMax }),
-      ...(partial.elevationGainMin !== undefined && { elevationGainMin: partial.elevationGainMin }),
+      hot: {
+        ...state.hot,
+        meetingRoom: {
+          ...state.hot.meetingRoom,
+          ...patch,
+        },
+      },
     })),
-  replaceFiltersFromUrl: (partial) =>
+  setItiIsLoop: (value) => set((state) => ({ iti: { ...state.iti, isLoop: value } })),
+  setItiDifficulty: (min, max) => set((state) => ({ iti: { ...state.iti, difficultyMin: min, difficultyMax: max } })),
+  setItiDistance: (min, max) => set((state) => ({ iti: { ...state.iti, distanceMinKm: min, distanceMaxKm: max } })),
+  setItiDuration: (min, max) => set((state) => ({ iti: { ...state.iti, durationMinH: min, durationMaxH: max } })),
+  toggleItiPractice: (code) =>
     set((state) => ({
-      ...state,
-      selectedTypes: partial.selectedTypes ?? initialState.selectedTypes,
-      search: partial.search ?? initialState.search,
-      view: partial.view ?? initialState.view,
-      labels: partial.labels ?? initialState.labels,
-      amenities: partial.amenities ?? initialState.amenities,
-      openNow: partial.openNow ?? initialState.openNow,
-      capacityMetricCode: partial.capacityMetricCode ?? initialState.capacityMetricCode,
-      capacityMin: partial.capacityMin ?? initialState.capacityMin,
-      capacityMax: partial.capacityMax ?? initialState.capacityMax,
-      itineraryDifficultyMin: partial.itineraryDifficultyMin ?? initialState.itineraryDifficultyMin,
-      itineraryDifficultyMax: partial.itineraryDifficultyMax ?? initialState.itineraryDifficultyMax,
-      elevationGainMin: partial.elevationGainMin ?? initialState.elevationGainMin,
-      // URL is the source of truth for filters; reset spatial-only state.
-      polygon: initialState.polygon,
-      bbox: initialState.bbox,
+      iti: {
+        ...state.iti,
+        practicesAny: state.iti.practicesAny.includes(code)
+          ? state.iti.practicesAny.filter((item) => item !== code)
+          : [...state.iti.practicesAny, code],
+      },
     })),
+  setPolygon: (polygon, bbox = null) => set((state) => ({ common: { ...state.common, polygon, bbox } })),
+  resetSpatialFilter: () => set((state) => ({ common: { ...state.common, polygon: null, bbox: null } })),
+  resetAll: () => set(DEFAULT_EXPLORER_FILTERS),
+  setFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, false)),
+  replaceFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, true)),
 }));

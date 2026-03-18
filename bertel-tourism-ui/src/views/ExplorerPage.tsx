@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
-import { useExplorerInfiniteQuery, useMapObjectsQuery } from '../hooks/useExplorerQueries';
+import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -64,21 +64,18 @@ export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   const [expandedPanel, setExpandedPanel] = useState<ExplorerPanelKey | null>(null);
-  const pageQuery = useExplorerInfiniteQuery();
-  const mapQuery = useMapObjectsQuery();
+  const cardsQuery = useExplorerCardsQuery();
+  const referencesQuery = useExplorerReferencesQuery();
   usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
-  const cards = useMemo(
-    () => pageQuery.data?.pages.flatMap((page) => page.data) ?? [],
-    [pageQuery.data],
-  );
+  const cards = cardsQuery.data ?? [];
 
-  if (pageQuery.isError) {
-    return <section className="panel-card panel-card--wide">{(pageQuery.error as Error).message}</section>;
+  if (cardsQuery.isError) {
+    return <section className="panel-card panel-card--wide">{(cardsQuery.error as Error).message}</section>;
   }
 
-  if (mapQuery.isError) {
-    return <section className="panel-card panel-card--wide">{(mapQuery.error as Error).message}</section>;
+  if (referencesQuery.isError) {
+    return <section className="panel-card panel-card--wide">{(referencesQuery.error as Error).message}</section>;
   }
 
   const renderPanel = (panel: ExplorerPanelKey, mode: 'inline' | 'modal') => {
@@ -87,17 +84,14 @@ export default function ExplorerPage() {
       : null;
 
     if (panel === 'filters') {
-      return <FiltersPanel headerActions={headerActions} compact={isCompactExplorer} />;
+      return <FiltersPanel headerActions={headerActions} compact={isCompactExplorer} references={referencesQuery.data} />;
     }
 
     if (panel === 'results') {
       return (
         <ResultsList
           cards={cards}
-          loading={pageQuery.isLoading}
-          hasNextPage={Boolean(pageQuery.hasNextPage)}
-          fetchNextPage={pageQuery.fetchNextPage}
-          isFetchingNextPage={pageQuery.isFetchingNextPage}
+          loading={cardsQuery.isLoading || referencesQuery.isLoading}
           headerActions={headerActions}
         />
       );
@@ -105,7 +99,7 @@ export default function ExplorerPage() {
 
     return (
       <Suspense fallback={<MapFallback />}>
-        <MapPanel objects={mapQuery.data ?? []} headerActions={headerActions} />
+        <MapPanel objects={cards} headerActions={headerActions} />
       </Suspense>
     );
   };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
@@ -6,34 +6,11 @@ import type { ObjectCard } from '../../types/domain';
 interface ResultsListProps {
   cards: ObjectCard[];
   loading: boolean;
-  hasNextPage: boolean;
-  fetchNextPage: () => void;
-  isFetchingNextPage: boolean;
   headerActions?: ReactNode;
 }
 
-export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetchingNextPage, headerActions }: ResultsListProps) {
+export function ResultsList({ cards, loading, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const node = sentinelRef.current;
-    if (!node || !hasNextPage || isFetchingNextPage) {
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: '180px' },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <section className="results-panel">
@@ -81,9 +58,6 @@ export function ResultsList({ cards, loading, hasNextPage, fetchNextPage, isFetc
           </button>
         ))}
       </div>
-
-      <div ref={sentinelRef} className="list-sentinel" />
-      {isFetchingNextPage && <div className="panel-card panel-card--nested">Chargement de la page suivante...</div>}
     </section>
   );
 }

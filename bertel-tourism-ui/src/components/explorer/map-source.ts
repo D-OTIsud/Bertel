@@ -1,5 +1,5 @@
 import { getMarkerImageId } from '../../config/map-markers';
-import type { MapObject } from '../../types/domain';
+import type { ObjectCard } from '../../types/domain';
 
 export interface MapFeatureProperties {
   id: string;
@@ -26,7 +26,7 @@ export interface MapFeatureCollection {
   features: MapFeature[];
 }
 
-export function buildObjectFeatureCollection(objects: MapObject[]): MapFeatureCollection {
+export function buildObjectFeatureCollection(objects: ObjectCard[]): MapFeatureCollection {
   return {
     type: 'FeatureCollection',
     features: objects.flatMap((item) => {
@@ -49,7 +49,7 @@ export function buildObjectFeatureCollection(objects: MapObject[]): MapFeatureCo
           type: item.type,
           address: item.location?.address ?? 'Sans adresse',
           city: item.location?.city ?? '',
-          price: item.price?.formatted ?? '',
+          price: item.render?.price ?? (item.min_price != null ? `${item.min_price} EUR` : ''),
           rating: item.rating == null ? '' : String(item.rating),
           markerIcon: getMarkerImageId(item.type),
         },

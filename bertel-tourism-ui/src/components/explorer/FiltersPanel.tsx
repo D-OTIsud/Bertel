@@ -32,13 +32,11 @@ interface FiltersPanelProps {
 interface FiltersSectionProps {
   eyebrow: string;
   title: string;
-  description?: string;
   children: ReactNode;
 }
 
 interface FiltersSubsectionProps {
   title: string;
-  description?: string;
   children: ReactNode;
 }
 
@@ -54,14 +52,13 @@ function isBucketSelected(selectedBuckets: ExplorerBucketKey[], bucket: Explorer
   return selectedBuckets.includes(bucket);
 }
 
-function FiltersSection({ eyebrow, title, description, children }: FiltersSectionProps) {
+function FiltersSection({ eyebrow, title, children }: FiltersSectionProps) {
   return (
     <section className="filters-panel__section">
       <div className="filters-panel__section-header">
         <span className="eyebrow">{eyebrow}</span>
         <div className="filters-panel__section-heading">
           <h3>{title}</h3>
-          {description ? <p>{description}</p> : null}
         </div>
       </div>
       <div className="filters-panel__section-body">{children}</div>
@@ -69,12 +66,11 @@ function FiltersSection({ eyebrow, title, description, children }: FiltersSectio
   );
 }
 
-function FiltersSubsection({ title, description, children }: FiltersSubsectionProps) {
+function FiltersSubsection({ title, children }: FiltersSubsectionProps) {
   return (
     <section className="filters-panel__subsection">
       <div className="filters-panel__subsection-header">
         <span className="facet-title">{title}</span>
-        {description ? <p>{description}</p> : null}
       </div>
       {children}
     </section>
@@ -122,7 +118,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
       </Button>
 
       <div className="filters-panel__content">
-        <FiltersSection eyebrow="Base" title="Filtres generaux" description="Commencez par les categories, la localisation et les options partagees.">
+        <FiltersSection eyebrow="Base" title="Filtres generaux">
           <FiltersSubsection title="Categories">
             <div className="chip-grid">
               {EXPLORER_BUCKET_OPTIONS.map((option) => (
@@ -173,7 +169,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
         </FiltersSection>
 
         {showHot ? (
-          <FiltersSection eyebrow="Categorie active" title="Hebergements" description="Filtres specifiques aux hotels, campings, residences et hebergements touristiques.">
+          <FiltersSection eyebrow="Categorie active" title="Hebergements">
             <FiltersSubsection title="Sous-types hebergement">
               <div className="chip-grid">
                 {HOT_BUCKET_TYPES.map((type) => (
@@ -237,7 +233,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
               </FiltersSubsection>
             ) : null}
 
-            <FiltersSubsection title="Salles de reunion" description="Affinez les capacites MICE pour les hebergements qui proposent des espaces evenementiels.">
+            <FiltersSubsection title="Salles de reunion">
               <div className="filters-panel__range-grid">
                 <Input
                   type="number"
@@ -273,7 +269,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
         ) : null}
 
         {showRes && references?.resCapacityMetrics.length ? (
-          <FiltersSection eyebrow="Categorie active" title="Restaurants" description="Separation claire pour les capacites et contraintes propres a la restauration.">
+          <FiltersSection eyebrow="Categorie active" title="Restaurants">
             <FiltersSubsection title="Capacites restaurant">
               <div className="filters-panel__metric-stack">
                 {references.resCapacityMetrics.map((metric) => (
@@ -303,7 +299,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
         ) : null}
 
         {showIti ? (
-          <FiltersSection eyebrow="Categorie active" title="Itineraires" description="Regroupez les criteres de parcours et d activites dans une zone distincte.">
+          <FiltersSection eyebrow="Categorie active" title="Itineraires">
             <FiltersSubsection title="Type de parcours">
               <div className="chip-grid">
                 {[

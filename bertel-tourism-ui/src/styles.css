@@ -2222,7 +2222,7 @@ body::after {
 .map-panel__header-actions-wrap--expanded {
   padding: 0.6rem;
   border-radius: 14px;
-  background: rgba(255, 253, 248, 0.72);
+  background: rgba(255, 253, 248, 0);
   border: 1px solid rgba(24, 49, 59, 0.08);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);

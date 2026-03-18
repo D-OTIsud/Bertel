@@ -34,15 +34,16 @@ function useExplorerFilters() {
 export function useExplorerCardsQuery() {
   const filters = useExplorerFilters();
   const langPrefs = useSessionStore((state) => state.langPrefs);
+  const demoMode = useSessionStore((state) => state.demoMode);
   const queryFilters = useMemo(
     () => ({
       ...filters,
       hot: {
         ...filters.hot,
-        subtypes: [],
+        subtypes: demoMode ? filters.hot.subtypes : [],
       },
     }),
-    [filters],
+    [demoMode, filters],
   );
 
   const query = useQuery({

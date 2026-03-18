@@ -3,20 +3,68 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { SlidersHorizontal } from 'lucide-react';
-import { Layer, Map, Marker, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
+import { Layer, Map, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { getMarkerImageId } from '../../config/map-markers';
+import { getMarkerImageId, objectTypeOptions } from '../../config/map-markers';
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
-import { normalizeExplorerObjectType } from '../../utils/facets';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
 const COMPACT_EXPLORER_BREAKPOINT = '(max-width: 1180px)';
+const MARKER_IMAGE_PREFIX = '/markers/';
+
+const CLUSTER_LAYER_ID = 'clusters';
+const CLUSTER_COUNT_LAYER_ID = 'cluster-count';
+const UNCLUSTERED_POINT_LAYER_ID = 'unclustered-points';
+
+function MarkerImagesPreloader() {
+  const { map } = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    const imageIds = objectTypeOptions.map((t) => getMarkerImageId(t.code));
+
+    const loadAll = () => {
+      if (!map.isStyleLoaded()) return;
+
+      for (const imageId of imageIds) {
+        if (map.hasImage(imageId)) continue;
+        const url = `${MARKER_IMAGE_PREFIX}${imageId}.png`;
+
+        // maplibre's loadImage signature is not fully typed via react-map-gl.
+        (map as unknown as { loadImage: (u: string, cb: (err: unknown, img: unknown) => void) => void }).loadImage(
+          url,
+          (err, img) => {
+            if (err) return;
+            if (!img) return;
+            // Add again only if style reload removed it in the meantime.
+            if (!map.hasImage(imageId)) {
+              map.addImage(imageId, img as any, { pixelRatio: 2 });
+            }
+          },
+        );
+      }
+    };
+
+    loadAll();
+
+    // Reload images after style changes (mapLayer switching).
+    const onStyleData = () => loadAll();
+    map.on('styledata', onStyleData);
+
+    return () => {
+      map.off('styledata', onStyleData);
+    };
+  }, [map]);
+
+  return null;
+}
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
   const coords = polygon.coordinates[0] ?? [];
@@ -141,27 +189,17 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [headerExpanded, setHeaderExpanded] = useState(false);
+  const [mapCursor, setMapCursor] = useState<'default' | 'pointer'>('default');
   const hoverTimerRef = useRef<number | null>(null);
   const popupHoveredRef = useRef(false);
   const markerHoveredRef = useRef(false);
   const autoClearSelectedCardTimerRef = useRef<number | null>(null);
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
+  const hoveredPointIdRef = useRef<string | null>(null);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
+  const cardById = useMemo(() => new globalThis.Map(objects.map((card) => [card.id, card] as const)), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
-  const markerPoints = useMemo(
-    () =>
-      objects.flatMap((card) => {
-        const lat = card.location?.lat;
-        const lon = card.location?.lon;
-        if (lat == null || lon == null) return [];
-
-        const type = normalizeExplorerObjectType(card.type);
-        const imageId = getMarkerImageId(type);
-        return [{ card, lat, lon, imageSrc: `/markers/${imageId}.png` }];
-      }),
-    [objects],
-  );
 
   const collapseHeader = useCallback(() => {
     setHeaderExpanded(false);
@@ -242,6 +280,94 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     schedulePopupClose();
   }, [schedulePopupClose]);
 
+  const handleUnclusteredHover = useCallback(
+    (feature: any, lng: number, lat: number) => {
+      const id = String(feature?.properties?.id ?? '');
+      if (!id) return;
+
+      // Avoid resetting the tooltip timer on every mouse move.
+      if (hoveredPointIdRef.current === id) return;
+      hoveredPointIdRef.current = id;
+
+      const card = cardById.get(id);
+      if (!card) return;
+      handleMarkerEnter(card, lng, lat);
+    },
+    [cardById, handleMarkerEnter],
+  );
+
+  const handleHoverLeave = useCallback(() => {
+    hoveredPointIdRef.current = null;
+    setMapCursor('default');
+    handleMarkerLeave();
+  }, [handleMarkerLeave]);
+
+  const handleMapMove = useCallback(
+    (event: any) => {
+      const features = event?.features;
+      const lng = event?.lngLat?.lng;
+      const lat = event?.lngLat?.lat;
+      if (typeof lng !== 'number' || typeof lat !== 'number') return;
+
+      const hoveredUnclustered = features?.find((f: any) => f?.layer?.id === UNCLUSTERED_POINT_LAYER_ID);
+      const hoveredCluster = features?.find((f: any) => f?.layer?.id === CLUSTER_LAYER_ID || f?.layer?.id === CLUSTER_COUNT_LAYER_ID);
+
+      if (hoveredUnclustered) {
+        setMapCursor('pointer');
+        handleUnclusteredHover(hoveredUnclustered, lng, lat);
+        return;
+      }
+
+      if (hoveredCluster) {
+        // Cluster hover: just show pointer cursor; no tooltip.
+        setMapCursor('pointer');
+        if (hoveredPointIdRef.current) {
+          hoveredPointIdRef.current = null;
+          handleMarkerLeave();
+        }
+        return;
+      }
+
+      // Not over an interactive point.
+      if (hoveredPointIdRef.current) {
+        handleHoverLeave();
+      } else {
+        setMapCursor('default');
+      }
+    },
+    [handleHoverLeave, handleMarkerLeave, handleUnclusteredHover],
+  );
+
+  const handleMapClick = useCallback(
+    (event: any) => {
+      const features = event?.features;
+      if (!features || features.length === 0) return;
+
+      const clickedFeature = features[0];
+      const props = clickedFeature?.properties ?? {};
+      const clusterId = props?.cluster_id;
+      const pointId = props?.id;
+
+      if (clusterId != null) {
+        const map = event.target as any;
+        const source = map?.getSource?.(OBJECT_SOURCE_ID) as any;
+        if (source?.getClusterExpansionZoom) {
+          source.getClusterExpansionZoom(clusterId, (err: unknown, zoom: number) => {
+            if (err) return;
+            if (typeof zoom !== 'number') return;
+            map.easeTo({ center: event.lngLat, zoom });
+          });
+        }
+        return;
+      }
+
+      if (pointId != null) {
+        handleMarkerClick(String(pointId));
+      }
+    },
+    [handleMarkerClick],
+  );
+
   return (
     <section className="map-panel panel-card panel-card--map">
       <div className={`map-panel__header-actions-wrap ${headerExpanded ? 'map-panel__header-actions-wrap--expanded' : ''}`}>
@@ -281,30 +407,78 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             zoom: 10.2,
           }}
           attributionControl={false}
-          cursor="default"
+          cursor={mapCursor}
+          interactiveLayerIds={[CLUSTER_LAYER_ID, CLUSTER_COUNT_LAYER_ID, UNCLUSTERED_POINT_LAYER_ID]}
+          onClick={handleMapClick}
+          onMouseMove={handleMapMove}
+          onMouseLeave={handleHoverLeave}
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           <MapDrawControl />
-          {markerPoints.map((point) => (
-            <Marker key={point.card.id} longitude={point.lon} latitude={point.lat} anchor="bottom">
-              <button
-                type="button"
-                className="map-marker-pin"
-                onMouseEnter={() => handleMarkerEnter(point.card, point.lon, point.lat)}
-                onMouseLeave={handleMarkerLeave}
-                onClick={() => handleMarkerClick(point.card.id)}
-                aria-label={`Ouvrir ${point.card.name}`}
-              >
-                <img src={point.imageSrc} alt={point.card.name} className="map-marker-pin__img" />
-              </button>
-            </Marker>
-          ))}
-          <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
+          <MarkerImagesPreloader />
+          <Source
+            id={OBJECT_SOURCE_ID}
+            type="geojson"
+            data={geojsonData}
+            cluster={true}
+            clusterMaxZoom={14}
+            clusterRadius={50}
+          >
+            <Layer
+              id={CLUSTER_LAYER_ID}
+              type="circle"
+              filter={['has', 'point_count']}
+              paint={{
+                'circle-color': '#18313B',
+                'circle-stroke-color': '#FFFDF8',
+                'circle-stroke-width': 2,
+                'circle-radius': [
+                  'step',
+                  ['get', 'point_count'],
+                  14,
+                  10,
+                  18,
+                  30,
+                  22,
+                  60,
+                  26,
+                ],
+              }}
+            />
+            <Layer
+              id={CLUSTER_COUNT_LAYER_ID}
+              type="symbol"
+              filter={['has', 'point_count']}
+              layout={{
+                'text-field': '{point_count_abbreviated}',
+                'text-size': 12,
+                'text-allow-overlap': true,
+                'text-ignore-placement': true,
+              }}
+              paint={{
+                'text-color': '#FFFDF8',
+                'text-halo-color': '#18313B',
+                'text-halo-width': 1,
+              }}
+            />
+            <Layer
+              id={UNCLUSTERED_POINT_LAYER_ID}
+              type="symbol"
+              filter={['!', ['has', 'point_count']]}
+              layout={{
+                'icon-image': ['get', 'markerIcon'],
+                'icon-size': 0.52,
+                'icon-anchor': 'bottom',
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true,
+              }}
+            />
             <Layer
               id={OBJECT_LABEL_LAYER_ID}
               type="symbol"
               minzoom={12}
+              filter={['!', ['has', 'point_count']]}
               layout={{
                 'text-field': ['get', 'name'],
                 'text-size': 12,

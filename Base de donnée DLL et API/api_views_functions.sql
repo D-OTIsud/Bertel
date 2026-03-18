@@ -887,6 +887,16 @@ AS $$
       CASE WHEN n.filters ? 'languages_any'
         THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'languages_any'))
       END AS languages_any,
+      CASE WHEN n.filters ? 'city_any'
+        THEN ARRAY(
+          SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'city_any')))
+        )
+      END AS city_any,
+      CASE WHEN n.filters ? 'lieu_dit_any'
+        THEN ARRAY(
+          SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'lieu_dit_any')))
+        )
+      END AS lieu_dit_any,
       CASE WHEN n.filters ? 'media_types_any'
         THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'media_types_any'))
       END AS media_types_any,
@@ -913,6 +923,8 @@ AS $$
       NOT (
         n.filters ? 'amenities_all'
         OR n.filters ? 'amenity_families_any'
+        OR n.filters ? 'city_any'
+        OR n.filters ? 'lieu_dit_any'
         OR n.filters ? 'pet_accepted'
         OR n.filters ? 'media_types_any'
         OR n.filters ? 'meeting_room'
@@ -930,6 +942,8 @@ AS $$
       m.commercial_visibility,
       m.name_search_vector,
       m.city_search_vector,
+      NULL::TEXT AS city_normalized,
+      NULL::TEXT AS lieu_dit_normalized,
       m.geog2,
       m.cached_is_open_now,
       m.cached_amenity_codes,
@@ -950,6 +964,8 @@ AS $$
       o.commercial_visibility,
       o.name_search_vector,
       ol.city_search_vector,
+      immutable_unaccent(lower(ol.city)) AS city_normalized,
+      immutable_unaccent(lower(ol.lieu_dit)) AS lieu_dit_normalized,
       ol.geog2,
       o.cached_is_open_now,
       o.cached_amenity_codes,
@@ -960,7 +976,7 @@ AS $$
     FROM object o
     CROSS JOIN params
     LEFT JOIN LATERAL (
-      SELECT ol2.city_search_vector, ol2.geog2
+      SELECT ol2.city_search_vector, ol2.city, ol2.lieu_dit, ol2.geog2
       FROM object_location ol2
       WHERE ol2.object_id = o.id
         AND ol2.is_main_location IS TRUE
@@ -981,6 +997,8 @@ AS $$
       src.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)) OR
       (src.city_search_vector IS NOT NULL AND src.city_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)))
     )
+    AND (params.city_any IS NULL OR COALESCE(src.city_normalized, '') = ANY(params.city_any))
+    AND (params.lieu_dit_any IS NULL OR COALESCE(src.lieu_dit_normalized, '') = ANY(params.lieu_dit_any))
     AND (params.amenities_any IS NULL OR COALESCE(src.cached_amenity_codes, ARRAY[]::TEXT[]) && params.amenities_any)
     AND (params.amenities_all IS NULL OR NOT EXISTS (
       SELECT 1
@@ -1207,7 +1225,14 @@ AS $$
       'lat',      ol.latitude,
       'lon',      ol.longitude,
       'city',     ol.city,
-      'postcode', ol.postcode
+      'postcode', ol.postcode,
+      'lieu_dit', ol.lieu_dit,
+      'address',  CONCAT_WS(', ',
+        NULLIF(ol.address1, ''),
+        NULLIF(ol.lieu_dit, ''),
+        NULLIF(ol.postcode, ''),
+        NULLIF(ol.city, '')
+      )
     ),
     'description',  LEFT(COALESCE(
       api.i18n_pick(d.description_chapo_i18n, api.pick_lang(p_lang_prefs), 'fr'),

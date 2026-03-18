@@ -1,48 +1,124 @@
-import type { ExplorerFilters, ObjectTypeCode } from '@/types/domain';
+import type { ExplorerBucketKey, ExplorerFilters } from '@/types/domain';
+import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS } from '@/utils/facets';
 
-const OBJECT_TYPES: ObjectTypeCode[] = ['HOT', 'RES', 'ACT', 'ITI', 'EVT'];
+const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
+
+function parseCapacityFilters(value: string | null): Array<{ code: string; min?: number; max?: number }> | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const filters = value
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .flatMap((item) => {
+      const [code = '', minRaw = '', maxRaw = ''] = item.split(':');
+      if (!code) {
+        return [];
+      }
+      const min = parseOptionalNumber(minRaw);
+      const max = parseOptionalNumber(maxRaw);
+      return [{ code, min, max }];
+    });
+
+  return filters.length > 0 ? filters : undefined;
+}
+
+function serializeCapacityFilters(filters: Array<{ code: string; min?: number; max?: number }>): string | null {
+  const encoded = filters
+    .filter((filter) => filter.code && (filter.min != null || filter.max != null))
+    .map((filter) => `${filter.code}:${filter.min ?? ''}:${filter.max ?? ''}`)
+    .join(';');
+
+  return encoded || null;
+}
 
 export function parseSearchParams(searchParams: URLSearchParams): Partial<ExplorerFilters> {
-  const typesParam = searchParams.get('types');
-  const selectedTypes =
-    typesParam !== null
-      ? typesParam.split(',').filter((t): t is ObjectTypeCode => OBJECT_TYPES.includes(t as ObjectTypeCode))
+  const bucketsParam = searchParams.get('buckets');
+  const selectedBuckets =
+    bucketsParam !== null
+      ? bucketsParam.split(',').filter((bucket): bucket is ExplorerBucketKey => EXPLORER_BUCKETS.includes(bucket as ExplorerBucketKey))
       : undefined;
 
-  const search = searchParams.get('search') ?? undefined;
-  const viewParam = searchParams.get('view');
-  const view = viewParam === 'card' || viewParam === 'full' ? viewParam : undefined;
+  const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  const hotClassifications = searchParams.get('hotClassifications')?.split(',').filter(Boolean).flatMap((value) => {
+    const [schemeCode = '', valueCode = ''] = value.split(':');
+    if (!schemeCode || !valueCode) {
+      return [];
+    }
+    return [{ schemeCode, valueCode }];
+  }) ?? undefined;
 
-  const labelsParam = searchParams.get('labels');
-  const labels = labelsParam ? labelsParam.split(',').filter(Boolean) : undefined;
+  const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
+  const commonPatch = {
+    ...(searchParams.get('search') != null && { search: searchParams.get('search') ?? '' }),
+    ...(searchParams.get('city') != null && { city: searchParams.get('city') ?? '' }),
+    ...(searchParams.get('lieuDit') != null && { lieuDit: searchParams.get('lieuDit') ?? '' }),
+    ...(searchParams.get('pmr') != null && { pmr: searchParams.get('pmr') === 'true' }),
+    ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
+    ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
+  };
 
-  const amenitiesParam = searchParams.get('amenities');
-  const amenities = amenitiesParam ? amenitiesParam.split(',').filter(Boolean) : undefined;
-
-  const openNowParam = searchParams.get('openNow');
-  const openNow =
-    openNowParam === 'true' ? true : openNowParam === 'false' ? false : undefined;
-
-  const capacityMetricCode = searchParams.get('capacityMetricCode') ?? undefined;
-  const capacityMin = parseOptionalNumber(searchParams.get('capacityMin'));
-  const capacityMax = parseOptionalNumber(searchParams.get('capacityMax'));
-  const itineraryDifficultyMin = parseOptionalNumber(searchParams.get('itineraryDifficultyMin'));
-  const itineraryDifficultyMax = parseOptionalNumber(searchParams.get('itineraryDifficultyMax'));
-  const elevationGainMin = parseOptionalNumber(searchParams.get('elevationGainMin'));
+  const itiPatch = {
+    ...(searchParams.get('itiIsLoop') != null && {
+      isLoop: searchParams.get('itiIsLoop') === 'true' ? true : searchParams.get('itiIsLoop') === 'false' ? false : null,
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDifficultyMin')) !== undefined && {
+      difficultyMin: parseOptionalNumber(searchParams.get('itiDifficultyMin')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDifficultyMax')) !== undefined && {
+      difficultyMax: parseOptionalNumber(searchParams.get('itiDifficultyMax')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDistanceMinKm')) !== undefined && {
+      distanceMinKm: parseOptionalNumber(searchParams.get('itiDistanceMinKm')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDistanceMaxKm')) !== undefined && {
+      distanceMaxKm: parseOptionalNumber(searchParams.get('itiDistanceMaxKm')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDurationMinH')) !== undefined && {
+      durationMinH: parseOptionalNumber(searchParams.get('itiDurationMinH')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDurationMaxH')) !== undefined && {
+      durationMaxH: parseOptionalNumber(searchParams.get('itiDurationMaxH')),
+    }),
+    ...(itiPractices !== undefined && { practicesAny: itiPractices }),
+  };
 
   return {
-    ...(selectedTypes !== undefined && selectedTypes.length > 0 && { selectedTypes }),
-    ...(search !== undefined && { search }),
-    ...(view !== undefined && { view }),
-    ...(labels !== undefined && { labels }),
-    ...(amenities !== undefined && { amenities }),
-    ...(openNow !== undefined && { openNow }),
-    ...(capacityMetricCode && { capacityMetricCode }),
-    ...(capacityMin !== undefined && { capacityMin }),
-    ...(capacityMax !== undefined && { capacityMax }),
-    ...(itineraryDifficultyMin !== undefined && { itineraryDifficultyMin }),
-    ...(itineraryDifficultyMax !== undefined && { itineraryDifficultyMax }),
-    ...(elevationGainMin !== undefined && { elevationGainMin }),
+    ...(selectedBuckets !== undefined && selectedBuckets.length > 0 && { selectedBuckets }),
+    ...(Object.keys(commonPatch).length > 0 && {
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        ...commonPatch,
+      },
+    }),
+    ...(hotSubtypes !== undefined || hotClassifications !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
+      ? {
+          hot: {
+            ...DEFAULT_EXPLORER_FILTERS.hot,
+            ...(hotSubtypes !== undefined && { subtypes: hotSubtypes as ExplorerFilters['hot']['subtypes'] }),
+            ...(hotClassifications !== undefined && { classifications: hotClassifications }),
+            ...(parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined && {
+              capacityFilters: parseCapacityFilters(searchParams.get('hotCapacity')),
+            }),
+          },
+        }
+      : {}),
+    ...(parseCapacityFilters(searchParams.get('resCapacity')) !== undefined
+      ? {
+          res: {
+            ...DEFAULT_EXPLORER_FILTERS.res,
+            capacityFilters: parseCapacityFilters(searchParams.get('resCapacity')) ?? DEFAULT_EXPLORER_FILTERS.res.capacityFilters,
+          },
+        }
+      : {}),
+    ...(Object.keys(itiPatch).length > 0 && {
+      iti: {
+        ...DEFAULT_EXPLORER_FILTERS.iti,
+        ...itiPatch,
+      },
+    }),
   };
 }
 
@@ -54,41 +130,64 @@ function parseOptionalNumber(s: string | null): number | undefined {
 
 export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   const p = new URLSearchParams();
-  if (filters.selectedTypes.length > 0) {
-    p.set('types', filters.selectedTypes.join(','));
+  if (filters.selectedBuckets.length > 0) {
+    p.set('buckets', filters.selectedBuckets.join(','));
   }
-  if (filters.search) {
-    p.set('search', filters.search);
+  if (filters.common.search) {
+    p.set('search', filters.common.search);
   }
-  if (filters.view && filters.view !== 'card') {
-    p.set('view', filters.view);
+  if (filters.common.city) {
+    p.set('city', filters.common.city);
   }
-  if (filters.labels.length > 0) {
-    p.set('labels', filters.labels.join(','));
+  if (filters.common.lieuDit) {
+    p.set('lieuDit', filters.common.lieuDit);
   }
-  if (filters.amenities.length > 0) {
-    p.set('amenities', filters.amenities.join(','));
+  if (filters.common.pmr) {
+    p.set('pmr', 'true');
   }
-  if (filters.openNow) {
+  if (filters.common.petsAccepted) {
+    p.set('pets', 'true');
+  }
+  if (filters.common.openNow) {
     p.set('openNow', 'true');
   }
-  if (filters.capacityMetricCode) {
-    p.set('capacityMetricCode', filters.capacityMetricCode);
+  if (filters.hot.subtypes.length > 0) {
+    p.set('hotSubtypes', filters.hot.subtypes.join(','));
   }
-  if (filters.capacityMin != null) {
-    p.set('capacityMin', String(filters.capacityMin));
+  if (filters.hot.classifications.length > 0) {
+    p.set('hotClassifications', filters.hot.classifications.map((item) => `${item.schemeCode}:${item.valueCode}`).join(','));
   }
-  if (filters.capacityMax != null) {
-    p.set('capacityMax', String(filters.capacityMax));
+  const hotCapacity = serializeCapacityFilters(filters.hot.capacityFilters);
+  if (hotCapacity) {
+    p.set('hotCapacity', hotCapacity);
   }
-  if (filters.itineraryDifficultyMin != null) {
-    p.set('itineraryDifficultyMin', String(filters.itineraryDifficultyMin));
+  const resCapacity = serializeCapacityFilters(filters.res.capacityFilters);
+  if (resCapacity) {
+    p.set('resCapacity', resCapacity);
   }
-  if (filters.itineraryDifficultyMax != null) {
-    p.set('itineraryDifficultyMax', String(filters.itineraryDifficultyMax));
+  if (filters.iti.isLoop != null) {
+    p.set('itiIsLoop', String(filters.iti.isLoop));
   }
-  if (filters.elevationGainMin != null) {
-    p.set('elevationGainMin', String(filters.elevationGainMin));
+  if (filters.iti.difficultyMin != null) {
+    p.set('itiDifficultyMin', String(filters.iti.difficultyMin));
+  }
+  if (filters.iti.difficultyMax != null) {
+    p.set('itiDifficultyMax', String(filters.iti.difficultyMax));
+  }
+  if (filters.iti.distanceMinKm != null) {
+    p.set('itiDistanceMinKm', String(filters.iti.distanceMinKm));
+  }
+  if (filters.iti.distanceMaxKm != null) {
+    p.set('itiDistanceMaxKm', String(filters.iti.distanceMaxKm));
+  }
+  if (filters.iti.durationMinH != null) {
+    p.set('itiDurationMinH', String(filters.iti.durationMinH));
+  }
+  if (filters.iti.durationMaxH != null) {
+    p.set('itiDurationMaxH', String(filters.iti.durationMaxH));
+  }
+  if (filters.iti.practicesAny.length > 0) {
+    p.set('itiPractices', filters.iti.practicesAny.join(','));
   }
   return p;
 }

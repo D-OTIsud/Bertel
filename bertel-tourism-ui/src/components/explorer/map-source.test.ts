@@ -9,14 +9,14 @@ describe('buildObjectFeatureCollection', () => {
         name: 'Hotel Basalte',
         type: 'HOT',
         rating: 4.6,
+        render: {
+          price: '149 EUR / nuit',
+        },
         location: {
           lat: -21.1,
           lon: 55.4,
           address: 'Front de mer',
           city: 'Saint-Pierre',
-        },
-        price: {
-          formatted: '149 EUR / nuit',
         },
       },
       {

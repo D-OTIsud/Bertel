@@ -1,13 +1,14 @@
-import { filterMockCards, mockAuditQuestions, mockCrmTasks, mockMapObjects, mockObjectDetails, mockPendingChanges, mockPublicationCards, mockTimeline } from '../data/mock';
+import { filterMockCards, mockAuditQuestions, mockCrmTasks, mockObjectDetails, mockPendingChanges, mockPublicationCards, mockTimeline } from '../data/mock';
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import type { AuditQuestion, CrmTask, ExplorerFilters, MapObject, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
-import { buildRpcFilters } from '../utils/facets';
+import type { AuditQuestion, ExplorerBucketKey, CrmTask, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
+import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeObjectDetailPayload } from './object-detail';
 
 interface ExplorerPageInput {
   cursor?: string | null;
   pageSize?: number;
+  bucket: ExplorerBucketKey;
   filters: ExplorerFilters;
   langPrefs: string[];
 }
@@ -15,10 +16,6 @@ interface ExplorerPageInput {
 interface ExplorerRpcPayload {
   meta?: RpcPageResponse<ObjectCard>['meta'];
   data?: unknown;
-}
-
-interface MapObjectsRpcPayload {
-  objects?: unknown;
 }
 
 interface ObjectResourceRpcPayload {
@@ -69,13 +66,6 @@ function assertExplorerPayload(data: unknown): ExplorerRpcPayload {
   return data as ExplorerRpcPayload;
 }
 
-function assertMapPayload(data: unknown): MapObjectsRpcPayload {
-  if (!data || typeof data !== 'object') {
-    throw new Error('Payload carte invalide recu depuis le RPC.');
-  }
-  return data as MapObjectsRpcPayload;
-}
-
 function assertObjectPayload(data: unknown): ObjectResourceRpcPayload {
   if (!data || typeof data !== 'object') {
     throw new Error('Payload fiche invalide recu depuis le RPC.');
@@ -102,18 +92,18 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
   const client = requireRpcClient();
 
   if (session.demoMode || !client) {
-    return paginateMock(filterMockCards(input.filters), input.cursor, pageSize);
+    return paginateMock(filterMockCards(input.filters, input.bucket), input.cursor, pageSize);
   }
 
   const { data, error } = await client.schema('api').rpc('list_object_resources_filtered_page', {
     p_cursor: input.cursor ?? null,
     p_lang_prefs: input.langPrefs,
     p_page_size: pageSize,
-    p_filters: buildRpcFilters(input.filters),
-    p_types: input.filters.selectedTypes.length > 0 ? input.filters.selectedTypes : null,
-    p_search: input.filters.search || null,
+    p_filters: buildBucketRpcFilters(input.filters, input.bucket),
+    p_types: getBackendTypesForBucket(input.bucket),
+    p_search: input.filters.common.search || null,
     p_track_format: 'none',
-    p_view: input.filters.view,
+    p_view: 'card',
   });
 
   if (error) {
@@ -131,31 +121,30 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
   };
 }
 
-export async function listMapObjects(filters: ExplorerFilters, langPrefs: string[]): Promise<MapObject[]> {
-  const session = useSessionStore.getState();
-  const client = requireRpcClient();
+async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: ExplorerFilters, langPrefs: string[]): Promise<ObjectCard[]> {
+  const cards: ObjectCard[] = [];
+  let cursor: string | null = null;
 
-  if (session.demoMode || !client) {
-    return mockMapObjects.filter((item) =>
-      filters.selectedTypes.length === 0 ? true : filters.selectedTypes.includes(item.type as never),
-    );
-  }
+  do {
+    const page = await listExplorerPage({
+      bucket,
+      cursor,
+      pageSize: 200,
+      filters,
+      langPrefs,
+    });
 
-  const { data, error } = await client.schema('api').rpc('list_objects_map_view', {
-    p_types: filters.selectedTypes.length > 0 ? filters.selectedTypes : null,
-    p_status: ['published'],
-    p_filters: buildRpcFilters(filters),
-    p_lang_prefs: langPrefs,
-    p_limit: 500,
-    p_offset: 0,
-  });
+    cards.push(...page.data);
+    cursor = page.meta.next_cursor ?? null;
+  } while (cursor);
 
-  if (error) {
-    throw error;
-  }
+  return cards;
+}
 
-  const payload = assertMapPayload(data);
-  return Array.isArray(payload.objects) ? (payload.objects as MapObject[]) : [];
+export async function listExplorerCards(filters: ExplorerFilters, langPrefs: string[]): Promise<ObjectCard[]> {
+  const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
+  const results = await Promise.all(buckets.map((bucket) => fetchAllExplorerBucketCards(bucket, filters, langPrefs)));
+  return sortExplorerCards(dedupeExplorerCards(results.flat()));
 }
 
 export async function getObjectResource(objectId: string, langPrefs: string[]): Promise<ObjectDetail> {

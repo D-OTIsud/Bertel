@@ -1,7 +1,24 @@
 export type UserRole = 'super_admin' | 'tourism_agent' | 'owner';
 export type NetworkStatus = 'connected' | 'degraded' | 'offline';
 export type MapLayerMode = 'classic' | 'satellite' | 'topo';
-export type ObjectTypeCode = 'HOT' | 'RES' | 'ACT' | 'ITI' | 'EVT';
+export type ObjectTypeCode = 'HOT' | 'RES' | 'ACT' | 'ITI' | 'EVT' | 'VIS' | 'SRV';
+export type ExplorerBucketKey = ObjectTypeCode;
+export type BackendObjectTypeCode =
+  | 'HOT'
+  | 'HPA'
+  | 'HLO'
+  | 'CAMP'
+  | 'RVA'
+  | 'RES'
+  | 'ITI'
+  | 'FMA'
+  | 'LOI'
+  | 'PCU'
+  | 'PNA'
+  | 'VIL'
+  | 'COM'
+  | 'PSV'
+  | 'ASC';
 
 export interface GeoPolygon {
   type: 'Polygon';
@@ -14,11 +31,67 @@ export interface LocationSummary {
   city?: string | null;
   postcode?: string | null;
   address?: string | null;
+  lieu_dit?: string | null;
+}
+
+export interface CapacityFilter {
+  code: string;
+  min?: number;
+  max?: number;
+}
+
+export interface ClassificationRef {
+  schemeCode: string;
+  valueCode: string;
+}
+
+export interface MeetingRoomFilter {
+  minCount?: number;
+  minAreaM2?: number;
+  minCapTheatre?: number;
+  minCapClassroom?: number;
+}
+
+export interface ExplorerCommonFilters {
+  search: string;
+  city: string;
+  lieuDit: string;
+  pmr: boolean;
+  petsAccepted: boolean;
+  openNow: boolean;
+  bbox?: [number, number, number, number] | null;
+  polygon?: GeoPolygon | null;
+}
+
+export interface HotBucketFilters {
+  subtypes: BackendObjectTypeCode[];
+  classifications: ClassificationRef[];
+  capacityFilters: CapacityFilter[];
+  meetingRoom: MeetingRoomFilter;
+}
+
+export interface ResBucketFilters {
+  capacityFilters: CapacityFilter[];
+}
+
+export interface ItiBucketFilters {
+  isLoop: boolean | null;
+  difficultyMin?: number;
+  difficultyMax?: number;
+  distanceMinKm?: number;
+  distanceMaxKm?: number;
+  durationMinH?: number;
+  durationMaxH?: number;
+  practicesAny: string[];
+}
+
+export interface ActBucketFilters {
+  environmentTagsAny: string[];
 }
 
 export interface ObjectCard {
   id: string;
-  type: ObjectTypeCode | string;
+  type: BackendObjectTypeCode | string;
   name: string;
   status?: string;
   image?: string | null;
@@ -37,36 +110,35 @@ export interface ObjectCard {
   };
 }
 
-export interface MapObject {
-  id: string;
-  name: string;
-  type: string;
-  image?: string | null;
-  description?: string | null;
-  rating?: number | null;
-  location?: LocationSummary;
-  price?: {
-    amount?: number | null;
-    currency?: string | null;
-    formatted?: string | null;
-  } | null;
-}
+export type MapObject = ObjectCard;
 
 export interface ExplorerFilters {
-  selectedTypes: ObjectTypeCode[];
-  search: string;
-  labels: string[];
-  amenities: string[];
-  openNow: boolean;
-  capacityMetricCode?: string;
-  capacityMin?: number;
-  capacityMax?: number;
-  itineraryDifficultyMin?: number;
-  itineraryDifficultyMax?: number;
-  elevationGainMin?: number;
-  bbox?: [number, number, number, number] | null;
-  polygon?: GeoPolygon | null;
-  view: 'card' | 'full';
+  selectedBuckets: ExplorerBucketKey[];
+  common: ExplorerCommonFilters;
+  hot: HotBucketFilters;
+  res: ResBucketFilters;
+  iti: ItiBucketFilters;
+  act: ActBucketFilters;
+  vis: Record<string, never>;
+  srv: Record<string, never>;
+}
+
+export interface ExplorerReferenceOption {
+  code: string;
+  name: string;
+}
+
+export interface ExplorerClassificationGroup {
+  schemeCode: string;
+  schemeName: string;
+  values: ExplorerReferenceOption[];
+}
+
+export interface ExplorerReferences {
+  hotClassifications: ExplorerClassificationGroup[];
+  hotCapacityMetrics: ExplorerReferenceOption[];
+  resCapacityMetrics: ExplorerReferenceOption[];
+  itiPractices: ExplorerReferenceOption[];
 }
 
 export interface RpcPageMeta {

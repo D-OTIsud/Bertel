@@ -15,7 +15,7 @@ import {
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
-import type { GeoPolygon, MapObject, ObjectTypeCode } from '../../types/domain';
+import type { GeoPolygon, ObjectCard, ObjectTypeCode } from '../../types/domain';
 import { buildObjectFeatureCollection, type MapFeatureProperties } from './map-source';
 
 const OBJECT_SOURCE_ID = 'objects-source';
@@ -92,7 +92,7 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
 
 function MapDrawControl() {
   const { map } = useMap();
-  const polygon = useExplorerStore((state) => state.polygon);
+  const polygon = useExplorerStore((state) => state.common.polygon);
   const setPolygon = useExplorerStore((state) => state.setPolygon);
   const resetSpatialFilter = useExplorerStore((state) => state.resetSpatialFilter);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -187,7 +187,7 @@ function MapDrawControl() {
 }
 
 interface MapPanelProps {
-  objects: MapObject[];
+  objects: ObjectCard[];
   headerActions?: ReactNode;
 }
 

@@ -2053,6 +2053,32 @@ body::after {
   border-color: #9d4135;
 }
 
+.filters-panel__metric-stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.filters-panel__metric-row {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.filters-panel__metric-row strong {
+  font-size: 0.86rem;
+}
+
+.filters-panel__range-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (max-width: 760px) {
+  .filters-panel__range-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .explorer-workspace .result-card {
   grid-template-columns: 112px minmax(0, 1fr);
   gap: 0.65rem;

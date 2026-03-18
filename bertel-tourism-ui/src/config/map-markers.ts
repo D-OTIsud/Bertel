@@ -1,4 +1,5 @@
 import type { ObjectTypeCode } from '../types/domain';
+import { normalizeExplorerObjectType } from '../utils/facets';
 
 export type MarkerIconKey =
   | 'bed'
@@ -30,11 +31,13 @@ interface SanitizedSvgDefinition {
 }
 
 export const objectTypeOptions: Array<{ code: ObjectTypeCode; label: string }> = [
-  { code: 'HOT', label: 'Hotel' },
+  { code: 'HOT', label: 'Hebergement' },
   { code: 'RES', label: 'Restaurant' },
   { code: 'ACT', label: 'Activite' },
   { code: 'ITI', label: 'Itineraire' },
   { code: 'EVT', label: 'Evenement' },
+  { code: 'VIS', label: 'Visite' },
+  { code: 'SRV', label: 'Service' },
 ];
 
 export const markerIconCatalog: Record<MarkerIconKey, MarkerIconDefinition> = {
@@ -78,6 +81,8 @@ export const markerIconChoicesByType: Record<ObjectTypeCode, MarkerIconKey[]> = 
   ACT: ['spark', 'camera', 'leaf'],
   ITI: ['route', 'leaf', 'spark'],
   EVT: ['calendar', 'spark', 'camera'],
+  VIS: ['camera', 'building', 'leaf'],
+  SRV: ['building', 'spark', 'leaf'],
 };
 
 export const defaultMarkerStyles: Record<ObjectTypeCode, MarkerStyle> = {
@@ -86,10 +91,12 @@ export const defaultMarkerStyles: Record<ObjectTypeCode, MarkerStyle> = {
   ACT: { color: '#1E7F78', icon: 'spark', mode: 'preset', customSvg: null },
   ITI: { color: '#327090', icon: 'route', mode: 'preset', customSvg: null },
   EVT: { color: '#C75E48', icon: 'calendar', mode: 'preset', customSvg: null },
+  VIS: { color: '#7E6FB7', icon: 'camera', mode: 'preset', customSvg: null },
+  SRV: { color: '#587C62', icon: 'building', mode: 'preset', customSvg: null },
 };
 
 export function getMarkerImageId(type: string): string {
-  return `marker-${String(type || 'default').toUpperCase()}`;
+  return `marker-${normalizeExplorerObjectType(type)}`;
 }
 
 export function sanitizeMarkerColor(value: string, fallback: string): string {

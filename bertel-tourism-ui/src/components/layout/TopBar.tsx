@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Clock3, Menu, Search, UserCircle2 } from 'lucide-react';
 import { useSessionStore } from '../../store/session-store';
+import { useExplorerStore } from '../../store/explorer-store';
 import { useThemeStore } from '../../store/theme-store';
 import { Input } from '@/components/ui/input';
 
@@ -30,6 +31,8 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
   const userName = useSessionStore((state) => state.userName);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
+  const search = useExplorerStore((state) => state.common.search);
+  const setSearch = useExplorerStore((state) => state.setSearch);
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
   const [now, setNow] = useState(() => new Date());
@@ -89,6 +92,8 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
           <Search className="h-4 w-4" />
           <Input
             type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Rechercher une fiche, une ville ou une action..."
             className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />

@@ -9,6 +9,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useExplorerStore } from '../store/explorer-store';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const MapPanel = lazy(async () => ({ default: (await import('../components/explorer/MapPanel')).MapPanel }));
 
@@ -73,6 +74,11 @@ export default function ExplorerPage() {
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
+  const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
+
+  const selectedCard = selectedCardId ? cards.find((card) => card.id === selectedCardId) : null;
+  const mobileSheetOpen = isCompactExplorer && Boolean(selectedCard);
 
   useEffect(() => {
     setVisibleObjectIds(cards.map((c) => c.id));
@@ -125,6 +131,38 @@ export default function ExplorerPage() {
 
   return (
     <section className="explorer-workspace">
+      <Sheet
+        open={mobileSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) clearSelectedCard();
+        }}
+      >
+        <SheetContent side="bottom" showClose={true} className="border-0 bg-transparent p-0 shadow-none">
+          {selectedCard ? (
+            <div className="panel-card panel-card--nested" style={{ padding: '0.9rem 1rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                {selectedCard.image ? (
+                  <img
+                    src={selectedCard.image}
+                    alt={selectedCard.name}
+                    style={{
+                      width: 64,
+                      height: 80,
+                      borderRadius: 16,
+                      objectFit: 'cover',
+                      flex: 'none',
+                    }}
+                  />
+                ) : null}
+                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                  <div className="eyebrow">Fiche</div>
+                  <strong style={{ fontSize: 18, lineHeight: 1.2 }}>{selectedCard.name}</strong>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
       {isCompactExplorer ? (
         <section className="explorer-layout explorer-layout--mobile">
           <nav className="explorer-mobile-tabs" aria-label="Panneaux mobile explorateur">

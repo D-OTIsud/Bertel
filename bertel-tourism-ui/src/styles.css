@@ -1068,6 +1068,30 @@ a {
   min-width: 190px;
 }
 
+.map-hover-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.map-hover-card__img {
+  width: 100%;
+  max-width: 180px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(24, 49, 59, 0.08);
+  background: rgba(24, 49, 59, 0.04);
+}
+
+.map-hover-card__name {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .maplibregl-popup-content,
 .mapboxgl-popup-content {
   border-radius: 20px !important;
@@ -2149,6 +2173,11 @@ body::after {
 .explorer-workspace .result-card__title-row,
 .explorer-workspace .field-block__header {
   gap: 0.7rem;
+}
+
+.explorer-workspace .result-card__title-row {
+  /* Keep title and label row compact */
+  gap: 0.25rem;
 }
 
 .explorer-workspace .filters-panel .chip-grid {

@@ -16,7 +16,7 @@ import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, ObjectCard, ObjectTypeCode } from '../../types/domain';
-import { buildObjectFeatureCollection, type MapFeatureProperties } from './map-source';
+import { buildObjectFeatureCollection } from './map-source';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_FALLBACK_LAYER_ID = 'objects-fallback';
@@ -188,6 +188,146 @@ function MapDrawControl() {
   return null;
 }
 
+type HoverPopupState = {
+  lngLat: [number, number];
+  id: string;
+  name: string;
+  image?: string;
+};
+
+function MapMarkerInteractions({
+  cardById,
+  selectCard,
+  setHoverPopupState,
+}: {
+  cardById: Map<string, ObjectCard>;
+  selectCard: (id: string) => void;
+  setHoverPopupState: (next: HoverPopupState | null) => void;
+}) {
+  const { map } = useMap();
+
+  const cardByIdRef = useRef(cardById);
+  useEffect(() => {
+    cardByIdRef.current = cardById;
+  }, [cardById]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    let hoverTimer: number | null = null;
+    let hoveredId: string | null = null;
+    let boundIcon = false;
+    let boundLabel = false;
+    let boundFallback = false;
+
+    const clearHover = () => {
+      if (hoverTimer != null) {
+        window.clearTimeout(hoverTimer);
+        hoverTimer = null;
+      }
+      hoveredId = null;
+      setHoverPopupState(null);
+    };
+
+    const resolveIdAtPoint = (point: unknown): string | null => {
+      const features = map.queryRenderedFeatures(point as any, {
+        layers: [OBJECT_ICON_LAYER_ID, OBJECT_LABEL_LAYER_ID, OBJECT_FALLBACK_LAYER_ID],
+      });
+      const feature = features?.[0] as { properties?: Record<string, unknown> } | undefined;
+      const id = feature?.properties?.id;
+      return typeof id === 'string' ? id : null;
+    };
+
+    const showTooltipForId = (id: string, lngLat: { lng: number; lat: number }) => {
+      const card = cardByIdRef.current.get(id);
+      if (!card) return;
+      setHoverPopupState({
+        lngLat: [lngLat.lng, lngLat.lat],
+        id,
+        name: card.name,
+        image: card.image ?? undefined,
+      });
+    };
+
+    const onEnter = (e: any) => {
+      (map.getCanvas() as HTMLCanvasElement).style.cursor = 'pointer';
+      const id = resolveIdAtPoint(e.point);
+      if (!id) return;
+      hoveredId = id;
+
+      if (hoverTimer != null) window.clearTimeout(hoverTimer);
+
+      const lngLat = e.lngLat as { lng: number; lat: number };
+      hoverTimer = window.setTimeout(() => {
+        // If we moved to another marker before the delay, don't show.
+        if (hoveredId !== id) return;
+        showTooltipForId(id, lngLat);
+      }, 300);
+    };
+
+    const onLeave = () => {
+      (map.getCanvas() as HTMLCanvasElement).style.cursor = '';
+      clearHover();
+    };
+
+    const onClick = (e: any) => {
+      const id = resolveIdAtPoint(e.point);
+      if (!id) return;
+      clearHover();
+      selectCard(id);
+    };
+
+    const bindIfLayersExist = () => {
+      const hasIcon = Boolean(map.getLayer(OBJECT_ICON_LAYER_ID));
+      const hasLabel = Boolean(map.getLayer(OBJECT_LABEL_LAYER_ID));
+      const hasFallback = Boolean(map.getLayer(OBJECT_FALLBACK_LAYER_ID));
+
+      if (hasIcon && !boundIcon) {
+        map.on('mouseenter', OBJECT_ICON_LAYER_ID, onEnter as any);
+        map.on('mouseleave', OBJECT_ICON_LAYER_ID, onLeave as any);
+        map.on('click', OBJECT_ICON_LAYER_ID, onClick as any);
+        boundIcon = true;
+      }
+      if (hasLabel && !boundLabel) {
+        map.on('mouseenter', OBJECT_LABEL_LAYER_ID, onEnter as any);
+        map.on('mouseleave', OBJECT_LABEL_LAYER_ID, onLeave as any);
+        map.on('click', OBJECT_LABEL_LAYER_ID, onClick as any);
+        boundLabel = true;
+      }
+      if (hasFallback && !boundFallback) {
+        map.on('mouseenter', OBJECT_FALLBACK_LAYER_ID, onEnter as any);
+        map.on('mouseleave', OBJECT_FALLBACK_LAYER_ID, onLeave as any);
+        map.on('click', OBJECT_FALLBACK_LAYER_ID, onClick as any);
+        boundFallback = true;
+      }
+    };
+
+    const tryBind = () => bindIfLayersExist();
+
+    if (map.isStyleLoaded()) tryBind();
+    map.on('styledata', tryBind);
+
+    return () => {
+      clearHover();
+      map.off('styledata', tryBind);
+      // Off only the handlers we may have bound.
+      map.off('mouseenter', OBJECT_ICON_LAYER_ID, onEnter as any);
+      map.off('mouseleave', OBJECT_ICON_LAYER_ID, onLeave as any);
+      map.off('click', OBJECT_ICON_LAYER_ID, onClick as any);
+
+      map.off('mouseenter', OBJECT_LABEL_LAYER_ID, onEnter as any);
+      map.off('mouseleave', OBJECT_LABEL_LAYER_ID, onLeave as any);
+      map.off('click', OBJECT_LABEL_LAYER_ID, onClick as any);
+
+      map.off('mouseenter', OBJECT_FALLBACK_LAYER_ID, onEnter as any);
+      map.off('mouseleave', OBJECT_FALLBACK_LAYER_ID, onLeave as any);
+      map.off('click', OBJECT_FALLBACK_LAYER_ID, onClick as any);
+    };
+  }, [map, selectCard, setHoverPopupState]);
+
+  return null;
+}
+
 interface MapPanelProps {
   objects: ObjectCard[];
   headerActions?: ReactNode;
@@ -197,47 +337,24 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const mapLayer = useUiStore((state) => state.mapLayer);
   const markerStyles = useUiStore((state) => state.markerStyles);
   const setMapLayer = useUiStore((state) => state.setMapLayer);
-  const openDrawer = useUiStore((state) => state.openDrawer);
 
-  const [popupState, setPopupState] = useState<{
-    lngLat: [number, number];
-    properties: MapFeatureProperties;
-  } | null>(null);
+  const selectCard = useExplorerStore((state) => state.selectCard);
+  const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [headerExpanded, setHeaderExpanded] = useState(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
+  const cardById = useMemo(() => {
+    const map = new globalThis.Map<string, ObjectCard>();
+    for (const card of objects) {
+      map.set(card.id, card);
+    }
+    return map;
+  }, [objects]);
   const mapStyle = env.mapStyles[mapLayer];
   const fallbackCircleColor = useMemo(() => {
     const entries = objectTypeOptions.flatMap((item) => [item.code, (markerStyles[item.code] ?? defaultMarkerStyles[item.code]).color] as const);
     return ['match', ['get', 'type'], ...entries, '#327090'] as const;
   }, [markerStyles]);
-
-  const handleClick = useCallback(
-    (e: { features?: Array<{ geometry?: { type?: string; coordinates?: unknown }; properties?: unknown }> }) => {
-      const feature = e.features?.[0];
-      if (!feature || feature.geometry?.type !== 'Point' || !Array.isArray(feature.geometry.coordinates)) {
-        return;
-      }
-      const [lon, lat] = feature.geometry.coordinates as [number, number];
-      const props = (feature.properties ?? {}) as Partial<MapFeatureProperties>;
-      const id = typeof props.id === 'string' ? props.id : '';
-      setPopupState({
-        lngLat: [lon, lat],
-        properties: {
-          id,
-          name: props.name ?? 'Sans nom',
-          type: props.type ?? '',
-          address: props.address ?? 'Sans adresse',
-          city: props.city ?? '',
-          price: props.price ?? '',
-          rating: props.rating ?? '',
-          markerIcon: props.markerIcon ?? '',
-        },
-      });
-      if (id) openDrawer(id);
-    },
-    [openDrawer],
-  );
 
   const collapseHeader = useCallback(() => {
     setHeaderExpanded(false);
@@ -282,14 +399,17 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             zoom: 10.2,
           }}
           attributionControl={false}
-          onClick={handleClick}
-          interactiveLayerIds={[OBJECT_ICON_LAYER_ID, OBJECT_LABEL_LAYER_ID]}
           cursor="default"
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           <MapMarkerImages markerStyles={markerStyles} />
           <MapDrawControl />
+          <MapMarkerInteractions
+            cardById={cardById}
+            selectCard={selectCard}
+            setHoverPopupState={(next) => setHoverPopupState(next)}
+          />
           <Source id={OBJECT_SOURCE_ID} type="geojson" data={geojsonData}>
             <Layer
               id={OBJECT_FALLBACK_LAYER_ID}
@@ -330,20 +450,22 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               }}
             />
           </Source>
-          {popupState && (
+          {hoverPopupState && (
             <Popup
-              longitude={popupState.lngLat[0]}
-              latitude={popupState.lngLat[1]}
-              onClose={() => setPopupState(null)}
+              longitude={hoverPopupState.lngLat[0]}
+              latitude={hoverPopupState.lngLat[1]}
+              onClose={() => setHoverPopupState(null)}
               offset={18}
-              closeButton
+              closeButton={false}
               closeOnClick={false}
             >
-              <div className="map-popup">
-                <strong>{popupState.properties.name}</strong>
-                <span>{popupState.properties.address || 'Sans adresse'}</span>
-                {popupState.properties.price ? <div>{popupState.properties.price}</div> : null}
-                {popupState.properties.rating ? <div>Note: {popupState.properties.rating}</div> : null}
+              <div className="map-hover-card">
+                <img
+                  className="map-hover-card__img"
+                  src={hoverPopupState.image ?? ''}
+                  alt={hoverPopupState.name}
+                />
+                <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
               </div>
             </Popup>
           )}

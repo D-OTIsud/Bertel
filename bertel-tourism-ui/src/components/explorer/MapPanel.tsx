@@ -475,7 +475,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
-          {/* <MapDrawControl /> */}
+          <MapDrawControl />
           <StyleImageMissingBinder onMissing={handleImageMissing} />
           <MarkerImagesLoader onReady={setImagesLoaded} />
           {imagesLoaded ? (

@@ -60,16 +60,24 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     };
 
     const syncImages = async () => {
-      if (!isMounted || !map?.getStyle()) return;
+      if (!isMounted || !map) return;
+      if (!map.isStyleLoaded()) return;
       await Promise.allSettled(objectTypeOptions.map(async ({ code }) => upsertImage(code)));
     };
 
     const onStyleImageMissing = (event: { id?: string }) => {
       const missingId = String(event.id ?? '');
-      const type = objectTypeOptions.find((item) => getMarkerImageId(item.code) === missingId)?.code;
-      if (!type) {
-        return;
+      let type = objectTypeOptions.find((item) => getMarkerImageId(item.code) === missingId)?.code;
+
+      // Be tolerant to unexpected casing/format (MapLibre sometimes reports ids in a different casing).
+      if (!type && missingId.toLowerCase().startsWith('marker-')) {
+        const candidate = missingId.slice('marker-'.length).toUpperCase() as ObjectTypeCode;
+        if (candidate in defaultMarkerStyles) {
+          type = candidate;
+        }
       }
+
+      if (!type) return;
       void upsertImage(type);
     };
 
@@ -232,10 +240,14 @@ function MapMarkerInteractions({
     const resolveIdAtPoint = (point: unknown): string | null => {
       const features = map.queryRenderedFeatures(point as any, {
         layers: [OBJECT_ICON_LAYER_ID, OBJECT_LABEL_LAYER_ID, OBJECT_FALLBACK_LAYER_ID],
-      });
-      const feature = features?.[0] as { properties?: Record<string, unknown> } | undefined;
-      const id = feature?.properties?.id;
-      return typeof id === 'string' ? id : null;
+      }) as Array<{ properties?: { id?: unknown } }> | undefined;
+
+      // Pick the first feature that actually carries `properties.id`.
+      for (const feature of features ?? []) {
+        const id = feature.properties?.id;
+        if (typeof id === 'string') return id;
+      }
+      return null;
     };
 
     const showTooltipForId = (id: string, lngLat: { lng: number; lat: number }) => {
@@ -304,12 +316,23 @@ function MapMarkerInteractions({
 
     const tryBind = () => bindIfLayersExist();
 
+    const onLoad = () => tryBind();
     if (map.isStyleLoaded()) tryBind();
+    map.on('load', onLoad);
     map.on('styledata', tryBind);
+
+    // Layers can be added after the initial style load; poll briefly to ensure bindings happen.
+    const interval = window.setInterval(() => {
+      tryBind();
+      // Stop once at least fallback is bound; pins hover/click work as soon as icons bind.
+      if (boundFallback) window.clearInterval(interval);
+    }, 250);
 
     return () => {
       clearHover();
       map.off('styledata', tryBind);
+      map.off('load', onLoad);
+      window.clearInterval(interval);
       // Off only the handlers we may have bound.
       map.off('mouseenter', OBJECT_ICON_LAYER_ID, onEnter as any);
       map.off('mouseleave', OBJECT_ICON_LAYER_ID, onLeave as any);

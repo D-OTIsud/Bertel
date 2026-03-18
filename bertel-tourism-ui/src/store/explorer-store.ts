@@ -3,6 +3,9 @@ import type { BackendObjectTypeCode, CapacityFilter, ExplorerFilters, ExplorerBu
 import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
+  selectedObjectIds: string[];
+  visibleObjectIds: string[];
+
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
   setCity: (city: string) => void;
@@ -12,6 +15,11 @@ interface ExplorerState extends ExplorerFilters {
   setOpenNow: (value: boolean) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
+  toggleSelectedObject: (objectId: string) => void;
+  clearSelection: () => void;
+  setVisibleObjectIds: (objectIds: string[]) => void;
+  selectAllVisible: () => void;
+
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
   toggleHotClassification: (schemeCode: string, valueCode: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
@@ -80,6 +88,9 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
 
 export const useExplorerStore = create<ExplorerState>((set) => ({
   ...DEFAULT_EXPLORER_FILTERS,
+  selectedObjectIds: [],
+  visibleObjectIds: [],
+
   toggleBucket: (bucket) =>
     set((state) => ({
       selectedBuckets: state.selectedBuckets.includes(bucket)
@@ -105,6 +116,29 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       };
     }),
   clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
+  toggleSelectedObject: (objectId) =>
+    set((state) => {
+      const needle = String(objectId).trim();
+      if (!needle) return state;
+      const exists = state.selectedObjectIds.includes(needle);
+
+      return {
+        ...state,
+        selectedObjectIds: exists ? state.selectedObjectIds.filter((id) => id !== needle) : [...state.selectedObjectIds, needle],
+      };
+    }),
+  clearSelection: () => set((state) => ({ ...state, selectedObjectIds: [] })),
+  setVisibleObjectIds: (objectIds) =>
+    set((state) => ({
+      ...state,
+      visibleObjectIds: [...new Set(objectIds.map((id) => String(id).trim()).filter(Boolean))],
+    })),
+  selectAllVisible: () =>
+    set((state) => ({
+      ...state,
+      selectedObjectIds: state.visibleObjectIds.length > 0 ? [...state.visibleObjectIds] : [],
+    })),
+
   toggleHotSubtype: (type) =>
     set((state) => {
       const nextSubtypes = state.hot.subtypes.includes(type)

@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { ShoppingBag } from 'lucide-react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
+import { cn } from '@/lib/utils';
 
 interface ResultsListProps {
   cards: ObjectCard[];
@@ -21,6 +23,8 @@ function hashLabel(value: string): number {
 export function ResultsList({ cards, loading, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
+  const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
+  const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
 
   return (
     <section className="results-panel">
@@ -45,7 +49,7 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
         {cards.map((card) => (
           <div
             key={card.id}
-            className="result-card"
+            className={cn('result-card', selectedObjectIds.includes(card.id) && 'result-card--selected')}
             role="button"
             tabIndex={0}
             onClick={() => openDrawer(card.id)}
@@ -68,13 +72,28 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                   <h3>{card.name}</h3>
                   <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                 </div>
-                {Array.isArray(card.labels) && card.labels.length > 0 ? (() => {
-                  const labels = card.labels;
+                <button
+                  type="button"
+                  className={cn('result-card__select-btn', selectedObjectIds.includes(card.id) && 'result-card__select-btn--active')}
+                  aria-label={selectedObjectIds.includes(card.id) ? 'Retirer de la selection' : 'Ajouter a la selection'}
+                  aria-pressed={selectedObjectIds.includes(card.id)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleSelectedObject(card.id);
+                  }}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                </button>
+                {(() => {
+                  const labels = Array.isArray(card.labels) ? card.labels : [];
+                  const hasLabels = labels.length > 0;
                   const visibleCount = Math.min(labels.length, 3);
                   const showOverflow = labels.length > 3;
-                  const stackRows = visibleCount + (showOverflow ? 1 : 0);
+                  const stackRows = Math.max(1, visibleCount + (showOverflow ? 1 : 0));
+
                   return (
-                    <span className="label-stack" aria-label={`Labels: ${labels.join(', ')}`}>
+                    <span className="label-stack" aria-label={hasLabels ? `Labels: ${labels.join(', ')}` : 'Aucun label'}>
                       <span className="label-stack__deck" style={{ ['--label-stack-rows' as never]: stackRows }}>
                         {labels.slice(0, 3).map((label) => (
                           <span
@@ -101,7 +120,7 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                       </span>
                     </span>
                   );
-                })() : null}
+                })()}
               </div>
               <div className="result-card__footer">
                 <strong className="result-card__location">{card.location?.address ?? 'Adresse a completer'}</strong>

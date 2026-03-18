@@ -82,11 +82,6 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
                           <span
                             className="label-stack__badge label-stack__badge--overflow result-card__label-badge"
                             data-tone="overflow"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              toggleLabel(labels[0] ?? '');
-                            }}
                           >
                             +{labels.length - 3}
                           </span>

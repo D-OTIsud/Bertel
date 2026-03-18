@@ -35,7 +35,7 @@ export function AppFooter() {
   const networkTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
 
   return (
-    <footer className="app-footer">
+    <div className="app-footer" role="contentinfo">
       <nav className="app-footer__nav" aria-label="Raccourcis principaux">
         {footerLinks.map((item) => {
           const Icon = item.icon;
@@ -75,6 +75,6 @@ export function AppFooter() {
         <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
         <StatusPill tone="neutral">{liveUsersCount} live</StatusPill>
       </div>
-    </footer>
+    </div>
   );
 }

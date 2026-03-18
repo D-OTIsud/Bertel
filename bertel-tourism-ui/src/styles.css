@@ -2397,6 +2397,7 @@ body::after {
 .explorer-workspace .result-card__title-row {
   align-items: center;
   flex-wrap: wrap;
+  row-gap: 0.25rem;
 }
 
 .explorer-workspace .result-card__title-row .label-stack {
@@ -2415,9 +2416,9 @@ body::after {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  height: 22px;
-  padding: 0 0.55rem;
-  font-size: 0.68rem;
+  height: 20px;
+  padding: 0 0.5rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -2429,10 +2430,10 @@ body::after {
 .label-stack {
   position: relative;
   display: block;
-  --label-badge-h: 22px;
-  --label-gap: 4px;
+  --label-badge-h: 20px;
+  --label-gap: 3px;
   width: 100%;
-  margin-top: 0.06rem;
+  margin-top: 0;
   align-self: stretch;
   overflow: visible;
 }

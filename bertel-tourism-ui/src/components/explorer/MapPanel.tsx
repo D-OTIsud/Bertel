@@ -9,14 +9,12 @@ import { getMarkerImageId } from '../../config/map-markers';
 import { env } from '../../lib/env';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
-const COMPACT_EXPLORER_BREAKPOINT = '(max-width: 1180px)';
 
 function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
   const coords = polygon.coordinates[0] ?? [];
@@ -138,14 +136,11 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const setMapLayer = useUiStore((state) => state.setMapLayer);
 
   const selectCard = useExplorerStore((state) => state.selectCard);
-  const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
   const popupHoveredRef = useRef(false);
   const markerHoveredRef = useRef(false);
-  const autoClearSelectedCardTimerRef = useRef<number | null>(null);
-  const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
@@ -184,10 +179,6 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   useEffect(
     () => () => {
       clearHoverTimer();
-      if (autoClearSelectedCardTimerRef.current != null) {
-        window.clearTimeout(autoClearSelectedCardTimerRef.current);
-        autoClearSelectedCardTimerRef.current = null;
-      }
     },
     [clearHoverTimer],
   );
@@ -218,20 +209,8 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       clearHoverTimer();
       setHoverPopupState(null);
       selectCard(cardId);
-      if (autoClearSelectedCardTimerRef.current != null) {
-        window.clearTimeout(autoClearSelectedCardTimerRef.current);
-        autoClearSelectedCardTimerRef.current = null;
-      }
-
-      // On desktop we want the visual highlight to disappear automatically.
-      // On mobile, we keep the bottom sheet open until the user closes it.
-      if (!isCompactExplorer) {
-        autoClearSelectedCardTimerRef.current = window.setTimeout(() => {
-          clearSelectedCard();
-        }, 5000);
-      }
     },
-    [clearHoverTimer, clearSelectedCard, isCompactExplorer, selectCard],
+    [clearHoverTimer, selectCard],
   );
   const handlePopupEnter = useCallback(() => {
     popupHoveredRef.current = true;

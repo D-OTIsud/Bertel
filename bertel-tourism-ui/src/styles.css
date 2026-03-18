@@ -878,8 +878,8 @@ a {
 }
 
 .result-card--selected {
-  border-color: var(--theme-accent);
-  box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), 0.18), var(--shadow-soft);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.18), var(--shadow-soft);
 }
 
 .result-card__select-btn {

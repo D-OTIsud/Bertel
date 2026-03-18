@@ -202,7 +202,8 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 }
 
 export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
-  const allowedHotSubtypes = new Set(filters.hot.subtypes);
+  const effectiveHotSubtypes = filters.hot.subtypes.length > 0 ? filters.hot.subtypes : DEFAULT_HOT_SUBTYPES;
+  const allowedHotSubtypes = new Set(effectiveHotSubtypes);
   return cards.filter((card) => {
     if (normalizeExplorerObjectType(card.type) !== 'HOT') {
       return true;

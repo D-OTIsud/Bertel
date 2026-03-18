@@ -55,6 +55,9 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     if (!map) return;
     let isMounted = true;
 
+    const requiredImageIds = objectTypeOptions.map(({ code }) => getMarkerImageId(code));
+    const allImagesRegistered = () => requiredImageIds.every((id) => map.hasImage(id));
+
     const upsertImage = async (code: ObjectTypeCode) => {
       const imageId = getMarkerImageId(code);
       const style = markerStyles[code] ?? defaultMarkerStyles[code];
@@ -108,20 +111,42 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
       void upsertImage(type);
     };
 
-    const onLoad = () => {
+    // MapLibre event timing can vary depending on when React mounts the map.
+    // Use multiple triggers + a short retry loop to guarantee marker images are registered.
+    const scheduleSync = () => {
       void syncImages();
     };
-    // MapLibre reliably emits `load` on first style load; `styledata` can be missed on initial mount
-    // depending on timing, so listen to both and also sync immediately when possible.
-    if (map.isStyleLoaded()) void syncImages();
-    map.once('load', onLoad);
-    map.on('styledata', onLoad);
+
+    if (map.isStyleLoaded()) {
+      scheduleSync();
+    } else {
+      map.once('load', scheduleSync);
+      map.once('idle', scheduleSync);
+      map.on('styledata', scheduleSync);
+    }
+
+    // Retry for a short period in case `load`/`styledata` were missed.
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      if (!isMounted) {
+        window.clearInterval(interval);
+        return;
+      }
+      attempts += 1;
+      if (map.isStyleLoaded()) {
+        if (!allImagesRegistered()) scheduleSync();
+        if (allImagesRegistered() || attempts >= 10) {
+          window.clearInterval(interval);
+        }
+      }
+    }, 200);
+
     map.on('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
 
     return () => {
       isMounted = false;
-      map.off('load', onLoad);
-      map.off('styledata', onLoad);
+      window.clearInterval(interval);
+      map.off('styledata', scheduleSync);
       map.off('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
     };
   }, [map, markerStyles]);
@@ -344,18 +369,17 @@ function MapMarkerInteractions({
     };
 
     const tryBind = () => bindIfLayersExist();
-
     const onLoad = () => tryBind();
+
     if (map.isStyleLoaded()) tryBind();
-    map.on('load', onLoad);
+    map.once('load', onLoad);
     map.on('styledata', tryBind);
 
-    // Layers can be added after the initial style load; poll briefly to ensure bindings happen.
+    // Layers can be added after initial style load; keep retrying briefly.
     const interval = window.setInterval(() => {
       tryBind();
-      // Stop once at least fallback is bound; pins hover/click work as soon as icons bind.
       if (boundFallback) window.clearInterval(interval);
-    }, 250);
+    }, 200);
 
     return () => {
       clearHover();

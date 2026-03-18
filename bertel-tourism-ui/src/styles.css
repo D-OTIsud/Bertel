@@ -708,9 +708,18 @@ a {
 
 .results-panel__title-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.results-panel__title-row .eyebrow {
+  margin-bottom: 0;
+  line-height: 1;
+}
+
+.results-panel__title-row .results-count {
+  line-height: 1;
 }
 
 .results-count {

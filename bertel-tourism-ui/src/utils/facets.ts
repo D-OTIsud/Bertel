@@ -46,7 +46,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
 };
 
 export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
-  selectedBuckets: ['HOT', 'RES', 'ITI'],
+  selectedBuckets: [],
   common: DEFAULT_COMMON_FILTERS,
   hot: {
     subtypes: [...DEFAULT_HOT_SUBTYPES],

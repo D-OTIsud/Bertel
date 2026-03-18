@@ -26,7 +26,7 @@ export const mockCards: ObjectCard[] = [
     labels: ['ecolabel', 'prestige', 'vue-mer', 'spa', 'mice', 'nouveau'],
     description: 'Hotel panoramique avec spa, grande capacite et vue sur l ocean.',
     updated_at: '2026-03-10T11:15:00Z',
-    location: { lat: -21.135, lon: 55.472, city: 'Saint-Pierre', postcode: '97410', address: 'Front de mer, Saint-Pierre' },
+    location: { lat: -21.349245712362077, lon: 55.48258886392355, city: 'Saint-Pierre', postcode: '97410', address: 'Front de mer, Saint-Pierre' },
     render: { price: '149 EUR / nuit', rating: '4.6 / 5', updated_at: 'Mis a jour le 10 mars 2026' },
   },
   {
@@ -42,7 +42,7 @@ export const mockCards: ObjectCard[] = [
     labels: ['famille', 'local', 'terrasse'],
     description: 'Cuisine locale creative, terrasse, service midi et soir.',
     updated_at: '2026-03-08T17:20:00Z',
-    location: { lat: -21.283, lon: 55.411, city: 'Etang-Sale', postcode: '97427', address: 'Rue des filaos, Etang-Sale' },
+    location: { lat: -21.273443388814123, lon: 55.33390803222577, city: 'Etang-Sale', postcode: '97427', address: 'Rue des filaos, Etang-Sale' },
     render: { price: 'Menu a partir de 28 EUR', rating: '4.8 / 5', updated_at: 'Mis a jour le 8 mars 2026' },
   },
   {
@@ -57,7 +57,7 @@ export const mockCards: ObjectCard[] = [
     open_now: true,
     description: 'Itineraire forestier avec denivele moyen et panorama volcanique.',
     updated_at: '2026-03-06T09:00:00Z',
-    location: { lat: -21.231, lon: 55.605, city: 'Cilaos', postcode: '97413', address: 'Depart au belvedere' },
+    location: { lat: -21.12931941062737, lon: 55.455478307663036, city: 'Cilaos', postcode: '97413', address: 'Depart au belvedere' },
     render: { rating: '4.5 / 5', updated_at: 'Mis a jour le 6 mars 2026' },
   },
   {
@@ -73,7 +73,7 @@ export const mockCards: ObjectCard[] = [
     labels: ['prestige', 'guide', 'petit-groupe', 'aventure', 'photo-spots'],
     description: 'Sortie guidee en petit groupe avec mise a l eau securisee.',
     updated_at: '2026-03-09T07:40:00Z',
-    location: { lat: -21.378, lon: 55.548, city: 'Saint-Joseph', postcode: '97480', address: 'Anse des remparts' },
+    location: { lat: -21.383928154391096, lon: 55.61914342905779, city: 'Saint-Joseph', postcode: '97480', address: 'Anse des remparts' },
     render: { price: '52 EUR / personne', rating: '4.7 / 5', updated_at: 'Mis a jour le 9 mars 2026' },
   },
   {
@@ -88,7 +88,7 @@ export const mockCards: ObjectCard[] = [
     open_now: false,
     description: 'Evenement familial avec concerts, marche des producteurs et navettes.',
     updated_at: '2026-03-04T12:30:00Z',
-    location: { lat: -21.098, lon: 55.297, city: 'Le Tampon', postcode: '97430', address: 'Parvis du theatre' },
+    location: { lat: -21.201013707480357, lon: 55.624340007832835, city: 'Le Tampon', postcode: '97430', address: 'Parvis du theatre' },
     render: { price: 'Billets a partir de 12 EUR', rating: '4.3 / 5', updated_at: 'Mis a jour le 4 mars 2026' },
   },
 ];

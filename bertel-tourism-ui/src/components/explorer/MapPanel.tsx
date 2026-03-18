@@ -73,15 +73,16 @@ function MapMarkerImages({ markerStyles }: { markerStyles: Record<ObjectTypeCode
     };
 
     const onLoad = () => void syncImages();
-    if (map.isStyleLoaded()) {
-      void syncImages();
-    } else {
-      map.once('styledata', onLoad);
-    }
+    // MapLibre reliably emits `load` on first style load; `styledata` can be missed on initial mount
+    // depending on timing, so listen to both and also sync immediately when possible.
+    if (map.isStyleLoaded()) void syncImages();
+    map.once('load', onLoad);
+    map.on('styledata', onLoad);
     map.on('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
 
     return () => {
       isMounted = false;
+      map.off('load', onLoad);
       map.off('styledata', onLoad);
       map.off('styleimagemissing', onStyleImageMissing as unknown as (...args: unknown[]) => void);
     };

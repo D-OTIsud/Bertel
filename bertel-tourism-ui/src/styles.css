@@ -2106,9 +2106,15 @@ body::after {
   gap: 0.7rem;
 }
 
+.explorer-workspace .filters-panel .chip-grid {
+  gap: 0.55rem;
+}
+
 .explorer-workspace .filters-panel .chip,
 .explorer-workspace .filters-panel .ghost-button {
-  padding: 0.58rem 0.95rem;
+  padding: 0.46rem 0.78rem;
+  min-height: 34px;
+  font-size: 0.85rem;
 }
 
 .explorer-workspace .filters-panel__content {

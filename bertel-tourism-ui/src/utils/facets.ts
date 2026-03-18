@@ -41,6 +41,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   pmr: false,
   petsAccepted: false,
   openNow: false,
+  labelsAny: [],
   bbox: null,
   polygon: null,
 };
@@ -204,7 +205,16 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
   const effectiveHotSubtypes = filters.hot.subtypes.length > 0 ? filters.hot.subtypes : DEFAULT_HOT_SUBTYPES;
   const allowedHotSubtypes = new Set(effectiveHotSubtypes);
+  const labelNeedles = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
+  const requireLabelMatch = labelNeedles.length > 0;
   return cards.filter((card) => {
+    if (requireLabelMatch) {
+      const hay = Array.isArray(card.labels) ? card.labels.map((label) => String(label).toLowerCase()) : [];
+      const matches = labelNeedles.some((needle) => hay.includes(needle));
+      if (!matches) {
+        return false;
+      }
+    }
     if (normalizeExplorerObjectType(card.type) !== 'HOT') {
       return true;
     }

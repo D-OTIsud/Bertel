@@ -89,6 +89,8 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
   const setPmr = useExplorerStore((state) => state.setPmr);
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
+  const toggleLabel = useExplorerStore((state) => state.toggleLabel);
+  const clearLabels = useExplorerStore((state) => state.clearLabels);
   const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
   const toggleHotClassification = useExplorerStore((state) => state.toggleHotClassification);
   const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
@@ -166,6 +168,21 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
               </label>
             </div>
           </FiltersSubsection>
+
+          {common.labelsAny.length > 0 ? (
+            <FiltersSubsection title="Labels">
+              <div className="chip-grid">
+                {common.labelsAny.map((label) => (
+                  <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
+                    {label}
+                  </button>
+                ))}
+                <button type="button" className="chip" onClick={clearLabels}>
+                  Effacer
+                </button>
+              </div>
+            </FiltersSubsection>
+          ) : null}
         </FiltersSection>
 
         {showHot ? (

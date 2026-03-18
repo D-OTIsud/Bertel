@@ -140,6 +140,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
   const popupHoveredRef = useRef(false);
+  const markerHoveredRef = useRef(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles[mapLayer];
@@ -166,16 +167,14 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       hoverTimerRef.current = null;
     }
   }, []);
-  const schedulePopupClose = useCallback(
-    (markerId: string) => {
-      clearHoverTimer();
-      hoverTimerRef.current = window.setTimeout(() => {
-        if (popupHoveredRef.current) return;
-        setHoverPopupState((prev) => (prev?.id === markerId ? null : prev));
-      }, 140);
-    },
-    [clearHoverTimer],
-  );
+  const schedulePopupClose = useCallback(() => {
+    clearHoverTimer();
+    hoverTimerRef.current = window.setTimeout(() => {
+      // Close only if the mouse is not over marker and not over the tooltip.
+      if (popupHoveredRef.current || markerHoveredRef.current) return;
+      setHoverPopupState(null);
+    }, 300);
+  }, [clearHoverTimer]);
 
   useEffect(
     () => () => {
@@ -186,6 +185,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
   const handleMarkerEnter = useCallback(
     (card: ObjectCard, lng: number, lat: number) => {
+      markerHoveredRef.current = true;
       clearHoverTimer();
       hoverTimerRef.current = window.setTimeout(() => {
         setHoverPopupState({
@@ -199,12 +199,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     [clearHoverTimer],
   );
 
-  const handleMarkerLeave = useCallback(
-    (markerId: string) => {
-      schedulePopupClose(markerId);
-    },
-    [schedulePopupClose],
-  );
+  const handleMarkerLeave = useCallback(() => {
+    markerHoveredRef.current = false;
+    schedulePopupClose();
+  }, [schedulePopupClose]);
 
   const handleMarkerClick = useCallback(
     (cardId: string) => {
@@ -220,9 +218,8 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   }, [clearHoverTimer]);
   const handlePopupLeave = useCallback(() => {
     popupHoveredRef.current = false;
-    clearHoverTimer();
-    setHoverPopupState(null);
-  }, [clearHoverTimer]);
+    schedulePopupClose();
+  }, [schedulePopupClose]);
 
   return (
     <section className="map-panel panel-card panel-card--map">
@@ -274,7 +271,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
                 type="button"
                 className="map-marker-pin"
                 onMouseEnter={() => handleMarkerEnter(point.card, point.lon, point.lat)}
-                onMouseLeave={() => handleMarkerLeave(point.card.id)}
+                onMouseLeave={handleMarkerLeave}
                 onClick={() => handleMarkerClick(point.card.id)}
                 aria-label={`Ouvrir ${point.card.name}`}
               >
@@ -306,7 +303,8 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               longitude={hoverPopupState.lngLat[0]}
               latitude={hoverPopupState.lngLat[1]}
               onClose={() => setHoverPopupState(null)}
-              offset={18}
+              anchor="bottom"
+              offset={12}
               closeButton={false}
               closeOnClick={false}
             >

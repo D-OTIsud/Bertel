@@ -2352,8 +2352,62 @@ body::after {
   gap: 0.75rem;
 }
 
-.map-panel__header-actions .segmented-control {
+.map-panel__header-top-row {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.map-panel__header-trigger--inline {
+  width: 36px;
+  height: 36px;
+  box-shadow: none;
+}
+
+.map-panel__lasso-tools {
+  display: grid;
+  justify-items: end;
+  gap: 0.4rem;
+  max-width: 18rem;
+}
+
+.map-panel__lasso-status {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.map-panel__lasso-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.map-panel__lasso-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.map-panel__lasso-fill {
+  fill: color-mix(in srgb, var(--accent-brand) 20%, transparent);
+  stroke: none;
+}
+
+.map-panel__lasso-line {
+  fill: none;
+  stroke: var(--accent-brand);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 7 5;
 }
 
 /* Tighten card radii to recover usable space */
@@ -2590,6 +2644,11 @@ body::after {
 .map-marker-pin:hover {
   transform: scale(1.15) translateY(-2px);
   z-index: 10;
+}
+
+.map-marker-pin--selected .map-marker-pin__img {
+  filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--accent-brand) 58%, transparent))
+    drop-shadow(0 12px 18px rgba(24, 49, 59, 0.2));
 }
 
 .map-marker-pin__img {

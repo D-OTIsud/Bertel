@@ -177,7 +177,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const [zoom, setZoom] = useState<number>(10.2);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
-  const mapStyle = env.mapStyles.classic;
+  const mapStyle = env.mapStyles.satellite;
   const markerPoints = useMemo(
     () =>
       objects.flatMap((card) => {

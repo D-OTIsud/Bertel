@@ -31,7 +31,7 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       drawerObjectId: null,
-      mapLayer: 'classic',
+      mapLayer: 'satellite',
       networkStatus: 'connected',
       liveUsersCount: 3,
       footerActionMode: 'default',

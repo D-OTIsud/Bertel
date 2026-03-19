@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { BackendObjectTypeCode, CapacityFilter, ExplorerFilters, ExplorerBucketKey, GeoPolygon, MeetingRoomFilter } from '../types/domain';
+import { mergeSelectedObjectIds } from '../utils/explorer-selection';
 import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
@@ -17,6 +18,7 @@ interface ExplorerState extends ExplorerFilters {
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
   toggleSelectedObject: (objectId: string) => void;
+  addSelectedObjects: (objectIds: string[]) => void;
   clearSelection: () => void;
   setVisibleObjectIds: (objectIds: string[]) => void;
   selectAllVisible: () => void;
@@ -130,6 +132,11 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         ...state,
         selectedObjectIds: exists ? state.selectedObjectIds.filter((id) => id !== needle) : [...state.selectedObjectIds, needle],
       };
+    }),
+  addSelectedObjects: (objectIds) =>
+    set((state) => {
+      const selectedObjectIds = mergeSelectedObjectIds(state.selectedObjectIds, objectIds);
+      return selectedObjectIds.length === state.selectedObjectIds.length ? state : { ...state, selectedObjectIds };
     }),
   clearSelection: () => set((state) => ({ ...state, selectedObjectIds: [] })),
   setVisibleObjectIds: (objectIds) =>

@@ -370,6 +370,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
 
     resetLassoPath();
     setLassoArmed(true);
+    setHeaderExpanded(false);
   }, [disableLasso, lassoArmed, resetLassoPath]);
 
   const handleLassoPointerDown = useCallback(

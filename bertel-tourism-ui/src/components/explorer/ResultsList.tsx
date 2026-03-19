@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { StatusPill } from '../common/StatusPill';
 import { useUiStore } from '../../store/ui-store';
@@ -32,6 +32,20 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const orderedCards = useMemo(() => {
+    if (selectedObjectIds.length === 0) {
+      return cards;
+    }
+
+    const cardsById = new Map(cards.map((card) => [card.id, card] as const));
+    const selectedCards = selectedObjectIds.flatMap((id) => {
+      const card = cardsById.get(id);
+      return card ? [card] : [];
+    });
+    const selectedSet = new Set(selectedCards.map((card) => card.id));
+
+    return [...selectedCards, ...cards.filter((card) => !selectedSet.has(card.id))];
+  }, [cards, selectedObjectIds]);
 
   useEffect(() => {
     if (!selectedCardId) return;
@@ -60,7 +74,7 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
       ) : null}
 
       <div className="results-list">
-        {cards.map((card) => (
+        {orderedCards.map((card) => (
           <div
             key={card.id}
             id={toResultCardDomId(card.id)}

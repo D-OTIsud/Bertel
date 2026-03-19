@@ -158,6 +158,7 @@ interface MapPanelProps {
 
 export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
+  const openDrawer = useUiStore((state) => state.openDrawer);
 
   const selectCard = useExplorerStore((state) => state.selectCard);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
@@ -303,6 +304,15 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       selectCard(cardId);
     },
     [clearHoverTimer, selectCard],
+  );
+
+  const handlePopupClick = useCallback(
+    (cardId: string) => {
+      clearHoverTimer();
+      setHoverPopupState(null);
+      openDrawer(cardId);
+    },
+    [clearHoverTimer, openDrawer],
   );
 
   const appendLassoPoint = useCallback((point: ScreenPoint) => {
@@ -578,14 +588,22 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
               closeButton={false}
               closeOnClick={false}
             >
-              <div className="map-hover-card" onMouseEnter={handlePopupEnter} onMouseLeave={handlePopupLeave}>
+              <button
+                type="button"
+                className="map-hover-card map-hover-card--button"
+                onClick={() => handlePopupClick(hoverPopupState.id)}
+                onMouseEnter={handlePopupEnter}
+                onMouseLeave={handlePopupLeave}
+                aria-label={`Ouvrir la fiche ${hoverPopupState.name}`}
+              >
                 <img
                   className="map-hover-card__img"
                   src={hoverPopupState.image ?? ''}
                   alt={hoverPopupState.name}
                 />
                 <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
-              </div>
+                <span className="map-hover-card__cta">Ouvrir la fiche</span>
+              </button>
             </Popup>
           )}
         </Map>

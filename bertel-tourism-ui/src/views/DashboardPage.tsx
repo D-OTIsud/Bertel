@@ -1,15 +1,47 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import { mockCards, mockTimeline } from '../data/mock';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
+import { useDashboardFilterStore } from '../store/dashboard-filter-store';
+import {
+  getDashboardScorecards,
+  getDashboardTypeBreakdown,
+  getDashboardCityDistribution,
+  getDashboardActualisation,
+} from '../services/dashboard-rpc';
+import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
+import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
+import { CityDistribution } from '../components/dashboard/CityDistribution';
+import { ActualisationTable } from '../components/dashboard/ActualisationTable';
+import { DashboardFiltersBar } from '../components/dashboard/DashboardFiltersBar';
+import type {
+  DashboardScorecards,
+  DashboardTypeBreakdown,
+  DashboardCityDistribution,
+  DashboardActualisation,
+} from '../types/dashboard';
 
 export default function DashboardPage() {
   const role = useSessionStore((state) => state.role);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const openDrawer = useUiStore((state) => state.openDrawer);
+  const filters = useDashboardFilterStore((state) => state.filters);
+
+  const [scorecards, setScorecards] = useState<DashboardScorecards | null>(null);
+  const [typeBreakdown, setTypeBreakdown] = useState<DashboardTypeBreakdown | null>(null);
+  const [cityDistribution, setCityDistribution] = useState<DashboardCityDistribution | null>(null);
+  const [actualisation, setActualisation] = useState<DashboardActualisation | null>(null);
+
+  useEffect(() => {
+    getDashboardScorecards(filters).then(setScorecards).catch(console.error);
+    getDashboardTypeBreakdown(filters).then(setTypeBreakdown).catch(console.error);
+    getDashboardCityDistribution(filters).then(setCityDistribution).catch(console.error);
+    getDashboardActualisation(filters).then(setActualisation).catch(console.error);
+  }, [filters]);
   const visibleObjects = role === 'owner' ? mockCards.filter((item) => item.type === 'HOT' || item.type === 'RES') : mockCards;
   const liveEditing = mockCards.slice(0, 3);
   const openNowCount = visibleObjects.filter((item) => item.open_now).length;
@@ -152,6 +184,20 @@ export default function DashboardPage() {
           </article>
         </aside>
       </div>
+      <DashboardFiltersBar />
+
+      {(scorecards || typeBreakdown || cityDistribution || actualisation) && (
+        <section className="dashboard-kpi">
+          {scorecards && <ScorecardStrip data={scorecards} />}
+
+          <div className="dashboard-kpi__row">
+            {typeBreakdown && <TypeBreakdown data={typeBreakdown} />}
+            {cityDistribution && <CityDistribution data={cityDistribution} />}
+          </div>
+
+          {actualisation && <ActualisationTable data={actualisation} />}
+        </section>
+      )}
     </section>
   );
 }

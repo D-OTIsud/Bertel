@@ -1,234 +1,303 @@
 # Plan de mapping — Import Lot 1
 # Structures : secondary_types · zone_touristique · distribution_channel · crm_demand_topic_oti
 
-**Version :** 1.0
+**Version :** 1.1
 **Date :** 2026-03-20
-**Source :** `Etablissements (3).xlsx` — 896 lignes, 24 onglets
+**Source :** `Etablissements (3).xlsx` — 24 onglets
 **Statut :** En attente d'approbation avant implémentation
+
+> **v1.1 — Correction majeure :** la hiérarchie des sources a été révisée.
+> Les règles de mapping de `zone_touristique` et `secondary_types` changent en conséquence.
 
 ---
 
-## Périmètre
+## 0. Hiérarchie des sources (règle de vérité)
 
-Ce document couvre uniquement le mapping des 4 structures du Lot 1 :
-- `object.secondary_types` — types secondaires des objets multi-appartenance
-- `object_location.zone_touristique` — zone touristique texte libre
-- `ref_code (distribution_channel)` — canaux OTA/diffusion
-- `ref_code (crm_demand_topic_oti)` — sujets CRM réels OTI
+| Feuille | Rôle | Utilisation |
+|---|---|---|
+| **`formulaire`** | Source canonique des **objets** | Toute donnée relative aux établissements provient de cette feuille |
+| **`Prestataires`** | Source canonique des **actors** (prestataires / contacts) | Données de personnes et contacts |
+| `Etablissements` | Source auxiliaire uniquement — **non utilisée comme source de vérité** | Peut être consultée pour contextualiser une donnée absente de `formulaire`, jamais comme source primaire |
+| `IdSupaToSheet` | **Ignoré** | Ne pas utiliser |
 
-Il ne couvre pas l'import général des établissements (Lot 3).
+**Clé de jointure principale :** `formulaire.id OTI` est l'identifiant canonique de chaque objet. Toutes les feuilles secondaires rejoignent via ce champ.
+
+| Feuille secondaire | Colonne de jointure | Cible | Taux de match vérifié |
+|---|---|---|---|
+| `Resaux sociaux` | `formulaire` | `formulaire.id OTI` | 100% (783/783) |
+| `CRM` | `Etablissement` | `formulaire.id OTI` | 99.6% (744/747) |
+| `CRM` | `Prestataires` | `Prestataires.Presta ID` | 99.6% (672/675) |
+| `Prestataires` | `formulaire` | `formulaire.id OTI` | 724/923 (les 199 sans match = prestataires sans établissement associé) |
 
 ---
 
 ## 1. `object.secondary_types`
 
-### 1.1 Colonnes source
+### 1.1 Feuille source canonique
 
-| Onglet | Colonne | Exemple |
+**`formulaire`** — colonne `Nom catégorie`
+
+`Etablissements` n'est plus la source. La logique de détection multi-appartenance change.
+
+### 1.2 Colonnes source
+
+| Colonne | Feuille | Exemple |
 |---|---|---|
-| `Etablissements` | `Groupe catégorie` | `"Hébergement,Restauration"` |
-| `Etablissements` | `Nom catégorie` | `"Chambre d'hôtes,Table d'hôtes"` |
-| `Etablissements` | `Nom sous catégorie` | `"Chambre d'hôte,Table d'hôte"` |
+| `Groupe catégorie` | `formulaire` | `'Restauration'` (toujours mono-valeur dans formulaire) |
+| `Nom catégorie` | `formulaire` | `'Restaurant ; Autre type de restauration'` |
 
-La colonne `Groupe catégorie` est la source primaire pour détecter la multi-appartenance (valeur à virgule).
-La colonne `Nom catégorie` précise les types et permet le mapping vers `object_type`.
+> **Différence structurelle vs Etablissements :**
+> - Dans `Etablissements` : multi-appartenance indiquée par `,` dans `Groupe catégorie`
+> - Dans `formulaire` : `Groupe catégorie` est **toujours mono-valeur**. La multi-appartenance est indiquée par `;` dans `Nom catégorie`.
+> - Séparateur canonique dans `formulaire` : **point-virgule + espace** (` ; `)
 
-### 1.2 Volume réel
+### 1.3 Volume réel (formulaire)
 
 | Catégorie | Compte |
 |---|---|
-| Rows `Groupe catégorie` avec virgule | **6** |
-| Rows `Nom catégorie` avec virgule | **37** (inclut les sous-types fonctionnels non structurants) |
+| Lignes `formulaire` totales | 1 431 |
+| Lignes avec `Nom catégorie` multi-valeurs (`;`) | **23** |
+| Lignes avec `Groupe catégorie` multi-valeurs | **0** |
 
-**Remarque :** Le chiffre de 21 évoqué dans le plan de migration venait d'une estimation préliminaire. L'analyse précise donne **6 établissements avec vraie multi-appartenance de type principal** et 37 avec multi-sous-catégories (souvent purement descriptifs, non structurants pour `object_type`).
+> **Correction v1.1 :** Le chiffre de 6 cas (basé sur `Etablissements`) était sous-estimé. La source canonique `formulaire` révèle **23 cas** de multi-appartenance, avec un séparateur différent.
 
-### 1.3 Mapping `Nom catégorie` → `object_type`
+### 1.4 Mapping `Nom catégorie` → `object_type`
 
-| Nom catégorie (Excel) | object_type cible | Notes |
+| Nom catégorie (formulaire) | `object_type` | Notes |
 |---|---|---|
-| Hôtel | `HOT` | — |
-| Location saisonnière | `HLO` | Gîte, Villa, Appartement, Bungalow |
-| Chambre d'hôtes | `HLO` | Pas de type dédié — HLO par défaut |
+| Location saisonnière | `HLO` | 524 cas — type majoritaire |
+| Chambre d'hôtes | `HLO` | Pas de type dédié |
 | Gîte d'étape et de randonnée | `HLO` | — |
+| Hôtel | `HOT` | — |
+| Auberge | `HOT` | **Arbitrage métier requis** (HOT ou HLO ?) |
 | Camping | `CAMP` | — |
 | Restaurant | `RES` | — |
-| Table d'hôtes | `RES` | Restauration attachée à un hébergement |
-| Autre type de restauration | `RES` | Traiteur, snack inclus |
-| Auberge | `HOT` | À confirmer |
+| Autre type de restauration | `RES` | Traiteur, snack |
+| Table d'hôtes | `RES` | — |
 | Remise en forme | `FMA` | — |
-| Terre / Patrimoine naturel | `ITI` | Randonnée pédestre, VTT |
-| Artisanat / Patrimoine agricole | `LOI` | — |
 | Divertissement | `FMA` | Bar, cinéma, spectacle |
-| Accueil et information | `ORG` | Exclus des KPI dashboard |
-| Transport (Autocar) | `ORG` | Exclus |
-| Services | `ORG` | Exclus |
+| Terre | `ITI` | Randonnée, VTT, équitation |
+| Patrimoine naturel | `ITI` | Ou `LOI` — **arbitrage métier requis** |
+| Artisanat | `LOI` | — |
+| Terroir | `LOI` | — |
+| Patrimoine culturel | `LOI` | — |
+| Patrimoine agricole | `LOI` | — |
+| Patrimoine industriel | `LOI` | — |
+| Art | `LOI` | — |
+| Services | `ORG` | Exclu des KPI |
+| Accueil et information | `ORG` | Exclu des KPI |
+| Transport (Autocar) | `ORG` | Exclu des KPI |
 
-### 1.4 Cas multi-appartenance réels (6 lignes)
+### 1.5 Cas multi-appartenance réels (23 lignes, formulaire)
 
-| id | Nom | Groupe catégorie | Type principal (`object_type`) | `secondary_types` |
+| id OTI | Nom | `Nom catégorie` | `object_type` principal | `secondary_types` |
 |---|---|---|---|---|
-| 3011 | Bar le 3615 El Pesciofi | Restauration, Loisirs - se divertir | `RES` | `{FMA}` |
-| 1692 | El Latino | Restauration, Loisirs - se divertir | `RES` | `{FMA}` |
-| 255 | Étoile des Neiges | Hébergement, Restauration | `HLO` | `{RES}` |
-| 2948 | Vague du Sud | Hébergement, Restauration | `HOT` | `{RES}` |
-| — | AGENCE AVENTURE | Découverte, Loisirs - se divertir | `LOI` | `{FMA}` (à confirmer) |
-| — | Guinguette (La) | Restauration, Loisirs - se divertir | `RES` | `{FMA}` |
+| recWCDXqagD1EKp55 | Irise Traiteur | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| 69d501a7 | Tisane du Volcan | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| recjVuOypOyayuqqy | Le Labyrinthe en Champ Thé | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| recygdEueaTEjr8Nu | Adrenalile | Etangs et rivières ; Mer | `FMA` | `{}` (**type à confirmer**) |
+| 5D60AA1162 | Le Jardin FOU | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
+| 6a07b6d5 | La Libellule Qui Roule | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| rec6dejyDi7Joy3vA | Aquasens | Etangs et rivières ; Mer | `FMA` | `{}` (**type à confirmer**) |
+| 191a90db | Les Crins de Bel Air | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
+| recPVX5imIkKti6DB | La Marmite du Pêcheur | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| rec02mfTgrevxaiWm | Bouillon d'Aventure | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
+| recm3zPthhLho7F66 | Parfum de Géranium | Patrimoine agricole ; Patrimoine industriel | `LOI` | `{}` (même type) |
+| d20caf12 | LE PTI COIN DES ZABITANTS | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| rech5cqzU6ONX2AVL | CAHEB (Huiles Essentielles) | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| 883cb1c2 | Happy Time Run | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| recjEjBFtNJ8wMqCg | L'Impériale Pirun Pizzeria | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| recpoMrt052WGicmB | Far Far de Bézaves | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| 06CCA673EC | Saveurs des forêts | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| recEscXK1LxwsizGj | Le Milena's | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| 7ffeea05 | CAP MANAPANY | Restaurant ; Autre type de restauration | `RES` | `{}` (même type) |
+| c6d5eae0 | Le Rucher du Petit Piton | Patrimoine agricole ; Patrimoine culturel | `LOI` | `{}` (même type) |
+| 9fea8c0e | Insel Tours | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
+| 595AE0BA7C | Association Entre-Deux Culture | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
+| db789d9c | Ti Karé Dan Péi | Terre ; Patrimoine culturel | `ITI` | `{LOI}` |
 
-> **Règle de mapping :** le premier `Groupe catégorie` détermine `object_type` (principal). Chaque groupe supplémentaire est mappé via le tableau 1.3 et inséré dans `secondary_types`.
+**Observation :** Sur 23 cas, **17 mappent sur le même `object_type`** pour les deux catégories (ex: `Restaurant ; Autre type de restauration` → RES + RES → `secondary_types = {}`). Seuls **5 cas** génèrent un `secondary_types` non vide (`ITI + {LOI}`). Les 2 cas `Etangs et rivières ; Mer` nécessitent un arbitrage.
 
-### 1.5 Normalisations
+### 1.6 Règle de mapping
 
-- Supprimer les guillemets dans `"Loisirs - se divertir"`.
-- Supprimer les espaces autour des virgules.
-- Ignorer les doublons dans la liste (ex : `Patrimoine agricole,Patrimoine culturel` → deux types LOI → dédupliqué → `{LOI}`).
+```
+split(Nom catégorie, ' ; ')
+→ premier élément → mapper vers object_type (colonne principale)
+→ éléments suivants → mapper vers object_type → ajouter dans secondary_types si différent du principal
+→ dédupliquer secondary_types
+```
 
-### 1.6 Rejets / cas ambigus
+### 1.7 Rejets / cas ambigus
 
-| Cas | Traitement recommandé |
+| Cas | Traitement |
 |---|---|
-| `Nom catégorie` multi-valeurs sans `Groupe catégorie` multi — ex : `Patrimoine agricole,Patrimoine culturel` | Considérer comme un seul type LOI (variation fonctionnelle, non structurante) |
-| `Auberge` → HOT ou HLO ? | **Arbitrage métier requis** avant import |
-| `Table d'hôtes` seule sans hébergement associé | RES par défaut — vérifier si un objet HLO parent existe dans la base |
-| `AGENCE AVENTURE LA REUNION` — id NULL | Ligne sans identifiant — exclure de l'import pilote |
-| `Guinguette (La)` — id NULL | Idem |
+| `Etangs et rivières ; Mer` (2 cas) | **Arbitrage métier requis** — FMA ? ITI ? pas de type `EAU` dans l'enum |
+| `Auberge` → HOT ou HLO | **Arbitrage métier requis** |
+| `Patrimoine naturel` → ITI ou LOI | **Arbitrage métier requis** |
 
 ---
 
 ## 2. `object_location.zone_touristique`
 
-### 2.1 Colonnes source
+### 2.1 Feuille source canonique
 
-| Onglet | Colonne | Exemple |
+**`formulaire`** — colonne `Lieux-dits`
+
+### 2.2 Colonnes source
+
+| Colonne | Feuille | Exemple |
 |---|---|---|
-| `Etablissements` | `Lieux-dits` | `"Plaine des Cafres / Plaines et volcan"` |
+| `Lieux-dits` | `formulaire` | `'La Plaine des Cafres'` |
 
-### 2.2 Volume
+### 2.3 Différence structurelle critique vs plan v1.0
+
+> **⚠ Règle invalide dans le plan v1.0 :**
+> Le plan précédent supposait un pattern `"lieu-dit / zone touristique"` (ex: `"Plaine des Cafres / Plaines et volcan"`).
+> Ce pattern **n'existe pas dans `formulaire`**. Il était présent uniquement dans `Etablissements` (source désormais exclue).
+>
+> Dans `formulaire`, `Lieux-dits` contient **uniquement le nom du lieu-dit**, sans zone associée.
+
+### 2.4 Volume réel (formulaire)
 
 | Catégorie | Compte |
 |---|---|
-| Lignes avec `Lieux-dits` renseigné | **312 / 896** |
-| Dont avec pattern `lieu / zone` | **196** |
-| Dont lieu-dit sans zone (pas de slash) | **116** |
-| Lignes sans lieu-dit | **584** |
+| Lignes avec `Lieux-dits` renseigné | 773 / 1 431 |
+| Lignes sans `Lieux-dits` | 658 |
+| Pattern `lieu / zone` | **0** |
+| Valeurs uniques de lieux-dits | 75 |
 
-### 2.3 Règle d'extraction
+### 2.5 Zones touristiques — état actuel
 
-Le champ `Lieux-dits` contient deux informations séparées par ` / ` :
+La donnée `zone_touristique` **ne peut pas être extraite automatiquement de `formulaire`**. La correspondance lieu-dit → zone doit être construite manuellement ou via un référentiel externe.
 
-```
-"Plaine des Cafres / Plaines et volcan"
- ↓ lieu_dit                ↓ zone_touristique
-```
+**75 lieux-dits uniques identifiés dans `formulaire` :**
 
-**Parsing :** `split(' / ', maxsplit=1)` → `[lieu_dit, zone_touristique]`
-
-### 2.4 Zones touristiques identifiées (données Excel)
-
-| Zone extraite | Occurrences | Normalisée |
+| Lieux-dits les plus fréquents | Occurrences | Zone touristique probable |
 |---|---|---|
-| `Plaines et volcan` | 146 | `Plaines et Volcan` |
-| `Sud` | 49 | `Sud` |
-| `Cirque de Mafate` | 1 | `Cirque de Mafate` |
+| La Plaine des Cafres | 168 | Plaines et Volcan |
+| Manapany-Les-Bains | 51 | Sud |
+| Trois Mares | 40 | Sud |
+| Vincendo | 36 | Sud |
+| Langevin | 35 | Sud |
+| Entre-Deux | 28 | Sud |
+| centre ville | 26 | (commune — non zonifiable) |
+| Tampon | 20 | (commune — non zonifiable) |
+| Grand Coude | 18 | Sud |
+| Ravine des Citrons | 18 | Sud |
 
-### 2.5 Normalisations
+### 2.6 Nouvelle règle de mapping
 
-- Trim des espaces avant/après le slash.
-- `"Plaines et volcan"` → `"Plaines et Volcan"` (majuscule V canonique).
-- Cas particulier : `"Plaine des Cfres, 23è"` (typo + format invalide) → **rejet, import à NULL, log de rejet**.
-
-### 2.6 Règles de mapping
-
-| Cas source | `lieu_dit` (object_location) | `zone_touristique` (object_location) |
+| Cas source (`formulaire.Lieux-dits`) | `lieu_dit` (object_location) | `zone_touristique` (object_location) |
 |---|---|---|
-| `"Lieu / Zone"` | Partie avant le slash | Partie après le slash (normalisée) |
-| `"Lieu seul"` (sans slash) | Valeur brute | `NULL` |
-| Vide ou NULL | `NULL` | `NULL` |
-| Typo non parseable | `NULL` (log) | `NULL` (log) |
+| Valeur renseignée | Valeur brute (trim) | **NULL** — à enrichir via table de correspondance |
+| NULL / vide | NULL | NULL |
 
-### 2.7 Rejets / cas ambigus
+**Conséquence :** `zone_touristique` sera NULL pour tous les objets à l'import initial.
+L'enrichissement nécessite une table de correspondance `lieu_dit → zone_touristique` (75 lieux-dits à mapper manuellement — effort estimé : 1h).
+
+### 2.7 Option d'enrichissement avant import
+
+Construire une table de correspondance statique :
+```
+La Plaine des Cafres → Plaines et Volcan
+Bourg Murat → Plaines et Volcan
+Grand Coude → Sud
+Langevin → Sud
+Manapany-Les-Bains → Sud
+Vincendo → Sud
+... (72 autres à compléter)
+```
+
+Cette table peut être fournie sous forme de CSV validé métier, puis appliquée lors du script d'import Lot 3.
+
+### 2.8 Rejets / cas ambigus
 
 | Cas | Traitement |
 |---|---|
-| `"Plaine des Cfres, 23è"` | Rejet — log dans fichier de rejets pilote |
-| Lieux-dits avec virgule (1 cas) | Parser la première valeur uniquement ; log de l'ambiguïté |
-| Lieux-dits sans zone (116 cas) | `zone_touristique = NULL` — acceptable pour l'instant (Lot 3) |
+| `centre ville`, `Tampon` — nom de commune, pas un lieu-dit | Copier dans `lieu_dit`, `zone_touristique = NULL`, signaler |
+| `PK14`, `PK12` — kilomètriques RN3 | Copier dans `lieu_dit`, zone = `Plaines et Volcan` probable |
+| Lieux-dits sans correspondance zone connue | `zone_touristique = NULL` + log |
 
 ---
 
 ## 3. `distribution_channel`
 
-### 3.1 Colonnes source
+### 3.1 Feuille source canonique
 
-| Onglet | Colonne | Valeurs OTA présentes |
+**`Resaux sociaux`** — jointure sur `formulaire` via `formulaire.id OTI`
+
+Aucun changement de source par rapport au plan v1.0 — `Resaux sociaux` était déjà la source secondaire correcte. La correction porte sur la **clé de jointure** : elle passe maintenant explicitement par `formulaire.id OTI` (et non plus par une correspondance via `Etablissements`).
+
+### 3.2 Colonnes source
+
+| Colonne | Feuille | Rôle |
 |---|---|---|
-| `Resaux sociaux` | `Type_R_S` | `Airbnb`, `Booking`, `Leboncoin`, `Abritel` |
-| `Etablissements` | `Site Tiers` | `airbnb,booking` (liste comma-séparée) |
+| `formulaire` | `Resaux sociaux` | Clé de jointure → `formulaire.id OTI` |
+| `Type_R_S` | `Resaux sociaux` | Type de plateforme |
+| `URL` | `Resaux sociaux` | URL du lien |
 
-### 3.2 Volume
+### 3.3 Taux de couverture de jointure
 
-| Platform | Onglet source | Occurrences |
-|---|---|---|
-| Airbnb | Resaux sociaux | 230 |
-| Booking | Resaux sociaux | 227 |
-| Leboncoin | Resaux sociaux | 48 |
-| Abritel | Resaux sociaux | 27 |
-| airbnb,booking | Etablissements.Site Tiers | 3 (doublons probables avec Resaux sociaux) |
+- 783 entrées `Resaux sociaux` avec une valeur `formulaire`
+- 783/783 matchent avec `formulaire.id OTI` (**100%**)
+- 7 non matchés dans l'ancien plan (via `Etablissements`) étaient des artefacts de la mauvaise clé
 
-**Source principale :** onglet `Resaux sociaux` (lien direct par `formulaire` = ID établissement Airtable).
+### 3.4 Mapping `Type_R_S` → domaine cible
 
-### 3.3 Mapping `Type_R_S` → `distribution_channel.code`
+| `Type_R_S` (Resaux sociaux) | `domain` cible | `code` cible | Volume |
+|---|---|---|---|
+| `Airbnb` | `distribution_channel` | `airbnb` | 230 |
+| `Booking` | `distribution_channel` | `booking` | 227 |
+| `Leboncoin` | `distribution_channel` | `leboncoin` | 48 |
+| `Abritel` | `distribution_channel` | `abritel` | 27 |
+| `Facebook` | `social_network` | `facebook` | 645 |
+| `Instagram` | `social_network` | `instagram` | 158 |
+| `tripadvisor` | `social_network` | `tripadvisor` | 126 |
+| `TikTok` | `social_network` | `tiktok` | 8 |
 
-| `Type_R_S` (Excel) | `domain` cible | `code` cible |
-|---|---|---|
-| `Airbnb` | `distribution_channel` | `airbnb` |
-| `Booking` | `distribution_channel` | `booking` |
-| `Leboncoin` | `distribution_channel` | `leboncoin` |
-| `Abritel` | `distribution_channel` | `abritel` |
-| `Facebook` | `social_network` | `facebook` |
-| `Instagram` | `social_network` | `instagram` |
-| `TikTok` | `social_network` | `tiktok` |
-| `tripadvisor` | `social_network` | `tripadvisor` |
+> **Règle absolue :** `Booking` ne va jamais dans `social_network`. Si `Type_R_S = 'Booking'`, target = `distribution_channel.booking` sans exception.
 
-> **Règle absolue :** `Booking` ne va jamais dans `social_network`. Si une ligne source classe Booking comme réseau social, elle est remappée vers `distribution_channel.booking`.
-
-### 3.4 Jointure avec les établissements
-
-La colonne `formulaire` dans `Resaux sociaux` correspond à l'identifiant Airtable (pas l'id numérique).
-La jointure vers `object.id` nécessite une table de correspondance `id_airtable → id_objet` (à construire lors de l'import Lot 3).
-
-### 3.5 Doublon Site Tiers / Resaux sociaux
-
-Les 3 lignes `Etablissements.Site Tiers = "airbnb,booking"` sont probablement des doublons des entrées `Resaux sociaux`. À dédupliquer lors de l'import via contrainte `ON CONFLICT DO NOTHING` sur la table de liaison.
-
-### 3.6 Rejets / cas ambigus
+### 3.5 Rejets / cas ambigus
 
 | Cas | Traitement |
 |---|---|
-| `Type_R_S` inconnu (valeur hors liste) | Log de rejet — ne pas insérer |
-| Lien OTA sans URL (`URL` NULL) | Insérer avec `url = NULL` — acceptable |
-| Doublon même `formulaire` + même `Type_R_S` | Dédupliquer via `ON CONFLICT DO NOTHING` |
+| `Type_R_S` hors liste connue | Log de rejet — ne pas insérer, escalader |
+| URL NULL | Insérer avec `url = NULL` — acceptable |
+| Doublon même `formulaire` + même `Type_R_S` | `ON CONFLICT DO NOTHING` |
+| `formulaire` sans match dans `formulaire.id OTI` (0 cas selon analyse) | Sans objet |
 
 ---
 
 ## 4. `crm_demand_topic_oti`
 
-### 4.1 Colonnes source
+### 4.1 Feuille source canonique
 
-| Onglet | Colonne | Colonne secondaire |
+**`CRM`** — colonnes `Objet_du_Contact` (topic) et `Etablissement` (lien objet)
+
+Le CRM est lié aux objets ET aux prestataires :
+- `CRM.Etablissement` → `formulaire.id OTI` (99.6% de match)
+- `CRM.Prestataires` → `Prestataires.Presta ID` (99.6% de match)
+
+### 4.2 Colonnes source
+
+| Colonne | Feuille | Rôle |
 |---|---|---|
-| `CRM` | `Objet_du_Contact` | `Sous-catégorie` (Lot 4, non mappé ici) |
+| `Objet_du_Contact` | `CRM` | Sujet de l'interaction — source du code `crm_demand_topic_oti` |
+| `Etablissement` | `CRM` | FK vers `formulaire.id OTI` (objet concerné) |
+| `Prestataires` | `CRM` | FK vers `Prestataires.Presta ID` (prestataire concerné) |
+| `Date` | `CRM` | Date de l'interaction |
+| `Status` | `CRM` | Statut de traitement (`Traitée`, etc.) |
+| `Message` | `CRM` | Corps du message (non mappé Lot 1) |
+| `Sous-catégorie` | `CRM` | Sous-topic (non mappé Lot 1 — Lot 4) |
 
-### 4.2 Volume
+Aucun changement de source par rapport au plan v1.0. La correction porte sur la **clarification que la jointure passe par `formulaire.id OTI`** et `Prestataires.Presta ID`, pas par `Etablissements`.
 
-- **2 122 interactions CRM** au total
-- **20 valeurs uniques** après normalisation (voir table 4.3)
+### 4.3 Table de normalisation (inchangée)
 
-### 4.3 Table de normalisation complète
-
-| Valeur brute Excel | Occurrences | Code seedé | Normalisation appliquée |
+| Valeur brute | Occurrences | Code seedé | Normalisation |
 |---|---|---|---|
-| `Accompagnement Taxe de séjour` | 636 | `accompagnement_taxe_sejour` | Valeur canonique |
-| `Accompagnement taxe de séjour` | 5 | `accompagnement_taxe_sejour` | Casse normalisée (minuscule → majuscule T) |
+| `Accompagnement Taxe de séjour` | 636 | `accompagnement_taxe_sejour` | Canonique |
+| `Accompagnement taxe de séjour` | 5 | `accompagnement_taxe_sejour` | Casse normalisée |
 | `Promotion SIT (reunion.fr)` | 273 | `promotion_sit` | — |
 | `Demande signalétique` | 186 | `demande_signaletique` | — |
 | `Promotion  Explore` | 158 | `promotion_explore` | Double espace supprimé |
@@ -249,20 +318,14 @@ Les 3 lignes `Etablissements.Site Tiers = "airbnb,booking"` sont probablement de
 | `Boutique` | 2 | `boutique` | — |
 | `Dispositifs financiers` | 1 | `dispositifs_financiers` | — |
 
-**Total après dédoublonnage casse :** 20 codes distincts pour 2 122 interactions.
-
-### 4.4 Jointure avec les établissements
-
-La colonne `Prestataires` dans `CRM` correspond à l'identifiant Airtable de l'établissement.
-Même logique de jointure que pour `Resaux sociaux` : nécessite la table de correspondance `id_airtable → id_objet`.
-
-### 4.5 Rejets / cas ambigus
+### 4.4 Rejets / cas ambigus
 
 | Cas | Traitement |
 |---|---|
-| `Objet_du_Contact` NULL ou vide | Exclure de l'import — log de rejet |
-| Valeur hors des 20 codes connus | Log de rejet — ne pas insérer ; escalader pour arbitrage |
-| `Sous-catégorie` renseignée | Conserver en colonne `extra JSONB` provisoirement ; mapping Lot 4 |
+| `Objet_du_Contact` NULL (quelques lignes) | Exclure — log de rejet |
+| `Etablissement` sans match `formulaire.id OTI` (3 cas) | Log — insérer sans FK objet ou exclure |
+| `Prestataires` sans match `Prestataires.Presta ID` (3 cas) | Log — insérer sans FK prestataire ou exclure |
+| `Sous-catégorie` renseignée | Conserver en `extra JSONB` — mapping Lot 4 |
 
 ---
 
@@ -270,71 +333,71 @@ Même logique de jointure que pour `Resaux sociaux` : nécessite la table de cor
 
 ### 5.1 Objectif
 
-Valider les règles de mapping sur un échantillon contrôlé avant l'import global.
-Périmètre : **10 établissements** couvrant les cas représentatifs et ambigus.
+Valider les règles de mapping sur un échantillon contrôlé de **10 établissements** avant import global.
 
-### 5.2 Critères de sélection de l'échantillon pilote
+### 5.2 Critères de sélection
 
-| Critère | Établissements cibles |
+| Critère | Cible |
 |---|---|
-| Multi-appartenance (Lot 1) | id 255, 2948, 3011, 1692 (les 4 avec id valide) |
-| Lieu-dit avec zone | 2 établissements avec pattern `lieu / zone` |
-| Lieu-dit sans zone | 1 établissement |
+| Multi-appartenance `ITI + {LOI}` | 4 cas : 5D60AA1162, 191a90db, rec02mfTgrevxaiWm, 9fea8c0e |
+| Multi-appartenance même type (validation règle dédup) | 1 cas RES+RES : recWCDXqagD1EKp55 |
+| Avec lieu-dit et zone connue | 1 établissement de La Plaine des Cafres |
 | Sans lieu-dit | 1 établissement |
-| Avec liens OTA (Airbnb + Booking) | 1 établissement avec entrées dans `Resaux sociaux` |
-| Avec interactions CRM | 1 établissement avec plusieurs sujets |
+| Avec liens OTA dans `Resaux sociaux` | 1 établissement avec Airbnb + Booking |
+| Avec interactions CRM variées | 1 établissement avec ≥ 3 sujets distincts |
 
 ### 5.3 Séquence d'import pilote
 
 ```
-Étape 1 : Préparer la table de correspondance id_airtable → id_objet
-           (nécessaire pour joindre Resaux sociaux et CRM aux objets)
+Étape 1 : Construire la table de correspondance lieu_dit → zone_touristique
+           (75 valeurs à mapper — format CSV validé métier)
+           → BLOQUANT si zone_touristique non NULL est requis pour le pilote
+           → Non bloquant si zone_touristique = NULL accepté en phase pilote
 
-Étape 2 : Importer les 10 établissements pilotes (object + object_location)
-           → vérifier object_type principal
-           → vérifier lieu_dit et zone_touristique
-           → vérifier secondary_types (4 cas multi-appartenance)
+Étape 2 : Importer les 10 objets pilotes depuis `formulaire`
+           → vérifier object_type principal depuis Groupe catégorie
+           → vérifier lieu_dit depuis Lieux-dits
+           → vérifier zone_touristique (NULL ou enrichie via table)
+           → vérifier secondary_types sur les 5 cas pilotes
 
-Étape 3 : Importer les liens Resaux sociaux des 10 établissements
+Étape 3 : Importer les liens Resaux sociaux des 10 objets
            → vérifier routing distribution_channel vs social_network
-           → vérifier absence de Booking dans social_network
+           → jointure via formulaire.id OTI (100% de couverture attendu)
 
-Étape 4 : Importer les interactions CRM des 10 établissements
-           → vérifier normalisation des valeurs source
-           → vérifier codes crm_demand_topic_oti
+Étape 4 : Importer les interactions CRM des 10 objets
+           → normalisation Objet_du_Contact → code crm_demand_topic_oti
+           → jointure via CRM.Etablissement → formulaire.id OTI
 
 Étape 5 : Contrôle qualité
-           → requête de vérification : aucun booking dans social_network
-           → requête de vérification : secondary_types cohérent avec object_type
-           → log des rejets : compter les lignes non importées et leur motif
+           → Booking absent de social_network : 100%
+           → secondary_types cohérent : 100% des cas pilotes
+           → zone_touristique : log des NULL et des enrichissements appliqués
+           → Taux de rejet CRM < 2%
 ```
 
-### 5.4 Critères de validation du pilote
+### 5.4 Ce qui bloque l'import pilote
 
-| Critère | Seuil d'acceptation |
-|---|---|
-| Taux de rejets zone_touristique | < 5% (hors lignes sans lieu-dit) |
-| Taux de rejets CRM | < 2% (hors NULL) |
-| Booking absent de social_network | 100% |
-| secondary_types cohérent | 100% des 4 cas multi-cat |
-| Doublons OTA dédupliqués | 100% |
+| # | Bloquant | Décision requise | Nature |
+|---|---|---|---|
+| 1 | Table de correspondance `lieu_dit → zone_touristique` | Fournie par l'équipe OTI OU accepter NULL pour le pilote | **Métier** |
+| 2 | `Auberge` → `HOT` ou `HLO` | Arbitrage type | **Métier** |
+| 3 | `Etangs et rivières ; Mer` → quel `object_type` ? | Pas de type EAU dans l'enum | **Métier** |
+| 4 | `Patrimoine naturel` → `ITI` ou `LOI` | Ambiguïté fonctionnelle | **Métier** |
 
-### 5.5 Ce qui bloque l'import pilote
+### 5.5 Ce qui ne bloque pas
 
-| Bloquant | Action requise |
-|---|---|
-| Table de correspondance `id_airtable → id_objet` | À construire (onglet `IdSupaToSheet` à analyser) |
-| Arbitrage `Auberge` → HOT ou HLO | Décision métier avant import |
-| Jointure `formulaire` (Resaux sociaux / CRM) → id objet | Dépend de la table de correspondance |
+- La jointure `Resaux sociaux → formulaire` est propre (100% de match) — aucune table de correspondance supplémentaire nécessaire
+- La normalisation CRM est complète et commitée dans les seeds
+- `secondary_types` est mappable pour 21/23 cas sans arbitrage métier
 
 ---
 
-## 6. Résumé des décisions requises avant implémentation
+## 6. Récapitulatif des règles invalides dans le plan v1.0
 
-| # | Question | Impact |
+| Règle v1.0 | Statut | Remplacement v1.1 |
 |---|---|---|
-| 1 | `Auberge` → `HOT` ou `HLO` ? | Mapping Nom catégorie |
-| 2 | `Table d'hôtes` seule → `RES` sans objet HLO parent ? | Règle de création objet |
-| 3 | Lignes sans id numérique (AGENCE AVENTURE, Guinguette) → importer ou exclure ? | Périmètre pilote |
-| 4 | Lieux-dits sans zone (116 cas) → laisser `zone_touristique = NULL` ou enrichissement manuel ? | Qualité data |
-| 5 | `Ousailé` — est-ce un lieu-dit ou une erreur de saisie ? | Qualité code CRM |
+| Source `Etablissements` pour objets | **Invalide** | Source `formulaire` |
+| Pattern `"lieu / zone"` dans Lieux-dits | **Invalide** | `Lieux-dits` contient uniquement le lieu-dit dans `formulaire` |
+| 6 cas multi-appartenance (séparateur `,` dans `Groupe catégorie`) | **Invalide** | 23 cas (séparateur ` ; ` dans `Nom catégorie`) |
+| Jointure RS via `Etablissements` | **Sans objet** | Jointure directe `Resaux sociaux.formulaire → formulaire.id OTI` |
+| Zone extraite automatiquement (3 zones connues) | **Invalide** | `zone_touristique = NULL` à l'import, enrichissement via table externe |

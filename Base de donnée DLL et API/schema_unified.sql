@@ -783,6 +783,10 @@ END $$;
 
 ALTER TABLE IF EXISTS ref_classification_scheme
   ADD COLUMN IF NOT EXISTS name_i18n JSONB;
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS is_distinction BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS display_group VARCHAR(50);
 CREATE TABLE IF NOT EXISTS ref_classification_value (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE CASCADE,

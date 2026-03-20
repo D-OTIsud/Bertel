@@ -7271,22 +7271,33 @@ AS $$
     FROM scoped
   ),
   pending AS (
-    SELECT COUNT(*) AS cnt
-    FROM   pending_change pc
-    WHERE  pc.status    = 'pending'
-      AND  pc.object_id IN (SELECT object_id FROM filtered_ids)
+    SELECT
+      COUNT(*) FILTER (WHERE pc.status = 'pending')                               AS cnt,
+      ROUND(
+        (AVG(
+          EXTRACT(EPOCH FROM (COALESCE(pc.applied_at, pc.reviewed_at) - pc.submitted_at))
+          / 86400.0
+        ) FILTER (
+          WHERE pc.status IN ('approved', 'rejected', 'applied')
+            AND COALESCE(pc.applied_at, pc.reviewed_at) IS NOT NULL
+        ))::numeric,
+        1
+      )                                                                            AS avg_days
+    FROM pending_change pc
+    WHERE pc.object_id IN (SELECT object_id FROM filtered_ids)
   )
   SELECT jsonb_build_object(
-    'total',            m.total,
-    'published',        m.published,
-    'published_pct',    COALESCE(ROUND(m.published * 100.0 / NULLIF(m.total, 0), 1), 0.0),
-    'avg_completeness', NULL::numeric,
-    'pending_changes',  p.cnt,
-    'delta_30d',        m.delta_30d,
-    'delta_pct',        CASE
-                          WHEN COALESCE(m.prior_30d, 0) = 0 THEN NULL
-                          ELSE ROUND((m.delta_30d::numeric / m.prior_30d - 1) * 100, 1)
-                        END
+    'total',                m.total,
+    'published',            m.published,
+    'published_pct',        COALESCE(ROUND(m.published * 100.0 / NULLIF(m.total, 0), 1), 0.0),
+    'avg_completeness',     NULL::numeric,
+    'pending_changes',      p.cnt,
+    'delta_30d',            m.delta_30d,
+    'delta_pct',            CASE
+                              WHEN COALESCE(m.prior_30d, 0) = 0 THEN NULL
+                              ELSE ROUND((m.delta_30d::numeric / m.prior_30d - 1) * 100, 1)
+                            END,
+    'avg_processing_days',  p.avg_days
   )
   FROM metrics m, pending p;
 $$;
@@ -7294,9 +7305,9 @@ $$;
 COMMENT ON FUNCTION api.get_dashboard_scorecards IS
 'Dashboard §1: hero scorecard aggregates for the filtered object pool.
 Returns total/published counts, pending_change count (scoped to same pool),
-and 30-day creation delta vs the prior 30 days.
-avg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C
-when the per-type field-presence formula is implemented.
+30-day creation delta vs the prior 30 days, and average processing delay
+(COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.
+avg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C.
 ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
 
 -- ─────────────────────────────────────────────────────
@@ -7530,3 +7541,89 @@ weekly_rates is NULL until Phase 2B adds the object_version time-series join.
 updated_at reflects meaningful business edits only (cache-only changes are excluded
 by the update_object_updated_at_business trigger).
 ORG objects excluded. p_updated_at_from/to scope the object pool (inclusive DATE boundaries).';
+-- ─────────────────────────────────────────────────────
+-- §5  Distinction Overview — qualifications, classements, labels
+-- ─────────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION api.get_dashboard_distinction_overview(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM   api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t FROM unnest(enum_range(null::object_type)) AS t WHERE t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.id
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  -- Schemes flagged is_distinction = TRUE in ref_classification_scheme.
+  -- New labels are picked up automatically when seeded with that flag set;
+  -- no SQL change required here.
+  distinctions AS (
+    SELECT oc.object_id, s.code AS scheme_code, s.name AS scheme_name, s.display_group
+    FROM   object_classification oc
+    JOIN   ref_classification_scheme s ON s.id = oc.scheme_id
+    WHERE  oc.status = 'granted'
+      AND  s.is_distinction = TRUE
+      AND  oc.object_id IN (SELECT id FROM scoped)
+  ),
+  by_scheme AS (
+    SELECT scheme_code, scheme_name, display_group, COUNT(DISTINCT object_id) AS cnt
+    FROM   distinctions
+    GROUP  BY scheme_code, scheme_name, display_group
+  ),
+  totals AS (
+    SELECT COUNT(*) AS total_scoped FROM scoped
+  ),
+  with_dist AS (
+    SELECT COUNT(DISTINCT object_id) AS cnt FROM distinctions
+  )
+  SELECT jsonb_build_object(
+    'total_scoped',        t.total_scoped,
+    'with_distinction',    d.cnt,
+    'without_distinction', t.total_scoped - d.cnt,
+    'distinction_pct',     COALESCE(ROUND(d.cnt * 100.0 / NULLIF(t.total_scoped, 0), 1), 0.0),
+    'by_scheme',           COALESCE(
+                             (SELECT jsonb_agg(
+                                jsonb_build_object(
+                                  'scheme_code',   bs.scheme_code,
+                                  'scheme_name',   bs.scheme_name,
+                                  'display_group', bs.display_group,
+                                  'count',         bs.cnt
+                                ) ORDER BY bs.cnt DESC
+                              )
+                              FROM by_scheme bs
+                             ),
+                             '[]'::jsonb
+                           )
+  )
+  FROM totals t, with_dist d;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_distinction_overview IS
+'Dashboard §5: overview of objects carrying at least one granted qualification,
+classification, or label. Scope is driven by ref_classification_scheme.is_distinction = TRUE —
+no hardcoded list. To add a new label, seed its scheme with is_distinction = TRUE; this
+function picks it up automatically. Typological schemes (type_hot, retail_category) keep
+is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakdown sorted
+by count DESC. ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';

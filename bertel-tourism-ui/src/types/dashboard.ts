@@ -47,6 +47,13 @@ export interface DashboardScorecards {
   delta_30d: number;
   /** percentage change vs the prior 30-day window; null when prior window is empty */
   delta_pct: number | null;
+  /**
+   * Average number of calendar days between pending_change.submitted_at and
+   * COALESCE(applied_at, reviewed_at), for changes with status in
+   * ('approved', 'rejected', 'applied'). Null when no resolved changes exist
+   * in the current filtered pool.
+   */
+  avg_processing_days: number | null;
 }
 
 // ─── §2a  Type Breakdown  (LOCKED — Phase 2A) ────────────────────────────────
@@ -102,6 +109,36 @@ export interface ActualisationRow {
 export interface DashboardActualisation {
   threshold_days: number;
   rows: ActualisationRow[];
+}
+
+// ─── §5  Distinction Overview  (LOCKED — Phase 2B) ───────────────────────────
+
+export type DistinctionDisplayGroup =
+  | 'official_classification'
+  | 'quality_label'
+  | 'environmental_label'
+  | 'accessibility_label';
+
+export interface DistinctionSchemeRow {
+  scheme_code: string;
+  scheme_name: string;
+  display_group: DistinctionDisplayGroup | null;
+  count: number;
+}
+
+export interface DashboardDistinctionOverview {
+  total_scoped: number;
+  with_distinction: number;
+  without_distinction: number;
+  /** with_distinction / total_scoped × 100, 1 decimal. 0.0 when pool is empty */
+  distinction_pct: number;
+  /**
+   * Per-scheme breakdown, sorted by count DESC.
+   * Only schemes with count > 0 are included.
+   * Covers: hot_stars, camp_stars, meuble_stars, gites_epics, clevacances_keys,
+   * green_key, eu_ecolabel, tourisme_handicap.
+   */
+  by_scheme: DistinctionSchemeRow[];
 }
 
 // ─── Provisional types — mock-only, NOT locked ───────────────────────────────

@@ -1,7 +1,7 @@
 # Plan de mapping — Import Lot 1
 # Structures : secondary_types · zone_touristique · distribution_channel · crm_demand_topic_oti
 
-**Version :** 1.3
+**Version :** 1.4
 **Date :** 2026-03-20
 **Source :** `Etablissements (3).xlsx` — 24 onglets
 **Statut :** En attente d'approbation avant implémentation
@@ -12,6 +12,8 @@
 > **v1.2 — Ajout :** rattachement objet → organisation et certifications organisationnelles.
 >
 > **v1.3 — Ajustement :** formulation du rattachement corrigée (portage SIT, pas propriété), rôle par défaut révisé de `manager` vers `publisher`.
+>
+> **v1.4 — Décision métier :** `region_code = 'RUN'` retenu pour OTI du Sud. Prérequis pilote levé.
 
 ---
 
@@ -462,10 +464,10 @@ valid_until DATE
 Créer un objet `object_type = 'ORG'` représentant OTI du Sud dans les seeds de production (hors seeds de test déjà existants) :
 
 ```
-name       = 'OTI du Sud'   (nom court opérationnel)
 object_type = 'ORG'
-region_code = 'SUD'          (ou code à confirmer — distinct de 'TST')
+name        = 'OTI du Sud'
 status      = 'published'
+region_code = 'RUN'          ← décision métier tranchée
 ```
 
 **Cet objet doit exister en base avant l'import pilote.** Il est le référent de tous les `object_org_link` insérés lors de l'import.
@@ -565,45 +567,44 @@ La section 5.3 (Séquence d'import pilote) est complétée :
 | Élément | Bloquant pilote | Action |
 |---|---|---|
 | Objet ORG OTI du Sud en base | **OUI** | À créer avant l'Étape 0 du pilote |
-| `region_code` de l'OTI du Sud | **OUI** | Arbitrage métier (code court à définir) |
+| `region_code` de l'OTI du Sud | ✅ Résolu | `'RUN'` — décision tranchée |
 | Seeds `destination_excellence` + `qti_r` | Non | Peut attendre après le pilote |
 | Certifications OTI dans `object_classification` | Non | Peut attendre après le pilote |
 
 ---
 
-### F. Prérequis pilote — objet ORG OTI du Sud
+### F. Prérequis pilote — objet ORG OTI du Sud ✅ LEVÉ
 
-L'objet ORG OTI du Sud est le seul prérequis technique bloquant pour l'import pilote.
-Sans lui, l'INSERT dans `object_org_link` échoue sur contrainte FK.
+**Tous les arbitrages sont tranchés. Le pilote est exécutable.**
 
-#### Champs à renseigner
+#### Définition minimale de l'objet ORG à créer
 
-| Champ | Obligatoire | Valeur | Notes |
-|---|---|---|---|
-| `object_type` | **OUI** | `'ORG'` | Fixé |
-| `name` | **OUI** | `'OTI du Sud'` | Nom court opérationnel |
-| `status` | **OUI** | `'published'` | Le défaut est `'draft'` — à forcer explicitement |
-| `region_code` | **OUI (arbitrage)** | ex. `'SUD'` | Contrainte : 3 caractères `[A-Z0-9]` — **seul arbitrage restant** |
-| `id` | Non | auto-généré | Trigger existant, format `^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$` |
-| `business_timezone` | Non | `'Indian/Reunion'` | Défaut correct pour La Réunion |
-| `commercial_visibility` | Non | `'active'` | Défaut correct |
-| Tous les autres champs | Non | NULL | Descriptions, contacts, coordonnées — remplissage ultérieur |
+| Champ | Valeur | Statut |
+|---|---|---|
+| `object_type` | `'ORG'` | Obligatoire — fixé |
+| `name` | `'OTI du Sud'` | Obligatoire — fixé |
+| `status` | `'published'` | Obligatoire — à forcer (défaut est `'draft'`) |
+| `region_code` | `'RUN'` | Obligatoire — **décision tranchée** |
+| `id` | auto-généré | Trigger existant, format `^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$` |
+| `business_timezone` | `'Indian/Reunion'` | Défaut correct — ne pas spécifier |
+| `commercial_visibility` | `'active'` | Défaut correct — ne pas spécifier |
+| Tous les autres champs | NULL | Descriptions, contacts — remplissage ultérieur |
 
-#### Seul arbitrage restant
+> `region_code = 'RUN'` — code île de La Réunion, retenu comme identifiant de scope pour OTI du Sud. Immuable une fois posé.
 
-Le `region_code` doit être un code à 3 caractères `[A-Z0-9]`. Il identifie OTI du Sud dans le cloisonnement multi-tenant du schéma. Options raisonnables :
+#### Rattachement à insérer pour chaque objet importé
 
-| Option | Logique |
-|---|---|
-| `SUD` | Zone géographique — cohérent avec le périmètre intercommunal |
-| `OTS` | Initiales OTI du Sud |
-| `974` | Code département de La Réunion (si la base ne couvre qu'un seul département) |
+```
+object_org_link :
+  org  = objet ORG 'OTI du Sud' (region_code='RUN')
+  role = publisher
+  is_primary = TRUE
+```
 
-Ce code sera utilisé pour toutes les futures requêtes scoped à OTI du Sud. **Une fois choisi, ne pas le changer** — il devient une clé de partition dans plusieurs index.
+#### Ce qui est désormais exécutable
 
-#### Ce qui devient exécutable dès que le `region_code` est tranché
-
-- Création de l'objet ORG OTI du Sud (seed de production ou INSERT de validation)
-- Import pilote des 10 établissements avec rattachement `object_org_link` (`role = publisher`, `is_primary = TRUE`)
-- Import des liens OTA et interactions CRM des 10 établissements pilotes
-- L'ensemble de la séquence de la section 5.3 peut démarrer
+- Création de l'objet ORG OTI du Sud (seed ou INSERT de validation)
+- Import pilote des 10 établissements (objet + object_location + object_org_link)
+- Import des liens OTA (distribution_channel)
+- Import des interactions CRM (crm_demand_topic_oti)
+- L'ensemble de la séquence section 5.3 peut démarrer

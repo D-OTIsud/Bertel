@@ -7212,3 +7212,321 @@ $$;
 
 COMMENT ON FUNCTION api.get_object_cards_adapted_batch IS
 'Batch wrapper for get_object_resource_adapted. Returns adapted/FALC resources for multiple objects, preserving input order.';
+
+-- =====================================================
+-- DASHBOARD PHASE 2A — KPI FUNCTIONS
+-- Conventions:
+--   • ORG objects are excluded from every aggregation.
+--   • p_updated_at_from / p_updated_at_to are inclusive DATE boundaries
+--     cast to TIMESTAMPTZ at midnight UTC; to_date adds 1 day for exclusivity.
+--   • pending_change is always scoped to the same filtered object pool.
+--   • p_status defaults to published-only.
+-- =====================================================
+
+-- ─────────────────────────────────────────────────────
+-- §1  Hero Scorecards
+-- ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.get_dashboard_scorecards(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t
+        FROM   unnest(enum_range(null::object_type)) AS t
+        WHERE  t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.status, o.created_at
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  metrics AS (
+    SELECT
+      COUNT(*)                                                           AS total,
+      COUNT(*) FILTER (WHERE status = 'published')                      AS published,
+      COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')  AS delta_30d,
+      COUNT(*) FILTER (
+        WHERE created_at >= NOW() - INTERVAL '60 days'
+          AND created_at <  NOW() - INTERVAL '30 days'
+      )                                                                  AS prior_30d
+    FROM scoped
+  ),
+  pending AS (
+    SELECT COUNT(*) AS cnt
+    FROM   pending_change pc
+    WHERE  pc.status    = 'pending'
+      AND  pc.object_id IN (SELECT object_id FROM filtered_ids)
+  )
+  SELECT jsonb_build_object(
+    'total',            m.total,
+    'published',        m.published,
+    'published_pct',    COALESCE(ROUND(m.published * 100.0 / NULLIF(m.total, 0), 1), 0.0),
+    'avg_completeness', NULL::numeric,
+    'pending_changes',  p.cnt,
+    'delta_30d',        m.delta_30d,
+    'delta_pct',        CASE
+                          WHEN COALESCE(m.prior_30d, 0) = 0 THEN NULL
+                          ELSE ROUND((m.delta_30d::numeric / m.prior_30d - 1) * 100, 1)
+                        END
+  )
+  FROM metrics m, pending p;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_scorecards IS
+'Dashboard §1: hero scorecard aggregates for the filtered object pool.
+Returns total/published counts, pending_change count (scoped to same pool),
+and 30-day creation delta vs the prior 30 days.
+avg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C
+when the per-type field-presence formula is implemented.
+ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
+
+-- ─────────────────────────────────────────────────────
+-- §2a  Object Distribution — by Type
+-- ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.get_dashboard_type_breakdown(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t
+        FROM   unnest(enum_range(null::object_type)) AS t
+        WHERE  t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.object_type, o.status
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  breakdown AS (
+    SELECT
+      object_type::TEXT                                                   AS type,
+      COUNT(*)                                                            AS cnt,
+      COUNT(*) FILTER (WHERE status = 'published')                       AS published,
+      COUNT(*) FILTER (WHERE status = 'draft')                           AS draft,
+      COUNT(*) FILTER (WHERE status = 'archived')                        AS archived,
+      SUM(COUNT(*)) OVER ()                                               AS grand_total
+    FROM scoped
+    GROUP BY object_type
+  )
+  SELECT jsonb_build_object(
+    'total', COALESCE(MAX(grand_total), 0),
+    'rows',  COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'type',         type,
+          'count',        cnt,
+          'published',    published,
+          'draft',        draft,
+          'archived',     archived,
+          'pct_of_total', ROUND(cnt * 100.0 / NULLIF(grand_total, 0), 1)
+        )
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    )
+  )
+  FROM breakdown;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_type_breakdown IS
+'Dashboard §2a: object count broken down by object_type within the filtered pool.
+Each row includes per-status counts and the type''s share of the total.
+ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
+
+-- ─────────────────────────────────────────────────────
+-- §2b  Object Distribution — by City
+-- ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.get_dashboard_city_distribution(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL,
+  p_limit           INT             DEFAULT 20
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t
+        FROM   unnest(enum_range(null::object_type)) AS t
+        WHERE  t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.id, o.created_at
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  city_counts AS (
+    SELECT
+      loc.city,
+      COUNT(DISTINCT s.id)                                                AS cnt,
+      COUNT(DISTINCT s.id) FILTER (
+        WHERE s.created_at >= NOW() - INTERVAL '30 days'
+      )                                                                   AS delta_30d
+    FROM   scoped s
+    JOIN   object_location loc
+      ON   loc.object_id        = s.id
+      AND  loc.is_main_location = TRUE
+      AND  loc.city             IS NOT NULL
+      AND  loc.city             <> ''
+    GROUP BY loc.city
+    ORDER BY cnt DESC
+    LIMIT p_limit
+  )
+  SELECT jsonb_build_object(
+    'rows', COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'city',      city,
+          'count',     cnt,
+          'delta_30d', delta_30d
+        )
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    )
+  )
+  FROM city_counts;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_city_distribution IS
+'Dashboard §2b: top cities by object count within the filtered pool.
+Reads is_main_location=true from object_location; excludes null/empty cities.
+delta_30d counts objects created (not updated) in that city in the last 30 days.
+ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
+
+-- ─────────────────────────────────────────────────────
+-- §10  Actualisation Rate
+-- ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.get_dashboard_actualisation(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL,
+  p_threshold_days  INT             DEFAULT 90
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t
+        FROM   unnest(enum_range(null::object_type)) AS t
+        WHERE  t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.object_type, o.updated_at
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  by_type AS (
+    SELECT
+      object_type::TEXT                                                   AS type,
+      COUNT(*)                                                            AS total,
+      COUNT(*) FILTER (
+        WHERE updated_at >= NOW() - make_interval(days => p_threshold_days)
+      )                                                                   AS up_to_date,
+      COUNT(*) FILTER (
+        WHERE updated_at <  NOW() - make_interval(days => p_threshold_days)
+          AND updated_at >= NOW() - make_interval(days => p_threshold_days * 2)
+      )                                                                   AS to_review,
+      COUNT(*) FILTER (
+        WHERE updated_at <  NOW() - make_interval(days => p_threshold_days * 2)
+      )                                                                   AS stale
+    FROM scoped
+    GROUP BY object_type
+  )
+  SELECT jsonb_build_object(
+    'threshold_days', p_threshold_days,
+    'rows', COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'type',         type,
+          'total',        total,
+          'up_to_date',   up_to_date,
+          'to_review',    to_review,
+          'stale',        stale,
+          'rate',         ROUND(up_to_date * 100.0 / NULLIF(total, 0), 1),
+          'weekly_rates', NULL::jsonb
+        )
+        ORDER BY type
+      ),
+      '[]'::jsonb
+    )
+  )
+  FROM by_type;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_actualisation IS
+'Dashboard §10: per-type freshness breakdown against a configurable threshold.
+Tiers: up_to_date (< p_threshold_days old), to_review (threshold..2x threshold),
+stale (> 2x threshold). rate = percentage up_to_date.
+weekly_rates is NULL until Phase 2B adds the object_version time-series join.
+updated_at reflects meaningful business edits only (cache-only changes are excluded
+by the update_object_updated_at_business trigger).
+ORG objects excluded. p_updated_at_from/to scope the object pool (inclusive DATE boundaries).';

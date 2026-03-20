@@ -69,7 +69,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
  ('social_network','linkedin','LinkedIn','Page professionnelle LinkedIn'),
  ('social_network','twitter','X (Twitter)','Compte X / Twitter'),
  ('social_network','tripadvisor','Tripadvisor','Fiche Tripadvisor'),
- ('social_network','booking','Booking.com','Profil Booking.com'),
+ -- booking.com retiré de social_network — voir domaine distribution_channel (Lot 1, 2026-03-20)
  ('social_network','google_business','Google Business Profile','Fiche Google Business Profile')
 ON CONFLICT DO NOTHING;
 
@@ -311,6 +311,48 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('demand_topic','marketing','Marketing','Campagnes marketing et promotion'),
 ('demand_topic','logistique','Logistique','Transport, transferts, bagagerie'),
 ('demand_topic','urgence','Urgence','Assistance urgente sur place')
+ON CONFLICT DO NOTHING;
+
+-- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
+
+-- Canaux de diffusion OTA / plateformes de réservation.
+-- Booking.com est UNIQUEMENT ici — ne pas l'ajouter dans social_network.
+-- Règle de migration future : toute donnée historique classant Booking comme
+-- réseau social doit être remappée vers distribution_channel.booking.
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+ ('distribution_channel','airbnb',   'Airbnb',        'Plateforme de location courte durée Airbnb',           1),
+ ('distribution_channel','booking',  'Booking.com',   'Plateforme de réservation hôtelière Booking.com',      2),
+ ('distribution_channel','abritel',  'Abritel',       'Plateforme de location de vacances Abritel / Vrbo',    3),
+ ('distribution_channel','leboncoin','Leboncoin',      'Annonces de location sur Leboncoin',                   4)
+ON CONFLICT DO NOTHING;
+
+-- Sujets CRM réels de l'OTI Sud — 20 valeurs normalisées depuis l'Excel source.
+-- "Accompagnement taxe de séjour" (casse minuscule, 5 occ.) normalisé sur
+-- "Accompagnement Taxe de séjour" (casse canonique, 636 occ.).
+-- "Promotion  Explore" (double espace) normalisé sur "Promotion Explore".
+-- "Problème  juridique, Sirene" (double espace) normalisé sur "Problème juridique, Sirene".
+-- Ce domaine est additif : demand_topic générique est conservé intact.
+INSERT INTO ref_code (domain, code, name, position) VALUES
+ ('crm_demand_topic_oti','accompagnement_taxe_sejour',  'Accompagnement Taxe de séjour',      1),
+ ('crm_demand_topic_oti','promotion_sit',               'Promotion SIT (reunion.fr)',           2),
+ ('crm_demand_topic_oti','demande_signaletique',        'Demande signalétique',                3),
+ ('crm_demand_topic_oti','promotion_explore',           'Promotion Explore',                   4),
+ ('crm_demand_topic_oti','partenaire_b2c',              'Partenaire d''une action B To C',     5),
+ ('crm_demand_topic_oti','promotion_facebook',          'Promotion Facebook',                  6),
+ ('crm_demand_topic_oti','fermeture_definitive',        'Fermeture définitive',                7),
+ ('crm_demand_topic_oti','labels_classements_etoiles',  'Labels et classements étoiles',       8),
+ ('crm_demand_topic_oti','autres',                      'Autres',                              9),
+ ('crm_demand_topic_oti','modification_infos_bdd',      'Modification infos BDD',              10),
+ ('crm_demand_topic_oti','fermeture_provisoire',        'Fermeture provisoire',                11),
+ ('crm_demand_topic_oti','porteur_de_projet',           'Porteur de projet(s)',                12),
+ ('crm_demand_topic_oti','demande_de_visite',           'Demande de visite',                   13),
+ ('crm_demand_topic_oti','participants_atelier_presta', 'Participants d''un atelier presta',   14),
+ ('crm_demand_topic_oti','ousaile',                     'Ousailé',                             15),
+ ('crm_demand_topic_oti','demande_attestation_oti',     'Demande d''attestation OTI',          16),
+ ('crm_demand_topic_oti','probleme_juridique_sirene',   'Problème juridique, Sirene',          17),
+ ('crm_demand_topic_oti','plainte_client',              'Plainte client',                      18),
+ ('crm_demand_topic_oti','boutique',                    'Boutique',                            19),
+ ('crm_demand_topic_oti','dispositifs_financiers',      'Dispositifs financiers',              20)
 ON CONFLICT DO NOTHING;
 
 -- Sous-thématiques détaillées
@@ -3531,7 +3573,7 @@ WITH ref_code_translations(domain, code, name_en, name_es, description_en, descr
     ('social_network','linkedin','LinkedIn','LinkedIn','Professional LinkedIn page','Página profesional de LinkedIn'),
     ('social_network','twitter','X (Twitter)','X (Twitter)','X / Twitter account','Cuenta de X / Twitter'),
     ('social_network','tripadvisor','Tripadvisor','Tripadvisor','Tripadvisor listing','Ficha de Tripadvisor'),
-    ('social_network','booking','Booking.com','Booking.com','Booking.com profile','Perfil en Booking.com'),
+    -- booking.com retiré de social_network — voir domaine distribution_channel (Lot 1, 2026-03-20)
     ('social_network','google_business','Google Business Profile','Google Business Profile','Google Business Profile listing','Ficha de Google Business Profile'),
     ('social_network','wechat','WeChat','WeChat','Messaging and social network','Mensajería y red social'),
     ('social_network','line','LINE','LINE','Messaging and social network','Mensajería y red social'),

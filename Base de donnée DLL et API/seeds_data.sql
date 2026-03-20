@@ -933,6 +933,20 @@ BEGIN
 END $$;
 
 -- =====================================================
+-- SECTION PRODUCTION ORGANIZATIONS
+-- =====================================================
+
+-- OTI du Sud — organisation de référence pour le portage des fiches dans le SIT.
+-- Prérequis au pilote d'import — voir lot1_mapping_plan.md §7.F
+-- region_code='RUN' : île de La Réunion. Immuable une fois posé.
+INSERT INTO object (object_type, name, region_code, status, created_at, updated_at)
+SELECT 'ORG', 'OTI du Sud', 'RUN', 'published', NOW(), NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM object
+  WHERE object_type = 'ORG' AND name = 'OTI du Sud' AND region_code = 'RUN'
+);
+
+-- =====================================================
 -- SECTION TEST OBJECTS - region_code = 'TEST'
 -- =====================================================
 

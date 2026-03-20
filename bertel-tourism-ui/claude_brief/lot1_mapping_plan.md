@@ -1,13 +1,15 @@
 # Plan de mapping — Import Lot 1
 # Structures : secondary_types · zone_touristique · distribution_channel · crm_demand_topic_oti
 
-**Version :** 1.1
+**Version :** 1.2
 **Date :** 2026-03-20
 **Source :** `Etablissements (3).xlsx` — 24 onglets
 **Statut :** En attente d'approbation avant implémentation
 
 > **v1.1 — Correction majeure :** la hiérarchie des sources a été révisée.
 > Les règles de mapping de `zone_touristique` et `secondary_types` changent en conséquence.
+>
+> **v1.2 — Ajout :** rattachement objet → organisation et certifications organisationnelles.
 
 ---
 
@@ -401,3 +403,161 @@ Valider les règles de mapping sur un échantillon contrôlé de **10 établisse
 | 6 cas multi-appartenance (séparateur `,` dans `Groupe catégorie`) | **Invalide** | 23 cas (séparateur ` ; ` dans `Nom catégorie`) |
 | Jointure RS via `Etablissements` | **Sans objet** | Jointure directe `Resaux sociaux.formulaire → formulaire.id OTI` |
 | Zone extraite automatiquement (3 zones connues) | **Invalide** | `zone_touristique = NULL` à l'import, enrichissement via table externe |
+
+---
+
+## 7. Rattachement objet → organisation et certifications organisationnelles
+
+### A. État du schéma actuel
+
+#### A1. Rattachement objet → organisation
+
+Le schéma couvre ce besoin **nativement et complètement** via deux structures :
+
+**`object_org_link`** (table de liaison, déjà existante)
+```
+object_id       TEXT → object(id)   — l'établissement
+org_object_id   TEXT → object(id)   — l'organisation (objet de type ORG)
+role_id         UUID → ref_org_role — rôle : owner | manager | publisher
+is_primary      BOOLEAN             — contrainte unique : un seul org principal par objet
+```
+
+**`ref_org_role`** (déjà seedée)
+- `owner` — propriétaire principal
+- `manager` — gestionnaire au quotidien ← **rôle à utiliser pour OTI du Sud**
+- `publisher` — diffuseur
+
+Les organisations elles-mêmes sont des **objets avec `object_type = 'ORG'`**. Le seed de test contient déjà `'Office de Tourisme Intercommunal TEST'` (region_code='TST'). OTI du Sud sera créée de la même façon.
+
+#### A2. Certifications / qualifications d'une organisation
+
+Le schéma couvre également ce besoin **sans modification** via `object_classification` :
+
+```
+object_id   TEXT → object(id)   — peut être n'importe quel objet, y compris un ORG
+scheme_id   UUID → ref_classification_scheme
+value_id    UUID → ref_classification_value
+status      TEXT                — requested | granted | suspended | expired
+awarded_at  DATE
+valid_until DATE
+```
+
+`object_classification` n'est pas réservée aux établissements — elle est liée à `object(id)` sans restriction de `object_type`. Un objet ORG peut donc porter des certifications via cette même table.
+
+**Conclusion :** aucune nouvelle table n'est nécessaire pour les deux besoins.
+
+---
+
+### B. Recommandation minimale retenue
+
+#### B1. OTI du Sud — objet ORG de référence
+
+Créer un objet `object_type = 'ORG'` représentant OTI du Sud dans les seeds de production (hors seeds de test déjà existants) :
+
+```
+name       = 'OTI du Sud'   (nom court opérationnel)
+object_type = 'ORG'
+region_code = 'SUD'          (ou code à confirmer — distinct de 'TST')
+status      = 'published'
+```
+
+**Cet objet doit exister en base avant l'import pilote.** Il est le référent de tous les `object_org_link` insérés lors de l'import.
+
+#### B2. Règle de rattachement pour l'import
+
+Pour chaque objet importé depuis `formulaire` :
+
+```
+INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary)
+SELECT
+  <id_du_nouvel_objet>,
+  oti.id,
+  r.id,
+  TRUE
+FROM object oti, ref_org_role r
+WHERE oti.object_type = 'ORG' AND oti.name = 'OTI du Sud'
+  AND r.code = 'manager'
+ON CONFLICT DO NOTHING;
+```
+
+- Rôle : `manager` (OTI gère les fiches sans en être propriétaire)
+- `is_primary = TRUE` — contrainte unique respectée (un seul org principal par objet)
+
+#### B3. Certifications organisationnelles — seeds nécessaires
+
+Les certifications OTI du Sud à stocker dans `object_classification` nécessitent des schemes dédiés, **distincts** des schemes de distinction des établissements :
+
+| Certification | `scheme_code` proposé | `is_distinction` | `display_group` |
+|---|---|---|---|
+| Destination d'Excellence | `destination_excellence` | `FALSE` | `NULL` |
+| QTI-R (Qualité Tourisme île de la Réunion) | `qti_r` | `FALSE` | `NULL` |
+| Tourisme & Handicap (OTI) | `tourisme_handicap` | `TRUE` | `accessibility_label` |
+
+> `is_distinction = FALSE` pour les deux premiers : ce sont des certifications organisationnelles, pas des labels d'établissement. Le KPI DistinctionOverview (qui filtre sur `is_distinction = TRUE`) ne les remontera donc pas dans les stats des établissements — comportement souhaité.
+>
+> `tourisme_handicap` est déjà seedé comme scheme d'établissement (`is_distinction = TRUE`). Si OTI du Sud elle-même est certifiée T&H, c'est une `object_classification` sur l'objet ORG avec le même scheme — aucun conflit.
+
+---
+
+### C. Impact sur le plan de migration et sur le pilote
+
+#### C1. Nouveau prérequis avant import pilote
+
+| Prérequis | Nature | Bloquant pilote |
+|---|---|---|
+| Objet ORG `'OTI du Sud'` créé en base (seed ou INSERT manuel) | Technique | **OUI** — sans lui, l'INSERT `object_org_link` échoue |
+| `region_code` de l'OTI du Sud confirmé | Métier | OUI |
+| Schemes `destination_excellence` et `qti_r` seedés | Technique | Non — uniquement si on importe les certifs lors du pilote |
+
+#### C2. Modification de la séquence d'import pilote
+
+La section 5.3 (Séquence d'import pilote) est complétée :
+
+```
+Étape 0 (nouveau — BLOQUANT) :
+  Créer l'objet ORG 'OTI du Sud' en base
+  → seed de production ou INSERT manuel de validation
+  → vérifier que object_type='ORG' et status='published'
+
+Étape 2 (amendée) :
+  Pour chaque objet importé depuis formulaire :
+  → insérer l'objet dans object + object_location
+  → insérer object_org_link avec org='OTI du Sud', role='manager', is_primary=TRUE
+
+Étape 6 (nouveau — optionnel pilote) :
+  Insérer les object_classification de l'OTI du Sud elle-même
+  → Destination d'Excellence : scheme=destination_excellence, status='granted'
+  → QTI-R : scheme=qti_r, status='granted'
+  → uniquement si les schemes sont seedés avant le pilote
+```
+
+#### C3. Règle posée dans le plan (permanente)
+
+> **Tout objet importé dans ce chantier est rattaché par défaut à OTI du Sud**
+> via `object_org_link` avec `role = manager` et `is_primary = TRUE`.
+> Cette règle s'applique à tous les objets importés depuis `formulaire`,
+> quel que soit leur `object_type` (HOT, RES, HLO, CAMP, FMA, ITI, LOI…).
+
+---
+
+### D. Ce qu'il faudra créer plus tard si on veut aller plus loin
+
+| Besoin futur | Structure | Quand |
+|---|---|---|
+| Plusieurs organisations pour un même établissement (ex : OTI + CRT) | `object_org_link` supplémentaires avec `is_primary = FALSE` | Lot 3+ |
+| Hiérarchie OTI du Sud → CRT Réunion → Atout France | `object_org_link` entre objets ORG | Lot 4 |
+| Dates de validité des certifications OTI | `object_classification.awarded_at` + `valid_until` | À l'import pilote si disponibles |
+| Portail de gestion des certifications orga | Vue API dédiée | Non planifié |
+
+---
+
+### E. Ce point est-il bloquant avant le pilote ?
+
+**Partiellement bloquant.** La création de l'objet ORG `'OTI du Sud'` est un prérequis technique strict : sans lui, l'import des liaisons `object_org_link` échouera. En revanche, les certifications de l'OTI elle-même (Destination d'Excellence, QTI-R) sont optionnelles pour le pilote.
+
+| Élément | Bloquant pilote | Action |
+|---|---|---|
+| Objet ORG OTI du Sud en base | **OUI** | À créer avant l'Étape 0 du pilote |
+| `region_code` de l'OTI du Sud | **OUI** | Arbitrage métier (code court à définir) |
+| Seeds `destination_excellence` + `qti_r` | Non | Peut attendre après le pilote |
+| Certifications OTI dans `object_classification` | Non | Peut attendre après le pilote |

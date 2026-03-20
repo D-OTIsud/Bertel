@@ -1,7 +1,7 @@
 # Plan de mapping — Import Lot 1
 # Structures : secondary_types · zone_touristique · distribution_channel · crm_demand_topic_oti
 
-**Version :** 1.2
+**Version :** 1.3
 **Date :** 2026-03-20
 **Source :** `Etablissements (3).xlsx` — 24 onglets
 **Statut :** En attente d'approbation avant implémentation
@@ -10,6 +10,8 @@
 > Les règles de mapping de `zone_touristique` et `secondary_types` changent en conséquence.
 >
 > **v1.2 — Ajout :** rattachement objet → organisation et certifications organisationnelles.
+>
+> **v1.3 — Ajustement :** formulation du rattachement corrigée (portage SIT, pas propriété), rôle par défaut révisé de `manager` vers `publisher`.
 
 ---
 
@@ -406,26 +408,31 @@ Valider les règles de mapping sur un échantillon contrôlé de **10 établisse
 
 ---
 
-## 7. Rattachement objet → organisation et certifications organisationnelles
+## 7. Rattachement organisationnel et certifications de l'organisation
+
+> **Sens métier exact :** OTI du Sud porte les fiches dans le SIT, les diffuse, et en assure le suivi qualité. Ce n'est pas une relation de propriété sur l'établissement — l'établissement appartient à son exploitant. C'est un **portage organisationnel dans le SIT** : l'OTI est l'organisation qui référence, maintient et publie l'information touristique.
 
 ### A. État du schéma actuel
 
-#### A1. Rattachement objet → organisation
+#### A1. Rattachement organisationnel dans le SIT
 
 Le schéma couvre ce besoin **nativement et complètement** via deux structures :
 
 **`object_org_link`** (table de liaison, déjà existante)
 ```
-object_id       TEXT → object(id)   — l'établissement
-org_object_id   TEXT → object(id)   — l'organisation (objet de type ORG)
-role_id         UUID → ref_org_role — rôle : owner | manager | publisher
-is_primary      BOOLEAN             — contrainte unique : un seul org principal par objet
+object_id       TEXT → object(id)   — l'établissement référencé
+org_object_id   TEXT → object(id)   — l'organisation portant la fiche (type ORG)
+role_id         UUID → ref_org_role — rôle organisationnel
+is_primary      BOOLEAN             — contrainte unique : une seule org principale par fiche
 ```
 
-**`ref_org_role`** (déjà seedée)
-- `owner` — propriétaire principal
-- `manager` — gestionnaire au quotidien ← **rôle à utiliser pour OTI du Sud**
-- `publisher` — diffuseur
+**`ref_org_role`** — rôles disponibles et leur sens métier exact :
+
+| Code | Libellé seedé | Sens métier | Pertinence OTI du Sud |
+|---|---|---|---|
+| `owner` | Propriétaire principale | Détient l'objet juridiquement ou commercialement | ❌ L'OTI ne possède pas les établissements |
+| `manager` | Gestionnaire | Gère l'établissement au quotidien (exploitation) | ❌ L'OTI ne gère pas les hôtels ou restaurants |
+| `publisher` | Diffuseur | Référence, maintient et publie l'information dans le SIT | ✅ C'est exactement le rôle de l'OTI |
 
 Les organisations elles-mêmes sont des **objets avec `object_type = 'ORG'`**. Le seed de test contient déjà `'Office de Tourisme Intercommunal TEST'` (region_code='TST'). OTI du Sud sera créée de la même façon.
 
@@ -476,12 +483,13 @@ SELECT
   TRUE
 FROM object oti, ref_org_role r
 WHERE oti.object_type = 'ORG' AND oti.name = 'OTI du Sud'
-  AND r.code = 'manager'
+  AND r.code = 'publisher'
 ON CONFLICT DO NOTHING;
 ```
 
-- Rôle : `manager` (OTI gère les fiches sans en être propriétaire)
-- `is_primary = TRUE` — contrainte unique respectée (un seul org principal par objet)
+- **Rôle : `publisher`** — OTI du Sud référence et publie l'information touristique dans le SIT. Elle n'est pas propriétaire ni gestionnaire opérationnel des établissements.
+- `is_primary = TRUE` — l'OTI est l'organisation principale portant la fiche dans ce SIT.
+- Si un établissement a par ailleurs un propriétaire ou gestionnaire distinct (ex : groupe hôtelier), un second `object_org_link` pourra être ajouté plus tard avec `is_primary = FALSE` et le rôle approprié (`owner` ou `manager`).
 
 #### B3. Certifications organisationnelles — seeds nécessaires
 
@@ -522,7 +530,7 @@ La section 5.3 (Séquence d'import pilote) est complétée :
 Étape 2 (amendée) :
   Pour chaque objet importé depuis formulaire :
   → insérer l'objet dans object + object_location
-  → insérer object_org_link avec org='OTI du Sud', role='manager', is_primary=TRUE
+  → insérer object_org_link avec org='OTI du Sud', role='publisher', is_primary=TRUE
 
 Étape 6 (nouveau — optionnel pilote) :
   Insérer les object_classification de l'OTI du Sud elle-même
@@ -533,10 +541,9 @@ La section 5.3 (Séquence d'import pilote) est complétée :
 
 #### C3. Règle posée dans le plan (permanente)
 
-> **Tout objet importé dans ce chantier est rattaché par défaut à OTI du Sud**
-> via `object_org_link` avec `role = manager` et `is_primary = TRUE`.
-> Cette règle s'applique à tous les objets importés depuis `formulaire`,
-> quel que soit leur `object_type` (HOT, RES, HLO, CAMP, FMA, ITI, LOI…).
+> **Tout objet importé dans ce chantier est rattaché à OTI du Sud comme organisation portant la fiche dans le SIT**, via `object_org_link` avec `role = publisher` et `is_primary = TRUE`.
+> Ce rattachement signifie que l'OTI du Sud référence, maintient et publie l'information touristique de cet objet — pas qu'elle en est propriétaire ou gestionnaire opérationnel.
+> Cette règle s'applique à tous les objets importés depuis `formulaire`, quel que soit leur `object_type` (HOT, RES, HLO, CAMP, FMA, ITI, LOI…).
 
 ---
 

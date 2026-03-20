@@ -2318,6 +2318,87 @@ INSERT INTO ref_classification_scheme (code, name, description, selection, posit
 ('tourisme_handicap','Tourisme & Handicap','Handicaps reconnus (multi‑sélection)','multiple',8)
 ON CONFLICT (code) DO NOTHING;
 
+-- Marquer les schemes reconnus comme distinctions métier (idempotent)
+UPDATE ref_classification_scheme
+SET is_distinction = TRUE
+WHERE code IN (
+  'hot_stars', 'camp_stars', 'meuble_stars',
+  'gites_epics', 'clevacances_keys',
+  'green_key', 'eu_ecolabel',
+  'tourisme_handicap'
+);
+
+-- Affecter le groupe d'affichage dashboard aux schemes existants (idempotent)
+UPDATE ref_classification_scheme
+SET display_group = 'official_classification'
+WHERE code IN ('hot_stars', 'camp_stars', 'meuble_stars', 'gites_epics', 'clevacances_keys');
+
+UPDATE ref_classification_scheme
+SET display_group = 'environmental_label'
+WHERE code IN ('green_key', 'eu_ecolabel');
+
+UPDATE ref_classification_scheme
+SET display_group = 'accessibility_label'
+WHERE code = 'tourisme_handicap';
+
+-- ─── Nouveaux schemes — lot 1 validé ─────────────────────────────────────────
+
+INSERT INTO ref_classification_scheme (code, name, description, selection, is_distinction, display_group, position) VALUES
+('qualite_tourisme',        'Qualité Tourisme (France)',              'Marque nationale Qualité Tourisme — scheme legacy/transitoire',       'single',   TRUE, 'quality_label', 10),
+('destination_excellence',  'Destination d''Excellence',             'Successeur de Qualité Tourisme — nouvelle marque nationale',          'single',   TRUE, 'quality_label', 11),
+('qualite_tourisme_reunion','Qualité Tourisme Île de La Réunion',    'Marque régionale Qualité Tourisme portée par le CRT Réunion',         'single',   TRUE, 'quality_label', 12),
+('maitre_restaurateur',     'Maîtres Restaurateurs',                 'Titre d''État accordé au chef, attaché à l''établissement dans le SIT', 'single', TRUE, 'quality_label', 13),
+('esprit_parc',             'Esprit Parc National',                  'Marque du réseau des Parcs Nationaux de France (non réglementaire)',   'single',   TRUE, 'quality_label', 14),
+('cte',                     'Centre de Tourisme Équestre',           'Label FFE pour les centres de tourisme équestre',                     'single',   TRUE, 'quality_label', 15),
+('bienvenue_ferme',         'Bienvenue à la Ferme',                  'Label Chambres d''Agriculture — prestations à la ferme',              'multiple', TRUE, 'quality_label', 16),
+('accueil_paysan',          'Accueil Paysan',                        'Label réseau Accueil Paysan — formes d''accueil paysan',               'multiple', TRUE, 'quality_label', 17)
+ON CONFLICT (code) DO NOTHING;
+
+-- Valeur unique (binaire) pour les schemes single sans niveau
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, 'granted', 'Obtenu', 1
+FROM ref_classification_scheme s
+WHERE s.code IN (
+  'qualite_tourisme', 'destination_excellence', 'qualite_tourisme_reunion',
+  'maitre_restaurateur', 'esprit_parc', 'cte'
+)
+AND NOT EXISTS (
+  SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = 'granted'
+);
+
+-- Valeurs : Bienvenue à la Ferme (prestations cumulables)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES
+  ('ferme_sejour',      'Ferme de séjour',      1),
+  ('camping_ferme',     'Camping à la ferme',   2),
+  ('gite_rural',        'Gîte rural',           3),
+  ('table_hote',        'Table d''hôte',        4),
+  ('ferme_pedagogique', 'Ferme pédagogique',    5),
+  ('vente_directe',     'Vente directe',        6)
+) AS v(code, name, ordinal) ON TRUE
+WHERE s.code = 'bienvenue_ferme'
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code
+  );
+
+-- Valeurs : Accueil Paysan (formes d'accueil cumulables)
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES
+  ('hebergement',  'Hébergement paysan',         1),
+  ('restauration', 'Restauration paysanne',      2),
+  ('loisirs',      'Loisirs et activités',       3),
+  ('decouverte',   'Découverte et pédagogie',    4),
+  ('vente',        'Vente de produits fermiers', 5)
+) AS v(code, name, ordinal) ON TRUE
+WHERE s.code = 'accueil_paysan'
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code
+  );
+
 -- Valeurs: étoiles 1→5 (hôtel/camping/meublés)
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, v.code, v.name, v.ordinal

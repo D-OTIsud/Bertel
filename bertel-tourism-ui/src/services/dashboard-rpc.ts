@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/session-store';
 import type {
   DashboardActualisation,
   DashboardCityDistribution,
+  DashboardDistinctionOverview,
   DashboardFilters,
   DashboardScorecards,
   DashboardTypeBreakdown,
@@ -143,6 +144,24 @@ export async function getDashboardActualisation(
   return data as DashboardActualisation;
 }
 
+export async function getDashboardDistinctionOverview(
+  filters: DashboardFilters,
+): Promise<DashboardDistinctionOverview> {
+  const { demoMode } = useSessionStore.getState();
+  if (demoMode) {
+    const { mockDashboardData } = await import('../data/mock-dashboard');
+    return mockDashboardData.distinctionOverview;
+  }
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_distinction_overview', buildRpcParams(filters));
+
+  if (error) throw error;
+  return data as DashboardDistinctionOverview;
+}
+
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────
 // Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 
@@ -196,12 +215,3 @@ export async function getDashboardSeasonality(filters: DashboardFilters): Promis
   throw new Error('RPC get_dashboard_seasonality à brancher sur le backend.');
 }
 
-export async function getDashboardDistinctions(filters: DashboardFilters): Promise<unknown> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    return mockDashboardData.distinctions;
-  }
-  void filters;
-  throw new Error('RPC get_dashboard_distinctions à brancher sur le backend.');
-}

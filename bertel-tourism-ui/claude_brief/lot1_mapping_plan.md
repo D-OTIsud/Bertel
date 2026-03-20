@@ -568,3 +568,42 @@ La section 5.3 (Séquence d'import pilote) est complétée :
 | `region_code` de l'OTI du Sud | **OUI** | Arbitrage métier (code court à définir) |
 | Seeds `destination_excellence` + `qti_r` | Non | Peut attendre après le pilote |
 | Certifications OTI dans `object_classification` | Non | Peut attendre après le pilote |
+
+---
+
+### F. Prérequis pilote — objet ORG OTI du Sud
+
+L'objet ORG OTI du Sud est le seul prérequis technique bloquant pour l'import pilote.
+Sans lui, l'INSERT dans `object_org_link` échoue sur contrainte FK.
+
+#### Champs à renseigner
+
+| Champ | Obligatoire | Valeur | Notes |
+|---|---|---|---|
+| `object_type` | **OUI** | `'ORG'` | Fixé |
+| `name` | **OUI** | `'OTI du Sud'` | Nom court opérationnel |
+| `status` | **OUI** | `'published'` | Le défaut est `'draft'` — à forcer explicitement |
+| `region_code` | **OUI (arbitrage)** | ex. `'SUD'` | Contrainte : 3 caractères `[A-Z0-9]` — **seul arbitrage restant** |
+| `id` | Non | auto-généré | Trigger existant, format `^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$` |
+| `business_timezone` | Non | `'Indian/Reunion'` | Défaut correct pour La Réunion |
+| `commercial_visibility` | Non | `'active'` | Défaut correct |
+| Tous les autres champs | Non | NULL | Descriptions, contacts, coordonnées — remplissage ultérieur |
+
+#### Seul arbitrage restant
+
+Le `region_code` doit être un code à 3 caractères `[A-Z0-9]`. Il identifie OTI du Sud dans le cloisonnement multi-tenant du schéma. Options raisonnables :
+
+| Option | Logique |
+|---|---|
+| `SUD` | Zone géographique — cohérent avec le périmètre intercommunal |
+| `OTS` | Initiales OTI du Sud |
+| `974` | Code département de La Réunion (si la base ne couvre qu'un seul département) |
+
+Ce code sera utilisé pour toutes les futures requêtes scoped à OTI du Sud. **Une fois choisi, ne pas le changer** — il devient une clé de partition dans plusieurs index.
+
+#### Ce qui devient exécutable dès que le `region_code` est tranché
+
+- Création de l'objet ORG OTI du Sud (seed de production ou INSERT de validation)
+- Import pilote des 10 établissements avec rattachement `object_org_link` (`role = publisher`, `is_primary = TRUE`)
+- Import des liens OTA et interactions CRM des 10 établissements pilotes
+- L'ensemble de la séquence de la section 5.3 peut démarrer

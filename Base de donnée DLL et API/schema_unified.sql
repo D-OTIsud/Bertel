@@ -869,6 +869,25 @@ ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_environment_tags TE
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_language_codes TEXT[];
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_classification_codes TEXT[];
 
+-- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
+-- TRANSITOIRE / NON-CANONIQUE / OPT-IN
+-- secondary_types ne remplace pas object.object_type qui reste le type principal
+-- de référence pour toutes les APIs. Aucune API existante ne lit ni ne filtre ce
+-- champ automatiquement. Usage opt-in uniquement par le code qui l'invoque
+-- explicitement. Condition de remplacement : si multi-appartenance > 50 objets
+-- avec besoin UI confirmé, migrer vers junction table object_type_link et
+-- supprimer cette colonne.
+ALTER TABLE IF EXISTS object
+  ADD COLUMN IF NOT EXISTS secondary_types object_type[] NOT NULL DEFAULT '{}';
+
+-- TRANSITOIRE — non exposé comme filtre API avant backfill et normalisation.
+-- Stocke la zone touristique en texte libre pendant la phase d'import Excel.
+-- Condition de suppression : quand ref_zone_touristique est créée et que toutes
+-- les valeurs ont été normalisées sur des IDs FK, remplacer par
+-- zone_touristique_id UUID REFERENCES ref_zone_touristique(id).
+ALTER TABLE IF EXISTS object_location
+  ADD COLUMN IF NOT EXISTS zone_touristique TEXT;
+
 -- Génération d'ID si absent
 CREATE OR REPLACE FUNCTION api.before_insert_object_generate_id()
 RETURNS TRIGGER 

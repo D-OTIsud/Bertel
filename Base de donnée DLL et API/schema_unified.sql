@@ -1199,6 +1199,10 @@ DO $$ BEGIN
   BEGIN
     ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'RVA';
   EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'ACT';
+  EXCEPTION WHEN others THEN NULL; END;
 END $$;
 
 -- Valider dimensions médias selon type
@@ -2355,6 +2359,44 @@ END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_object_iti_profile_pos
 ON object_iti_profile(object_id, position_m);
+
+-- =====================================================
+-- Spécifiques ACT (activités commerciales encadrées)
+-- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+-- ACT = prestation commerciale encadrée, réservable, tarifée, définie par une durée.
+-- Distinct de PNA (site), ITI (tracé), FMA (événement daté).
+-- L'opérateur est un ACTOR (actor_object_role), jamais une ORG institutionnelle.
+-- site_object_id : optionnel — lien vers le PNA support (convention, non contraint en DB).
+-- Voir : bertel-tourism-ui/claude_brief/lot_act_plan.md
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_act (
+  object_id           TEXT        PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  duration_min        INTEGER     CHECK (duration_min > 0),
+  min_participants    SMALLINT    CHECK (min_participants >= 1),
+  max_participants    SMALLINT,
+  difficulty_level    SMALLINT    CHECK (difficulty_level BETWEEN 1 AND 5),
+  guide_required      BOOLEAN     NOT NULL DEFAULT TRUE,
+  min_age             SMALLINT,
+  equipment_provided  BOOLEAN     NOT NULL DEFAULT FALSE,
+  -- Lien optionnel vers le PNA/site support. Convention métier : pointe vers un PNA.
+  -- Aucune contrainte de type imposée en DB (pattern identique à object_membership.org_object_id).
+  site_object_id      TEXT        REFERENCES object(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_object_act_participants CHECK (
+    max_participants IS NULL
+    OR min_participants IS NULL
+    OR max_participants >= min_participants
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_object_act_site ON object_act(site_object_id)
+  WHERE site_object_id IS NOT NULL;
+
+DROP TRIGGER IF EXISTS update_object_act_updated_at ON object_act;
+CREATE TRIGGER update_object_act_updated_at
+  BEFORE UPDATE ON object_act
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- Tourism CRM extensions

@@ -1,8 +1,8 @@
 # Plan technique — Introduction du type `ACT`
 # Activité commerciale encadrée
 
-**Version :** 1.0
-**Date :** 2026-03-20
+**Version :** 1.1
+**Date :** 2026-03-21
 **Statut :** Plan validé métier — en attente d'implémentation
 **Prérequis :** Pilote Lot 1 validé
 
@@ -22,6 +22,19 @@ Ces définitions sont figées et ne doivent pas être remises en cause dans ce l
 | `ITI` | Parcours / tracé géographique structuré (LINESTRING) | Pas une sortie guidée vendue |
 | `FMA` | Événement daté (concert, festival, manifestation) | Pas une activité récurrente à la demande |
 | `ACT` | **Prestation commerciale encadrée, réservable, tarifée, définie par une durée** | Pas un lieu, pas un tracé, pas un événement |
+
+### Règle ORG / ACTOR — invariant transversal
+
+| Couche | Rôle | Exemples |
+|---|---|---|
+| `ORG` (object_type) | Structure institutionnelle. Portage large dans le SIT, publication, rattachement organisationnel. | OTI du Sud, CIVIS, Chambre de Commerce, fédération sportive |
+| `ACTOR` (table `actor`) | Exploitant réel, gérant, owner, guide, moniteur, contact opérationnel. Personne physique ou entité opérationnelle directe. | Gérant du club de plongée, moniteur de parapente, exploitant du gîte, guide de montagne |
+
+**Pour un objet `ACT`, le rattachement se fait sur deux couches distinctes :**
+- `object_org_link [publisher]` → `OTI du Sud` (ORG) : portage institutionnel dans le SIT
+- `actor_object_role [operator]` ou `[guide]` → l'entité commerciale ou la personne qui opère la prestation
+
+Un club de plongée ou une société de canyoning n'est **pas** une `ORG` dans ce modèle sauf si elle joue un rôle institutionnel de portage SIT. En tant qu'opérateur d'une prestation, elle est portée côté `ACTOR`.
 
 **`secondary_types` ne doit pas être utilisé pour remplacer `ACT`.**
 `secondary_types` est réservé aux rares cas d'appartenance inter-famille canonique (ex : ITI + {LOI}).
@@ -160,6 +173,23 @@ Ces types utilisent la table `object_relation` existante — aucun DDL de table 
 - `object_relation [uses_itinerary]` → pour le lien secondaire vers un ITI
 - `object_relation [based_at_site]` → alternatif à `site_object_id` si le FK direct n'est pas posé
 
+### 3.4 Rattachement organisationnel d'un ACT
+
+Un objet `ACT` est rattaché à deux couches distinctes, non interchangeables :
+
+```
+ACT (Sortie canyoning Langevin)
+  ├── object_org_link  [publisher]      → ORG  : OTI du Sud (portage SIT)
+  ├── actor_object_role [operator]      → ACTOR : prestataire commercial (club, société, moniteur)
+  ├── object_act.site_object_id         → PNA  : Canyon Rivière Langevin (optionnel)
+  ├── object_relation [uses_itinerary]  → ITI  : Sentier du canyon (optionnel)
+  ├── object_price                      → tarifs
+  └── object_classification [type_act]  → type : canyoning
+```
+
+L'opérateur commercial (club de plongée, société de canyoning, moniteur indépendant) est toujours un `ACTOR`, jamais une `ORG`, sauf s'il joue lui-même un rôle institutionnel de portage SIT.
+Les rôles `owner` et `manager` dans `ref_org_role` ne doivent pas être attribués à des ORG commerciales opératrices : ces rôles relèvent de la couche `actor_object_role`.
+
 ---
 
 ## 4. Impact sur le mapping actuel
@@ -253,10 +283,25 @@ Mettre une sortie canyoning dans `PNA` dilue le sens du type et rend le SIT inex
 `FMA` = événement daté. Toute activité sans date fixe constitutive **n'est pas un FMA**.
 `Remise en forme`, `cours de surf`, `sortie kayak sur réservation` ne sont pas des FMA.
 
-### 6.5 Ne pas implémenter ce lot avant la validation du pilote
+### 6.5 Ne pas modéliser les opérateurs commerciaux comme ORG
+
+Un club de plongée, une société de canyoning, un moniteur indépendant, un exploitant de gîte ne sont **pas** des `ORG` dans le sens de ce modèle.
+`ORG` est réservé aux structures institutionnelles qui portent des objets dans le SIT (OTI, intercommunalité, fédération).
+L'opérateur d'une prestation `ACT` est un `ACTOR` lié via `actor_object_role`.
+Créer une `ORG` pour chaque prestataire commercial produirait une explosion d'ORG sans valeur institutionnelle et diluerait le rôle `object_org_link`.
+
+### 6.6 Ne pas confondre `object_org_link` et `actor_object_role`
+
+`object_org_link` : lien entre un objet et une ORG institutionnelle — portage, publication, rattachement SIT.
+`actor_object_role` : lien entre un objet et un ACTOR opérationnel — gérance, exploitation, guidage, propriété.
+Les rôles `owner` et `manager` de `ref_org_role` ne doivent pas être utilisés pour des entités commerciales opératrices : ces notions appartiennent à `ref_actor_role`.
+
+### 6.7 Ne pas implémenter ce lot avant la validation du pilote
 
 Le pilote Lot 1 porte 10 fiches HLO/RES/LOI. Aucune n'est de type `ACT`.
 Introduire `ACT` avant la validation du pilote serait du scope creep inutile.
+
+---
 
 ---
 

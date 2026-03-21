@@ -2366,7 +2366,9 @@ ON object_iti_profile(object_id, position_m);
 -- ACT = prestation commerciale encadrée, réservable, tarifée, définie par une durée.
 -- Distinct de PNA (site), ITI (tracé), FMA (événement daté).
 -- L'opérateur est un ACTOR (actor_object_role), jamais une ORG institutionnelle.
--- site_object_id : optionnel — lien vers le PNA support (convention, non contraint en DB).
+-- Lien vers PNA/site support   : object_relation [based_at_site]
+-- Lien vers ITI tracé support  : object_relation [uses_itinerary]
+-- Coordonnées du RDV           : object_location (standard, comme tout objet)
 -- Voir : bertel-tourism-ui/claude_brief/lot_act_plan.md
 -- =====================================================
 CREATE TABLE IF NOT EXISTS object_act (
@@ -2378,9 +2380,6 @@ CREATE TABLE IF NOT EXISTS object_act (
   guide_required      BOOLEAN     NOT NULL DEFAULT TRUE,
   min_age             SMALLINT,
   equipment_provided  BOOLEAN     NOT NULL DEFAULT FALSE,
-  -- Lien optionnel vers le PNA/site support. Convention métier : pointe vers un PNA.
-  -- Aucune contrainte de type imposée en DB (pattern identique à object_membership.org_object_id).
-  site_object_id      TEXT        REFERENCES object(id) ON DELETE SET NULL,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT chk_object_act_participants CHECK (
@@ -2389,9 +2388,6 @@ CREATE TABLE IF NOT EXISTS object_act (
     OR max_participants >= min_participants
   )
 );
-
-CREATE INDEX IF NOT EXISTS idx_object_act_site ON object_act(site_object_id)
-  WHERE site_object_id IS NOT NULL;
 
 DROP TRIGGER IF EXISTS update_object_act_updated_at ON object_act;
 CREATE TRIGGER update_object_act_updated_at

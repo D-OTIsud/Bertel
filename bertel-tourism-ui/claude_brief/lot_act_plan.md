@@ -1,7 +1,7 @@
 # Plan technique — Introduction du type `ACT`
 # Activité commerciale encadrée
 
-**Version :** 1.2
+**Version :** 1.3
 **Date :** 2026-03-21
 **Statut :** IMPLÉMENTÉ — DDL + seeds exécutés le 2026-03-21
 **Prérequis :** Pilote Lot 1 validé
@@ -10,7 +10,10 @@
 > - `schema_unified.sql` : ENUM ACT ajouté (bloc DO $$ PSV/RVA/ACT), table `object_act` créée (bloc Lot ACT après section ITI)
 > - `seeds_data.sql` : `type_act` scheme + 12 valeurs, `uses_itinerary` + `based_at_site` dans `ref_object_relation_type`
 > - `lot1_mapping_plan.md` §1.4 : requalifications `Remise en forme` et `Divertissement` mises à jour
-> - Commit : voir git log `lot ACT`
+> - Commits : voir git log `lot ACT` et `fix(schema): suppression site_object_id`
+>
+> **Correction v1.3 :** `site_object_id` supprimé de `object_act` et de ce plan.
+> Règle unique : `object_location` pour la géographie, `object_relation` pour les liens objet→objet.
 
 > Ce plan est **distinct du pilote Lot 1** et doit être exécuté après sa validation.
 > Aucune des 10 fiches du pilote n'est de type `ACT`.
@@ -112,11 +115,19 @@ Table d'extension 1:1 sur `object`, modèle identique à `object_fma` et `object
 | `guide_required` | BOOLEAN | NOT NULL DEFAULT TRUE | Caractère encadré — critère de définition |
 | `min_age` | SMALLINT | nullable | Contrainte sécurité (parapente, canyoning…) |
 | `equipment_provided` | BOOLEAN | NOT NULL DEFAULT FALSE | Impact tarif et communication visiteur |
-| `site_object_id` | TEXT | FK → object(id) ON DELETE SET NULL, **nullable** | Lien optionnel vers le PNA/site support |
+| ~~`site_object_id`~~ | — | **Supprimé** — remplacé par `object_relation [based_at_site]` |
 | `created_at` | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | — |
 | `updated_at` | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | — |
 
-**`site_object_id` est optionnel.** Une ACT peut exister sans PNA associé (activité en piscine, salle d'escalade intérieure, cours de cuisine). Quand il est renseigné, il pointe conventionnellement vers un `PNA` mais aucune contrainte de type n'est imposée à la DB (même pattern que `object_membership.org_object_id`).
+**Règle de lien vers un site ou un itinéraire support :**
+
+| Concept | Mécanisme | Pourquoi |
+|---|---|---|
+| Coordonnées géographiques du point de rendez-vous | `object_location` (standard) | S'applique à tout objet ; alimente la carte et les filtres géo |
+| Lien vers un PNA / site support | `object_relation [based_at_site]` | Un seul mécanisme pour les relations objet→objet ; supporte N:M |
+| Lien vers un ITI tracé support | `object_relation [uses_itinerary]` | Idem |
+
+`site_object_id` n'existe pas dans `object_act`. Un FK dédié créerait un double mécanisme redondant avec `object_relation`, sans source de vérité claire.
 
 **Champs explicitement hors périmètre pour ce lot :**
 
@@ -174,10 +185,9 @@ Deux nouveaux types de relation pour lier ACT à ses objets supports :
 
 Ces types utilisent la table `object_relation` existante — aucun DDL de table supplémentaire.
 
-**Hiérarchie de lien recommandée :**
-- `object_act.site_object_id` → pour le lien primaire fort (le site principal)
-- `object_relation [uses_itinerary]` → pour le lien secondaire vers un ITI
-- `object_relation [based_at_site]` → alternatif à `site_object_id` si le FK direct n'est pas posé
+**Règle unique — pas de double mécanisme :**
+- `object_relation [based_at_site]` → lien vers le PNA/site support
+- `object_relation [uses_itinerary]` → lien vers l'ITI tracé support
 
 ### 3.4 Rattachement organisationnel d'un ACT
 
@@ -187,7 +197,8 @@ Un objet `ACT` est rattaché à deux couches distinctes, non interchangeables :
 ACT (Sortie canyoning Langevin)
   ├── object_org_link  [publisher]      → ORG  : OTI du Sud (portage SIT)
   ├── actor_object_role [operator]      → ACTOR : prestataire commercial (club, société, moniteur)
-  ├── object_act.site_object_id         → PNA  : Canyon Rivière Langevin (optionnel)
+  ├── object_location                   → coordonnées GPS du point de rendez-vous
+  ├── object_relation [based_at_site]   → PNA  : Canyon Rivière Langevin (optionnel)
   ├── object_relation [uses_itinerary]  → ITI  : Sentier du canyon (optionnel)
   ├── object_price                      → tarifs
   └── object_classification [type_act]  → type : canyoning

@@ -1,8 +1,8 @@
 # Plan de mapping — Import Lot 1
 # Structures : secondary_types · zone_touristique · distribution_channel · crm_demand_topic_oti
 
-**Version :** 1.4
-**Date :** 2026-03-20
+**Version :** 1.5
+**Date :** 2026-03-21
 **Source :** `Etablissements (3).xlsx` — 24 onglets
 **Statut :** En attente d'approbation avant implémentation
 
@@ -14,6 +14,8 @@
 > **v1.3 — Ajustement :** formulation du rattachement corrigée (portage SIT, pas propriété), rôle par défaut révisé de `manager` vers `publisher`.
 >
 > **v1.4 — Décision métier :** `region_code = 'RUN'` retenu pour OTI du Sud. Prérequis pilote levé.
+>
+> **v1.5 — Lot ACT (2026-03-21) :** `Remise en forme` requalifié de `FMA` → `ACT`. `Divertissement` : arbitrage fiche par fiche requis (FMA/ACT/COM). `Terre` : split tracé libre (ITI) vs sortie guidée commerciale (ACT). Voir `lot_act_plan.md` pour la définition complète.
 
 ---
 
@@ -80,10 +82,10 @@
 | Restaurant | `RES` | — |
 | Autre type de restauration | `RES` | Traiteur, snack |
 | Table d'hôtes | `RES` | — |
-| Remise en forme | `FMA` | — |
-| Divertissement | `FMA` | Bar, cinéma, spectacle |
-| Terre | `ITI` | Randonnée, VTT, équitation |
-| Patrimoine naturel | `ITI` | Ou `LOI` — **arbitrage métier requis** |
+| Remise en forme | `ACT` | **Corrigé — Lot ACT (2026-03-21)** : prestation récurrente encadrée, pas un événement. `type_act = remise_en_forme` |
+| Divertissement | **arbitrage requis** | Spectacle daté → `FMA` ; activité guidée → `ACT` ; bar/cinéma → `COM`. Fiche par fiche. |
+| Terre | `ITI` | Tracé libre → `ITI`. Sortie guidée commerciale → `ACT` (`uses_itinerary` vers ITI). **Arbitrage fiche par fiche requis.** |
+| Patrimoine naturel | `ITI` | Ou `LOI` (site libre) ou `ACT` (visite guidée payante) — **arbitrage métier requis** |
 | Artisanat | `LOI` | — |
 | Terroir | `LOI` | — |
 | Patrimoine culturel | `LOI` | — |

@@ -2359,7 +2359,10 @@ INSERT INTO ref_object_relation_type (code, name, description, position) VALUES
 ('managed_by','Géré par','Objet géré par une organisation',4),
 ('partner_of','Partenaire de','Relation de partenariat',5),
 ('sister','Objet associé','Objets de même famille',6),
-('recommended_with','Recommandé avec','Suggestion de co‑consommation',7)
+('recommended_with','Recommandé avec','Suggestion de co‑consommation',7),
+-- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+('uses_itinerary','Suit l''itinéraire','Une ACT emprunte un tracé ITI (randonnée guidée, VTT guidé)',8),
+('based_at_site','Se pratique sur le site','Une ACT se déroule sur un PNA (canyoning, plongée, parapente)',9)
 ON CONFLICT (code) DO NOTHING;
 
 -- Schémas de classification (étoiles/labels)
@@ -2409,6 +2412,40 @@ INSERT INTO ref_classification_scheme (code, name, description, selection, is_di
 ('bienvenue_ferme',         'Bienvenue à la Ferme',                  'Label Chambres d''Agriculture — prestations à la ferme',              'multiple', TRUE, 'quality_label', 16),
 ('accueil_paysan',          'Accueil Paysan',                        'Label réseau Accueil Paysan — formes d''accueil paysan',               'multiple', TRUE, 'quality_label', 17)
 ON CONFLICT (code) DO NOTHING;
+
+-- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+-- Scheme de sous-type pour les activités commerciales encadrées (ACT).
+-- is_distinction=FALSE : c'est un sous-type métier, pas un label/certification.
+-- display_group=NULL : non affiché dans le dashboard distinctions.
+-- Voir : bertel-tourism-ui/claude_brief/lot_act_plan.md §3.1
+INSERT INTO ref_classification_scheme (code, name, description, selection, is_distinction, position)
+SELECT 'type_act', 'Type d''activité encadrée', 'Sous-type métier pour les prestations ACT — canyoning, plongée, parapente, etc.', 'single', FALSE, 50
+WHERE NOT EXISTS (
+  SELECT 1 FROM ref_classification_scheme WHERE code = 'type_act'
+);
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES
+  ('canyoning',        'Canyoning',                   1),
+  ('plongee',          'Plongée sous-marine',          2),
+  ('parapente',        'Parapente',                    3),
+  ('kayak',            'Kayak / Paddle',               4),
+  ('randonnee_guidee', 'Randonnée guidée',             5),
+  ('escalade',         'Escalade encadrée',            6),
+  ('snorkeling',       'Snorkeling encadré',           7),
+  ('surf_cours',       'Cours de surf',                8),
+  ('vtt_guide',        'VTT guidé',                    9),
+  ('equitation',       'Équitation',                  10),
+  ('remise_en_forme',  'Remise en forme / Fitness',   11),
+  ('autre',            'Autre activité encadrée',     12)
+) AS v(code, name, ordinal) ON TRUE
+WHERE s.code = 'type_act'
+  AND NOT EXISTS (
+    SELECT 1 FROM ref_classification_value cv
+    WHERE cv.scheme_id = s.id AND cv.code = v.code
+  );
 
 -- Valeur unique (binaire) pour les schemes single sans niveau
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)

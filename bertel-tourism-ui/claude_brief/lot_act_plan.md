@@ -1,10 +1,16 @@
 # Plan technique — Introduction du type `ACT`
 # Activité commerciale encadrée
 
-**Version :** 1.1
+**Version :** 1.2
 **Date :** 2026-03-21
-**Statut :** Plan validé métier — en attente d'implémentation
+**Statut :** IMPLÉMENTÉ — DDL + seeds exécutés le 2026-03-21
 **Prérequis :** Pilote Lot 1 validé
+
+> **Trace d'implémentation :**
+> - `schema_unified.sql` : ENUM ACT ajouté (bloc DO $$ PSV/RVA/ACT), table `object_act` créée (bloc Lot ACT après section ITI)
+> - `seeds_data.sql` : `type_act` scheme + 12 valeurs, `uses_itinerary` + `based_at_site` dans `ref_object_relation_type`
+> - `lot1_mapping_plan.md` §1.4 : requalifications `Remise en forme` et `Divertissement` mises à jour
+> - Commit : voir git log `lot ACT`
 
 > Ce plan est **distinct du pilote Lot 1** et doit être exécuté après sa validation.
 > Aucune des 10 fiches du pilote n'est de type `ACT`.

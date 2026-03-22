@@ -890,14 +890,19 @@ $$;
 -- =====================================================
 -- Shared filter function: Returns object IDs matching filter criteria
 -- Used by list_object_resources_filtered_page, list_object_resources_filtered_since_fast, list_objects_map_view
+-- Returns label_rank alongside object_id:
+--   0 = exact granted classification match on label_scheme_ranked scheme
+--   1 = equivalent evidence (sustainability action link or accessibility amenity)
+--   Always 0 when label_scheme_ranked filter is absent.
 -- =====================================================
+DROP FUNCTION IF EXISTS api.get_filtered_object_ids(jsonb, object_type[], object_status[], text);
 CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
   p_filters JSONB,
   p_types object_type[],
   p_status object_status[],
   p_search TEXT DEFAULT NULL
 )
-RETURNS TABLE(object_id TEXT)
+RETURNS TABLE(object_id TEXT, label_rank INTEGER)
 LANGUAGE sql
 STABLE
 
@@ -964,6 +969,15 @@ AS $$
             AND COALESCE(j->>'value_code', '') <> ''
         )
       END AS classifications_any_codes,
+      -- accessibility type filters (2026-03-22)
+      -- disability_types_any: TEXT[] of canonical disability types (motor/hearing/visual/cognitive).
+      -- label_disability_types_any: TEXT[] of canonical disability types matched against LBL_TOURISME_HANDICAP subvalue_ids.
+      CASE WHEN n.filters ? 'disability_types_any'
+        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'disability_types_any'))
+      END AS disability_types_any,
+      CASE WHEN n.filters ? 'label_disability_types_any'
+        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'label_disability_types_any'))
+      END AS label_disability_types_any,
       NOT (
         n.filters ? 'amenities_all'
         OR n.filters ? 'amenity_families_any'
@@ -975,6 +989,9 @@ AS $$
         OR n.filters ? 'capacity_filters'
         OR n.filters ? 'tags_any'
         OR n.filters ? 'itinerary'
+        OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
+        OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)
+        OR n.filters ? 'label_disability_types_any' -- requires live join on object_classification.subvalue_ids
       ) AS use_mv
     FROM normalized n
   ),
@@ -1029,7 +1046,21 @@ AS $$
     ) ol ON TRUE
     WHERE NOT params.use_mv
   )
-  SELECT src.object_id
+  SELECT
+    src.object_id,
+    -- label_rank: 0 = exact granted classification, 1 = equivalent evidence.
+    -- Only meaningful when label_scheme_ranked filter is present; always 0 otherwise.
+    CASE
+      WHEN NOT (params.filters ? 'label_scheme_ranked') THEN 0
+      WHEN EXISTS (
+        SELECT 1 FROM object_classification oc
+        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+        WHERE oc.object_id = src.object_id
+          AND cs.code = params.filters->>'label_scheme_ranked'
+          AND oc.status = 'granted'
+      ) THEN 0
+      ELSE 1
+    END AS label_rank
   FROM source_rows src
   CROSS JOIN params
   WHERE (p_types IS NULL OR src.object_type = ANY(p_types))
@@ -1060,6 +1091,35 @@ AS $$
       JOIN ref_amenity ra ON ra.id = oa.amenity_id
       JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
       WHERE oa.object_id = src.object_id AND fam.code = ANY(params.amenity_families_any)
+    ))
+    -- disability_types_any: retourne les objets avec ≥1 amenity acc_* dont extra.disability_types
+    -- contient au moins une des valeurs demandées. Tableau vide → aucun effet (cardinality guard).
+    -- Bypasse le MV (use_mv = FALSE) car ref_amenity.extra n'est pas dans cached_amenity_codes.
+    AND (params.disability_types_any IS NULL OR cardinality(params.disability_types_any) = 0 OR EXISTS (
+      SELECT 1
+      FROM object_amenity oa
+      JOIN ref_amenity ra ON ra.id = oa.amenity_id
+      CROSS JOIN LATERAL jsonb_array_elements_text(
+        COALESCE(ra.extra->'disability_types', '[]'::jsonb)
+      ) AS dt(val)
+      WHERE oa.object_id = src.object_id
+        AND ra.code LIKE 'acc_%'
+        AND dt.val = ANY(params.disability_types_any)
+    ))
+    -- label_disability_types_any: retourne les objets avec un grant LBL_TOURISME_HANDICAP explicite
+    -- dont les subvalue_ids contiennent ≥1 type demandé (via ref_classification_value.metadata->>'disability_type').
+    -- Ne déduit pas depuis les amenities — requiert uniquement le label certifié avec subvalue_ids renseignés.
+    -- Tableau vide → aucun effet. Bypasse le MV (use_mv = FALSE).
+    AND (params.label_disability_types_any IS NULL OR cardinality(params.label_disability_types_any) = 0 OR EXISTS (
+      SELECT 1
+      FROM object_classification oc
+      JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+      CROSS JOIN LATERAL unnest(oc.subvalue_ids) AS sv(uid)
+      JOIN ref_classification_value cv ON cv.id = sv.uid
+      WHERE oc.object_id = src.object_id
+        AND cs.code = 'LBL_TOURISME_HANDICAP'
+        AND oc.status = 'granted'
+        AND cv.metadata->>'disability_type' = ANY(params.label_disability_types_any)
     ))
     AND (NOT (params.filters ? 'pet_accepted') OR EXISTS (
       SELECT 1 FROM object_pet_policy opp
@@ -1183,7 +1243,36 @@ AS $$
         )
       )
     ))
-    AND (NOT (params.filters ? 'open_now') OR src.cached_is_open_now = TRUE);
+    AND (NOT (params.filters ? 'open_now') OR src.cached_is_open_now = TRUE)
+    -- label_scheme_ranked: admit rank-0 (exact granted classification) and rank-1 (equivalent evidence).
+    -- rank-1a: any sustainability action whose label bridges to the requested scheme.
+    -- rank-1b: accessibility amenity family evidence (LBL_TOURISME_HANDICAP only).
+    AND (NOT (params.filters ? 'label_scheme_ranked') OR (
+      EXISTS (
+        SELECT 1 FROM object_classification oc
+        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+        WHERE oc.object_id = src.object_id
+          AND cs.code = params.filters->>'label_scheme_ranked'
+          AND oc.status = 'granted'
+      )
+      OR EXISTS (
+        SELECT 1 FROM object_sustainability_action osa
+        JOIN object_sustainability_action_label osal ON osal.object_sustainability_action_id = osa.id
+        JOIN object_classification oc2 ON oc2.id = osal.object_classification_id
+        JOIN ref_classification_scheme cs2 ON cs2.id = oc2.scheme_id
+        WHERE osa.object_id = src.object_id
+          AND cs2.code = params.filters->>'label_scheme_ranked'
+      )
+      OR (
+        (params.filters->>'label_scheme_ranked') = 'LBL_TOURISME_HANDICAP'
+        AND EXISTS (
+          SELECT 1 FROM object_amenity oa
+          JOIN ref_amenity ra ON ra.id = oa.amenity_id
+          JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+          WHERE oa.object_id = src.object_id AND fam.code = 'accessibility' -- canonical amenity family code
+        )
+      )
+    ));
 $$;
 
 -- =====================================================
@@ -1985,15 +2074,18 @@ BEGIN
   END IF;
 
   -- Amenities (enriched)
+  -- disability_types: sourced from ref_amenity.extra->'disability_types' (acc_* codes only).
+  -- Null for non-accessibility amenities — intentional; consumers treat absence as "not typed".
   IF v_fields IS NULL OR 'amenities' = ANY(v_fields) THEN
     js := js || jsonb_build_object(
       'amenities',
       COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
-                 'code',     ra.code,
-                 'name',     COALESCE(api.i18n_pick_strict(ra.name_i18n, lang, 'fr'), ra.name),
-                 'icon_url', ra.icon_url,
+                 'code',             ra.code,
+                 'name',             COALESCE(api.i18n_pick_strict(ra.name_i18n, lang, 'fr'), ra.name),
+                 'icon_url',         ra.icon_url,
+                 'disability_types', ra.extra->'disability_types',
                  'family', jsonb_build_object(
                    'code',     rf.code,
                    'name',     COALESCE(api.i18n_pick_strict(rf.name_i18n, lang, 'fr'), rf.name),
@@ -2109,19 +2201,31 @@ BEGIN
   END IF;
 
   -- Classifications (enriched)
+  -- disability_types_covered: for LBL_TOURISME_HANDICAP rows only, resolves object_classification.subvalue_ids
+  -- to disability type strings via ref_classification_value.metadata->>'disability_type'.
+  -- Returns '[]' for all other schemes and for LBL_TOURISME_HANDICAP rows with no subvalue_ids populated.
   IF v_fields IS NULL OR 'classifications' = ANY(v_fields) THEN
     js := js || jsonb_build_object(
       'classifications',
       COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object(
-                 'scheme',      (SELECT code FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
-                 'scheme_name', (SELECT name FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
-                 'value',       (SELECT code FROM ref_classification_value  v WHERE v.id = oc.value_id),
-                 'value_name',  (SELECT name FROM ref_classification_value  v WHERE v.id = oc.value_id),
-                 'awarded_at',  oc.awarded_at,
-                 'valid_until', oc.valid_until,
-                 'status',      oc.status
+                 'scheme',                  (SELECT code FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
+                 'scheme_name',             (SELECT name FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
+                 'value',                   (SELECT code FROM ref_classification_value  v WHERE v.id = oc.value_id),
+                 'value_name',              (SELECT name FROM ref_classification_value  v WHERE v.id = oc.value_id),
+                 'awarded_at',              oc.awarded_at,
+                 'valid_until',             oc.valid_until,
+                 'status',                  oc.status,
+                 'disability_types_covered', COALESCE((
+                   SELECT jsonb_agg(cv2.metadata->>'disability_type' ORDER BY cv2.position NULLS LAST)
+                   FROM ref_classification_scheme s2
+                   CROSS JOIN unnest(oc.subvalue_ids) AS sv(uid)
+                   JOIN ref_classification_value cv2 ON cv2.id = sv.uid
+                   WHERE s2.id = oc.scheme_id
+                     AND s2.code = 'LBL_TOURISME_HANDICAP'
+                     AND cv2.metadata->>'disability_type' IS NOT NULL
+                 ), '[]'::jsonb)
                )
                ORDER BY
                  (SELECT code FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
@@ -4343,18 +4447,20 @@ BEGIN
                                 ELSE split_part(v_render_locale, '-', 1) END);
 
   WITH filt AS (
-    SELECT 
-      o.id, 
-      o.name_normalized, 
-      o.updated_at, 
-      o.updated_at_source
+    SELECT
+      o.id,
+      o.name_normalized,
+      o.updated_at,
+      o.updated_at_source,
+      -- label_rank: 0 = exact label, 1 = equivalent evidence; always 0 when no label_scheme_ranked filter
+      fids.label_rank
     FROM api.get_filtered_object_ids(v_filters, v_types, v_status, v_search) fids
     JOIN object o ON o.id = fids.object_id
   ),
   paged AS (
-    SELECT f.*, ROW_NUMBER() OVER (ORDER BY f.name_normalized NULLS LAST, f.id) AS ord
+    SELECT f.*, ROW_NUMBER() OVER (ORDER BY f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
     FROM filt f
-    ORDER BY f.name_normalized NULLS LAST, f.id
+    ORDER BY f.label_rank, f.name_normalized NULLS LAST, f.id
     OFFSET v_offset LIMIT v_limit
   )
   SELECT
@@ -4970,7 +5076,7 @@ BEGIN
     WHERE aor.object_id = p_object_id
     GROUP BY a.id, a.display_name, a.first_name, a.last_name, a.gender,
              aor.role_id, rar.name, rar.code, aor.is_primary,
-             aor.valid_from, aor.valid_to, aor.visibility, aor.note
+             aor.valid_from, aor.valid_to, aor.visibility, aor.note, aor.created_at
     ORDER BY aor.is_primary DESC, aor.created_at
   )
   SELECT COALESCE(jsonb_agg(
@@ -5055,7 +5161,7 @@ BEGIN
     LEFT JOIN ref_contact_role rcr ON rcr.id = cc.role_id
     WHERE ool.object_id = p_object_id
     GROUP BY o.id, o.object_type, o.name, o.status,
-             ool.role_id, ror.name, ror.code, ool.note
+             ool.role_id, ror.name, ror.code, ool.note, ool.is_primary, ool.created_at
     ORDER BY ool.is_primary DESC, ool.created_at
   )
   SELECT COALESCE(jsonb_agg(
@@ -6083,7 +6189,7 @@ BEGIN
   -- Return as FeatureCollection
   RETURN json_build_object(
     'type', 'FeatureCollection',
-    'features', json_build_array(v_track) || v_stages::jsonb
+    'features', json_build_array(v_track)::jsonb || v_stages::jsonb
   );
 END;
 $$;
@@ -7152,11 +7258,19 @@ BEGIN
     ),
 
     -- Accessibility labels (tourisme & handicap classifications)
+    -- disability_types: resolves subvalue_ids to disability type strings (motor/hearing/visual/cognitive).
+    -- Returns [] if the grant has no subvalue_ids (label awarded without per-type breakdown).
     'accessibility_labels', COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
-          'code',  cv.code,
-          'label', COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name)
+          'code',             cv.code,
+          'label',            COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name),
+          'disability_types', COALESCE((
+            SELECT jsonb_agg(cv2.metadata->>'disability_type' ORDER BY cv2.position NULLS LAST)
+            FROM unnest(oc.subvalue_ids) AS sv(uid)
+            JOIN ref_classification_value cv2 ON cv2.id = sv.uid
+            WHERE cv2.metadata->>'disability_type' IS NOT NULL
+          ), '[]'::jsonb)
         )
         ORDER BY cv.position NULLS LAST, cv.code
       )
@@ -7164,8 +7278,24 @@ BEGIN
       JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
       JOIN ref_classification_value  cv ON cv.id = oc.value_id
       WHERE oc.object_id = o.id
-        AND cs.code = 'tourisme_handicap'
+        AND cs.code = 'LBL_TOURISME_HANDICAP'
         AND oc.status = 'granted'
+    ), '[]'::jsonb),
+
+    -- Accessibility amenity coverage: distinct disability types inferred from acc_* amenities present
+    -- on the object. Populated from ref_amenity.extra->'disability_types' for each acc_* code.
+    -- Non-empty even without a T&H label — useful for discovery and partial-accessibility display.
+    'accessibility_amenity_coverage', COALESCE((
+      SELECT jsonb_agg(dt_val ORDER BY dt_val)
+      FROM (
+        SELECT DISTINCT jsonb_array_elements_text(
+          COALESCE(ra2.extra->'disability_types', '[]'::jsonb)
+        ) AS dt_val
+        FROM object_amenity oa2
+        JOIN ref_amenity ra2 ON ra2.id = oa2.amenity_id
+        WHERE oa2.object_id = o.id
+          AND ra2.code LIKE 'acc_%'
+      ) AS coverage
     ), '[]'::jsonb),
 
     'updated_at', o.updated_at
@@ -7188,7 +7318,7 @@ $$;
 COMMENT ON FUNCTION api.get_object_resource_adapted IS
 'FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
 description_adapted preferred over regular description, essential location,
-primary phone/email contacts, main image, and tourisme_handicap accessibility labels.';
+primary phone/email contacts, main image, and LBL_TOURISME_HANDICAP accessibility labels (V5 canonical code).';
 
 -- Batch wrapper
 DROP FUNCTION IF EXISTS api.get_object_cards_adapted_batch(text[], text[]);

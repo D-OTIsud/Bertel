@@ -6,11 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { env } from '../lib/env';
-import { loginSchema, type LoginFormValues } from '../lib/schemas';
-import { signInWithGoogle } from '../services/auth';
+import { loginEmailSchema, type LoginFormValues } from '../lib/schemas';
+import { signInWithGoogle, signInWithEmailPassword } from '../services/auth';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,8 +25,13 @@ export default function LoginPage() {
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
 
   const [submitting, setSubmitting] = useState(false);
-  useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginEmailSchema),
     defaultValues: { email: '', password: '' },
   });
 
@@ -45,7 +51,22 @@ export default function LoginPage() {
 
   if (status === 'ready') return null;
 
+  async function onEmailSubmit(values: LoginFormValues) {
+    setSubmitting(true);
+    try {
+      await signInWithEmailPassword(values.email, values.password);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleGoogleLogin() {
+    const from = searchParams?.get('from');
+    if (from && typeof window !== 'undefined') {
+      sessionStorage.setItem('auth_redirect_from', from);
+    }
     setSubmitting(true);
     try {
       await signInWithGoogle();
@@ -77,6 +98,46 @@ export default function LoginPage() {
 
         {!demoMode ? (
           <>
+            <form onSubmit={handleSubmit(onEmailSubmit)} className="stack-list" noValidate>
+              <div>
+                <label htmlFor="login-email" className="sr-only">
+                  Email
+                </label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="Email"
+                  autoComplete="email"
+                  disabled={submitting}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="login-password" className="sr-only">
+                  Mot de passe
+                </label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  placeholder="Mot de passe"
+                  autoComplete="current-password"
+                  disabled={submitting}
+                  {...register('password')}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? 'Connexion...' : 'Se connecter'}
+              </Button>
+            </form>
+
+            <p className="auth-divider">ou</p>
+
             <Button
               type="button"
               className="auth-google-button w-full"
@@ -85,6 +146,7 @@ export default function LoginPage() {
             >
               {submitting ? 'Redirection Google...' : 'Continuer avec Google'}
             </Button>
+
             <p className="auth-note">
               Assurez-vous que le provider Google est actif dans Supabase Auth et que l URL de redirection de cette application est autorisee.
             </p>

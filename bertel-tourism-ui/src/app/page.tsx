@@ -34,6 +34,13 @@ export default function HomePage() {
       return;
     }
     if (status === 'ready') {
+      const from =
+        typeof window !== 'undefined' ? sessionStorage.getItem('auth_redirect_from') : null;
+      if (from && from.startsWith('/') && !from.startsWith('//')) {
+        sessionStorage.removeItem('auth_redirect_from');
+        router.replace(from);
+        return;
+      }
       router.replace(role === 'owner' ? '/dashboard' : '/explorer');
     }
   }, [status, role, router]);

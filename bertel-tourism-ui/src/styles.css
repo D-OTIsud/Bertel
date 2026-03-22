@@ -1408,6 +1408,13 @@ a {
   width: 100%;
 }
 
+.auth-divider {
+  text-align: center;
+  margin: 1rem 0;
+  color: var(--muted-foreground, #6b7280);
+  font-size: 0.875rem;
+}
+
 .quick-list {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }

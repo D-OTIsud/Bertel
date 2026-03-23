@@ -5164,6 +5164,111 @@ CREATE TRIGGER update_org_config_updated_at
 -- End of Phase 1 — Fondation du modèle d'accès
 -- =====================================================
 
+
+-- =====================================================
+-- Phase 2 — Auto-rattachement ORG ↔ objet à la création
+-- Implémente l'invariant §2.2 du document maître :
+-- "Quand un user d'une ORG crée un objet, cet objet est automatiquement
+-- rattaché à l'ORG du user comme publisher principal (is_primary = TRUE)."
+-- Référence : access_control_master_plan.md §2.2
+--
+-- Source de vérité : NEW.created_by → user_org_membership (pas auth.uid()).
+-- Ce choix rend le trigger robuste hors contexte JWT :
+-- imports, RPCs backend, service_role, scripts de migration.
+--
+-- Cas où le trigger ne fait rien (skip silencieux — jamais d'exception) :
+--   1. created_by IS NULL      → import / seed / service_role sans créateur identifié
+--   2. object_type = 'ORG'    → une ORG ne s'auto-rattache pas à une ORG
+--   3. 0 membership actif      → owner/super_admin hors ORG, ou user en onboarding
+--   4. > 1 membership actif    → owner multi-ORG : ORG cible ambiguë, skip sans erreur
+--   5. role 'publisher' absent → env sans seeds, test isolé — ne doit pas bloquer
+--   6. primary déjà existante  → edge case défensif sur uq_object_primary_org
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION api.auto_attach_object_to_creator_org()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_org_object_id     TEXT;
+  v_publisher_role_id UUID;
+  v_membership_count  INTEGER;
+BEGIN
+  -- 1. Pas de créateur identifié : import, seed, service_role, migration
+  IF NEW.created_by IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- 2. Une ORG ne s'auto-rattache pas à elle-même
+  IF NEW.object_type = 'ORG' THEN
+    RETURN NEW;
+  END IF;
+
+  -- 3. Résoudre le rôle 'publisher' dans ref_org_role (via code, pas UUID codé en dur)
+  SELECT id INTO v_publisher_role_id
+  FROM ref_org_role
+  WHERE code = 'publisher';
+
+  IF v_publisher_role_id IS NULL THEN
+    -- ref_org_role pas encore seedée (env de test isolé, CI sans seeds) : skip
+    RETURN NEW;
+  END IF;
+
+  -- 4. Compter les memberships actifs du créateur
+  --    On lit user_org_membership directement via created_by pour ne pas dépendre du JWT.
+  SELECT COUNT(*) INTO v_membership_count
+  FROM user_org_membership
+  WHERE user_id   = NEW.created_by
+    AND is_active = TRUE;
+
+  IF v_membership_count = 0 THEN
+    -- Créateur sans ORG active (owner/super_admin non rattaché, user en onboarding)
+    RETURN NEW;
+  END IF;
+
+  IF v_membership_count > 1 THEN
+    -- Owner/super_admin multi-ORG : cas ambigu, on ne devine pas l'ORG cible
+    -- La contrainte enforce_single_active_org_membership ne s'applique pas aux owners.
+    RETURN NEW;
+  END IF;
+
+  -- 5. Récupérer l'unique ORG active du créateur
+  SELECT org_object_id INTO v_org_object_id
+  FROM user_org_membership
+  WHERE user_id   = NEW.created_by
+    AND is_active = TRUE;
+
+  -- 6. Si un lien primary existe déjà pour cet objet (edge case défensif),
+  --    ne pas tenter d'insérer is_primary = TRUE — évite un conflit sur uq_object_primary_org.
+  IF EXISTS (
+    SELECT 1 FROM object_org_link
+    WHERE object_id = NEW.id AND is_primary = TRUE
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  -- 7. Insérer le rattachement publisher principal.
+  --    ON CONFLICT DO NOTHING : idempotent sur la PK (object_id, org_object_id, role_id).
+  INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, created_at, updated_at)
+  VALUES (NEW.id, v_org_object_id, v_publisher_role_id, TRUE, NOW(), NOW())
+  ON CONFLICT (object_id, org_object_id, role_id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_auto_attach_object_to_creator_org ON object;
+CREATE TRIGGER trg_auto_attach_object_to_creator_org
+  AFTER INSERT ON object
+  FOR EACH ROW EXECUTE FUNCTION api.auto_attach_object_to_creator_org();
+
+
+-- =====================================================
+-- End of Phase 2 — Auto-rattachement ORG ↔ objet
+-- =====================================================
+
 -- Run audit attachment after all table creations (including late sections).
 SELECT audit.attach_missing_triggers();
 

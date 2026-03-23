@@ -5269,6 +5269,135 @@ CREATE TRIGGER trg_auto_attach_object_to_creator_org
 -- End of Phase 2 — Auto-rattachement ORG ↔ objet
 -- =====================================================
 
+
+-- =====================================================
+-- Phase 4 — Niveau 2 des permissions
+-- Référence : access_control_master_plan.md §7 Phase 4
+-- Périmètre : ref_permission, org_permission, user_permission.
+-- Hors périmètre : exceptions Niveau 3, groupes, permissions de champ.
+-- =====================================================
+-- Principe clé : les permissions sont orthogonales aux rôles.
+--   - Un rôle métier ou admin ne confère AUCUNE permission implicite (§2.6 du plan).
+--   - Toute permission doit être accordée explicitement via org_permission ou user_permission.
+--   - user_permission est additive : un user peut avoir une permission que son ORG n'a pas (§2.4).
+-- =====================================================
+
+-- -----------------------------------------------------
+-- 1. ref_permission — Catalogue des permissions d'action (Niveau 2, V1)
+-- Chaque code représente une action accordable/révocable de façon explicite.
+-- category : domaine fonctionnel (content / crm / team / media).
+-- TEXT + CHECK préféré à ENUM pour la compatibilité migration (pattern établi Phase 1).
+-- is_active : désactivation sans suppression du catalogue.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_permission (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(100) NOT NULL UNIQUE,
+  name        VARCHAR(200) NOT NULL,
+  -- content, crm, team, media — TEXT + CHECK pour éviter ALTER TYPE en migration future
+  category    TEXT         NOT NULL CHECK (category IN ('content', 'crm', 'team', 'media')),
+  description TEXT,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS update_ref_permission_updated_at ON ref_permission;
+CREATE TRIGGER update_ref_permission_updated_at
+  BEFORE UPDATE ON ref_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- -----------------------------------------------------
+-- 2. org_permission — Permissions accordées à une ORG entière
+-- Une permission ORG est héritée par tous les membres actifs de l'ORG.
+-- Elle s'inscrit dans le périmètre Niveau 1 sans l'étendre.
+-- Contrainte (org_object_id, permission_id) UNIQUE : une ligne par couple.
+-- is_active : soft revoke — préserve la traçabilité (granted_by / granted_at).
+-- org_object_id pointe vers un object.type = 'ORG' (vérification applicative dans les RPC).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS org_permission (
+  id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_object_id  TEXT        NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  permission_id  UUID        NOT NULL REFERENCES ref_permission(id) ON DELETE CASCADE,
+  is_active      BOOLEAN     NOT NULL DEFAULT TRUE,
+  granted_by     UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  granted_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_org_permission UNIQUE (org_object_id, permission_id)
+);
+
+-- Index filtré actifs : chemin chaud dans api.user_has_permission() (chemin 2 — héritage ORG)
+CREATE INDEX IF NOT EXISTS idx_org_permission_active
+  ON org_permission (org_object_id, permission_id)
+  WHERE is_active = TRUE;
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+-- Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+-- le trigger est la solution correcte (même pattern que check_membership_org_type
+-- et check_org_config_org_type).
+CREATE OR REPLACE FUNCTION api.check_org_permission_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'org_permission.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_org_permission_org_type ON org_permission;
+CREATE TRIGGER check_org_permission_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON org_permission
+  FOR EACH ROW EXECUTE FUNCTION api.check_org_permission_org_type();
+
+DROP TRIGGER IF EXISTS update_org_permission_updated_at ON org_permission;
+CREATE TRIGGER update_org_permission_updated_at
+  BEFORE UPDATE ON org_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- -----------------------------------------------------
+-- 3. user_permission — Permissions additives accordées à un user précis
+-- Additive (§2.4) : un user peut avoir une permission que son ORG n'a pas globalement.
+-- Contrainte (user_id, permission_id) UNIQUE : une ligne par couple.
+-- is_active : soft revoke — préserve la traçabilité.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_permission (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  permission_id UUID        NOT NULL REFERENCES ref_permission(id) ON DELETE CASCADE,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  granted_by    UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  granted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_user_permission UNIQUE (user_id, permission_id)
+);
+
+-- Index filtré actifs : chemin chaud dans api.user_has_permission() (chemin 1 — permission directe)
+CREATE INDEX IF NOT EXISTS idx_user_permission_active
+  ON user_permission (user_id, permission_id)
+  WHERE is_active = TRUE;
+
+DROP TRIGGER IF EXISTS update_user_permission_updated_at ON user_permission;
+CREATE TRIGGER update_user_permission_updated_at
+  BEFORE UPDATE ON user_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- End of Phase 4 — Niveau 2 des permissions
+-- =====================================================
+
 -- Run audit attachment after all table creations (including late sections).
 SELECT audit.attach_missing_triggers();
 

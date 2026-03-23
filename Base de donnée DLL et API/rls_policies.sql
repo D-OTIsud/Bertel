@@ -1460,3 +1460,1185 @@ CREATE POLICY "admin_audit_session" ON audit_session
 DROP POLICY IF EXISTS "admin_audit_result" ON audit_result;
 CREATE POLICY "admin_audit_result" ON audit_result
   FOR ALL USING (auth.role() IN ('service_role','admin'));
+
+-- =====================================================
+-- Phase 3a — RLS des tables Phase 1 (membership / rôles / org_config)
+-- Référence : access_control_master_plan.md §7 Phase 3a
+-- =====================================================
+-- Périmètre couvert : 6 tables créées en Phase 1.
+-- Les écritures sensibles sont bloquées par les policies et routées
+-- vers les RPC SECURITY DEFINER définies en Phase 3b ci-dessous.
+-- =====================================================
+
+-- === Activation RLS sur les 6 tables Phase 1 ===
+ALTER TABLE ref_org_business_role  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ref_org_admin_role     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_org_membership    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_org_business_role ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_org_admin_role    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_config             ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- Helper : autorité plateforme (owner OU super_admin)
+-- Distinct de api.is_platform_owner() qui ne couvre que 'owner'.
+-- Utilisé pour les opérations réservées à l'autorité plateforme :
+--   - écriture sur org_config.access_scope (§2.8 du plan maître)
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.is_platform_superuser()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    -- Rôle Supabase interne (service_role, postgres admin)
+    auth.role() IN ('service_role', 'admin')
+    OR EXISTS (
+      SELECT 1
+      FROM app_user_profile p
+      WHERE p.id   = auth.uid()
+        AND p.role IN ('owner', 'super_admin')
+    );
+$$;
+
+-- =====================================================
+-- 1. ref_org_business_role — catalogue des rôles métier ORG
+-- Lecture : authentifié uniquement (pas de lecture anonyme)
+-- Écriture : admin plateforme / migration uniquement
+-- =====================================================
+DROP POLICY IF EXISTS "authed_ref_org_business_role_read"  ON ref_org_business_role;
+CREATE POLICY "authed_ref_org_business_role_read" ON ref_org_business_role
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    OR auth.role() IN ('service_role', 'admin')
+  );
+
+DROP POLICY IF EXISTS "admin_ref_org_business_role_write"  ON ref_org_business_role;
+CREATE POLICY "admin_ref_org_business_role_write" ON ref_org_business_role
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- 2. ref_org_admin_role — catalogue des rôles admin ORG
+-- Même règle : lecture authentifiée, écriture admin plateforme.
+-- =====================================================
+DROP POLICY IF EXISTS "authed_ref_org_admin_role_read"  ON ref_org_admin_role;
+CREATE POLICY "authed_ref_org_admin_role_read" ON ref_org_admin_role
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    OR auth.role() IN ('service_role', 'admin')
+  );
+
+DROP POLICY IF EXISTS "admin_ref_org_admin_role_write"  ON ref_org_admin_role;
+CREATE POLICY "admin_ref_org_admin_role_write" ON ref_org_admin_role
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- 3. user_org_membership — table de membership user ↔ ORG
+--
+-- Lecture :
+--   - Superusers (owner / super_admin / service_role) : lecture globale,
+--     toutes lignes y compris historiques (is_active = FALSE).
+--   - Membres ORG normaux : lignes ACTIVES uniquement de leur propre ORG.
+--     (user_id = auth.uid() OU même ORG via current_user_org_id())
+--   Note : current_user_org_id() est SECURITY DEFINER → bypass RLS,
+--   pas de récursion infinie.
+--
+-- Écriture — bloquée pour les utilisateurs normaux.
+--   Toute création/modification passe par les RPC dédiées :
+--   rpc_upsert_membership / rpc_deactivate_membership.
+-- =====================================================
+DROP POLICY IF EXISTS "member_user_org_membership_read"  ON user_org_membership;
+CREATE POLICY "member_user_org_membership_read" ON user_org_membership
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale (actif + historique)
+    api.is_platform_superuser()
+    -- Membres ORG : lignes actives uniquement de leur équipe
+    OR (
+      is_active = TRUE
+      AND (user_id = auth.uid() OR org_object_id = api.current_user_org_id())
+    )
+  );
+
+-- Écriture directe : réservée au rôle interne plateforme.
+-- Toute opération métier passe par les RPC Phase 3b.
+DROP POLICY IF EXISTS "admin_user_org_membership_write"  ON user_org_membership;
+CREATE POLICY "admin_user_org_membership_write" ON user_org_membership
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- 4. user_org_business_role — affectations de rôle métier
+--
+-- Lecture :
+--   - Superusers : lecture globale (actif + historique).
+--   - Membres ORG normaux : rôles ACTIFS uniquement, liés à un
+--     membership ACTIF de leur ORG (double filtre is_active).
+--
+-- Écriture — bloquée ; passe par rpc_set_business_role.
+-- =====================================================
+DROP POLICY IF EXISTS "member_user_org_business_role_read"  ON user_org_business_role;
+CREATE POLICY "member_user_org_business_role_read" ON user_org_business_role
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale (actif + historique)
+    api.is_platform_superuser()
+    -- Membres ORG : rôles actifs sur memberships actifs de la même ORG
+    OR (
+      is_active = TRUE
+      AND EXISTS (
+        SELECT 1
+        FROM user_org_membership m
+        WHERE m.id            = user_org_business_role.membership_id
+          AND m.is_active     = TRUE
+          AND (m.user_id = auth.uid() OR m.org_object_id = api.current_user_org_id())
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_user_org_business_role_write"  ON user_org_business_role;
+CREATE POLICY "admin_user_org_business_role_write" ON user_org_business_role
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- 5. user_org_admin_role — affectations de rôle admin ORG
+--
+-- Lecture :
+--   - Superusers : lecture globale (actif + historique).
+--   - Membres ORG normaux : rôles admin ACTIFS uniquement, liés à un
+--     membership ACTIF de leur ORG (double filtre is_active).
+--
+-- Écriture — bloquée ; passe par rpc_set_admin_role / rpc_revoke_admin_role.
+-- L'anti auto-élévation et la comparaison des rangs sont centralisées
+-- dans les RPC (cf. §2.6 du plan maître).
+-- =====================================================
+DROP POLICY IF EXISTS "member_user_org_admin_role_read"  ON user_org_admin_role;
+CREATE POLICY "member_user_org_admin_role_read" ON user_org_admin_role
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale (actif + historique)
+    api.is_platform_superuser()
+    -- Membres ORG : rôles admin actifs sur memberships actifs de la même ORG
+    OR (
+      is_active = TRUE
+      AND EXISTS (
+        SELECT 1
+        FROM user_org_membership m
+        WHERE m.id            = user_org_admin_role.membership_id
+          AND m.is_active     = TRUE
+          AND (m.user_id = auth.uid() OR m.org_object_id = api.current_user_org_id())
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_user_org_admin_role_write"  ON user_org_admin_role;
+CREATE POLICY "admin_user_org_admin_role_write" ON user_org_admin_role
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- 6. org_config — configuration de scope de l'ORG (Niveau 1)
+--
+-- Lecture :
+--   - Superusers (owner / super_admin / service_role) : lecture globale.
+--   - Membres actifs de l'ORG : lecture de la config de leur propre ORG.
+--     Filtre explicite sur m.is_active = TRUE (pas de raccourci
+--     via current_user_org_id() pour éviter un faux positif inter-ORG).
+--
+-- Écriture — super_admin / platform_owner UNIQUEMENT (§2.8).
+--   Un admin ORG local NE PEUT PAS modifier org_config.access_scope.
+--   Ce choix est structurant : le scope est un acte de gouvernance
+--   des données, pas d'administration locale.
+-- =====================================================
+DROP POLICY IF EXISTS "member_org_config_read"  ON org_config;
+CREATE POLICY "member_org_config_read" ON org_config
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale
+    api.is_platform_superuser()
+    -- Membres actifs de l'ORG : lecture de leur propre config
+    OR EXISTS (
+      SELECT 1
+      FROM user_org_membership m
+      WHERE m.org_object_id = org_config.org_object_id
+        AND m.user_id       = auth.uid()
+        AND m.is_active     = TRUE
+    )
+  );
+
+-- Écriture réservée à l'autorité plateforme (§2.8 du plan maître).
+-- api.is_platform_superuser() couvre owner, super_admin, service_role.
+-- WITH CHECK explicite : s'applique aussi aux INSERT (pas seulement UPDATE/DELETE).
+DROP POLICY IF EXISTS "superuser_org_config_write"  ON org_config;
+CREATE POLICY "superuser_org_config_write" ON org_config
+  FOR ALL
+  USING     (api.is_platform_superuser())
+  WITH CHECK (api.is_platform_superuser());
+
+-- =====================================================
+-- Phase 3b — RPC SECURITY DEFINER pour les écritures sensibles
+-- Référence : access_control_master_plan.md §7 Phase 3b
+-- =====================================================
+-- Principe :
+--   - La table RLS bloque les écritures directes des utilisateurs normaux.
+--   - Ces fonctions SECURITY DEFINER (run as postgres, bypass RLS) portent
+--     toute la logique d'autorisation : anti-self, rangs, anti-élévation.
+--   - Toutes les fonctions retournent des erreurs explicites avec un code
+--     préfixé (SELF_ACTION_FORBIDDEN, FORBIDDEN, RANK_VIOLATION, etc.)
+--     pour faciliter le débogage côté frontend.
+--
+-- Fonctions :
+--   rpc_upsert_membership      — crée ou réactive un membership + rôle métier initial
+--   rpc_deactivate_membership  — désactive un membership et ses rôles en cascade
+--   rpc_set_business_role      — change le rôle métier d'un membre
+--   rpc_set_admin_role         — attribue/change le rôle admin (anti-élévation stricte)
+--   rpc_revoke_admin_role      — retire le rôle admin (gestion vers le bas seulement)
+-- =====================================================
+
+-- -------------------------------------------------------
+-- rpc_upsert_membership
+-- Crée un membership (+ rôle métier initial) ou réactive un membership inactif.
+-- Autorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.
+-- Anti-self : un admin ne peut pas s'ajouter lui-même.
+-- Invariant §2.5 : le rôle métier est obligatoire — toujours fourni à la création.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_upsert_membership(
+  p_target_user_id    uuid,
+  p_org_object_id     text,
+  p_business_role_code text
+)
+RETURNS uuid   -- membership_id créé ou réactivé
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id          uuid    := auth.uid();
+  v_caller_rank        integer;
+  v_membership_id      uuid;
+  v_existing_id        uuid;
+  v_business_role_id   uuid;
+BEGIN
+  -- 1. Anti-self (§2.6)
+  IF p_target_user_id = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: un administrateur ne peut pas gérer son propre membership';
+  END IF;
+
+  -- 2. Autorisation appelant
+  IF api.is_platform_superuser() THEN
+    v_caller_rank := 999;
+  ELSE
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = p_org_object_id
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+    IF v_caller_rank < 20 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 20 (org_manager) pour créer un membership';
+    END IF;
+  END IF;
+
+  -- 3. Validation du rôle métier initial (obligatoire — §2.5)
+  SELECT id INTO v_business_role_id
+  FROM ref_org_business_role WHERE code = p_business_role_code;
+  IF v_business_role_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_ROLE: code rôle métier inconnu : %', p_business_role_code;
+  END IF;
+
+  -- 4. Réactivation si un membership inactif existe déjà pour cette paire (user, org)
+  SELECT id INTO v_existing_id
+  FROM user_org_membership
+  WHERE user_id       = p_target_user_id
+    AND org_object_id = p_org_object_id;
+
+  IF v_existing_id IS NOT NULL THEN
+    -- Réactivation : mettre à jour activated_at + effacer deactivated_at.
+    -- invited_by / invited_at conservés depuis l'invitation d'origine.
+    UPDATE user_org_membership
+       SET is_active      = TRUE,
+           activated_at   = NOW(),
+           deactivated_at = NULL,
+           updated_at     = NOW()
+     WHERE id = v_existing_id;
+    v_membership_id := v_existing_id;
+  ELSE
+    -- Création : le trigger enforce_single_active_org_membership protège la contrainte
+    INSERT INTO user_org_membership (
+      user_id, org_object_id, is_active,
+      invited_by, invited_at, activated_at, deactivated_at,
+      created_at, updated_at
+    )
+    VALUES (
+      p_target_user_id, p_org_object_id, TRUE,
+      v_caller_id, NOW(), NOW(), NULL,
+      NOW(), NOW()
+    )
+    RETURNING id INTO v_membership_id;
+  END IF;
+
+  -- 5. Rotation du rôle métier : désactiver l'actuel puis créer le nouveau
+  UPDATE user_org_business_role
+     SET is_active  = FALSE,
+         updated_at = NOW()
+   WHERE membership_id = v_membership_id
+     AND is_active     = TRUE;
+
+  INSERT INTO user_org_business_role (
+    membership_id, role_id, is_active,
+    assigned_by, assigned_at, created_at, updated_at
+  )
+  VALUES (
+    v_membership_id, v_business_role_id, TRUE,
+    v_caller_id, NOW(), NOW(), NOW()
+  );
+
+  RETURN v_membership_id;
+END;
+$$;
+
+-- -------------------------------------------------------
+-- rpc_deactivate_membership
+-- Désactive un membership et ses rôles (métier + admin) en cascade.
+-- Autorisation : org_admin (rank ≥ 30) de l'ORG cible, ou super_admin.
+-- Anti-self : un admin ne peut pas désactiver son propre membership.
+-- Rang : la cible doit avoir un rang admin strictement inférieur à l'appelant (§2.6).
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_deactivate_membership(
+  p_membership_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id    uuid := auth.uid();
+  v_caller_rank  integer;
+  v_target_user  uuid;
+  v_target_org   text;
+  v_target_rank  integer;
+BEGIN
+  -- Récupérer les infos du membership cible
+  SELECT user_id, org_object_id
+    INTO v_target_user, v_target_org
+  FROM user_org_membership
+  WHERE id = p_membership_id AND is_active = TRUE;
+
+  IF v_target_user IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: membership introuvable ou déjà inactif';
+  END IF;
+
+  -- Anti-self (§2.6)
+  IF v_target_user = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: impossible de désactiver son propre membership';
+  END IF;
+
+  -- Autorisation appelant
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+    IF v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 (org_admin) pour désactiver un membership';
+    END IF;
+
+    -- Rang de la cible si elle a un rôle admin
+    SELECT r.rank INTO v_target_rank
+    FROM user_org_admin_role uar
+    JOIN ref_org_admin_role r ON r.id = uar.role_id
+    WHERE uar.membership_id = p_membership_id AND uar.is_active = TRUE;
+
+    -- Pas de retrait latéral (§2.6) : rang cible doit être < rang appelant
+    IF v_target_rank IS NOT NULL AND v_target_rank >= v_caller_rank THEN
+      RAISE EXCEPTION 'RANK_VIOLATION: impossible de désactiver un membre de rang (%) ≥ au vôtre (%) (§2.6)',
+        v_target_rank, v_caller_rank;
+    END IF;
+  END IF;
+
+  -- Désactivation en cascade : rôles d'abord, membership ensuite
+  UPDATE user_org_business_role
+     SET is_active = FALSE, updated_at = NOW()
+   WHERE membership_id = p_membership_id AND is_active = TRUE;
+
+  UPDATE user_org_admin_role
+     SET is_active = FALSE, updated_at = NOW()
+   WHERE membership_id = p_membership_id AND is_active = TRUE;
+
+  UPDATE user_org_membership
+     SET is_active      = FALSE,
+         deactivated_at = NOW(),
+         updated_at     = NOW()
+   WHERE id = p_membership_id;
+END;
+$$;
+
+-- -------------------------------------------------------
+-- rpc_set_business_role
+-- Remplace le rôle métier actif d'un membre (rotation : désactiver + créer).
+-- Autorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.
+-- Anti-self : un admin ne peut pas modifier son propre rôle métier.
+-- Note : les rôles métier n'ont pas de hiérarchie de rang propre ;
+--        le guard porte sur le rang admin de l'appelant uniquement.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_set_business_role(
+  p_membership_id uuid,
+  p_role_code     text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id   uuid := auth.uid();
+  v_caller_rank integer;
+  v_target_user uuid;
+  v_target_org  text;
+  v_role_id     uuid;
+BEGIN
+  SELECT user_id, org_object_id
+    INTO v_target_user, v_target_org
+  FROM user_org_membership
+  WHERE id = p_membership_id AND is_active = TRUE;
+
+  IF v_target_user IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: membership introuvable ou inactif';
+  END IF;
+
+  -- Anti-self (§2.6)
+  IF v_target_user = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: impossible de modifier son propre rôle métier';
+  END IF;
+
+  -- Autorisation
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL OR v_caller_rank < 20 THEN
+      RAISE EXCEPTION 'FORBIDDEN: rang minimum requis 20 (org_manager) pour modifier un rôle métier';
+    END IF;
+  END IF;
+
+  -- Validation du rôle cible
+  SELECT id INTO v_role_id FROM ref_org_business_role WHERE code = p_role_code;
+  IF v_role_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_ROLE: code rôle métier inconnu : %', p_role_code;
+  END IF;
+
+  -- Rotation
+  UPDATE user_org_business_role
+     SET is_active = FALSE, updated_at = NOW()
+   WHERE membership_id = p_membership_id AND is_active = TRUE;
+
+  INSERT INTO user_org_business_role (
+    membership_id, role_id, is_active,
+    assigned_by, assigned_at, created_at, updated_at
+  )
+  VALUES (
+    p_membership_id, v_role_id, TRUE,
+    v_caller_id, NOW(), NOW(), NOW()
+  );
+END;
+$$;
+
+-- -------------------------------------------------------
+-- rpc_set_admin_role
+-- Attribue ou remplace le rôle admin d'un membre.
+-- Autorisation : org_admin (rank 30) de l'ORG cible, ou super_admin.
+-- Anti-self (§2.6) : auto-attribution interdite.
+-- Gestion vers le bas seulement (§2.6) :
+--   - nouveau rang cible < rang appelant
+--   - rang actuel cible (si admin) < rang appelant
+-- Invariant §2.5 : le membre doit avoir un rôle métier actif avant
+--   de recevoir un rôle admin ("pas d'admin sans métier").
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_set_admin_role(
+  p_membership_id uuid,
+  p_role_code     text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id        uuid    := auth.uid();
+  v_caller_rank      integer;
+  v_target_user      uuid;
+  v_target_org       text;
+  v_role_id          uuid;
+  v_new_rank         integer;
+  v_cur_rank         integer;
+  v_has_business_role boolean;
+BEGIN
+  SELECT user_id, org_object_id
+    INTO v_target_user, v_target_org
+  FROM user_org_membership
+  WHERE id = p_membership_id AND is_active = TRUE;
+
+  IF v_target_user IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: membership introuvable ou inactif';
+  END IF;
+
+  -- Anti-self (§2.6)
+  IF v_target_user = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: auto-attribution de rôle admin interdite (§2.6)';
+  END IF;
+
+  -- Invariant §2.5 : le membre doit avoir un rôle métier actif
+  SELECT EXISTS (
+    SELECT 1 FROM user_org_business_role
+    WHERE membership_id = p_membership_id AND is_active = TRUE
+  ) INTO v_has_business_role;
+  IF NOT v_has_business_role THEN
+    RAISE EXCEPTION 'INVARIANT_VIOLATION: un rôle admin ne peut pas être attribué sans rôle métier actif (§2.5)';
+  END IF;
+
+  -- Résolution du nouveau rang
+  SELECT id, rank INTO v_role_id, v_new_rank
+  FROM ref_org_admin_role WHERE code = p_role_code;
+  IF v_role_id IS NULL THEN
+    RAISE EXCEPTION 'INVALID_ROLE: code rôle admin inconnu : %', p_role_code;
+  END IF;
+
+  -- Rang actuel de la cible (si déjà admin)
+  SELECT r.rank INTO v_cur_rank
+  FROM user_org_admin_role uar
+  JOIN ref_org_admin_role r ON r.id = uar.role_id
+  WHERE uar.membership_id = p_membership_id AND uar.is_active = TRUE;
+
+  -- Autorisation appelant + vérifications de rang
+  IF api.is_platform_superuser() THEN
+    v_caller_rank := 999;
+  ELSE
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+
+    -- Gestion vers le bas seulement : nouveau rang < rang appelant (§2.6)
+    IF v_new_rank >= v_caller_rank THEN
+      RAISE EXCEPTION 'RANK_VIOLATION: impossible d''attribuer un rang (%) ≥ à votre propre rang (%) (§2.6)',
+        v_new_rank, v_caller_rank;
+    END IF;
+
+    -- Pas de retrait latéral : rang actuel cible < rang appelant (§2.6)
+    IF v_cur_rank IS NOT NULL AND v_cur_rank >= v_caller_rank THEN
+      RAISE EXCEPTION 'RANK_VIOLATION: impossible de modifier le rôle d''un membre de rang (%) ≥ au vôtre (%) (§2.6)',
+        v_cur_rank, v_caller_rank;
+    END IF;
+  END IF;
+
+  -- Rotation
+  UPDATE user_org_admin_role
+     SET is_active = FALSE, updated_at = NOW()
+   WHERE membership_id = p_membership_id AND is_active = TRUE;
+
+  INSERT INTO user_org_admin_role (
+    membership_id, role_id, is_active,
+    assigned_by, assigned_at, created_at, updated_at
+  )
+  VALUES (
+    p_membership_id, v_role_id, TRUE,
+    v_caller_id, NOW(), NOW(), NOW()
+  );
+END;
+$$;
+
+-- -------------------------------------------------------
+-- rpc_revoke_admin_role
+-- Retire le rôle admin d'un membre (sans toucher au rôle métier).
+-- Autorisation : org_admin (rank 30), ou super_admin.
+-- Anti-self (§2.6) : impossible de se retirer son propre rôle admin.
+-- Gestion vers le bas seulement (§2.6) : rang cible < rang appelant.
+-- No-op silencieux si la cible n'a pas de rôle admin actif.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_revoke_admin_role(
+  p_membership_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id   uuid := auth.uid();
+  v_caller_rank integer;
+  v_target_user uuid;
+  v_target_org  text;
+  v_target_rank integer;
+BEGIN
+  SELECT user_id, org_object_id
+    INTO v_target_user, v_target_org
+  FROM user_org_membership
+  WHERE id = p_membership_id AND is_active = TRUE;
+
+  IF v_target_user IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: membership introuvable ou inactif';
+  END IF;
+
+  -- Anti-self (§2.6)
+  IF v_target_user = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: impossible de retirer son propre rôle admin';
+  END IF;
+
+  -- Rang actuel de la cible
+  SELECT r.rank INTO v_target_rank
+  FROM user_org_admin_role uar
+  JOIN ref_org_admin_role r ON r.id = uar.role_id
+  WHERE uar.membership_id = p_membership_id AND uar.is_active = TRUE;
+
+  -- No-op silencieux : pas de rôle admin à retirer
+  IF v_target_rank IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Autorisation
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+
+    -- Pas de retrait latéral (§2.6) : rang cible < rang appelant
+    IF v_target_rank >= v_caller_rank THEN
+      RAISE EXCEPTION 'RANK_VIOLATION: impossible de retirer le rôle d''un membre de rang (%) ≥ au vôtre (%) (§2.6)',
+        v_target_rank, v_caller_rank;
+    END IF;
+  END IF;
+
+  UPDATE user_org_admin_role
+     SET is_active = FALSE, updated_at = NOW()
+   WHERE membership_id = p_membership_id AND is_active = TRUE;
+END;
+$$;
+
+-- =====================================================
+-- Phase 3b — Grants EXECUTE sur les RPC SECURITY DEFINER
+-- Référence : access_control_master_plan.md §7 Phase 3b
+-- =====================================================
+-- Ces grants exposent les 5 RPC aux utilisateurs authentifiés (authenticated)
+-- et au rôle service interne (service_role).
+-- Le REVOKE FROM anon est une défense en profondeur : si un grant PUBLIC
+-- a été posé implicitement à la création (comportement PostgreSQL par défaut),
+-- ce REVOKE le nettoie explicitement. Les guards internes des RPC
+-- bloqueraient de toute façon un appel anonyme (auth.uid() NULL → FORBIDDEN),
+-- mais il vaut mieux ne pas atteindre ce code pour les utilisateurs anonymes.
+-- Pattern conforme à ui_whitelabel_branding.sql et SUPABASE_SETUP.md.
+-- =====================================================
+
+REVOKE EXECUTE ON FUNCTION api.rpc_upsert_membership(uuid, text, text)     FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_upsert_membership(uuid, text, text)     TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_deactivate_membership(uuid)              FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_deactivate_membership(uuid)              TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_set_business_role(uuid, text)            FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_set_business_role(uuid, text)            TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_set_admin_role(uuid, text)               FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_set_admin_role(uuid, text)               TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_revoke_admin_role(uuid)                  FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_revoke_admin_role(uuid)                  TO   authenticated, service_role;
+
+-- =====================================================
+-- Phase 4 — Niveau 2 des permissions
+-- Référence : access_control_master_plan.md §7 Phase 4
+-- =====================================================
+-- Contenu :
+--   A. Activation RLS sur les 3 tables Phase 4
+--   B. Helper api.user_has_permission()
+--   C. Policies RLS : ref_permission, org_permission, user_permission
+--   D. RPC SECURITY DEFINER : grant/revoke org_permission et user_permission
+--   E. Grants EXECUTE sur les nouvelles fonctions
+-- =====================================================
+
+-- =====================================================
+-- A. Activation RLS sur les 3 tables Phase 4
+-- =====================================================
+ALTER TABLE ref_permission  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_permission  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_permission ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- B. Helper : api.user_has_permission(p_permission_code text)
+-- =====================================================
+-- Résolution V1 — deux chemins, sans exceptions ni groupes :
+--   Chemin 1 : permission accordée directement au user (user_permission)
+--   Chemin 2 : permission accordée à l'ORG active du user (org_permission, héritage ORG)
+--
+-- CHOIX D'IMPLÉMENTATION — Pas de bypass automatique pour owner/super_admin :
+--   §2.6 du plan : "Un admin doit avoir ses permissions dans org_permission
+--   ou user_permission comme n'importe qui."
+--   Ce principe s'étend aux autorités plateforme pour préserver l'auditabilité.
+--   En pratique, les opérations owner/super_admin passent par service_role (bypass RLS
+--   natif) et n'ont pas besoin de shortcut ici.
+--   Si un owner a besoin d'une permission pour des tests UI, il reçoit une user_permission
+--   explicite — tracée comme n'importe quelle autre attribution.
+--
+-- STABLE + SECURITY DEFINER : bypass RLS sur org_permission et user_permission
+--   pour éviter toute récursion (même principe que current_user_org_id()).
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  WITH perm AS (
+    -- Résolution du permission_id une seule fois
+    SELECT id
+    FROM ref_permission
+    WHERE code = p_permission_code
+      AND is_active = TRUE
+    LIMIT 1
+  )
+  SELECT
+    -- Chemin 1 : permission directe sur le user
+    EXISTS (
+      SELECT 1
+      FROM user_permission up
+      JOIN perm p ON p.id = up.permission_id
+      WHERE up.user_id   = auth.uid()
+        AND up.is_active = TRUE
+    )
+    OR
+    -- Chemin 2 : héritage via l'ORG active du user
+    EXISTS (
+      SELECT 1
+      FROM org_permission op
+      JOIN perm p ON p.id = op.permission_id
+      JOIN user_org_membership uom ON uom.org_object_id = op.org_object_id
+      WHERE uom.user_id   = auth.uid()
+        AND uom.is_active = TRUE
+        AND op.is_active  = TRUE
+    );
+$$;
+
+-- =====================================================
+-- C. Policies RLS — Phase 4
+-- =====================================================
+
+-- ---------------------------------------------------
+-- C1. ref_permission — catalogue des permissions V1
+-- Lecture : authentifié uniquement (pas de lecture anonyme).
+-- Écriture : admin plateforme / migration uniquement.
+-- ---------------------------------------------------
+DROP POLICY IF EXISTS "authed_ref_permission_read"  ON ref_permission;
+CREATE POLICY "authed_ref_permission_read" ON ref_permission
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    OR auth.role() IN ('service_role', 'admin')
+  );
+
+DROP POLICY IF EXISTS "admin_ref_permission_write"  ON ref_permission;
+CREATE POLICY "admin_ref_permission_write" ON ref_permission
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- ---------------------------------------------------
+-- C2. org_permission — permissions accordées à une ORG
+-- Lecture :
+--   - Superusers : visibilité globale (actif + historique).
+--   - Membres actifs de l'ORG concernée : lignes actives uniquement.
+-- Écriture : service_role/admin uniquement (toute opération métier → RPC Phase 4D).
+-- ---------------------------------------------------
+DROP POLICY IF EXISTS "member_org_permission_read"  ON org_permission;
+CREATE POLICY "member_org_permission_read" ON org_permission
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale (actif + historique)
+    api.is_platform_superuser()
+    -- Membres actifs de l'ORG : permissions actives uniquement
+    OR (
+      is_active = TRUE
+      AND EXISTS (
+        SELECT 1
+        FROM user_org_membership m
+        WHERE m.org_object_id = org_permission.org_object_id
+          AND m.user_id       = auth.uid()
+          AND m.is_active     = TRUE
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_org_permission_write"  ON org_permission;
+CREATE POLICY "admin_org_permission_write" ON org_permission
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- ---------------------------------------------------
+-- C3. user_permission — permissions additives par user
+-- Lecture :
+--   - Superusers : visibilité globale (actif + historique).
+--   - Le user concerné : ses propres permissions actives.
+--   - Admins de l'ORG du user : permissions actives des membres de leur ORG.
+-- Écriture : service_role/admin uniquement (toute opération métier → RPC Phase 4D).
+-- ---------------------------------------------------
+DROP POLICY IF EXISTS "member_user_permission_read"  ON user_permission;
+CREATE POLICY "member_user_permission_read" ON user_permission
+  FOR SELECT USING (
+    -- Superuser plateforme : visibilité globale (actif + historique)
+    api.is_platform_superuser()
+    -- Le user lui-même voit ses propres permissions actives
+    OR (is_active = TRUE AND user_id = auth.uid())
+    -- Les admins de l'ORG du user voient les permissions actives des membres de leur ORG
+    OR (
+      is_active = TRUE
+      -- Le user cible est dans la même ORG que le caller
+      AND EXISTS (
+        SELECT 1 FROM user_org_membership m_target
+        WHERE m_target.user_id       = user_permission.user_id
+          AND m_target.is_active     = TRUE
+          AND m_target.org_object_id = api.current_user_org_id()
+      )
+      -- Le caller a un rôle admin actif dans son ORG
+      AND EXISTS (
+        SELECT 1 FROM user_org_membership m_caller
+        JOIN user_org_admin_role uar ON uar.membership_id = m_caller.id
+                                    AND uar.is_active     = TRUE
+        WHERE m_caller.user_id   = auth.uid()
+          AND m_caller.is_active = TRUE
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_user_permission_write"  ON user_permission;
+CREATE POLICY "admin_user_permission_write" ON user_permission
+  FOR ALL
+  USING     (auth.role() IN ('service_role', 'admin'))
+  WITH CHECK (auth.role() IN ('service_role', 'admin'));
+
+-- =====================================================
+-- D. RPC SECURITY DEFINER — attribution / retrait de permissions
+-- =====================================================
+-- Principe : même pattern que les RPC Phase 3.
+--   - La RLS bloque les écritures directes des utilisateurs normaux.
+--   - Ces fonctions portent toute la logique d'autorisation.
+-- Traçabilité : granted_by = auth.uid(), granted_at = NOW().
+-- Upsert pour org_permission et user_permission : ON CONFLICT DO UPDATE
+--   pour réactiver une permission révoquée sans violer la contrainte UNIQUE.
+-- =====================================================
+
+-- -------------------------------------------------------
+-- D1. rpc_grant_org_permission
+-- Accorde une permission à une ORG entière.
+-- Autorisation : org_admin (rank 30) de l'ORG cible, ou superuser plateforme.
+-- Idempotent : si la permission existe et est inactive, elle est réactivée.
+-- Pas d'anti-self : c'est une permission ORG, pas personnelle.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_grant_org_permission(
+  p_org_object_id   text,
+  p_permission_code text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id    uuid := auth.uid();
+  v_caller_rank  integer;
+  v_permission_id uuid;
+BEGIN
+  -- 0. Vérifier que p_org_object_id référence bien un objet de type ORG
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = p_org_object_id AND object_type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION 'INVALID_ORG: p_org_object_id doit référencer un objet de type ORG (valeur reçue : %)', p_org_object_id;
+  END IF;
+
+  -- 1. Vérifier que la permission existe et est active
+  SELECT id INTO v_permission_id
+  FROM ref_permission WHERE code = p_permission_code AND is_active = TRUE;
+  IF v_permission_id IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: code permission inconnu ou inactif : %', p_permission_code;
+  END IF;
+
+  -- 2. Autorisation appelant
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = p_org_object_id
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+    IF v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 (org_admin) pour modifier les permissions de l''ORG';
+    END IF;
+  END IF;
+
+  -- 3. Upsert : accorder ou réactiver la permission
+  INSERT INTO org_permission (org_object_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at)
+  VALUES (p_org_object_id, v_permission_id, TRUE, v_caller_id, NOW(), NOW(), NOW())
+  ON CONFLICT (org_object_id, permission_id) DO UPDATE
+    SET is_active  = TRUE,
+        granted_by = EXCLUDED.granted_by,
+        granted_at = EXCLUDED.granted_at,
+        updated_at = NOW();
+END;
+$$;
+
+-- -------------------------------------------------------
+-- D2. rpc_revoke_org_permission
+-- Révoque une permission d'une ORG (soft revoke : is_active = FALSE).
+-- Autorisation : org_admin (rank 30) de l'ORG cible, ou superuser plateforme.
+-- No-op silencieux si la permission n'est pas active sur cette ORG.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_revoke_org_permission(
+  p_org_object_id   text,
+  p_permission_code text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id    uuid := auth.uid();
+  v_caller_rank  integer;
+  v_permission_id uuid;
+BEGIN
+  -- 0. Vérifier que p_org_object_id référence bien un objet de type ORG
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = p_org_object_id AND object_type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION 'INVALID_ORG: p_org_object_id doit référencer un objet de type ORG (valeur reçue : %)', p_org_object_id;
+  END IF;
+
+  -- 1. Résolution de la permission (accepte les permissions inactives du catalogue)
+  SELECT id INTO v_permission_id
+  FROM ref_permission WHERE code = p_permission_code;
+  IF v_permission_id IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: code permission inconnu : %', p_permission_code;
+  END IF;
+
+  -- 2. Autorisation appelant
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = p_org_object_id
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
+    END IF;
+    IF v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 (org_admin) pour modifier les permissions de l''ORG';
+    END IF;
+  END IF;
+
+  -- 3. Révocation (no-op si la permission n'est pas active sur cette ORG)
+  UPDATE org_permission
+     SET is_active  = FALSE,
+         updated_at = NOW()
+   WHERE org_object_id = p_org_object_id
+     AND permission_id = v_permission_id
+     AND is_active     = TRUE;
+END;
+$$;
+
+-- -------------------------------------------------------
+-- D3. rpc_grant_user_permission
+-- Accorde une permission additive à un user précis.
+-- Autorisation : org_admin (rank 30) de l'ORG du user cible, ou superuser plateforme.
+-- Anti-self (§2.6) : un admin ne peut pas s'auto-accorder une permission.
+-- Idempotent : réactive une permission révoquée si elle existe déjà.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_grant_user_permission(
+  p_target_user_id  uuid,
+  p_permission_code text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id      uuid := auth.uid();
+  v_caller_rank    integer;
+  v_permission_id  uuid;
+  v_target_org     text;
+BEGIN
+  -- 1. Anti-self (§2.6)
+  IF p_target_user_id = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: auto-attribution de permission interdite (§2.6)';
+  END IF;
+
+  -- 2. Vérifier que la permission existe et est active dans le catalogue
+  SELECT id INTO v_permission_id
+  FROM ref_permission WHERE code = p_permission_code AND is_active = TRUE;
+  IF v_permission_id IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: code permission inconnu ou inactif : %', p_permission_code;
+  END IF;
+
+  -- 3. Trouver l'ORG active du user cible (nécessaire pour vérifier le rang de l'appelant)
+  SELECT org_object_id INTO v_target_org
+  FROM user_org_membership
+  WHERE user_id = p_target_user_id AND is_active = TRUE
+  LIMIT 1;
+
+  IF v_target_org IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: le user cible n''a pas de membership actif dans une ORG';
+  END IF;
+
+  -- 4. Autorisation appelant
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans l''ORG du user cible';
+    END IF;
+    IF v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 (org_admin) pour accorder des permissions individuelles';
+    END IF;
+  END IF;
+
+  -- 5. Upsert : accorder ou réactiver la permission
+  INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at)
+  VALUES (p_target_user_id, v_permission_id, TRUE, v_caller_id, NOW(), NOW(), NOW())
+  ON CONFLICT (user_id, permission_id) DO UPDATE
+    SET is_active  = TRUE,
+        granted_by = EXCLUDED.granted_by,
+        granted_at = EXCLUDED.granted_at,
+        updated_at = NOW();
+END;
+$$;
+
+-- -------------------------------------------------------
+-- D4. rpc_revoke_user_permission
+-- Révoque une permission individuelle d'un user (soft revoke).
+-- Autorisation : org_admin (rank 30) de l'ORG du user cible, ou superuser plateforme.
+-- Anti-self (§2.6) : un admin ne peut pas se retirer une permission lui-même.
+-- No-op silencieux si la permission n'est pas active pour ce user.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_revoke_user_permission(
+  p_target_user_id  uuid,
+  p_permission_code text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id     uuid := auth.uid();
+  v_caller_rank   integer;
+  v_permission_id uuid;
+  v_target_org    text;
+BEGIN
+  -- 1. Anti-self (§2.6)
+  IF p_target_user_id = v_caller_id THEN
+    RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: auto-retrait de permission interdit (§2.6)';
+  END IF;
+
+  -- 2. Résolution de la permission (accepte les permissions inactives du catalogue)
+  SELECT id INTO v_permission_id
+  FROM ref_permission WHERE code = p_permission_code;
+  IF v_permission_id IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: code permission inconnu : %', p_permission_code;
+  END IF;
+
+  -- 3. Trouver l'ORG active du user cible
+  SELECT org_object_id INTO v_target_org
+  FROM user_org_membership
+  WHERE user_id = p_target_user_id AND is_active = TRUE
+  LIMIT 1;
+
+  IF v_target_org IS NULL THEN
+    RAISE EXCEPTION 'NOT_FOUND: le user cible n''a pas de membership actif dans une ORG';
+  END IF;
+
+  -- 4. Autorisation appelant
+  IF NOT api.is_platform_superuser() THEN
+    SELECT r.rank INTO v_caller_rank
+    FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active = TRUE
+    JOIN ref_org_admin_role  r   ON r.id = uar.role_id
+    WHERE uom.user_id       = v_caller_id
+      AND uom.org_object_id = v_target_org
+      AND uom.is_active     = TRUE;
+
+    IF v_caller_rank IS NULL THEN
+      RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans l''ORG du user cible';
+    END IF;
+    IF v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 (org_admin) pour révoquer des permissions individuelles';
+    END IF;
+  END IF;
+
+  -- 5. Révocation (no-op si non active)
+  UPDATE user_permission
+     SET is_active  = FALSE,
+         updated_at = NOW()
+   WHERE user_id      = p_target_user_id
+     AND permission_id = v_permission_id
+     AND is_active     = TRUE;
+END;
+$$;
+
+-- =====================================================
+-- E. Grants EXECUTE — Phase 4
+-- Pattern : REVOKE FROM PUBLIC, anon → GRANT TO authenticated, service_role
+-- =====================================================
+
+-- Helper user_has_permission : appelable par tous les utilisateurs authentifiés
+REVOKE EXECUTE ON FUNCTION api.user_has_permission(text)                    FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.user_has_permission(text)                    TO   authenticated, service_role;
+
+-- RPC org_permission
+REVOKE EXECUTE ON FUNCTION api.rpc_grant_org_permission(text, text)         FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_grant_org_permission(text, text)         TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_revoke_org_permission(text, text)        FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_revoke_org_permission(text, text)        TO   authenticated, service_role;
+
+-- RPC user_permission
+REVOKE EXECUTE ON FUNCTION api.rpc_grant_user_permission(uuid, text)        FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_grant_user_permission(uuid, text)        TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_revoke_user_permission(uuid, text)       FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_revoke_user_permission(uuid, text)       TO   authenticated, service_role;

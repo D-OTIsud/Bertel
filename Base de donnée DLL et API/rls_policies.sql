@@ -2973,3 +2973,23 @@ GRANT  EXECUTE ON FUNCTION api.rpc_create_object(text, text, text) TO   authenti
 
 REVOKE EXECUTE ON FUNCTION api.rpc_publish_object(text, boolean)   FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.rpc_publish_object(text, boolean)   TO   authenticated, service_role;
+
+-- =====================================================
+-- Grants: API explorer functions + ref partition access
+-- Added to fix 403 (internal schema) and 404 (partition grant)
+-- =====================================================
+
+-- api.get_filtered_object_ids is now SECURITY DEFINER to allow
+-- access to internal.mv_filtered_objects without exposing the
+-- internal schema to the authenticated role directly.
+REVOKE EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) TO authenticated, service_role;
+
+-- Explicit grant for the current 11-param signature of list_object_resources_filtered_page.
+-- The SUPABASE_SETUP.md documents a 10-param version — that signature is stale.
+REVOKE EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) TO authenticated, service_role;
+
+-- PostgreSQL child partition tables do NOT inherit GRANTs from the parent table.
+-- ref_code_iti_practice must be granted explicitly for PostgREST to expose it.
+GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;

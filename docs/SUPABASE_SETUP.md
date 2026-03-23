@@ -83,13 +83,20 @@ GRANT USAGE ON SCHEMA api TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.get_object_resource(text, text[], text, jsonb) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_page_text(text, text[], integer, text[], text[], text, text, boolean, text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_since_fast_text(timestamptz, text, boolean, text[], integer, text[], text[], text, text, boolean, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+-- Current signature has 11 params (added p_view as last param):
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_since_fast(timestamptz, text, boolean, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_objects_map_view(text[], text[], jsonb, text[], integer, integer) TO anon, authenticated;
+
+-- Internal helper (SECURITY DEFINER) — authenticated needs EXECUTE but NOT USAGE on schema internal:
+GRANT EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) TO authenticated, service_role;
 
 -- Privileged/admin-only RPC: service role only
 GRANT EXECUTE ON FUNCTION api.list_objects_with_validated_changes_since(timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION api.export_publication_indesign(uuid, integer, integer) TO service_role;
+
+-- ref_code partitions: PostgreSQL does NOT propagate parent GRANTs to child partitions.
+GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;
 ```
 
 5) Test an RPC from the API docs or via curl/Postman
@@ -137,9 +144,16 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA api FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.get_object_resource(text, text[], text, jsonb) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_page_text(text, text[], integer, text[], text[], text, text, boolean, text, boolean) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_since_fast_text(timestamptz, text, boolean, text[], integer, text[], text[], text, text, boolean, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
+-- Current signature has 11 params (added p_view as last param):
+GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_page(text, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_object_resources_filtered_since_fast(timestamptz, text, boolean, text[], integer, jsonb, object_type[], object_status[], text, text, boolean, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_objects_map_view(text[], text[], jsonb, text[], integer, integer) TO anon, authenticated;
+
+-- Internal helper (SECURITY DEFINER) — authenticated needs EXECUTE but NOT USAGE on schema internal:
+GRANT EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) TO authenticated, service_role;
+
+-- ref_code partitions: PostgreSQL does NOT propagate parent GRANTs to child partitions.
+GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;
 
 -- Optional if you call with the service key
 GRANT USAGE ON SCHEMA api TO service_role;

@@ -905,8 +905,13 @@ CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
 RETURNS TABLE(object_id TEXT, label_rank INTEGER)
 LANGUAGE sql
 STABLE
-
-SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+-- SECURITY DEFINER: required because this function accesses internal.mv_filtered_objects
+-- (a materialized view used as a hot-path cache). The `authenticated` role has no USAGE
+-- on schema `internal` by design — the internal schema is a private performance layer.
+-- Running as the function owner (postgres) is safe here: the function is read-only
+-- (STABLE), returns only filtered object IDs, and has a fixed search_path.
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
 AS $$
   -- Extract JSON arrays once into SQL arrays to avoid per-row JSON parsing.
   WITH normalized AS (

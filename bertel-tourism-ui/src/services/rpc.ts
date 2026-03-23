@@ -1,5 +1,5 @@
 import { filterMockCards, mockAuditQuestions, mockCrmTasks, mockObjectDetails, mockPendingChanges, mockPublicationCards, mockTimeline } from '../data/mock';
-import { getApiClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { AuditQuestion, ExplorerBucketKey, CrmTask, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
 import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
@@ -73,7 +73,7 @@ function assertObjectPayload(data: unknown): ObjectResourceRpcPayload {
   return data as ObjectResourceRpcPayload;
 }
 
-async function tryGetObjectWithDeepData(objectId: string, langPrefs: string[], client: NonNullable<ReturnType<typeof getApiClient>>): Promise<ObjectDetail> {
+async function tryGetObjectWithDeepData(objectId: string, langPrefs: string[], client: NonNullable<ReturnType<typeof getSupabaseClient>>): Promise<ObjectDetail> {
   const { data, error } = await client.schema('api').rpc('get_object_with_deep_data', {
     p_object_id: objectId,
     p_languages: langPrefs,
@@ -182,37 +182,32 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
   return normalizeObjectDetailPayload(payload, objectId);
 }
 
+// TODO: wire to real backend RPC when available
 export async function listPendingChanges(): Promise<PendingChangeItem[]> {
-  if (!useSessionStore.getState().demoMode) {
-    throw new Error('RPC pending_change a brancher sur le backend.');
-  }
-  return mockPendingChanges;
+  if (useSessionStore.getState().demoMode) return mockPendingChanges;
+  return [];
 }
 
+// TODO: wire to real backend RPC when available
 export async function listCrmTasks(): Promise<CrmTask[]> {
-  if (!useSessionStore.getState().demoMode) {
-    throw new Error('RPC CRM tasks a brancher sur le backend.');
-  }
-  return mockCrmTasks;
+  if (useSessionStore.getState().demoMode) return mockCrmTasks;
+  return [];
 }
 
+// TODO: wire to real backend RPC when available
 export async function listCrmTimeline(): Promise<typeof mockTimeline> {
-  if (!useSessionStore.getState().demoMode) {
-    throw new Error('RPC CRM timeline a brancher sur le backend.');
-  }
-  return mockTimeline;
+  if (useSessionStore.getState().demoMode) return mockTimeline;
+  return [];
 }
 
+// TODO: wire to real backend RPC when available
 export async function listAuditTemplate(): Promise<AuditQuestion[]> {
-  if (!useSessionStore.getState().demoMode) {
-    throw new Error('RPC audit_template a brancher sur le backend.');
-  }
-  return mockAuditQuestions;
+  if (useSessionStore.getState().demoMode) return mockAuditQuestions;
+  return [];
 }
 
+// TODO: wire to real backend RPC when available
 export async function listPublicationBoard(): Promise<PublicationCard[]> {
-  if (!useSessionStore.getState().demoMode) {
-    throw new Error('RPC publication_object a brancher sur le backend.');
-  }
-  return mockPublicationCards;
+  if (useSessionStore.getState().demoMode) return mockPublicationCards;
+  return [];
 }

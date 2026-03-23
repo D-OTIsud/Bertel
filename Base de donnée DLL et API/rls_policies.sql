@@ -779,9 +779,54 @@ CREATE POLICY "owner_write_discount" ON object_discount
 CREATE POLICY "owner_write_group_policy" ON object_group_policy
   FOR ALL USING (api.is_object_owner(object_id));
 
--- Écriture par propriétaire
-CREATE POLICY "Écriture par propriétaire (object)" ON object
-    FOR ALL USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by);
+-- -------------------------------------------------------
+-- Phase 5 — api.user_can_create_object()
+-- Définie ICI (avant la policy qui l'utilise) pour respecter l'ordre
+-- d'exécution SQL : la policy INSERT référence la fonction, elle doit
+-- exister au moment du CREATE POLICY.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.user_can_create_object()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  -- Niveau 1 : membership ORG actif requis (Niveau 2 n'élargit pas Niveau 1)
+  -- Niveau 2 : permission create_object requise
+  SELECT
+    api.current_user_org_id() IS NOT NULL
+    AND api.user_has_permission('create_object')
+$$;
+
+REVOKE EXECUTE ON FUNCTION api.user_can_create_object() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.user_can_create_object() TO   authenticated, service_role;
+
+-- Phase 5 : l'ancien FOR ALL "Écriture par propriétaire (object)" est splité en 3
+-- policies distinctes pour permettre le branchement Niveau 2 sur l'INSERT.
+-- UPDATE et DELETE conservent la règle "créateur" sans changement de sémantique.
+DROP POLICY IF EXISTS "Écriture par propriétaire (object)" ON object;
+DROP POLICY IF EXISTS "insert_object_create_permission"  ON object;
+DROP POLICY IF EXISTS "owner_update_object"              ON object;
+DROP POLICY IF EXISTS "owner_delete_object"              ON object;
+
+-- INSERT : permission Niveau 2 requise (create_object) + intégrité created_by
+CREATE POLICY "insert_object_create_permission" ON object
+  FOR INSERT
+  WITH CHECK (
+    api.user_can_create_object()  -- Niveau 2 : permission create_object requise
+    AND auth.uid() = created_by   -- intégrité : le créateur doit pointer vers lui-même
+  );
+
+-- UPDATE : périmètre identique à l'ancien FOR ALL
+-- publish_object / edit_canonical / edit_enrichment seront contrôlés par RPC dédiées (Phase 6)
+CREATE POLICY "owner_update_object" ON object
+  FOR UPDATE
+  USING     (auth.uid() = created_by)
+  WITH CHECK (auth.uid() = created_by);
+
+-- DELETE : périmètre identique à l'ancien FOR ALL
+CREATE POLICY "owner_delete_object" ON object
+  FOR DELETE
+  USING (auth.uid() = created_by);
 
 -- Accès admin/service_role
 DO $$ BEGIN
@@ -2642,3 +2687,289 @@ GRANT  EXECUTE ON FUNCTION api.rpc_grant_user_permission(uuid, text)        TO  
 
 REVOKE EXECUTE ON FUNCTION api.rpc_revoke_user_permission(uuid, text)       FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.rpc_revoke_user_permission(uuid, text)       TO   authenticated, service_role;
+
+-- =====================================================
+-- Phase 5 — Helpers métier Niveau 2
+-- Référence : access_control_master_plan.md §2.3 (Niveau 2), §2.6 (pas de bypass admin)
+--
+-- Ces fonctions encapsulent les contrôles Niveau 2 pour les 4 opérations
+-- métier ciblées. Elles appellent api.user_has_permission() et y ajoutent
+-- les critères métier spécifiques à chaque action.
+--
+-- Pas de bypass implicite pour owner/super_admin (§2.6 du plan maître).
+-- Les helpers sont des fonctions STABLE SECURITY DEFINER lisibles depuis
+-- les policies RLS et depuis les RPC qui appelleront les actions protégées.
+--
+-- Branchement RLS Phase 5 :
+--   BRANCHÉ     : create_object  → INSERT policy "insert_object_create_permission" sur object
+--   NON branché : publish_object → attente RPC dédiée (status ≠ distinguable en RLS UPDATE)
+--   NON branché : edit_canonical_when_publisher → attente RPC dédiée (pas de surface colonne isolée)
+--   NON branché : edit_org_enrichment → attente table enrichissement ORG + RPC dédiée
+-- =====================================================
+
+-- -------------------------------------------------------
+-- E1. api.user_can_create_object() — définie plus haut, avant la policy INSERT.
+-- -------------------------------------------------------
+
+-- -------------------------------------------------------
+-- E2. api.user_can_publish_object(p_object_id text)
+-- Permission Niveau 2 : publish_object
+-- ET l'ORG active du user est publisher sur l'objet (via object_org_link).
+-- Règle prudente (§2.2) : seul le publisher contrôle le statut de publication.
+-- Non branché en RLS : le changement de status passe par UPDATE, impossible de
+-- distinguer OLD.status vs NEW.status dans USING/WITH CHECK sans RPC.
+-- Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.user_can_publish_object(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    api.user_has_permission('publish_object')
+    AND EXISTS (
+      SELECT 1
+      FROM object_org_link ool
+      JOIN ref_org_role    ror ON ror.id = ool.role_id AND ror.code = 'publisher'
+      WHERE ool.object_id     = p_object_id
+        AND ool.org_object_id = api.current_user_org_id()
+    )
+$$;
+
+-- -------------------------------------------------------
+-- E3. api.user_can_write_canonical(p_object_id text)
+-- Permission Niveau 2 : edit_canonical_when_publisher
+-- ET l'ORG active du user est publisher sur l'objet.
+-- Règle métier (§2.2) : seul le publisher modifie la donnée canonique.
+-- Non branché en RLS : pas de surface de colonne isolée pour le canonique
+-- vs l'enrichissement dans le schéma actuel.
+-- Conçu pour être appelé par les RPC d'écriture canonique (Phase 6).
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.user_can_write_canonical(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    api.user_has_permission('edit_canonical_when_publisher')
+    AND EXISTS (
+      SELECT 1
+      FROM object_org_link ool
+      JOIN ref_org_role    ror ON ror.id = ool.role_id AND ror.code = 'publisher'
+      WHERE ool.object_id     = p_object_id
+        AND ool.org_object_id = api.current_user_org_id()
+    )
+$$;
+
+-- -------------------------------------------------------
+-- E4. api.user_can_write_enrichment(p_object_id text)
+-- Permission Niveau 2 : edit_org_enrichment
+-- ET l'ORG active du user dispose d'un lien object_org_link explicite
+--   avec rôle 'publisher' ou 'contributor' (pas 'reader').
+-- Règle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a
+--   un lien explicite avec un rôle au moins contributeur.
+-- Non branché en RLS : aucune table d'enrichissement ORG distincte n'existe
+--   encore dans le schéma — surface d'écriture non matérialisée.
+-- Conçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.user_can_write_enrichment(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    api.user_has_permission('edit_org_enrichment')
+    AND EXISTS (
+      SELECT 1
+      FROM object_org_link ool
+      JOIN ref_org_role    ror ON ror.id = ool.role_id AND ror.code IN ('publisher', 'contributor')
+      WHERE ool.object_id     = p_object_id
+        AND ool.org_object_id = api.current_user_org_id()
+    )
+$$;
+
+-- Grants EXECUTE — helpers métier Phase 5
+-- Accessibles : authenticated (appel depuis policies RLS + RPCs)
+--               service_role  (usage interne plateforme)
+-- Révoqués de PUBLIC et anon.
+-- user_can_create_object : grants définis plus haut (avant policy INSERT)
+
+REVOKE EXECUTE ON FUNCTION api.user_can_publish_object(text)     FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.user_can_publish_object(text)     TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.user_can_write_canonical(text)    FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.user_can_write_canonical(text)    TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.user_can_write_enrichment(text)   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.user_can_write_enrichment(text)   TO   authenticated, service_role;
+
+-- =====================================================
+-- Phase 6 — RPC métier : création et publication d'objet
+-- Référence : access_control_master_plan.md §2.2, §2.3, §7 Phase 6
+--
+-- Ces RPC fournissent la surface métier explicite pour les deux opérations
+-- qui ne peuvent pas être sécurisées finement par RLS seule :
+--   - création    : branché via helpers Niveau 1+2
+--   - publication : changement de status, contrôlé par helpers Niveau 2 + critère publisher
+--
+-- Les fonctions sont SECURITY DEFINER : elles s'exécutent en tant que postgres
+-- et bypassent RLS sur object. Les contrôles de permission sont portés
+-- explicitement par la RPC — c'est la RPC qui est la porte sécurisée.
+--
+-- Triggers qui s'exécutent automatiquement lors de l'INSERT/UPDATE :
+--   trg_before_insert_object_generate_id  → génère l'id si NULL
+--   trg_auto_attach_object_to_creator_org → rattache l'ORG publisher (lit created_by)
+--   trg_manage_object_published_at        → gère published_at lors du passage à 'published'
+-- =====================================================
+
+-- -------------------------------------------------------
+-- F1. api.rpc_create_object(p_object_type, p_name, p_region_code)
+-- Crée un objet via la surface métier sécurisée.
+-- Exige : membership ORG actif (Niveau 1) + permission create_object (Niveau 2).
+-- Status forcé à 'draft' : la publication passe obligatoirement par rpc_publish_object.
+-- created_by forcé à auth.uid() : non paramétrable, non falsifiable.
+-- ID généré automatiquement par le trigger (basé sur object_type + region_code).
+-- Retourne : l'id TEXT de l'objet créé.
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_create_object(
+  p_object_type text,
+  p_name        text,
+  p_region_code text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id uuid := auth.uid();
+  v_new_id    text;
+BEGIN
+  -- 0. Contexte utilisateur requis
+  -- auth.uid() est NULL en appel service_role pur (sans JWT applicatif).
+  -- Dans ce cas : created_by = NULL, trigger auto-attach no-op, données incohérentes.
+  -- On refuse explicitement plutôt que de laisser passer silencieusement.
+  IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION
+      'NO_AUTH_CONTEXT: rpc_create_object requiert un utilisateur authentifié (auth.uid() est NULL). Appel service_role sans JWT applicatif non supporté par cette RPC';
+  END IF;
+
+  -- 1. Contrôle Niveau 1+2 : membership ORG actif + permission create_object
+  IF NOT api.user_can_create_object() THEN
+    RAISE EXCEPTION
+      'FORBIDDEN: création d''objet refusée — vérifiez votre membership ORG actif et la permission create_object';
+  END IF;
+
+  -- 2. Validation du type objet (comparaison sur pg_enum pour un message propre)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumtypid = 'object_type'::regtype
+      AND enumlabel = p_object_type
+  ) THEN
+    RAISE EXCEPTION
+      'INVALID_OBJECT_TYPE: type d''objet inconnu : %. Types valides : RES, PCU, PNA, ORG, ITI, VIL, HPA, ASC, COM, HOT, HLO, LOI, FMA, CAMP, PSV, RVA',
+      p_object_type;
+  END IF;
+
+  -- 3. Validation du nom
+  IF p_name IS NULL OR trim(p_name) = '' THEN
+    RAISE EXCEPTION
+      'MISSING_REQUIRED_FIELD: le champ name est obligatoire et ne peut pas être vide';
+  END IF;
+
+  -- 4. Insertion
+  --   - id       : NULL → généré par trg_before_insert_object_generate_id
+  --   - status   : forcé à 'draft' (publication = rpc_publish_object)
+  --   - created_by / updated_by : forcé à auth.uid()
+  --   - trg_auto_attach_object_to_creator_org s'exécute en AFTER INSERT
+  INSERT INTO object (
+    object_type,
+    name,
+    region_code,
+    status,
+    created_by,
+    updated_by,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    p_object_type::object_type,
+    trim(p_name),
+    p_region_code,
+    'draft',
+    v_caller_id,
+    v_caller_id,
+    NOW(),
+    NOW()
+  )
+  RETURNING id INTO v_new_id;
+
+  RETURN v_new_id;
+END;
+$$;
+
+-- -------------------------------------------------------
+-- F2. api.rpc_publish_object(p_object_id, p_publish)
+-- Publie (TRUE) ou dépublie (FALSE) un objet.
+-- Exige : permission publish_object + ORG active = publisher sur l'objet.
+--
+-- Publication  (p_publish = TRUE)  → status = 'published'
+--   published_at géré par trg_manage_object_published_at (premier passage uniquement).
+-- Dépublication (p_publish = FALSE) → status = 'hidden'
+--   'hidden' = retrait temporaire du public, l'objet n'est pas remis en rédaction.
+--   'draft' est réservé aux objets non encore publiés.
+--   published_at conservé (historique de première publication intact).
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.rpc_publish_object(
+  p_object_id text,
+  p_publish   boolean DEFAULT TRUE
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_caller_id      uuid          := auth.uid();
+  v_current_status object_status;
+BEGIN
+  -- 1. Vérifier que l'objet existe
+  SELECT status INTO v_current_status
+  FROM object
+  WHERE id = p_object_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'NOT_FOUND: objet introuvable : %', p_object_id;
+  END IF;
+
+  -- 2. Contrôle Niveau 2 : permission publish_object + ORG active = publisher
+  IF NOT api.user_can_publish_object(p_object_id) THEN
+    RAISE EXCEPTION
+      'FORBIDDEN: publication refusée — vérifiez la permission publish_object et que votre ORG est publisher sur cet objet';
+  END IF;
+
+  -- 3. Appliquer le changement de statut
+  IF p_publish THEN
+    -- Publication : 'published'
+    -- trg_manage_object_published_at gère published_at si c'est la première publication.
+    UPDATE object
+       SET status     = 'published',
+           updated_by = v_caller_id,
+           updated_at = NOW()
+     WHERE id = p_object_id;
+  ELSE
+    -- Dépublication : 'hidden' (retrait temporaire, pas remise en rédaction)
+    -- published_at n'est pas réinitialisé : l'historique de 1ère publication est conservé.
+    UPDATE object
+       SET status     = 'hidden',
+           updated_by = v_caller_id,
+           updated_at = NOW()
+     WHERE id = p_object_id;
+  END IF;
+END;
+$$;
+
+-- Grants EXECUTE — RPC métier Phase 6
+REVOKE EXECUTE ON FUNCTION api.rpc_create_object(text, text, text) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_create_object(text, text, text) TO   authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_publish_object(text, boolean)   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_publish_object(text, boolean)   TO   authenticated, service_role;

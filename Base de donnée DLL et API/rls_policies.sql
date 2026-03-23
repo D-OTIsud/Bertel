@@ -114,20 +114,78 @@ AS $$
   WHERE lower(ac.value) = api.current_user_email()
 $$;
 
--- Droit étendu si acteur de l'objet ou d'une org parent
+-- Droit étendu en lecture : acteur (chemin historique) OU membership ORG (Phase 2).
+-- Les deux chemins sont en OR — aucune logique existante n'est retirée.
+-- Ne couvre que la lecture. Pas d'écriture, pas de permissions d'action.
+--
+-- Chemin 1 (conservé intact) — accès via rôle acteur :
+--   actor_object_role sur l'objet lui-même OU sur une ORG parente de l'objet.
+--
+-- Chemin 2 (ajouté Phase 2) — accès via membership ORG :
+--   A. Périmètre propre — l'objet EST l'ORG du user
+--   B. Périmètre propre — l'objet est lié à l'ORG du user via object_org_link (tous rôles, non publiés inclus)
+--   C. Périmètre externe publié — org_config.access_scope = 'all_published' ET objet published
+--      (objets non publiés d'autres ORG hors périmètre, cf. §2.3.B du plan)
 CREATE OR REPLACE FUNCTION api.can_read_extended(p_object_id text)
 RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
-  WITH my_actors AS (
-    SELECT * FROM api.user_actor_ids()
-  ), parent_orgs AS (
-    SELECT ool.org_object_id FROM object_org_link ool WHERE ool.object_id = p_object_id
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  WITH
+  -- Chemin 1 : accès acteur historique (conservé intact)
+  actor_path AS (
+    SELECT 1
+    FROM actor_object_role aor
+    WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids())
+      AND (
+        aor.object_id = p_object_id
+        OR aor.object_id IN (
+          SELECT ool.org_object_id
+          FROM object_org_link ool
+          WHERE ool.object_id = p_object_id
+        )
+      )
+    LIMIT 1
+  ),
+  -- Chemin 2A : l'objet est l'ORG elle-même (membership actif sur cet objet-ORG)
+  own_org AS (
+    SELECT 1
+    FROM user_org_membership uom
+    WHERE uom.user_id    = auth.uid()
+      AND uom.is_active  = TRUE
+      AND uom.org_object_id = p_object_id
+    LIMIT 1
+  ),
+  -- Chemin 2B : l'objet est dans le périmètre propre de l'ORG du user
+  --   (rattaché via object_org_link, quel que soit le rôle ORG, publiés et non publiés)
+  own_objects AS (
+    SELECT 1
+    FROM user_org_membership uom
+    JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+    WHERE uom.user_id   = auth.uid()
+      AND uom.is_active = TRUE
+      AND ool.object_id = p_object_id
+    LIMIT 1
+  ),
+  -- Chemin 2C : périmètre externe publié
+  --   L'ORG du user a le scope 'all_published' ET l'objet est published.
+  --   Les objets non publiés d'autres ORG restent hors portée (§2.3.B).
+  external_published AS (
+    SELECT 1
+    FROM user_org_membership uom
+    JOIN org_config oc ON oc.org_object_id = uom.org_object_id
+    JOIN object     o  ON o.id = p_object_id
+    WHERE uom.user_id   = auth.uid()
+      AND uom.is_active = TRUE
+      AND oc.access_scope = 'all_published'
+      AND o.status        = 'published'
+    LIMIT 1
   )
-  SELECT EXISTS (
-    SELECT 1 FROM actor_object_role aor
-    WHERE aor.actor_id IN (SELECT * FROM my_actors)
-      AND (aor.object_id = p_object_id OR aor.object_id IN (SELECT org_object_id FROM parent_orgs))
-  );
+  SELECT
+    EXISTS (SELECT 1 FROM actor_path)
+    OR EXISTS (SELECT 1 FROM own_org)
+    OR EXISTS (SELECT 1 FROM own_objects)
+    OR EXISTS (SELECT 1 FROM external_published);
 $$;
 
 -- Vérifie si l'utilisateur est propriétaire (owner) de l'objet
@@ -162,6 +220,64 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
       WHERE p.id = auth.uid()
         AND p.role = 'owner'
     );
+$$;
+
+-- =====================================================
+-- Phase 2 — Helpers RLS membership ORG
+-- Référence : access_control_master_plan.md §7 Phase 2
+-- Ces fonctions lisent uniquement le membership actif du user courant.
+-- Elles ne confèrent aucun droit d'écriture ni de permission d'action.
+-- =====================================================
+
+-- Retourne l'org_object_id actif du user courant (NULL si aucun membership actif).
+-- Pour un tourism_agent, au plus une ORG active existe (contrainte enforce_single_active_org_membership).
+-- Pour un owner/super_admin, retourne la première trouvée (usage interne uniquement).
+CREATE OR REPLACE FUNCTION api.current_user_org_id()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT uom.org_object_id
+  FROM user_org_membership uom
+  WHERE uom.user_id = auth.uid()
+    AND uom.is_active = TRUE
+  LIMIT 1;
+$$;
+
+-- Retourne le code du rôle métier actif du user courant (NULL si aucun).
+-- Traverse : user_org_membership → user_org_business_role → ref_org_business_role.
+-- Usage : affichage, contexte session — pas de logique de permission ici.
+CREATE OR REPLACE FUNCTION api.current_user_business_role_code()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT r.code
+  FROM user_org_membership uom
+  JOIN user_org_business_role ubr ON ubr.membership_id = uom.id
+                                  AND ubr.is_active = TRUE
+  JOIN ref_org_business_role r    ON r.id = ubr.role_id
+  WHERE uom.user_id  = auth.uid()
+    AND uom.is_active = TRUE
+  LIMIT 1;
+$$;
+
+-- Retourne le code du rôle admin actif du user courant (NULL si pas de rôle admin).
+-- Traverse : user_org_membership → user_org_admin_role → ref_org_admin_role.
+-- Le rôle admin ne bypasse pas api.user_has_permission() (§2.6 du plan).
+CREATE OR REPLACE FUNCTION api.current_user_admin_role_code()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT r.code
+  FROM user_org_membership uom
+  JOIN user_org_admin_role uar ON uar.membership_id = uom.id
+                               AND uar.is_active = TRUE
+  JOIN ref_org_admin_role r   ON r.id = uar.role_id
+  WHERE uom.user_id  = auth.uid()
+    AND uom.is_active = TRUE
+  LIMIT 1;
 $$;
 
 -- =====================================================

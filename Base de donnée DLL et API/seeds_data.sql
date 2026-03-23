@@ -3659,3 +3659,98 @@ ON CONFLICT (code) DO NOTHING;
 -- ============================================================
 -- End of Phase 1 — ref_org_business_role + ref_org_admin_role seeds
 -- ============================================================
+
+-- ============================================================
+-- Phase 4 — Seeds ref_permission (Niveau 2, V1 verrouillée — 2026-03-23)
+-- Grille complète des permissions d'action (access_control_master_plan.md §2.3).
+-- Orthogonales aux rôles : aucune permission n'est conférée implicitement (§2.6 du plan).
+-- Toute attribution passe par org_permission ou user_permission via les RPC dédiées.
+-- ============================================================
+INSERT INTO ref_permission (code, name, category, description) VALUES
+
+  -- -------------------------------------------------------
+  -- Catégorie : content — actions sur le contenu des objets
+  -- -------------------------------------------------------
+
+  -- Création d'un objet dans le périmètre de l'ORG
+  ('create_object',
+   'Créer un objet',
+   'content',
+   'Permet de créer un nouvel objet tourisme dans le périmètre de l''ORG'),
+
+  -- Modification de la donnée canonique — réservée à l'ORG publisher principal
+  ('edit_canonical_when_publisher',
+   'Modifier le canonique (ORG publisher)',
+   'content',
+   'Permet de modifier la donnée canonique d''un objet dont l''ORG est publisher principal via object_org_link'),
+
+  -- Modification de la couche d'enrichissement propre à l'ORG (non canonique)
+  ('edit_org_enrichment',
+   'Modifier l''enrichissement ORG',
+   'content',
+   'Permet de modifier la couche d''enrichissement propre à l''ORG, sans toucher aux données canoniques'),
+
+  -- Publication / dépublication d'un objet
+  ('publish_object',
+   'Publier / dépublier un objet',
+   'content',
+   'Permet de passer un objet au statut published ou de le dépublier'),
+
+  -- Validation des modifications soumises (workflow de validation éditoriale)
+  ('validate_changes',
+   'Valider des modifications en attente',
+   'content',
+   'Permet de valider ou rejeter des modifications soumises par un contributeur dans le workflow éditorial'),
+
+  -- Modification des horaires d'ouverture
+  ('edit_hours',
+   'Modifier les horaires',
+   'content',
+   'Permet de modifier les plages horaires et calendriers d''ouverture d''un objet'),
+
+  -- Modification de la grille tarifaire
+  ('edit_pricing',
+   'Modifier les tarifs',
+   'content',
+   'Permet de modifier la grille tarifaire et les conditions de prix d''un objet'),
+
+  -- -------------------------------------------------------
+  -- Catégorie : crm — actions sur les données de relation client
+  -- -------------------------------------------------------
+
+  -- Rédaction de notes CRM
+  ('write_crm_notes',
+   'Écrire des notes CRM',
+   'crm',
+   'Permet de rédiger et modifier des notes CRM associées à un objet'),
+
+  -- -------------------------------------------------------
+  -- Catégorie : team — actions sur la communication d'équipe
+  -- -------------------------------------------------------
+
+  -- Gestion des messages d'équipe liés aux objets
+  ('manage_team_messages',
+   'Gérer les messages d''équipe',
+   'team',
+   'Permet d''envoyer et gérer les messages d''équipe liés à un objet'),
+
+  -- -------------------------------------------------------
+  -- Catégorie : media — actions sur les documents et médias
+  -- -------------------------------------------------------
+
+  -- Attachement de documents
+  ('attach_documents',
+   'Attacher des documents',
+   'media',
+   'Permet d''attacher des fichiers et documents à un objet'),
+
+  -- Gestion de la galerie photos
+  ('edit_gallery',
+   'Modifier la galerie',
+   'media',
+   'Permet d''ajouter, modifier ou supprimer des photos dans la galerie d''un objet')
+
+ON CONFLICT (code) DO NOTHING;
+-- ============================================================
+-- End of Phase 4 — ref_permission seeds
+-- ============================================================

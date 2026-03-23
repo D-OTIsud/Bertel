@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { getDefaultAppPath } from '@/lib/auth-routing';
 import { useSessionStore } from '@/store/session-store';
 
 export default function HomePage() {
@@ -11,7 +12,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (status !== 'ready') return;
-    router.replace(role === 'owner' ? '/dashboard' : '/explorer');
+    router.replace(getDefaultAppPath(role));
   }, [status, role, router]);
 
   return null;

@@ -124,7 +124,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
     client.from('ref_classification_scheme').select('id,code,name,position').in('code', [...HOT_CLASSIFICATION_SCHEME_CODES]).order('position', { ascending: true }),
-    client.from('ref_code_iti_practice').select('code,name,position').eq('is_active', true).order('position', { ascending: true }),
+    // PostgREST does not expose child partition tables in its schema cache.
+    // Query the parent ref_code table with a domain filter instead.
+    client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
   ]);
 
   if (metricsResult.error) {

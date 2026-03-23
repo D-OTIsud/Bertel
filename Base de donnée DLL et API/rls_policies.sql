@@ -2990,6 +2990,6 @@ GRANT  EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], obj
 REVOKE EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) TO authenticated, service_role;
 
--- PostgreSQL child partition tables do NOT inherit GRANTs from the parent table.
--- ref_code_iti_practice must be granted explicitly for PostgREST to expose it.
-GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;
+-- Note: ref_code_iti_practice and other ref_code child partitions are NOT exposed
+-- directly via PostgREST (schema cache does not include partition children).
+-- Frontend must query the parent ref_code table with domain = 'iti_practice'.

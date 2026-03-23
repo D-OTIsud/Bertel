@@ -95,8 +95,8 @@ GRANT EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], obje
 GRANT EXECUTE ON FUNCTION api.list_objects_with_validated_changes_since(timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION api.export_publication_indesign(uuid, integer, integer) TO service_role;
 
--- ref_code partitions: PostgreSQL does NOT propagate parent GRANTs to child partitions.
-GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;
+-- Note: ref_code child partitions (ref_code_iti_practice, etc.) are NOT exposed by
+-- PostgREST. Query the parent ref_code table with .eq('domain', 'iti_practice').
 ```
 
 5) Test an RPC from the API docs or via curl/Postman
@@ -152,8 +152,8 @@ GRANT EXECUTE ON FUNCTION api.list_objects_map_view(text[], text[], jsonb, text[
 -- Internal helper (SECURITY DEFINER) — authenticated needs EXECUTE but NOT USAGE on schema internal:
 GRANT EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) TO authenticated, service_role;
 
--- ref_code partitions: PostgreSQL does NOT propagate parent GRANTs to child partitions.
-GRANT SELECT ON ref_code_iti_practice TO anon, authenticated, service_role;
+-- Note: ref_code child partitions (ref_code_iti_practice, etc.) are NOT exposed by
+-- PostgREST. Query the parent ref_code table with .eq('domain', 'iti_practice').
 
 -- Optional if you call with the service key
 GRANT USAGE ON SCHEMA api TO service_role;

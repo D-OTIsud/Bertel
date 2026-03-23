@@ -4830,6 +4830,340 @@ COMMENT ON COLUMN object_legal.document_delivered_at IS 'Timestamp when the supp
 COMMENT ON TABLE ref_legal_type IS 'Reference table for legal record types. Defines what types of legal documents can be stored for objects.';
 COMMENT ON COLUMN ref_legal_type.is_public IS 'Whether documents of this type can be public (true) or should only be visible to parent organization (false)';
 
+-- =====================================================
+-- Phase 1 — Fondation du modèle d'accès et de permissions
+-- Référence : access_control_master_plan.md (version 1.5, 2026-03-23)
+-- Périmètre : référentiels rôles, membership, scope ORG, lien user-actor.
+-- Hors périmètre : permissions (Niveau 2), exceptions (Niveau 3), groupes.
+-- =====================================================
+
+
+-- -----------------------------------------------------
+-- 1. ref_org_business_role — Catalogue des rôles métier ORG
+-- Le rôle métier reflète la fonction professionnelle du user dans l'ORG.
+-- Il est orthogonal au scope (Niveau 1) et aux permissions (Niveau 2).
+-- Il ne confère aucun droit implicite — les droits passent par org/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_org_business_role (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(50)  NOT NULL UNIQUE,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT,
+  position    INTEGER,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+
+-- -----------------------------------------------------
+-- 2. ref_org_admin_role — Catalogue des rôles d'administration ORG
+-- Le rôle admin définit le périmètre de gouvernance du user dans l'ORG.
+-- Orthogonal au rôle métier : on peut être editor et team_lead, ou viewer et org_admin.
+-- rank INTEGER obligatoire : permet les comparaisons pour les règles d'anti auto-élévation
+-- (un admin ne peut gérer que des rôles de rang strictement inférieur au sien).
+-- IMPORTANT : aucun rôle admin ne bypasse api.user_has_permission().
+-- Les droits d'un admin restent déclarés explicitement dans org_permission/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_org_admin_role (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(50)  NOT NULL UNIQUE,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT,
+  -- rank : entier de comparaison pour les règles d'anti auto-élévation (§2.6 du plan).
+  -- Distinct de position (ordre d'affichage) : ici la sémantique est fonctionnelle.
+  rank        INTEGER      NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+
+-- -----------------------------------------------------
+-- 3. user_org_membership — Appartenance d'un user à une ORG
+-- Cette table porte UNIQUEMENT le fait d'appartenir (membership).
+-- Elle ne porte pas les rôles — ceux-ci sont dans des tables séparées (§2.4 du plan).
+-- Contrainte métier : un user 'tourism_agent' n'a qu'une seule ORG active à la fois.
+-- Les users 'owner' et 'super_admin' sont exemptés de cette contrainte.
+-- org_object_id doit pointer vers un object.type = 'ORG' (vérifié par trigger).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_membership (
+  id               UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id          UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Doit pointer vers un objet de type 'ORG'. Garanti par trigger check_membership_org_type.
+  org_object_id    TEXT        NOT NULL REFERENCES object(id) ON DELETE RESTRICT,
+  is_active        BOOLEAN     NOT NULL DEFAULT TRUE,
+  invited_by       UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  invited_at       TIMESTAMPTZ,
+  activated_at     TIMESTAMPTZ,
+  deactivated_at   TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+-- Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+-- le trigger est la solution correcte.
+CREATE OR REPLACE FUNCTION api.check_membership_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'user_org_membership.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_membership_org_type ON user_org_membership;
+CREATE TRIGGER check_membership_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION api.check_membership_org_type();
+
+-- Trigger : contrainte "1 user tourism_agent = 1 ORG active".
+-- Un index partiel unique WHERE is_active = TRUE s'appliquerait à TOUS les users,
+-- y compris owner/super_admin. Le trigger permet d'appliquer la règle sélectivement.
+--
+-- Durcissements par rapport à la version naïve :
+--   1. pg_advisory_xact_lock(user_id) : sérialise les transactions concurrentes sur le
+--      même user_id — élimine le TOCTOU sur les INSERTs simultanés.
+--   2. SELECT ... FOR NO KEY UPDATE : verrouille les lignes actives existantes pendant
+--      la vérification — empêche une transaction concurrente de désactiver/réactiver
+--      un membership pendant que la nôtre lit.
+--   3. Le trigger se déclenche aussi sur UPDATE OF user_id : si user_id est modifié
+--      sur un membership actif, la contrainte est revérifiée pour le nouveau user_id.
+--   4. id IS DISTINCT FROM NEW.id remplace la condition TG_OP redondante :
+--      en BEFORE INSERT la ligne n'existe pas encore, l'exclusion est toujours correcte.
+CREATE OR REPLACE FUNCTION api.enforce_single_active_org_membership()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_platform_role TEXT;
+BEGIN
+  -- La contrainte ne s'applique qu'à l'activation d'un membership
+  IF NEW.is_active = FALSE THEN
+    RETURN NEW;
+  END IF;
+
+  -- Lire le rôle plateforme du user (sur le nouveau user_id en cas de UPDATE OF user_id)
+  SELECT role INTO v_platform_role
+  FROM app_user_profile
+  WHERE id = NEW.user_id;
+
+  -- owner et super_admin ne sont pas soumis à la contrainte métier 1-ORG
+  IF v_platform_role IN ('owner', 'super_admin') THEN
+    RETURN NEW;
+  END IF;
+
+  -- Verrou advisory transaction-level sur user_id :
+  -- sérialise toutes les tentatives d'activation concurrentes pour ce user.
+  -- Élimine le TOCTOU : deux INSERTs simultanés ne peuvent plus tous les deux
+  -- passer le EXISTS ci-dessous avant que l'un n'ait commité.
+  PERFORM pg_advisory_xact_lock(hashtext(NEW.user_id::text));
+
+  -- Verrouiller les lignes actives existantes (FOR NO KEY UPDATE) :
+  -- empêche une transaction concurrente de modifier is_active sur ces lignes
+  -- pendant que notre vérification est en cours.
+  PERFORM 1
+  FROM user_org_membership
+  WHERE user_id = NEW.user_id
+    AND is_active = TRUE
+    AND id IS DISTINCT FROM NEW.id
+  FOR NO KEY UPDATE;
+
+  -- Vérification effective : un seul membership actif autorisé
+  IF EXISTS (
+    SELECT 1
+    FROM user_org_membership
+    WHERE user_id = NEW.user_id
+      AND is_active = TRUE
+      AND id IS DISTINCT FROM NEW.id
+  ) THEN
+    RAISE EXCEPTION
+      'Un utilisateur tourism_agent ne peut avoir qu''une seule ORG active. '
+      'Désactivez le membership existant avant d''en activer un nouveau (user_id = %).',
+      NEW.user_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_single_active_org_membership ON user_org_membership;
+CREATE TRIGGER enforce_single_active_org_membership
+  -- user_id ajouté : couvre le cas UPDATE SET user_id sur un membership actif
+  BEFORE INSERT OR UPDATE OF is_active, user_id ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION api.enforce_single_active_org_membership();
+
+
+-- -----------------------------------------------------
+-- 4. user_org_business_role — Rôle métier actif du user dans son ORG
+-- Séparé du membership : on peut modifier le rôle sans toucher au membership.
+-- Contrainte : un seul rôle métier actif par membership (index partiel).
+-- Le rôle métier est obligatoire pour tout user rattaché à une ORG.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_business_role (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  membership_id UUID        NOT NULL REFERENCES user_org_membership(id) ON DELETE CASCADE,
+  role_id       UUID        NOT NULL REFERENCES ref_org_business_role(id) ON DELETE RESTRICT,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  assigned_by   UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Un seul rôle métier actif par membership à tout moment
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_org_business_role_active
+  ON user_org_business_role(membership_id) WHERE is_active = TRUE;
+
+
+-- -----------------------------------------------------
+-- 5. user_org_admin_role — Rôle d'administration du user dans son ORG
+-- Optionnel (0 ou 1 par membership). Séparé du rôle métier.
+-- Le rang est porté par ref_org_admin_role.rank (utilisé pour les contrôles anti-élévation).
+-- N'accorde aucun droit implicite — les droits restent dans org/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_admin_role (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  membership_id UUID        NOT NULL REFERENCES user_org_membership(id) ON DELETE CASCADE,
+  role_id       UUID        NOT NULL REFERENCES ref_org_admin_role(id) ON DELETE RESTRICT,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  assigned_by   UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Au plus un rôle admin actif par membership à tout moment
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_org_admin_role_active
+  ON user_org_admin_role(membership_id) WHERE is_active = TRUE;
+
+
+-- -----------------------------------------------------
+-- 6. app_user_profile — Ajout de actor_id (lien user → actor, optionnel)
+-- Lien 1-to-1 nullable. Un actor ne peut être lié qu'à un seul user.
+-- L'index partiel unique garantit l'unicité côté actor sans bloquer les NULLs.
+-- Le lien user → actor ne définit pas le rôle global ORG du user (§2.1 du plan).
+-- -----------------------------------------------------
+ALTER TABLE app_user_profile
+  ADD COLUMN IF NOT EXISTS actor_id UUID REFERENCES actor(id) ON DELETE SET NULL;
+
+-- Garantit qu'un actor n'est pas lié à plusieurs users simultanément
+CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_profile_actor_id
+  ON app_user_profile(actor_id) WHERE actor_id IS NOT NULL;
+
+
+-- -----------------------------------------------------
+-- 7. org_config — Scope d'accès de l'ORG (Niveau 1 uniquement)
+-- Cette table porte UNIQUEMENT le scope d'accès (Niveau 1).
+-- Elle ne porte PAS de permissions d'action (Niveau 2) — cf. Correction C3 du plan.
+-- Valeurs autorisées :
+--   own_objects_only : périmètre propre uniquement (objets créés/publiés/liés via object_org_link)
+--   all_published    : périmètre propre + lecture de tous les objets publiés d'autres ORG
+-- La valeur 'all_objects' est explicitement exclue (§2.3 du plan).
+-- Modification de access_scope réservée au super_admin (contrôle applicatif — §2.8 du plan).
+-- org_object_id doit pointer vers un object.type = 'ORG' (vérifié par trigger).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS org_config (
+  id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  -- Une seule config par ORG
+  org_object_id  TEXT        NOT NULL UNIQUE REFERENCES object(id) ON DELETE CASCADE,
+  access_scope   TEXT        NOT NULL DEFAULT 'own_objects_only'
+                   CHECK (access_scope IN ('own_objects_only', 'all_published')),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+CREATE OR REPLACE FUNCTION api.check_org_config_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'org_config.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_org_config_org_type ON org_config;
+CREATE TRIGGER check_org_config_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON org_config
+  FOR EACH ROW EXECUTE FUNCTION api.check_org_config_org_type();
+
+
+-- =====================================================
+-- Indexes Phase 1
+-- =====================================================
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_user_id
+  ON user_org_membership(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_org_object_id
+  ON user_org_membership(org_object_id);
+-- Index partiel pour les lookups fréquents "membership actif du user"
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_user_active
+  ON user_org_membership(user_id) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_user_org_business_role_membership_id
+  ON user_org_business_role(membership_id);
+CREATE INDEX IF NOT EXISTS idx_user_org_admin_role_membership_id
+  ON user_org_admin_role(membership_id);
+CREATE INDEX IF NOT EXISTS idx_org_config_org_object_id
+  ON org_config(org_object_id);
+
+
+-- =====================================================
+-- Triggers updated_at — Phase 1
+-- =====================================================
+DROP TRIGGER IF EXISTS update_ref_org_business_role_updated_at ON ref_org_business_role;
+CREATE TRIGGER update_ref_org_business_role_updated_at
+  BEFORE UPDATE ON ref_org_business_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ref_org_admin_role_updated_at ON ref_org_admin_role;
+CREATE TRIGGER update_ref_org_admin_role_updated_at
+  BEFORE UPDATE ON ref_org_admin_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_membership_updated_at ON user_org_membership;
+CREATE TRIGGER update_user_org_membership_updated_at
+  BEFORE UPDATE ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_business_role_updated_at ON user_org_business_role;
+CREATE TRIGGER update_user_org_business_role_updated_at
+  BEFORE UPDATE ON user_org_business_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_admin_role_updated_at ON user_org_admin_role;
+CREATE TRIGGER update_user_org_admin_role_updated_at
+  BEFORE UPDATE ON user_org_admin_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_org_config_updated_at ON org_config;
+CREATE TRIGGER update_org_config_updated_at
+  BEFORE UPDATE ON org_config
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- End of Phase 1 — Fondation du modèle d'accès
+-- =====================================================
+
 -- Run audit attachment after all table creations (including late sections).
 SELECT audit.attach_missing_triggers();
 

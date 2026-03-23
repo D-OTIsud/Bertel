@@ -2,8 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useBootstrapSession } from '@/hooks/useBootstrapSession';
-import { useNetworkMonitor } from '@/hooks/useNetworkMonitor';
+import { getPostLoginPath } from '@/lib/auth-routing';
 import { useSessionStore } from '@/store/session-store';
 
 function SessionFallback() {
@@ -23,8 +22,6 @@ function SessionFallback() {
 
 export default function HomePage() {
   const router = useRouter();
-  useBootstrapSession();
-  useNetworkMonitor();
   const status = useSessionStore((state) => state.status);
   const role = useSessionStore((state) => state.role);
 
@@ -36,12 +33,10 @@ export default function HomePage() {
     if (status === 'ready') {
       const from =
         typeof window !== 'undefined' ? sessionStorage.getItem('auth_redirect_from') : null;
-      if (from && from.startsWith('/') && !from.startsWith('//')) {
+      if (typeof window !== 'undefined') {
         sessionStorage.removeItem('auth_redirect_from');
-        router.replace(from);
-        return;
       }
-      router.replace(role === 'owner' ? '/dashboard' : '/explorer');
+      router.replace(getPostLoginPath(role, from));
     }
   }, [status, role, router]);
 

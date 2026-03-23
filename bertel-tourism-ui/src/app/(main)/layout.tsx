@@ -3,8 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { useBootstrapSession } from '@/hooks/useBootstrapSession';
-import { useNetworkMonitor } from '@/hooks/useNetworkMonitor';
+import { getLoginPath } from '@/lib/auth-routing';
 import { useSessionStore } from '@/store/session-store';
 
 function SessionFallback() {
@@ -25,14 +24,11 @@ function SessionFallback() {
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  useBootstrapSession();
-  useNetworkMonitor();
   const status = useSessionStore((state) => state.status);
 
   useEffect(() => {
     if (status === 'guest') {
-      const from = encodeURIComponent(pathname ?? '/');
-      router.replace(from ? `/login?from=${from}` : '/login');
+      router.replace(getLoginPath(pathname));
     }
   }, [status, router, pathname]);
 

@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { env } from '../lib/env';
+import { getPostLoginPath, isSafeInternalPath } from '../lib/auth-routing';
 import { loginEmailSchema, type LoginFormValues } from '../lib/schemas';
 import { signInWithGoogle, signInWithEmailPassword } from '../services/auth';
 import { useSessionStore } from '../store/session-store';
@@ -37,17 +38,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status !== 'ready') return;
-    const from = searchParams?.get('from');
-    if (from) {
-      router.replace(from);
-      return;
-    }
-    router.replace(role === 'owner' ? '/dashboard' : '/explorer');
+    router.replace(getPostLoginPath(role, searchParams?.get('from')));
   }, [role, router, searchParams, status]);
 
   useEffect(() => {
-    if (errorMessage) toast.error(errorMessage);
-  }, [errorMessage]);
+    if (!errorMessage) return;
+    if (status === 'error' || errorMessage.includes('deconnecte')) {
+      toast.error(errorMessage);
+    }
+  }, [errorMessage, status]);
 
   if (status === 'ready') return null;
 
@@ -64,8 +63,12 @@ export default function LoginPage() {
 
   async function handleGoogleLogin() {
     const from = searchParams?.get('from');
-    if (from && typeof window !== 'undefined') {
-      sessionStorage.setItem('auth_redirect_from', from);
+    if (typeof window !== 'undefined') {
+      if (isSafeInternalPath(from)) {
+        sessionStorage.setItem('auth_redirect_from', from);
+      } else {
+        sessionStorage.removeItem('auth_redirect_from');
+      }
     }
     setSubmitting(true);
     try {

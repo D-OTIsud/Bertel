@@ -3611,3 +3611,51 @@ $$;
 -- ============================================================
 -- End of V5 Sustainability + Accessibility seeds
 -- ============================================================
+
+-- ============================================================
+-- Phase 0 — Seeds ref_org_role (access_control_master_plan.md §2.2)
+-- Pré-requis bloquant : sans ces seeds, object_org_link est inutilisable.
+-- Ajout 2026-03-23 — requis avant toute Phase 1 du modèle d'accès.
+-- ============================================================
+INSERT INTO ref_org_role (code, name, description, position) VALUES
+-- publisher : ORG source canonique de l'objet. Écriture directe sur la donnée canonique.
+('publisher', 'Publisher principal', 'ORG publisher principale — source canonique, écriture directe sur la donnée de l''objet', 10),
+-- contributor : ORG enrichisseuse. Ne modifie que sa propre couche d''enrichissement.
+('contributor', 'ORG contributrice', 'ORG contributrice — enrichissement propre uniquement, pas d''accès à la donnée canonique', 20),
+-- reader : ORG lectrice. Accès en lecture uniquement, via lien explicite object_org_link.
+('reader', 'ORG lectrice', 'ORG lectrice — accès en lecture via lien explicite seulement', 30)
+ON CONFLICT (code) DO NOTHING;
+-- ============================================================
+-- End of Phase 0 — ref_org_role seeds
+-- ============================================================
+
+-- ============================================================
+-- Phase 1 — Seeds ref_org_business_role (D1 verrouillée — 2026-03-23)
+-- Rôles métier ORG. Orthogonaux au scope et aux permissions.
+-- Ne confèrent aucun droit implicite.
+-- ============================================================
+INSERT INTO ref_org_business_role (code, name, description, position) VALUES
+-- viewer : consultation uniquement, sans création ni modification
+('viewer',      'Lecteur',      'Consultation uniquement dans le périmètre accessible à l''ORG et au user', 10),
+-- contributor : saisie et enrichissement, sans rôle de validation éditoriale
+('contributor', 'Contributeur', 'Saisie, enrichissement, mise à jour dans le périmètre autorisé. Sans validation éditoriale.', 20),
+-- editor : contrôle qualité, correction, validation éditoriale
+('editor',      'Éditeur',      'Contrôle qualité, correction, validation éditoriale dans le périmètre autorisé', 30)
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================
+-- Phase 1 — Seeds ref_org_admin_role (D2 verrouillée — 2026-03-23)
+-- Rôles admin ORG. Rang obligatoire pour les règles d'anti auto-élévation.
+-- Aucun de ces rôles ne bypasse api.user_has_permission().
+-- ============================================================
+INSERT INTO ref_org_admin_role (code, name, description, rank) VALUES
+-- team_lead (rang 10) : premier niveau de délégation, gestion des membres non-admin
+('team_lead',   'Référent équipe',     'Premier niveau de délégation administrative dans l''ORG', 10),
+-- org_manager (rang 20) : administration opérationnelle — peut gérer les team_lead
+('org_manager', 'Gestionnaire ORG',    'Administration opérationnelle de l''ORG — peut gérer les membres de rang inférieur', 20),
+-- org_admin (rang 30) : niveau le plus élevé dans l''ORG, sans dépasser le super_admin plateforme
+('org_admin',   'Administrateur ORG',  'Niveau administratif le plus élevé dans l''ORG, sans dépasser le super_admin plateforme', 30)
+ON CONFLICT (code) DO NOTHING;
+-- ============================================================
+-- End of Phase 1 — ref_org_business_role + ref_org_admin_role seeds
+-- ============================================================

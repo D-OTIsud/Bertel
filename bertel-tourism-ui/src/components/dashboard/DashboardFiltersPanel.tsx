@@ -58,6 +58,7 @@ function isoNDaysAgo(days: number): string {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
+// Matches Explorer's FiltersSection structure — eyebrow + h3 two-level heading.
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="filters-panel__section">
@@ -71,14 +72,29 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Matches Explorer's FiltersSubsection structure — adds the subsection-header
+// wrapper around the facet title, which the previous implementation was missing.
+function Subsection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="filters-panel__subsection">
+      <div className="filters-panel__subsection-header">
+        <span className="facet-title">{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 
 interface DashboardFiltersPanelProps {
   /** Sorted, deduplicated city list from the corpus (api.get_dashboard_city_options). */
   availableCities: string[];
+  /** Non-null when the city options RPC failed — shown inline below the dropdown. */
+  cityLoadError?: string | null;
 }
 
-export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanelProps) {
+export function DashboardFiltersPanel({ availableCities, cityLoadError }: DashboardFiltersPanelProps) {
   const { filters, setFilters, resetFilters, sidebarCollapsed, toggleSidebar } =
     useDashboardFilterStore();
 
@@ -90,10 +106,6 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
     filters.pmr ||
     filters.petsAccepted ||
     JSON.stringify(filters.status) !== JSON.stringify(['published']);
-
-  function toggleType(code: BackendObjectTypeCode) {
-    setFilters({ types: toggleItem(filters.types, code) });
-  }
 
   function toggleStatus(code: NonNullable<DashboardFilters['status']>[number]) {
     setFilters({ status: toggleItem(filters.status, code) });
@@ -152,23 +164,28 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
 
         {/* Périmètre */}
         <Section title="Périmètre">
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Type d'objet</span>
-            <div className="chip-grid">
+          {/* Multi-select dropdown — Ctrl/Cmd+click or Shift+click for multiple selections.
+              Value is BackendObjectTypeCode[] stored in filters.types. */}
+          <Subsection title="Type d'objet">
+            <select
+              multiple
+              size={6}
+              className="dashboard-filter-input dashboard-filter-input--multi"
+              value={filters.types ?? []}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions).map(
+                  (o) => o.value as BackendObjectTypeCode,
+                );
+                setFilters({ types: selected.length > 0 ? selected : undefined });
+              }}
+            >
               {TYPE_OPTIONS.map(({ code, label }) => (
-                <button
-                  key={code}
-                  type="button"
-                  className={filters.types?.includes(code) ? 'chip chip--active' : 'chip'}
-                  onClick={() => toggleType(code)}
-                >
-                  {label}
-                </button>
+                <option key={code} value={code}>{label}</option>
               ))}
-            </div>
-          </div>
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Statut</span>
+            </select>
+          </Subsection>
+
+          <Subsection title="Statut">
             <div className="chip-grid">
               {STATUS_OPTIONS.map(({ code, label }) => (
                 <button
@@ -181,13 +198,12 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
                 </button>
               ))}
             </div>
-          </div>
+          </Subsection>
         </Section>
 
         {/* Localisation */}
         <Section title="Localisation">
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Commune OTI Sud</span>
+          <Subsection title="Commune">
             <select
               className="dashboard-filter-input"
               value={filters.cities?.[0] ?? ''}
@@ -201,9 +217,14 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
-          </div>
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Lieu-dit</span>
+            {cityLoadError && (
+              <span className="dashboard-filter-error">
+                Villes indisponibles — {cityLoadError}
+              </span>
+            )}
+          </Subsection>
+
+          <Subsection title="Lieu-dit">
             <input
               type="text"
               className="dashboard-filter-input"
@@ -214,13 +235,12 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
                 setFilters({ lieuDits: v ? [v] : undefined });
               }}
             />
-          </div>
+          </Subsection>
         </Section>
 
         {/* Période */}
         <Section title="Période de modification">
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Préréglages</span>
+          <Subsection title="Préréglages">
             <div className="chip-grid">
               {DATE_PRESETS.map(({ label, days }) => {
                 const from = isoNDaysAgo(days);
@@ -237,9 +257,9 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
                 );
               })}
             </div>
-          </div>
-          <div className="filters-panel__subsection">
-            <span className="facet-title">Plage personnalisée</span>
+          </Subsection>
+
+          <Subsection title="Plage personnalisée">
             <div className="dashboard-filter-date-row">
               <input
                 type="date"
@@ -255,26 +275,28 @@ export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanel
                 onChange={(e) => setFilters({ updatedAtTo: e.target.value || undefined })}
               />
             </div>
-          </div>
+          </Subsection>
         </Section>
 
-        {/* Accessibilité */}
+        {/* Accessibilité — switch-row pattern, matching Explorer's accessibility section */}
         <Section title="Accessibilité">
-          <div className="chip-grid">
-            <button
-              type="button"
-              className={filters.pmr ? 'chip chip--active' : 'chip'}
-              onClick={() => setFilters({ pmr: filters.pmr ? undefined : true })}
-            >
-              PMR
-            </button>
-            <button
-              type="button"
-              className={filters.petsAccepted ? 'chip chip--active' : 'chip'}
-              onClick={() => setFilters({ petsAccepted: filters.petsAccepted ? undefined : true })}
-            >
-              Animaux acceptés
-            </button>
+          <div className="filters-panel__toggle-group">
+            <label className="switch-row">
+              <span>PMR</span>
+              <input
+                type="checkbox"
+                checked={!!filters.pmr}
+                onChange={(e) => setFilters({ pmr: e.target.checked ? true : undefined })}
+              />
+            </label>
+            <label className="switch-row">
+              <span>Animaux acceptés</span>
+              <input
+                type="checkbox"
+                checked={!!filters.petsAccepted}
+                onChange={(e) => setFilters({ petsAccepted: e.target.checked ? true : undefined })}
+              />
+            </label>
           </div>
         </Section>
 

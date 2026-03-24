@@ -3283,6 +3283,31 @@ body::after {
   flex-shrink: 0;
 }
 
+/* Multi-select listbox for dashboard type filter */
+.dashboard-filter-input--multi {
+  height: auto;
+  min-height: 7rem;
+  padding: 0;
+}
+
+.dashboard-filter-input--multi option {
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+}
+
+/* Inline error hint below city dropdown when RPC load fails */
+.dashboard-filter-error {
+  font-size: 0.72rem;
+  color: #b34b3d;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* switch-row alignment inside the dashboard sidebar (mirrors Explorer override) */
+.dashboard-filters-sidebar .switch-row {
+  align-items: center;
+}
+
 /* ─── Active filter strip ───────────────────────────────────────────────── */
 
 .active-filter-strip {

@@ -35,9 +35,17 @@ export default function DashboardPage() {
   const [distinctionOverview, setDistinctionOverview] = useState<DashboardDistinctionOverview | null>(null);
   // Corpus-wide city list — fetched once on mount, independent of active filters.
   const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [cityLoadError, setCityLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    getDashboardCityOptions().then(setCityOptions).catch(console.error);
+    getDashboardCityOptions()
+      .then((cities) => { setCityOptions(cities); setCityLoadError(null); })
+      .catch((err: unknown) => {
+        console.error('getDashboardCityOptions failed:', err);
+        setCityLoadError(
+          err instanceof Error ? err.message : 'Impossible de charger la liste des villes',
+        );
+      });
   }, []);
 
   useEffect(() => {
@@ -50,7 +58,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-layout">
-      <DashboardFiltersPanel availableCities={cityOptions} />
+      <DashboardFiltersPanel availableCities={cityOptions} cityLoadError={cityLoadError} />
 
       <main className="dashboard-main">
         <ActiveFilterStrip />

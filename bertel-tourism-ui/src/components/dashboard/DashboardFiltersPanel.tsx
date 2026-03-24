@@ -31,14 +31,6 @@ const STATUS_OPTIONS: { code: NonNullable<DashboardFilters['status']>[number]; l
   { code: 'hidden',    label: 'Masqué' },
 ];
 
-// Communes OTI Sud — valeurs exactes présentes dans object_location.city
-const COMMUNE_OPTIONS = [
-  'Le Tampon',
-  'Entre-Deux',
-  'Saint-Joseph',
-  'Saint-Philippe',
-];
-
 const DATE_PRESETS: { label: string; days: number }[] = [
   { label: '7 j',    days: 7 },
   { label: '30 j',   days: 30 },
@@ -81,7 +73,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export function DashboardFiltersPanel() {
+interface DashboardFiltersPanelProps {
+  /** Sorted, deduplicated city list from the corpus (api.get_dashboard_city_options). */
+  availableCities: string[];
+}
+
+export function DashboardFiltersPanel({ availableCities }: DashboardFiltersPanelProps) {
   const { filters, setFilters, resetFilters, sidebarCollapsed, toggleSidebar } =
     useDashboardFilterStore();
 
@@ -100,10 +97,6 @@ export function DashboardFiltersPanel() {
 
   function toggleStatus(code: NonNullable<DashboardFilters['status']>[number]) {
     setFilters({ status: toggleItem(filters.status, code) });
-  }
-
-  function toggleCommune(name: string) {
-    setFilters({ cities: toggleItem(filters.cities, name) });
   }
 
   function applyDatePreset(days: number) {
@@ -195,18 +188,19 @@ export function DashboardFiltersPanel() {
         <Section title="Localisation">
           <div className="filters-panel__subsection">
             <span className="facet-title">Commune OTI Sud</span>
-            <div className="chip-grid">
-              {COMMUNE_OPTIONS.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={filters.cities?.includes(name) ? 'chip chip--active' : 'chip'}
-                  onClick={() => toggleCommune(name)}
-                >
-                  {name}
-                </button>
+            <select
+              className="dashboard-filter-input"
+              value={filters.cities?.[0] ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilters({ cities: v ? [v] : undefined });
+              }}
+            >
+              <option value="">Toutes les villes</option>
+              {availableCities.map((name) => (
+                <option key={name} value={name}>{name}</option>
               ))}
-            </div>
+            </select>
           </div>
           <div className="filters-panel__subsection">
             <span className="facet-title">Lieu-dit</span>

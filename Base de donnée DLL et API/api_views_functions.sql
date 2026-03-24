@@ -7762,3 +7762,34 @@ no hardcoded list. To add a new label, seed its scheme with is_distinction = TRU
 function picks it up automatically. Typological schemes (type_hot, retail_category) keep
 is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakdown sorted
 by count DESC. ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
+
+-- ─────────────────────────────────────────────────────
+-- City options for dashboard filter dropdown
+-- ─────────────────────────────────────────────────────
+-- Returns the full corpus city domain: distinct non-null, non-empty cities from
+-- object_location (is_main_location=true) across ALL non-ORG objects, any status.
+-- No filter parameters — caller receives the same list regardless of active dashboard
+-- filters. Used exclusively to populate the city <select> on the dashboard sidebar.
+CREATE OR REPLACE FUNCTION api.get_dashboard_city_options()
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT ARRAY(
+    SELECT DISTINCT btrim(ol.city)
+    FROM   object_location ol
+    JOIN   object o ON o.id = ol.object_id
+    WHERE  ol.is_main_location = TRUE
+      AND  btrim(ol.city) <> ''
+      AND  o.object_type <> 'ORG'
+    ORDER BY btrim(ol.city) ASC
+  );
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_city_options IS
+'Returns a sorted TEXT[] of distinct cities present in object_location
+(is_main_location=true, non-null/non-empty) for all non-ORG objects, any status.
+No filter parameters. Used to populate the dashboard city filter dropdown.
+Represents the full corpus city domain, not the current filtered slice.';

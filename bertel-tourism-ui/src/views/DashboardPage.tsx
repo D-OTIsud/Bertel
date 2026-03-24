@@ -8,6 +8,7 @@ import {
   getDashboardCityDistribution,
   getDashboardActualisation,
   getDashboardDistinctionOverview,
+  getDashboardCityOptions,
 } from '../services/dashboard-rpc';
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
@@ -32,6 +33,12 @@ export default function DashboardPage() {
   const [cityDistribution, setCityDistribution] = useState<DashboardCityDistribution | null>(null);
   const [actualisation, setActualisation] = useState<DashboardActualisation | null>(null);
   const [distinctionOverview, setDistinctionOverview] = useState<DashboardDistinctionOverview | null>(null);
+  // Corpus-wide city list — fetched once on mount, independent of active filters.
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDashboardCityOptions().then(setCityOptions).catch(console.error);
+  }, []);
 
   useEffect(() => {
     getDashboardScorecards(filters).then(setScorecards).catch(console.error);
@@ -43,7 +50,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-layout">
-      <DashboardFiltersPanel />
+      <DashboardFiltersPanel availableCities={cityOptions} />
 
       <main className="dashboard-main">
         <ActiveFilterStrip />

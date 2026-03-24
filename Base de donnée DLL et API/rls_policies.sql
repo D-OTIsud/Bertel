@@ -2993,3 +2993,7 @@ GRANT  EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[],
 -- Note: ref_code_iti_practice and other ref_code child partitions are NOT exposed
 -- directly via PostgREST (schema cache does not include partition children).
 -- Frontend must query the parent ref_code table with domain = 'iti_practice'.
+
+-- Dashboard city options — no filter params, corpus-wide distinct city list.
+REVOKE EXECUTE ON FUNCTION api.get_dashboard_city_options()             FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.get_dashboard_city_options()             TO   authenticated, service_role;

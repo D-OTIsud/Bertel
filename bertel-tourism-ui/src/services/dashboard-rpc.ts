@@ -162,6 +162,30 @@ export async function getDashboardDistinctionOverview(
   return data as DashboardDistinctionOverview;
 }
 
+// ─── City options — corpus-wide, filter-independent ──────────────────────────
+// Returns distinct cities from object_location across all non-ORG objects,
+// any status. Called once on dashboard mount; independent of DashboardFilters.
+
+export async function getDashboardCityOptions(): Promise<string[]> {
+  const { demoMode } = useSessionStore.getState();
+  if (demoMode) {
+    const { mockDashboardData } = await import('../data/mock-dashboard');
+    // Derive from mock distribution rows; exclude synthetic aggregates (no city_any filter value)
+    return mockDashboardData.cityDistribution.rows
+      .map((r) => r.city)
+      .filter((c) => c && c !== 'Autres')
+      .sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_city_options');
+
+  if (error) throw error;
+  return (data as string[]) ?? [];
+}
+
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────
 // Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 

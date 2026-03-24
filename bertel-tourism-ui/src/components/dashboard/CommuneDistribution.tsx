@@ -12,7 +12,8 @@ interface Props {
 
 export function CommuneDistribution({ data }: Props) {
   const setFilters = useDashboardFilterStore((s) => s.setFilters);
-  const activeCommunes = useDashboardFilterStore((s) => s.filters.cities ?? []);
+  const cities = useDashboardFilterStore((s) => s.filters.cities);
+  const activeCommunes = cities ?? [];
 
   // Indexer les données reçues par commune
   const byCommune = Object.fromEntries(data.rows.map((r) => [r.city, r]));

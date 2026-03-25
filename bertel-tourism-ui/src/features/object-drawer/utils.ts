@@ -4,11 +4,14 @@ interface GenericRecord {
   [key: string]: unknown;
 }
 
+type RelatedDirection = 'in' | 'out' | 'associated';
+
 export interface ContactItem {
   id: string;
   label: string;
   kind: string;
   value: string;
+  isPrimary: boolean;
 }
 
 export interface ActorItem {
@@ -30,6 +33,10 @@ export interface MediaItem {
   url: string;
   title: string;
   tags: string[];
+  isMain: boolean;
+  credit: string;
+  visibility: string;
+  position: string;
 }
 
 export interface LegalItem {
@@ -70,6 +77,9 @@ export interface MeetingRoomItem {
   name: string;
   capacityTheatre: string;
   capacityClassroom: string;
+  capacityBoardroom: string;
+  capacityU: string;
+  areaM2: string;
   equipment: string[];
 }
 
@@ -93,8 +103,63 @@ export interface ExternalSyncItem {
   note: string;
 }
 
+export interface CapacityItem {
+  id: string;
+  label: string;
+  value: string;
+}
+
+export interface TaxonomyItem {
+  id: string;
+  label: string;
+  meta: string;
+}
+
+export interface TaxonomyGroup {
+  key: string;
+  title: string;
+  items: TaxonomyItem[];
+}
+
+export interface PetPolicyItem {
+  accepted: boolean | null;
+  label: string;
+  details: string[];
+}
+
+export interface RelatedObjectItem {
+  id: string;
+  name: string;
+  type: string;
+  relationship: string;
+  direction: RelatedDirection;
+}
+
+export interface ItinerarySummary {
+  distanceKm: string;
+  durationHours: string;
+  difficulty: string;
+  elevationGain: string;
+  isLoop: boolean | null;
+  track: string;
+  trackFormat: string;
+  practices: string[];
+  info: string[];
+  sectionsCount: number;
+  stagesCount: number;
+  profilesCount: number;
+}
+
 function isRecord(value: unknown): value is GenericRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function readList(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 export function readArray(value: unknown): Array<Record<string, unknown>> {
@@ -119,6 +184,22 @@ export function readString(value: unknown, fallback = ''): string {
   return fallback;
 }
 
+export function readBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'oui'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'non'].includes(normalized)) return false;
+  }
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  return null;
+}
+
 function readNamedValue(value: unknown, fallback = ''): string {
   if (typeof value === 'string' || typeof value === 'number') {
     return readString(value, fallback);
@@ -128,8 +209,14 @@ function readNamedValue(value: unknown, fallback = ''): string {
     return (
       readString(value.name) ||
       readString(value.label) ||
-      readString(value.code) ||
       readString(value.title) ||
+      readString(value.display_name) ||
+      readString(value.value_name) ||
+      readString(value.scheme_name) ||
+      readString(value.kind_name) ||
+      readString(value.kind_label) ||
+      readString(value.code) ||
+      readString(value.slug) ||
       fallback
     );
   }
@@ -137,15 +224,26 @@ function readNamedValue(value: unknown, fallback = ''): string {
   return fallback;
 }
 
-function mapContactLines(value: unknown): string[] {
-  return readArray(value)
-    .map((item) => {
-      const kind = readNamedValue(item.kind, readString(item.kind_code));
-      const label = readNamedValue(item.role, kind || 'Contact');
-      const rawValue = readString(item.value);
-      return rawValue ? `${label}: ${rawValue}` : '';
-    })
+function readDisplayValues(value: unknown): string[] {
+  return readList(value)
+    .map((item) => readNamedValue(item))
     .filter(Boolean);
+}
+
+function makeItemId(prefix: string, record: Record<string, unknown>, index: number, fallback = ''): string {
+  return readString(record.id, readString(record.code, readString(record.slug, `${prefix}-${fallback || index}`)));
+}
+
+function dedupeByKey<T>(items: T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (!key || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 function formatDateRange(start: unknown, end: unknown, fallback: string): string {
@@ -162,6 +260,17 @@ function formatDateRange(start: unknown, end: unknown, fallback: string): string
     return `Jusqu'au ${endLabel}`;
   }
   return fallback;
+}
+
+function mapContactLines(value: unknown): string[] {
+  return readArray(value)
+    .map((item) => {
+      const kind = readNamedValue(item.kind, readString(item.kind_code));
+      const label = readNamedValue(item.role, kind || 'Contact');
+      const rawValue = readString(item.value);
+      return rawValue ? `${label}: ${rawValue}` : '';
+    })
+    .filter(Boolean);
 }
 
 function flattenPricePeriods(price: Record<string, unknown>, label: string, defaultAmount: string, defaultCurrency: string): PriceItem[] {
@@ -229,6 +338,132 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
   });
 }
 
+function parseNumberRank(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+}
+
+function buildBasicTaxonomyItems(value: unknown, prefix: string): TaxonomyItem[] {
+  return readList(value)
+    .map((item, index) => {
+      const record = readRecord(item);
+      const label = readNamedValue(item);
+      if (!label) {
+        return null;
+      }
+
+      return {
+        id: makeItemId(prefix, record, index, label),
+        label,
+        meta: [readString(record.status), readString(record.description)].filter(Boolean).join(' · '),
+      };
+    })
+    .filter((item): item is TaxonomyItem => item !== null);
+}
+
+function buildClassificationItems(value: unknown): TaxonomyItem[] {
+  return readArray(value)
+    .map((item, index) => {
+      const scheme = readNamedValue(item.scheme, readString(item.scheme_name));
+      const level = readNamedValue(item.value, readString(item.value_name));
+      const label = level || scheme;
+
+      if (!label) {
+        return null;
+      }
+
+      return {
+        id: makeItemId('classification', item, index, label),
+        label,
+        meta: [
+          scheme && scheme !== label ? scheme : '',
+          readString(item.status),
+          formatDateRange(item.awarded_at, item.valid_until, ''),
+        ].filter(Boolean).join(' · '),
+      };
+    })
+    .filter((item): item is TaxonomyItem => item !== null);
+}
+
+function buildSustainabilityItems(value: unknown): TaxonomyItem[] {
+  return readArray(value)
+    .map((item, index) => {
+      const labelRecord = readRecord(item.label);
+      const actionRecord = readRecord(item.action);
+      const label = readString(labelRecord.value_name, readNamedValue(labelRecord, readNamedValue(actionRecord, 'Durabilite')));
+
+      if (!label) {
+        return null;
+      }
+
+      return {
+        id: makeItemId('sustainability', item, index, label),
+        label,
+        meta: [
+          readString(labelRecord.scheme_name),
+          readNamedValue(actionRecord),
+          readString(labelRecord.status),
+        ].filter(Boolean).join(' · '),
+      };
+    })
+    .filter((item): item is TaxonomyItem => item !== null);
+}
+
+function createTaxonomyGroup(key: string, title: string, items: TaxonomyItem[]): TaxonomyGroup | null {
+  const deduped = dedupeByKey(items, (item) => item.label.toLowerCase());
+  if (!deduped.length) {
+    return null;
+  }
+
+  return {
+    key,
+    title,
+    items: deduped,
+  };
+}
+
+function formatCapacityValue(record: Record<string, unknown>): string {
+  const min = readString(record.min);
+  const max = readString(record.max);
+  const direct = readString(record.value, readString(record.amount, readString(record.count)));
+
+  if (direct) {
+    return direct;
+  }
+  if (min && max) {
+    return `${min}-${max}`;
+  }
+  return min || max;
+}
+
+function parseRelationEntries(value: unknown, direction: RelatedDirection): RelatedObjectItem[] {
+  return readList(value)
+    .map((entry, index) => {
+      const record = readRecord(entry);
+      const linkedRecord =
+        direction === 'in'
+          ? readRecord(record.source ?? record.object ?? record.related_object)
+          : readRecord(record.target ?? record.object ?? record.related_object ?? record);
+
+      const name = readString(linkedRecord.name, readNamedValue(linkedRecord));
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id: readString(linkedRecord.id, readString(record.id, `${direction}-${index}`)),
+        name,
+        type: readString(linkedRecord.type, readString(record.type)),
+        relationship: readNamedValue(
+          record.relation_type ?? record.role ?? record.kind,
+          readString(record.link_type, direction === 'associated' ? 'Associe' : direction === 'in' ? 'Entrant' : 'Sortant'),
+        ),
+        direction,
+      };
+    })
+    .filter((item): item is RelatedObjectItem => item !== null);
+}
+
 export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
   const objectContacts = readArray(raw.contacts);
   const actorContacts = readArray(raw.actors).flatMap((actor, actorIndex) =>
@@ -237,6 +472,7 @@ export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
       label: `${readString(actor.display_name, readString(actor.name, 'Acteur'))} / ${readNamedValue(contact.role, 'Contact')}`,
       kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
       value: readString(contact.value, 'Valeur a completer'),
+      isPrimary: readBoolean(contact.is_primary) === true,
     })),
   );
   const organizationContacts = readArray(raw.organizations ?? raw.org_links).flatMap((organization, organizationIndex) =>
@@ -245,19 +481,19 @@ export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
       label: `${readString(organization.name, 'Organisation')} / ${readNamedValue(contact.role, 'Contact')}`,
       kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
       value: readString(contact.value, 'Valeur a completer'),
+      isPrimary: readBoolean(contact.is_primary) === true,
     })),
   );
 
-  return [
-    ...objectContacts.map((contact, index) => ({
-      id: readString(contact.id, `contact-${index}`),
-      label: readString(contact.label, readNamedValue(contact.role, 'Contact')),
-      kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
-      value: readString(contact.value, 'Valeur a completer'),
-    })),
-    ...actorContacts,
-    ...organizationContacts,
-  ];
+  return [...objectContacts.map((contact, index) => ({
+    id: readString(contact.id, `contact-${index}`),
+    label: readString(contact.label, readNamedValue(contact.role, 'Contact')),
+    kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
+    value: readString(contact.value, 'Valeur a completer'),
+    isPrimary: readBoolean(contact.is_primary) === true,
+  })), ...actorContacts, ...organizationContacts].sort(
+    (left, right) => Number(right.isPrimary) - Number(left.isPrimary),
+  );
 }
 
 export function parseActors(raw: Record<string, unknown>): ActorItem[] {
@@ -279,14 +515,26 @@ export function parseOrganizations(raw: Record<string, unknown>): OrganizationIt
 }
 
 export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
-  return readArray(raw.media).map((item, index) => ({
+  const items = readArray(raw.media).map((item, index) => ({
     id: readString(item.id, `media-${index}`),
     url: readString(item.url, readString(item.secure_url)),
-    title: readString(item.title, readString(item.name, 'Media')),
+    title: readString(item.title, readString(item.name, readString(item.alt_text, 'Media'))),
     tags: Array.isArray(item.tags)
-      ? item.tags.map((tag) => readNamedValue(tag, String(tag)))
-      : readArray(item.media_tags).map((tag) => readNamedValue(tag.tag ?? tag, 'tag a definir')),
+      ? item.tags.map((tag) => readNamedValue(tag, String(tag))).filter(Boolean)
+      : readArray(item.media_tags).map((tag) => readNamedValue(tag.tag ?? tag, 'tag a definir')).filter(Boolean),
+    isMain: readBoolean(item.is_main ?? item.main ?? item.is_primary) === true,
+    credit: readString(item.credit, readString(item.author)),
+    visibility: readString(item.visibility, readNamedValue(item.status)),
+    position: readString(item.position, readString(item.order)),
   }));
+
+  return items.slice().sort((left, right) => {
+    if (left.isMain !== right.isMain) {
+      return left.isMain ? -1 : 1;
+    }
+
+    return parseNumberRank(left.position) - parseNumberRank(right.position);
+  });
 }
 
 export function parseLegal(raw: Record<string, unknown>): LegalItem[] {
@@ -332,7 +580,10 @@ export function parseMeetingRooms(raw: Record<string, unknown>): MeetingRoomItem
     id: readString(room.id, `meeting-${index}`),
     name: readString(room.name, 'Salle MICE'),
     capacityTheatre: readString(room.capacity_theatre, readString(room.capacity_seated, 'n/a')),
-    capacityClassroom: readString(room.capacity_classroom, readString(room.capacity_boardroom, 'n/a')),
+    capacityClassroom: readString(room.capacity_classroom, 'n/a'),
+    capacityBoardroom: readString(room.capacity_boardroom, 'n/a'),
+    capacityU: readString(room.capacity_u, readString(room.capacity_u_shape, 'n/a')),
+    areaM2: readString(room.area_m2, readString(room.surface_m2, 'n/a')),
     equipment: readArray(room.equipment ?? room.meeting_room_equipment).map((item) => readNamedValue(item.equipment ?? item, 'equipement')).filter(Boolean),
   }));
 }
@@ -359,4 +610,163 @@ export function parseExternalSyncs(raw: Record<string, unknown>): ExternalSyncIt
     lastSyncAt: readString(item.last_sync_at, readString(item.updated_at, 'Jamais')),
     note: readString(item.note, readString(item.sync_note, 'Aucune note')),
   }));
+}
+
+export function parseCapacities(raw: Record<string, unknown>): CapacityItem[] {
+  const structured = readList(raw.capacity).length > 0
+    ? readList(raw.capacity)
+    : readList(raw.capacities ?? raw.object_capacities ?? raw.capacity_metrics);
+
+  const parsed = structured
+    .map((item, index) => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        const value = String(item);
+        return value && value !== '0'
+          ? {
+              id: `capacity-${index}`,
+              label: 'Capacite',
+              value,
+            }
+          : null;
+      }
+
+      const record = readRecord(item);
+      const label = readNamedValue(record.code ?? record.metric ?? record.label, readString(record.label, 'Capacite'));
+      const value = formatCapacityValue(record);
+
+      if (!value || value === '0') {
+        return null;
+      }
+
+      return {
+        id: makeItemId('capacity', record, index, label),
+        label: label || 'Capacite',
+        value,
+      };
+    })
+    .filter((item): item is CapacityItem => item !== null);
+
+  if (parsed.length > 0) {
+    return dedupeByKey(parsed, (item) => `${item.label.toLowerCase()}-${item.value}`);
+  }
+
+  const fallbackValue = readString(raw.capacity, readString(raw.total_capacity));
+  return fallbackValue && fallbackValue !== '0'
+    ? [{ id: 'capacity-fallback', label: 'Capacite', value: fallbackValue }]
+    : [];
+}
+
+export function parseTaxonomyGroups(raw: Record<string, unknown>): TaxonomyGroup[] {
+  const itineraryDetails = readRecord(raw.itinerary_details);
+  const groups = [
+    createTaxonomyGroup('labels', 'Labels', buildBasicTaxonomyItems(raw.labels, 'label')),
+    createTaxonomyGroup('badges', 'Badges', buildBasicTaxonomyItems(raw.badges, 'badge')),
+    createTaxonomyGroup('tags', 'Tags', buildBasicTaxonomyItems(raw.tags, 'tag')),
+    createTaxonomyGroup('classifications', 'Classements', buildClassificationItems(raw.classifications)),
+    createTaxonomyGroup('sustainability', 'Durabilite', buildSustainabilityItems(raw.sustainability_action_labels)),
+    createTaxonomyGroup('environment', 'Environnement', buildBasicTaxonomyItems(raw.environment_tags, 'environment')),
+    createTaxonomyGroup('payments', 'Paiements', buildBasicTaxonomyItems(raw.payment_methods, 'payment')),
+    createTaxonomyGroup('languages', 'Langues', buildBasicTaxonomyItems(raw.languages, 'language')),
+    createTaxonomyGroup(
+      'practices',
+      'Pratiques',
+      dedupeByKey(
+        [...buildBasicTaxonomyItems(raw.practices ?? raw.object_practices, 'practice'), ...buildBasicTaxonomyItems(itineraryDetails.practices, 'itinerary-practice')],
+        (item) => item.label.toLowerCase(),
+      ),
+    ),
+  ];
+
+  return groups.filter((group): group is TaxonomyGroup => group !== null);
+}
+
+export function parsePetPolicy(raw: Record<string, unknown>): PetPolicyItem | null {
+  const policy = readRecord(raw.pet_policy);
+  const accepted = readBoolean(policy.accepted ?? policy.is_accepted ?? raw.pet_accepted ?? raw.pets_accepted);
+  const label = readString(
+    policy.label,
+    accepted === true ? 'Animaux acceptes' : accepted === false ? 'Animaux non acceptes' : readNamedValue(policy.policy),
+  );
+  const details = [
+    readString(policy.note),
+    readString(policy.conditions),
+    readString(policy.restrictions),
+    readString(policy.comment),
+    ...readDisplayValues(policy.allowed_types ?? policy.allowed_animals),
+  ].filter(Boolean);
+
+  if (accepted === null && !label && details.length === 0) {
+    return null;
+  }
+
+  return {
+    accepted,
+    label: label || 'Politique animaux',
+    details,
+  };
+}
+
+export function parseRelatedObjects(raw: Record<string, unknown>): RelatedObjectItem[] {
+  const relations = readRecord(raw.relations);
+  const itineraryDetails = readRecord(raw.itinerary_details);
+
+  return dedupeByKey(
+    [
+      ...parseRelationEntries(raw.associated_objects, 'associated'),
+      ...parseRelationEntries(itineraryDetails.associated_objects, 'associated'),
+      ...parseRelationEntries(relations.out, 'out'),
+      ...parseRelationEntries(relations.in, 'in'),
+    ],
+    (item) => `${item.id}-${item.relationship}-${item.direction}`,
+  );
+}
+
+export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySummary | null {
+  const itinerary = readRecord(raw.itinerary);
+  const details = readRecord(raw.itinerary_details);
+  const loopValue = readBoolean(itinerary.is_loop ?? raw.is_loop);
+  const practices = dedupeByKey(
+    [...buildBasicTaxonomyItems(details.practices, 'practice'), ...buildBasicTaxonomyItems(raw.practices ?? raw.object_practices, 'practice')],
+    (item) => item.label.toLowerCase(),
+  ).map((item) => item.label);
+  const infoRecord = readRecord(details.info);
+  const info = dedupeByKey(
+    [
+      ...readDisplayValues(details.info),
+      ...['summary', 'note', 'advice', 'tips', 'recommendation', 'description'].map((key) => readString(infoRecord[key])),
+    ].filter(Boolean),
+    (item) => item.toLowerCase(),
+  );
+
+  const summary: ItinerarySummary = {
+    distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
+    durationHours: readString(itinerary.duration_hours, readString(raw.duration_hours, readString(raw.duration_h, readString(raw.total_duration_h)))),
+    difficulty: readNamedValue(itinerary.difficulty, readString(itinerary.difficulty_level, readNamedValue(raw.difficulty, readString(raw.difficulty_level)))),
+    elevationGain: readString(itinerary.elevation_gain, readString(raw.elevation_gain, readString(raw.elevation_gain_m))),
+    isLoop: loopValue,
+    track: readString(itinerary.track, readString(raw.track, readString(details.track))),
+    trackFormat: readString(itinerary.track_format, readString(raw.track_format, readString(details.track_format))),
+    practices,
+    info,
+    sectionsCount: readList(details.sections).length,
+    stagesCount: readList(details.stages).length,
+    profilesCount: readList(details.profiles).length,
+  };
+
+  const hasData = [
+    summary.distanceKm,
+    summary.durationHours,
+    summary.difficulty,
+    summary.elevationGain,
+    summary.track,
+    summary.trackFormat,
+  ].some(Boolean)
+    || summary.isLoop !== null
+    || summary.practices.length > 0
+    || summary.info.length > 0
+    || summary.sectionsCount > 0
+    || summary.stagesCount > 0
+    || summary.profilesCount > 0;
+
+  return hasData ? summary : null;
 }

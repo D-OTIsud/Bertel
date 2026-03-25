@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 // ── Types ─────────────────────────────────────────────────────────────────
 
 interface FilterDropdownProps<T extends string> {
-  options: { code: T; label: string }[];
+  options: ReadonlyArray<{ code: T; label: string }>;
   selected: T[];
   onChange: (selected: T[]) => void;
   mode: 'multi' | 'single';
@@ -17,7 +17,7 @@ interface FilterDropdownProps<T extends string> {
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function getTriggerLabel<T extends string>(
-  options: { code: T; label: string }[],
+  options: ReadonlyArray<{ code: T; label: string }>,
   selected: T[],
   placeholder: string,
 ): string {

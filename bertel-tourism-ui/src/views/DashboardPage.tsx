@@ -9,6 +9,7 @@ import {
   getDashboardActualisation,
   getDashboardDistinctionOverview,
   getDashboardCityOptions,
+  getDashboardLieuDitOptions,
 } from '../services/dashboard-rpc';
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
@@ -36,6 +37,9 @@ export default function DashboardPage() {
   // Corpus-wide city list — fetched once on mount, independent of active filters.
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [cityLoadError, setCityLoadError] = useState<string | null>(null);
+  // Corpus-wide lieu-dit list — fetched once on mount, independent of active filters.
+  const [lieuDitOptions, setLieuDitOptions] = useState<string[]>([]);
+  const [lieuDitLoadError, setLieuDitLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     getDashboardCityOptions()
@@ -44,6 +48,16 @@ export default function DashboardPage() {
         console.error('getDashboardCityOptions failed:', err);
         setCityLoadError(
           err instanceof Error ? err.message : 'Impossible de charger la liste des villes',
+        );
+      });
+  }, []);
+
+  useEffect(() => {
+    getDashboardLieuDitOptions()
+      .then((items) => { setLieuDitOptions(items); setLieuDitLoadError(null); })
+      .catch((err: unknown) => {
+        setLieuDitLoadError(
+          err instanceof Error ? err.message : 'Impossible de charger les lieux-dits',
         );
       });
   }, []);
@@ -58,7 +72,12 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-layout">
-      <DashboardFiltersPanel availableCities={cityOptions} cityLoadError={cityLoadError} />
+      <DashboardFiltersPanel
+        availableCities={cityOptions}
+        cityLoadError={cityLoadError}
+        availableLieuDits={lieuDitOptions}
+        lieuDitLoadError={lieuDitLoadError}
+      />
 
       <main className="dashboard-main">
         <ActiveFilterStrip />

@@ -10,8 +10,13 @@ export interface ContactItem {
   id: string;
   label: string;
   kind: string;
+  kindCode: string;
   value: string;
+  href: string;
+  iconUrl: string;
   isPrimary: boolean;
+  isPublic: boolean;
+  position: number | null;
 }
 
 export interface ActorItem {
@@ -26,6 +31,7 @@ export interface OrganizationItem {
   name: string;
   linkType: string;
   contacts: string[];
+  emails: string[];
 }
 
 export interface MediaItem {
@@ -224,6 +230,24 @@ function readNamedValue(value: unknown, fallback = ''): string {
   return fallback;
 }
 
+function readInteger(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(normalized, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
 function readDisplayValues(value: unknown): string[] {
   return readList(value)
     .map((item) => readNamedValue(item))
@@ -244,6 +268,101 @@ function dedupeByKey<T>(items: T[], getKey: (item: T) => string): T[] {
     seen.add(key);
     return true;
   });
+}
+
+function formatClassificationLabel(scheme: string, level: string): string {
+  const cleanScheme = scheme.trim();
+  const cleanLevel = level.trim();
+
+  if (!cleanLevel) {
+    return cleanScheme;
+  }
+
+  if (!cleanScheme) {
+    return cleanLevel;
+  }
+
+  const lowerScheme = cleanScheme.toLowerCase();
+  const lowerLevel = cleanLevel.toLowerCase();
+
+  if (lowerLevel.includes(lowerScheme)) {
+    return cleanLevel;
+  }
+
+  if (/^\d+([.,]\d+)?$/.test(cleanLevel)) {
+    return `${cleanLevel} ${lowerScheme}`;
+  }
+
+  return `${cleanScheme} · ${cleanLevel}`;
+}
+
+function normalizeUrlValue(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^[a-z]+:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  return `https://${normalized}`;
+}
+
+function normalizePhoneValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('+')) {
+    return `+${trimmed.slice(1).replace(/[^\d]/g, '')}`;
+  }
+
+  return trimmed.replace(/[^\d]/g, '');
+}
+
+function buildContactHref(kindCode: string, value: string): string {
+  const normalizedKind = kindCode.trim().toLowerCase();
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return '';
+  }
+
+  if (normalizedKind === 'email' || (!normalizedKind && normalizedValue.includes('@'))) {
+    return `mailto:${normalizedValue}`;
+  }
+
+  if (['phone', 'mobile', 'fax'].includes(normalizedKind)) {
+    const phone = normalizePhoneValue(normalizedValue);
+    return phone ? `tel:${phone}` : '';
+  }
+
+  if (normalizedKind === 'whatsapp') {
+    const phone = normalizePhoneValue(normalizedValue).replace(/^\+/, '');
+    return phone ? `https://wa.me/${phone}` : '';
+  }
+
+  if (
+    ['website', 'booking', 'facebook', 'instagram', 'linkedin', 'youtube', 'tiktok'].includes(normalizedKind) ||
+    /^https?:\/\//i.test(normalizedValue) ||
+    /^[\w.-]+\.[a-z]{2,}/i.test(normalizedValue)
+  ) {
+    return normalizeUrlValue(normalizedValue);
+  }
+
+  return '';
+}
+
+function extractEmails(value: unknown): string[] {
+  return readArray(value)
+    .map((contact) => readString(contact.value).trim().toLowerCase())
+    .filter((contact) => contact.includes('@'));
 }
 
 function formatDateRange(start: unknown, end: unknown, fallback: string): string {
@@ -366,7 +485,7 @@ function buildClassificationItems(value: unknown): TaxonomyItem[] {
     .map((item, index) => {
       const scheme = readNamedValue(item.scheme, readString(item.scheme_name));
       const level = readNamedValue(item.value, readString(item.value_name));
-      const label = level || scheme;
+      const label = formatClassificationLabel(scheme, level);
 
       if (!label) {
         return null;
@@ -466,34 +585,42 @@ function parseRelationEntries(value: unknown, direction: RelatedDirection): Rela
 
 export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
   const objectContacts = readArray(raw.contacts);
-  const actorContacts = readArray(raw.actors).flatMap((actor, actorIndex) =>
-    readArray(actor.contacts).map((contact, contactIndex) => ({
-      id: readString(contact.id, `actor-contact-${actorIndex}-${contactIndex}`),
-      label: `${readString(actor.display_name, readString(actor.name, 'Acteur'))} / ${readNamedValue(contact.role, 'Contact')}`,
-      kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
-      value: readString(contact.value, 'Valeur a completer'),
-      isPrimary: readBoolean(contact.is_primary) === true,
-    })),
-  );
-  const organizationContacts = readArray(raw.organizations ?? raw.org_links).flatMap((organization, organizationIndex) =>
-    readArray(organization.contacts).map((contact, contactIndex) => ({
-      id: readString(contact.id, `org-contact-${organizationIndex}-${contactIndex}`),
-      label: `${readString(organization.name, 'Organisation')} / ${readNamedValue(contact.role, 'Contact')}`,
-      kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
-      value: readString(contact.value, 'Valeur a completer'),
-      isPrimary: readBoolean(contact.is_primary) === true,
-    })),
-  );
+  const parsedContacts = objectContacts.map<ContactItem | null>((contact, index) => {
+    const kindRecord = readRecord(contact.kind);
+    const kindCode = readString(contact.kind_code, readString(kindRecord.code)).toLowerCase();
+    const kindLabel = readString(contact.kind_name, readNamedValue(contact.kind, kindCode || 'contact'));
+    const value = readString(contact.value, 'Valeur a completer');
+    const isPublic = readBoolean(contact.is_public) !== false;
 
-  return [...objectContacts.map((contact, index) => ({
-    id: readString(contact.id, `contact-${index}`),
-    label: readString(contact.label, readNamedValue(contact.role, 'Contact')),
-    kind: readNamedValue(contact.kind, readString(contact.kind_code, 'general')),
-    value: readString(contact.value, 'Valeur a completer'),
-    isPrimary: readBoolean(contact.is_primary) === true,
-  })), ...actorContacts, ...organizationContacts].sort(
-    (left, right) => Number(right.isPrimary) - Number(left.isPrimary),
-  );
+    if (!isPublic) {
+      return null;
+    }
+
+    return {
+      id: readString(contact.id, `contact-${index}`),
+      label: readString(contact.label, readNamedValue(contact.role, 'Contact')),
+      kind: kindLabel || 'Contact',
+      kindCode,
+      value,
+      href: buildContactHref(kindCode, value),
+      iconUrl: readString(contact.icon_url, readString(kindRecord.icon_url)),
+      isPrimary: readBoolean(contact.is_primary) === true,
+      isPublic,
+      position: readInteger(contact.position),
+    };
+  });
+
+  return parsedContacts
+    .filter((item): item is ContactItem => item !== null)
+    .sort((left, right) => {
+      if (left.isPrimary !== right.isPrimary) {
+        return Number(right.isPrimary) - Number(left.isPrimary);
+      }
+
+      const leftPosition = left.position ?? Number.MAX_SAFE_INTEGER;
+      const rightPosition = right.position ?? Number.MAX_SAFE_INTEGER;
+      return leftPosition - rightPosition;
+    });
 }
 
 export function parseActors(raw: Record<string, unknown>): ActorItem[] {
@@ -511,6 +638,7 @@ export function parseOrganizations(raw: Record<string, unknown>): OrganizationIt
     name: readString(organization.name, 'Organisation'),
     linkType: readNamedValue(organization.role ?? organization.relation_type, readString(organization.link_type, 'Lien non precise')),
     contacts: mapContactLines(organization.contacts),
+    emails: extractEmails(organization.contacts),
   }));
 }
 

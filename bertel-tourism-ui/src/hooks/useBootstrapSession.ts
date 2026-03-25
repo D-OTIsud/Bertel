@@ -94,6 +94,7 @@ export function useBootstrapSession() {
       hydrateFromAuth({
         role,
         userId: user.id,
+        email: String(user.email ?? ''),
         userName,
         avatar: initialsFromName(userName),
         langPrefs,

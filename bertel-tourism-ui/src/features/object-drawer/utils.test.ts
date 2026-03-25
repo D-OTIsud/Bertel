@@ -2,6 +2,7 @@ import { mockObjectDetails } from '../../data/mock';
 import {
   parseActors,
   parseCapacities,
+  parseContacts,
   parseExternalSyncs,
   parseItinerarySummary,
   parseMedia,
@@ -188,6 +189,53 @@ describe('object drawer utils', () => {
       label: 'Animaux acceptes',
     });
     expect(petPolicy?.details).toContain('Supplement menage');
+  });
+
+  it('keeps public contacts only and builds usable href metadata', () => {
+    const raw = {
+      contacts: [
+        {
+          id: 'contact-1',
+          label: 'Accueil',
+          kind_code: 'phone',
+          kind_name: 'Telephone',
+          value: '+262 262 00 00 00',
+          is_primary: true,
+          is_public: true,
+          position: 2,
+        },
+        {
+          id: 'contact-2',
+          label: 'Site',
+          kind_code: 'website',
+          value: 'hotel-example.re',
+          is_public: true,
+          position: 3,
+        },
+        {
+          id: 'contact-3',
+          label: 'Interne',
+          kind_code: 'email',
+          value: 'private@example.com',
+          is_public: false,
+        },
+      ],
+    } as Record<string, unknown>;
+
+    const contacts = parseContacts(raw);
+
+    expect(contacts).toHaveLength(2);
+    expect(contacts[0]).toMatchObject({
+      id: 'contact-1',
+      kindCode: 'phone',
+      href: 'tel:+262262000000',
+      isPrimary: true,
+    });
+    expect(contacts[1]).toMatchObject({
+      id: 'contact-2',
+      kindCode: 'website',
+      href: 'https://hotel-example.re',
+    });
   });
 
   it('parses itinerary summaries and related objects from nested payloads', () => {

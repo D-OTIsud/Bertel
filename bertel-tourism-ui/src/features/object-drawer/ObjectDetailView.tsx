@@ -121,6 +121,83 @@ function readList(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function readNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const parsed = Number.parseFloat(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function readRichText(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const candidate = readRichText(item);
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    return '';
+  }
+
+  if (isRecord(value)) {
+    const priorityKeys = [
+      'fr',
+      'text',
+      'value',
+      'label',
+      'name',
+      'description',
+      'description_adapted',
+      'description_chapo',
+      'description_mobile',
+      'description_edition',
+    ];
+
+    for (const key of priorityKeys) {
+      const candidate = readRichText(value[key]);
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    for (const candidate of Object.values(value)) {
+      const text = readRichText(candidate);
+      if (text) {
+        return text;
+      }
+    }
+  }
+
+  return '';
+}
+
+function pickFirstText(...values: unknown[]): string {
+  for (const value of values) {
+    const text = readRichText(value).trim();
+    if (text) {
+      return text;
+    }
+  }
+
+  return '';
+}
+
 function resolveLabel(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number') {
     return String(value);
@@ -177,16 +254,81 @@ function extractAmenities(raw: Record<string, unknown>): string[] {
   return dedupeLabels(labels.filter(Boolean));
 }
 
+function readPrimaryDescriptionEntry(raw: Record<string, unknown>): Record<string, unknown> {
+  const sources = [
+    raw.object_descriptions,
+    raw.object_description,
+    raw.descriptions_list,
+  ];
+
+  for (const source of sources) {
+    const entry = readList(source).find((item) => isRecord(item));
+    if (isRecord(entry)) {
+      return entry;
+    }
+  }
+
+  return {};
+}
+
+function readDescriptions(raw: Record<string, unknown>): { description: string; adaptedDescription: string } {
+  const descriptions = isRecord(raw.descriptions) ? raw.descriptions : {};
+  const entry = readPrimaryDescriptionEntry(raw);
+  const render = isRecord(raw.render) ? raw.render : {};
+
+  const description = pickFirstText(
+    raw.description,
+    descriptions.description,
+    entry.description,
+    raw.description_chapo,
+    descriptions.description_chapo,
+    entry.description_chapo,
+    render.description,
+  );
+  const adaptedDescription = pickFirstText(
+    raw.description_adapted,
+    descriptions.description_adapted,
+    raw.description_mobile,
+    descriptions.description_mobile,
+    raw.description_edition,
+    descriptions.description_edition,
+  );
+
+  return {
+    description,
+    adaptedDescription: adaptedDescription && adaptedDescription !== description ? adaptedDescription : '',
+  };
+}
+
 function readLocation(raw: Record<string, unknown>): DetailLocation | null {
-  const location = isRecord(raw.location) ? raw.location : {};
-  const address = readString(location.address, readString(raw.address));
-  const city = readString(location.city, readString(raw.city));
-  const postcode = readString(location.postcode, readString(raw.postcode));
-  const lieuDit = readString(location.lieu_dit, readString(raw.lieu_dit));
-  const latRaw = readString(location.lat, readString(raw.lat));
-  const lonRaw = readString(location.lon, readString(raw.lon));
-  const latitude = latRaw ? Number(latRaw) : null;
-  const longitude = lonRaw ? Number(lonRaw) : null;
+  const addressRecord = isRecord(raw.address) ? raw.address : {};
+  const locationRecord = isRecord(raw.location) ? raw.location : {};
+  const mainLocation = readList(raw.object_locations ?? raw.object_location ?? raw.locations)
+    .find((item) => isRecord(item) && item.is_main_location !== false);
+  const mainLocationRecord = isRecord(mainLocation) ? mainLocation : {};
+  const coordinateSource = Array.isArray(locationRecord.coordinates)
+    ? locationRecord.coordinates
+    : Array.isArray(mainLocationRecord.coordinates)
+      ? mainLocationRecord.coordinates
+      : [];
+
+  const address = pickFirstText(
+    addressRecord.address1,
+    addressRecord.street,
+    mainLocationRecord.address1,
+    mainLocationRecord.address,
+    raw.address1,
+    raw.address,
+  );
+  const city = pickFirstText(addressRecord.city, mainLocationRecord.city, raw.city);
+  const postcode = pickFirstText(addressRecord.postcode, addressRecord.zipcode, mainLocationRecord.postcode, raw.postcode);
+  const lieuDit = pickFirstText(addressRecord.lieu_dit, mainLocationRecord.lieu_dit, raw.lieu_dit);
+  const latitude = readNumber(
+    locationRecord.latitude ?? locationRecord.lat ?? mainLocationRecord.latitude ?? mainLocationRecord.lat ?? coordinateSource[1] ?? raw.latitude ?? raw.lat,
+  );
+  const longitude = readNumber(
+    locationRecord.longitude ?? locationRecord.lon ?? mainLocationRecord.longitude ?? mainLocationRecord.lon ?? coordinateSource[0] ?? raw.longitude ?? raw.lon,
+  );
   const cityLine = [postcode, city].filter(Boolean).join(' ');
   const label = [address, lieuDit, cityLine].filter(Boolean).join(' · ');
 
@@ -199,7 +341,7 @@ function readLocation(raw: Record<string, unknown>): DetailLocation | null {
     city,
     postcode,
     lieuDit,
-    label: label || [latRaw, lonRaw].filter(Boolean).join(', '),
+    label: label || [latitude, longitude].filter((value) => value != null).join(', '),
     coordinates: latitude != null && longitude != null ? `${latitude}, ${longitude}` : '',
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
@@ -208,12 +350,13 @@ function readLocation(raw: Record<string, unknown>): DetailLocation | null {
 
 function buildPreviewData(data: ObjectDetail, raw: Record<string, unknown>): PreviewData {
   const typeCode = (data.type ?? '').toUpperCase();
+  const descriptions = readDescriptions(raw);
 
   return {
     typeCode,
-    typeLabel: TYPE_LABEL[typeCode] ?? data.type ?? 'Fiche',
-    description: readString(raw.description),
-    adaptedDescription: readString(raw.description_adapted),
+    typeLabel: TYPE_LABEL[typeCode] ?? data.type ?? '',
+    description: descriptions.description,
+    adaptedDescription: descriptions.adaptedDescription,
     location: readLocation(raw),
     amenities: extractAmenities(raw),
     capacities: parseCapacities(raw),
@@ -451,7 +594,7 @@ function HeroBlock({
       <div className="detail-hero__content">
         <h1 className="sr-only">{data.name}</h1>
         <div className="detail-hero__badges">
-          <span className="detail-hero__type-badge">{preview.typeLabel}</span>
+          {preview.typeLabel && <span className="detail-hero__type-badge">{preview.typeLabel}</span>}
           {preview.location?.city && <span className="detail-hero__meta-pill">{preview.location.city}</span>}
           {preview.media.length > 1 && <span className="detail-hero__meta-pill">{preview.media.length} medias</span>}
         </div>
@@ -918,41 +1061,51 @@ function NetworkSection({
         {actors.length > 0 && (
           <div className="detail-network__group">
             <span className="detail-subtitle">Equipe</span>
-            {actors.slice(0, 5).map((actor) => (
-              <div key={actor.id} className="detail-list-row detail-list-row--stacked">
-                <strong>{actor.name}</strong>
-                <p>{actor.role}</p>
-                {actor.contacts[0] && <small>{actor.contacts[0]}</small>}
-              </div>
-            ))}
+            <div className="detail-card-list">
+              {actors.slice(0, 5).map((actor) => (
+                <div key={actor.id} className="detail-mini-card">
+                  <div className="detail-mini-card__header">
+                    <strong>{actor.name}</strong>
+                    {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
+                  </div>
+                  {actor.contacts[0] && <p className="detail-mini-card__meta">{actor.contacts[0]}</p>}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {organizations.length > 0 && (
           <div className="detail-network__group">
             <span className="detail-subtitle">Organisations</span>
-            {organizations.slice(0, 5).map((organization) => (
-              <div key={organization.id} className="detail-list-row detail-list-row--stacked">
-                <strong>{organization.name}</strong>
-                <p>{organization.linkType}</p>
-                {organization.contacts[0] && <small>{organization.contacts[0]}</small>}
-              </div>
-            ))}
+            <div className="detail-card-list">
+              {organizations.slice(0, 5).map((organization) => (
+                <div key={organization.id} className="detail-mini-card">
+                  <div className="detail-mini-card__header">
+                    <strong>{organization.name}</strong>
+                    {organization.linkType && <span className="detail-chip detail-chip--soft">{organization.linkType}</span>}
+                  </div>
+                  {organization.contacts[0] && <p className="detail-mini-card__meta">{organization.contacts[0]}</p>}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {memberships.length > 0 && (
           <div className="detail-network__group">
             <span className="detail-subtitle">Adhesions</span>
-            {memberships.slice(0, 5).map((membership) => (
-              <div key={membership.id} className="detail-list-row">
-                <div>
-                  <strong>{membership.name || membership.campaign}</strong>
-                  <p>{[membership.tier, membership.expiresAt].filter(Boolean).join(' · ')}</p>
+            <div className="detail-card-list">
+              {memberships.slice(0, 5).map((membership) => (
+                <div key={membership.id} className="detail-mini-card">
+                  <div className="detail-mini-card__header">
+                    <strong>{membership.name || membership.campaign}</strong>
+                    <span className={`status-pill status-pill--${membershipTone(membership)}`}>
+                      {membership.status}
+                    </span>
+                  </div>
+                  <p className="detail-mini-card__meta">{[membership.tier, membership.expiresAt].filter(Boolean).join(' · ')}</p>
                 </div>
-                <span className={`status-pill status-pill--${membershipTone(membership)}`}>
-                  {membership.status}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

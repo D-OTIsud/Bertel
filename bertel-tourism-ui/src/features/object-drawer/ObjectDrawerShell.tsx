@@ -26,6 +26,25 @@ interface ObjectDrawerShellProps {
   onClose: () => void;
 }
 
+const DRAWER_TYPE_LABELS: Record<string, string> = {
+  HOT: 'Hotel',
+  HPA: 'Hebergement plein air',
+  HLO: 'Hebergement loisir',
+  CAMP: 'Camping',
+  RVA: 'Residence vacances',
+  RES: 'Restaurant',
+  ITI: 'Itineraire',
+  FMA: 'Itineraire',
+  ASC: 'Activite',
+  LOI: 'Loisir',
+  PCU: 'Patrimoine',
+  PNA: 'Site naturel',
+  PSV: 'Prestataire',
+  SRV: 'Service',
+  VIL: 'Ville',
+  COM: 'Commune',
+};
+
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
   const { data, isLoading, isError, error } = useObjectDetailQuery(objectId);
   const { peers, me, lockedFields, typingUsers, lockField, unlockField } = usePresenceRoom(
@@ -82,7 +101,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const nameBlocked = Boolean(nameLock && nameLock.userId !== me.userId);
   const address = readString((raw.location as { address?: string } | undefined)?.address);
   const title = data?.id === objectId ? data.name : objectId;
-  const typeLabel = data?.type ?? 'Fiche';
+  const typeLabel = data?.type ? DRAWER_TYPE_LABELS[(data.type ?? '').toUpperCase()] ?? data.type : '';
+  const eyebrow = mode === 'edit' ? 'Edition collaborative' : typeLabel;
 
   // Sections allowed for this object type — drives both nav visibility and panel rendering.
   // Falls back to all sections when data is still loading or type is unrecognised.
@@ -95,9 +115,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     <div key={objectId} className="drawer-shell__inner">
       <div className="drawer-header">
         <div>
-          <span className="eyebrow">{mode === 'edit' ? 'Edition collaborative' : 'Fiche'}</span>
+          {eyebrow && <span className="eyebrow">{eyebrow}</span>}
           <h2 className="font-display text-2xl font-semibold">{title}</h2>
-          <p>{typeLabel} · {address || 'Adresse a completer'}</p>
         </div>
         <div className="drawer-header__actions">
           <StatusPill tone="neutral">{peers.length} live</StatusPill>

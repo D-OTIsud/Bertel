@@ -33,14 +33,18 @@ describe('ObjectDetailView', () => {
       name: 'Hotel Horizon Basalte',
       type: 'HOT',
       raw: {
-        description: 'Grand hotel panoramique avec spa, restauration et espaces evenementiels.',
-        description_adapted: 'Version adaptee de la description avec mise en avant de l accessibilite.',
-        location: {
-          address: '12 promenade du lagon',
+        descriptions: {
+          description: 'Grand hotel panoramique avec spa, restauration et espaces evenementiels.',
+          description_chapo: 'Version courte de la presentation.',
+        },
+        address: {
+          address1: '12 promenade du lagon',
           city: 'Saint-Pierre',
           postcode: '97410',
-          lat: '-21.3391',
-          lon: '55.4781',
+        },
+        location: {
+          latitude: -21.3391,
+          longitude: 55.4781,
         },
         media: [
           {
@@ -61,7 +65,7 @@ describe('ObjectDetailView', () => {
         tags: [{ id: 'tag-1', name: 'Vue mer' }],
         labels: [{ id: 'label-1', name: 'Label prestige' }],
         badges: [{ id: 'badge-1', name: 'Signature' }],
-        classifications: [{ id: 'class-1', scheme: { name: 'Etoiles' }, value: { name: '4' } }],
+        classifications: [{ id: 'class-1', scheme: 'gites_epics', value: '3' }],
         sustainability_action_labels: [
           { label: { value_name: 'Clef verte', scheme_name: 'Eco' }, action: { name: 'Gestion eau' } },
         ],
@@ -111,7 +115,7 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('En quelques mots')).toBeInTheDocument();
     expect(screen.getByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).toBeInTheDocument();
     expect(screen.getByText('Reperes')).toBeInTheDocument();
-    expect(screen.getAllByText('4 etoiles').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Gites de France · 3 epis').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ouvrir dans google maps/i })).toHaveAttribute(
@@ -145,12 +149,16 @@ describe('ObjectDetailView', () => {
       name: 'Maison des Filaos',
       type: 'HOT',
       raw: {
-        description: 'Maison d hotes de charme sans galerie photo complete.',
-        location: {
-          address: '3 rue des filaos',
+        descriptions: {
+          description: 'Maison d hotes de charme sans galerie photo complete.',
+        },
+        address: {
+          address1: '3 rue des filaos',
           city: 'Etang-Sale',
-          lat: '-21.2581',
-          lon: '55.3321',
+        },
+        location: {
+          latitude: -21.2581,
+          longitude: 55.3321,
         },
         contacts: [{ id: 'contact-1', label: 'Accueil', kind_code: 'phone', value: '+262 262 00 00 00' }],
         tags: [{ id: 'tag-1', name: 'Maison d hotes' }],
@@ -180,12 +188,16 @@ describe('ObjectDetailView', () => {
       name: 'Sentier des trois remparts',
       type: 'ITI',
       raw: {
-        description: 'Grande boucle avec belvederes et portions forestieres.',
-        location: {
-          address: 'Depart au parking forestier',
+        descriptions: {
+          description: 'Grande boucle avec belvederes et portions forestieres.',
+        },
+        address: {
+          address1: 'Depart au parking forestier',
           city: 'Cilaos',
-          lat: '-21.1270',
-          lon: '55.4710',
+        },
+        location: {
+          latitude: -21.127,
+          longitude: 55.471,
         },
         media: [{ id: 'media-1', url: 'https://example.com/iti.jpg', title: 'Belvedere' }],
         tags: [{ id: 'tag-1', name: 'Panorama' }],

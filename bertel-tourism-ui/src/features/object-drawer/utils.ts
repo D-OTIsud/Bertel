@@ -270,9 +270,74 @@ function dedupeByKey<T>(items: T[], getKey: (item: T) => string): T[] {
   });
 }
 
-function formatClassificationLabel(scheme: string, level: string): string {
-  const cleanScheme = scheme.trim();
-  const cleanLevel = level.trim();
+const CLASSIFICATION_SCHEME_LABELS: Record<string, string> = {
+  hot_stars: 'Classement hotelier',
+  camp_stars: 'Classement camping',
+  meuble_stars: 'Classement meubles',
+  gites_epics: 'Gites de France',
+  clevacances_keys: 'Clevacances',
+  green_key: 'Clef Verte',
+  eu_ecolabel: 'Ecolabel europeen',
+  tourisme_handicap: 'Tourisme & Handicap',
+  qualite_tourisme: 'Qualite Tourisme',
+  qualite_tourisme_reunion: 'Qualite Tourisme Ile de La Reunion',
+  lbl_qualite_tourisme: 'Qualite Tourisme',
+};
+
+function humanizeCode(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  return trimmed
+    .replace(/^LBL_/i, '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function humanizeClassificationScheme(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+
+  return CLASSIFICATION_SCHEME_LABELS[normalized] ?? humanizeCode(value);
+}
+
+function humanizeClassificationValue(schemeCode: string, value: string): string {
+  const cleanValue = value.trim();
+  const normalizedScheme = schemeCode.trim().toLowerCase();
+  const normalizedValue = cleanValue.toLowerCase();
+
+  if (!cleanValue || ['granted', 'certified', 'active', 'yes', 'true', 'oui'].includes(normalizedValue)) {
+    return '';
+  }
+
+  if (/^\d+([.,]\d+)?$/.test(cleanValue)) {
+    if (['hot_stars', 'camp_stars', 'meuble_stars'].includes(normalizedScheme)) {
+      return `${cleanValue} etoiles`;
+    }
+    if (normalizedScheme === 'gites_epics') {
+      return `${cleanValue} epis`;
+    }
+    if (normalizedScheme === 'clevacances_keys') {
+      return `${cleanValue} cles`;
+    }
+  }
+
+  return humanizeCode(cleanValue) || cleanValue;
+}
+
+function formatClassificationLabel(scheme: string, level: string, schemeCode = ''): string {
+  const rawScheme = scheme.trim();
+  const cleanScheme = (
+    rawScheme && !rawScheme.includes('_') ? rawScheme : humanizeClassificationScheme(schemeCode || rawScheme)
+  ).trim();
+  const rawLevel = level.trim();
+  const cleanLevel = (humanizeClassificationValue(schemeCode, rawLevel) || rawLevel).trim();
+  const normalizedSchemeCode = schemeCode.trim().toLowerCase();
 
   if (!cleanLevel) {
     return cleanScheme;
@@ -289,11 +354,15 @@ function formatClassificationLabel(scheme: string, level: string): string {
     return cleanLevel;
   }
 
+  if (/^\d+([.,]\d+)?$/.test(rawLevel) && ['hot_stars', 'camp_stars', 'meuble_stars', 'gites_epics', 'clevacances_keys'].includes(normalizedSchemeCode)) {
+    return `${cleanScheme} · ${humanizeClassificationValue(normalizedSchemeCode, rawLevel)}`;
+  }
+
   if (/^\d+([.,]\d+)?$/.test(cleanLevel)) {
     return `${cleanLevel} ${lowerScheme}`;
   }
 
-  return `${cleanScheme} · ${cleanLevel}`;
+  return cleanScheme ? `${cleanScheme} · ${cleanLevel}` : cleanLevel;
 }
 
 function normalizeUrlValue(value: string): string {
@@ -483,9 +552,17 @@ function buildBasicTaxonomyItems(value: unknown, prefix: string): TaxonomyItem[]
 function buildClassificationItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
     .map((item, index) => {
-      const scheme = readNamedValue(item.scheme, readString(item.scheme_name));
-      const level = readNamedValue(item.value, readString(item.value_name));
-      const label = formatClassificationLabel(scheme, level);
+      const schemeCode = readString(item.scheme_code, readString(item.scheme, readString(readRecord(item.scheme).code)));
+      const valueCode = readString(item.value_code, readString(item.value, readString(readRecord(item.value).code)));
+      const rawScheme = readNamedValue(item.scheme, readString(item.scheme_name, humanizeClassificationScheme(schemeCode)));
+      const rawLevel = readNamedValue(item.value, readString(item.value_name, humanizeClassificationValue(schemeCode, valueCode)));
+      const scheme = rawScheme && rawScheme.trim().toLowerCase() !== schemeCode.trim().toLowerCase()
+        ? rawScheme
+        : humanizeClassificationScheme(schemeCode);
+      const level = rawLevel && rawLevel.trim().toLowerCase() !== valueCode.trim().toLowerCase()
+        ? rawLevel
+        : humanizeClassificationValue(schemeCode, valueCode);
+      const label = formatClassificationLabel(scheme, level || valueCode, schemeCode);
 
       if (!label) {
         return null;
@@ -495,7 +572,7 @@ function buildClassificationItems(value: unknown): TaxonomyItem[] {
         id: makeItemId('classification', item, index, label),
         label,
         meta: [
-          scheme && scheme !== label ? scheme : '',
+          scheme && scheme !== label ? scheme : humanizeClassificationScheme(schemeCode),
           readString(item.status),
           formatDateRange(item.awarded_at, item.valid_until, ''),
         ].filter(Boolean).join(' · '),

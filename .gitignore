@@ -40,3 +40,14 @@ node_modules/
 
 # Test artifacts
 test_results.txt
+
+# Git worktrees
+.worktrees/
+
+# AI assistant tooling (not part of the app)
+CLAUDE.md
+.claude/
+.cursor/
+*.mdc
+GEMINI.md
+AGENTS.md

@@ -85,7 +85,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
   const res = useExplorerStore((state) => state.res);
   const iti = useExplorerStore((state) => state.iti);
   const toggleBucket = useExplorerStore((state) => state.toggleBucket);
-  const setCity = useExplorerStore((state) => state.setCity);
+  const setCities = useExplorerStore((state) => state.setCities);
   const setLieuDit = useExplorerStore((state) => state.setLieuDit);
   const setPmr = useExplorerStore((state) => state.setPmr);
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
@@ -141,11 +141,12 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
             <div className="filters-panel__subsection">
               <span className="facet-title">Ville</span>
               <FilterDropdown<string>
-                mode="single"
+                mode="multi"
                 placeholder="Toutes les communes"
+                allLabel="Toutes les communes"
                 options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
-                selected={common.city ? [common.city] : []}
-                onChange={(vals) => setCity(vals[0] ?? '')}
+                selected={common.cities}
+                onChange={(vals) => setCities(vals)}
               />
             </div>
             <div className="filters-panel__subsection">

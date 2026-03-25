@@ -12,6 +12,9 @@ interface FilterDropdownProps<T extends string> {
   mode: 'multi' | 'single';
   placeholder: string;
   loadError?: string | null;
+  /** When provided, adds a "select all / reset" item at the top of the menu.
+   *  It shows as active when selected is empty. Clicking it calls onChange([]) and closes. */
+  allLabel?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -37,6 +40,7 @@ export function FilterDropdown<T extends string>({
   mode,
   placeholder,
   loadError,
+  allLabel,
 }: FilterDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -144,6 +148,21 @@ export function FilterDropdown<T extends string>({
           className="filter-dropdown__menu"
           style={menuStyle}
         >
+          {allLabel && (
+            <li
+              role="option"
+              aria-selected={selected.length === 0}
+              className={selected.length === 0
+                ? 'filter-dropdown__item filter-dropdown__item--selected'
+                : 'filter-dropdown__item'}
+              onClick={() => { onChange([]); setOpen(false); }}
+            >
+              <span className="filter-dropdown__icon" aria-hidden>
+                {selected.length === 0 ? '✓' : ''}
+              </span>
+              {allLabel}
+            </li>
+          )}
           {options.map((opt) => {
             const isSelected = selected.includes(opt.code);
             return (

@@ -10,7 +10,7 @@ interface ExplorerState extends ExplorerFilters {
 
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
-  setCity: (city: string) => void;
+  setCities: (cities: string[]) => void;
   setLieuDit: (lieuDit: string) => void;
   setPmr: (value: boolean) => void;
   setPetsAccepted: (value: boolean) => void;
@@ -104,7 +104,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         : [...state.selectedBuckets, bucket],
     })),
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
-  setCity: (city) => set((state) => ({ common: { ...state.common, city, ...(city ? {} : { lieuDit: '' }) } })),
+  setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
   setPmr: (value) => set((state) => ({ common: { ...state.common, pmr: value } })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),

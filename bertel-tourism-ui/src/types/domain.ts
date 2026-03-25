@@ -54,7 +54,7 @@ export interface MeetingRoomFilter {
 
 export interface ExplorerCommonFilters {
   search: string;
-  city: string;
+  cities: string[];
   lieuDit: string;
   pmr: boolean;
   petsAccepted: boolean;

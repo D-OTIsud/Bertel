@@ -36,7 +36,7 @@ export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTy
 
 export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   search: '',
-  city: '',
+  cities: [],
   lieuDit: '',
   pmr: false,
   petsAccepted: false,
@@ -138,8 +138,9 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     payload.bbox = common.bbox;
   }
 
-  if (cleanString(common.city)) {
-    payload.city_any = [cleanString(common.city)];
+  const cleanCities = common.cities.map(cleanString).filter(Boolean);
+  if (cleanCities.length > 0) {
+    payload.city_any = cleanCities;
   }
 
   if (cleanString(common.lieuDit)) {

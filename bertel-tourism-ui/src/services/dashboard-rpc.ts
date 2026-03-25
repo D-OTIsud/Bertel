@@ -162,48 +162,33 @@ export async function getDashboardDistinctionOverview(
   return data as DashboardDistinctionOverview;
 }
 
-// ─── City options — corpus-wide, filter-independent ──────────────────────────
-// Returns distinct cities from object_location across all non-ORG objects,
-// any status. Called once on dashboard mount; independent of DashboardFilters.
+// ─── Filter options — corpus-wide, filter-independent ────────────────────────
+// Returns cities and lieux-dits in a single RPC call.
+// Both datasets share the same base table/JOIN/conditions and are always needed
+// together on dashboard mount — one round trip is cheaper than two.
 
-export async function getDashboardCityOptions(): Promise<string[]> {
+export async function getDashboardFilterOptions(): Promise<{ cities: string[]; lieuDits: string[] }> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
-    // Derive from mock distribution rows; exclude synthetic aggregates (no city_any filter value)
-    return mockDashboardData.cityDistribution.rows
+    const cities = mockDashboardData.cityDistribution.rows
       .map((r) => r.city)
       .filter((c) => c && c !== 'Autres')
       .sort((a, b) => a.localeCompare(b, 'fr'));
+    return { cities, lieuDits: [] };
   }
 
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_city_options');
+    .rpc('get_dashboard_filter_options');
 
   if (error) throw error;
-  return (data as string[]) ?? [];
-}
-
-// ─── Lieu-dit options — corpus-wide, filter-independent ──────────────────────
-// Returns distinct lieux-dits from object_location across all non-ORG objects,
-// any status. Called once on dashboard mount; independent of DashboardFilters.
-// Demo mode: returns [] (no lieu_dit values in current mock data).
-
-export async function getDashboardLieuDitOptions(): Promise<string[]> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    return [];
-  }
-
-  const client = requireDashboardRpcClient();
-  const { data, error } = await client
-    .schema('api')
-    .rpc('get_dashboard_lieu_dit_options');
-
-  if (error) throw error;
-  return (data as string[]) ?? [];
+  const result = data as { cities: string[]; lieu_dits: string[] };
+  return {
+    cities:   result.cities    ?? [],
+    lieuDits: result.lieu_dits ?? [],
+  };
 }
 
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────

@@ -67,8 +67,14 @@ function bucketCapacityOptions(
   );
 }
 
+// Representative Réunion municipalities for demo mode city dropdown.
+// Live mode derives from api.get_dashboard_filter_options() (object_location corpus).
+const DEMO_CITIES = ['Le Tampon', 'Saint-Benoît', 'Saint-Denis', 'Saint-Paul', 'Saint-Pierre', 'Sainte-Marie'];
+
 function buildDemoReferences(): ExplorerReferences {
   return {
+    cities: DEMO_CITIES,
+    lieuDits: [],
     hotClassifications: [
       {
         schemeCode: 'type_hot',
@@ -120,6 +126,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     applicabilityResult,
     schemesResult,
     practicesResult,
+    locationOptionsResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
@@ -127,6 +134,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     // PostgREST does not expose child partition tables in its schema cache.
     // Query the parent ref_code table with a domain filter instead.
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
+    // City and lieu-dit options — same SQL function as dashboard, reused here to
+    // avoid a separate fetch. Both datasets are always needed at Explorer mount.
+    client.schema('api').rpc('get_dashboard_filter_options'),
   ]);
 
   if (metricsResult.error) {
@@ -140,6 +150,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   }
   if (practicesResult.error) {
     throw practicesResult.error;
+  }
+  if (locationOptionsResult.error) {
+    throw locationOptionsResult.error;
   }
 
   const schemes = (schemesResult.data ?? []) as ClassificationSchemeRow[];
@@ -175,10 +188,14 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     ),
   }));
 
+  const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
+
   return {
     hotClassifications,
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
+    cities:   locationOptions?.cities    ?? [],
+    lieuDits: locationOptions?.lieu_dits ?? [],
   };
 }

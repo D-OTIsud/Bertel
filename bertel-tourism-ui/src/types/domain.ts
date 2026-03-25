@@ -140,6 +140,10 @@ export interface ExplorerReferences {
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
   itiPractices: ExplorerReferenceOption[];
+  /** Corpus-wide city list — from api.get_dashboard_filter_options */
+  cities: string[];
+  /** Corpus-wide lieu-dit list — from api.get_dashboard_filter_options */
+  lieuDits: string[];
 }
 
 export interface RpcPageMeta {

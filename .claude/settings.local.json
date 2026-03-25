@@ -1,6 +1,11 @@
 {
   "permissions": {
+    "defaultMode": "dontAsk",
     "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Bash",
       "Bash(sed -n '219,235p' \"/mnt/c/Users/dphil/Bertel3.0/bertel-tourism-ui/src/styles.css\")",
       "Bash(sed -n '1674,1685p' \"/mnt/c/Users/dphil/Bertel3.0/bertel-tourism-ui/src/styles.css\")",
       "Bash(sed -n '278,300p' \"/mnt/c/Users/dphil/Bertel3.0/bertel-tourism-ui/src/styles.css\")",
@@ -43,7 +48,42 @@
       "Bash(echo \"✗ MISSING: $table\")",
       "Bash(fi)",
       "Bash(done)",
-      "Bash(/tmp/extraction_summary.txt:*)"
+      "Bash(/tmp/extraction_summary.txt:*)",
+      "Bash(find /mnt/c/Users/dphil/Bertel3.0 -name *membership* -o -name *user_org* -o -name *org_member*)",
+      "Bash(find /mnt/c/Users/dphil/Bertel3.0 -name *.md -type f)",
+      "Bash(ls /mnt/c/Users/dphil/Bertel3.0/bertel-tourism-ui/.env*)",
+      "Bash(ls /mnt/c/Users/dphil/Bertel3.0/.env*)",
+      "Read(//home/dphil/.config/**)",
+      "Bash(env)",
+      "Bash(npm --version)",
+      "Bash(npx supabase:*)",
+      "Bash(docker ps:*)",
+      "Bash(/dev/null -l)",
+      "Bash(git -C /mnt/c/Users/dphil/Bertel3.0 log --oneline -- \"bertel-tourism-ui/src/app/\\(main\\)/layout.tsx\" \"bertel-tourism-ui/src/hooks/useBootstrapSession.ts\")",
+      "Bash(node:*)",
+      "Bash(head -10 grep -r \"Too many re-renders\\\\|Maximum update depth\" /mnt/c/Users/dphil/Bertel3.0/bertel-tourism-ui/node_modules/react-dom/cjs/)",
+      "Bash(/dev/null cat:*)",
+      "Bash(ls:*)"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(ln:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(rmdir:*)",
+      "Bash(find * -delete)",
+      "Bash(git clean:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

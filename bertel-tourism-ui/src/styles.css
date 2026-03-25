@@ -3147,12 +3147,6 @@ body::after {
   border-bottom: 1px solid var(--line);
 }
 
-.dashboard-filters-sidebar__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .dashboard-filters-sidebar__toggle {
   background: none;
   border: none;
@@ -3187,37 +3181,20 @@ body::after {
   border-radius: 50%;
 }
 
-.filters-panel__content {
+/* Scrollable card-layout content column — scoped to avoid overriding base rule globally. */
+.dashboard-filters-sidebar .filters-panel__content {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1rem;
   overflow-y: auto;
   flex: 1;
+  padding: 0.75rem;
 }
 
-.dashboard-filters-sidebar .filters-panel__section {
-  border-bottom: 1px solid var(--line);
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  padding: 0.85rem 1rem;
-  gap: 0;
-}
-
-.dashboard-filters-sidebar .filters-panel__section-header {
-  margin-bottom: 0.6rem;
-}
-
-.dashboard-filters-sidebar .filters-panel__section-heading h3 {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin: 0;
+/* Reset button positioned below the header, flush with sidebar padding. */
+.dashboard-filters-sidebar .filters-panel__reset {
+  margin: 0 1rem 0.25rem;
+  align-self: flex-start;
 }
 
 .dashboard-filters-sidebar .filters-panel__section-body {
@@ -3283,16 +3260,27 @@ body::after {
   flex-shrink: 0;
 }
 
-/* Multi-select listbox for dashboard type filter */
-.dashboard-filter-input--multi {
-  height: auto;
-  min-height: 7rem;
-  padding: 0;
+/* Chip sizing compact pour la sidebar 240px (mirror de l'override .explorer-workspace) */
+.dashboard-filters-sidebar .chip {
+  padding: 0.38rem 0.68rem;
+  font-size: 0.8rem;
 }
 
-.dashboard-filter-input--multi option {
-  padding: 0.3rem 0.65rem;
-  cursor: pointer;
+.dashboard-filters-sidebar .chip-grid {
+  gap: 0.42rem;
+}
+
+/* Label field-block réduit pour la densité sidebar */
+.dashboard-filters-sidebar .field-block {
+  gap: 0.4rem;
+}
+
+.dashboard-filters-sidebar .field-block > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* Inline error hint below city dropdown when RPC load fails */

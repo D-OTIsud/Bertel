@@ -101,7 +101,7 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
             </div>
             <div className="result-card__body">
               <div className="result-card__title-row">
-                <div>
+                <div className="result-card__title-copy">
                   <h3>{card.name}</h3>
                   <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                 </div>

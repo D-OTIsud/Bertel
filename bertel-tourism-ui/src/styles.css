@@ -20,6 +20,7 @@
   --bg-strong: #ebe2d5;
   --panel: rgba(255, 253, 248, 0.82);
   --panel-strong: #fffdf8;
+  --surface: #fffdf8;        /* solid surface (menus, cards, sidebars) */
   --surface-soft: #edf5f4;
   --line: rgba(24, 49, 59, 0.12);
   --text: #18313b;
@@ -3255,8 +3256,8 @@ body::after {
 }
 
 .dashboard-filter-date-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
 }
 

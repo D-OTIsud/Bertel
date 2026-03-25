@@ -4,6 +4,7 @@ import type { BackendObjectTypeCode, ExplorerBucketKey, ExplorerReferences } fro
 import { EXPLORER_BUCKET_OPTIONS, HOT_BUCKET_TYPES } from '../../utils/facets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FilterDropdown } from '../dashboard/FilterDropdown';
 
 const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   HOT: 'Hotels',
@@ -137,17 +138,26 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
           </FiltersSubsection>
 
           <FiltersSubsection title="Localisation">
-            <label className="field-block">
-              <span>Ville</span>
-              <Input type="text" value={common.city} onChange={(event) => setCity(event.target.value)} placeholder="Ex: Saint-Pierre" />
-            </label>
-
-            {common.city ? (
-              <label className="field-block">
-                <span>Lieu-dit</span>
-                <Input type="text" value={common.lieuDit} onChange={(event) => setLieuDit(event.target.value)} placeholder="Ex: Front de mer" />
-              </label>
-            ) : null}
+            <div className="filters-panel__subsection">
+              <span className="facet-title">Ville</span>
+              <FilterDropdown<string>
+                mode="single"
+                placeholder="Toutes les communes"
+                options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
+                selected={common.city ? [common.city] : []}
+                onChange={(vals) => setCity(vals[0] ?? '')}
+              />
+            </div>
+            <div className="filters-panel__subsection">
+              <span className="facet-title">Lieu-dit</span>
+              <FilterDropdown<string>
+                mode="single"
+                placeholder="Tous les lieux-dits"
+                options={(references?.lieuDits ?? []).map((v) => ({ code: v, label: v }))}
+                selected={common.lieuDit ? [common.lieuDit] : []}
+                onChange={(vals) => setLieuDit(vals[0] ?? '')}
+              />
+            </div>
           </FiltersSubsection>
 
           <FiltersSubsection title="Accessibilite et services">

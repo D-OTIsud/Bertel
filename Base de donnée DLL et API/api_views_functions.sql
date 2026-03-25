@@ -7828,3 +7828,61 @@ Represents the full corpus lieu-dit domain, not the current filtered slice.';
 
 REVOKE EXECUTE ON FUNCTION api.get_dashboard_lieu_dit_options() FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.get_dashboard_lieu_dit_options() TO   authenticated, service_role;
+
+-- ─────────────────────────────────────────────────────
+-- Combined filter options — cities + lieux-dits in one round trip
+-- ─────────────────────────────────────────────────────
+-- Returns both dropdown option sets as a single jsonb object so the dashboard
+-- panel can be initialised with one RPC call instead of two.
+-- Both datasets share the same base table, JOIN, and filter conditions;
+-- merging them removes an unnecessary network round trip.
+-- Supersedes get_dashboard_city_options + get_dashboard_lieu_dit_options
+-- (those remain deployed; this is the preferred entry point going forward).
+CREATE OR REPLACE FUNCTION api.get_dashboard_filter_options()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT jsonb_build_object(
+    'cities', COALESCE(
+      (
+        SELECT jsonb_agg(city ORDER BY city)
+        FROM (
+          SELECT DISTINCT btrim(ol.city) AS city
+          FROM   object_location ol
+          JOIN   object o ON o.id = ol.object_id
+          WHERE  ol.is_main_location = TRUE
+            AND  btrim(ol.city) <> ''
+            AND  o.object_type <> 'ORG'
+        ) c
+      ),
+      '[]'::jsonb
+    ),
+    'lieu_dits', COALESCE(
+      (
+        SELECT jsonb_agg(lieu_dit ORDER BY lieu_dit)
+        FROM (
+          SELECT DISTINCT btrim(ol.lieu_dit) AS lieu_dit
+          FROM   object_location ol
+          JOIN   object o ON o.id = ol.object_id
+          WHERE  ol.is_main_location = TRUE
+            AND  ol.lieu_dit IS NOT NULL
+            AND  btrim(ol.lieu_dit) <> ''
+            AND  o.object_type <> 'ORG'
+        ) l
+      ),
+      '[]'::jsonb
+    )
+  );
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_filter_options IS
+'Returns { cities: text[], lieu_dits: text[] } as jsonb — sorted, btrim-cleaned,
+distinct values from object_location (is_main_location=true) for all non-ORG objects,
+any status. Both arrays represent the full corpus domain (not the current filtered slice).
+Used to populate the city and lieu-dit filter dropdowns on the dashboard sidebar in one call.';
+
+REVOKE EXECUTE ON FUNCTION api.get_dashboard_filter_options() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.get_dashboard_filter_options() TO   authenticated, service_role;

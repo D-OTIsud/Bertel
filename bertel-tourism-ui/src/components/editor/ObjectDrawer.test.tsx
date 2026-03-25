@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ObjectDrawer } from './ObjectDrawer';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
+import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
 
 const mockUseObjectDetailQuery = jest.fn();
@@ -24,7 +25,9 @@ jest.mock('../../hooks/usePresenceRoom', () => ({
 describe('ObjectDrawer drafts', () => {
   beforeEach(() => {
     useUiStore.setState({ drawerObjectId: 'obj-1' });
-    useObjectDrawerStore.setState({ activeSection: 'general', draftsByObject: {} });
+    // mode must be 'edit' for these tests — they assert on form inputs in the edit panels
+    useObjectDrawerStore.setState({ activeSection: 'general', mode: 'edit', draftsByObject: {} });
+    useSessionStore.setState({ role: 'tourism_agent', status: 'ready' });
     mockUseObjectDetailQuery.mockClear();
   });
 

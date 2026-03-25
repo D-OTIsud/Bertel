@@ -20,8 +20,8 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
         aria-describedby={undefined}
         className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
       >
-        <SheetTitle className="sr-only">Edition fiche objet</SheetTitle>
-        <SheetDescription className="sr-only">Panneau lateral pour modifier les details d un objet touristique.</SheetDescription>
+        <SheetTitle className="sr-only">Fiche objet</SheetTitle>
+        <SheetDescription className="sr-only">Panneau lateral de detail d un objet touristique. Le bouton Modifier permet d acceder au mode edition.</SheetDescription>
         {objectId ? <ObjectDrawerShell objectId={objectId} onClose={closeDrawer} /> : null}
       </SheetContent>
     </Sheet>

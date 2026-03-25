@@ -206,7 +206,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     points,
     bounds: bounds || undefined,
     zoom,
-    options: { radius: 50, maxZoom: 14 },
+    options: { radius: 30, maxZoom: 12 },
   });
   const selectedObjectIdSet = useMemo(() => new Set(selectedObjectIds), [selectedObjectIds]);
   const lassoSvgPoints = useMemo(() => toSvgPointString(lassoPoints), [lassoPoints]);

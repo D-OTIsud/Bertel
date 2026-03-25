@@ -39,9 +39,14 @@ export function FilterDropdown<T extends string>({
   loadError,
 }: FilterDropdownProps<T>) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
+
+  // SSR guard: createPortal requires document.body, which is unavailable during
+  // Next.js pre-rendering. Only enable the portal after the first client mount.
+  useEffect(() => { setMounted(true); }, []);
 
   // Position menu below trigger using fixed coordinates (portal approach).
   const updateMenuPosition = useCallback(() => {
@@ -132,7 +137,7 @@ export function FilterDropdown<T extends string>({
         <p className="filter-dropdown__error">{loadError}</p>
       )}
 
-      {open && createPortal(
+      {mounted && open && createPortal(
         <ul
           ref={menuRef}
           role="listbox"

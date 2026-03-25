@@ -95,6 +95,41 @@ describe('open/close', () => {
     fireEvent.click(trigger);
     expect(document.body.querySelector('.filter-dropdown__menu')).toBeNull();
   });
+
+  it('closes the menu on Escape key', () => {
+    render(
+      <FilterDropdown
+        options={OPTIONS}
+        selected={[]}
+        onChange={() => {}}
+        mode="multi"
+        placeholder="Tous les types"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+    // menu is open
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('closes the menu when clicking outside', () => {
+    render(
+      <div>
+        <FilterDropdown
+          options={OPTIONS}
+          selected={[]}
+          onChange={() => {}}
+          mode="multi"
+          placeholder="Tous les types"
+        />
+        <button data-testid="outside">outside</button>
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /tous les types/i }));
+    // menu is open
+    fireEvent.pointerDown(screen.getByTestId('outside'));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
 });
 
 // ── Multi mode ─────────────────────────────────────────────────────────────

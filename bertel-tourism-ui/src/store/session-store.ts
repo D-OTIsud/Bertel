@@ -8,6 +8,7 @@ interface SessionState {
   status: SessionStatus;
   role: UserRole | null;
   userId: string | null;
+  email: string;
   userName: string;
   avatar: string;
   langPrefs: string[];
@@ -18,6 +19,7 @@ interface SessionState {
   hydrateFromAuth: (payload: {
     role: UserRole;
     userId: string;
+    email: string;
     userName: string;
     avatar: string;
     langPrefs: string[];
@@ -31,6 +33,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   status: env.demoMode ? 'ready' : 'booting',
   role: env.demoMode ? 'tourism_agent' : null,
   userId: env.demoMode ? 'usr-local-marie' : null,
+  email: env.demoMode ? 'marie@example.com' : '',
   userName: env.demoMode ? 'Marie D.' : '',
   avatar: env.demoMode ? 'MA' : '--',
   langPrefs: ['fr', 'en'],
@@ -38,11 +41,12 @@ export const useSessionStore = create<SessionState>((set) => ({
   errorMessage: null,
   setDemoRole: (role) => set((state) => (state.demoMode ? { role } : state)),
   setLangPrefs: (langPrefs) => set({ langPrefs }),
-  hydrateFromAuth: ({ role, userId, userName, avatar, langPrefs }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs }) =>
     set({
       status: 'ready',
       role,
       userId,
+      email,
       userName,
       avatar,
       langPrefs,
@@ -55,6 +59,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       errorMessage: message,
       role: null,
       userId: null,
+      email: '',
       userName: '',
       avatar: '--',
     }),
@@ -64,6 +69,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       errorMessage: message,
       role: null,
       userId: null,
+      email: '',
       userName: '',
       avatar: '--',
     }),

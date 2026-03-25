@@ -150,7 +150,7 @@ describe('object drawer utils', () => {
         { label: 'Chambres', count: 28 },
       ],
       tags: [{ id: 'tag-1', name: 'Vue mer' }],
-      classifications: [{ id: 'class-1', scheme: { name: 'Etoiles' }, value: { name: '4 etoiles' } }],
+      classifications: [{ id: 'class-1', scheme: 'gites_epics', value: '3' }],
       sustainability_action_labels: [
         { label: { value_name: 'Clef verte', scheme_name: 'Eco' }, action: { name: 'Gestion eau' } },
       ],
@@ -184,6 +184,7 @@ describe('object drawer utils', () => {
       expect.arrayContaining(['tags', 'classifications', 'sustainability', 'environment', 'payments', 'languages', 'practices']),
     );
     expect(groups.find((group) => group.key === 'tags')?.items[0].label).toBe('Vue mer');
+    expect(groups.find((group) => group.key === 'classifications')?.items[0].label).toBe('Gites de France · 3 epis');
     expect(petPolicy).toMatchObject({
       accepted: true,
       label: 'Animaux acceptes',

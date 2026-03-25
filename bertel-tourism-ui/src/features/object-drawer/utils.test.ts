@@ -1,5 +1,17 @@
 import { mockObjectDetails } from '../../data/mock';
-import { parseActors, parseExternalSyncs, parseMemberships, parseOpenings, parsePrices } from './utils';
+import {
+  parseActors,
+  parseCapacities,
+  parseExternalSyncs,
+  parseItinerarySummary,
+  parseMedia,
+  parseMemberships,
+  parseOpenings,
+  parsePetPolicy,
+  parsePrices,
+  parseRelatedObjects,
+  parseTaxonomyGroups,
+} from './utils';
 
 describe('object drawer utils', () => {
   it('parses memberships from structured object payloads', () => {
@@ -110,5 +122,141 @@ describe('object drawer utils', () => {
     expect(openings).toHaveLength(1);
     expect(openings[0].slots).toContain('09:00 -> 18:00');
     expect(openings[0].weekdays).toContain('Lundi');
+  });
+
+  it('parses taxonomy groups, media metadata and capacity arrays', () => {
+    const raw = {
+      media: [
+        {
+          id: 'media-main',
+          url: 'https://example.com/main.jpg',
+          title: 'Facade ocean',
+          is_main: true,
+          credit: 'Studio Rivage',
+          visibility: 'public',
+          position: 2,
+          tags: [{ name: 'facade' }, 'premium'],
+        },
+        {
+          id: 'media-secondary',
+          url: 'https://example.com/secondary.jpg',
+          title: 'Piscine',
+          position: 1,
+        },
+      ],
+      capacity: [
+        { code: { name: 'Personnes' }, value: 120 },
+        { label: 'Chambres', count: 28 },
+      ],
+      tags: [{ id: 'tag-1', name: 'Vue mer' }],
+      classifications: [{ id: 'class-1', scheme: { name: 'Etoiles' }, value: { name: '4 etoiles' } }],
+      sustainability_action_labels: [
+        { label: { value_name: 'Clef verte', scheme_name: 'Eco' }, action: { name: 'Gestion eau' } },
+      ],
+      environment_tags: [{ id: 'env-1', name: 'Littoral' }],
+      payment_methods: [{ id: 'pay-1', name: 'CB' }],
+      languages: [{ id: 'lang-1', name: 'Francais' }],
+      practices: [{ id: 'prac-1', name: 'Bien-etre' }],
+      pet_policy: { accepted: true, note: 'Supplement menage' },
+    } as Record<string, unknown>;
+
+    const media = parseMedia(raw);
+    const capacities = parseCapacities(raw);
+    const groups = parseTaxonomyGroups(raw);
+    const petPolicy = parsePetPolicy(raw);
+
+    expect(media[0]).toMatchObject({
+      id: 'media-main',
+      isMain: true,
+      credit: 'Studio Rivage',
+      visibility: 'public',
+      position: '2',
+    });
+    expect(media[0].tags).toEqual(['facade', 'premium']);
+
+    expect(capacities).toEqual([
+      { id: 'capacity-Personnes', label: 'Personnes', value: '120' },
+      { id: 'capacity-Chambres', label: 'Chambres', value: '28' },
+    ]);
+
+    expect(groups.map((group) => group.key)).toEqual(
+      expect.arrayContaining(['tags', 'classifications', 'sustainability', 'environment', 'payments', 'languages', 'practices']),
+    );
+    expect(groups.find((group) => group.key === 'tags')?.items[0].label).toBe('Vue mer');
+    expect(petPolicy).toMatchObject({
+      accepted: true,
+      label: 'Animaux acceptes',
+    });
+    expect(petPolicy?.details).toContain('Supplement menage');
+  });
+
+  it('parses itinerary summaries and related objects from nested payloads', () => {
+    const raw = {
+      itinerary: {
+        distance_km: 12.5,
+        duration_hours: 4.2,
+        difficulty_level: 'Intermediaire',
+        elevation_gain: 540,
+        is_loop: true,
+        track: 'track-data',
+        track_format: 'gpx',
+      },
+      itinerary_details: {
+        practices: [{ id: 'practice-1', name: 'Randonnee' }],
+        info: { summary: 'Depart tres tot conseille' },
+        sections: [{ id: 'section-1' }, { id: 'section-2' }],
+        stages: [{ id: 'stage-1' }],
+        profiles: [{ id: 'profile-1' }],
+        associated_objects: [
+          {
+            id: 'poi-1',
+            name: 'Belvedere des hauts',
+            type: 'POI',
+            relation_type: { name: 'Etape' },
+          },
+        ],
+      },
+      relations: {
+        out: [
+          {
+            relation_type: { name: 'Acces' },
+            target: { id: 'srv-1', name: 'Parking forestier', type: 'SRV' },
+          },
+        ],
+        in: [
+          {
+            relation_type: { name: 'Anime' },
+            source: { id: 'actor-1', name: 'Guide local', type: 'ACT' },
+          },
+        ],
+      },
+    } as Record<string, unknown>;
+
+    const itinerary = parseItinerarySummary(raw);
+    const related = parseRelatedObjects(raw);
+
+    expect(itinerary).toMatchObject({
+      distanceKm: '12.5',
+      durationHours: '4.2',
+      difficulty: 'Intermediaire',
+      elevationGain: '540',
+      isLoop: true,
+      track: 'track-data',
+      trackFormat: 'gpx',
+      sectionsCount: 2,
+      stagesCount: 1,
+      profilesCount: 1,
+    });
+    expect(itinerary?.practices).toContain('Randonnee');
+    expect(itinerary?.info).toContain('Depart tres tot conseille');
+
+    expect(related).toHaveLength(3);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Belvedere des hauts', direction: 'associated', relationship: 'Etape' }),
+        expect.objectContaining({ name: 'Parking forestier', direction: 'out', relationship: 'Acces' }),
+        expect.objectContaining({ name: 'Guide local', direction: 'in', relationship: 'Anime' }),
+      ]),
+    );
   });
 });

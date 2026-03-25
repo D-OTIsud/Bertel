@@ -7793,3 +7793,38 @@ COMMENT ON FUNCTION api.get_dashboard_city_options IS
 (is_main_location=true, non-null/non-empty) for all non-ORG objects, any status.
 No filter parameters. Used to populate the dashboard city filter dropdown.
 Represents the full corpus city domain, not the current filtered slice.';
+
+-- ─────────────────────────────────────────────────────
+-- Lieu-dit options for dashboard filter dropdown
+-- ─────────────────────────────────────────────────────
+-- Returns the full corpus lieu-dit domain: distinct non-null, non-empty, btrim-cleaned
+-- lieux-dits from object_location (is_main_location=true) across ALL non-ORG objects,
+-- any status. No filter parameters. Used exclusively to populate the lieu-dit dropdown
+-- on the dashboard sidebar.
+CREATE OR REPLACE FUNCTION api.get_dashboard_lieu_dit_options()
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT ARRAY(
+    SELECT DISTINCT btrim(ol.lieu_dit)
+    FROM   object_location ol
+    JOIN   object o ON o.id = ol.object_id
+    WHERE  ol.is_main_location = true
+      AND  ol.lieu_dit IS NOT NULL
+      AND  btrim(ol.lieu_dit) <> ''
+      AND  o.object_type <> 'ORG'
+    ORDER BY btrim(ol.lieu_dit) ASC
+  );
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_lieu_dit_options IS
+'Returns a sorted TEXT[] of distinct lieux-dits (btrim-cleaned, non-null/non-empty)
+from object_location (is_main_location=true) for all non-ORG objects, any status.
+No filter parameters. Used to populate the dashboard lieu-dit filter dropdown.
+Represents the full corpus lieu-dit domain, not the current filtered slice.';
+
+REVOKE EXECUTE ON FUNCTION api.get_dashboard_lieu_dit_options() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.get_dashboard_lieu_dit_options() TO   authenticated, service_role;

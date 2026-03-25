@@ -54,7 +54,13 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
   const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
   const commonPatch = {
     ...(searchParams.get('search') != null && { search: searchParams.get('search') ?? '' }),
-    ...(searchParams.get('city') != null && { city: searchParams.get('city') ?? '' }),
+    // Support both 'cities' (multi, new) and legacy 'city' (single, old bookmarks).
+    ...(searchParams.get('cities') != null && {
+      cities: (searchParams.get('cities') ?? '').split(',').filter(Boolean),
+    }),
+    ...(searchParams.get('city') != null && !searchParams.has('cities') && {
+      cities: [searchParams.get('city') ?? ''].filter(Boolean),
+    }),
     ...(searchParams.get('lieuDit') != null && { lieuDit: searchParams.get('lieuDit') ?? '' }),
     ...(searchParams.get('pmr') != null && { pmr: searchParams.get('pmr') === 'true' }),
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
@@ -141,8 +147,8 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   if (filters.common.search) {
     p.set('search', filters.common.search);
   }
-  if (filters.common.city) {
-    p.set('city', filters.common.city);
+  if (filters.common.cities.length > 0) {
+    p.set('cities', filters.common.cities.join(','));
   }
   if (filters.common.lieuDit) {
     p.set('lieuDit', filters.common.lieuDit);

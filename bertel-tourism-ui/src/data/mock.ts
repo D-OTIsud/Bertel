@@ -363,7 +363,7 @@ function matchesBucket(card: ObjectCard, bucket: ExplorerBucketKey): boolean {
 export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucketKey): ObjectCard[] {
   const buckets = bucket ? [bucket] : getEffectiveSelectedBuckets(filters.selectedBuckets);
   const search = filters.common.search.trim().toLowerCase();
-  const city = filters.common.city.trim().toLowerCase();
+  const cities = filters.common.cities.map((c) => c.trim().toLowerCase()).filter(Boolean);
   const lieuDit = filters.common.lieuDit.trim().toLowerCase();
   const labelsAny = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
 
@@ -374,7 +374,7 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
       card.name.toLowerCase().includes(search) ||
       (card.description ?? '').toLowerCase().includes(search) ||
       (card.location?.city ?? '').toLowerCase().includes(search);
-    const cityMatches = city.length === 0 || (card.location?.city ?? '').toLowerCase() === city;
+    const cityMatches = cities.length === 0 || cities.includes((card.location?.city ?? '').toLowerCase());
     const lieuDitMatches = lieuDit.length === 0 || (card.location?.lieu_dit ?? '').toLowerCase().includes(lieuDit);
     const openMatches = !filters.common.openNow || card.open_now === true;
     const petsMatches = !filters.common.petsAccepted || card.id === 'HOTRUN0000000001';

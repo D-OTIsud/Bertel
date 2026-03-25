@@ -200,6 +200,7 @@ export function DashboardFiltersPanel({
             <FilterDropdown<string>
               mode="multi"
               placeholder="Toutes les communes"
+              allLabel="Toutes les communes"
               options={availableCities.map((c) => ({ code: c, label: c }))}
               selected={filters.cities ?? []}
               onChange={(cities) => setFilters({ cities: cities.length > 0 ? cities : undefined })}

@@ -1,19 +1,11 @@
-import { useObjectDrawerStore, type ObjectDrawerSection } from '../../store/object-drawer-store';
+import { useObjectDrawerStore } from '../../store/object-drawer-store';
+import type { SectionDef } from './object-drawer-sections';
 
-const sections: Array<{ id: ObjectDrawerSection; label: string }> = [
-  { id: 'general', label: 'General' },
-  { id: 'contacts', label: 'Contacts' },
-  { id: 'media', label: 'Media' },
-  { id: 'legal', label: 'Legal' },
-  { id: 'pricing', label: 'Tarifs' },
-  { id: 'openings', label: 'Ouvertures' },
-  { id: 'rooms', label: 'Chambres' },
-  { id: 'mice', label: 'MICE' },
-  { id: 'memberships', label: 'Adhesions' },
-  { id: 'external-sync', label: 'Sync' },
-];
+interface ObjectDrawerNavProps {
+  sections: SectionDef[];
+}
 
-export function ObjectDrawerNav() {
+export function ObjectDrawerNav({ sections }: ObjectDrawerNavProps) {
   const activeSection = useObjectDrawerStore((state) => state.activeSection);
   const setActiveSection = useObjectDrawerStore((state) => state.setActiveSection);
 

@@ -12,6 +12,8 @@ export type ObjectDrawerSection =
   | 'memberships'
   | 'external-sync';
 
+export type DrawerMode = 'view' | 'edit';
+
 interface ObjectDraftState {
   name: string;
   description: string;
@@ -20,8 +22,10 @@ interface ObjectDraftState {
 
 interface ObjectDrawerState {
   activeSection: ObjectDrawerSection;
+  mode: DrawerMode;
   draftsByObject: Record<string, ObjectDraftState>;
   setActiveSection: (section: ObjectDrawerSection) => void;
+  setMode: (mode: DrawerMode) => void;
   resetSection: () => void;
   initializeDraft: (objectId: string, draft: { name: string; description: string }) => void;
   updateDraft: (objectId: string, field: 'name' | 'description', value: string) => void;
@@ -30,9 +34,12 @@ interface ObjectDrawerState {
 
 export const useObjectDrawerStore = create<ObjectDrawerState>((set) => ({
   activeSection: 'general',
+  mode: 'view',
   draftsByObject: {},
   setActiveSection: (section) => set({ activeSection: section }),
-  resetSection: () => set({ activeSection: 'general' }),
+  setMode: (mode) => set({ mode }),
+  // Reset to view mode on every new object open
+  resetSection: () => set({ activeSection: 'general', mode: 'view' }),
   initializeDraft: (objectId, draft) =>
     set((state) => {
       const existing = state.draftsByObject[objectId];

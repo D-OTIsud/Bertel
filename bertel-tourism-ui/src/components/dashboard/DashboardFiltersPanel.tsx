@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
 import type { BackendObjectTypeCode } from '../../types/domain';
 import type { DashboardFilters } from '../../types/dashboard';
+import { FilterDropdown } from './FilterDropdown';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const TYPE_OPTIONS: { code: BackendObjectTypeCode; label: string }[] = [
+const OBJECT_TYPE_OPTIONS: { code: BackendObjectTypeCode; label: string }[] = [
   { code: 'HOT',  label: 'Hôtels' },
   { code: 'HPA',  label: 'Plein air' },
   { code: 'HLO',  label: 'Lois. hbg.' },
@@ -40,14 +41,6 @@ const DATE_PRESETS: { label: string; days: number }[] = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-// Additive toggle: ajoute si absent, retire si présent.
-// Même logique que toggleBucket / toggleHotSubtype dans Explorer.
-function toggleItem<T>(arr: T[] | undefined, item: T): T[] | undefined {
-  if (!arr || arr.length === 0) return [item];
-  const next = arr.includes(item) ? arr.filter((v) => v !== item) : [...arr, item];
-  return next.length > 0 ? next : undefined;
-}
 
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10);
@@ -98,28 +91,30 @@ interface DashboardFiltersPanelProps {
   availableCities: string[];
   /** Non-null when the city options RPC failed — shown inline below the dropdown. */
   cityLoadError?: string | null;
+  /** Sorted, deduplicated lieu-dit list from the corpus (api.get_dashboard_lieu_dit_options). */
+  availableLieuDits: string[];
+  /** Non-null when the lieu-dit options RPC failed — shown inline below the dropdown. */
+  lieuDitLoadError?: string | null;
 }
 
-export function DashboardFiltersPanel({ availableCities, cityLoadError }: DashboardFiltersPanelProps) {
+export function DashboardFiltersPanel({
+  availableCities,
+  cityLoadError,
+  availableLieuDits,
+  lieuDitLoadError,
+}: DashboardFiltersPanelProps) {
   const { filters, setFilters, resetFilters, sidebarCollapsed, toggleSidebar } =
     useDashboardFilterStore();
 
   const hasActiveFilters =
     (filters.types && filters.types.length > 0) ||
     (filters.cities && filters.cities.length > 0) ||
+    (filters.lieuDits && filters.lieuDits.length > 0) ||
     filters.updatedAtFrom ||
     filters.updatedAtTo ||
     filters.pmr ||
     filters.petsAccepted ||
     JSON.stringify(filters.status) !== JSON.stringify(['published']);
-
-  function toggleType(code: BackendObjectTypeCode) {
-    setFilters({ types: toggleItem(filters.types, code) });
-  }
-
-  function toggleStatus(code: NonNullable<DashboardFilters['status']>[number]) {
-    setFilters({ status: toggleItem(filters.status, code) });
-  }
 
   function applyDatePreset(days: number) {
     setFilters({ updatedAtFrom: isoNDaysAgo(days), updatedAtTo: isoToday() });
@@ -164,86 +159,60 @@ export function DashboardFiltersPanel({ availableCities, cityLoadError }: Dashbo
       </div>
 
       {hasActiveFilters && (
-        <Button type="button" variant="ghost" className="filters-panel__reset" onClick={resetFilters}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="filters-panel__reset"
+          onClick={resetFilters}
+        >
           Réinitialiser
         </Button>
       )}
 
       <div className="filters-panel__content">
 
-        {/* Périmètre — types (chips additifs, même pattern qu'Explorer) + statuts */}
+        {/* Périmètre — types et statuts via FilterDropdown */}
         <FiltersSection eyebrow="Périmètre" title="Types et statuts">
           <FiltersSubsection title="Type d'objet">
-            {/* Chips additifs : cliquer sélectionne/désélectionne indépendamment.
-                Pas de <select multiple> natif — mobile-safe, même pattern qu'Explorer. */}
-            <div className="chip-grid">
-              {TYPE_OPTIONS.map(({ code, label }) => (
-                <button
-                  key={code}
-                  type="button"
-                  className={filters.types?.includes(code) ? 'chip chip--active' : 'chip'}
-                  onClick={() => toggleType(code)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <FilterDropdown<BackendObjectTypeCode>
+              mode="multi"
+              placeholder="Tous les types"
+              options={OBJECT_TYPE_OPTIONS}
+              selected={filters.types ?? []}
+              onChange={(types) => setFilters({ types: types.length > 0 ? types : undefined })}
+            />
           </FiltersSubsection>
 
           <FiltersSubsection title="Statut">
-            <div className="chip-grid">
-              {STATUS_OPTIONS.map(({ code, label }) => (
-                <button
-                  key={code}
-                  type="button"
-                  className={filters.status?.includes(code) ? 'chip chip--active' : 'chip'}
-                  onClick={() => toggleStatus(code)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <FilterDropdown<NonNullable<DashboardFilters['status']>[number]>
+              mode="single"
+              placeholder="Publié"
+              options={STATUS_OPTIONS}
+              selected={filters.status ?? []}
+              onChange={(codes) => setFilters({ status: codes.length > 0 ? codes : undefined })}
+            />
           </FiltersSubsection>
         </FiltersSection>
 
-        {/* Localisation — même structure que FiltersSubsection "Localisation" d'Explorer :
-            deux field-block successifs dans la même sous-section. */}
+        {/* Localisation — commune et lieu-dit via FilterDropdown */}
         <FiltersSection eyebrow="Localisation" title="Commune et lieu-dit">
           <FiltersSubsection title="Localisation">
-            <label className="field-block">
-              <span>Commune</span>
-              <select
-                className="dashboard-filter-input"
-                value={filters.cities?.[0] ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setFilters({ cities: v ? [v] : undefined });
-                }}
-              >
-                <option value="">Toutes les villes</option>
-                {availableCities.map((name) => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </label>
-            {cityLoadError && (
-              <span className="dashboard-filter-error">
-                Villes indisponibles — {cityLoadError}
-              </span>
-            )}
-            <label className="field-block">
-              <span>Lieu-dit</span>
-              <input
-                type="text"
-                className="dashboard-filter-input"
-                placeholder="ex. Bois de Nèfles"
-                value={filters.lieuDits?.[0] ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value.trim();
-                  setFilters({ lieuDits: v ? [v] : undefined });
-                }}
-              />
-            </label>
+            <FilterDropdown<string>
+              mode="multi"
+              placeholder="Toutes les communes"
+              options={availableCities.map((c) => ({ code: c, label: c }))}
+              selected={filters.cities ?? []}
+              onChange={(cities) => setFilters({ cities: cities.length > 0 ? cities : undefined })}
+              loadError={cityLoadError}
+            />
+            <FilterDropdown<string>
+              mode="single"
+              placeholder="Tous les lieux-dits"
+              options={availableLieuDits.map((v) => ({ code: v, label: v }))}
+              selected={filters.lieuDits ?? []}
+              onChange={(vals) => setFilters({ lieuDits: vals.length > 0 ? vals : undefined })}
+              loadError={lieuDitLoadError}
+            />
           </FiltersSubsection>
         </FiltersSection>
 
@@ -269,20 +238,25 @@ export function DashboardFiltersPanel({ availableCities, cityLoadError }: Dashbo
           </FiltersSubsection>
 
           <FiltersSubsection title="Plage personnalisée">
-            <div className="dashboard-filter-date-row">
-              <input
-                type="date"
-                className="dashboard-filter-input"
-                value={filters.updatedAtFrom ?? ''}
-                onChange={(e) => setFilters({ updatedAtFrom: e.target.value || undefined })}
-              />
-              <span className="dashboard-filter-date-sep">→</span>
-              <input
-                type="date"
-                className="dashboard-filter-input"
-                value={filters.updatedAtTo ?? ''}
-                onChange={(e) => setFilters({ updatedAtTo: e.target.value || undefined })}
-              />
+            <div className="dashboard-filter-date-grid">
+              <div>
+                <span className="facet-title">Du</span>
+                <input
+                  type="date"
+                  className="dashboard-filter-input"
+                  value={filters.updatedAtFrom ?? ''}
+                  onChange={(e) => setFilters({ updatedAtFrom: e.target.value || undefined })}
+                />
+              </div>
+              <div>
+                <span className="facet-title">Au</span>
+                <input
+                  type="date"
+                  className="dashboard-filter-input"
+                  value={filters.updatedAtTo ?? ''}
+                  onChange={(e) => setFilters({ updatedAtTo: e.target.value || undefined })}
+                />
+              </div>
             </div>
           </FiltersSubsection>
         </FiltersSection>

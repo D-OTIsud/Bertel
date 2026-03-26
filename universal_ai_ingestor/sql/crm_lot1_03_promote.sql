@@ -49,7 +49,7 @@ BEGIN
         NULL,
         NULL,
         'import_berta2_crm',
-        t.extra,
+        COALESCE(t.extra, '{}'::jsonb) || jsonb_build_object('import_batch_id', v_batch_id),
         NOW(),
         NOW()
     FROM staging.crm_interaction_temp t
@@ -110,7 +110,8 @@ BEGIN
             'original_comment_status',         t.original_comment_status,
             'close_reqs',                      t.close_reqs,
             'humeur_raw',                      t.humeur_raw,
-            'modere',                          t.modere
+            'modere',                          t.modere,
+            'import_batch_id',                 v_batch_id
         ),
         NOW(),
         NOW()

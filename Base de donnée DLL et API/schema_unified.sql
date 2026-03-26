@@ -3413,7 +3413,8 @@ ON object_description USING GIN (description_i18n jsonb_path_ops);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_private_description(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
 -- Supports pinned-first ordering within an org scope
-CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned ON object_private_description(object_id, org_object_id, is_pinned DESC, created_at ASC);
+DROP INDEX IF EXISTS idx_object_private_description_pinned;
+CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned ON object_private_description(object_id, org_object_id, is_pinned DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);

@@ -29,9 +29,16 @@ export interface CreatedObjectPrivateNote {
   id: string;
   body: string;
   audience: string;
+  category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
   lang?: string | null;
+  created_by?: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
 }
 
 export async function canWriteObjectPrivateNote(objectId: string): Promise<boolean> {
@@ -43,10 +50,10 @@ export async function canWriteObjectPrivateNote(objectId: string): Promise<boole
 
   const client = getApiClient();
   if (!client) {
-    return session.role === 'super_admin' || session.role === 'owner';
+    return false;
   }
 
-  const { data, error } = await client.schema('api').rpc('is_object_owner', {
+  const { data, error } = await client.schema('api').rpc('can_write_object_private_notes', {
     p_object_id: objectId,
   });
 
@@ -55,6 +62,27 @@ export async function canWriteObjectPrivateNote(objectId: string): Promise<boole
   }
 
   return data === true;
+}
+
+async function getCurrentUserOrgId(): Promise<string | null> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    return 'ORG-DEMO';
+  }
+
+  const client = getApiClient();
+  if (!client) {
+    return null;
+  }
+
+  const { data, error } = await client.schema('api').rpc('current_user_org_id');
+
+  if (error) {
+    throw error;
+  }
+
+  return typeof data === 'string' && data.trim() ? data : null;
 }
 
 function paginateMock(cards: ObjectCard[], cursor: string | null | undefined, pageSize: number): RpcPageResponse<ObjectCard> {
@@ -109,6 +137,10 @@ async function tryGetObjectWithDeepData(objectId: string, langPrefs: string[], c
   const { data, error } = await client.schema('api').rpc('get_object_with_deep_data', {
     p_object_id: objectId,
     p_languages: langPrefs,
+    p_options: {
+      render: true,
+      include_private: true,
+    },
   });
 
   if (error) {
@@ -203,6 +235,7 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
     p_track_format: 'geojson',
     p_options: {
       render: true,
+      include_private: true,
     },
   });
 
@@ -217,6 +250,8 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
 export async function createObjectPrivateNote(input: {
   objectId: string;
   body: string;
+  category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+  isPinned: boolean;
 }): Promise<CreatedObjectPrivateNote> {
   const session = useSessionStore.getState();
 
@@ -226,9 +261,16 @@ export async function createObjectPrivateNote(input: {
       id: `demo-private-note-${Date.now()}`,
       body: input.body,
       audience: 'private',
+      category: input.category,
+      is_pinned: input.isPinned,
       created_at: now,
       updated_at: now,
       lang: session.langPrefs[0] ?? 'fr',
+      created_by: {
+        id: session.userId ?? 'demo-user',
+        display_name: session.userName || 'Equipe demo',
+        avatar_url: null,
+      },
     };
   }
 
@@ -237,24 +279,44 @@ export async function createObjectPrivateNote(input: {
     throw new Error("Connexion backend indisponible pour enregistrer la note d'equipe.");
   }
 
+  if (!session.userId) {
+    throw new Error("Impossible d'identifier l'auteur de cette note.");
+  }
+
+  const orgId = await getCurrentUserOrgId();
+  if (!orgId) {
+    throw new Error("Un rattachement a une organisation active est requis pour ajouter une note interne.");
+  }
+
   const { data, error } = await client
     .from('object_private_description')
     .insert({
       object_id: input.objectId,
+      org_object_id: orgId,
       body: input.body,
       audience: 'private',
+      category: input.category,
+      is_pinned: input.isPinned,
+      created_by_user_id: session.userId,
     })
-    .select('id, body, audience, created_at, updated_at')
+    .select('id, body, audience, category, is_pinned, created_at, updated_at')
     .single();
 
   if (error) {
     if (error.message?.toLowerCase().includes('row-level security') || error.code === '42501') {
-      throw new Error("L'ajout de note est reserve au proprietaire principal de cette fiche.");
+      throw new Error("Impossible d'enregistrer cette note pour le moment. Verifiez votre organisation active et vos droits d'acces a la fiche.");
     }
     throw error;
   }
 
-  return data as CreatedObjectPrivateNote;
+  return {
+    ...(data as Omit<CreatedObjectPrivateNote, 'created_by'>),
+    created_by: {
+      id: session.userId,
+      display_name: session.userName || session.email || 'Equipe',
+      avatar_url: null,
+    },
+  };
 }
 
 // TODO: wire to real backend RPC when available

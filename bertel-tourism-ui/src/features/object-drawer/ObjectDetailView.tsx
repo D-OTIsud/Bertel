@@ -13,6 +13,7 @@ import {
   Mail,
   MapPinned,
   Navigation,
+  Pin,
   Phone,
   Plus,
   ShieldCheck,
@@ -25,7 +26,7 @@ import { getMarkerImageId } from '../../config/map-markers';
 import { useAddObjectPrivateNoteMutation, useObjectPrivateNoteWriteAccessQuery } from '../../hooks/useExplorerQueries';
 import { env } from '../../lib/env';
 import {
-  type DescriptionEntry,
+  type PrivateNoteEntry,
   parseObjectDetail,
   type ParsedAmenityItem,
   type ParsedLocation,
@@ -110,8 +111,7 @@ interface PreviewData {
   petPolicy: PetPolicyItem | null;
   relatedObjects: RelatedObjectItem[];
   itinerary: ItinerarySummary | null;
-  privateNote: string;
-  privateNotes: DescriptionEntry[];
+  privateNotes: PrivateNoteEntry[];
 }
 
 interface PracticalFact {
@@ -135,6 +135,11 @@ interface DistinctionHighlight {
   icon: typeof Award;
   tone: DistinctionGroupMeta['tone'];
   priority: number;
+}
+
+interface NoteCategoryMeta {
+  label: string;
+  tone: 'neutral' | 'important' | 'urgent' | 'internal' | 'followup';
 }
 
 const DISTINCTION_GROUPS: Record<string, DistinctionGroupMeta> = {
@@ -162,6 +167,14 @@ const DISTINCTION_GROUPS: Record<string, DistinctionGroupMeta> = {
     tone: 'badges',
     priority: 3,
   },
+};
+
+const NOTE_CATEGORY_META: Record<PrivateNoteEntry['category'], NoteCategoryMeta> = {
+  general: { label: 'General', tone: 'neutral' },
+  important: { label: 'Important', tone: 'important' },
+  urgent: { label: 'Urgent', tone: 'urgent' },
+  internal: { label: 'Interne', tone: 'internal' },
+  followup: { label: 'Suivi', tone: 'followup' },
 };
 
 function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): PreviewData {
@@ -195,7 +208,6 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
     petPolicy: parsed.operations.petPolicy,
     relatedObjects: parsed.relations.all,
     itinerary: parsed.itinerary.summary,
-    privateNote: parsed.text.privateNote,
     privateNotes: parsed.text.privateNotes,
   };
 }
@@ -416,8 +428,12 @@ function membershipTone(item: MembershipItem): string {
   return 'neutral';
 }
 
-function sortNotesByRecency(notes: DescriptionEntry[]): DescriptionEntry[] {
+function sortNotesByRecency(notes: PrivateNoteEntry[]): PrivateNoteEntry[] {
   return [...notes].sort((left, right) => {
+    if (left.isPinned !== right.isPinned) {
+      return Number(right.isPinned) - Number(left.isPinned);
+    }
+
     const leftTime = left.createdAt ? Date.parse(left.createdAt) : Number.NaN;
     const rightTime = right.createdAt ? Date.parse(right.createdAt) : Number.NaN;
 
@@ -425,21 +441,17 @@ function sortNotesByRecency(notes: DescriptionEntry[]): DescriptionEntry[] {
       return rightTime - leftTime;
     }
 
-    if (left.position !== right.position) {
-      return (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER);
-    }
-
     return left.id.localeCompare(right.id);
   });
 }
 
-function dedupeNotes(notes: DescriptionEntry[]): DescriptionEntry[] {
+function dedupeNotes(notes: PrivateNoteEntry[]): PrivateNoteEntry[] {
   const seen = new Set<string>();
-  const items: DescriptionEntry[] = [];
+  const items: PrivateNoteEntry[] = [];
 
   for (const note of notes) {
-    const key = `${note.id}-${note.description}-${note.createdAt}`;
-    if (!note.description || seen.has(key)) {
+    const key = `${note.id}-${note.body}-${note.createdAt}`;
+    if (!note.body || seen.has(key)) {
       continue;
     }
     seen.add(key);
@@ -463,7 +475,36 @@ function formatNoteDate(value: string): string {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(timestamp));
+}
+
+function getNoteAuthorName(note: PrivateNoteEntry): string {
+  return note.createdByName || 'Equipe';
+}
+
+function getNoteAuthorInitials(note: PrivateNoteEntry): string {
+  const name = getNoteAuthorName(note);
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) {
+    return 'EQ';
+  }
+
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+}
+
+function getNoteExcerpt(note: PrivateNoteEntry): string {
+  const value = note.body.trim();
+  if (value.length <= 140) {
+    return value;
+  }
+  return `${value.slice(0, 137).trimEnd()}...`;
 }
 
 function Section({
@@ -838,59 +879,70 @@ function OverviewSection({ preview }: { preview: PreviewData }) {
 function TeamNotesSection({
   objectId,
   notes,
-  fallbackNote,
-  visible,
 }: {
   objectId: string;
-  notes: DescriptionEntry[];
-  fallbackNote: string;
-  visible: boolean;
+  notes: PrivateNoteEntry[];
 }) {
   const addNoteMutation = useAddObjectPrivateNoteMutation(objectId);
   const writeAccessQuery = useObjectPrivateNoteWriteAccessQuery(objectId);
+  const sessionUserName = useSessionStore((state) => state.userName);
+  const sessionUserId = useSessionStore((state) => state.userId);
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
+  const [draftCategory, setDraftCategory] = useState<PrivateNoteEntry['category']>('general');
+  const [draftPinned, setDraftPinned] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [createdNotes, setCreatedNotes] = useState<DescriptionEntry[]>([]);
+  const [createdNotes, setCreatedNotes] = useState<PrivateNoteEntry[]>([]);
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setComposerOpen(false);
     setDraft('');
+    setDraftCategory('general');
+    setDraftPinned(false);
     setErrorMessage('');
     setCreatedNotes([]);
+    setExpandedNotes(new Set());
   }, [objectId]);
 
   const mergedNotes = useMemo(() => {
-    const shouldInjectFallback = Boolean(
-      fallbackNote && !notes.some((note) => note.description.trim() === fallbackNote.trim()),
-    );
-    const fallbackItems = shouldInjectFallback
-      ? [{
-          id: 'private-note-fallback',
-          language: '',
-          position: null,
-          description: fallbackNote,
-          chapo: '',
-          adaptedDescription: '',
-          mobileDescription: '',
-          editorialDescription: '',
-          visibility: 'private',
-          audience: 'private',
-          createdAt: '',
-          updatedAt: '',
-        } satisfies DescriptionEntry]
-      : [];
-
-    return dedupeNotes([...createdNotes, ...notes, ...fallbackItems]);
-  }, [createdNotes, fallbackNote, notes]);
+    return dedupeNotes([...createdNotes, ...notes]);
+  }, [createdNotes, notes]);
 
   const hasContent = mergedNotes.length > 0;
   const canWriteNotes = writeAccessQuery.data === true;
   const noteAccessKnown = writeAccessQuery.isSuccess || writeAccessQuery.isError;
 
-  if (!visible) {
+  useEffect(() => {
+    if (!mergedNotes.length) {
+      setExpandedNotes((current) => (current.size === 0 ? current : new Set()));
+      return;
+    }
+
+    setExpandedNotes((current) => {
+      if (current.size > 0) {
+        return current;
+      }
+
+      const firstNoteId = mergedNotes[0]?.id;
+      return firstNoteId ? new Set([firstNoteId]) : current;
+    });
+  }, [mergedNotes]);
+
+  if (noteAccessKnown && !canWriteNotes && !hasContent) {
     return null;
   }
+
+  const toggleNote = (noteId: string) =>
+    setExpandedNotes((current) => {
+      const next = new Set(current);
+      if (next.has(noteId)) {
+        next.delete(noteId);
+      } else {
+        next.add(noteId);
+      }
+      return next;
+    });
 
   const handleSubmit = async () => {
     const value = draft.trim();
@@ -901,27 +953,33 @@ function TeamNotesSection({
     setErrorMessage('');
 
     try {
-      const createdNote = await addNoteMutation.mutateAsync(value);
+      const createdNote = await addNoteMutation.mutateAsync({
+        body: value,
+        category: draftCategory,
+        isPinned: draftPinned,
+      });
       setCreatedNotes((current) =>
         dedupeNotes([
           {
             id: createdNote.id,
-            language: '',
-            position: null,
-            description: createdNote.body,
-            chapo: '',
-            adaptedDescription: '',
-            mobileDescription: '',
-            editorialDescription: '',
-            visibility: createdNote.audience,
+            body: createdNote.body,
             audience: createdNote.audience,
+            category: createdNote.category,
+            isPinned: createdNote.is_pinned,
+            language: createdNote.lang ?? '',
             createdAt: createdNote.created_at,
             updatedAt: createdNote.updated_at,
+            createdById: createdNote.created_by?.id ?? sessionUserId ?? '',
+            createdByName: createdNote.created_by?.display_name ?? sessionUserName ?? '',
+            createdByAvatarUrl: createdNote.created_by?.avatar_url ?? '',
           },
           ...current,
         ]),
       );
+      setExpandedNotes((current) => new Set([createdNote.id, ...current]));
       setDraft('');
+      setDraftCategory('general');
+      setDraftPinned(false);
       setComposerOpen(false);
     } catch (error) {
       const message = error instanceof Error
@@ -934,29 +992,91 @@ function TeamNotesSection({
   return (
     <Section title="Informations equipe" restricted>
       <div className="detail-team-notes">
+        {!noteAccessKnown && !hasContent ? (
+          <span className="detail-team-notes__hint">Chargement des notes internes...</span>
+        ) : null}
         {hasContent ? (
           <div className="detail-team-notes__list">
             {mergedNotes.map((note) => (
-              <article key={`${note.id}-${note.createdAt}`} className="detail-team-note">
-                <div className="detail-team-note__header">
-                  <span className="detail-team-note__tag">Interne</span>
-                  {formatNoteDate(note.createdAt) && (
-                    <time className="detail-team-note__date" dateTime={note.createdAt}>
-                      {formatNoteDate(note.createdAt)}
-                    </time>
-                  )}
-                </div>
-                <p>{note.description}</p>
+              <article
+                key={`${note.id}-${note.createdAt}`}
+                className={`detail-team-note${expandedNotes.has(note.id) ? ' detail-team-note--expanded' : ''}`}
+              >
+                <button
+                  type="button"
+                  className="detail-team-note__toggle"
+                  onClick={() => toggleNote(note.id)}
+                  aria-expanded={expandedNotes.has(note.id)}
+                >
+                  <div className="detail-team-note__summary">
+                    <div className="detail-team-note__identity">
+                      <span className="detail-team-note__avatar" aria-hidden="true">
+                        {getNoteAuthorInitials(note)}
+                      </span>
+                      <div className="detail-team-note__meta">
+                        <div className="detail-team-note__header">
+                          <strong>{getNoteAuthorName(note)}</strong>
+                          <span
+                            className={`detail-team-note__tag detail-team-note__tag--${NOTE_CATEGORY_META[note.category].tone}`}
+                          >
+                            {NOTE_CATEGORY_META[note.category].label}
+                          </span>
+                          {note.isPinned && (
+                            <span className="detail-team-note__pin" title="Note epinglee">
+                              <Pin size={12} />
+                            </span>
+                          )}
+                        </div>
+                        <div className="detail-team-note__subtitle">
+                          {formatNoteDate(note.createdAt) && (
+                            <time className="detail-team-note__date" dateTime={note.createdAt}>
+                              {formatNoteDate(note.createdAt)}
+                            </time>
+                          )}
+                          <p className="detail-team-note__excerpt">{getNoteExcerpt(note)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {expandedNotes.has(note.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                </button>
+                {expandedNotes.has(note.id) && (
+                  <div className="detail-team-note__content">
+                    <p>{note.body}</p>
+                  </div>
+                )}
               </article>
             ))}
           </div>
-        ) : (
+        ) : noteAccessKnown ? (
           <p className="detail-team-notes__empty">Aucune information interne pour le moment.</p>
-        )}
+        ) : null}
 
         <div className="detail-team-notes__composer">
           {composerOpen && canWriteNotes ? (
             <div className="detail-team-notes__editor">
+              <div className="detail-team-notes__controls">
+                <select
+                  className="detail-team-notes__select"
+                  value={draftCategory}
+                  onChange={(event) => setDraftCategory(event.target.value as PrivateNoteEntry['category'])}
+                  aria-label="Importance de la note"
+                >
+                  {Object.entries(NOTE_CATEGORY_META).map(([key, meta]) => (
+                    <option key={key} value={key}>
+                      {meta.label}
+                    </option>
+                  ))}
+                </select>
+                <label className="detail-team-notes__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={draftPinned}
+                    onChange={(event) => setDraftPinned(event.target.checked)}
+                  />
+                  <span>Epingler</span>
+                </label>
+              </div>
               <textarea
                 className="detail-team-notes__input"
                 value={draft}
@@ -993,7 +1113,7 @@ function TeamNotesSection({
                   ) : (
                     <Plus size={16} />
                   )}
-                  Ajouter
+                  Enregistrer
                 </button>
               </div>
             </div>
@@ -1006,13 +1126,7 @@ function TeamNotesSection({
               <Plus size={16} />
               Ajouter une note
             </button>
-          ) : noteAccessKnown ? (
-            <p className="detail-team-notes__hint">
-              L'ajout de note est reserve au proprietaire principal de cette fiche.
-            </p>
-          ) : (
-            <span className="detail-team-notes__hint">Verification des droits d'ajout...</span>
-          )}
+          ) : null}
         </div>
       </div>
     </Section>
@@ -1035,6 +1149,15 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
     return left.title.localeCompare(right.title, 'fr', { sensitivity: 'base' });
   });
   const highlights = buildDistinctionHighlights(sortedGroups);
+  const highlightedIds = new Set(highlights.map((h) => h.id));
+
+  // Items already shown in highlights are excluded from the grid chips to avoid duplication.
+  const remainingGroups = sortedGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !highlightedIds.has(`${group.key}-${item.id}`)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Section title="Distinctions">
@@ -1058,30 +1181,32 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
           })}
         </div>
       )}
-      <div className="detail-taxonomy-grid detail-taxonomy-grid--distinctions">
-        {sortedGroups.map((group) => {
-          const meta = getDistinctionGroupMeta(group.key);
-          const Icon = meta.icon;
+      {remainingGroups.length > 0 && (
+        <div className="detail-taxonomy-grid detail-taxonomy-grid--distinctions">
+          {remainingGroups.map((group) => {
+            const meta = getDistinctionGroupMeta(group.key);
+            const Icon = meta.icon;
 
-          return (
-            <div key={group.key} className={`detail-taxonomy-group detail-taxonomy-group--card detail-taxonomy-group--${meta.tone}`}>
-              <div className="detail-taxonomy-group__header">
-                <span className={`detail-taxonomy-group__icon detail-taxonomy-group__icon--${meta.tone}`} aria-hidden="true">
-                  <Icon size={16} />
-                </span>
-                <span className="detail-taxonomy-group__title">{meta.title}</span>
-              </div>
-              <div className="detail-chip-strip">
-                {group.items.map((item) => (
-                  <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`} title={item.meta || undefined}>
-                    {item.label}
+            return (
+              <div key={group.key} className={`detail-taxonomy-group detail-taxonomy-group--card detail-taxonomy-group--${meta.tone}`}>
+                <div className="detail-taxonomy-group__header">
+                  <span className={`detail-taxonomy-group__icon detail-taxonomy-group__icon--${meta.tone}`} aria-hidden="true">
+                    <Icon size={16} />
                   </span>
-                ))}
+                  <span className="detail-taxonomy-group__title">{meta.title}</span>
+                </div>
+                <div className="detail-chip-strip">
+                  {group.items.map((item) => (
+                    <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`} title={item.meta || undefined}>
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </Section>
   );
 }
@@ -1677,7 +1802,7 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
         RoomList({ rooms: preview.roomTypes }),
         MeetingRoomList({ rooms: preview.meetingRooms }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1701,7 +1826,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1725,7 +1850,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
         TaxonomySection({ groups: taxonomyGroups }),
         ItineraryPracticalSection({ itinerary: preview.itinerary }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1749,7 +1874,7 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1773,7 +1898,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1797,7 +1922,7 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1820,7 +1945,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />

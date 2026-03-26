@@ -244,6 +244,28 @@ AS $$
   LIMIT 1;
 $$;
 
+-- Retourne TRUE si l'utilisateur courant peut consulter les notes privées
+-- de l'objet depuis le périmètre de son organisation active.
+CREATE OR REPLACE FUNCTION api.can_read_object_private_notes(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    api.current_user_org_id() IS NOT NULL
+    AND api.can_read_extended(p_object_id);
+$$;
+
+-- Retourne TRUE si l'utilisateur courant peut écrire une note privée
+-- pour l'objet dans le périmètre de son organisation active.
+CREATE OR REPLACE FUNCTION api.can_write_object_private_notes(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT api.can_read_object_private_notes(p_object_id);
+$$;
+
 -- Retourne le code du rôle métier actif du user courant (NULL si aucun).
 -- Traverse : user_org_membership → user_org_business_role → ref_org_business_role.
 -- Usage : affichage, contexte session — pas de logique de permission ici.
@@ -332,6 +354,9 @@ DROP POLICY IF EXISTS "Lecture restreinte identifiants externes" ON object_exter
 DROP POLICY IF EXISTS "pub_descriptions_public" ON object_description;
 DROP POLICY IF EXISTS "ext_descriptions_org_actor" ON object_description;
 DROP POLICY IF EXISTS "ext_private_descriptions_org_actor" ON object_private_description;
+DROP POLICY IF EXISTS "org_insert_private_description" ON object_private_description;
+DROP POLICY IF EXISTS "author_update_private_description" ON object_private_description;
+DROP POLICY IF EXISTS "author_delete_private_description" ON object_private_description;
 DROP POLICY IF EXISTS "ext_legal_org_actor" ON object_legal;
 DROP POLICY IF EXISTS "ext_discounts_org_actor" ON object_discount;
 DROP POLICY IF EXISTS "ext_group_policies_org_actor" ON object_group_policy;
@@ -737,20 +762,11 @@ CREATE POLICY "ext_descriptions_org_actor" ON object_description
   FOR SELECT USING (api.can_read_extended(object_id));
 
 -- Private notes: user must have extended access to the object AND the note must belong
--- to their own org (or have no org context). This prevents cross-org note leakage —
--- a user from ORG_B cannot see ORG_A's notes even if they have actor access to the object.
+-- to their own active org. Users without active org membership do not see any note.
 CREATE POLICY "ext_private_descriptions_org_actor" ON object_private_description
   FOR SELECT USING (
-    api.can_read_extended(object_id)
-    AND (
-      org_object_id IS NULL  -- canonical note with no org scoping
-      OR org_object_id IN (
-        SELECT uom.org_object_id
-        FROM user_org_membership uom
-        WHERE uom.user_id = auth.uid()
-          AND uom.is_active = TRUE
-      )
-    )
+    api.can_read_object_private_notes(object_id)
+    AND org_object_id = api.current_user_org_id()
   );
 
 -- Légal, réductions & politiques groupe: accès étendu uniquement
@@ -781,20 +797,37 @@ CREATE POLICY "owner_write_media" ON media
 CREATE POLICY "owner_write_description" ON object_description
   FOR ALL USING (api.is_object_owner(object_id));
 
--- Write: user must own the object AND may only write notes scoped to their own org.
--- Prevents a rogue insert of a note with a foreign org_object_id.
-CREATE POLICY "owner_write_private_description" ON object_private_description
-  FOR ALL USING (
-    api.is_object_owner(object_id)
-    AND (
-      org_object_id IS NULL
-      OR org_object_id IN (
-        SELECT uom.org_object_id
-        FROM user_org_membership uom
-        WHERE uom.user_id = auth.uid()
-          AND uom.is_active = TRUE
-      )
-    )
+-- Private notes: any authenticated user with an active org and object access can add
+-- a note, but only inside their own org scope and under their own identity.
+CREATE POLICY "org_insert_private_description" ON object_private_description
+  FOR INSERT WITH CHECK (
+    api.can_write_object_private_notes(object_id)
+    AND org_object_id = api.current_user_org_id()
+    AND created_by_user_id = auth.uid()
+    AND audience = 'private'
+  );
+
+-- Update/delete kept to the original author within the same org scope.
+CREATE POLICY "author_update_private_description" ON object_private_description
+  FOR UPDATE
+  USING (
+    api.can_read_object_private_notes(object_id)
+    AND org_object_id = api.current_user_org_id()
+    AND created_by_user_id = auth.uid()
+  )
+  WITH CHECK (
+    api.can_write_object_private_notes(object_id)
+    AND org_object_id = api.current_user_org_id()
+    AND created_by_user_id = auth.uid()
+    AND audience = 'private'
+  );
+
+CREATE POLICY "author_delete_private_description" ON object_private_description
+  FOR DELETE
+  USING (
+    api.can_read_object_private_notes(object_id)
+    AND org_object_id = api.current_user_org_id()
+    AND created_by_user_id = auth.uid()
   );
 
 CREATE POLICY "owner_write_legal" ON object_legal

@@ -2043,8 +2043,10 @@ BEGIN
         WHERE m.object_id = obj.id
           AND m.is_published = TRUE
           AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
-          AND (m.org_object_id = v_prefer_org OR m.org_object_id IS NULL)
-        ORDER BY 
+          -- When v_prefer_org is NULL (no org link on this object), return all media.
+          -- When v_prefer_org is set, return that org's media and unattributed media only.
+          AND (v_prefer_org IS NULL OR m.org_object_id = v_prefer_org OR m.org_object_id IS NULL)
+        ORDER BY
           m.id,
           CASE WHEN m.org_object_id = v_prefer_org THEN 0 ELSE 1 END,
           m.is_main DESC,

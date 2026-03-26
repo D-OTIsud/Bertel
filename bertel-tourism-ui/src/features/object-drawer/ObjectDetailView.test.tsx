@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useSessionStore } from '../../store/session-store';
@@ -6,6 +6,8 @@ import type { ObjectDetail } from '../../types/domain';
 import { ObjectDetailView } from './ObjectDetailView';
 
 const mockMutateAsync = jest.fn();
+const mockUpdateMutateAsync = jest.fn();
+const mockDeleteMutateAsync = jest.fn();
 const mockPrivateNoteAccess = {
   data: true,
   isSuccess: true,
@@ -21,6 +23,14 @@ jest.mock('react-map-gl/maplibre', () => ({
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useAddObjectPrivateNoteMutation: () => ({
     mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+  useUpdateObjectPrivateNoteMutation: () => ({
+    mutateAsync: mockUpdateMutateAsync,
+    isPending: false,
+  }),
+  useDeleteObjectPrivateNoteMutation: () => ({
+    mutateAsync: mockDeleteMutateAsync,
     isPending: false,
   }),
   useObjectPrivateNoteWriteAccessQuery: () => mockPrivateNoteAccess,
@@ -48,6 +58,8 @@ function renderDetail(data: ObjectDetail) {
 describe('ObjectDetailView', () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
+    mockUpdateMutateAsync.mockReset();
+    mockDeleteMutateAsync.mockReset();
     mockPrivateNoteAccess.data = true;
     mockPrivateNoteAccess.isSuccess = true;
     mockPrivateNoteAccess.isError = false;
@@ -234,9 +246,9 @@ describe('ObjectDetailView', () => {
     expect(screen.getAllByText('Reduction plastique').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
-    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
-    expect(screen.getByText('Urgent')).toBeInTheDocument();
     expect(screen.getAllByText('Client VIP a prevenir avant toute fermeture exceptionnelle.').length).toBeGreaterThan(0);
+    expect(screen.getByTitle(/Auteur: Sophie Admin/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /actions de la note/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map-zoom')).toBeInTheDocument();
@@ -330,6 +342,162 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Informations equipe')).not.toBeInTheDocument();
     expect(screen.queryByText('Equipe interne')).not.toBeInTheDocument();
     expect(screen.getByText('Reseau Sud')).toBeInTheDocument();
+  });
+
+  it('shows only the three most recent team notes by default and lets the user expand the list', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-notes',
+      name: 'Hotel Notes',
+      type: 'HOT',
+      raw: {
+        descriptions: {
+          description: 'Hotel avec carnet interne riche.',
+        },
+        private_notes: [
+          {
+            id: 'note-1',
+            body: 'Premiere note',
+            created_at: '2026-03-20T08:00:00.000Z',
+            audience: 'private',
+            category: 'general',
+            is_pinned: false,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+          {
+            id: 'note-2',
+            body: 'Deuxieme note',
+            created_at: '2026-03-21T08:00:00.000Z',
+            audience: 'private',
+            category: 'important',
+            is_pinned: false,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+          {
+            id: 'note-3',
+            body: 'Troisieme note',
+            created_at: '2026-03-22T08:00:00.000Z',
+            audience: 'private',
+            category: 'internal',
+            is_pinned: false,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+          {
+            id: 'note-4',
+            body: 'Quatrieme note',
+            created_at: '2026-03-23T08:00:00.000Z',
+            audience: 'private',
+            category: 'followup',
+            is_pinned: false,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+          {
+            id: 'note-5',
+            body: 'Cinquieme note',
+            created_at: '2026-03-24T08:00:00.000Z',
+            audience: 'private',
+            category: 'urgent',
+            is_pinned: false,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    expect(screen.getByText('Informations equipe')).toBeInTheDocument();
+    expect(screen.getByText('Cinquieme note')).toBeInTheDocument();
+    expect(screen.getByText('Quatrieme note')).toBeInTheDocument();
+    expect(screen.getByText('Troisieme note')).toBeInTheDocument();
+    expect(screen.queryByText('Deuxieme note')).not.toBeInTheDocument();
+    expect(screen.queryByText('Premiere note')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /voir plus \(2\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /export csv/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /voir plus \(2\)/i }));
+
+    expect(screen.getByText('Deuxieme note')).toBeInTheDocument();
+    expect(screen.getByText('Premiere note')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /voir moins/i })).toBeInTheDocument();
+  });
+
+  it('lets an authorized user edit an existing private note', async () => {
+    mockUpdateMutateAsync.mockResolvedValue({
+      id: 'private-edit',
+      body: 'Note mise a jour',
+      audience: 'private',
+      category: 'important',
+      is_pinned: true,
+      created_at: '2026-03-24T08:00:00.000Z',
+      updated_at: '2026-03-26T08:00:00.000Z',
+    });
+
+    const data: ObjectDetail = {
+      id: 'hotel-edit-note',
+      name: 'Hotel Note Editable',
+      type: 'HOT',
+      raw: {
+        descriptions: {
+          description: 'Hotel avec note modifiable.',
+        },
+        private_notes: [
+          {
+            id: 'private-edit',
+            body: 'Note initiale',
+            created_at: '2026-03-24T08:00:00.000Z',
+            audience: 'private',
+            category: 'important',
+            is_pinned: true,
+            can_edit: true,
+            can_delete: true,
+            created_by: {
+              id: 'usr-2',
+              display_name: 'Sophie Admin',
+              avatar_url: null,
+            },
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    fireEvent.click(screen.getByRole('button', { name: /actions de la note/i }));
+    fireEvent.click(screen.getByRole('button', { name: /modifier/i }));
+    fireEvent.change(screen.getByPlaceholderText(/modifier cette note interne/i), {
+      target: { value: 'Note mise a jour' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^enregistrer$/i }));
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+        noteId: 'private-edit',
+        body: 'Note mise a jour',
+        category: 'important',
+        isPinned: true,
+        isArchived: false,
+      });
+    });
   });
 
   it('renders itinerary stats, practical notes, related objects and map links from nested itinerary payloads', () => {

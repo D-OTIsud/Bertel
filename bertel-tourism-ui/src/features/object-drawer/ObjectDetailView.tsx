@@ -1,29 +1,42 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
+  AlertTriangle,
+  Archive,
   Award,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  CornerDownRight,
+  FileText,
+  Pencil,
   Leaf,
   ExternalLink,
   Eye,
   Globe,
+  Info,
   Loader2,
   Mail,
   MapPinned,
   Navigation,
+  Download,
   Pin,
   Phone,
   Plus,
   ShieldCheck,
   Tag,
+  Trash2,
   X,
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getMarkerImageId } from '../../config/map-markers';
-import { useAddObjectPrivateNoteMutation, useObjectPrivateNoteWriteAccessQuery } from '../../hooks/useExplorerQueries';
+import {
+  useAddObjectPrivateNoteMutation,
+  useDeleteObjectPrivateNoteMutation,
+  useObjectPrivateNoteWriteAccessQuery,
+  useUpdateObjectPrivateNoteMutation,
+} from '../../hooks/useExplorerQueries';
 import { env } from '../../lib/env';
 import {
   type PrivateNoteEntry,
@@ -450,7 +463,7 @@ function dedupeNotes(notes: PrivateNoteEntry[]): PrivateNoteEntry[] {
   const items: PrivateNoteEntry[] = [];
 
   for (const note of notes) {
-    const key = `${note.id}-${note.body}-${note.createdAt}`;
+    const key = note.id;
     if (!note.body || seen.has(key)) {
       continue;
     }
@@ -473,7 +486,24 @@ function formatNoteDate(value: string): string {
 
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(timestamp));
+}
+
+function formatNoteDateTime(value: string): string {
+  if (!value) {
+    return '';
+  }
+
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
@@ -490,27 +520,63 @@ function getNoteAuthorName(note: PrivateNoteEntry): string {
   return localPart || fallback;
 }
 
-function getNoteAuthorInitials(note: PrivateNoteEntry): string {
-  const name = getNoteAuthorName(note);
-  const parts = name
-    .split(' ')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (!parts.length) {
-    return 'EQ';
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
-}
-
 function getNoteExcerpt(note: PrivateNoteEntry): string {
   const value = note.body.trim();
-  if (value.length <= 140) {
+  if (value.length <= 120) {
     return value;
   }
-  return `${value.slice(0, 137).trimEnd()}...`;
+  return `${value.slice(0, 117).trimEnd()}...`;
+}
+
+function getNoteTooltip(note: PrivateNoteEntry): string {
+  const details = [
+    `Auteur: ${getNoteAuthorName(note)}`,
+    `Type: ${NOTE_CATEGORY_META[note.category].label}`,
+    formatNoteDateTime(note.createdAt) ? `Date: ${formatNoteDateTime(note.createdAt)}` : '',
+    note.isPinned ? 'Epinglée' : '',
+    note.isArchived ? 'Archivee' : '',
+    '',
+    note.body,
+  ].filter(Boolean);
+
+  return details.join('\n');
+}
+
+function getNoteCategoryIcon(category: PrivateNoteEntry['category']) {
+  switch (category) {
+    case 'important':
+      return Info;
+    case 'urgent':
+      return AlertTriangle;
+    case 'internal':
+      return ShieldCheck;
+    case 'followup':
+      return CornerDownRight;
+    case 'general':
+    default:
+      return FileText;
+  }
+}
+
+function escapeCsvValue(value: string): string {
+  const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function buildNotesCsv(notes: PrivateNoteEntry[]): string {
+  const rows = [
+    ['date', 'author', 'category', 'pinned', 'archived', 'note'],
+    ...notes.map((note) => [
+      note.createdAt,
+      getNoteAuthorName(note),
+      NOTE_CATEGORY_META[note.category].label,
+      note.isPinned ? 'yes' : 'no',
+      note.isArchived ? 'yes' : 'no',
+      note.body,
+    ]),
+  ];
+
+  return rows.map((row) => row.map((cell) => escapeCsvValue(cell)).join(',')).join('\n');
 }
 
 function Section({
@@ -890,16 +956,27 @@ function TeamNotesSection({
   notes: PrivateNoteEntry[];
 }) {
   const addNoteMutation = useAddObjectPrivateNoteMutation(objectId);
+  const updateNoteMutation = useUpdateObjectPrivateNoteMutation(objectId);
+  const deleteNoteMutation = useDeleteObjectPrivateNoteMutation(objectId);
   const writeAccessQuery = useObjectPrivateNoteWriteAccessQuery(objectId);
   const sessionUserName = useSessionStore((state) => state.userName);
   const sessionUserId = useSessionStore((state) => state.userId);
+  const sessionRole = useSessionStore((state) => state.role);
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [draftCategory, setDraftCategory] = useState<PrivateNoteEntry['category']>('general');
   const [draftPinned, setDraftPinned] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdNotes, setCreatedNotes] = useState<PrivateNoteEntry[]>([]);
-  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [editedNotes, setEditedNotes] = useState<Record<string, PrivateNoteEntry>>({});
+  const [deletedNoteIds, setDeletedNoteIds] = useState<Set<string>>(new Set());
+  const [showAllNotes, setShowAllNotes] = useState(false);
+  const [openMenuNoteId, setOpenMenuNoteId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [editCategory, setEditCategory] = useState<PrivateNoteEntry['category']>('general');
+  const [editPinned, setEditPinned] = useState(false);
+  const [editErrorMessage, setEditErrorMessage] = useState('');
 
   useEffect(() => {
     setComposerOpen(false);
@@ -908,47 +985,82 @@ function TeamNotesSection({
     setDraftPinned(false);
     setErrorMessage('');
     setCreatedNotes([]);
-    setExpandedNotes(new Set());
+    setEditedNotes({});
+    setDeletedNoteIds(new Set());
+    setShowAllNotes(false);
+    setOpenMenuNoteId(null);
+    setEditingNoteId(null);
+    setEditDraft('');
+    setEditCategory('general');
+    setEditPinned(false);
+    setEditErrorMessage('');
   }, [objectId]);
 
   const mergedNotes = useMemo(() => {
-    return dedupeNotes([...createdNotes, ...notes]);
-  }, [createdNotes, notes]);
+    const deletedIds = deletedNoteIds;
+    const baseNotes = [...createdNotes, ...notes]
+      .filter((note) => !deletedIds.has(note.id))
+      .map((note) => editedNotes[note.id] ?? note);
+
+    return dedupeNotes(baseNotes);
+  }, [createdNotes, deletedNoteIds, editedNotes, notes]);
+  const totalNoteCount = mergedNotes.length;
+  const displayedNotes = showAllNotes ? mergedNotes.slice(0, 10) : mergedNotes.slice(0, 3);
+  const hiddenNoteCount = Math.max(totalNoteCount - displayedNotes.length, 0);
 
   const hasContent = mergedNotes.length > 0;
   const canWriteNotes = writeAccessQuery.data === true;
   const noteAccessKnown = writeAccessQuery.isSuccess || writeAccessQuery.isError;
 
-  useEffect(() => {
-    if (!mergedNotes.length) {
-      setExpandedNotes((current) => (current.size === 0 ? current : new Set()));
-      return;
-    }
-
-    setExpandedNotes((current) => {
-      if (current.size > 0) {
-        return current;
-      }
-
-      const firstNoteId = mergedNotes[0]?.id;
-      return firstNoteId ? new Set([firstNoteId]) : current;
-    });
-  }, [mergedNotes]);
-
   if (noteAccessKnown && !canWriteNotes && !hasContent) {
     return null;
   }
 
-  const toggleNote = (noteId: string) =>
-    setExpandedNotes((current) => {
-      const next = new Set(current);
-      if (next.has(noteId)) {
-        next.delete(noteId);
-      } else {
-        next.add(noteId);
-      }
-      return next;
-    });
+  const canEditNote = (note: PrivateNoteEntry) =>
+    note.canEdit
+    || note.createdById === sessionUserId
+    || sessionRole === 'super_admin'
+    || sessionRole === 'owner';
+
+  const canDeleteNote = (note: PrivateNoteEntry) =>
+    note.canDelete
+    || sessionRole === 'super_admin'
+    || sessionRole === 'owner';
+
+  const handleExport = () => {
+    if (!mergedNotes.length || typeof window === 'undefined') {
+      return;
+    }
+
+    const csv = buildNotesCsv(mergedNotes);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeObjectId = objectId.replace(/[^a-zA-Z0-9_-]+/g, '-');
+    link.href = url;
+    link.download = `notes-internes-${safeObjectId}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const startEditingNote = (note: PrivateNoteEntry) => {
+    setEditingNoteId(note.id);
+    setOpenMenuNoteId(null);
+    setEditDraft(note.body);
+    setEditCategory(note.category);
+    setEditPinned(note.isPinned);
+    setEditErrorMessage('');
+  };
+
+  const cancelEditingNote = () => {
+    setEditingNoteId(null);
+    setEditDraft('');
+    setEditCategory('general');
+    setEditPinned(false);
+    setEditErrorMessage('');
+  };
 
   const handleSubmit = async () => {
     const value = draft.trim();
@@ -972,6 +1084,9 @@ function TeamNotesSection({
             audience: createdNote.audience,
             category: createdNote.category,
             isPinned: createdNote.is_pinned,
+            isArchived: createdNote.is_archived,
+            canEdit: true,
+            canDelete: sessionRole === 'super_admin' || sessionRole === 'owner',
             language: createdNote.lang ?? '',
             createdAt: createdNote.created_at,
             updatedAt: createdNote.updated_at,
@@ -982,7 +1097,6 @@ function TeamNotesSection({
           ...current,
         ]),
       );
-      setExpandedNotes((current) => new Set([createdNote.id, ...current]));
       setDraft('');
       setDraftCategory('general');
       setDraftPinned(false);
@@ -995,6 +1109,106 @@ function TeamNotesSection({
     }
   };
 
+  const handleSaveNote = async (note: PrivateNoteEntry) => {
+    const value = editDraft.trim();
+    if (!value) {
+      return;
+    }
+
+    setEditErrorMessage('');
+
+    try {
+      const updatedNote = await updateNoteMutation.mutateAsync({
+        noteId: note.id,
+        body: value,
+        category: editCategory,
+        isPinned: editPinned,
+        isArchived: note.isArchived,
+      });
+
+      setEditedNotes((current) => ({
+        ...current,
+        [note.id]: {
+          ...note,
+          body: updatedNote.body,
+          category: updatedNote.category,
+          isPinned: updatedNote.is_pinned,
+          isArchived: updatedNote.is_archived,
+          updatedAt: updatedNote.updated_at,
+          audience: updatedNote.audience,
+          canEdit: note.canEdit,
+          canDelete: note.canDelete,
+        },
+      }));
+      cancelEditingNote();
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Impossible de modifier cette note pour le moment.";
+      setEditErrorMessage(message);
+    }
+  };
+
+  const handleArchiveToggle = async (note: PrivateNoteEntry) => {
+    setEditErrorMessage('');
+    setOpenMenuNoteId(null);
+
+    try {
+      const updatedNote = await updateNoteMutation.mutateAsync({
+        noteId: note.id,
+        body: note.body,
+        category: note.category,
+        isPinned: note.isPinned,
+        isArchived: !note.isArchived,
+      });
+
+      setEditedNotes((current) => ({
+        ...current,
+        [note.id]: {
+          ...note,
+          isArchived: updatedNote.is_archived,
+          updatedAt: updatedNote.updated_at,
+        },
+      }));
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Impossible d'archiver cette note pour le moment.";
+      setEditErrorMessage(message);
+    }
+  };
+
+  const handleDeleteNote = async (note: PrivateNoteEntry) => {
+    if (typeof window !== 'undefined' && !window.confirm('Supprimer cette note interne ?')) {
+      return;
+    }
+
+    setEditErrorMessage('');
+    setOpenMenuNoteId(null);
+
+    try {
+      await deleteNoteMutation.mutateAsync(note.id);
+      setDeletedNoteIds((current) => new Set([...current, note.id]));
+      setEditedNotes((current) => {
+        if (!(note.id in current)) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[note.id];
+        return next;
+      });
+      if (editingNoteId === note.id) {
+        cancelEditingNote();
+      }
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Impossible de supprimer cette note pour le moment.";
+      setEditErrorMessage(message);
+    }
+  };
+
   return (
     <Section title="Informations equipe" restricted>
       <div className="detail-team-notes">
@@ -1002,72 +1216,182 @@ function TeamNotesSection({
           <span className="detail-team-notes__hint">Chargement des notes internes...</span>
         ) : null}
         {hasContent ? (
-          <div className="detail-team-notes__list">
-            {mergedNotes.map((note) => (
-              <article
-                key={`${note.id}-${note.createdAt}`}
-                className={`detail-team-note${expandedNotes.has(note.id) ? ' detail-team-note--expanded' : ''}`}
-              >
+          <>
+            <div className="detail-team-notes__toolbar">
+              {totalNoteCount > 3 ? (
                 <button
                   type="button"
-                  className="detail-team-note__toggle"
-                  onClick={() => toggleNote(note.id)}
-                  aria-expanded={expandedNotes.has(note.id)}
+                  className="detail-team-notes__utility"
+                  onClick={() => setShowAllNotes((value) => !value)}
                 >
-                  <div className="detail-team-note__summary">
-                    <div className="detail-team-note__identity">
-                      {note.createdByAvatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          className="detail-team-note__avatar detail-team-note__avatar--image"
-                          src={note.createdByAvatarUrl}
-                          alt=""
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <span className="detail-team-note__avatar" aria-hidden="true">
-                          {getNoteAuthorInitials(note)}
-                        </span>
+                  {showAllNotes ? 'Voir moins' : `Voir plus (${hiddenNoteCount})`}
+                </button>
+              ) : <span />}
+              <button
+                type="button"
+                className="detail-team-notes__utility"
+                onClick={handleExport}
+              >
+                <Download size={14} />
+                Export CSV
+              </button>
+            </div>
+            <div className="detail-team-notes__list">
+              {displayedNotes.map((note) => (
+              <article
+                key={`${note.id}-${note.createdAt}`}
+                className={`detail-team-note${note.isArchived ? ' detail-team-note--archived' : ''}`}
+              >
+                <div className="detail-team-note__row" title={getNoteTooltip(note)}>
+                  <span
+                    className={`detail-team-note__avatar detail-team-note__avatar--${NOTE_CATEGORY_META[note.category].tone}`}
+                    aria-hidden="true"
+                  >
+                    {(() => {
+                      const NoteIcon = getNoteCategoryIcon(note.category);
+                      return <NoteIcon size={14} />;
+                    })()}
+                  </span>
+                  <p className="detail-team-note__line">
+                    {note.isPinned && (
+                      <span className="detail-team-note__pin" title="Note epinglee">
+                        <Pin size={10} />
+                      </span>
+                    )}
+                    {formatNoteDate(note.createdAt) && (
+                      <time className="detail-team-note__date" dateTime={note.createdAt}>
+                        {formatNoteDate(note.createdAt)}
+                      </time>
+                    )}
+                    <span className="detail-team-note__separator" aria-hidden="true">-</span>
+                    <span>{getNoteExcerpt(note)}</span>
+                  </p>
+                  {(canEditNote(note) || canDeleteNote(note)) && (
+                    <div className="detail-team-note__menu-shell">
+                      <button
+                        type="button"
+                        className="detail-team-note__menu-trigger"
+                        aria-label="Actions de la note"
+                        aria-expanded={openMenuNoteId === note.id}
+                        onClick={() => setOpenMenuNoteId((current) => (current === note.id ? null : note.id))}
+                      >
+                        ...
+                      </button>
+                      {openMenuNoteId === note.id && (
+                        <div className="detail-team-note__menu">
+                          {canEditNote(note) && (
+                            <button
+                              type="button"
+                              className="detail-team-note__menu-item"
+                              onClick={() => startEditingNote(note)}
+                            >
+                              <Pencil size={14} />
+                              Modifier
+                            </button>
+                          )}
+                          {canEditNote(note) && (
+                            <button
+                              type="button"
+                              className="detail-team-note__menu-item"
+                              onClick={() => handleArchiveToggle(note)}
+                            >
+                              <Archive size={14} />
+                              {note.isArchived ? 'Restaurer' : 'Archiver'}
+                            </button>
+                          )}
+                          {canDeleteNote(note) && (
+                            <button
+                              type="button"
+                              className="detail-team-note__menu-item detail-team-note__menu-item--danger"
+                              onClick={() => handleDeleteNote(note)}
+                              disabled={deleteNoteMutation.isPending}
+                            >
+                              {deleteNoteMutation.isPending ? (
+                                <Loader2 size={14} className="detail-team-notes__spinner" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
                       )}
-                      <div className="detail-team-note__meta">
-                        <div className="detail-team-note__header">
-                          <strong className="detail-team-note__author">{getNoteAuthorName(note)}</strong>
-                          <span
-                            className={`detail-team-note__tag detail-team-note__tag--${NOTE_CATEGORY_META[note.category].tone}`}
-                          >
-                            {NOTE_CATEGORY_META[note.category].label}
-                          </span>
-                          {note.isPinned && (
-                            <span className="detail-team-note__pin" title="Note epinglee">
-                              <Pin size={12} />
-                            </span>
+                    </div>
+                  )}
+                </div>
+                {editingNoteId === note.id && (
+                  <div className="detail-team-note__content">
+                    <div className="detail-team-note__editor">
+                      <div className="detail-team-notes__controls">
+                        <select
+                          className="detail-team-notes__select"
+                          value={editCategory}
+                          onChange={(event) => setEditCategory(event.target.value as PrivateNoteEntry['category'])}
+                          aria-label="Importance de la note"
+                        >
+                          {Object.entries(NOTE_CATEGORY_META).map(([key, meta]) => (
+                            <option key={key} value={key}>
+                              {meta.label}
+                            </option>
+                          ))}
+                        </select>
+                        <label className="detail-team-notes__checkbox">
+                          <input
+                            type="checkbox"
+                            checked={editPinned}
+                            onChange={(event) => setEditPinned(event.target.checked)}
+                          />
+                          <span>Epingler</span>
+                        </label>
+                      </div>
+                      <textarea
+                        className="detail-team-notes__input detail-team-notes__input--compact"
+                        value={editDraft}
+                        onChange={(event) => {
+                          setEditDraft(event.target.value);
+                          if (editErrorMessage) {
+                            setEditErrorMessage('');
+                          }
+                        }}
+                        rows={4}
+                        placeholder="Modifier cette note interne."
+                      />
+                      {editErrorMessage && <p className="detail-team-notes__error">{editErrorMessage}</p>}
+                      <div className="detail-team-note__actions">
+                        <button
+                          type="button"
+                          className="detail-team-notes__utility"
+                          onClick={cancelEditingNote}
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          className="detail-team-notes__utility detail-team-notes__utility--primary"
+                          onClick={() => handleSaveNote(note)}
+                          disabled={!editDraft.trim() || updateNoteMutation.isPending}
+                        >
+                          {updateNoteMutation.isPending && editingNoteId === note.id ? (
+                            <Loader2 size={14} className="detail-team-notes__spinner" />
+                          ) : (
+                            <Pencil size={14} />
                           )}
-                        </div>
-                        <div className="detail-team-note__subtitle">
-                          {formatNoteDate(note.createdAt) && (
-                            <time className="detail-team-note__date" dateTime={note.createdAt}>
-                              {formatNoteDate(note.createdAt)}
-                            </time>
-                          )}
-                          {!expandedNotes.has(note.id) && (
-                            <p className="detail-team-note__excerpt">{getNoteExcerpt(note)}</p>
-                          )}
-                        </div>
+                          Enregistrer
+                        </button>
                       </div>
                     </div>
-                    <span className="detail-team-note__chevron" aria-hidden="true">
-                      {expandedNotes.has(note.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </span>
-                  </div>
-                </button>
-                {expandedNotes.has(note.id) && (
-                  <div className="detail-team-note__content">
-                    <p>{note.body}</p>
                   </div>
                 )}
               </article>
-            ))}
-          </div>
+              ))}
+            </div>
+            {showAllNotes && totalNoteCount > 10 && (
+              <p className="detail-team-notes__hint">10 notes les plus recentes affichees.</p>
+            )}
+            {editErrorMessage && !editingNoteId && (
+              <p className="detail-team-notes__error">{editErrorMessage}</p>
+            )}
+          </>
         ) : noteAccessKnown ? (
           <p className="detail-team-notes__empty">Aucune information interne pour le moment.</p>
         ) : null}

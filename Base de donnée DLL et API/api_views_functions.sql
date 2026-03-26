@@ -1728,13 +1728,15 @@ BEGIN
 
   -- Private notes (org-scoped; pinned notes surface first)
   IF v_inc_private AND v_user_org IS NOT NULL THEN
-    -- Primary private note: pinned first, then most recent, scoped to the user's active org
+    -- Primary private note: active notes first, then pinned, then most recent.
     js := js || COALESCE((
       SELECT jsonb_build_object(
         'private_note',
         (to_jsonb(pn) - 'object_id' - 'language_id' - 'created_by_user_id')
         || jsonb_build_object(
              'lang', rl.code,
+             'can_edit', api.can_manage_object_private_note(pn.id),
+             'can_delete', api.can_delete_object_private_note(pn.id),
              -- Author info for display in the UI (null-safe)
              'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
                'id',           up.id,
@@ -1750,11 +1752,11 @@ BEGIN
         AND pn.audience = 'private'
         AND v_user_org IS NOT NULL
         AND pn.org_object_id = v_user_org
-      ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
+      ORDER BY pn.is_archived ASC, pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
       LIMIT 1
     ), '{}'::jsonb);
 
-    -- All private notes: org-scoped, pinned first then newest first.
+    -- All private notes: org-scoped, active first, pinned first, newest first.
     js := js || jsonb_build_object(
       'private_notes',
       COALESCE((
@@ -1762,13 +1764,15 @@ BEGIN
           (to_jsonb(pn) - 'object_id' - 'language_id' - 'created_by_user_id')
           || jsonb_build_object(
                'lang', rl.code,
+               'can_edit', api.can_manage_object_private_note(pn.id),
+               'can_delete', api.can_delete_object_private_note(pn.id),
                'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
                  'id',           up.id,
                  'display_name', up.display_name,
                  'avatar_url',   up.avatar_url
                ) ELSE NULL END
              )
-          ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
+          ORDER BY pn.is_archived ASC, pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
         )
         FROM object_private_description pn
         LEFT JOIN ref_language rl ON rl.id = pn.language_id

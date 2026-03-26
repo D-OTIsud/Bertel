@@ -3,7 +3,14 @@ import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
-import { canWriteObjectPrivateNote, createObjectPrivateNote, getObjectResource, listExplorerCards } from '../services/rpc';
+import {
+  canWriteObjectPrivateNote,
+  createObjectPrivateNote,
+  deleteObjectPrivateNote,
+  getObjectResource,
+  listExplorerCards,
+  updateObjectPrivateNote,
+} from '../services/rpc';
 import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
 
 function useExplorerFilters() {
@@ -114,5 +121,41 @@ export function useObjectPrivateNoteWriteAccessQuery(objectId: string | null) {
     enabled: Boolean(objectId),
     staleTime: 60 * 1000,
     initialData: demoMode ? true : undefined,
+  });
+}
+
+export function useUpdateObjectPrivateNoteMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      noteId: string;
+      body: string;
+      category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+      isPinned: boolean;
+      isArchived: boolean;
+    }) => updateObjectPrivateNote(input),
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+    },
+  });
+}
+
+export function useDeleteObjectPrivateNoteMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (noteId: string) => deleteObjectPrivateNote(noteId),
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+    },
   });
 }

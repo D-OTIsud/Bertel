@@ -99,7 +99,19 @@ BEGIN
     GET DIAGNOSTICS n = ROW_COUNT;
     RAISE NOTICE '  Étape 6 (approved) : % lignes', n;
 
-    -- Étape 7 : rejeter — object non résolu
+    -- Étape 7a : rejeter — object résolu mais occurred_at absent/invalide
+    UPDATE staging.crm_interaction_temp
+    SET resolution_status = 'rejected',
+        extra             = COALESCE(extra, '{}'::jsonb)
+                         || jsonb_build_object('rejection_reason', 'missing_or_invalid_occurred_at')
+    WHERE import_batch_id   = v_batch_id
+      AND resolution_status = 'pending'
+      AND object_id  IS NOT NULL
+      AND occurred_at IS NULL;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RAISE NOTICE '  Étape 7a (rejected missing occurred_at) : % lignes', n;
+
+    -- Étape 7b : rejeter — object non résolu
     UPDATE staging.crm_interaction_temp
     SET resolution_status = 'rejected',
         extra             = COALESCE(extra, '{}'::jsonb)
@@ -107,7 +119,7 @@ BEGIN
     WHERE import_batch_id   = v_batch_id
       AND resolution_status = 'pending';
     GET DIAGNOSTICS n = ROW_COUNT;
-    RAISE NOTICE '  Étape 7 (rejected) : % lignes', n;
+    RAISE NOTICE '  Étape 7b (rejected no object) : % lignes', n;
 
 END
 $recon_crm$;
@@ -169,7 +181,20 @@ BEGIN
     GET DIAGNOSTICS n = ROW_COUNT;
     RAISE NOTICE '  Étape 4 (approved) : % lignes', n;
 
-    -- Étape 5 : rejeter orphelins
+    -- Étape 5a : rejeter — parent résolu mais occurred_at absent/invalide
+    UPDATE staging.crm_comment_temp
+    SET resolution_status = 'rejected',
+        extra             = COALESCE(extra, '{}'::jsonb)
+                         || jsonb_build_object('rejection_reason', 'missing_or_invalid_occurred_at')
+    WHERE import_batch_id                = v_batch_id
+      AND resolution_status              = 'pending'
+      AND resolved_parent_interaction_id IS NOT NULL
+      AND object_id                      IS NOT NULL
+      AND occurred_at                    IS NULL;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RAISE NOTICE '  Étape 5a (rejected missing occurred_at) : % lignes', n;
+
+    -- Étape 5b : rejeter orphelins — parent non résolu
     UPDATE staging.crm_comment_temp
     SET resolution_status = 'rejected',
         extra             = COALESCE(extra, '{}'::jsonb)
@@ -177,7 +202,7 @@ BEGIN
     WHERE import_batch_id   = v_batch_id
       AND resolution_status = 'pending';
     GET DIAGNOSTICS n = ROW_COUNT;
-    RAISE NOTICE '  Étape 5 (rejected orphelins) : % lignes', n;
+    RAISE NOTICE '  Étape 5b (rejected orphelins) : % lignes', n;
 
 END
 $recon_comments$;

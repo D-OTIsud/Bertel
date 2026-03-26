@@ -4,11 +4,12 @@
 -- Toutes les requêtes doivent retourner 0 ou les résultats attendus indiqués.
 -- =============================================================================
 
--- 1. Aucune ligne promue avec un object_id invalide
+-- 1. Aucune ligne promue avec un object_id invalide (batch courant)
 -- Attendu : 0
 SELECT COUNT(*) AS interactions_object_fk_invalide
 FROM crm_interaction ci
 WHERE ci.source = 'import_berta2_crm'
+  AND ci.extra->>'import_batch_id' = :'batch_id'
   AND NOT EXISTS (SELECT 1 FROM object o WHERE o.id = ci.object_id);
 
 -- 2. Aucune ligne pending restante après réconciliation
@@ -48,14 +49,41 @@ SELECT
 FROM staging.crm_comment_temp
 WHERE import_batch_id = :'batch_id';
 
--- 5. Chaque commentaire promu porte le parent_interaction_id dans extra
+-- 5. Cohérence parents : staging approved = promus avec batch marker
+-- Attendu : staging_approved = promus_avec_batch_id
+SELECT
+    (SELECT COUNT(*)
+     FROM staging.crm_interaction_temp
+     WHERE import_batch_id   = :'batch_id'
+       AND resolution_status = 'approved'
+       AND is_approved        = TRUE)                           AS staging_approved,
+    (SELECT COUNT(*)
+     FROM crm_interaction
+     WHERE source                    = 'import_berta2_crm'
+       AND extra->>'import_batch_id' = :'batch_id')            AS promus_avec_batch_id;
+
+-- 6. Cohérence commentaires : staging approved = promus avec batch marker
+-- Attendu : staging_approved = promus_avec_batch_id
+SELECT
+    (SELECT COUNT(*)
+     FROM staging.crm_comment_temp
+     WHERE import_batch_id   = :'batch_id'
+       AND resolution_status = 'approved'
+       AND is_approved        = TRUE)                           AS staging_approved,
+    (SELECT COUNT(*)
+     FROM crm_interaction
+     WHERE source                    = 'import_berta2_commentaire'
+       AND extra->>'import_batch_id' = :'batch_id')            AS promus_avec_batch_id;
+
+-- 7. Chaque commentaire promu du batch porte le parent_interaction_id dans extra
 -- Attendu : 0
 SELECT COUNT(*) AS commentaires_sans_parent_dans_extra
 FROM crm_interaction
-WHERE source = 'import_berta2_commentaire'
+WHERE source                    = 'import_berta2_commentaire'
+  AND extra->>'import_batch_id' = :'batch_id'
   AND (extra->>'promoted_parent_interaction_id') IS NULL;
 
--- 6. Prérequis object_external_id satisfait (à exécuter avant tout batch)
+-- 8. Prérequis object_external_id satisfait (à exécuter avant tout batch)
 -- Attendu : 0
 WITH oti_org AS (
     SELECT id AS org_id FROM object

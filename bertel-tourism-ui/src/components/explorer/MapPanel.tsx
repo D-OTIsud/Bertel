@@ -23,6 +23,10 @@ import { cn } from '@/lib/utils';
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
 const LASSO_POINT_MIN_DISTANCE = 6;
+const DEFAULT_MAP_CENTER: [number, number] = [55.536384, -21.130568];
+const DEFAULT_MAP_ZOOM = 10.2;
+const SINGLE_POINT_ZOOM = 13;
+const MAP_FIT_PADDING = 48;
 
 type ScreenPoint = {
   x: number;
@@ -174,8 +178,10 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const markerHoveredRef = useRef(false);
   const lassoPointsRef = useRef<ScreenPoint[]>([]);
   const mapRef = useRef<any>(null);
+  const lastFitSignatureRef = useRef<string | null>(null);
   const [bounds, setBounds] = useState<BBox | null>(null);
-  const [zoom, setZoom] = useState<number>(10.2);
+  const [zoom, setZoom] = useState<number>(DEFAULT_MAP_ZOOM);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
   const mapStyle = env.mapStyles.satellite;
@@ -201,6 +207,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
       geometry: { type: 'Point' as const, coordinates: [mp.lon, mp.lat] as [number, number] },
     }));
   }, [markerPoints]);
+  const markerCoordinates = useMemo(() => markerPoints.map(({ lon, lat }) => [lon, lat] as const), [markerPoints]);
 
   const { clusters, supercluster } = useSupercluster({
     points,
@@ -248,6 +255,61 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
     },
     [clearHoverTimer],
   );
+
+  useEffect(() => {
+    if (!mapLoaded) {
+      return;
+    }
+
+    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current;
+    if (!mapInstance) {
+      return;
+    }
+
+    if (markerCoordinates.length === 0) {
+      lastFitSignatureRef.current = null;
+      return;
+    }
+
+    const nextSignature = markerCoordinates.map(([lon, lat]) => `${lon}:${lat}`).join('|');
+    if (lastFitSignatureRef.current === nextSignature) {
+      return;
+    }
+
+    lastFitSignatureRef.current = nextSignature;
+
+    if (markerCoordinates.length === 1) {
+      const [[longitude, latitude]] = markerCoordinates;
+      mapInstance.easeTo({
+        center: [longitude, latitude],
+        zoom: SINGLE_POINT_ZOOM,
+        duration: 500,
+      });
+      return;
+    }
+
+    const [minLng, minLat, maxLng, maxLat] = markerCoordinates.reduce(
+      (acc, [lon, lat]) => [
+        Math.min(acc[0], lon),
+        Math.min(acc[1], lat),
+        Math.max(acc[2], lon),
+        Math.max(acc[3], lat),
+      ],
+      [Infinity, Infinity, -Infinity, -Infinity],
+    );
+
+    mapInstance.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      {
+        padding: MAP_FIT_PADDING,
+        duration: 500,
+        maxZoom: SINGLE_POINT_ZOOM,
+      },
+    );
+  }, [mapLoaded, markerCoordinates]);
 
   useEffect(() => {
     if (!lassoFeedback) {
@@ -497,13 +559,14 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           ref={mapRef}
           mapStyle={mapStyle}
           initialViewState={{
-            longitude: 55.536384,
-            latitude: -21.130568,
-            zoom: 10.2,
+            longitude: DEFAULT_MAP_CENTER[0],
+            latitude: DEFAULT_MAP_CENTER[1],
+            zoom: DEFAULT_MAP_ZOOM,
           }}
           attributionControl={false}
           cursor={lassoArmed ? 'crosshair' : 'default'}
           onLoad={(e) => {
+            setMapLoaded(true);
             const b = e.target.getBounds().toArray().flat() as BBox;
             setBounds(b);
             setZoom(e.target.getZoom());

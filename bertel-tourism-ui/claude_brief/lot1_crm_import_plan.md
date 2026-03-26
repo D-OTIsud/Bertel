@@ -373,44 +373,61 @@ Ils doivent être loggés et conservés en `extra` quand utile.
 
 ---
 
-## 10. Séquence d'implémentation retenue
+## 10. Séquence d'exécution exacte
 
-### Étape 0
-Valider le `org_object_id` OTI à utiliser pour tous les lookups `object_external_id`.
+> **Note d'architecture :** les scripts `crm_lot1_02_reconcile.sql` et `crm_lot1_03_promote.sql`
+> contenaient chacun deux blocs DO (parents + commentaires). Ils ont été remplacés par 4 fichiers
+> distincts pour rendre l'ordre obligatoire non ambigu. Les anciens fichiers lèvent une exception
+> si exécutés par erreur.
 
-### Étape 1
-Compléter `object_external_id` à partir des objets déjà importés si les external IDs Airtable ne sont pas encore présents.
+### DDL et prérequis (une seule fois, idempotent)
 
-### Étape 2
-Charger le CSV `CRM` dans `staging.crm_interaction_temp`.
+```
+\i crm_lot1_00_staging.sql          -- crée staging.crm_comment_temp
+\i crm_lot1_01_prereq.sql           -- peuple object_external_id  ⚠️ écrit en table finale
+```
 
-### Étape 3
-Créer puis charger le CSV `Commentaires` dans `staging.crm_comment_temp`.
+### Enregistrement du batch (obligatoire avant tout chargement staging)
 
-### Étape 4
-Faire le pass de réconciliation sur les lignes CRM parent :
-- object,
-- actor,
-- owner,
-- topic.
+```sql
+INSERT INTO staging.import_batches (batch_id, status, metadata)
+VALUES ('votre-batch-id', 'staging_loaded', '{"lot": "1"}'::jsonb);
+```
 
-### Étape 5
-Marquer les lignes CRM parent `approved` / `rejected`.
+### Chargement CSV en staging
 
-### Étape 6
-Promouvoir les lignes CRM parent dans `crm_interaction`.
+```
+→ Charger CRM         dans staging.crm_interaction_temp
+→ Charger Commentaires dans staging.crm_comment_temp
+```
 
-### Étape 7
-Faire le pass de réconciliation des commentaires vers leur parent promu.
+### Pipeline CRM — ordre strict
 
-### Étape 8
-Marquer les commentaires `approved` / `rejected`.
+```
+\set batch_id 'votre-batch-id'
 
-### Étape 9
-Promouvoir les commentaires dans `crm_interaction`.
+\i crm_lot1_02a_reconcile_parents.sql    -- réconciliation parents (staging only)
+\i crm_lot1_03a_promote_parents.sql      -- ⚠️ ÉCRIT dans crm_interaction (parents)
+\i crm_lot1_02b_reconcile_comments.sql   -- réconciliation commentaires (staging only)
+                                          -- (résout les parents depuis crm_interaction)
+\i crm_lot1_03b_promote_comments.sql     -- ⚠️ ÉCRIT dans crm_interaction (commentaires)
+\i crm_lot1_04_validate.sql              -- lecture seule
+```
 
-### Étape 10
-Lancer les contrôles de validation finaux.
+**L'ordre 02a → 03a → 02b → 03b est obligatoire et non interchangeable.**
+`02b` nécessite que les parents soient déjà dans `crm_interaction` (résolution du lien parent).
+
+### Pipeline galerie (indépendant, même batch_id)
+
+```
+\set batch_id 'votre-batch-id'
+
+→ Charger galerie dans staging.media_temp
+
+\i media_lot1_01_reconcile.sql           -- réconciliation galerie (staging only)
+\i media_lot1_02_promote.sql             -- ⚠️ ÉCRIT dans media
+\i media_lot1_03_validate.sql            -- lecture seule
+```
 
 ---
 

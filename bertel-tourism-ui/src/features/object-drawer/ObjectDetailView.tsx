@@ -13,6 +13,7 @@ import {
   Navigation,
   Phone,
   Plus,
+  X,
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -577,7 +578,7 @@ function MediaRail({
   onSelect: (index: number) => void;
   onOpenGallery: (index: number) => void;
 }) {
-  const items = getMediaWindow(preview.media, activeIndex, 5);
+  const items = getMediaWindow(preview.media, activeIndex, 6);
 
   if (!items.length) {
     return null;
@@ -586,11 +587,11 @@ function MediaRail({
   return (
     <section className="detail-media-rail panel-card panel-card--nested detail-section--aside">
       <div className="detail-media-rail__grid">
-        {items.map(({ item, index }, railIndex) => (
+        {items.map(({ item, index }) => (
           <button
             key={item.id}
             type="button"
-            className={`detail-media-thumb detail-media-thumb--${railIndex === 0 ? 'featured' : 'regular'}`}
+            className="detail-media-thumb"
             onClick={() => {
               onSelect(index);
               onOpenGallery(index);
@@ -639,12 +640,20 @@ function GalleryLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="detail-gallery-dialog" showClose>
+      <DialogContent className="detail-gallery-dialog" showClose={false}>
         <DialogTitle className="sr-only">Galerie photo de {data.name}</DialogTitle>
         <DialogDescription className="sr-only">
           Visionneuse plein ecran des photos disponibles pour cette fiche.
         </DialogDescription>
         <div className="detail-gallery-modal">
+          <button
+            type="button"
+            className="detail-gallery-modal__close"
+            onClick={() => onOpenChange(false)}
+            aria-label="Fermer la galerie"
+          >
+            <X size={20} />
+          </button>
           <div
             className="detail-gallery-modal__frame"
             onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}

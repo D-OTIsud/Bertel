@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ObjectDrawer } from './ObjectDrawer';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -8,6 +8,10 @@ const mockUseObjectDetailQuery = jest.fn();
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectDetailQuery: (...args: unknown[]) => mockUseObjectDetailQuery(...args),
+  useAddObjectPrivateNoteMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
 }));
 
 jest.mock('../../hooks/usePresenceRoom', () => ({
@@ -40,6 +44,9 @@ describe('ObjectDrawer drafts', () => {
     });
 
     const { rerender } = render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
 
     const nameInput = screen.getByDisplayValue('Hotel A');
     fireEvent.change(nameInput, { target: { value: 'Hotel A Draft' } });
@@ -67,6 +74,9 @@ describe('ObjectDrawer drafts', () => {
     });
 
     const { rerender } = render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
     fireEvent.change(screen.getByDisplayValue('Hotel A'), { target: { value: 'Hotel A Draft' } });
 
     mockUseObjectDetailQuery.mockReturnValue({
@@ -77,8 +87,28 @@ describe('ObjectDrawer drafts', () => {
     });
 
     rerender(<ObjectDrawer objectId="obj-2" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
 
     expect(screen.getByDisplayValue('Restaurant B')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Hotel A Draft')).not.toBeInTheDocument();
+  });
+
+  it('shows a loading skeleton instead of the object technical id while the detail is fetching', () => {
+    useObjectDrawerStore.setState({ activeSection: 'general', mode: 'view', draftsByObject: {} });
+
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="LOIRUN000000000W" />);
+
+    expect(screen.getByTestId('drawer-loading-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('LOIRUN000000000W')).not.toBeInTheDocument();
+    expect(screen.queryByText(/chargement de la fiche/i)).not.toBeInTheDocument();
   });
 });

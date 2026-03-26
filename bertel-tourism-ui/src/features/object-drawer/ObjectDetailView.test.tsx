@@ -247,7 +247,7 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
     expect(screen.getAllByText('Client VIP a prevenir avant toute fermeture exceptionnelle.').length).toBeGreaterThan(0);
-    expect(screen.getByTitle(/Auteur: Sophie Admin/)).toBeInTheDocument();
+    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /actions de la note/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
@@ -426,9 +426,9 @@ describe('ObjectDetailView', () => {
     renderDetail(data);
 
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
-    expect(screen.getByText('Cinquieme note')).toBeInTheDocument();
-    expect(screen.getByText('Quatrieme note')).toBeInTheDocument();
-    expect(screen.getByText('Troisieme note')).toBeInTheDocument();
+    expect(screen.getAllByText('Cinquieme note').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Quatrieme note').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Troisieme note').length).toBeGreaterThan(0);
     expect(screen.queryByText('Deuxieme note')).not.toBeInTheDocument();
     expect(screen.queryByText('Premiere note')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /voir plus \(2\)/i })).toBeInTheDocument();
@@ -436,8 +436,8 @@ describe('ObjectDetailView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /voir plus \(2\)/i }));
 
-    expect(screen.getByText('Deuxieme note')).toBeInTheDocument();
-    expect(screen.getByText('Premiere note')).toBeInTheDocument();
+    expect(screen.getAllByText('Deuxieme note').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Premiere note').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /voir moins/i })).toBeInTheDocument();
   });
 

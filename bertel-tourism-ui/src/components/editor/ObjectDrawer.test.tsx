@@ -12,6 +12,14 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
     mutateAsync: jest.fn(),
     isPending: false,
   }),
+  useUpdateObjectPrivateNoteMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
+  useDeleteObjectPrivateNoteMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useObjectPrivateNoteWriteAccessQuery: () => ({
     data: true,
     isSuccess: true,

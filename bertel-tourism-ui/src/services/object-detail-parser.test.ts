@@ -44,6 +44,9 @@ describe('parseObjectDetail', () => {
         audience: 'private',
         category: 'important',
         is_pinned: true,
+        is_archived: false,
+        can_edit: true,
+        can_delete: true,
         created_at: '2026-03-24T08:00:00.000Z',
         created_by: {
           id: 'usr-1',
@@ -57,6 +60,9 @@ describe('parseObjectDetail', () => {
           body: 'Visite de groupe sur reservation.',
           audience: 'private',
           category: 'followup',
+          is_archived: true,
+          can_edit: false,
+          can_delete: false,
           created_at: '2026-03-25T09:30:00.000Z',
           created_by: {
             id: 'usr-2',
@@ -357,6 +363,9 @@ describe('parseObjectDetail', () => {
       body: 'Usage interne uniquement.',
       category: 'important',
       isPinned: true,
+      isArchived: false,
+      canEdit: true,
+      canDelete: true,
       createdByName: 'Marie Equipe',
     });
     expect(parsed.text.privateNotes).toEqual(
@@ -365,11 +374,14 @@ describe('parseObjectDetail', () => {
           body: 'Usage interne uniquement.',
           audience: 'private',
           category: 'important',
+          canEdit: true,
+          canDelete: true,
         }),
         expect.objectContaining({
           body: 'Visite de groupe sur reservation.',
           audience: 'private',
           category: 'followup',
+          isArchived: true,
           createdByName: 'Paul Terrain',
         }),
       ]),

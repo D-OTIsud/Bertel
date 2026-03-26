@@ -31,6 +31,7 @@ export interface CreatedObjectPrivateNote {
   audience: string;
   category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
   is_pinned: boolean;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
   lang?: string | null;
@@ -263,6 +264,7 @@ export async function createObjectPrivateNote(input: {
       audience: 'private',
       category: input.category,
       is_pinned: input.isPinned,
+      is_archived: false,
       created_at: now,
       updated_at: now,
       lang: session.langPrefs[0] ?? 'fr',
@@ -297,9 +299,10 @@ export async function createObjectPrivateNote(input: {
       audience: 'private',
       category: input.category,
       is_pinned: input.isPinned,
+      is_archived: false,
       created_by_user_id: session.userId,
     })
-    .select('id, body, audience, category, is_pinned, created_at, updated_at')
+    .select('id, body, audience, category, is_pinned, is_archived, created_at, updated_at')
     .single();
 
   if (error) {
@@ -317,6 +320,82 @@ export async function createObjectPrivateNote(input: {
       avatar_url: null,
     },
   };
+}
+
+export async function updateObjectPrivateNote(input: {
+  noteId: string;
+  body: string;
+  category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+  isPinned: boolean;
+  isArchived: boolean;
+}): Promise<Omit<CreatedObjectPrivateNote, 'created_by'>> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    const now = new Date().toISOString();
+    return {
+      id: input.noteId,
+      body: input.body,
+      audience: 'private',
+      category: input.category,
+      is_pinned: input.isPinned,
+      is_archived: input.isArchived,
+      created_at: now,
+      updated_at: now,
+      lang: session.langPrefs[0] ?? 'fr',
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error("Connexion backend indisponible pour modifier la note d'equipe.");
+  }
+
+  const { data, error } = await client
+    .from('object_private_description')
+    .update({
+      body: input.body,
+      category: input.category,
+      is_pinned: input.isPinned,
+      is_archived: input.isArchived,
+    })
+    .eq('id', input.noteId)
+    .select('id, body, audience, category, is_pinned, is_archived, created_at, updated_at')
+    .single();
+
+  if (error) {
+    if (error.message?.toLowerCase().includes('row-level security') || error.code === '42501') {
+      throw new Error("Impossible de modifier cette note pour le moment.");
+    }
+    throw error;
+  }
+
+  return data as Omit<CreatedObjectPrivateNote, 'created_by'>;
+}
+
+export async function deleteObjectPrivateNote(noteId: string): Promise<void> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error("Connexion backend indisponible pour supprimer la note d'equipe.");
+  }
+
+  const { error } = await client
+    .from('object_private_description')
+    .delete()
+    .eq('id', noteId);
+
+  if (error) {
+    if (error.message?.toLowerCase().includes('row-level security') || error.code === '42501') {
+      throw new Error("Impossible de supprimer cette note pour le moment.");
+    }
+    throw error;
+  }
 }
 
 // TODO: wire to real backend RPC when available

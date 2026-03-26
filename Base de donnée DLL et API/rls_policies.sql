@@ -301,6 +301,134 @@ AS $$
   LIMIT 1;
 $$;
 
+-- Retourne le rang admin actif du user courant dans son ORG active (NULL si aucun).
+CREATE OR REPLACE FUNCTION api.current_user_admin_rank()
+RETURNS integer
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT r.rank
+  FROM user_org_membership uom
+  JOIN user_org_admin_role uar ON uar.membership_id = uom.id
+                               AND uar.is_active = TRUE
+  JOIN ref_org_admin_role r    ON r.id = uar.role_id
+  WHERE uom.user_id = auth.uid()
+    AND uom.is_active = TRUE
+  ORDER BY r.rank DESC
+  LIMIT 1;
+$$;
+
+-- Retourne le rang admin de l'auteur de la note dans l'ORG de la note (NULL si aucun).
+CREATE OR REPLACE FUNCTION api.object_private_note_author_admin_rank(p_note_id uuid)
+RETURNS integer
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT r.rank
+  FROM object_private_description pn
+  JOIN user_org_membership uom ON uom.user_id = pn.created_by_user_id
+                              AND uom.org_object_id = pn.org_object_id
+                              AND uom.is_active = TRUE
+  JOIN user_org_admin_role uar ON uar.membership_id = uom.id
+                              AND uar.is_active = TRUE
+  JOIN ref_org_admin_role r    ON r.id = uar.role_id
+  WHERE pn.id = p_note_id
+  ORDER BY r.rank DESC
+  LIMIT 1;
+$$;
+
+-- Auteur, supérieur hiérarchique direct dans la même ORG, ou superuser plateforme.
+-- Utilisé pour modifier / archiver une note.
+CREATE OR REPLACE FUNCTION api.can_manage_object_private_note(p_note_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_note                object_private_description%ROWTYPE;
+  v_current_org         TEXT;
+  v_caller_rank         INTEGER;
+  v_author_rank         INTEGER;
+  v_author_platform_top BOOLEAN;
+BEGIN
+  SELECT *
+  INTO v_note
+  FROM object_private_description
+  WHERE id = p_note_id;
+
+  IF NOT FOUND THEN
+    RETURN FALSE;
+  END IF;
+
+  IF v_note.created_by_user_id = auth.uid() THEN
+    RETURN TRUE;
+  END IF;
+
+  IF api.is_platform_superuser() THEN
+    RETURN TRUE;
+  END IF;
+
+  v_current_org := api.current_user_org_id();
+  IF v_current_org IS NULL OR v_note.org_object_id IS DISTINCT FROM v_current_org THEN
+    RETURN FALSE;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM app_user_profile p
+    WHERE p.id = v_note.created_by_user_id
+      AND p.role IN ('owner', 'super_admin')
+  )
+  INTO v_author_platform_top;
+
+  IF v_author_platform_top THEN
+    RETURN FALSE;
+  END IF;
+
+  v_caller_rank := api.current_user_admin_rank();
+  IF v_caller_rank IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  v_author_rank := api.object_private_note_author_admin_rank(p_note_id);
+  RETURN v_caller_rank > COALESCE(v_author_rank, 0);
+END;
+$$;
+
+-- Suppression : réservée au rang admin le plus élevé de l'ORG (org_admin) ou au superuser plateforme.
+CREATE OR REPLACE FUNCTION api.can_delete_object_private_note(p_note_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_note        object_private_description%ROWTYPE;
+  v_current_org TEXT;
+  v_caller_rank INTEGER;
+BEGIN
+  SELECT *
+  INTO v_note
+  FROM object_private_description
+  WHERE id = p_note_id;
+
+  IF NOT FOUND THEN
+    RETURN FALSE;
+  END IF;
+
+  IF api.is_platform_superuser() THEN
+    RETURN TRUE;
+  END IF;
+
+  v_current_org := api.current_user_org_id();
+  IF v_current_org IS NULL OR v_note.org_object_id IS DISTINCT FROM v_current_org THEN
+    RETURN FALSE;
+  END IF;
+
+  v_caller_rank := api.current_user_admin_rank();
+  RETURN COALESCE(v_caller_rank, 0) >= 30;
+END;
+$$;
+
 -- =====================================================
 -- 2. POLITIQUES POUR LES TABLES DE RÉFÉRENCE
 -- =====================================================
@@ -806,27 +934,26 @@ CREATE POLICY "org_insert_private_description" ON object_private_description
     AND audience = 'private'
   );
 
--- Update/delete kept to the original author within the same org scope.
-CREATE POLICY "author_update_private_description" ON object_private_description
+-- Update/delete autorises pour l'auteur, un supérieur hiérarchique de la même ORG,
+-- ou un superuser plateforme. Les champs système restent verrouillés par trigger.
+DROP POLICY IF EXISTS "author_update_private_description" ON object_private_description;
+DROP POLICY IF EXISTS "author_delete_private_description" ON object_private_description;
+DROP POLICY IF EXISTS "manage_update_private_description" ON object_private_description;
+DROP POLICY IF EXISTS "manage_delete_private_description" ON object_private_description;
+
+CREATE POLICY "manage_update_private_description" ON object_private_description
   FOR UPDATE
   USING (
-    api.can_read_object_private_notes(object_id)
-    AND org_object_id = api.current_user_org_id()
-    AND created_by_user_id = auth.uid()
+    api.can_manage_object_private_note(id)
   )
   WITH CHECK (
-    api.can_write_object_private_notes(object_id)
-    AND org_object_id = api.current_user_org_id()
-    AND created_by_user_id = auth.uid()
-    AND audience = 'private'
+    api.can_manage_object_private_note(id)
   );
 
-CREATE POLICY "author_delete_private_description" ON object_private_description
+CREATE POLICY "manage_delete_private_description" ON object_private_description
   FOR DELETE
   USING (
-    api.can_read_object_private_notes(object_id)
-    AND org_object_id = api.current_user_org_id()
-    AND created_by_user_id = auth.uid()
+    api.can_delete_object_private_note(id)
   );
 
 CREATE POLICY "owner_write_legal" ON object_legal

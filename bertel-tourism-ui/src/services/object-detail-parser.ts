@@ -76,6 +76,9 @@ export interface PrivateNoteEntry {
   audience: string;
   category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
   isPinned: boolean;
+  isArchived: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   language: string;
   createdAt: string;
   updatedAt: string;
@@ -593,6 +596,9 @@ function parsePrivateNoteEntry(value: unknown, prefix: string, index: number): P
     audience: readString(record.audience, 'private'),
     category: normalizePrivateNoteCategory(readString(record.category, 'general')),
     isPinned: readBoolean(record.is_pinned) ?? false,
+    isArchived: readBoolean(record.is_archived) ?? false,
+    canEdit: readBoolean(record.can_edit) ?? false,
+    canDelete: readBoolean(record.can_delete) ?? false,
     language: readString(record.language, readString(record.lang)),
     createdAt: readString(record.created_at),
     updatedAt: readString(record.updated_at),

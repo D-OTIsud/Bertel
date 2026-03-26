@@ -1342,6 +1342,8 @@ CREATE TABLE IF NOT EXISTS object_private_description (
     CHECK (category IN ('general','important','urgent','internal','followup')),
   -- Pin flag: pinned notes surface at the top of the list
   is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Archive flag: archived notes stay visible to the team but are visually muted
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1351,7 +1353,8 @@ ALTER TABLE object_private_description
   ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general'
     CHECK (category IN ('general','important','urgent','internal','followup')),
-  ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Liens externes (external_ids)
 CREATE TABLE IF NOT EXISTS object_external_id (
@@ -3414,7 +3417,8 @@ CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_priva
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
 -- Supports pinned-first ordering within an org scope
 DROP INDEX IF EXISTS idx_object_private_description_pinned;
-CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned ON object_private_description(object_id, org_object_id, is_pinned DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned
+  ON object_private_description(object_id, org_object_id, is_archived ASC, is_pinned DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);
@@ -4427,6 +4431,29 @@ DROP TRIGGER IF EXISTS update_object_place_description_updated_at ON object_plac
 CREATE TRIGGER update_object_place_description_updated_at BEFORE UPDATE ON object_place_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_object_private_description_updated_at ON object_private_description;
 CREATE TRIGGER update_object_private_description_updated_at BEFORE UPDATE ON object_private_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Notes privées : les champs de portée et d'auteur restent immuables même si
+-- un responsable ORG supérieur modifie le contenu d'une note.
+CREATE OR REPLACE FUNCTION api.lock_object_private_description_system_fields()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  NEW.object_id := OLD.object_id;
+  NEW.org_object_id := OLD.org_object_id;
+  NEW.created_by_user_id := OLD.created_by_user_id;
+  NEW.created_at := OLD.created_at;
+  NEW.audience := OLD.audience;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS lock_object_private_description_system_fields ON object_private_description;
+CREATE TRIGGER lock_object_private_description_system_fields
+  BEFORE UPDATE ON object_private_description
+  FOR EACH ROW EXECUTE FUNCTION api.lock_object_private_description_system_fields();
 DROP TRIGGER IF EXISTS update_object_classification_updated_at ON object_classification;
 CREATE TRIGGER update_object_classification_updated_at BEFORE UPDATE ON object_classification FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS trg_enforce_classification_single_selection ON object_classification;

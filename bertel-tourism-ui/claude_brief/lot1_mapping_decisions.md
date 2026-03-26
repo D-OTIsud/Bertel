@@ -1,10 +1,10 @@
 # Lot 1 — Canonical mapping decisions
 # Berta 2.0 CSV → Bertel 3.0 unified model
 
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-03-21
 **Status:** Living document — updated as decisions are locked
-**Last update:** 2026-03-21 — Prestations à proximité decisions locked; implementation-status table added
+**Last update:** 2026-03-26 — Lot 1 pilot batch fully executed (CRM + galerie). Media pipeline schema decisions locked.
 **Source file:** `Berta 2.0 - Berta 2.0 (1).csv` (834 rows, OTI du Sud scope)
 **Target files:**
 - `Base de donnée DLL et API/schema_unified.sql` — canonical schema
@@ -74,6 +74,31 @@ Three statuses apply to every decision in this document:
 | Sustainability V5 (9 labels, 9 cats, ~60 groups, ~240 actions, equivalences) | ✓ 2026-03-21 | ✓ sections A1–A7 in seeds_data.sql | n/a | — |
 | Accessibility V5 (LBL_TOURISME_HANDICAP, famille accessibility, 32 équipements) | ✓ 2026-03-21 | ✓ section B in seeds_data.sql | n/a | — |
 | migration_sustainability_v5.sql (DDL: groups, equivalence tables, views) | ✓ 2026-03-21 | ✓ Base de donnée DLL et API/migration_sustainability_v5.sql | n/a | Must be applied before seeds_data.sql V5 sections |
+
+---
+
+## Pilot batch execution log
+
+### Batch `lot1-pilot-db-existing-20260326-01` — status: COMPLETE (2026-03-26)
+
+**Scope:** 9 objects from Lot1_cross_type that were already present in the DB
+(10th object `d5c7c61d` not in `object_external_id` — excluded from batch, not a blocking error).
+
+| Pipeline | Rows | Result |
+|---|---|---|
+| CRM parents (`import_berta2_crm`) | 24 | promoted ✓ |
+| CRM comments (`import_berta2_commentaire`) | 26 | promoted ✓ |
+| Galerie / media (`media`) | 64 | promoted ✓ |
+
+**Validation results (all checks passed):**
+- CRM: 0 orphan object FK, all staging rows `approved`
+- Media: 0 invalid FK, staging_approved=64 == promus=64, 0 is_main violations, 9 objects × 1 is_main=TRUE
+
+**Schema decisions locked this session:**
+- `staging.media_temp` name is reserved by the AI ingestor pipeline (different schema/purpose). Lot 1 galerie uses `staging.media_galerie_lot1_temp` instead.
+- `media` table required a new `extra JSONB` column for import-tracking (consistent with `crm_interaction.extra`). Applied 2026-03-26 via ALTER TABLE.
+- `is_main_resolved` uses Option A: one winner per formulaire = MIN(`legacy_img_id`) among `main_pic_source=TRUE` rows. Surplus `main_pic_source=TRUE` rows are promoted with `is_main=FALSE`.
+- Media promotion uses `media_type_id` from `ref_code_media_type` (`code='photo'`), not a hardcoded UUID.
 
 ---
 

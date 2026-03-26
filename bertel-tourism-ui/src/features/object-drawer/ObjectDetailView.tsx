@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
+  Award,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Leaf,
   ExternalLink,
   Eye,
   Globe,
@@ -13,6 +15,8 @@ import {
   Navigation,
   Phone,
   Plus,
+  ShieldCheck,
+  Tag,
   X,
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
@@ -115,6 +119,50 @@ interface PracticalFact {
   value?: string;
   items?: string[];
 }
+
+interface DistinctionGroupMeta {
+  title: string;
+  icon: typeof Award;
+  tone: 'classifications' | 'sustainability' | 'labels' | 'badges';
+  priority: number;
+}
+
+interface DistinctionHighlight {
+  id: string;
+  label: string;
+  meta: string;
+  groupTitle: string;
+  icon: typeof Award;
+  tone: DistinctionGroupMeta['tone'];
+  priority: number;
+}
+
+const DISTINCTION_GROUPS: Record<string, DistinctionGroupMeta> = {
+  classifications: {
+    title: 'Classements',
+    icon: Award,
+    tone: 'classifications',
+    priority: 0,
+  },
+  sustainability: {
+    title: 'Engagements durables',
+    icon: Leaf,
+    tone: 'sustainability',
+    priority: 1,
+  },
+  labels: {
+    title: 'Labels',
+    icon: ShieldCheck,
+    tone: 'labels',
+    priority: 2,
+  },
+  badges: {
+    title: 'Badges',
+    icon: Tag,
+    tone: 'badges',
+    priority: 3,
+  },
+};
 
 function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): PreviewData {
   const typeCode = (parsed.identity.type || data.type || '').toUpperCase();
@@ -230,6 +278,61 @@ function pickGroups(groups: TaxonomyGroup[], keys: string[]): TaxonomyGroup[] {
   return keys
     .map((key) => getGroup(groups, key))
     .filter((group): group is TaxonomyGroup => group !== null);
+}
+
+function getDistinctionGroupMeta(key: string): DistinctionGroupMeta {
+  return DISTINCTION_GROUPS[key] ?? DISTINCTION_GROUPS.labels;
+}
+
+function getDistinctionHighlightScore(params: {
+  label: string;
+  meta: string;
+  groupPriority: number;
+}): number {
+  const haystack = `${params.label} ${params.meta}`.toLowerCase();
+
+  if (/(tourisme\s*&?\s*handicap|handicap|pmr|accessible)/.test(haystack)) {
+    return params.groupPriority - 300;
+  }
+
+  if (/(clef verte|green|durab|eco|ecolo|environ)/.test(haystack)) {
+    return params.groupPriority - 200;
+  }
+
+  if (/(qualite tourisme|qualité tourisme|ecolabel|label)/.test(haystack)) {
+    return params.groupPriority - 100;
+  }
+
+  return params.groupPriority;
+}
+
+function buildDistinctionHighlights(groups: TaxonomyGroup[]): DistinctionHighlight[] {
+  return groups
+    .flatMap((group) => {
+      const meta = getDistinctionGroupMeta(group.key);
+
+      return group.items.map((item) => ({
+        id: `${group.key}-${item.id}`,
+        label: item.label,
+        meta: item.meta,
+        groupTitle: meta.title,
+        icon: meta.icon,
+        tone: meta.tone,
+        priority: getDistinctionHighlightScore({
+          label: item.label,
+          meta: item.meta,
+          groupPriority: meta.priority,
+        }),
+      }));
+    })
+    .sort((left, right) => {
+      if (left.priority !== right.priority) {
+        return left.priority - right.priority;
+      }
+
+      return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
+    })
+    .slice(0, 4);
 }
 
 function toCapacityStats(capacities: CapacityItem[]): StatDef[] {
@@ -914,21 +1017,63 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
     return null;
   }
 
+  const sortedGroups = [...groups].sort((left, right) => {
+    const leftPriority = getDistinctionGroupMeta(left.key).priority;
+    const rightPriority = getDistinctionGroupMeta(right.key).priority;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    return left.title.localeCompare(right.title, 'fr', { sensitivity: 'base' });
+  });
+  const highlights = buildDistinctionHighlights(sortedGroups);
+
   return (
-    <Section title="Labels et engagements">
-      <div className="detail-taxonomy-grid">
-        {groups.map((group) => (
-          <div key={group.key} className="detail-taxonomy-group detail-taxonomy-group--card">
-            <span className="detail-taxonomy-group__title">{group.title}</span>
-            <div className="detail-chip-strip">
-              {group.items.map((item) => (
-                <span key={item.id} className="detail-chip" title={item.meta || undefined}>
-                  {item.label}
+    <Section title="Distinctions">
+      {highlights.length > 0 && (
+        <div className="detail-distinction-highlights">
+          {highlights.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <div key={item.id} className={`detail-distinction-highlight detail-distinction-highlight--${item.tone}`}>
+                <span className="detail-distinction-highlight__icon" aria-hidden="true">
+                  <Icon size={18} />
                 </span>
-              ))}
+                <div className="detail-distinction-highlight__copy">
+                  <span className="detail-distinction-highlight__kicker">{item.groupTitle}</span>
+                  <strong>{item.label}</strong>
+                  {item.meta && <small>{item.meta}</small>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="detail-taxonomy-grid detail-taxonomy-grid--distinctions">
+        {sortedGroups.map((group) => {
+          const meta = getDistinctionGroupMeta(group.key);
+          const Icon = meta.icon;
+
+          return (
+            <div key={group.key} className={`detail-taxonomy-group detail-taxonomy-group--card detail-taxonomy-group--${meta.tone}`}>
+              <div className="detail-taxonomy-group__header">
+                <span className={`detail-taxonomy-group__icon detail-taxonomy-group__icon--${meta.tone}`} aria-hidden="true">
+                  <Icon size={16} />
+                </span>
+                <span className="detail-taxonomy-group__title">{meta.title}</span>
+              </div>
+              <div className="detail-chip-strip">
+                {group.items.map((item) => (
+                  <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`} title={item.meta || undefined}>
+                    {item.label}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
@@ -1510,7 +1655,7 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1536,7 +1681,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1560,7 +1705,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability', 'practices']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1584,7 +1729,7 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1608,7 +1753,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1632,7 +1777,7 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
@@ -1664,7 +1809,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']) }),
+        TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']) }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),

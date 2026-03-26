@@ -92,12 +92,22 @@ describe('ObjectDetailView', () => {
         tags: [{ id: 'tag-1', name: 'Vue mer' }],
         labels: [{ id: 'label-1', name: 'Label prestige' }],
         badges: [{ id: 'badge-1', name: 'Signature' }],
-        classifications: [{ id: 'class-1', scheme: 'gites_epics', value: '3' }],
+        classifications: [
+          { id: 'class-1', scheme: 'gites_epics', value: '3' },
+          { id: 'class-2', scheme_name: 'Tourisme & Handicap', value_name: '4 handicaps' },
+        ],
         sustainability_labels: [
           {
             value_id: 's-label-1',
             scheme_name: 'Clef Verte',
             value_name: 'Obtenu',
+          },
+        ],
+        sustainability_actions: [
+          {
+            object_action_id: 's-action-1',
+            action: { name: 'Reduction plastique', category: { name: 'Dechets' } },
+            status: 'En place',
           },
         ],
         sustainability_action_labels: [
@@ -190,10 +200,12 @@ describe('ObjectDetailView', () => {
     fireEvent.click(screen.getByRole('button', { name: /lire la suite/i }));
     expect(screen.getByText('Version courte de la presentation.')).toBeInTheDocument();
     expect(screen.getByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).toBeInTheDocument();
-    expect(screen.getByText('Labels et engagements')).toBeInTheDocument();
-    expect(screen.getByText('Label prestige')).toBeInTheDocument();
-    expect(screen.getByText('Signature')).toBeInTheDocument();
+    expect(screen.getByText('Distinctions')).toBeInTheDocument();
+    expect(screen.getAllByText('Label prestige').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Signature').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Clef Verte · Obtenu').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Tourisme & Handicap · 4 handicaps').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reduction plastique').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
     expect(screen.getByText('Client VIP a prevenir avant toute fermeture exceptionnelle.')).toBeInTheDocument();

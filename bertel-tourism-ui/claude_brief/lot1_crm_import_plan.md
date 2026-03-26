@@ -1,9 +1,9 @@
 # Plan d'import CRM Lot 1
 # Structures : crm_interaction · staging.crm_interaction_temp · staging.crm_comment_temp
 
-**Version :** 1.0
-**Date :** 2026-03-26
-**Sources :** `Etablissements - CRM (1).csv`, `Etablissements - Commentaires (1).csv`
+**Version :** 1.1
+**Date :** 2026-03-26 (galerie ajoutée 2026-03-26)
+**Sources :** `Etablissements - CRM (1).csv`, `Etablissements - Commentaires (1).csv`, `Etablissements - galerie (3).csv`
 **Statut :** En attente d'approbation avant implémentation
 
 ---
@@ -464,3 +464,72 @@ Le plan retenu est :
 - **pas de reconstruction spéculative du cycle de vie source**.
 
 Ce plan est suffisant pour lancer une implémentation pragmatique et propre dans le modèle Bertel actuel.
+
+---
+
+## 14. Extension Galerie — Import `Etablissements - galerie (3).csv` vers `media`
+
+### 14.1 Nature du fichier source
+
+Chaque ligne représente une photo d'un établissement.
+
+| Colonne source | Nature |
+|---|---|
+| `Img_id` | ID legacy photo (hex 8 chars) |
+| `formulaire` | Airtable rec* — clé legacy établissement |
+| `Path` | URL HTTPS Supabase storage (bucket `old_media`) |
+| `main_Pic` | booléen — photo principale dans la source |
+| `Description` | légende libre, souvent vide |
+
+Volumétrie : 5 095 photos effectives (5 320 lignes dont 225 vides), 484 établissements distincts.
+
+### 14.2 Clé de jointure
+
+`galerie.formulaire` = même clé Airtable rec* que `CRM.Etablissement`.
+
+Réconciliation : `formulaire` → `object_external_id.external_id` (scope OTI, `source_system='berta_v2_csv_export'`) → `object.id`.
+
+**Dépendance :** `crm_lot1_01_prereq.sql` doit avoir été exécuté au préalable.
+
+### 14.3 Cible finale
+
+Table `media` (existante dans le schéma).
+
+Mapping :
+
+| `media` | Source | Note |
+|---|---|---|
+| `object_id TEXT` | `formulaire` réconcilié | |
+| `url TEXT NOT NULL` | `Path` | |
+| `description TEXT` | `Description` | NULL si vide |
+| `is_main BOOLEAN` | dérivé de `main_Pic` + Option A | |
+| `media_type_id UUID NOT NULL` | ref_code `photo` | résolu une fois à la promotion |
+| `org_object_id TEXT` | OTI org id | même pattern que CRM |
+| `extra` | `legacy_img_id`, `legacy_formulaire`, `import_batch_id` | traçabilité |
+
+### 14.4 Règle de déduplication `is_main` (Option A)
+
+**Contrainte schéma :** `uq_media_one_main_per_type ON media(object_id, media_type_id) WHERE is_main` — un seul `is_main=TRUE` par (établissement, type photo).
+
+**Règle retenue :** parmi les lignes `main_Pic=TRUE` d'un même établissement, seule celle avec le **`MIN(legacy_img_id)`** (ordre lexicographique sur hex) conserve `is_main_resolved=TRUE`. Les autres passent à `FALSE`. Règle appliquée en réconciliation, avant promotion.
+
+Cette règle est déterministe et stable (indépendante de l'ordre d'insertion en staging).
+
+### 14.5 Motifs de rejet
+
+| Motif | Condition |
+|---|---|
+| `missing_or_invalid_url` | `Path` NULL, vide, ou ne commence pas par `https?://` |
+| `no_object_resolved` | `formulaire` non trouvé dans `object_external_id` |
+
+### 14.6 Séquence d'exécution galerie
+
+```
+[prérequis] crm_lot1_01_prereq.sql   ← déjà exécuté pour CRM, même objet
+[ETL]       charger galerie CSV dans staging.media_temp
+[01]        media_lot1_01_reconcile.sql  ← résolution object + is_main Option A
+[02]        media_lot1_02_promote.sql    ← INSERT INTO media
+[03]        media_lot1_03_validate.sql   ← validations ciblées
+```
+
+Le pipeline galerie est **indépendant de `crm_interaction`** — il peut s'exécuter avant ou après le pipeline CRM, du moment que le prérequis `object_external_id` est satisfait.

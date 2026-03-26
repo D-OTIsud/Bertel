@@ -2829,6 +2829,7 @@ a {
 .detail-team-notes__list {
   display: grid;
   gap: 0.8rem;
+  overflow: visible;
 }
 
 .detail-team-notes__toolbar {
@@ -2877,7 +2878,11 @@ a {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(24, 49, 59, 0.1);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.detail-team-note--menu-open {
+  z-index: 6;
 }
 
 .detail-team-note--archived {
@@ -2988,9 +2993,9 @@ a {
 
 .detail-team-note__menu {
   position: absolute;
-  top: calc(100% + 0.35rem);
+  bottom: calc(100% - 0.25rem);
   right: 0;
-  z-index: 4;
+  z-index: 20;
   display: grid;
   min-width: 10.5rem;
   padding: 0.35rem;
@@ -3064,6 +3069,17 @@ a {
 .detail-team-notes__composer {
   display: grid;
   gap: 0.8rem;
+}
+
+.detail-team-notes__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.detail-team-notes__footer--end {
+  justify-content: flex-end;
 }
 
 .detail-team-notes__editor {
@@ -3165,6 +3181,13 @@ a {
   min-height: 32px;
   padding-inline: 0.72rem;
   font-size: 0.86rem;
+}
+
+.detail-team-notes__utility--icon {
+  justify-content: center;
+  width: 2.2rem;
+  min-width: 2.2rem;
+  padding: 0;
 }
 
 .detail-team-notes__hint {

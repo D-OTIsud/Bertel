@@ -432,7 +432,7 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Deuxieme note')).not.toBeInTheDocument();
     expect(screen.queryByText('Premiere note')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /voir plus \(2\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /export csv/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /exporter les notes/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /voir plus \(2\)/i }));
 

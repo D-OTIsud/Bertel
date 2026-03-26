@@ -394,7 +394,7 @@ export default function SettingsPage() {
                 <div className="marker-settings-card__header">
                   <div>
                     <strong>{typeOption.label}</strong>
-                    <p>{typeOption.code}</p>
+                    <p>{typeOption.backendTypes.join(' · ')}</p>
                   </div>
                   <img
                     src={buildMarkerDataUri(marker)}

@@ -20,18 +20,28 @@ export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: st
   { code: 'SRV', label: 'Services' },
 ];
 
-export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = ['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'];
+export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTypeCode[]> = {
+  HOT: ['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'],
+  RES: ['RES'],
+  ACT: ['ACT', 'LOI'],
+  ITI: ['ITI'],
+  EVT: ['FMA'],
+  VIS: ['PCU', 'PNA', 'VIL'],
+  SRV: ['COM', 'PSV', 'ASC'],
+};
+
+export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];
 export const DEFAULT_HOT_SUBTYPES: BackendObjectTypeCode[] = [...HOT_BUCKET_TYPES];
 export const HOT_CLASSIFICATION_SCHEME_CODES = ['type_hot', 'hot_stars', 'camp_stars', 'meuble_stars'] as const;
 
 export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTypeCode[]> = {
-  HOT: HOT_BUCKET_TYPES,
-  RES: ['RES'],
-  ITI: ['ITI'],
-  EVT: ['FMA'],
-  ACT: ['LOI'],
-  VIS: ['PCU', 'PNA', 'VIL'],
-  SRV: ['COM', 'PSV', 'ASC'],
+  HOT: [...EXPLORER_TYPE_CODE_FAMILIES.HOT],
+  RES: [...EXPLORER_TYPE_CODE_FAMILIES.RES],
+  ITI: [...EXPLORER_TYPE_CODE_FAMILIES.ITI],
+  EVT: [...EXPLORER_TYPE_CODE_FAMILIES.EVT],
+  ACT: [...EXPLORER_TYPE_CODE_FAMILIES.ACT],
+  VIS: [...EXPLORER_TYPE_CODE_FAMILIES.VIS],
+  SRV: [...EXPLORER_TYPE_CODE_FAMILIES.SRV],
 };
 
 export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
@@ -92,30 +102,13 @@ export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObje
 export function normalizeExplorerObjectType(type: string): ObjectTypeCode {
   const upper = String(type ?? '').toUpperCase() as BackendObjectTypeCode;
 
-  if (HOT_BUCKET_TYPES.includes(upper)) {
-    return 'HOT';
+  for (const [family, codes] of Object.entries(EXPLORER_TYPE_CODE_FAMILIES) as Array<[ObjectTypeCode, BackendObjectTypeCode[]]>) {
+    if (codes.includes(upper)) {
+      return family;
+    }
   }
 
-  switch (upper) {
-    case 'RES':
-      return 'RES';
-    case 'ITI':
-      return 'ITI';
-    case 'FMA':
-      return 'EVT';
-    case 'LOI':
-      return 'ACT';
-    case 'PCU':
-    case 'PNA':
-    case 'VIL':
-      return 'VIS';
-    case 'COM':
-    case 'PSV':
-    case 'ASC':
-      return 'SRV';
-    default:
-      return 'ACT';
-  }
+  return upper in EXPLORER_TYPE_CODE_FAMILIES ? (upper as ObjectTypeCode) : 'ACT';
 }
 
 export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: ExplorerBucketKey): Record<string, unknown> {

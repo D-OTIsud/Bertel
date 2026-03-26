@@ -1606,6 +1606,7 @@ DECLARE
   v_color TEXT := COALESCE(p_options->>'stage_color','red');
   v_opening_times JSON;
   v_prefer_org TEXT;
+  v_user_org TEXT;
   v_inc_private BOOLEAN := COALESCE((p_options->>'include_private')::boolean, FALSE);
   v_fields TEXT[] := CASE WHEN p_options ? 'fields' THEN ARRAY(SELECT jsonb_array_elements_text(p_options->'fields')) ELSE NULL END;
   v_include TEXT[] := CASE WHEN p_options ? 'include' THEN ARRAY(SELECT jsonb_array_elements_text(p_options->'include')) ELSE NULL END;
@@ -1645,6 +1646,8 @@ BEGIN
            LIMIT 1
          ))
   INTO v_prefer_org;
+
+  v_user_org := api.current_user_org_id();
 
   IF v_render_locale IS NULL OR v_render_locale = '' THEN
     v_render_locale := CASE
@@ -1725,7 +1728,7 @@ BEGIN
 
   -- Private notes (org-scoped; pinned notes surface first)
   IF v_inc_private AND v_can_read_extended THEN
-    -- Primary private note: most recently pinned, then most recent within the preferred org
+    -- Primary private note: pinned first, then most recent, scoped to the user's active org
     js := js || COALESCE((
       SELECT jsonb_build_object(
         'private_note',
@@ -1745,18 +1748,13 @@ BEGIN
       LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
       WHERE pn.object_id = obj.id
         AND pn.audience = 'private'
-        AND (
-          (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
-          OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
-        )
-      -- Pinned notes take priority; within same pin status use newest first
-      ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id
+        AND v_user_org IS NOT NULL
+        AND pn.org_object_id = v_user_org
+      ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
       LIMIT 1
     ), '{}'::jsonb);
 
-    -- All private notes: org-scoped, pinned first then chronological ascending
-    -- NOTE: org filter deliberately mirrors the singular query above; the old aggregate
-    -- had no org filter and would leak notes from all orgs into the response.
+    -- All private notes: org-scoped, pinned first then newest first.
     js := js || jsonb_build_object(
       'private_notes',
       COALESCE((
@@ -1770,17 +1768,15 @@ BEGIN
                  'avatar_url',   up.avatar_url
                ) ELSE NULL END
              )
-          ORDER BY pn.is_pinned DESC, pn.created_at ASC, pn.id
+          ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
         )
         FROM object_private_description pn
         LEFT JOIN ref_language rl ON rl.id = pn.language_id
         LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
         WHERE pn.object_id = obj.id
           AND pn.audience = 'private'
-          AND (
-            (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
-            OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
-          )
+          AND v_user_org IS NOT NULL
+          AND pn.org_object_id = v_user_org
       ), '[]'::jsonb)
     );
   END IF;
@@ -2270,7 +2266,11 @@ BEGIN
                  oc.ctid
              )
       FROM object_classification oc
+      -- Partition: keep only non-sustainability schemes in 'classifications'.
+      -- LBL_* sustainability and accessibility labels go to 'sustainability_labels' block below.
+      JOIN ref_classification_scheme sc_grp ON sc_grp.id = oc.scheme_id
       WHERE oc.object_id = obj.id
+        AND COALESCE(sc_grp.display_group, '') NOT IN ('sustainability_labels', 'accessibility_labels')
       ), '[]'::jsonb)
     );
   END IF;
@@ -2647,7 +2647,10 @@ BEGIN
       FROM object_classification oc
       JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
       JOIN ref_classification_value cv ON cv.id = oc.value_id
+      -- Partition: only sustainability and accessibility label schemes here.
+      -- All other schemes (official_classification, quality_label, etc.) go to 'classifications' block above.
       WHERE oc.object_id = obj.id
+        AND sc.display_group IN ('sustainability_labels', 'accessibility_labels')
       ), '[]'::jsonb)
     );
   END IF;

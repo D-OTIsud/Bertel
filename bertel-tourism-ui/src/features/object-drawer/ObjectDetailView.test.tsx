@@ -5,10 +5,25 @@ import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
 import { ObjectDetailView } from './ObjectDetailView';
 
+const mockMutateAsync = jest.fn();
+const mockPrivateNoteAccess = {
+  data: true,
+  isSuccess: true,
+  isError: false,
+};
+
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children }: { children?: ReactNode }) => <div data-testid="detail-map">{children}</div>,
   Marker: ({ children }: { children?: ReactNode }) => <div data-testid="detail-marker">{children}</div>,
   NavigationControl: () => <div data-testid="detail-map-zoom" />,
+}));
+
+jest.mock('../../hooks/useExplorerQueries', () => ({
+  useAddObjectPrivateNoteMutation: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+  useObjectPrivateNoteWriteAccessQuery: () => mockPrivateNoteAccess,
 }));
 
 function renderDetail(data: ObjectDetail) {
@@ -32,6 +47,10 @@ function renderDetail(data: ObjectDetail) {
 
 describe('ObjectDetailView', () => {
   beforeEach(() => {
+    mockMutateAsync.mockReset();
+    mockPrivateNoteAccess.data = true;
+    mockPrivateNoteAccess.isSuccess = true;
+    mockPrivateNoteAccess.isError = false;
     useSessionStore.setState({
       status: 'ready',
       role: 'super_admin',
@@ -62,6 +81,13 @@ describe('ObjectDetailView', () => {
             body: 'Client VIP a prevenir avant toute fermeture exceptionnelle.',
             created_at: '2026-03-25T09:30:00.000Z',
             audience: 'private',
+            category: 'urgent',
+            is_pinned: true,
+            created_by: {
+              id: 'usr-2',
+              display_name: 'Sophie Admin',
+              avatar_url: null,
+            },
           },
         ],
         address: {
@@ -208,7 +234,9 @@ describe('ObjectDetailView', () => {
     expect(screen.getAllByText('Reduction plastique').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
-    expect(screen.getByText('Client VIP a prevenir avant toute fermeture exceptionnelle.')).toBeInTheDocument();
+    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
+    expect(screen.getByText('Urgent')).toBeInTheDocument();
+    expect(screen.getAllByText('Client VIP a prevenir avant toute fermeture exceptionnelle.').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map-zoom')).toBeInTheDocument();
@@ -259,6 +287,7 @@ describe('ObjectDetailView', () => {
   });
 
   it('keeps the placeholder elegant and hides actors for an unauthorized user', () => {
+    mockPrivateNoteAccess.data = false;
     useSessionStore.setState({
       role: 'tourism_agent',
       email: 'visitor@example.com',

@@ -42,14 +42,27 @@ describe('parseObjectDetail', () => {
         id: 'private-primary',
         body: 'Usage interne uniquement.',
         audience: 'private',
+        category: 'important',
+        is_pinned: true,
         created_at: '2026-03-24T08:00:00.000Z',
+        created_by: {
+          id: 'usr-1',
+          display_name: 'Marie Equipe',
+          avatar_url: null,
+        },
       },
       private_notes: [
         {
           id: 'private-1',
           body: 'Visite de groupe sur reservation.',
           audience: 'private',
+          category: 'followup',
           created_at: '2026-03-25T09:30:00.000Z',
+          created_by: {
+            id: 'usr-2',
+            display_name: 'Paul Terrain',
+            avatar_url: 'https://example.com/avatar.png',
+          },
         },
       ],
       places: [
@@ -340,16 +353,24 @@ describe('parseObjectDetail', () => {
     );
     expect(parsed.text.chapo).toBe('Pôle d attraction touristique, pédagogique et scientifique.');
     expect(parsed.text.adaptedDescription).toBe('Version adaptee du descriptif.');
-    expect(parsed.text.privateNote).toBe('Usage interne uniquement.');
+    expect(parsed.text.privateNote).toMatchObject({
+      body: 'Usage interne uniquement.',
+      category: 'important',
+      isPinned: true,
+      createdByName: 'Marie Equipe',
+    });
     expect(parsed.text.privateNotes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          description: 'Usage interne uniquement.',
+          body: 'Usage interne uniquement.',
           audience: 'private',
+          category: 'important',
         }),
         expect.objectContaining({
-          description: 'Visite de groupe sur reservation.',
+          body: 'Visite de groupe sur reservation.',
           audience: 'private',
+          category: 'followup',
+          createdByName: 'Paul Terrain',
         }),
       ]),
     );

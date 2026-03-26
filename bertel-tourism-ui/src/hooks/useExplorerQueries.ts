@@ -84,12 +84,16 @@ export function useAddObjectPrivateNoteMutation(objectId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (body: string) => {
+    mutationFn: async (input: {
+      body: string;
+      category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+      isPinned: boolean;
+    }) => {
       if (!objectId) {
         throw new Error("Aucune fiche active pour ajouter une note d'equipe.");
       }
 
-      return createObjectPrivateNote({ objectId, body });
+      return createObjectPrivateNote({ objectId, ...input });
     },
     onSuccess: async () => {
       if (!objectId) {
@@ -102,7 +106,6 @@ export function useAddObjectPrivateNoteMutation(objectId: string | null) {
 }
 
 export function useObjectPrivateNoteWriteAccessQuery(objectId: string | null) {
-  const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
 
   return useQuery({
@@ -110,6 +113,6 @@ export function useObjectPrivateNoteWriteAccessQuery(objectId: string | null) {
     queryFn: async () => canWriteObjectPrivateNote(objectId ?? ''),
     enabled: Boolean(objectId),
     staleTime: 60 * 1000,
-    initialData: demoMode || role === 'super_admin' || role === 'owner' ? true : undefined,
+    initialData: demoMode ? true : undefined,
   });
 }

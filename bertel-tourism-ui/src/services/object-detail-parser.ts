@@ -70,6 +70,20 @@ export interface DescriptionEntry {
   updatedAt: string;
 }
 
+export interface PrivateNoteEntry {
+  id: string;
+  body: string;
+  audience: string;
+  category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
+  isPinned: boolean;
+  language: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  createdByName: string;
+  createdByAvatarUrl: string;
+}
+
 export interface PlaceItem {
   id: string;
   name: string;
@@ -86,8 +100,8 @@ export interface ParsedTextSection {
   editorialDescription: string;
   descriptions: DescriptionEntry[];
   places: PlaceItem[];
-  privateNote: string;
-  privateNotes: DescriptionEntry[];
+  privateNote: PrivateNoteEntry | null;
+  privateNotes: PrivateNoteEntry[];
 }
 
 export interface ParsedLocation {
@@ -174,7 +188,7 @@ export interface ParsedInternalSection {
   legalRecords: LegalItem[];
   externalIds: ExternalSyncItem[];
   origins: Array<Record<string, unknown>>;
-  privateNotes: DescriptionEntry[];
+  privateNotes: PrivateNoteEntry[];
   render: Record<string, unknown>;
   transparentBlocks: Record<string, unknown>;
 }
@@ -556,6 +570,57 @@ function parseDescriptionContainer(value: unknown, prefix: string): DescriptionE
   return entry ? [entry] : [];
 }
 
+function normalizePrivateNoteCategory(value: string): PrivateNoteEntry['category'] {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'important' || normalized === 'urgent' || normalized === 'internal' || normalized === 'followup') {
+    return normalized;
+  }
+  return 'general';
+}
+
+function parsePrivateNoteEntry(value: unknown, prefix: string, index: number): PrivateNoteEntry | null {
+  const record = readRecord(value);
+  const body = pickFirstText(record.body, record.description, record.text, record.value);
+
+  if (!body) {
+    return null;
+  }
+
+  const createdByRecord = readRecord(record.created_by);
+  return {
+    id: makeItemId(prefix, record, index, body),
+    body,
+    audience: readString(record.audience, 'private'),
+    category: normalizePrivateNoteCategory(readString(record.category, 'general')),
+    isPinned: readBoolean(record.is_pinned) ?? false,
+    language: readString(record.language, readString(record.lang)),
+    createdAt: readString(record.created_at),
+    updatedAt: readString(record.updated_at),
+    createdById: readString(createdByRecord.id),
+    createdByName: pickFirstText(createdByRecord.display_name, createdByRecord.name, createdByRecord.email),
+    createdByAvatarUrl: readString(createdByRecord.avatar_url),
+  };
+}
+
+function parsePrivateNoteEntries(value: unknown, prefix: string): PrivateNoteEntry[] {
+  return readList(value)
+    .map((item, index) => parsePrivateNoteEntry(item, prefix, index))
+    .filter((item): item is PrivateNoteEntry => item !== null);
+}
+
+function parsePrivateNoteContainer(value: unknown, prefix: string): PrivateNoteEntry[] {
+  if (Array.isArray(value)) {
+    return parsePrivateNoteEntries(value, prefix);
+  }
+
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const entry = parsePrivateNoteEntry(value, prefix, 0);
+  return entry ? [entry] : [];
+}
+
 function parsePlaceItems(value: unknown): PlaceItem[] {
   return readArray(value)
     .map((place, index) => {
@@ -597,10 +662,10 @@ function parseText(raw: Record<string, unknown>): ParsedTextSection {
   const render = readRecord(raw.render);
   const privateNotes = dedupeByKey(
     [
-      ...parseDescriptionContainer(raw.private_note, 'private-note-primary'),
-      ...parseDescriptionContainer(raw.private_notes, 'private-note'),
+      ...parsePrivateNoteContainer(raw.private_note, 'private-note-primary'),
+      ...parsePrivateNoteContainer(raw.private_notes, 'private-note'),
     ],
-    (item) => `${item.id}-${item.description}-${item.createdAt}-${item.updatedAt}`,
+    (item) => `${item.id}-${item.body}-${item.createdAt}-${item.updatedAt}`,
   );
 
   return {
@@ -639,7 +704,7 @@ function parseText(raw: Record<string, unknown>): ParsedTextSection {
     ),
     descriptions: descriptionEntries,
     places: parsePlaceItems(raw.places),
-    privateNote: pickFirstText(readRecord(raw.private_note).body, raw.private_note, privateNotes[0]?.description),
+    privateNote: privateNotes[0] ?? null,
     privateNotes,
   };
 }
@@ -1114,7 +1179,7 @@ function buildItinerary(raw: Record<string, unknown>): ParsedItinerarySection {
   };
 }
 
-function buildInternal(raw: Record<string, unknown>, privateNotes: DescriptionEntry[]): ParsedInternalSection {
+function buildInternal(raw: Record<string, unknown>, privateNotes: PrivateNoteEntry[]): ParsedInternalSection {
   const transparentKeys = [
     'menus',
     'cuisine_types',

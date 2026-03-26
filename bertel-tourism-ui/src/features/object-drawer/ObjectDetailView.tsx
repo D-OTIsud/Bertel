@@ -1,5 +1,5 @@
-import { Fragment, type ReactNode } from 'react';
-import { ExternalLink, Globe, Mail, MapPinned, Navigation, Phone } from 'lucide-react';
+import { Fragment, useState, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, Eye, Globe, Mail, MapPinned, Navigation, Phone } from 'lucide-react';
 import { Map, Marker } from 'react-map-gl/maplibre';
 import { getMarkerImageId } from '../../config/map-markers';
 import { env } from '../../lib/env';
@@ -64,7 +64,7 @@ type DetailLocation = ParsedLocation;
 
 interface PreviewData {
   typeCode: string;
-  typeLabel: string;
+  summary: string;
   description: string;
   adaptedDescription: string;
   location: DetailLocation | null;
@@ -87,28 +87,20 @@ interface PreviewData {
 
 interface PracticalFact {
   label: string;
-  value: string;
-}
-
-function dedupeLabels(labels: string[]): string[] {
-  const seen = new Set<string>();
-
-  return labels.filter((label) => {
-    const normalized = label.trim().toLowerCase();
-    if (!normalized || seen.has(normalized)) {
-      return false;
-    }
-
-    seen.add(normalized);
-    return true;
-  });
+  value?: string;
+  items?: string[];
 }
 
 function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): PreviewData {
   const typeCode = (parsed.identity.type || data.type || '').toUpperCase();
   return {
     typeCode,
-    typeLabel: TYPE_LABEL[typeCode] ?? data.type ?? '',
+    summary:
+      parsed.text.chapo ||
+      parsed.text.description ||
+      parsed.text.adaptedDescription ||
+      parsed.text.mobileDescription ||
+      parsed.text.editorialDescription,
     description: parsed.text.description || parsed.text.chapo,
     adaptedDescription:
       parsed.text.adaptedDescription ||
@@ -209,13 +201,6 @@ function pickGroups(groups: TaxonomyGroup[], keys: string[]): TaxonomyGroup[] {
     .filter((group): group is TaxonomyGroup => group !== null);
 }
 
-function flattenHeroLabels(groups: TaxonomyGroup[], media: MediaItem | null): string[] {
-  const groupLabels = groups.flatMap((group) => group.items.map((item) => item.label));
-  const mediaLabels = media?.tags ?? [];
-
-  return dedupeLabels([...groupLabels, ...mediaLabels]).slice(0, 4);
-}
-
 function toCapacityStats(capacities: CapacityItem[]): StatDef[] {
   return capacities.slice(0, 5).map((item) => ({
     value: item.value,
@@ -244,15 +229,15 @@ function buildPracticalFacts(preview: PreviewData): PracticalFact[] {
   const payments = getGroup(preview.taxonomyGroups, 'payments');
   const environment = getGroup(preview.taxonomyGroups, 'environment');
   const facts: Array<PracticalFact | null> = [
-    languages?.items.length ? { label: 'Langues', value: languages.items.map((item) => item.label).join(' · ') } : null,
-    payments?.items.length ? { label: 'Paiements', value: payments.items.map((item) => item.label).join(' · ') } : null,
+    languages?.items.length ? { label: 'Langues', items: languages.items.map((item) => item.label) } : null,
+    payments?.items.length ? { label: 'Paiements', items: payments.items.map((item) => item.label) } : null,
     environment?.items.length
-      ? { label: 'Environnement', value: environment.items.map((item) => item.label).join(' · ') }
+      ? { label: 'Cadre', items: environment.items.map((item) => item.label) }
       : null,
     preview.petPolicy
       ? {
           label: 'Animaux',
-          value: [preview.petPolicy.label, ...preview.petPolicy.details].filter(Boolean).join(' · '),
+          items: [preview.petPolicy.label, ...preview.petPolicy.details].filter(Boolean),
         }
       : null,
   ];
@@ -295,19 +280,28 @@ function Section({
   description,
   children,
   aside = false,
+  restricted = false,
 }: {
   title: string;
   kicker?: string;
   description?: string;
   children: ReactNode;
   aside?: boolean;
+  restricted?: boolean;
 }) {
   return (
     <article className={`detail-section panel-card panel-card--nested${aside ? ' detail-section--aside' : ''}`}>
       <div className="detail-section__header">
-        {kicker && <span className="detail-section__eyebrow">{kicker}</span>}
-        <h3 className="detail-section__title">{title}</h3>
-        {description && <p className="detail-section__description">{description}</p>}
+        <div className="detail-section__heading">
+          {kicker && <span className="detail-section__eyebrow">{kicker}</span>}
+          <h3 className="detail-section__title">{title}</h3>
+          {description && <p className="detail-section__description">{description}</p>}
+        </div>
+        {restricted && (
+          <span className="detail-section__scope" title="Visible uniquement pour les utilisateurs autorises">
+            <Eye size={14} />
+          </span>
+        )}
       </div>
       <div className="detail-section__body">{children}</div>
     </article>
@@ -334,16 +328,11 @@ function StatStrip({ stats }: { stats: StatDef[] }) {
 function HeroBlock({
   data,
   preview,
-  highlightGroups,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
-  highlightGroups: TaxonomyGroup[];
 }) {
   const mainMedia = preview.media[0] ?? null;
-  const chips = flattenHeroLabels(highlightGroups, mainMedia);
-  const heroCaption = mainMedia?.title || preview.location?.city || preview.typeLabel;
-  const heroSubtitle = preview.location?.label && preview.location.label !== heroCaption ? preview.location.label : '';
 
   return (
     <section className={`detail-hero${mainMedia ? '' : ' detail-hero--placeholder'}`}>
@@ -354,61 +343,66 @@ function HeroBlock({
         <div className="detail-hero__placeholder-art" aria-hidden="true" />
       )}
       <div className="detail-hero__veil" aria-hidden="true" />
-      <div className="detail-hero__content">
-        <h1 className="sr-only">{data.name}</h1>
-        <div className="detail-hero__badges">
-          {preview.typeLabel && <span className="detail-hero__type-badge">{preview.typeLabel}</span>}
-          {preview.location?.city && <span className="detail-hero__meta-pill">{preview.location.city}</span>}
-          {preview.media.length > 1 && <span className="detail-hero__meta-pill">{preview.media.length} medias</span>}
-        </div>
-        <div className="detail-hero__copy">
-          <p className="detail-hero__caption">{heroCaption}</p>
-          {heroSubtitle && <p className="detail-hero__subtitle">{heroSubtitle}</p>}
-        </div>
-        {chips.length > 0 && (
-          <div className="detail-chip-strip detail-chip-strip--hero">
-            {chips.map((chip) => (
-              <span key={chip} className="detail-chip detail-chip--hero">
-                {chip}
-              </span>
-            ))}
-          </div>
-        )}
+      <h1 className="sr-only">{data.name}</h1>
+      <div className="detail-hero__footer">
         {!mainMedia && (
           <p className="detail-hero__placeholder-copy">
-            Pas encore de photo principale. Les informations utiles restent disponibles juste en dessous.
+            Pas encore de photo principale.
           </p>
         )}
-        {mainMedia?.credit && <p className="detail-hero__credit">Photo {mainMedia.credit}</p>}
+        <div className="detail-hero__meta">
+          {preview.media.length > 1 && <span className="detail-hero__meta-pill">{preview.media.length} medias</span>}
+          {mainMedia?.credit && <p className="detail-hero__credit">Photo {mainMedia.credit}</p>}
+        </div>
       </div>
     </section>
   );
 }
 
-function OverviewSection({ preview, stats }: { preview: PreviewData; stats: StatDef[] }) {
-  const leadText = preview.description || preview.adaptedDescription;
-  const supportText =
-    preview.description && preview.adaptedDescription && preview.adaptedDescription !== preview.description
+function OverviewSection({ preview }: { preview: PreviewData }) {
+  const [expanded, setExpanded] = useState(false);
+  const summary = preview.summary || preview.description || preview.adaptedDescription;
+  const fullText = preview.description || summary;
+  const alternateText =
+    preview.adaptedDescription &&
+      preview.adaptedDescription !== fullText &&
+      preview.adaptedDescription !== summary
       ? preview.adaptedDescription
       : '';
-  const hasOverview = Boolean(leadText || supportText || preview.location?.label || stats.length);
+  const canRevealFull = Boolean(summary && fullText && summary !== fullText);
+  const canClamp = !canRevealFull && summary.length > 340;
+  const displayedText = expanded && canRevealFull ? fullText : summary;
+  const showToggle = canRevealFull || canClamp;
+  const hasOverview = Boolean(summary || alternateText);
 
   if (!hasOverview) {
     return null;
   }
 
   return (
-    <section className="detail-overview panel-card panel-card--nested">
-      <div className="detail-overview__header">
+    <Section title="Description">
+      <div className="detail-overview">
         <div className="detail-overview__copy">
-          {(leadText || supportText) && <h2 className="detail-overview__title">En quelques mots</h2>}
-          {leadText && <p className="detail-overview__lead">{leadText}</p>}
-          {supportText && <p className="detail-overview__support">{supportText}</p>}
+          {displayedText && (
+            <p className={`detail-overview__lead${!expanded && showToggle ? ' detail-overview__lead--clamped' : ''}`}>
+              {displayedText}
+            </p>
+          )}
+          {expanded && alternateText && <p className="detail-overview__support">{alternateText}</p>}
         </div>
-        {preview.location?.label && <p className="detail-overview__location">{preview.location.label}</p>}
+        {showToggle && (
+          <button
+            type="button"
+            className="detail-expand-button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+          >
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {expanded ? 'Voir moins' : 'Lire la suite'}
+          </button>
+        )}
       </div>
-      <StatStrip stats={stats} />
-    </section>
+    </Section>
   );
 }
 
@@ -418,10 +412,10 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
   }
 
   return (
-    <Section title="Reperes">
+    <Section title="Labels et engagements">
       <div className="detail-taxonomy-grid">
         {groups.map((group) => (
-          <div key={group.key} className="detail-taxonomy-group">
+          <div key={group.key} className="detail-taxonomy-group detail-taxonomy-group--card">
             <span className="detail-taxonomy-group__title">{group.title}</span>
             <div className="detail-chip-strip">
               {group.items.map((item) => (
@@ -447,16 +441,16 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
   const markerSrc = `/markers/${getMarkerImageId(preview.typeCode)}.png`;
 
   return (
-    <Section title="Plan d'acces">
+    <Section title="Plan d'acces" aside>
       <div className="detail-map-card">
         <div className="detail-map-card__canvas">
           <Map
             reuseMaps
-            mapStyle={env.mapStyles.classic}
+            mapStyle={env.mapStyles.satellite}
             initialViewState={{
               longitude: location.longitude,
               latitude: location.latitude,
-              zoom: 14,
+              zoom: 15,
             }}
             attributionControl={false}
             scrollZoom={false}
@@ -473,7 +467,7 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
             </Marker>
           </Map>
         </div>
-        <div className="detail-map-card__aside">
+        <div className="detail-map-card__body">
           <div className="detail-map-card__address">
             <span className="detail-subtitle">Adresse</span>
             <p>{location.label || `${location.latitude}, ${location.longitude}`}</p>
@@ -505,43 +499,53 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
   );
 }
 
-function CapacityAmenitiesSection({
+function CapacitySection({
   capacities,
-  amenities,
-  petPolicy,
 }: {
   capacities: CapacityItem[];
-  amenities: string[];
-  petPolicy: PetPolicyItem | null;
 }) {
   const stats = toCapacityStats(capacities);
-  const hasContent = stats.length > 0 || amenities.length > 0 || Boolean(petPolicy);
 
-  if (!hasContent) {
+  if (!stats.length) {
     return null;
   }
 
   return (
-    <Section title="Sur place">
-      {stats.length > 0 && <StatStrip stats={stats} />}
-      {amenities.length > 0 && (
-        <div className="detail-block-stack">
-          <span className="detail-subtitle">Equipements</span>
-          <div className="detail-chip-strip">
-            {amenities.map((amenity) => (
-              <span key={amenity} className="detail-chip detail-chip--soft">
-                {amenity}
-              </span>
-            ))}
+    <Section title="Capacite d'accueil">
+      <StatStrip stats={stats} />
+    </Section>
+  );
+}
+
+function AmenitiesSection({ amenities }: { amenities: string[] }) {
+  if (!amenities.length) {
+    return null;
+  }
+
+  return (
+    <Section title="Equipements">
+      <div className="detail-feature-grid">
+        {amenities.map((amenity) => (
+          <div key={amenity} className="detail-feature-card">
+            <span className="detail-feature-card__dot" aria-hidden="true" />
+            <strong>{amenity}</strong>
           </div>
-        </div>
-      )}
-      {petPolicy && (
-        <div className="detail-inline-note">
-          <strong>{petPolicy.label}</strong>
-          {petPolicy.details.length > 0 && <span>{petPolicy.details.join(' · ')}</span>}
-        </div>
-      )}
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function ItineraryStatsSection({ itinerary }: { itinerary: ItinerarySummary | null }) {
+  const stats = toItineraryStats(itinerary);
+
+  if (!stats.length) {
+    return null;
+  }
+
+  return (
+    <Section title="Le parcours">
+      <StatStrip stats={stats} />
     </Section>
   );
 }
@@ -720,11 +724,21 @@ function PracticalSection({ facts }: { facts: PracticalFact[] }) {
 
   return (
     <Section title="A savoir" aside>
-      <div className="detail-list">
+      <div className="detail-fact-grid">
         {facts.map((fact) => (
-          <div key={`${fact.label}-${fact.value}`} className="detail-list-row detail-list-row--stacked">
+          <div key={`${fact.label}-${fact.value ?? fact.items?.join('-') ?? ''}`} className="detail-fact-card">
             <span className="detail-fact-label">{fact.label}</span>
-            <strong>{fact.value}</strong>
+            {fact.items && fact.items.length > 0 ? (
+              <div className="detail-chip-strip detail-chip-strip--compact">
+                {fact.items.map((item) => (
+                  <span key={`${fact.label}-${item}`} className="detail-chip detail-chip--soft detail-chip--practical">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <strong>{fact.value}</strong>
+            )}
           </div>
         ))}
       </div>
@@ -738,7 +752,7 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
   }
 
   return (
-    <Section title="Contacter ce lieu" aside>
+    <Section title="Contact" aside>
       <div className="detail-contact-list">
         {contacts.slice(0, 8).map((contact) => (
           <ContactCard key={contact.id} contact={contact} />
@@ -805,38 +819,42 @@ function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
   );
 }
 
-function NetworkSection({
-  actors,
-  organizations,
-  memberships,
-}: {
-  actors: ActorItem[];
-  organizations: OrganizationItem[];
-  memberships: MembershipItem[];
-}) {
-  if (!actors.length && !organizations.length && !memberships.length) {
+function TeamSection({ actors }: { actors: ActorItem[] }) {
+  if (!actors.length) {
     return null;
   }
 
   return (
-    <Section title="Organisation" aside>
-      <div className="detail-network">
-        {actors.length > 0 && (
-          <div className="detail-network__group">
-            <span className="detail-subtitle">Equipe</span>
-            <div className="detail-card-list">
-              {actors.slice(0, 5).map((actor) => (
-                <div key={actor.id} className="detail-mini-card">
-                  <div className="detail-mini-card__header">
-                    <strong>{actor.name}</strong>
-                    {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
-                  </div>
-                  {actor.contacts[0] && <p className="detail-mini-card__meta">{actor.contacts[0]}</p>}
-                </div>
-              ))}
+    <Section title="Equipe interne" aside restricted>
+      <div className="detail-card-list">
+        {actors.slice(0, 5).map((actor) => (
+          <div key={actor.id} className="detail-mini-card">
+            <div className="detail-mini-card__header">
+              <strong>{actor.name}</strong>
+              {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
             </div>
+            {actor.contacts[0] && <p className="detail-mini-card__meta">{actor.contacts[0]}</p>}
           </div>
-        )}
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function NetworkSection({
+  organizations,
+  memberships,
+}: {
+  organizations: OrganizationItem[];
+  memberships: MembershipItem[];
+}) {
+  if (!organizations.length && !memberships.length) {
+    return null;
+  }
+
+  return (
+    <Section title="Reseau" aside>
+      <div className="detail-network">
         {organizations.length > 0 && (
           <div className="detail-network__group">
             <span className="detail-subtitle">Organisations</span>
@@ -881,7 +899,7 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
     return null;
   }
 
-  const notes: PracticalFact[] = [
+  const notes = ([
     itinerary.practices.length > 0 ? { label: 'Pratiques', value: itinerary.practices.join(' · ') } : null,
     itinerary.info.length > 0 ? { label: 'Conseils', value: itinerary.info.join(' · ') } : null,
     itinerary.track
@@ -890,7 +908,7 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
     itinerary.sectionsCount > 0 ? { label: 'Sections', value: String(itinerary.sectionsCount) } : null,
     itinerary.stagesCount > 0 ? { label: 'Etapes', value: String(itinerary.stagesCount) } : null,
     itinerary.profilesCount > 0 ? { label: 'Profils', value: `${itinerary.profilesCount} profil(s)` } : null,
-  ].filter((item): item is PracticalFact => item !== null);
+  ] as Array<PracticalFact | null>).filter((item): item is PracticalFact => item !== null);
 
   if (!notes.length) {
     return null;
@@ -913,28 +931,22 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
 function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSeeActors: boolean): ReactNode[] {
   return [
     ContactSection({ contacts: preview.contacts }),
+    LocationMapSection({ preview }),
     PracticalSection({ facts }),
     RelatedObjectsSection({ items: preview.relatedObjects }),
-    NetworkSection({
-      actors: canSeeActors ? preview.actors : [],
-      organizations: preview.organizations,
-      memberships: preview.memberships,
-    }),
+    TeamSection({ actors: canSeeActors ? preview.actors : [] }),
+    NetworkSection({ organizations: preview.organizations, memberships: preview.memberships }),
   ];
 }
 
 function DetailScaffold({
   data,
   preview,
-  highlightGroups,
-  overviewStats,
   mainSections,
   asideSections,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
-  highlightGroups: TaxonomyGroup[];
-  overviewStats: StatDef[];
   mainSections: ReactNode[];
   asideSections: ReactNode[];
 }) {
@@ -943,8 +955,7 @@ function DetailScaffold({
 
   return (
     <div className="object-detail-view">
-      <HeroBlock data={data} preview={preview} highlightGroups={highlightGroups} />
-      <OverviewSection preview={preview} stats={overviewStats} />
+      <HeroBlock data={data} preview={preview} />
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
           {visibleMain.map((section, index) => (
@@ -967,24 +978,18 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'sustainability', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'sustainability', 'environment', 'payments', 'languages', 'tags']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
         TaxonomySection({ groups: taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         RoomList({ rooms: preview.roomTypes }),
         MeetingRoomList({ rooms: preview.meetingRooms }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
@@ -999,24 +1004,18 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'payments', 'languages', 'tags']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
         TaxonomySection({ groups: taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
         GallerySection({ media: preview.media }),
       ]}
@@ -1029,18 +1028,16 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'practices', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'practices', 'environment', 'languages', 'tags']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability', 'practices']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toItineraryStats(preview.itinerary)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
+        ItineraryStatsSection({ itinerary: preview.itinerary }),
         TaxonomySection({ groups: taxonomyGroups }),
         ItineraryPracticalSection({ itinerary: preview.itinerary }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
@@ -1055,24 +1052,18 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags', 'payments', 'languages', 'environment']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
         TaxonomySection({ groups: taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
         GallerySection({ media: preview.media }),
       ]}
@@ -1085,24 +1076,18 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'payments', 'languages', 'tags']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
         TaxonomySection({ groups: taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
         GallerySection({ media: preview.media }),
       ]}
@@ -1115,24 +1100,18 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'environment', 'tags']);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'environment', 'languages', 'tags']);
+  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
+        OverviewSection({ preview }),
         TaxonomySection({ groups: taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
         GallerySection({ media: preview.media }),
       ]}
@@ -1145,23 +1124,17 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
   const parsed = parseObjectDetail(raw);
   const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags']);
   const practicalFacts = buildPracticalFacts(preview);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
-      highlightGroups={highlightGroups}
-      overviewStats={toCapacityStats(preview.capacities)}
       mainSections={[
-        LocationMapSection({ preview }),
-        TaxonomySection({ groups: preview.taxonomyGroups }),
-        CapacityAmenitiesSection({
-          capacities: preview.capacities,
-          amenities: preview.amenities,
-          petPolicy: preview.petPolicy,
-        }),
+        OverviewSection({ preview }),
+        TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']) }),
+        CapacitySection({ capacities: preview.capacities }),
+        AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
         GallerySection({ media: preview.media }),
       ]}

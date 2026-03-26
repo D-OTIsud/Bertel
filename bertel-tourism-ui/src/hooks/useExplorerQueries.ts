@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
-import { getObjectResource, listExplorerCards } from '../services/rpc';
+import { createObjectPrivateNote, getObjectResource, listExplorerCards } from '../services/rpc';
 import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
 
 function useExplorerFilters() {
@@ -77,5 +77,26 @@ export function useObjectDetailQuery(objectId: string | null) {
     queryKey: ['object-detail', objectId, langPrefs],
     queryFn: () => getObjectResource(objectId ?? '', langPrefs),
     enabled: Boolean(objectId),
+  });
+}
+
+export function useAddObjectPrivateNoteMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (body: string) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour ajouter une note d'equipe.");
+      }
+
+      return createObjectPrivateNote({ objectId, body });
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+    },
   });
 }

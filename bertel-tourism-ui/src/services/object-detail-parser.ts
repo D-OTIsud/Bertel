@@ -65,6 +65,9 @@ export interface DescriptionEntry {
   mobileDescription: string;
   editorialDescription: string;
   visibility: string;
+  audience: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PlaceItem {
@@ -507,7 +510,7 @@ function buildContactHref(kindCode: string, value: string): string {
 
 function parseDescriptionEntry(value: unknown, prefix: string, index: number): DescriptionEntry | null {
   const record = readRecord(value);
-  const description = pickFirstText(record.description, record.text, record.value);
+  const description = pickFirstText(record.description, record.text, record.value, record.body);
   const chapo = pickFirstText(record.description_chapo, record.chapo, record.summary);
   const adaptedDescription = pickFirstText(record.description_adapted);
   const mobileDescription = pickFirstText(record.description_mobile);
@@ -527,6 +530,9 @@ function parseDescriptionEntry(value: unknown, prefix: string, index: number): D
     mobileDescription,
     editorialDescription,
     visibility: readString(record.visibility),
+    audience: readString(record.audience),
+    createdAt: readString(record.created_at),
+    updatedAt: readString(record.updated_at),
   };
 }
 
@@ -589,7 +595,13 @@ function parseText(raw: Record<string, unknown>): ParsedTextSection {
   );
   const primaryEntry = descriptionEntries[0] ?? null;
   const render = readRecord(raw.render);
-  const privateNotes = parseDescriptionEntries(raw.private_notes, 'private-note');
+  const privateNotes = dedupeByKey(
+    [
+      ...parseDescriptionContainer(raw.private_note, 'private-note-primary'),
+      ...parseDescriptionContainer(raw.private_notes, 'private-note'),
+    ],
+    (item) => `${item.id}-${item.description}-${item.createdAt}-${item.updatedAt}`,
+  );
 
   return {
     description: pickFirstText(
@@ -627,7 +639,7 @@ function parseText(raw: Record<string, unknown>): ParsedTextSection {
     ),
     descriptions: descriptionEntries,
     places: parsePlaceItems(raw.places),
-    privateNote: pickFirstText(raw.private_note, privateNotes[0]?.description),
+    privateNote: pickFirstText(readRecord(raw.private_note).body, raw.private_note, privateNotes[0]?.description),
     privateNotes,
   };
 }

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ChevronDown,
   ChevronLeft,
@@ -7,15 +7,20 @@ import {
   ExternalLink,
   Eye,
   Globe,
+  Loader2,
   Mail,
   MapPinned,
   Navigation,
   Phone,
+  Plus,
 } from 'lucide-react';
-import { Map, Marker } from 'react-map-gl/maplibre';
+import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getMarkerImageId } from '../../config/map-markers';
+import { useAddObjectPrivateNoteMutation } from '../../hooks/useExplorerQueries';
 import { env } from '../../lib/env';
 import {
+  type DescriptionEntry,
   parseObjectDetail,
   type ParsedAmenityItem,
   type ParsedLocation,
@@ -100,6 +105,8 @@ interface PreviewData {
   petPolicy: PetPolicyItem | null;
   relatedObjects: RelatedObjectItem[];
   itinerary: ItinerarySummary | null;
+  privateNote: string;
+  privateNotes: DescriptionEntry[];
 }
 
 interface PracticalFact {
@@ -139,6 +146,8 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
     petPolicy: parsed.operations.petPolicy,
     relatedObjects: parsed.relations.all,
     itinerary: parsed.itinerary.summary,
+    privateNote: parsed.text.privateNote,
+    privateNotes: parsed.text.privateNotes,
   };
 }
 
@@ -319,6 +328,56 @@ function membershipTone(item: MembershipItem): string {
   return 'neutral';
 }
 
+function sortNotesByRecency(notes: DescriptionEntry[]): DescriptionEntry[] {
+  return [...notes].sort((left, right) => {
+    const leftTime = left.createdAt ? Date.parse(left.createdAt) : Number.NaN;
+    const rightTime = right.createdAt ? Date.parse(right.createdAt) : Number.NaN;
+
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+      return rightTime - leftTime;
+    }
+
+    if (left.position !== right.position) {
+      return (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER);
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function dedupeNotes(notes: DescriptionEntry[]): DescriptionEntry[] {
+  const seen = new Set<string>();
+  const items: DescriptionEntry[] = [];
+
+  for (const note of notes) {
+    const key = `${note.id}-${note.description}-${note.createdAt}`;
+    if (!note.description || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push(note);
+  }
+
+  return sortNotesByRecency(items);
+}
+
+function formatNoteDate(value: string): string {
+  if (!value) {
+    return '';
+  }
+
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(timestamp));
+}
+
 function Section({
   title,
   kicker,
@@ -375,16 +434,19 @@ function HeroBlock({
   preview,
   activeIndex,
   onChange,
+  onOpenGallery,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
   activeIndex: number;
   onChange: (index: number) => void;
+  onOpenGallery: () => void;
 }) {
   const totalMedia = preview.media.length;
   const mainMedia = totalMedia > 0 ? preview.media[getWrappedIndex(activeIndex, totalMedia)] : null;
   const indicatorCount = Math.min(totalMedia, 3);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [suppressOpenClick, setSuppressOpenClick] = useState(false);
 
   const goToPrevious = () => {
     if (totalMedia <= 1) {
@@ -405,6 +467,29 @@ function HeroBlock({
       <h1 className="sr-only">{data.name}</h1>
       <div
         className="detail-hero__frame"
+        role={mainMedia ? 'button' : undefined}
+        tabIndex={mainMedia ? 0 : -1}
+        aria-label={mainMedia ? 'Ouvrir la galerie photo' : undefined}
+        onClick={() => {
+          if (suppressOpenClick) {
+            setSuppressOpenClick(false);
+            return;
+          }
+
+          if (mainMedia) {
+            onOpenGallery();
+          }
+        }}
+        onKeyDown={(event) => {
+          if (!mainMedia) {
+            return;
+          }
+
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpenGallery();
+          }
+        }}
         onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
         onTouchEnd={(event) => {
           const endX = event.changedTouches[0]?.clientX ?? null;
@@ -420,10 +505,12 @@ function HeroBlock({
           }
 
           if (delta > 0) {
+            setSuppressOpenClick(true);
             goToPrevious();
             return;
           }
 
+          setSuppressOpenClick(true);
           goToNext();
         }}
       >
@@ -436,10 +523,26 @@ function HeroBlock({
         <div className="detail-hero__veil" aria-hidden="true" />
         {totalMedia > 1 && (
           <>
-            <button type="button" className="detail-hero__nav detail-hero__nav--prev" onClick={goToPrevious} aria-label="Image precedente">
+            <button
+              type="button"
+              className="detail-hero__nav detail-hero__nav--prev"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToPrevious();
+              }}
+              aria-label="Image precedente"
+            >
               <ChevronLeft size={18} />
             </button>
-            <button type="button" className="detail-hero__nav detail-hero__nav--next" onClick={goToNext} aria-label="Image suivante">
+            <button
+              type="button"
+              className="detail-hero__nav detail-hero__nav--next"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToNext();
+              }}
+              aria-label="Image suivante"
+            >
               <ChevronRight size={18} />
             </button>
             <div className="detail-hero__dots" aria-hidden="true">
@@ -452,18 +555,13 @@ function HeroBlock({
             </div>
           </>
         )}
+        {mainMedia?.credit && <p className="detail-hero__credit detail-hero__credit--overlay">Photo {mainMedia.credit}</p>}
       </div>
-      <div className="detail-hero__footer">
-        {!mainMedia && (
-          <p className="detail-hero__placeholder-copy">
-            Pas encore de photo principale.
-          </p>
-        )}
-        <div className="detail-hero__meta">
-          {preview.media.length > 1 && <span className="detail-hero__meta-pill">{preview.media.length} medias</span>}
-          {mainMedia?.credit && <p className="detail-hero__credit">Photo {mainMedia.credit}</p>}
-        </div>
-      </div>
+      {!mainMedia && (
+        <p className="detail-hero__placeholder-copy">
+          Pas encore de photo principale.
+        </p>
+      )}
     </section>
   );
 }
@@ -472,10 +570,12 @@ function MediaRail({
   preview,
   activeIndex,
   onSelect,
+  onOpenGallery,
 }: {
   preview: PreviewData;
   activeIndex: number;
   onSelect: (index: number) => void;
+  onOpenGallery: (index: number) => void;
 }) {
   const items = getMediaWindow(preview.media, activeIndex, 5);
 
@@ -491,7 +591,10 @@ function MediaRail({
             key={item.id}
             type="button"
             className={`detail-media-thumb detail-media-thumb--${railIndex === 0 ? 'featured' : 'regular'}`}
-            onClick={() => onSelect(index)}
+            onClick={() => {
+              onSelect(index);
+              onOpenGallery(index);
+            }}
             aria-label={`Voir le media ${index + 1}`}
           >
             {item.url ? (
@@ -501,11 +604,123 @@ function MediaRail({
               <div className="detail-media-thumb__placeholder" aria-hidden="true" />
             )}
             <span className="detail-media-thumb__veil" aria-hidden="true" />
-            <span className="detail-media-thumb__label">{item.title || 'Media'}</span>
           </button>
         ))}
       </div>
     </section>
+  );
+}
+
+function GalleryLightbox({
+  data,
+  media,
+  activeIndex,
+  open,
+  onOpenChange,
+  onChange,
+}: {
+  data: ObjectDetail;
+  media: MediaItem[];
+  activeIndex: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onChange: (index: number) => void;
+}) {
+  const total = media.length;
+  const activeMedia = total > 0 ? media[getWrappedIndex(activeIndex, total)] : null;
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  if (!total || !activeMedia) {
+    return null;
+  }
+
+  const goToPrevious = () => onChange(getWrappedIndex(activeIndex - 1, total));
+  const goToNext = () => onChange(getWrappedIndex(activeIndex + 1, total));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="detail-gallery-dialog" showClose>
+        <DialogTitle className="sr-only">Galerie photo de {data.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Visionneuse plein ecran des photos disponibles pour cette fiche.
+        </DialogDescription>
+        <div className="detail-gallery-modal">
+          <div
+            className="detail-gallery-modal__frame"
+            onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
+            onTouchEnd={(event) => {
+              const endX = event.changedTouches[0]?.clientX ?? null;
+              if (touchStartX == null || endX == null) {
+                return;
+              }
+
+              const delta = endX - touchStartX;
+              setTouchStartX(null);
+
+              if (Math.abs(delta) < 40) {
+                return;
+              }
+
+              if (delta > 0) {
+                goToPrevious();
+                return;
+              }
+
+              goToNext();
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="detail-gallery-modal__image"
+              src={activeMedia.url}
+              alt={activeMedia.title || data.name}
+            />
+            {total > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="detail-gallery-modal__nav detail-gallery-modal__nav--prev"
+                  onClick={goToPrevious}
+                  aria-label="Image precedente dans la galerie"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="detail-gallery-modal__nav detail-gallery-modal__nav--next"
+                  onClick={goToNext}
+                  aria-label="Image suivante dans la galerie"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+          </div>
+          <div className="detail-gallery-modal__footer">
+            <div className="detail-gallery-modal__meta">
+              <strong>{activeMedia.title || data.name}</strong>
+              {activeMedia.credit && <span>Photo {activeMedia.credit}</span>}
+            </div>
+            {media.length > 1 && (
+              <div className="detail-gallery-modal__thumbs">
+                {media.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`detail-gallery-modal__thumb${index === activeIndex ? ' detail-gallery-modal__thumb--active' : ''}`}
+                    onClick={() => onChange(index)}
+                    aria-label={`Voir la photo ${index + 1} en grand`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.url} alt={item.title || `Photo ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -521,9 +736,9 @@ function OverviewSection({ preview }: { preview: PreviewData }) {
       : '';
   const canRevealFull = Boolean(summary && fullText && summary !== fullText);
   const canClamp = !canRevealFull && summary.length > 340;
-  const displayedText = expanded && canRevealFull ? fullText : summary;
   const showToggle = canRevealFull || canClamp;
   const hasOverview = Boolean(summary || alternateText);
+  const showExtendedText = expanded && canRevealFull;
 
   if (!hasOverview) {
     return null;
@@ -533,10 +748,16 @@ function OverviewSection({ preview }: { preview: PreviewData }) {
     <Section title="Description">
       <div className="detail-overview">
         <div className="detail-overview__copy">
-          {displayedText && (
+          {summary && (
             <p className={`detail-overview__lead${!expanded && showToggle ? ' detail-overview__lead--clamped' : ''}`}>
-              {displayedText}
+              {summary}
             </p>
+          )}
+          {showExtendedText && (
+            <>
+              <span className="detail-overview__separator" aria-hidden="true" />
+              <p className="detail-overview__body">{fullText}</p>
+            </>
           )}
           {expanded && alternateText && <p className="detail-overview__support">{alternateText}</p>}
         </div>
@@ -551,6 +772,181 @@ function OverviewSection({ preview }: { preview: PreviewData }) {
             {expanded ? 'Voir moins' : 'Lire la suite'}
           </button>
         )}
+      </div>
+    </Section>
+  );
+}
+
+function TeamNotesSection({
+  objectId,
+  notes,
+  fallbackNote,
+  visible,
+}: {
+  objectId: string;
+  notes: DescriptionEntry[];
+  fallbackNote: string;
+  visible: boolean;
+}) {
+  const addNoteMutation = useAddObjectPrivateNoteMutation(objectId);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [createdNotes, setCreatedNotes] = useState<DescriptionEntry[]>([]);
+
+  useEffect(() => {
+    setComposerOpen(false);
+    setDraft('');
+    setErrorMessage('');
+    setCreatedNotes([]);
+  }, [objectId]);
+
+  const mergedNotes = useMemo(() => {
+    const shouldInjectFallback = Boolean(
+      fallbackNote && !notes.some((note) => note.description.trim() === fallbackNote.trim()),
+    );
+    const fallbackItems = shouldInjectFallback
+      ? [{
+          id: 'private-note-fallback',
+          language: '',
+          position: null,
+          description: fallbackNote,
+          chapo: '',
+          adaptedDescription: '',
+          mobileDescription: '',
+          editorialDescription: '',
+          visibility: 'private',
+          audience: 'private',
+          createdAt: '',
+          updatedAt: '',
+        } satisfies DescriptionEntry]
+      : [];
+
+    return dedupeNotes([...createdNotes, ...notes, ...fallbackItems]);
+  }, [createdNotes, fallbackNote, notes]);
+
+  const hasContent = mergedNotes.length > 0;
+
+  if (!visible) {
+    return null;
+  }
+
+  const handleSubmit = async () => {
+    const value = draft.trim();
+    if (!value) {
+      return;
+    }
+
+    setErrorMessage('');
+
+    try {
+      const createdNote = await addNoteMutation.mutateAsync(value);
+      setCreatedNotes((current) =>
+        dedupeNotes([
+          {
+            id: createdNote.id,
+            language: '',
+            position: null,
+            description: createdNote.body,
+            chapo: '',
+            adaptedDescription: '',
+            mobileDescription: '',
+            editorialDescription: '',
+            visibility: createdNote.audience,
+            audience: createdNote.audience,
+            createdAt: createdNote.created_at,
+            updatedAt: createdNote.updated_at,
+          },
+          ...current,
+        ]),
+      );
+      setDraft('');
+      setComposerOpen(false);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Impossible d'enregistrer cette note pour le moment.";
+      setErrorMessage(message);
+    }
+  };
+
+  return (
+    <Section title="Informations equipe" restricted>
+      <div className="detail-team-notes">
+        {hasContent ? (
+          <div className="detail-team-notes__list">
+            {mergedNotes.map((note) => (
+              <article key={`${note.id}-${note.createdAt}`} className="detail-team-note">
+                <div className="detail-team-note__header">
+                  <span className="detail-team-note__tag">Interne</span>
+                  {formatNoteDate(note.createdAt) && (
+                    <time className="detail-team-note__date" dateTime={note.createdAt}>
+                      {formatNoteDate(note.createdAt)}
+                    </time>
+                  )}
+                </div>
+                <p>{note.description}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="detail-team-notes__empty">Aucune information interne pour le moment.</p>
+        )}
+
+        <div className="detail-team-notes__composer">
+          {composerOpen ? (
+            <div className="detail-team-notes__editor">
+              <textarea
+                className="detail-team-notes__input"
+                value={draft}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  if (errorMessage) {
+                    setErrorMessage('');
+                  }
+                }}
+                placeholder="Ajouter une information utile pour l'equipe."
+                rows={4}
+              />
+              {errorMessage && <p className="detail-team-notes__error">{errorMessage}</p>}
+              <div className="detail-team-notes__actions">
+                <button
+                  type="button"
+                  className="detail-team-notes__button detail-team-notes__button--ghost"
+                  onClick={() => {
+                    setComposerOpen(false);
+                    setDraft('');
+                    setErrorMessage('');
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="detail-team-notes__button detail-team-notes__button--primary"
+                  onClick={handleSubmit}
+                  disabled={!draft.trim() || addNoteMutation.isPending}
+                >
+                  {addNoteMutation.isPending ? (
+                    <Loader2 size={16} className="detail-team-notes__spinner" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="detail-team-notes__button detail-team-notes__button--inline"
+              onClick={() => setComposerOpen(true)}
+            >
+              <Plus size={16} />
+              Ajouter une note
+            </button>
+          )}
+        </div>
       </div>
     </Section>
   );
@@ -603,18 +999,19 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
               zoom: 15,
             }}
             attributionControl={false}
-            scrollZoom={false}
+            scrollZoom
             dragPan={false}
             dragRotate={false}
-            doubleClickZoom={false}
-            touchZoomRotate={false}
-            keyboard={false}
+            doubleClickZoom
+            touchZoomRotate
+            keyboard
             style={{ width: '100%', height: '100%' }}
           >
             <Marker longitude={location.longitude} latitude={location.latitude} anchor="bottom">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="detail-map-pin" src={markerSrc} alt="" aria-hidden="true" />
             </Marker>
+            <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
           </Map>
         </div>
         <div className="detail-map-card__body">
@@ -1107,24 +1504,44 @@ function DetailScaffold({
   asideSections: ReactNode[];
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     setActiveMediaIndex(0);
+    setLightboxOpen(false);
   }, [data.id, preview.media.length]);
 
   const mediaRail = MediaRail({
     preview,
     activeIndex: activeMediaIndex,
     onSelect: setActiveMediaIndex,
+    onOpenGallery: (index) => {
+      setActiveMediaIndex(index);
+      setLightboxOpen(true);
+    },
   });
   const visibleMain = mainSections.filter(Boolean);
   const visibleAside = [mediaRail, ...asideSections].filter(Boolean);
 
   return (
     <div className="object-detail-view">
+      <GalleryLightbox
+        data={data}
+        media={preview.media}
+        activeIndex={activeMediaIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        onChange={setActiveMediaIndex}
+      />
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
-          <HeroBlock data={data} preview={preview} activeIndex={activeMediaIndex} onChange={setActiveMediaIndex} />
+          <HeroBlock
+            data={data}
+            preview={preview}
+            activeIndex={activeMediaIndex}
+            onChange={setActiveMediaIndex}
+            onOpenGallery={() => setLightboxOpen(true)}
+          />
           {visibleMain.map((section, index) => (
             <Fragment key={`main-${index}`}>{section}</Fragment>
           ))}
@@ -1154,6 +1571,7 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
@@ -1179,6 +1597,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
@@ -1203,6 +1622,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         OverviewSection({ preview }),
         ItineraryStatsSection({ itinerary: preview.itinerary }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         ItineraryPracticalSection({ itinerary: preview.itinerary }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
@@ -1225,6 +1645,7 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
@@ -1248,6 +1669,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
@@ -1271,6 +1693,7 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
@@ -1293,6 +1716,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']) }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),

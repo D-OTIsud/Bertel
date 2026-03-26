@@ -1000,7 +1000,7 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
             }}
             attributionControl={false}
             scrollZoom
-            dragPan={false}
+            dragPan
             dragRotate={false}
             doubleClickZoom
             touchZoomRotate
@@ -1571,13 +1571,13 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         RoomList({ rooms: preview.roomTypes }),
         MeetingRoomList({ rooms: preview.meetingRooms }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1597,11 +1597,11 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1622,10 +1622,10 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         OverviewSection({ preview }),
         ItineraryStatsSection({ itinerary: preview.itinerary }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         ItineraryPracticalSection({ itinerary: preview.itinerary }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1645,11 +1645,11 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1669,11 +1669,11 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1693,11 +1693,11 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: taxonomyGroups }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1716,11 +1716,11 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       mainSections={[
         OverviewSection({ preview }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
         TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'sustainability']) }),
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
+        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes, fallbackNote: preview.privateNote, visible: canSeeActors }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />

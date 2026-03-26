@@ -1570,6 +1570,10 @@ a {
   gap: 1rem;
 }
 
+.detail-main {
+  --detail-media-block-height: 360px;
+}
+
 .detail-hero {
   display: grid;
   padding: 0.8rem;
@@ -1583,7 +1587,8 @@ a {
 
 .detail-hero__frame {
   position: relative;
-  min-height: 360px;
+  min-height: var(--detail-media-block-height);
+  height: var(--detail-media-block-height);
   border-radius: 20px;
   overflow: hidden;
 }
@@ -2170,17 +2175,20 @@ a {
 
 .detail-media-rail__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1.3fr) repeat(2, minmax(0, 0.78fr));
-  gap: 0.7rem;
-  min-height: 360px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  height: var(--detail-media-block-height);
+  min-height: var(--detail-media-block-height);
 }
 
 .detail-media-thumb {
   position: relative;
   display: block;
   width: 100%;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   border: 1px solid rgba(24, 49, 59, 0.08);
@@ -2190,8 +2198,8 @@ a {
 }
 
 .detail-media-thumb--featured {
-  grid-column: 1 / -1;
-  grid-row: 1;
+  grid-column: span 2;
+  grid-row: span 2;
 }
 
 .detail-media-thumb__image,
@@ -2213,6 +2221,7 @@ a {
 .detail-gallery-dialog {
   width: min(96vw, 1440px) !important;
   max-width: min(96vw, 1440px) !important;
+  height: min(calc(100dvh - 24px), 940px) !important;
   max-height: calc(100vh - 24px) !important;
   padding: 0 !important;
   overflow: hidden !important;
@@ -2224,13 +2233,18 @@ a {
 
 .detail-gallery-modal {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
   padding: 1rem;
 }
 
 .detail-gallery-modal__frame {
   position: relative;
-  min-height: min(72vh, 860px);
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   border-radius: 20px;
   background: rgba(17, 24, 29, 0.92);
@@ -2292,7 +2306,7 @@ a {
 .detail-gallery-modal__thumbs {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(76px, 110px);
+  grid-auto-columns: minmax(68px, 96px);
   gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 0.2rem;
@@ -2309,7 +2323,7 @@ a {
 
 .detail-gallery-modal__thumb img {
   width: 100%;
-  height: 76px;
+  height: 64px;
   object-fit: cover;
 }
 
@@ -2824,8 +2838,13 @@ a {
     padding: 0.7rem;
   }
 
+  .detail-main {
+    --detail-media-block-height: 260px;
+  }
+
   .detail-hero__frame {
-    min-height: 260px;
+    min-height: var(--detail-media-block-height);
+    height: var(--detail-media-block-height);
   }
 
   .detail-map-card {
@@ -2834,12 +2853,14 @@ a {
 
   .detail-media-rail__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1.15fr) repeat(2, minmax(0, 0.72fr));
-    min-height: 260px;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    min-height: var(--detail-media-block-height);
+    height: var(--detail-media-block-height);
   }
 
   .detail-media-thumb--featured {
-    grid-column: span 3;
+    grid-column: span 2;
+    grid-row: span 2;
   }
 
   .detail-contact-value {

@@ -180,7 +180,7 @@ describe('parseObjectDetail', () => {
       payment_methods: [{ id: 'pay-1', name: 'CB' }],
       languages: [{ id: 'lang-1', name: 'Francais' }],
       practices: [{ id: 'practice-1', name: 'Visite' }],
-      amenities: [{ amenity: { name: 'Boutique' } }],
+      amenities: [{ amenity: { id: 'amenity-1', name: 'Boutique', icon_url: 'https://example.com/icons/shop.svg' } }],
       equipment: [{ name: 'Parking' }],
       capacity: [{ code: { name: 'Visiteurs' }, value: 300 }],
       room_types: [
@@ -373,6 +373,12 @@ describe('parseObjectDetail', () => {
     expect(parsed.media.tagCloud).toEqual(expect.arrayContaining(['volcan', 'interieur']));
 
     expect(parsed.taxonomy.amenities).toEqual(expect.arrayContaining(['Boutique', 'Parking']));
+    expect(parsed.taxonomy.amenityItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Boutique', iconUrl: 'https://example.com/icons/shop.svg' }),
+        expect.objectContaining({ label: 'Parking', iconUrl: '' }),
+      ]),
+    );
     expect(parsed.taxonomy.groups.map((group) => group.key)).toEqual(
       expect.arrayContaining(['tags', 'classifications', 'sustainability', 'environment', 'payments', 'languages', 'practices']),
     );

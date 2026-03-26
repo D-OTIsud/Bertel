@@ -124,9 +124,16 @@ export interface ParsedSustainabilitySection {
   merged: Array<{ id: string; label: string; meta: string }>;
 }
 
+export interface ParsedAmenityItem {
+  id: string;
+  label: string;
+  iconUrl: string;
+}
+
 export interface ParsedTaxonomySection {
   groups: TaxonomyGroup[];
   amenities: string[];
+  amenityItems: ParsedAmenityItem[];
   sustainability: ParsedSustainabilitySection;
 }
 
@@ -949,7 +956,7 @@ function normalizeAggregatedContacts(raw: Record<string, unknown>, organizations
   };
 }
 
-function extractAmenityLabels(raw: Record<string, unknown>): string[] {
+function extractAmenities(raw: Record<string, unknown>): ParsedAmenityItem[] {
   const sources = [
     raw.amenities,
     raw.object_amenities,
@@ -958,21 +965,33 @@ function extractAmenityLabels(raw: Record<string, unknown>): string[] {
     raw.equipments,
   ];
 
-  return dedupeLabels(
-    sources.flatMap((source) =>
-      readList(source).map((item) => {
+  return dedupeByKey(
+    sources.flatMap((source, sourceIndex) =>
+      readList(source).map((item, itemIndex) => {
         if (typeof item === 'string' || typeof item === 'number') {
-          return String(item);
+          return {
+            id: `amenity-${sourceIndex}-${itemIndex}`,
+            label: String(item),
+            iconUrl: '',
+          };
         }
 
         const record = readRecord(item);
-        return readNamedValue(record.amenity ?? record.feature ?? record.equipment ?? item);
+        const owner = readRecord(record.amenity ?? record.feature ?? record.equipment ?? item);
+        const label = readNamedValue(owner, readNamedValue(item));
+
+        return {
+          id: readString(owner.id, readString(record.id, `amenity-${sourceIndex}-${itemIndex}`)),
+          label,
+          iconUrl: readString(owner.icon_url, readString(record.icon_url)),
+        };
       }),
-    ).filter(Boolean),
+    ).filter((item) => item.label),
+    (item) => item.label.toLowerCase(),
   );
 }
 
-function buildTaxonomy(raw: Record<string, unknown>, groups: TaxonomyGroup[], amenities: string[]): ParsedTaxonomySection {
+function buildTaxonomy(raw: Record<string, unknown>, groups: TaxonomyGroup[], amenityItems: ParsedAmenityItem[]): ParsedTaxonomySection {
   const sustainabilityLabels = buildSustainabilityLabelItems(raw.sustainability_labels);
   const sustainabilityActions = buildSustainabilityActionItems(raw.sustainability_actions);
   const sustainabilityActionLabels = buildSustainabilityActionLabelItems(raw.sustainability_action_labels);
@@ -992,7 +1011,8 @@ function buildTaxonomy(raw: Record<string, unknown>, groups: TaxonomyGroup[], am
 
   return {
     groups: mergedGroups,
-    amenities,
+    amenities: amenityItems.map((item) => item.label),
+    amenityItems,
     sustainability: {
       labels: sustainabilityLabels,
       actions: sustainabilityActions,
@@ -1171,7 +1191,7 @@ export function parseObjectDetail(raw: Record<string, unknown>): ParsedObjectDet
     gallery: mediaItems.slice(1),
     tagCloud: dedupeLabels(mediaItems.flatMap((item) => item.tags)),
   };
-  const taxonomy = buildTaxonomy(raw, parseTaxonomyGroups(raw), extractAmenityLabels(raw));
+  const taxonomy = buildTaxonomy(raw, parseTaxonomyGroups(raw), extractAmenities(raw));
   const operations = buildOperations(raw);
   const relations = buildRelations(raw, organizationItems, actorItems, membershipItems);
   const itinerary = buildItinerary(raw);

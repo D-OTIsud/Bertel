@@ -528,20 +528,6 @@ function getNoteExcerpt(note: PrivateNoteEntry): string {
   return `${value.slice(0, 117).trimEnd()}...`;
 }
 
-function getNoteTooltip(note: PrivateNoteEntry): string {
-  const details = [
-    `Auteur: ${getNoteAuthorName(note)}`,
-    `Type: ${NOTE_CATEGORY_META[note.category].label}`,
-    formatNoteDateTime(note.createdAt) ? `Date: ${formatNoteDateTime(note.createdAt)}` : '',
-    note.isPinned ? 'Epinglée' : '',
-    note.isArchived ? 'Archivee' : '',
-    '',
-    note.body,
-  ].filter(Boolean);
-
-  return details.join('\n');
-}
-
 function getNoteCategoryIcon(category: PrivateNoteEntry['category']) {
   switch (category) {
     case 'important':
@@ -579,6 +565,50 @@ function buildNotesCsv(notes: PrivateNoteEntry[]): string {
   return rows.map((row) => row.map((cell) => escapeCsvValue(cell)).join(',')).join('\n');
 }
 
+function DetailTooltip({
+  content,
+  children,
+  block = false,
+  bubbleClassName,
+}: {
+  content?: ReactNode;
+  children: ReactNode;
+  block?: boolean;
+  bubbleClassName?: string;
+}) {
+  if (!content) {
+    return <>{children}</>;
+  }
+
+  const Tag = block ? 'div' : 'span';
+
+  return (
+    <Tag className={`detail-tooltip${block ? ' detail-tooltip--block' : ''}`}>
+      {children}
+      <span className={`detail-tooltip__bubble${bubbleClassName ? ` ${bubbleClassName}` : ''}`} role="tooltip">
+        {content}
+      </span>
+    </Tag>
+  );
+}
+
+function NoteTooltipContent({ note }: { note: PrivateNoteEntry }) {
+  const meta = [
+    NOTE_CATEGORY_META[note.category].label,
+    note.isPinned ? 'Epinglée' : '',
+    note.isArchived ? 'Archivée' : '',
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <span className="detail-tooltip__stack">
+      <strong>{getNoteAuthorName(note)}</strong>
+      {meta && <span>{meta}</span>}
+      {formatNoteDateTime(note.createdAt) && <span>{formatNoteDateTime(note.createdAt)}</span>}
+      <span className="detail-tooltip__body">{note.body}</span>
+    </span>
+  );
+}
+
 function Section({
   title,
   kicker,
@@ -603,9 +633,11 @@ function Section({
           {description && <p className="detail-section__description">{description}</p>}
         </div>
         {restricted && (
-          <span className="detail-section__scope" title="Visible uniquement pour les utilisateurs autorises">
-            <Eye size={14} />
-          </span>
+          <DetailTooltip content="Visible uniquement pour les utilisateurs autorises">
+            <span className="detail-section__scope">
+              <Eye size={14} />
+            </span>
+          </DetailTooltip>
         )}
       </div>
       <div className="detail-section__body">{children}</div>
@@ -1234,83 +1266,87 @@ function TeamNotesSection({
                 key={`${note.id}-${note.createdAt}`}
                 className={`detail-team-note${note.isArchived ? ' detail-team-note--archived' : ''}${openMenuNoteId === note.id ? ' detail-team-note--menu-open' : ''}`}
               >
-                <div className="detail-team-note__row" title={getNoteTooltip(note)}>
-                  <span
-                    className={`detail-team-note__avatar detail-team-note__avatar--${NOTE_CATEGORY_META[note.category].tone}`}
-                    aria-hidden="true"
-                  >
-                    {(() => {
-                      const NoteIcon = getNoteCategoryIcon(note.category);
-                      return <NoteIcon size={14} />;
-                    })()}
-                  </span>
-                  <p className="detail-team-note__line">
-                    {note.isPinned && (
-                      <span className="detail-team-note__pin" title="Note epinglee">
-                        <Pin size={10} />
-                      </span>
-                    )}
-                    {formatNoteDate(note.createdAt) && (
-                      <time className="detail-team-note__date" dateTime={note.createdAt}>
-                        {formatNoteDate(note.createdAt)}
-                      </time>
-                    )}
-                    <span className="detail-team-note__separator" aria-hidden="true">-</span>
-                    <span>{getNoteExcerpt(note)}</span>
-                  </p>
-                  {(canEditNote(note) || canDeleteNote(note)) && (
-                    <div className="detail-team-note__menu-shell">
-                      <button
-                        type="button"
-                        className="detail-team-note__menu-trigger"
-                        aria-label="Actions de la note"
-                        aria-expanded={openMenuNoteId === note.id}
-                        onClick={() => setOpenMenuNoteId((current) => (current === note.id ? null : note.id))}
-                      >
-                        ...
-                      </button>
-                      {openMenuNoteId === note.id && (
-                        <div className="detail-team-note__menu">
-                          {canEditNote(note) && (
-                            <button
-                              type="button"
-                              className="detail-team-note__menu-item"
-                              onClick={() => startEditingNote(note)}
-                            >
-                              <Pencil size={14} />
-                              Modifier
-                            </button>
-                          )}
-                          {canEditNote(note) && (
-                            <button
-                              type="button"
-                              className="detail-team-note__menu-item"
-                              onClick={() => handleArchiveToggle(note)}
-                            >
-                              <Archive size={14} />
-                              {note.isArchived ? 'Restaurer' : 'Archiver'}
-                            </button>
-                          )}
-                          {canDeleteNote(note) && (
-                            <button
-                              type="button"
-                              className="detail-team-note__menu-item detail-team-note__menu-item--danger"
-                              onClick={() => handleDeleteNote(note)}
-                              disabled={deleteNoteMutation.isPending}
-                            >
-                              {deleteNoteMutation.isPending ? (
-                                <Loader2 size={14} className="detail-team-notes__spinner" />
-                              ) : (
-                                <Trash2 size={14} />
-                              )}
-                              Supprimer
-                            </button>
-                          )}
-                        </div>
+                <DetailTooltip content={<NoteTooltipContent note={note} />} block bubbleClassName="detail-tooltip__bubble--note">
+                  <div className="detail-team-note__row">
+                    <span
+                      className={`detail-team-note__avatar detail-team-note__avatar--${NOTE_CATEGORY_META[note.category].tone}`}
+                      aria-hidden="true"
+                    >
+                      {(() => {
+                        const NoteIcon = getNoteCategoryIcon(note.category);
+                        return <NoteIcon size={14} />;
+                      })()}
+                    </span>
+                    <p className="detail-team-note__line">
+                      {note.isPinned && (
+                        <DetailTooltip content="Note epinglee">
+                          <span className="detail-team-note__pin">
+                            <Pin size={10} />
+                          </span>
+                        </DetailTooltip>
                       )}
-                    </div>
-                  )}
-                </div>
+                      {formatNoteDate(note.createdAt) && (
+                        <time className="detail-team-note__date" dateTime={note.createdAt}>
+                          {formatNoteDate(note.createdAt)}
+                        </time>
+                      )}
+                      <span className="detail-team-note__separator" aria-hidden="true">-</span>
+                      <span>{getNoteExcerpt(note)}</span>
+                    </p>
+                    {(canEditNote(note) || canDeleteNote(note)) && (
+                      <div className="detail-team-note__menu-shell">
+                        <button
+                          type="button"
+                          className="detail-team-note__menu-trigger"
+                          aria-label="Actions de la note"
+                          aria-expanded={openMenuNoteId === note.id}
+                          onClick={() => setOpenMenuNoteId((current) => (current === note.id ? null : note.id))}
+                        >
+                          ...
+                        </button>
+                        {openMenuNoteId === note.id && (
+                          <div className="detail-team-note__menu">
+                            {canEditNote(note) && (
+                              <button
+                                type="button"
+                                className="detail-team-note__menu-item"
+                                onClick={() => startEditingNote(note)}
+                              >
+                                <Pencil size={14} />
+                                Modifier
+                              </button>
+                            )}
+                            {canEditNote(note) && (
+                              <button
+                                type="button"
+                                className="detail-team-note__menu-item"
+                                onClick={() => handleArchiveToggle(note)}
+                              >
+                                <Archive size={14} />
+                                {note.isArchived ? 'Restaurer' : 'Archiver'}
+                              </button>
+                            )}
+                            {canDeleteNote(note) && (
+                              <button
+                                type="button"
+                                className="detail-team-note__menu-item detail-team-note__menu-item--danger"
+                                onClick={() => handleDeleteNote(note)}
+                                disabled={deleteNoteMutation.isPending}
+                              >
+                                {deleteNoteMutation.isPending ? (
+                                  <Loader2 size={14} className="detail-team-notes__spinner" />
+                                ) : (
+                                  <Trash2 size={14} />
+                                )}
+                                Supprimer
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </DetailTooltip>
                 {editingNoteId === note.id && (
                   <div className="detail-team-note__content">
                     <div className="detail-team-note__editor">
@@ -1464,28 +1500,30 @@ function TeamNotesSection({
                 Ajouter une note
               </button>
               {hasContent && (
+                <DetailTooltip content="Exporter les notes">
+                  <button
+                    type="button"
+                    className="detail-team-notes__utility detail-team-notes__utility--icon"
+                    onClick={handleExport}
+                    aria-label="Exporter les notes"
+                  >
+                    <Download size={15} />
+                  </button>
+                </DetailTooltip>
+              )}
+            </div>
+          ) : hasContent ? (
+            <div className="detail-team-notes__footer detail-team-notes__footer--end">
+              <DetailTooltip content="Exporter les notes">
                 <button
                   type="button"
                   className="detail-team-notes__utility detail-team-notes__utility--icon"
                   onClick={handleExport}
                   aria-label="Exporter les notes"
-                  title="Exporter les notes"
                 >
                   <Download size={15} />
                 </button>
-              )}
-            </div>
-          ) : hasContent ? (
-            <div className="detail-team-notes__footer detail-team-notes__footer--end">
-              <button
-                type="button"
-                className="detail-team-notes__utility detail-team-notes__utility--icon"
-                onClick={handleExport}
-                aria-label="Exporter les notes"
-                title="Exporter les notes"
-              >
-                <Download size={15} />
-              </button>
+              </DetailTooltip>
             </div>
           ) : null}
         </div>
@@ -1557,11 +1595,23 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
                   <span className="detail-taxonomy-group__title">{meta.title}</span>
                 </div>
                 <div className="detail-chip-strip">
-                  {group.items.map((item) => (
-                    <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`} title={item.meta || undefined}>
-                      {item.label}
-                    </span>
-                  ))}
+                  {group.items.map((item) => {
+                    const chip = (
+                      <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`}>
+                        {item.label}
+                      </span>
+                    );
+
+                    if (!item.meta) {
+                      return chip;
+                    }
+
+                    return (
+                      <DetailTooltip key={item.id} content={item.meta}>
+                        {chip}
+                      </DetailTooltip>
+                    );
+                  })}
                 </div>
               </div>
             );

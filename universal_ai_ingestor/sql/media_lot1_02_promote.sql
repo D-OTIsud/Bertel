@@ -54,7 +54,7 @@ BEGIN
         ),
         NOW(),
         NOW()
-    FROM staging.media_temp t
+    FROM staging.media_galerie_lot1_temp t
     WHERE t.import_batch_id   = v_batch_id
       AND t.resolution_status = 'approved'
       AND t.is_approved        = TRUE;

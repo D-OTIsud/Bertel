@@ -1,9 +1,26 @@
-import { Fragment, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, Eye, Globe, Mail, MapPinned, Navigation, Phone } from 'lucide-react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ExternalLink,
+  Eye,
+  Globe,
+  Mail,
+  MapPinned,
+  Navigation,
+  Phone,
+} from 'lucide-react';
 import { Map, Marker } from 'react-map-gl/maplibre';
 import { getMarkerImageId } from '../../config/map-markers';
 import { env } from '../../lib/env';
-import { parseObjectDetail, type ParsedLocation, type ParsedObjectDetail } from '../../services/object-detail-parser';
+import {
+  parseObjectDetail,
+  type ParsedAmenityItem,
+  type ParsedLocation,
+  type ParsedObjectDetail,
+} from '../../services/object-detail-parser';
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
 import {
@@ -68,7 +85,7 @@ interface PreviewData {
   description: string;
   adaptedDescription: string;
   location: DetailLocation | null;
-  amenities: string[];
+  amenities: ParsedAmenityItem[];
   capacities: CapacityItem[];
   media: MediaItem[];
   prices: PriceItem[];
@@ -107,7 +124,7 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
       parsed.text.mobileDescription ||
       parsed.text.editorialDescription,
     location: parsed.location,
-    amenities: parsed.taxonomy.amenities,
+    amenities: parsed.taxonomy.amenityItems,
     capacities: parsed.operations.capacities,
     media: parsed.media.items,
     prices: parsed.operations.prices,
@@ -191,6 +208,10 @@ function getContactIcon(kindCode: string) {
   return ExternalLink;
 }
 
+function sortAmenities(amenities: ParsedAmenityItem[]) {
+  return [...amenities].sort((left, right) => Number(Boolean(right.iconUrl)) - Number(Boolean(left.iconUrl)));
+}
+
 function getGroup(groups: TaxonomyGroup[], key: string): TaxonomyGroup | null {
   return groups.find((group) => group.key === key) ?? null;
 }
@@ -206,6 +227,30 @@ function toCapacityStats(capacities: CapacityItem[]): StatDef[] {
     value: item.value,
     label: item.label,
   }));
+}
+
+function getWrappedIndex(index: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+
+  return ((index % total) + total) % total;
+}
+
+function getMediaWindow(media: MediaItem[], activeIndex: number, count: number) {
+  if (media.length <= 1) {
+    return [];
+  }
+
+  const items: Array<{ item: MediaItem; index: number }> = [];
+  const total = media.length;
+
+  for (let offset = 1; offset < total && items.length < count; offset += 1) {
+    const index = getWrappedIndex(activeIndex + offset, total);
+    items.push({ item: media[index], index });
+  }
+
+  return items;
 }
 
 function toItineraryStats(itinerary: ItinerarySummary | null): StatDef[] {
@@ -328,22 +373,86 @@ function StatStrip({ stats }: { stats: StatDef[] }) {
 function HeroBlock({
   data,
   preview,
+  activeIndex,
+  onChange,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
+  activeIndex: number;
+  onChange: (index: number) => void;
 }) {
-  const mainMedia = preview.media[0] ?? null;
+  const totalMedia = preview.media.length;
+  const mainMedia = totalMedia > 0 ? preview.media[getWrappedIndex(activeIndex, totalMedia)] : null;
+  const indicatorCount = Math.min(totalMedia, 3);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const goToPrevious = () => {
+    if (totalMedia <= 1) {
+      return;
+    }
+    onChange(getWrappedIndex(activeIndex - 1, totalMedia));
+  };
+
+  const goToNext = () => {
+    if (totalMedia <= 1) {
+      return;
+    }
+    onChange(getWrappedIndex(activeIndex + 1, totalMedia));
+  };
 
   return (
-    <section className={`detail-hero${mainMedia ? '' : ' detail-hero--placeholder'}`}>
-      {mainMedia?.url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.title || data.name} />
-      ) : (
-        <div className="detail-hero__placeholder-art" aria-hidden="true" />
-      )}
-      <div className="detail-hero__veil" aria-hidden="true" />
+    <section className={`detail-hero${mainMedia ? '' : ' detail-hero--placeholder'}${totalMedia > 1 ? ' detail-hero--carousel' : ''}`}>
       <h1 className="sr-only">{data.name}</h1>
+      <div
+        className="detail-hero__frame"
+        onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
+        onTouchEnd={(event) => {
+          const endX = event.changedTouches[0]?.clientX ?? null;
+          if (touchStartX == null || endX == null) {
+            return;
+          }
+
+          const delta = endX - touchStartX;
+          setTouchStartX(null);
+
+          if (Math.abs(delta) < 40) {
+            return;
+          }
+
+          if (delta > 0) {
+            goToPrevious();
+            return;
+          }
+
+          goToNext();
+        }}
+      >
+        {mainMedia?.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.title || data.name} />
+        ) : (
+          <div className="detail-hero__placeholder-art" aria-hidden="true" />
+        )}
+        <div className="detail-hero__veil" aria-hidden="true" />
+        {totalMedia > 1 && (
+          <>
+            <button type="button" className="detail-hero__nav detail-hero__nav--prev" onClick={goToPrevious} aria-label="Image precedente">
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" className="detail-hero__nav detail-hero__nav--next" onClick={goToNext} aria-label="Image suivante">
+              <ChevronRight size={18} />
+            </button>
+            <div className="detail-hero__dots" aria-hidden="true">
+              {Array.from({ length: indicatorCount }, (_, index) => (
+                <span
+                  key={`dot-${index}`}
+                  className={`detail-hero__dot${index === activeIndex % indicatorCount ? ' detail-hero__dot--active' : ''}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       <div className="detail-hero__footer">
         {!mainMedia && (
           <p className="detail-hero__placeholder-copy">
@@ -354,6 +463,47 @@ function HeroBlock({
           {preview.media.length > 1 && <span className="detail-hero__meta-pill">{preview.media.length} medias</span>}
           {mainMedia?.credit && <p className="detail-hero__credit">Photo {mainMedia.credit}</p>}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function MediaRail({
+  preview,
+  activeIndex,
+  onSelect,
+}: {
+  preview: PreviewData;
+  activeIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const items = getMediaWindow(preview.media, activeIndex, 5);
+
+  if (!items.length) {
+    return null;
+  }
+
+  return (
+    <section className="detail-media-rail panel-card panel-card--nested detail-section--aside">
+      <div className="detail-media-rail__grid">
+        {items.map(({ item, index }, railIndex) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`detail-media-thumb detail-media-thumb--${railIndex === 0 ? 'featured' : 'regular'}`}
+            onClick={() => onSelect(index)}
+            aria-label={`Voir le media ${index + 1}`}
+          >
+            {item.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.url} alt={item.title || 'Media secondaire'} className="detail-media-thumb__image" />
+            ) : (
+              <div className="detail-media-thumb__placeholder" aria-hidden="true" />
+            )}
+            <span className="detail-media-thumb__veil" aria-hidden="true" />
+            <span className="detail-media-thumb__label">{item.title || 'Media'}</span>
+          </button>
+        ))}
       </div>
     </section>
   );
@@ -517,20 +667,57 @@ function CapacitySection({
   );
 }
 
-function AmenitiesSection({ amenities }: { amenities: string[] }) {
+function AmenitiesSection({ amenities }: { amenities: ParsedAmenityItem[] }) {
+  const [expanded, setExpanded] = useState(false);
   if (!amenities.length) {
     return null;
   }
 
+  const sortedAmenities = sortAmenities(amenities);
+  const featuredAmenities = sortedAmenities.filter((item) => item.iconUrl);
+  const plainAmenities = sortedAmenities.filter((item) => !item.iconUrl);
+  const previewFeatured = featuredAmenities.slice(0, 3);
+  const previewPlain = previewFeatured.length < 3 ? plainAmenities.slice(0, 3 - previewFeatured.length) : [];
+  const visibleFeatured = expanded ? featuredAmenities : previewFeatured;
+  const visiblePlain = expanded ? plainAmenities : previewPlain;
+  const showToggle = sortedAmenities.length > 3;
+
   return (
     <Section title="Equipements">
-      <div className="detail-feature-grid">
-        {amenities.map((amenity) => (
-          <div key={amenity} className="detail-feature-card">
-            <span className="detail-feature-card__dot" aria-hidden="true" />
-            <strong>{amenity}</strong>
+      <div className="detail-amenities">
+        {visibleFeatured.length > 0 && (
+          <div className="detail-feature-grid">
+            {visibleFeatured.map((amenity) => (
+              <div key={amenity.id} className="detail-feature-card">
+                <span className="detail-feature-card__icon" aria-hidden="true">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={amenity.iconUrl} alt="" />
+                </span>
+                <strong>{amenity.label}</strong>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        {visiblePlain.length > 0 && (
+          <div className="detail-chip-strip detail-chip-strip--compact">
+            {visiblePlain.map((amenity) => (
+              <span key={amenity.id} className="detail-chip detail-chip--soft detail-chip--equipment">
+                {amenity.label}
+              </span>
+            ))}
+          </div>
+        )}
+        {showToggle && (
+          <button
+            type="button"
+            className="detail-expand-button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+          >
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {expanded ? 'Voir moins' : 'Voir tous les equipements'}
+          </button>
+        )}
       </div>
     </Section>
   );
@@ -687,36 +874,6 @@ function PricingAndOpeningsSection({
   );
 }
 
-function GallerySection({ media }: { media: MediaItem[] }) {
-  const secondary = media.slice(1, 5);
-
-  if (!secondary.length) {
-    return null;
-  }
-
-  return (
-    <Section title="En images">
-      <div className="detail-gallery">
-        {secondary.map((item) => (
-          <figure key={item.id} className="detail-gallery__item">
-            {item.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.url} alt={item.title || 'Media secondaire'} className="detail-gallery__image" />
-            ) : (
-              <div className="detail-gallery__placeholder" />
-            )}
-            <figcaption className="detail-gallery__caption">
-              <strong>{item.title || 'Media'}</strong>
-              {item.tags.length > 0 && <span>{item.tags.join(' · ')}</span>}
-              {item.credit && <small>Photo {item.credit}</small>}
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
 function PracticalSection({ facts }: { facts: PracticalFact[] }) {
   if (!facts.length) {
     return null;
@@ -754,9 +911,11 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
   return (
     <Section title="Contact" aside>
       <div className="detail-contact-list">
-        {contacts.slice(0, 8).map((contact) => (
-          <ContactCard key={contact.id} contact={contact} />
-        ))}
+        <div className="detail-contact-card detail-contact-card--deck">
+          {contacts.slice(0, 6).map((contact) => (
+            <ContactCard key={contact.id} contact={contact} />
+          ))}
+        </div>
       </div>
     </Section>
   );
@@ -767,24 +926,21 @@ function ContactCard({ contact }: { contact: ContactItem }) {
   const content = (
     <>
       <span className="detail-contact-card__icon" aria-hidden="true">
-        <Icon size={18} />
+        {contact.iconUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={contact.iconUrl} alt="" className="detail-contact-card__icon-image" />
+        ) : (
+          <Icon size={18} />
+        )}
       </span>
-      <div className="detail-contact-card__content">
-        <strong>{contact.label}</strong>
-        <span>
-          {[contact.kind, contact.isPrimary ? 'Principal' : '']
-            .filter(Boolean)
-            .join(' · ')}
-        </span>
-        <small>{contact.value}</small>
-      </div>
+      <span className="detail-contact-card__value">{contact.value}</span>
     </>
   );
 
   if (contact.href) {
     return (
       <a
-        className="detail-contact-card detail-contact-card--link"
+        className="detail-contact-row detail-contact-row--link"
         href={contact.href}
         target={contact.href.startsWith('http') ? '_blank' : undefined}
         rel={contact.href.startsWith('http') ? 'noreferrer' : undefined}
@@ -794,7 +950,7 @@ function ContactCard({ contact }: { contact: ContactItem }) {
     );
   }
 
-  return <div className="detail-contact-card">{content}</div>;
+  return <div className="detail-contact-row">{content}</div>;
 }
 
 function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
@@ -950,14 +1106,25 @@ function DetailScaffold({
   mainSections: ReactNode[];
   asideSections: ReactNode[];
 }) {
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveMediaIndex(0);
+  }, [data.id, preview.media.length]);
+
+  const mediaRail = MediaRail({
+    preview,
+    activeIndex: activeMediaIndex,
+    onSelect: setActiveMediaIndex,
+  });
   const visibleMain = mainSections.filter(Boolean);
-  const visibleAside = asideSections.filter(Boolean);
+  const visibleAside = [mediaRail, ...asideSections].filter(Boolean);
 
   return (
     <div className="object-detail-view">
-      <HeroBlock data={data} preview={preview} />
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
+          <HeroBlock data={data} preview={preview} activeIndex={activeMediaIndex} onChange={setActiveMediaIndex} />
           {visibleMain.map((section, index) => (
             <Fragment key={`main-${index}`}>{section}</Fragment>
           ))}
@@ -993,7 +1160,6 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
         RoomList({ rooms: preview.roomTypes }),
         MeetingRoomList({ rooms: preview.meetingRooms }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1017,7 +1183,6 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1041,7 +1206,6 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
         TaxonomySection({ groups: taxonomyGroups }),
         ItineraryPracticalSection({ itinerary: preview.itinerary }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1065,7 +1229,6 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1089,7 +1252,6 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1113,7 +1275,6 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -1136,7 +1297,6 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
         CapacitySection({ capacities: preview.capacities }),
         AmenitiesSection({ amenities: preview.amenities }),
         PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        GallerySection({ media: preview.media }),
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />

@@ -80,7 +80,13 @@ describe('ObjectDetailView', () => {
         ],
         payment_methods: [{ id: 'pay-1', name: 'CB' }, { id: 'pay-2', name: 'Cheque vacances' }],
         languages: [{ id: 'lang-1', name: 'Francais' }, { id: 'lang-2', name: 'Anglais' }],
-        amenities: [{ amenity: { name: 'Piscine chauffee' } }, { amenity: { name: 'Spa' } }],
+        amenities: [
+          { amenity: { id: 'amenity-1', name: 'Piscine chauffee', icon_url: 'https://example.com/icons/pool.svg' } },
+          { amenity: { id: 'amenity-2', name: 'Spa', icon_url: 'https://example.com/icons/spa.svg' } },
+          { amenity: { id: 'amenity-3', name: 'Balcon' } },
+          { amenity: { id: 'amenity-4', name: 'Wifi' } },
+          { amenity: { id: 'amenity-5', name: 'Parking' } },
+        ],
         capacity: [{ code: { name: 'Personnes' }, value: 120 }],
         room_types: [
           { id: 'room-1', name: 'Suite ocean', capacity_adults: 4, beds: '2 queen', quantity: 6, amenities: ['Balcon'] },
@@ -176,6 +182,16 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('120')).toBeInTheDocument();
     expect(screen.getByText('Equipements')).toBeInTheDocument();
     expect(screen.getByText('Piscine chauffee')).toBeInTheDocument();
+    expect(screen.getAllByText('Spa').length).toBeGreaterThan(0);
+    expect(screen.getByText('Balcon')).toBeInTheDocument();
+    expect(screen.queryByText('Wifi')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /voir tous les equipements/i }));
+    expect(screen.getByText('Wifi')).toBeInTheDocument();
+    expect(screen.getByText('Parking')).toBeInTheDocument();
+    expect(screen.queryByText('Telephone')).not.toBeInTheDocument();
+    expect(screen.queryByText('Email')).not.toBeInTheDocument();
+    expect(screen.getByText('+262 262 10 10 10')).toBeInTheDocument();
+    expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
     expect(screen.getByText('Tarifs et horaires')).toBeInTheDocument();
@@ -187,7 +203,12 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Reseau')).toBeInTheDocument();
     expect(screen.getByText('Office Sud Premium')).toBeInTheDocument();
     expect(screen.getByText('Navette lagon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /image suivante/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /voir le media 2/i })).toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /image suivante/i }));
+    expect(screen.queryByText(/Photo Studio Ocean/)).not.toBeInTheDocument();
+    expect(screen.queryByText('En images')).not.toBeInTheDocument();
   });
 
   it('keeps the placeholder elegant and hides actors for an unauthorized user', () => {

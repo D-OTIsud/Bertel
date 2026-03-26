@@ -14,7 +14,7 @@ WHERE m.extra->>'import_batch_id' = :'batch_id'
 -- 2. Aucune ligne pending restante après réconciliation
 -- Attendu : aucune ligne avec resolution_status = 'pending'
 SELECT resolution_status, COUNT(*) AS nb
-FROM staging.media_temp
+FROM staging.media_galerie_lot1_temp
 WHERE import_batch_id = :'batch_id'
 GROUP BY 1
 ORDER BY 1;
@@ -22,7 +22,7 @@ ORDER BY 1;
 -- 3. Distribution des motifs de rejet
 -- Informationnel — vérifie que les raisons sont uniquement 'no_object_resolved' ou 'missing_or_invalid_url'
 SELECT extra->>'rejection_reason' AS rejection_reason, COUNT(*) AS nb
-FROM staging.media_temp
+FROM staging.media_galerie_lot1_temp
 WHERE import_batch_id   = :'batch_id'
   AND resolution_status = 'rejected'
 GROUP BY 1
@@ -32,7 +32,7 @@ ORDER BY 2 DESC;
 -- Attendu : staging_approved = promus_avec_batch_id
 SELECT
     (SELECT COUNT(*)
-     FROM staging.media_temp
+     FROM staging.media_galerie_lot1_temp
      WHERE import_batch_id   = :'batch_id'
        AND resolution_status = 'approved'
        AND is_approved        = TRUE)                      AS staging_approved,

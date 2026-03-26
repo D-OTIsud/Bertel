@@ -22,7 +22,7 @@ BEGIN
     RAISE NOTICE 'Media réconciliation — batch: %, org: %', v_batch_id, v_org_id;
 
     -- Étape 1 : initialiser extra depuis raw_source_data (img_id + formulaire legacy)
-    UPDATE staging.media_temp
+    UPDATE staging.media_galerie_lot1_temp
     SET extra = COALESCE(extra, '{}'::jsonb) || jsonb_build_object(
                     'legacy_img_id',    raw_source_data->>'Img_id',
                     'legacy_formulaire', raw_source_data->>'formulaire'
@@ -33,8 +33,7 @@ BEGIN
     RAISE NOTICE '  Étape 1 (init extra) : % lignes', n;
 
     -- Étape 2 : rejeter les lignes sans URL valide dès maintenant
-    -- (ne sert à rien de réconcilier un objet si l'URL est absente)
-    UPDATE staging.media_temp
+    UPDATE staging.media_galerie_lot1_temp
     SET resolution_status = 'rejected',
         extra             = COALESCE(extra, '{}'::jsonb)
                          || jsonb_build_object('rejection_reason', 'missing_or_invalid_url')
@@ -45,7 +44,7 @@ BEGIN
     RAISE NOTICE '  Étape 2 (rejected invalid url) : % lignes', n;
 
     -- Étape 3 : legacy_formulaire → object.id via object_external_id (scope OTI)
-    UPDATE staging.media_temp t
+    UPDATE staging.media_galerie_lot1_temp t
     SET object_id = oei.object_id
     FROM object_external_id oei
     WHERE oei.organization_object_id = v_org_id
@@ -57,15 +56,12 @@ BEGIN
     RAISE NOTICE '  Étape 3 (object_id) : % lignes résolues', n;
 
     -- Étape 4 : résolution is_main_resolved — Option A
-    -- Parmi les lignes main_pic_source=TRUE d'un même (batch, legacy_formulaire),
-    -- seule la ligne avec le MIN(legacy_img_id) conserve is_main_resolved=TRUE.
-    -- Toutes les autres restent FALSE (valeur par défaut).
-    UPDATE staging.media_temp t
+    UPDATE staging.media_galerie_lot1_temp t
     SET is_main_resolved = TRUE
     FROM (
         SELECT DISTINCT ON (import_batch_id, legacy_formulaire)
                import_media_id
-        FROM   staging.media_temp
+        FROM   staging.media_galerie_lot1_temp
         WHERE  import_batch_id   = v_batch_id
           AND  resolution_status = 'pending'
           AND  main_pic_source   = TRUE
@@ -76,8 +72,8 @@ BEGIN
     GET DIAGNOSTICS n = ROW_COUNT;
     RAISE NOTICE '  Étape 4 (is_main_resolved=TRUE) : % lignes', n;
 
-    -- Étape 5 : approuver — object résolu + URL présente
-    UPDATE staging.media_temp
+    -- Étape 5 : approuver
+    UPDATE staging.media_galerie_lot1_temp
     SET resolution_status = 'approved',
         is_approved       = TRUE
     WHERE import_batch_id   = v_batch_id
@@ -88,7 +84,7 @@ BEGIN
     RAISE NOTICE '  Étape 5 (approved) : % lignes', n;
 
     -- Étape 6 : rejeter — object non résolu
-    UPDATE staging.media_temp
+    UPDATE staging.media_galerie_lot1_temp
     SET resolution_status = 'rejected',
         extra             = COALESCE(extra, '{}'::jsonb)
                          || jsonb_build_object('rejection_reason', 'no_object_resolved')

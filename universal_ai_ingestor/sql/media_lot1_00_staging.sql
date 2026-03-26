@@ -5,7 +5,7 @@
 --              staging.crm_comment_temp.
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS staging.media_temp (
+CREATE TABLE IF NOT EXISTS staging.media_galerie_lot1_temp (
     import_media_id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
     import_batch_id                TEXT        NOT NULL
                                                REFERENCES staging.import_batches(batch_id)
@@ -36,16 +36,16 @@ CREATE TABLE IF NOT EXISTS staging.media_temp (
     updated_at                     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_media_temp_batch
-    ON staging.media_temp (import_batch_id);
+CREATE INDEX IF NOT EXISTS idx_media_galerie_lot1_temp_batch
+    ON staging.media_galerie_lot1_temp (import_batch_id);
 
-CREATE INDEX IF NOT EXISTS idx_media_temp_resolution
-    ON staging.media_temp (import_batch_id, resolution_status);
+CREATE INDEX IF NOT EXISTS idx_media_galerie_lot1_temp_resolution
+    ON staging.media_galerie_lot1_temp (import_batch_id, resolution_status);
 
-CREATE INDEX IF NOT EXISTS idx_media_temp_formulaire
-    ON staging.media_temp (import_batch_id, legacy_formulaire);
+CREATE INDEX IF NOT EXISTS idx_media_galerie_lot1_temp_formulaire
+    ON staging.media_galerie_lot1_temp (import_batch_id, legacy_formulaire);
 
-DROP TRIGGER IF EXISTS trg_media_temp_updated_at ON staging.media_temp;
-CREATE TRIGGER trg_media_temp_updated_at
-    BEFORE UPDATE ON staging.media_temp
+DROP TRIGGER IF EXISTS trg_media_galerie_lot1_temp_updated_at ON staging.media_galerie_lot1_temp;
+CREATE TRIGGER trg_media_galerie_lot1_temp_updated_at
+    BEFORE UPDATE ON staging.media_galerie_lot1_temp
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

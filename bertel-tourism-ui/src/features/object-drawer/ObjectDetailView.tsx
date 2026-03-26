@@ -1227,20 +1227,12 @@ function TeamNotesSection({
                   {showAllNotes ? 'Voir moins' : `Voir plus (${hiddenNoteCount})`}
                 </button>
               ) : <span />}
-              <button
-                type="button"
-                className="detail-team-notes__utility"
-                onClick={handleExport}
-              >
-                <Download size={14} />
-                Export CSV
-              </button>
             </div>
             <div className="detail-team-notes__list">
               {displayedNotes.map((note) => (
               <article
                 key={`${note.id}-${note.createdAt}`}
-                className={`detail-team-note${note.isArchived ? ' detail-team-note--archived' : ''}`}
+                className={`detail-team-note${note.isArchived ? ' detail-team-note--archived' : ''}${openMenuNoteId === note.id ? ' detail-team-note--menu-open' : ''}`}
               >
                 <div className="detail-team-note__row" title={getNoteTooltip(note)}>
                   <span
@@ -1462,14 +1454,39 @@ function TeamNotesSection({
               </div>
             </div>
           ) : canWriteNotes ? (
-            <button
-              type="button"
-              className="detail-team-notes__button detail-team-notes__button--inline"
-              onClick={() => setComposerOpen(true)}
-            >
-              <Plus size={16} />
-              Ajouter une note
-            </button>
+            <div className="detail-team-notes__footer">
+              <button
+                type="button"
+                className="detail-team-notes__button detail-team-notes__button--inline"
+                onClick={() => setComposerOpen(true)}
+              >
+                <Plus size={16} />
+                Ajouter une note
+              </button>
+              {hasContent && (
+                <button
+                  type="button"
+                  className="detail-team-notes__utility detail-team-notes__utility--icon"
+                  onClick={handleExport}
+                  aria-label="Exporter les notes"
+                  title="Exporter les notes"
+                >
+                  <Download size={15} />
+                </button>
+              )}
+            </div>
+          ) : hasContent ? (
+            <div className="detail-team-notes__footer detail-team-notes__footer--end">
+              <button
+                type="button"
+                className="detail-team-notes__utility detail-team-notes__utility--icon"
+                onClick={handleExport}
+                aria-label="Exporter les notes"
+                title="Exporter les notes"
+              >
+                <Download size={15} />
+              </button>
+            </div>
           ) : null}
         </div>
       </div>

@@ -17,8 +17,9 @@ import { ObjectMicePanel } from './ObjectMicePanel';
 import { ObjectOpeningsPanel } from './ObjectOpeningsPanel';
 import { ObjectPricingPanel } from './ObjectPricingPanel';
 import { ObjectRoomsPanel } from './ObjectRoomsPanel';
+import { parseObjectDetail } from '../../services/object-detail-parser';
 import { getSectionsForType, DEFAULT_SECTION } from './object-drawer-sections';
-import { readObjectRecord, readString } from './utils';
+import { readObjectRecord } from './utils';
 import { Button } from '@/components/ui/button';
 
 interface ObjectDrawerShellProps {
@@ -72,9 +73,10 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       return;
     }
 
+    const parsed = parseObjectDetail((data.raw ?? {}) as Record<string, unknown>);
     initializeDraft(objectId, {
       name: data.name,
-      description: readString((data.raw as Record<string, unknown> | undefined)?.description),
+      description: parsed.text.description,
     });
   }, [data, initializeDraft, objectId]);
 
@@ -92,6 +94,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   }
 
   const raw = readObjectRecord(data, objectId);
+  const parsed = parseObjectDetail(raw);
   const name = draft?.name ?? '';
   const description = draft?.description ?? '';
   const isDirty = draft?.dirty ?? false;
@@ -99,7 +102,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const nameLock = lockedFields.name;
   const descriptionBlocked = Boolean(descriptionLock && descriptionLock.userId !== me.userId);
   const nameBlocked = Boolean(nameLock && nameLock.userId !== me.userId);
-  const address = readString((raw.location as { address?: string } | undefined)?.address);
+  const address = parsed.location?.address || parsed.location?.label || '';
   const title = data?.id === objectId ? data.name : objectId;
   const typeLabel = data?.type ? DRAWER_TYPE_LABELS[(data.type ?? '').toUpperCase()] ?? data.type : '';
   const eyebrow = mode === 'edit' ? 'Edition collaborative' : typeLabel;

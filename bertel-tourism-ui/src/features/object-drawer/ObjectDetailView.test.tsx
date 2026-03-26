@@ -33,10 +33,12 @@ describe('ObjectDetailView', () => {
       name: 'Hotel Horizon Basalte',
       type: 'HOT',
       raw: {
-        descriptions: {
-          description: 'Grand hotel panoramique avec spa, restauration et espaces evenementiels.',
-          description_chapo: 'Version courte de la presentation.',
-        },
+        descriptions: [
+          {
+            description: 'Grand hotel panoramique avec spa, restauration et espaces evenementiels.',
+            description_chapo: 'Version courte de la presentation.',
+          },
+        ],
         address: {
           address1: '12 promenade du lagon',
           city: 'Saint-Pierre',
@@ -66,6 +68,13 @@ describe('ObjectDetailView', () => {
         labels: [{ id: 'label-1', name: 'Label prestige' }],
         badges: [{ id: 'badge-1', name: 'Signature' }],
         classifications: [{ id: 'class-1', scheme: 'gites_epics', value: '3' }],
+        sustainability_labels: [
+          {
+            value_id: 's-label-1',
+            scheme_name: 'Clef Verte',
+            value_name: 'Obtenu',
+          },
+        ],
         sustainability_action_labels: [
           { label: { value_name: 'Clef verte', scheme_name: 'Eco' }, action: { name: 'Gestion eau' } },
         ],
@@ -80,12 +89,44 @@ describe('ObjectDetailView', () => {
           { id: 'meeting-1', name: 'Salle Basalte', capacity_theatre: 80, capacity_classroom: 32, area_m2: 110, equipment: ['Projecteur'] },
         ],
         prices: [{ label: 'Suite ocean', amount: 240, currency: 'EUR', period_label: 'Haute saison' }],
-        openings: [{ label: 'Toute l annee', slots: ['07:00 -> 22:00'], weekdays: ['Lundi', 'Mardi'] }],
-        contacts: [
-          { id: 'contact-1', label: 'Reservations', kind: 'email', value: 'resa@horizon.re', is_primary: true },
-          { id: 'contact-2', label: 'Site officiel', kind_code: 'website', value: 'horizon.re' },
+        opening_times: {
+          periods_current: [
+            {
+              label: 'Toute l annee',
+              date_start: '2026-01-01',
+              date_end: '2026-12-31',
+              weekday_slots: {
+                monday: [{ start: '07:00', end: '22:00' }],
+                tuesday: [{ start: '07:00', end: '22:00' }],
+              },
+            },
+          ],
+        },
+        contacts: [],
+        actors: [{
+          id: 'actor-1',
+          name: 'Marie Horizon',
+          role: 'Direction',
+          visibility: 'public',
+          contacts: [
+            { id: 'actor-contact-1', kind: { code: 'email', name: 'Email' }, value: 'resa@horizon.re', is_primary: true },
+            { id: 'actor-contact-2', kind: { code: 'phone', name: 'Telephone' }, value: '+262 262 10 10 10' },
+          ],
+        }],
+        outgoing_relations: [
+          {
+            id: 'relation-1',
+            relation_type: { name: 'A proximite' },
+            target: { id: 'poi-1', name: 'Plage centrale', type: 'PNA' },
+          },
         ],
-        actors: [{ id: 'actor-1', name: 'Marie Horizon', role: 'Direction' }],
+        incoming_relations: [
+          {
+            id: 'relation-2',
+            relation_type: { name: 'Dessert' },
+            source: { id: 'srv-1', name: 'Navette lagon', type: 'SRV' },
+          },
+        ],
         organizations: [
           {
             id: 'org-1',
@@ -116,6 +157,7 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).toBeInTheDocument();
     expect(screen.getByText('Reperes')).toBeInTheDocument();
     expect(screen.getAllByText('Gites de France · 3 epis').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Clef Verte · Obtenu').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ouvrir dans google maps/i })).toHaveAttribute(
@@ -131,10 +173,12 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
     expect(screen.getByText('Tarifs et horaires')).toBeInTheDocument();
+    expect(screen.getAllByText(/07:00/).length).toBeGreaterThan(0);
     expect(screen.getByText('Contacter ce lieu')).toBeInTheDocument();
     expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
     expect(screen.getByText('Organisation')).toBeInTheDocument();
     expect(screen.getByText('Marie Horizon')).toBeInTheDocument();
+    expect(screen.getByText('Navette lagon')).toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();
   });
 

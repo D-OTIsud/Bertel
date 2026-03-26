@@ -1,13 +1,14 @@
-import { parseActors, parseContacts, parseOrganizations } from './utils';
+import { parseObjectDetail } from '../../services/object-detail-parser';
 
 interface ObjectContactsPanelProps {
   raw: Record<string, unknown>;
 }
 
 export function ObjectContactsPanel({ raw }: ObjectContactsPanelProps) {
-  const contacts = parseContacts(raw);
-  const actors = parseActors(raw);
-  const organizations = parseOrganizations(raw);
+  const parsed = parseObjectDetail(raw);
+  const contacts = parsed.contacts.public;
+  const actors = parsed.relations.actors;
+  const organizations = parsed.relations.organizations;
 
   return (
     <div className="drawer-grid drawer-grid--stacked">

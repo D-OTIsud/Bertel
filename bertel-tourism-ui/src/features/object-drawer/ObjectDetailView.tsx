@@ -18,7 +18,7 @@ import {
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getMarkerImageId } from '../../config/map-markers';
-import { useAddObjectPrivateNoteMutation } from '../../hooks/useExplorerQueries';
+import { useAddObjectPrivateNoteMutation, useObjectPrivateNoteWriteAccessQuery } from '../../hooks/useExplorerQueries';
 import { env } from '../../lib/env';
 import {
   type DescriptionEntry,
@@ -245,22 +245,6 @@ function getWrappedIndex(index: number, total: number): number {
   }
 
   return ((index % total) + total) % total;
-}
-
-function getMediaWindow(media: MediaItem[], activeIndex: number, count: number) {
-  if (media.length <= 1) {
-    return [];
-  }
-
-  const items: Array<{ item: MediaItem; index: number }> = [];
-  const total = media.length;
-
-  for (let offset = 1; offset < total && items.length < count; offset += 1) {
-    const index = getWrappedIndex(activeIndex + offset, total);
-    items.push({ item: media[index], index });
-  }
-
-  return items;
 }
 
 function toItineraryStats(itinerary: ItinerarySummary | null): StatDef[] {
@@ -567,51 +551,6 @@ function HeroBlock({
   );
 }
 
-function MediaRail({
-  preview,
-  activeIndex,
-  onSelect,
-  onOpenGallery,
-}: {
-  preview: PreviewData;
-  activeIndex: number;
-  onSelect: (index: number) => void;
-  onOpenGallery: (index: number) => void;
-}) {
-  const items = getMediaWindow(preview.media, activeIndex, 6);
-
-  if (!items.length) {
-    return null;
-  }
-
-  return (
-    <section className="detail-media-rail panel-card panel-card--nested detail-section--aside">
-      <div className="detail-media-rail__grid">
-        {items.map(({ item, index }) => (
-          <button
-            key={item.id}
-            type="button"
-            className="detail-media-thumb"
-            onClick={() => {
-              onSelect(index);
-              onOpenGallery(index);
-            }}
-            aria-label={`Voir le media ${index + 1}`}
-          >
-            {item.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.url} alt={item.title || 'Media secondaire'} className="detail-media-thumb__image" />
-            ) : (
-              <div className="detail-media-thumb__placeholder" aria-hidden="true" />
-            )}
-            <span className="detail-media-thumb__veil" aria-hidden="true" />
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function GalleryLightbox({
   data,
   media,
@@ -798,6 +737,7 @@ function TeamNotesSection({
   visible: boolean;
 }) {
   const addNoteMutation = useAddObjectPrivateNoteMutation(objectId);
+  const writeAccessQuery = useObjectPrivateNoteWriteAccessQuery(objectId);
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -835,6 +775,8 @@ function TeamNotesSection({
   }, [createdNotes, fallbackNote, notes]);
 
   const hasContent = mergedNotes.length > 0;
+  const canWriteNotes = writeAccessQuery.data === true;
+  const noteAccessKnown = writeAccessQuery.isSuccess || writeAccessQuery.isError;
 
   if (!visible) {
     return null;
@@ -903,7 +845,7 @@ function TeamNotesSection({
         )}
 
         <div className="detail-team-notes__composer">
-          {composerOpen ? (
+          {composerOpen && canWriteNotes ? (
             <div className="detail-team-notes__editor">
               <textarea
                 className="detail-team-notes__input"
@@ -945,7 +887,7 @@ function TeamNotesSection({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : canWriteNotes ? (
             <button
               type="button"
               className="detail-team-notes__button detail-team-notes__button--inline"
@@ -954,6 +896,12 @@ function TeamNotesSection({
               <Plus size={16} />
               Ajouter une note
             </button>
+          ) : noteAccessKnown ? (
+            <p className="detail-team-notes__hint">
+              L'ajout de note est reserve au proprietaire principal de cette fiche.
+            </p>
+          ) : (
+            <span className="detail-team-notes__hint">Verification des droits d'ajout...</span>
           )}
         </div>
       </div>
@@ -1492,8 +1440,8 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
 
 function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSeeActors: boolean): ReactNode[] {
   return [
-    ContactSection({ contacts: preview.contacts }),
     LocationMapSection({ preview }),
+    ContactSection({ contacts: preview.contacts }),
     PracticalSection({ facts }),
     RelatedObjectsSection({ items: preview.relatedObjects }),
     TeamSection({ actors: canSeeActors ? preview.actors : [] }),
@@ -1520,17 +1468,8 @@ function DetailScaffold({
     setLightboxOpen(false);
   }, [data.id, preview.media.length]);
 
-  const mediaRail = MediaRail({
-    preview,
-    activeIndex: activeMediaIndex,
-    onSelect: setActiveMediaIndex,
-    onOpenGallery: (index) => {
-      setActiveMediaIndex(index);
-      setLightboxOpen(true);
-    },
-  });
   const visibleMain = mainSections.filter(Boolean);
-  const visibleAside = [mediaRail, ...asideSections].filter(Boolean);
+  const visibleAside = asideSections.filter(Boolean);
 
   return (
     <div className="object-detail-view">

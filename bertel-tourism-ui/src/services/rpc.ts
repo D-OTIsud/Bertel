@@ -34,6 +34,29 @@ export interface CreatedObjectPrivateNote {
   lang?: string | null;
 }
 
+export async function canWriteObjectPrivateNote(objectId: string): Promise<boolean> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    return true;
+  }
+
+  const client = getApiClient();
+  if (!client) {
+    return session.role === 'super_admin' || session.role === 'owner';
+  }
+
+  const { data, error } = await client.schema('api').rpc('is_object_owner', {
+    p_object_id: objectId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data === true;
+}
+
 function paginateMock(cards: ObjectCard[], cursor: string | null | undefined, pageSize: number): RpcPageResponse<ObjectCard> {
   const offset = cursor ? Number.parseInt(cursor, 10) : 0;
   const slice = cards.slice(offset, offset + pageSize);
@@ -225,6 +248,9 @@ export async function createObjectPrivateNote(input: {
     .single();
 
   if (error) {
+    if (error.message?.toLowerCase().includes('row-level security') || error.code === '42501') {
+      throw new Error("L'ajout de note est reserve au proprietaire principal de cette fiche.");
+    }
     throw error;
   }
 

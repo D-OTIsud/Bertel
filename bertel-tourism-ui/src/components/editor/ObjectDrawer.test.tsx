@@ -12,6 +12,11 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
     mutateAsync: jest.fn(),
     isPending: false,
   }),
+  useObjectPrivateNoteWriteAccessQuery: () => ({
+    data: true,
+    isSuccess: true,
+    isError: false,
+  }),
 }));
 
 jest.mock('../../hooks/usePresenceRoom', () => ({

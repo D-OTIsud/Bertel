@@ -38,11 +38,18 @@ describe('parseObjectDetail', () => {
           description_edition: 'Version editoriale du descriptif.',
         },
       ],
-      private_note: 'Usage interne uniquement.',
+      private_note: {
+        id: 'private-primary',
+        body: 'Usage interne uniquement.',
+        audience: 'private',
+        created_at: '2026-03-24T08:00:00.000Z',
+      },
       private_notes: [
         {
           id: 'private-1',
-          description: 'Visite de groupe sur reservation.',
+          body: 'Visite de groupe sur reservation.',
+          audience: 'private',
+          created_at: '2026-03-25T09:30:00.000Z',
         },
       ],
       places: [
@@ -333,6 +340,19 @@ describe('parseObjectDetail', () => {
     );
     expect(parsed.text.chapo).toBe('Pôle d attraction touristique, pédagogique et scientifique.');
     expect(parsed.text.adaptedDescription).toBe('Version adaptee du descriptif.');
+    expect(parsed.text.privateNote).toBe('Usage interne uniquement.');
+    expect(parsed.text.privateNotes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Usage interne uniquement.',
+          audience: 'private',
+        }),
+        expect.objectContaining({
+          description: 'Visite de groupe sur reservation.',
+          audience: 'private',
+        }),
+      ]),
+    );
     expect(parsed.text.places[0]).toMatchObject({
       name: 'Belvedere',
       locationLabel: 'Sentier volcan · Le Tampon',
@@ -439,6 +459,7 @@ describe('parseObjectDetail', () => {
     expect(parsed.internal.legalRecords).toHaveLength(1);
     expect(parsed.internal.externalIds).toHaveLength(1);
     expect(parsed.internal.origins).toHaveLength(1);
+    expect(parsed.internal.privateNotes).toHaveLength(2);
     expect(parsed.internal.transparentBlocks).toMatchObject({
       menus: [{ id: 'menu-1' }],
       cuisine_types: [{ id: 'cuisine-1', name: 'Locale' }],

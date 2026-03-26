@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
@@ -7,10 +8,26 @@ import { ObjectDetailView } from './ObjectDetailView';
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children }: { children?: ReactNode }) => <div data-testid="detail-map">{children}</div>,
   Marker: ({ children }: { children?: ReactNode }) => <div data-testid="detail-marker">{children}</div>,
+  NavigationControl: () => <div data-testid="detail-map-zoom" />,
 }));
 
 function renderDetail(data: ObjectDetail) {
-  return render(<ObjectDetailView data={data} raw={data.raw} />);
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ObjectDetailView data={data} raw={data.raw} />
+    </QueryClientProvider>,
+  );
 }
 
 describe('ObjectDetailView', () => {
@@ -37,6 +54,14 @@ describe('ObjectDetailView', () => {
           {
             description: 'Grand hotel panoramique avec spa, restauration et espaces evenementiels.',
             description_chapo: 'Version courte de la presentation.',
+          },
+        ],
+        private_notes: [
+          {
+            id: 'private-1',
+            body: 'Client VIP a prevenir avant toute fermeture exceptionnelle.',
+            created_at: '2026-03-25T09:30:00.000Z',
+            audience: 'private',
           },
         ],
         address: {
@@ -163,13 +188,18 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Version courte de la presentation.')).toBeInTheDocument();
     expect(screen.queryByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /lire la suite/i }));
+    expect(screen.getByText('Version courte de la presentation.')).toBeInTheDocument();
     expect(screen.getByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).toBeInTheDocument();
     expect(screen.getByText('Labels et engagements')).toBeInTheDocument();
     expect(screen.getByText('Label prestige')).toBeInTheDocument();
     expect(screen.getByText('Signature')).toBeInTheDocument();
     expect(screen.getAllByText('Clef Verte · Obtenu').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
+    expect(screen.getByText('Informations equipe')).toBeInTheDocument();
+    expect(screen.getByText('Client VIP a prevenir avant toute fermeture exceptionnelle.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-map-zoom')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ouvrir dans google maps/i })).toHaveAttribute(
       'href',
       expect.stringContaining('google.com/maps/search'),
@@ -203,11 +233,15 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Reseau')).toBeInTheDocument();
     expect(screen.getByText('Office Sud Premium')).toBeInTheDocument();
     expect(screen.getByText('Navette lagon')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /image suivante/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ouvrir la galerie photo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^image suivante$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /voir le media 2/i })).toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /image suivante/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^image suivante$/i }));
     expect(screen.queryByText(/Photo Studio Ocean/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /ouvrir la galerie photo/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /image suivante dans la galerie/i })).toBeInTheDocument();
     expect(screen.queryByText('En images')).not.toBeInTheDocument();
   });
 
@@ -251,6 +285,7 @@ describe('ObjectDetailView', () => {
 
     expect(screen.getByText(/Pas encore de photo principale/)).toBeInTheDocument();
     expect(screen.getByText('Maison d hotes de charme sans galerie photo complete.')).toBeInTheDocument();
+    expect(screen.queryByText('Informations equipe')).not.toBeInTheDocument();
     expect(screen.queryByText('Equipe interne')).not.toBeInTheDocument();
     expect(screen.getByText('Reseau Sud')).toBeInTheDocument();
   });

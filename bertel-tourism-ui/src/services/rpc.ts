@@ -25,6 +25,15 @@ interface ObjectResourceRpcPayload {
   [key: string]: unknown;
 }
 
+export interface CreatedObjectPrivateNote {
+  id: string;
+  body: string;
+  audience: string;
+  created_at: string;
+  updated_at: string;
+  lang?: string | null;
+}
+
 function paginateMock(cards: ObjectCard[], cursor: string | null | undefined, pageSize: number): RpcPageResponse<ObjectCard> {
   const offset = cursor ? Number.parseInt(cursor, 10) : 0;
   const slice = cards.slice(offset, offset + pageSize);
@@ -180,6 +189,46 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
 
   const payload = assertObjectPayload(data);
   return normalizeObjectDetailPayload(payload, objectId);
+}
+
+export async function createObjectPrivateNote(input: {
+  objectId: string;
+  body: string;
+}): Promise<CreatedObjectPrivateNote> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    const now = new Date().toISOString();
+    return {
+      id: `demo-private-note-${Date.now()}`,
+      body: input.body,
+      audience: 'private',
+      created_at: now,
+      updated_at: now,
+      lang: session.langPrefs[0] ?? 'fr',
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error("Connexion backend indisponible pour enregistrer la note d'equipe.");
+  }
+
+  const { data, error } = await client
+    .from('object_private_description')
+    .insert({
+      object_id: input.objectId,
+      body: input.body,
+      audience: 'private',
+    })
+    .select('id, body, audience, created_at, updated_at')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as CreatedObjectPrivateNote;
 }
 
 // TODO: wire to real backend RPC when available

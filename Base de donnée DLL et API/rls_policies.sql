@@ -736,8 +736,22 @@ CREATE POLICY "pub_descriptions_public" ON object_description
 CREATE POLICY "ext_descriptions_org_actor" ON object_description
   FOR SELECT USING (api.can_read_extended(object_id));
 
+-- Private notes: user must have extended access to the object AND the note must belong
+-- to their own org (or have no org context). This prevents cross-org note leakage —
+-- a user from ORG_B cannot see ORG_A's notes even if they have actor access to the object.
 CREATE POLICY "ext_private_descriptions_org_actor" ON object_private_description
-  FOR SELECT USING (api.can_read_extended(object_id));
+  FOR SELECT USING (
+    api.can_read_extended(object_id)
+    AND (
+      org_object_id IS NULL  -- canonical note with no org scoping
+      OR org_object_id IN (
+        SELECT uom.org_object_id
+        FROM user_org_membership uom
+        WHERE uom.user_id = auth.uid()
+          AND uom.is_active = TRUE
+      )
+    )
+  );
 
 -- Légal, réductions & politiques groupe: accès étendu uniquement
 CREATE POLICY "ext_legal_org_actor" ON object_legal
@@ -767,8 +781,21 @@ CREATE POLICY "owner_write_media" ON media
 CREATE POLICY "owner_write_description" ON object_description
   FOR ALL USING (api.is_object_owner(object_id));
 
+-- Write: user must own the object AND may only write notes scoped to their own org.
+-- Prevents a rogue insert of a note with a foreign org_object_id.
 CREATE POLICY "owner_write_private_description" ON object_private_description
-  FOR ALL USING (api.is_object_owner(object_id));
+  FOR ALL USING (
+    api.is_object_owner(object_id)
+    AND (
+      org_object_id IS NULL
+      OR org_object_id IN (
+        SELECT uom.org_object_id
+        FROM user_org_membership uom
+        WHERE uom.user_id = auth.uid()
+          AND uom.is_active = TRUE
+      )
+    )
+  );
 
 CREATE POLICY "owner_write_legal" ON object_legal
   FOR ALL USING (api.is_object_owner(object_id));

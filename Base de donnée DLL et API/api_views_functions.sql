@@ -1723,37 +1723,64 @@ BEGIN
     ), '{}'::jsonb);
   END IF;
 
-  -- Private notes (by preferred organization, optional)
+  -- Private notes (org-scoped; pinned notes surface first)
   IF v_inc_private AND v_can_read_extended THEN
-    -- Primary private note
+    -- Primary private note: most recently pinned, then most recent within the preferred org
     js := js || COALESCE((
-      SELECT jsonb_build_object('private_note', (to_jsonb(pn) - 'object_id' - 'language_id') || jsonb_build_object('lang', rl.code))
+      SELECT jsonb_build_object(
+        'private_note',
+        (to_jsonb(pn) - 'object_id' - 'language_id' - 'created_by_user_id')
+        || jsonb_build_object(
+             'lang', rl.code,
+             -- Author info for display in the UI (null-safe)
+             'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
+               'id',           up.id,
+               'display_name', up.display_name,
+               'avatar_url',   up.avatar_url
+             ) ELSE NULL END
+           )
+      )
       FROM object_private_description pn
       LEFT JOIN ref_language rl ON rl.id = pn.language_id
+      LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
       WHERE pn.object_id = obj.id
         AND pn.audience = 'private'
         AND (
           (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
           OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
         )
-      ORDER BY pn.created_at DESC, pn.id
+      -- Pinned notes take priority; within same pin status use newest first
+      ORDER BY pn.is_pinned DESC, pn.created_at DESC, pn.id
       LIMIT 1
     ), '{}'::jsonb);
 
-    -- All private notes
+    -- All private notes: org-scoped, pinned first then chronological ascending
+    -- NOTE: org filter deliberately mirrors the singular query above; the old aggregate
+    -- had no org filter and would leak notes from all orgs into the response.
     js := js || jsonb_build_object(
       'private_notes',
       COALESCE((
         SELECT jsonb_agg(
-          (to_jsonb(pn) - 'object_id' - 'language_id') || jsonb_build_object('lang', rl.code)
-               ORDER BY
-                 NULLIF((to_jsonb(pn)->>'created_at'),'')::timestamptz NULLS LAST,
-                 NULLIF((to_jsonb(pn)->>'id'),'') NULLS LAST,
-                 pn.ctid)
+          (to_jsonb(pn) - 'object_id' - 'language_id' - 'created_by_user_id')
+          || jsonb_build_object(
+               'lang', rl.code,
+               'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
+                 'id',           up.id,
+                 'display_name', up.display_name,
+                 'avatar_url',   up.avatar_url
+               ) ELSE NULL END
+             )
+          ORDER BY pn.is_pinned DESC, pn.created_at ASC, pn.id
+        )
         FROM object_private_description pn
         LEFT JOIN ref_language rl ON rl.id = pn.language_id
+        LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
         WHERE pn.object_id = obj.id
           AND pn.audience = 'private'
+          AND (
+            (v_prefer_org IS NOT NULL AND pn.org_object_id IS NOT DISTINCT FROM v_prefer_org)
+            OR (v_prefer_org IS NULL AND pn.org_object_id IS NULL)
+          )
       ), '[]'::jsonb)
     );
   END IF;

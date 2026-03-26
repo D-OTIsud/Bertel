@@ -411,6 +411,13 @@ describe('parseObjectDetail', () => {
     expect(parsed.taxonomy.sustainability.merged.map((item) => item.label)).toEqual(
       expect.arrayContaining(['Qualite Tourisme · Titulaire', 'Reduction plastique', 'Clef verte']),
     );
+    expect(parsed.taxonomy.groups.find((group) => group.key === 'sustainability')?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Qualite Tourisme · Titulaire' }),
+        expect.objectContaining({ label: 'Reduction plastique' }),
+        expect.objectContaining({ label: 'Clef verte' }),
+      ]),
+    );
 
     expect(parsed.operations.capacities).toEqual(
       expect.arrayContaining([expect.objectContaining({ label: 'Visiteurs', value: '300' })]),

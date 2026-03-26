@@ -1013,7 +1013,13 @@ function buildTaxonomy(raw: Record<string, unknown>, groups: TaxonomyGroup[], am
   );
 
   const mergedGroups = groups.slice();
-  if (sustainabilityMerged.length > 0 && !mergedGroups.some((group) => group.key === 'sustainability')) {
+  const sustainabilityGroupIndex = mergedGroups.findIndex((group) => group.key === 'sustainability');
+  if (sustainabilityMerged.length > 0 && sustainabilityGroupIndex >= 0) {
+    mergedGroups[sustainabilityGroupIndex] = {
+      ...mergedGroups[sustainabilityGroupIndex],
+      items: sustainabilityMerged,
+    };
+  } else if (sustainabilityMerged.length > 0) {
     mergedGroups.push({
       key: 'sustainability',
       title: 'Durabilite',

@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
-import { createObjectPrivateNote, getObjectResource, listExplorerCards } from '../services/rpc';
+import { canWriteObjectPrivateNote, createObjectPrivateNote, getObjectResource, listExplorerCards } from '../services/rpc';
 import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
 
 function useExplorerFilters() {
@@ -98,5 +98,18 @@ export function useAddObjectPrivateNoteMutation(objectId: string | null) {
 
       await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
     },
+  });
+}
+
+export function useObjectPrivateNoteWriteAccessQuery(objectId: string | null) {
+  const role = useSessionStore((state) => state.role);
+  const demoMode = useSessionStore((state) => state.demoMode);
+
+  return useQuery({
+    queryKey: ['object-private-note-write-access', objectId],
+    queryFn: async () => canWriteObjectPrivateNote(objectId ?? ''),
+    enabled: Boolean(objectId),
+    staleTime: 60 * 1000,
+    initialData: demoMode || role === 'super_admin' || role === 'owner' ? true : undefined,
   });
 }

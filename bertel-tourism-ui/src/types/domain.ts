@@ -12,6 +12,7 @@ export type BackendObjectTypeCode =
   | 'RES'
   | 'ITI'
   | 'FMA'
+  | 'ACT'
   | 'LOI'
   | 'PCU'
   | 'PNA'

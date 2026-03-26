@@ -15,6 +15,7 @@ const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   RES: 'Restaurants',
   ITI: 'Itineraires',
   FMA: 'Evenements',
+  ACT: 'Activites',
   LOI: 'Loisirs',
   PCU: 'Culture',
   PNA: 'Nature',

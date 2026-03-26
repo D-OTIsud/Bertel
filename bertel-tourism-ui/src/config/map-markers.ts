@@ -1,5 +1,5 @@
-import type { ObjectTypeCode } from '../types/domain';
-import { normalizeExplorerObjectType } from '../utils/facets';
+import type { BackendObjectTypeCode, ObjectTypeCode } from '../types/domain';
+import { EXPLORER_TYPE_CODE_FAMILIES, normalizeExplorerObjectType } from '../utils/facets';
 
 export type MarkerIconKey =
   | 'bed'
@@ -30,14 +30,14 @@ interface SanitizedSvgDefinition {
   inner: string;
 }
 
-export const objectTypeOptions: Array<{ code: ObjectTypeCode; label: string }> = [
-  { code: 'HOT', label: 'Hebergement' },
-  { code: 'RES', label: 'Restaurant' },
-  { code: 'ACT', label: 'Activite' },
-  { code: 'ITI', label: 'Itineraire' },
-  { code: 'EVT', label: 'Evenement' },
-  { code: 'VIS', label: 'Visite' },
-  { code: 'SRV', label: 'Service' },
+export const objectTypeOptions: Array<{ code: ObjectTypeCode; label: string; backendTypes: BackendObjectTypeCode[] }> = [
+  { code: 'HOT', label: 'Hebergement', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.HOT },
+  { code: 'RES', label: 'Restaurant', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.RES },
+  { code: 'ACT', label: 'Activite', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.ACT },
+  { code: 'ITI', label: 'Itineraire', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.ITI },
+  { code: 'EVT', label: 'Evenement', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.EVT },
+  { code: 'VIS', label: 'Visite', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.VIS },
+  { code: 'SRV', label: 'Service', backendTypes: EXPLORER_TYPE_CODE_FAMILIES.SRV },
 ];
 
 export const markerIconCatalog: Record<MarkerIconKey, MarkerIconDefinition> = {

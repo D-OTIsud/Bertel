@@ -46,8 +46,62 @@ const DRAWER_TYPE_LABELS: Record<string, string> = {
   COM: 'Commune',
 };
 
+function DrawerHeaderSkeleton() {
+  return (
+    <div className="drawer-loading-heading" aria-hidden="true">
+      <span className="drawer-skeleton drawer-skeleton--eyebrow" />
+      <span className="drawer-skeleton drawer-skeleton--title" />
+      <div className="drawer-header__meta drawer-header__meta--loading">
+        <span className="drawer-skeleton drawer-skeleton--chip" />
+        <span className="drawer-skeleton drawer-skeleton--chip" />
+        <span className="drawer-skeleton drawer-skeleton--chip drawer-skeleton--chip-wide" />
+      </div>
+    </div>
+  );
+}
+
+function DrawerPreviewSkeleton() {
+  return (
+    <div className="drawer-loading-preview" data-testid="drawer-loading-skeleton" aria-hidden="true">
+      <div className="drawer-loading-layout">
+        <div className="drawer-loading-main">
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--hero" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--section-lg" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--section-md" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--section-md" />
+        </div>
+        <div className="drawer-loading-aside">
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--media" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--side" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--map" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DrawerEditSkeleton() {
+  return (
+    <>
+      <section className="object-drawer-nav drawer-loading-nav" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={`nav-skeleton-${index}`} className="drawer-skeleton drawer-loading-nav__item" />
+        ))}
+      </section>
+      <section className="drawer__panel-area min-w-0 w-full flex-1">
+        <div className="drawer-loading-panel" data-testid="drawer-loading-skeleton" aria-hidden="true">
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--panel-title" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--panel-field" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--panel-field" />
+          <div className="drawer-skeleton drawer-loading-card drawer-loading-card--panel-textarea" />
+        </div>
+      </section>
+    </>
+  );
+}
+
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
-  const { data, isLoading, isError, error } = useObjectDetailQuery(objectId);
+  const { data, isError, error } = useObjectDetailQuery(objectId);
   const { peers, me, lockedFields, typingUsers, lockField, unlockField } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
     { enabled: Boolean(objectId), syncGlobalStatus: false },
@@ -103,14 +157,16 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const descriptionBlocked = Boolean(descriptionLock && descriptionLock.userId !== me.userId);
   const nameBlocked = Boolean(nameLock && nameLock.userId !== me.userId);
   const address = parsed.location?.address || parsed.location?.label || '';
-  const title = data?.id === objectId ? data.name : objectId;
-  const typeLabel = data?.type ? DRAWER_TYPE_LABELS[(data.type ?? '').toUpperCase()] ?? data.type : '';
+  const hasResolvedData = data?.id === objectId;
+  const isShellLoading = !isError && !hasResolvedData;
+  const title = hasResolvedData ? data.name : '';
+  const typeLabel = hasResolvedData && data?.type ? DRAWER_TYPE_LABELS[(data.type ?? '').toUpperCase()] ?? data.type : '';
   const eyebrow = mode === 'edit' ? 'Edition collaborative' : typeLabel;
-  const headerChips = parsed.taxonomy.groups
+  const headerChips = hasResolvedData ? parsed.taxonomy.groups
     .filter((group) => ['classifications', 'tags'].includes(group.key))
     .flatMap((group) => group.items.map((item) => item.label))
     .filter((label, index, items) => items.indexOf(label) === index)
-    .slice(0, 6);
+    .slice(0, 6) : [];
 
   // Sections allowed for this object type — drives both nav visibility and panel rendering.
   // Falls back to all sections when data is still loading or type is unrecognised.
@@ -121,20 +177,24 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
   return (
     <div key={objectId} className="drawer-shell__inner">
-      <div className="drawer-header">
-        <div>
-          {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-          <h2 className="font-display text-2xl font-semibold">{title}</h2>
-          {headerChips.length > 0 && (
-            <div className="drawer-header__meta">
-              {headerChips.map((chip) => (
-                <span key={chip} className="drawer-header__chip">
-                  {chip}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="drawer-header" aria-busy={isShellLoading}>
+        {isShellLoading ? (
+          <DrawerHeaderSkeleton />
+        ) : (
+          <div>
+            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+            <h2 className="font-display text-2xl font-semibold">{title}</h2>
+            {headerChips.length > 0 && (
+              <div className="drawer-header__meta">
+                {headerChips.map((chip) => (
+                  <span key={chip} className="drawer-header__chip">
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="drawer-header__actions">
           <StatusPill tone="neutral">{peers.length} live</StatusPill>
           <AvatarStack people={peers} />
@@ -158,16 +218,17 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         {isDirty && <div className="inline-alert">Brouillon local non sauvegarde.</div>}
         {typingUsers.length > 0 && <div className="inline-alert">{typingUsers.join(' · ')}</div>}
       </div>
-      {isLoading && <div className="panel-card panel-card--nested">Chargement de la fiche...</div>}
       {isError && <div className="panel-card panel-card--warning panel-card--nested">{(error as Error).message}</div>}
 
       <div className={`drawer__content ${mode === 'view' ? 'drawer__content--preview' : 'drawer__content--modular'}`}>
-        {mode === 'view' && data?.id === objectId && (
+        {mode === 'view' && isShellLoading && <DrawerPreviewSkeleton />}
+        {mode === 'view' && hasResolvedData && (
           <section className="drawer__preview-area">
             <ObjectDetailView data={data} raw={raw} />
           </section>
         )}
-        {mode === 'edit' && (
+        {mode === 'edit' && isShellLoading && <DrawerEditSkeleton />}
+        {mode === 'edit' && !isShellLoading && (
           <>
             <ObjectDrawerNav sections={editSections} />
             <section className="drawer__panel-area min-w-0 w-full flex-1">

@@ -1335,9 +1335,23 @@ CREATE TABLE IF NOT EXISTS object_private_description (
   body TEXT NOT NULL,
   audience TEXT NOT NULL DEFAULT 'private' CHECK (audience IN ('private','partners')),
   language_id UUID REFERENCES ref_language(id) ON DELETE SET NULL,
+  -- Authorship: which authenticated user created this note
+  created_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  -- Categorisation: general intent of the note
+  category TEXT NOT NULL DEFAULT 'general'
+    CHECK (category IN ('general','important','urgent','internal','followup')),
+  -- Pin flag: pinned notes surface at the top of the list
+  is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Idempotent column additions for object_private_description (table may already exist)
+ALTER TABLE object_private_description
+  ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general'
+    CHECK (category IN ('general','important','urgent','internal','followup')),
+  ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Liens externes (external_ids)
 CREATE TABLE IF NOT EXISTS object_external_id (
@@ -3398,6 +3412,8 @@ CREATE INDEX IF NOT EXISTS idx_object_description_i18n_gin
 ON object_description USING GIN (description_i18n jsonb_path_ops);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_private_description(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
+-- Supports pinned-first ordering within an org scope
+CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned ON object_private_description(object_id, org_object_id, is_pinned DESC, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
 CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);

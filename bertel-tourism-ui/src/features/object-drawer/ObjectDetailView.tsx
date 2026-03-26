@@ -533,6 +533,7 @@ function HeroBlock({
   const totalMedia = preview.media.length;
   const mainMedia = totalMedia > 0 ? preview.media[getWrappedIndex(activeIndex, totalMedia)] : null;
   const indicatorCount = Math.min(totalMedia, 3);
+  const galleryLabel = totalMedia > 1 ? `${totalMedia} photos` : totalMedia === 1 ? '1 photo' : '';
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [suppressOpenClick, setSuppressOpenClick] = useState(false);
 
@@ -642,6 +643,12 @@ function HeroBlock({
               ))}
             </div>
           </>
+        )}
+        {galleryLabel && (
+          <div className="detail-hero__gallery-cta" aria-hidden="true">
+            <span>{galleryLabel}</span>
+            <ChevronRight size={16} />
+          </div>
         )}
         {mainMedia?.credit && <p className="detail-hero__credit detail-hero__credit--overlay">Photo {mainMedia.credit}</p>}
       </div>

@@ -246,6 +246,7 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Office Sud Premium')).toBeInTheDocument();
     expect(screen.getByText('Navette lagon')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ouvrir la galerie photo/i })).toBeInTheDocument();
+    expect(screen.getByText('2 photos')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^image suivante$/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /voir le media 2/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();

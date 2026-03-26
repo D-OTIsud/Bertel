@@ -4927,7 +4927,7 @@ SET search_path = public, api, auth
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
   ) THEN
     RAISE EXCEPTION
       'user_org_membership.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
@@ -5109,7 +5109,7 @@ SET search_path = public, api, auth
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
   ) THEN
     RAISE EXCEPTION
       'org_config.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
@@ -5361,7 +5361,7 @@ SET search_path = public, api, auth
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM object WHERE id = NEW.org_object_id AND type = 'ORG'
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
   ) THEN
     RAISE EXCEPTION
       'org_permission.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',

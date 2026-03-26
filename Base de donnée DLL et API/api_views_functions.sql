@@ -1727,7 +1727,7 @@ BEGIN
   END IF;
 
   -- Private notes (org-scoped; pinned notes surface first)
-  IF v_inc_private AND v_can_read_extended THEN
+  IF v_inc_private AND v_user_org IS NOT NULL THEN
     -- Primary private note: pinned first, then most recent, scoped to the user's active org
     js := js || COALESCE((
       SELECT jsonb_build_object(

@@ -481,7 +481,13 @@ function formatNoteDate(value: string): string {
 }
 
 function getNoteAuthorName(note: PrivateNoteEntry): string {
-  return note.createdByName || 'Equipe';
+  const fallback = note.createdByName || 'Equipe';
+  if (!fallback.includes('@')) {
+    return fallback;
+  }
+
+  const [localPart] = fallback.split('@');
+  return localPart || fallback;
 }
 
 function getNoteAuthorInitials(note: PrivateNoteEntry): string {
@@ -1010,12 +1016,22 @@ function TeamNotesSection({
                 >
                   <div className="detail-team-note__summary">
                     <div className="detail-team-note__identity">
-                      <span className="detail-team-note__avatar" aria-hidden="true">
-                        {getNoteAuthorInitials(note)}
-                      </span>
+                      {note.createdByAvatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="detail-team-note__avatar detail-team-note__avatar--image"
+                          src={note.createdByAvatarUrl}
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span className="detail-team-note__avatar" aria-hidden="true">
+                          {getNoteAuthorInitials(note)}
+                        </span>
+                      )}
                       <div className="detail-team-note__meta">
                         <div className="detail-team-note__header">
-                          <strong>{getNoteAuthorName(note)}</strong>
+                          <strong className="detail-team-note__author">{getNoteAuthorName(note)}</strong>
                           <span
                             className={`detail-team-note__tag detail-team-note__tag--${NOTE_CATEGORY_META[note.category].tone}`}
                           >
@@ -1033,11 +1049,15 @@ function TeamNotesSection({
                               {formatNoteDate(note.createdAt)}
                             </time>
                           )}
-                          <p className="detail-team-note__excerpt">{getNoteExcerpt(note)}</p>
+                          {!expandedNotes.has(note.id) && (
+                            <p className="detail-team-note__excerpt">{getNoteExcerpt(note)}</p>
+                          )}
                         </div>
                       </div>
                     </div>
-                    {expandedNotes.has(note.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    <span className="detail-team-note__chevron" aria-hidden="true">
+                      {expandedNotes.has(note.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
                   </div>
                 </button>
                 {expandedNotes.has(note.id) && (

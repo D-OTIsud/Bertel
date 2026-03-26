@@ -245,15 +245,14 @@ AS $$
 $$;
 
 -- Retourne TRUE si l'utilisateur courant peut consulter les notes privées
--- de l'objet depuis le périmètre de son organisation active.
+-- depuis le périmètre de son organisation active.
 CREATE OR REPLACE FUNCTION api.can_read_object_private_notes(p_object_id text)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, api, auth
 AS $$
   SELECT
-    api.current_user_org_id() IS NOT NULL
-    AND api.can_read_extended(p_object_id);
+    api.current_user_org_id() IS NOT NULL;
 $$;
 
 -- Retourne TRUE si l'utilisateur courant peut écrire une note privée

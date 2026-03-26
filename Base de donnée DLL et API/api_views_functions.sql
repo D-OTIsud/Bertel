@@ -5197,9 +5197,12 @@ $$;
 -- Enhanced API function: Get object with deep parent, actor, and organization data
 -- Delegates to batch version for efficiency
 -- =====================================================
+-- Drop old 2-parameter overload (TEXT, TEXT[]) if present; replaced by 3-param version with p_options.
+DROP FUNCTION IF EXISTS api.get_object_with_deep_data(TEXT, TEXT[]);
 CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(
   p_object_id TEXT,
-  p_languages TEXT[] DEFAULT ARRAY['fr']
+  p_languages TEXT[] DEFAULT ARRAY['fr'],
+  p_options   JSONB  DEFAULT '{}'::jsonb  -- forwarded to api.get_object_resource as p_options
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -5215,13 +5218,13 @@ BEGIN
   EXECUTE $sql$
     SELECT COALESCE(
       (SELECT json_array_elements(
-         api.get_objects_with_deep_data(ARRAY[$1], $2)::json
+         api.get_objects_with_deep_data(ARRAY[$1], $2, 'none', $3)::json
       )),
       NULL
     )
   $sql$
   INTO v_result
-  USING p_object_id, p_languages;
+  USING p_object_id, p_languages, p_options;
 
   RETURN v_result;
 END;
@@ -5245,7 +5248,10 @@ AS $$
   -- Fully optimized: Single query with LATERAL joins instead of function calls per object
   SELECT COALESCE(json_agg(
     json_build_object(
-      'object', api.get_object_resource(o.id, p_languages, p_include_media, p_filters),
+      -- p_track_format is always 'none' here; media behavior flows through p_filters (p_options).
+      -- p_include_media is retained in the outer signature for backward compat but must NOT
+      -- be passed into p_track_format, which expects 'kml'/'gpx'/'none' only.
+      'object', api.get_object_resource(o.id, p_languages, 'none', p_filters),
       'parent_objects', COALESCE(parents.data, '[]'::jsonb),
       'actors', COALESCE(actors.data, '[]'::jsonb),
       'organizations', COALESCE(orgs.data, '[]'::jsonb)

@@ -3,24 +3,10 @@ import { ExternalLink, Globe, Mail, MapPinned, Navigation, Phone } from 'lucide-
 import { Map, Marker } from 'react-map-gl/maplibre';
 import { getMarkerImageId } from '../../config/map-markers';
 import { env } from '../../lib/env';
+import { parseObjectDetail, type ParsedLocation, type ParsedObjectDetail } from '../../services/object-detail-parser';
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
 import {
-  parseActors,
-  parseCapacities,
-  parseContacts,
-  parseItinerarySummary,
-  parseMeetingRooms,
-  parseMedia,
-  parseMemberships,
-  parseOpenings,
-  parseOrganizations,
-  parsePetPolicy,
-  parsePrices,
-  parseRelatedObjects,
-  parseRoomTypes,
-  parseTaxonomyGroups,
-  readString,
   type ActorItem,
   type CapacityItem,
   type ContactItem,
@@ -74,16 +60,7 @@ interface StatDef {
   label: string;
 }
 
-interface DetailLocation {
-  address: string;
-  city: string;
-  postcode: string;
-  lieuDit: string;
-  label: string;
-  coordinates: string;
-  latitude: number | null;
-  longitude: number | null;
-}
+type DetailLocation = ParsedLocation;
 
 interface PreviewData {
   typeCode: string;
@@ -113,110 +90,6 @@ interface PracticalFact {
   value: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function readList(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function readNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    const normalized = value.trim();
-    if (!normalized) {
-      return null;
-    }
-
-    const parsed = Number.parseFloat(normalized);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-
-  return null;
-}
-
-function readRichText(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number') {
-    return String(value);
-  }
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const candidate = readRichText(item);
-      if (candidate) {
-        return candidate;
-      }
-    }
-
-    return '';
-  }
-
-  if (isRecord(value)) {
-    const priorityKeys = [
-      'fr',
-      'text',
-      'value',
-      'label',
-      'name',
-      'description',
-      'description_adapted',
-      'description_chapo',
-      'description_mobile',
-      'description_edition',
-    ];
-
-    for (const key of priorityKeys) {
-      const candidate = readRichText(value[key]);
-      if (candidate) {
-        return candidate;
-      }
-    }
-
-    for (const candidate of Object.values(value)) {
-      const text = readRichText(candidate);
-      if (text) {
-        return text;
-      }
-    }
-  }
-
-  return '';
-}
-
-function pickFirstText(...values: unknown[]): string {
-  for (const value of values) {
-    const text = readRichText(value).trim();
-    if (text) {
-      return text;
-    }
-  }
-
-  return '';
-}
-
-function resolveLabel(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number') {
-    return String(value);
-  }
-
-  if (isRecord(value)) {
-    return (
-      readString(value.name) ||
-      readString(value.label) ||
-      readString(value.title) ||
-      readString(value.display_name) ||
-      readString(value.value_name) ||
-      readString(value.code)
-    );
-  }
-
-  return '';
-}
-
 function dedupeLabels(labels: string[]): string[] {
   const seen = new Set<string>();
 
@@ -231,148 +104,32 @@ function dedupeLabels(labels: string[]): string[] {
   });
 }
 
-function extractAmenities(raw: Record<string, unknown>): string[] {
-  const sources = [
-    raw.amenities,
-    raw.object_amenities,
-    raw.features,
-    raw.equipment,
-    raw.equipments,
-  ];
-
-  const labels = sources.flatMap((source) =>
-    readList(source).map((item) => {
-      if (typeof item === 'string' || typeof item === 'number') {
-        return String(item);
-      }
-
-      const record = isRecord(item) ? item : {};
-      return resolveLabel(record.amenity ?? record.feature ?? record.equipment ?? item);
-    }),
-  );
-
-  return dedupeLabels(labels.filter(Boolean));
-}
-
-function readPrimaryDescriptionEntry(raw: Record<string, unknown>): Record<string, unknown> {
-  const sources = [
-    raw.object_descriptions,
-    raw.object_description,
-    raw.descriptions_list,
-  ];
-
-  for (const source of sources) {
-    const entry = readList(source).find((item) => isRecord(item));
-    if (isRecord(entry)) {
-      return entry;
-    }
-  }
-
-  return {};
-}
-
-function readDescriptions(raw: Record<string, unknown>): { description: string; adaptedDescription: string } {
-  const descriptions = isRecord(raw.descriptions) ? raw.descriptions : {};
-  const entry = readPrimaryDescriptionEntry(raw);
-  const render = isRecord(raw.render) ? raw.render : {};
-
-  const description = pickFirstText(
-    raw.description,
-    descriptions.description,
-    entry.description,
-    raw.description_chapo,
-    descriptions.description_chapo,
-    entry.description_chapo,
-    render.description,
-  );
-  const adaptedDescription = pickFirstText(
-    raw.description_adapted,
-    descriptions.description_adapted,
-    raw.description_mobile,
-    descriptions.description_mobile,
-    raw.description_edition,
-    descriptions.description_edition,
-  );
-
-  return {
-    description,
-    adaptedDescription: adaptedDescription && adaptedDescription !== description ? adaptedDescription : '',
-  };
-}
-
-function readLocation(raw: Record<string, unknown>): DetailLocation | null {
-  const addressRecord = isRecord(raw.address) ? raw.address : {};
-  const locationRecord = isRecord(raw.location) ? raw.location : {};
-  const mainLocation = readList(raw.object_locations ?? raw.object_location ?? raw.locations)
-    .find((item) => isRecord(item) && item.is_main_location !== false);
-  const mainLocationRecord = isRecord(mainLocation) ? mainLocation : {};
-  const coordinateSource = Array.isArray(locationRecord.coordinates)
-    ? locationRecord.coordinates
-    : Array.isArray(mainLocationRecord.coordinates)
-      ? mainLocationRecord.coordinates
-      : [];
-
-  const address = pickFirstText(
-    addressRecord.address1,
-    addressRecord.street,
-    mainLocationRecord.address1,
-    mainLocationRecord.address,
-    raw.address1,
-    raw.address,
-  );
-  const city = pickFirstText(addressRecord.city, mainLocationRecord.city, raw.city);
-  const postcode = pickFirstText(addressRecord.postcode, addressRecord.zipcode, mainLocationRecord.postcode, raw.postcode);
-  const lieuDit = pickFirstText(addressRecord.lieu_dit, mainLocationRecord.lieu_dit, raw.lieu_dit);
-  const latitude = readNumber(
-    locationRecord.latitude ?? locationRecord.lat ?? mainLocationRecord.latitude ?? mainLocationRecord.lat ?? coordinateSource[1] ?? raw.latitude ?? raw.lat,
-  );
-  const longitude = readNumber(
-    locationRecord.longitude ?? locationRecord.lon ?? mainLocationRecord.longitude ?? mainLocationRecord.lon ?? coordinateSource[0] ?? raw.longitude ?? raw.lon,
-  );
-  const cityLine = [postcode, city].filter(Boolean).join(' ');
-  const label = [address, lieuDit, cityLine].filter(Boolean).join(' · ');
-
-  if (!label && latitude == null && longitude == null) {
-    return null;
-  }
-
-  return {
-    address,
-    city,
-    postcode,
-    lieuDit,
-    label: label || [latitude, longitude].filter((value) => value != null).join(', '),
-    coordinates: latitude != null && longitude != null ? `${latitude}, ${longitude}` : '',
-    latitude: Number.isFinite(latitude) ? latitude : null,
-    longitude: Number.isFinite(longitude) ? longitude : null,
-  };
-}
-
-function buildPreviewData(data: ObjectDetail, raw: Record<string, unknown>): PreviewData {
-  const typeCode = (data.type ?? '').toUpperCase();
-  const descriptions = readDescriptions(raw);
-
+function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): PreviewData {
+  const typeCode = (parsed.identity.type || data.type || '').toUpperCase();
   return {
     typeCode,
     typeLabel: TYPE_LABEL[typeCode] ?? data.type ?? '',
-    description: descriptions.description,
-    adaptedDescription: descriptions.adaptedDescription,
-    location: readLocation(raw),
-    amenities: extractAmenities(raw),
-    capacities: parseCapacities(raw),
-    media: parseMedia(raw),
-    prices: parsePrices(raw),
-    openings: parseOpenings(raw),
-    contacts: parseContacts(raw),
-    actors: parseActors(raw),
-    organizations: parseOrganizations(raw),
-    memberships: parseMemberships(raw),
-    roomTypes: parseRoomTypes(raw),
-    meetingRooms: parseMeetingRooms(raw),
-    taxonomyGroups: parseTaxonomyGroups(raw),
-    petPolicy: parsePetPolicy(raw),
-    relatedObjects: parseRelatedObjects(raw),
-    itinerary: parseItinerarySummary(raw),
+    description: parsed.text.description || parsed.text.chapo,
+    adaptedDescription:
+      parsed.text.adaptedDescription ||
+      parsed.text.mobileDescription ||
+      parsed.text.editorialDescription,
+    location: parsed.location,
+    amenities: parsed.taxonomy.amenities,
+    capacities: parsed.operations.capacities,
+    media: parsed.media.items,
+    prices: parsed.operations.prices,
+    openings: parsed.operations.openings,
+    contacts: parsed.contacts.public,
+    actors: parsed.relations.actors,
+    organizations: parsed.relations.organizations,
+    memberships: parsed.relations.memberships,
+    roomTypes: parsed.operations.roomTypes,
+    meetingRooms: parsed.operations.meetingRooms,
+    taxonomyGroups: parsed.taxonomy.groups,
+    petPolicy: parsed.operations.petPolicy,
+    relatedObjects: parsed.relations.all,
+    itinerary: parsed.itinerary.summary,
   };
 }
 
@@ -405,6 +162,9 @@ function canRevealActors(params: {
 }
 
 function getGoogleMapsSearchUrl(location: DetailLocation): string {
+  if (location.googleMapsUrl) {
+    return location.googleMapsUrl;
+  }
   const query = location.latitude != null && location.longitude != null
     ? `${location.latitude},${location.longitude}`
     : location.label;
@@ -412,6 +172,9 @@ function getGoogleMapsSearchUrl(location: DetailLocation): string {
 }
 
 function getGoogleMapsDirectionsUrl(location: DetailLocation): string {
+  if (location.directionsUrl) {
+    return location.directionsUrl;
+  }
   const destination = location.latitude != null && location.longitude != null
     ? `${location.latitude},${location.longitude}`
     : location.label;
@@ -1201,7 +964,8 @@ function DetailScaffold({
 }
 
 function AccommodationDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'sustainability', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'sustainability', 'environment', 'payments', 'languages', 'tags']);
@@ -1232,7 +996,8 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
 }
 
 function RestaurantDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'payments', 'languages', 'tags']);
@@ -1261,7 +1026,8 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
 }
 
 function ItineraryDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'practices', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'practices', 'environment', 'languages', 'tags']);
@@ -1286,7 +1052,8 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
 }
 
 function ActivityDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags', 'payments', 'languages', 'environment']);
@@ -1315,7 +1082,8 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
 }
 
 function VisitableDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'classifications', 'payments', 'languages', 'tags']);
@@ -1344,7 +1112,8 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
 }
 
 function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'environment', 'tags']);
   const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'environment', 'languages', 'tags']);
@@ -1373,7 +1142,8 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
 }
 
 function GenericDetailView({ data, raw }: DetailViewProps) {
-  const preview = buildPreviewData(data, raw);
+  const parsed = parseObjectDetail(raw);
+  const preview = buildPreviewData(data, parsed);
   const canSeeActors = useActorVisibility(preview.organizations);
   const highlightGroups = pickGroups(preview.taxonomyGroups, ['labels', 'badges', 'tags']);
   const practicalFacts = buildPracticalFacts(preview);

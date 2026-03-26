@@ -17,6 +17,9 @@ export interface ContactItem {
   isPrimary: boolean;
   isPublic: boolean;
   position: number | null;
+  source: 'object' | 'actor' | 'organization';
+  sourceName: string;
+  visibility: string;
 }
 
 export interface ActorItem {
@@ -24,6 +27,9 @@ export interface ActorItem {
   name: string;
   role: string;
   contacts: string[];
+  visibility: string;
+  isPrimary: boolean;
+  note: string;
 }
 
 export interface OrganizationItem {
@@ -32,6 +38,8 @@ export interface OrganizationItem {
   linkType: string;
   contacts: string[];
   emails: string[];
+  note: string;
+  source: 'organization' | 'org_link' | 'parent_object';
 }
 
 export interface MediaItem {
@@ -43,6 +51,10 @@ export interface MediaItem {
   credit: string;
   visibility: string;
   position: string;
+  width: string;
+  height: string;
+  typeCode: string;
+  typeLabel: string;
 }
 
 export interface LegalItem {
@@ -67,6 +79,7 @@ export interface OpeningItem {
   slots: string[];
   weekdays: string[];
   details: string[];
+  season: string;
 }
 
 export interface RoomTypeItem {
@@ -139,6 +152,8 @@ export interface RelatedObjectItem {
   type: string;
   relationship: string;
   direction: RelatedDirection;
+  note: string;
+  distanceM: string;
 }
 
 export interface ItinerarySummary {
@@ -461,6 +476,18 @@ function mapContactLines(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function normalizeOrganizationEntry(organization: Record<string, unknown>, index: number, source: OrganizationItem['source']): OrganizationItem {
+  return {
+    id: readString(organization.id, `${source}-${index}`),
+    name: readString(organization.name, 'Organisation'),
+    linkType: readNamedValue(organization.role ?? organization.relation_type, readString(organization.link_type, 'Lien non precise')),
+    contacts: mapContactLines(organization.contacts),
+    emails: extractEmails(organization.contacts),
+    note: readString(organization.note),
+    source,
+  };
+}
+
 function flattenPricePeriods(price: Record<string, unknown>, label: string, defaultAmount: string, defaultCurrency: string): PriceItem[] {
   const periods = readArray(price.periods ?? price.price_periods ?? price.object_price_periods);
 
@@ -500,6 +527,7 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
       slots,
       weekdays,
       details: [readString(period.status), readString(period.note)].filter(Boolean),
+      season: '',
     }];
   }
 
@@ -522,8 +550,89 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
         readNamedValue(schedule.schedule_type),
         readString(period.note),
       ].filter(Boolean),
+      season: '',
     };
   });
+}
+
+function formatOpeningSlots(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => formatOpeningSlots(item));
+  }
+
+  const record = readRecord(value);
+  const start = readString(record.start, readString(record.start_time, readString(record.time_start)));
+  const end = readString(record.end, readString(record.end_time, readString(record.time_end)));
+
+  if (start || end) {
+    return [`${start || '00:00'} -> ${end || '23:59'}`];
+  }
+
+  if (typeof value === 'string') {
+    return [value];
+  }
+
+  return [];
+}
+
+function humanizeWeekday(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const map: Record<string, string> = {
+    monday: 'Lundi',
+    tuesday: 'Mardi',
+    wednesday: 'Mercredi',
+    thursday: 'Jeudi',
+    friday: 'Vendredi',
+    saturday: 'Samedi',
+    sunday: 'Dimanche',
+    mon: 'Lundi',
+    tue: 'Mardi',
+    wed: 'Mercredi',
+    thu: 'Jeudi',
+    fri: 'Vendredi',
+    sat: 'Samedi',
+    sun: 'Dimanche',
+  };
+
+  return map[normalized] ?? value;
+}
+
+function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: string): OpeningItem {
+  const weekdaySlots = readRecord(period.weekday_slots);
+  const weekdayEntries = Object.entries(weekdaySlots).filter(([, slots]) => {
+    if (Array.isArray(slots)) {
+      return slots.length > 0;
+    }
+    if (isRecord(slots)) {
+      return Object.keys(slots).length > 0;
+    }
+    return false;
+  });
+  const weekdays = weekdayEntries.map(([day]) => humanizeWeekday(day));
+  const slots = weekdayEntries.flatMap(([, slotValue]) => formatOpeningSlots(slotValue));
+
+  return {
+    label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
+    slots,
+    weekdays,
+    details: [formatDateRange(period.date_start, period.date_end, ''), season].filter(Boolean),
+    season,
+  };
+}
+
+function normalizeCanonicalOpenings(value: unknown): OpeningItem[] {
+  const openingTimes = readRecord(value);
+  const currentPeriods = readArray(
+    openingTimes.periods_current ?? openingTimes.PeriodeOuvertures ?? openingTimes.current_periods,
+  );
+  const nextPeriods = readArray(
+    openingTimes.periods_next_year ?? openingTimes.PeriodeOuverturesAnneeSuivantes ?? openingTimes.next_year_periods,
+  );
+
+  return [
+    ...currentPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee en cours')),
+    ...nextPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee suivante')),
+  ];
 }
 
 function parseNumberRank(value: string): number {
@@ -559,10 +668,11 @@ function buildClassificationItems(value: unknown): TaxonomyItem[] {
       const scheme = rawScheme && rawScheme.trim().toLowerCase() !== schemeCode.trim().toLowerCase()
         ? rawScheme
         : humanizeClassificationScheme(schemeCode);
+      const humanizedLevel = humanizeClassificationValue(schemeCode, valueCode);
       const level = rawLevel && rawLevel.trim().toLowerCase() !== valueCode.trim().toLowerCase()
         ? rawLevel
-        : humanizeClassificationValue(schemeCode, valueCode);
-      const label = formatClassificationLabel(scheme, level || valueCode, schemeCode);
+        : humanizedLevel;
+      const label = formatClassificationLabel(scheme, level, schemeCode);
 
       if (!label) {
         return null;
@@ -600,6 +710,26 @@ function buildSustainabilityItems(value: unknown): TaxonomyItem[] {
           readNamedValue(actionRecord),
           readString(labelRecord.status),
         ].filter(Boolean).join(' · '),
+      };
+    })
+    .filter((item): item is TaxonomyItem => item !== null);
+}
+
+function buildSustainabilityLabelItems(value: unknown): TaxonomyItem[] {
+  return readArray(value)
+    .map((item, index) => {
+      const scheme = readString(item.scheme_name, readNamedValue(item.scheme, 'Durabilite'));
+      const valueName = readString(item.value_name, readNamedValue(item.value, ''));
+      const label = [scheme, valueName].filter(Boolean).join(' · ') || scheme;
+
+      if (!label) {
+        return null;
+      }
+
+      return {
+        id: makeItemId('sustainability-label', item, index, label),
+        label,
+        meta: [readString(item.status), formatDateRange(item.awarded_at, item.valid_until, '')].filter(Boolean).join(' · '),
       };
     })
     .filter((item): item is TaxonomyItem => item !== null);
@@ -655,6 +785,8 @@ function parseRelationEntries(value: unknown, direction: RelatedDirection): Rela
           readString(record.link_type, direction === 'associated' ? 'Associe' : direction === 'in' ? 'Entrant' : 'Sortant'),
         ),
         direction,
+        note: readString(record.note),
+        distanceM: readString(record.distance_m),
       };
     })
     .filter((item): item is RelatedObjectItem => item !== null);
@@ -684,6 +816,9 @@ export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
       isPrimary: readBoolean(contact.is_primary) === true,
       isPublic,
       position: readInteger(contact.position),
+      source: 'object',
+      sourceName: readString(raw.name, 'Lieu'),
+      visibility: readString(contact.visibility),
     };
   });
 
@@ -706,17 +841,21 @@ export function parseActors(raw: Record<string, unknown>): ActorItem[] {
     name: readString(actor.display_name, readString(actor.name, 'Acteur sans nom')),
     role: readNamedValue(actor.role, readString(actor.role_code, 'Role non precise')),
     contacts: mapContactLines(actor.contacts),
+    visibility: readString(actor.visibility, 'public'),
+    isPrimary: readBoolean(actor.is_primary) === true,
+    note: readString(actor.note),
   }));
 }
 
 export function parseOrganizations(raw: Record<string, unknown>): OrganizationItem[] {
-  return readArray(raw.organizations ?? raw.org_links ?? raw.parent_objects).map((organization, index) => ({
-    id: readString(organization.id, `org-${index}`),
-    name: readString(organization.name, 'Organisation'),
-    linkType: readNamedValue(organization.role ?? organization.relation_type, readString(organization.link_type, 'Lien non precise')),
-    contacts: mapContactLines(organization.contacts),
-    emails: extractEmails(organization.contacts),
-  }));
+  return dedupeByKey(
+    [
+      ...readArray(raw.organizations).map((organization, index) => normalizeOrganizationEntry(organization, index, 'organization')),
+      ...readArray(raw.org_links).map((organization, index) => normalizeOrganizationEntry(organization, index, 'org_link')),
+      ...readArray(raw.parent_objects).map((organization, index) => normalizeOrganizationEntry(organization, index, 'parent_object')),
+    ],
+    (organization) => organization.id,
+  );
 }
 
 export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
@@ -731,6 +870,10 @@ export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
     credit: readString(item.credit, readString(item.author)),
     visibility: readString(item.visibility, readNamedValue(item.status)),
     position: readString(item.position, readString(item.order)),
+    width: readString(item.width),
+    height: readString(item.height),
+    typeCode: readString(item.type_code, readString(readRecord(item.media_type).code)),
+    typeLabel: readNamedValue(item.media_type, readString(item.type_name)),
   }));
 
   return items.slice().sort((left, right) => {
@@ -765,7 +908,12 @@ export function parsePrices(raw: Record<string, unknown>): PriceItem[] {
 }
 
 export function parseOpenings(raw: Record<string, unknown>): OpeningItem[] {
-  const openingPeriods = readArray(raw.opening_times ?? raw.opening_periods ?? raw.openings);
+  const canonicalOpenings = normalizeCanonicalOpenings(raw.opening_times);
+  if (canonicalOpenings.length > 0) {
+    return canonicalOpenings;
+  }
+
+  const openingPeriods = readArray(raw.opening_periods ?? raw.openings ?? raw.opening_times);
   return openingPeriods.flatMap((period) => flattenOpeningSchedules(period));
 }
 
@@ -863,12 +1011,19 @@ export function parseCapacities(raw: Record<string, unknown>): CapacityItem[] {
 
 export function parseTaxonomyGroups(raw: Record<string, unknown>): TaxonomyGroup[] {
   const itineraryDetails = readRecord(raw.itinerary_details);
+  const sustainabilityItems = dedupeByKey(
+    [
+      ...buildSustainabilityLabelItems(raw.sustainability_labels),
+      ...buildSustainabilityItems(raw.sustainability_action_labels),
+    ],
+    (item) => item.label.toLowerCase(),
+  );
   const groups = [
     createTaxonomyGroup('labels', 'Labels', buildBasicTaxonomyItems(raw.labels, 'label')),
     createTaxonomyGroup('badges', 'Badges', buildBasicTaxonomyItems(raw.badges, 'badge')),
     createTaxonomyGroup('tags', 'Tags', buildBasicTaxonomyItems(raw.tags, 'tag')),
     createTaxonomyGroup('classifications', 'Classements', buildClassificationItems(raw.classifications)),
-    createTaxonomyGroup('sustainability', 'Durabilite', buildSustainabilityItems(raw.sustainability_action_labels)),
+    createTaxonomyGroup('sustainability', 'Durabilite', sustainabilityItems),
     createTaxonomyGroup('environment', 'Environnement', buildBasicTaxonomyItems(raw.environment_tags, 'environment')),
     createTaxonomyGroup('payments', 'Paiements', buildBasicTaxonomyItems(raw.payment_methods, 'payment')),
     createTaxonomyGroup('languages', 'Langues', buildBasicTaxonomyItems(raw.languages, 'language')),
@@ -919,6 +1074,8 @@ export function parseRelatedObjects(raw: Record<string, unknown>): RelatedObject
     [
       ...parseRelationEntries(raw.associated_objects, 'associated'),
       ...parseRelationEntries(itineraryDetails.associated_objects, 'associated'),
+      ...parseRelationEntries(raw.outgoing_relations, 'out'),
+      ...parseRelationEntries(raw.incoming_relations, 'in'),
       ...parseRelationEntries(relations.out, 'out'),
       ...parseRelationEntries(relations.in, 'in'),
     ],

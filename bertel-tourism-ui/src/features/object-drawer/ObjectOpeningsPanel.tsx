@@ -1,11 +1,11 @@
-import { parseOpenings } from './utils';
+import { parseObjectDetail } from '../../services/object-detail-parser';
 
 interface ObjectOpeningsPanelProps {
   raw: Record<string, unknown>;
 }
 
 export function ObjectOpeningsPanel({ raw }: ObjectOpeningsPanelProps) {
-  const openings = parseOpenings(raw);
+  const openings = parseObjectDetail(raw).operations.openings;
 
   return (
     <div className="drawer-grid drawer-grid--stacked">

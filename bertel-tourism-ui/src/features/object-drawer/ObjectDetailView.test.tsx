@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
@@ -27,7 +27,7 @@ describe('ObjectDetailView', () => {
     });
   });
 
-  it('renders a refined accommodation preview with visible description, map, readable classifications and protected network data', () => {
+  it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',
       name: 'Hotel Horizon Basalte',
@@ -153,10 +153,14 @@ describe('ObjectDetailView', () => {
     renderDetail(data);
 
     expect(screen.getByRole('heading', { name: 'Hotel Horizon Basalte' })).toBeInTheDocument();
-    expect(screen.getByText('En quelques mots')).toBeInTheDocument();
+    expect(screen.getByText('Description')).toBeInTheDocument();
+    expect(screen.getByText('Version courte de la presentation.')).toBeInTheDocument();
+    expect(screen.queryByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /lire la suite/i }));
     expect(screen.getByText('Grand hotel panoramique avec spa, restauration et espaces evenementiels.')).toBeInTheDocument();
-    expect(screen.getByText('Reperes')).toBeInTheDocument();
-    expect(screen.getAllByText('Gites de France · 3 epis').length).toBeGreaterThan(0);
+    expect(screen.getByText('Labels et engagements')).toBeInTheDocument();
+    expect(screen.getByText('Label prestige')).toBeInTheDocument();
+    expect(screen.getByText('Signature')).toBeInTheDocument();
     expect(screen.getAllByText('Clef Verte · Obtenu').length).toBeGreaterThan(0);
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
@@ -168,16 +172,20 @@ describe('ObjectDetailView', () => {
       'href',
       expect.stringContaining('google.com/maps/dir'),
     );
-    expect(screen.getByText('Sur place')).toBeInTheDocument();
+    expect(screen.getByText('Capacite d\'accueil')).toBeInTheDocument();
+    expect(screen.getByText('120')).toBeInTheDocument();
+    expect(screen.getByText('Equipements')).toBeInTheDocument();
     expect(screen.getByText('Piscine chauffee')).toBeInTheDocument();
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
     expect(screen.getByText('Tarifs et horaires')).toBeInTheDocument();
     expect(screen.getAllByText(/07:00/).length).toBeGreaterThan(0);
-    expect(screen.getByText('Contacter ce lieu')).toBeInTheDocument();
+    expect(screen.getByText('Contact')).toBeInTheDocument();
     expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
-    expect(screen.getByText('Organisation')).toBeInTheDocument();
+    expect(screen.getByText('Equipe interne')).toBeInTheDocument();
     expect(screen.getByText('Marie Horizon')).toBeInTheDocument();
+    expect(screen.getByText('Reseau')).toBeInTheDocument();
+    expect(screen.getByText('Office Sud Premium')).toBeInTheDocument();
     expect(screen.getByText('Navette lagon')).toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();
   });
@@ -221,7 +229,7 @@ describe('ObjectDetailView', () => {
     renderDetail(data);
 
     expect(screen.getByText(/Pas encore de photo principale/)).toBeInTheDocument();
-    expect(screen.getAllByText('Maison d hotes').length).toBeGreaterThan(0);
+    expect(screen.getByText('Maison d hotes de charme sans galerie photo complete.')).toBeInTheDocument();
     expect(screen.queryByText('Equipe interne')).not.toBeInTheDocument();
     expect(screen.getByText('Reseau Sud')).toBeInTheDocument();
   });

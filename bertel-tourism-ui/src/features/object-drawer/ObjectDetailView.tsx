@@ -63,33 +63,15 @@ import {
   type RoomTypeItem,
   type TaxonomyGroup,
 } from './utils';
+import { OBJECT_TYPE_LABELS } from '../../services/modifier-payload';
 
 const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
 const RESTAURANT_TYPES = new Set(['RES']);
-const ITINERARY_TYPES = new Set(['ITI', 'FMA']);
-const ACTIVITY_TYPES = new Set(['ASC']);
-const VISITABLE_TYPES = new Set(['LOI', 'PCU']);
+const ITINERARY_TYPES = new Set(['ITI']);
+const ACTIVITY_TYPES = new Set(['ACT']);
+const VISITABLE_TYPES = new Set(['LOI']);
 const NATURAL_TYPES = new Set(['PNA']);
-const SERVICE_TYPES = new Set(['PSV', 'SRV', 'VIL', 'COM']);
-
-const TYPE_LABEL: Record<string, string> = {
-  HOT: 'Hotel',
-  HPA: 'Hebergement plein air',
-  HLO: 'Hebergement loisir',
-  CAMP: 'Camping',
-  RVA: 'Residence vacances',
-  RES: 'Restaurant',
-  ITI: 'Itineraire',
-  FMA: 'Itineraire',
-  ASC: 'Activite',
-  LOI: 'Loisir',
-  PCU: 'Patrimoine',
-  PNA: 'Site naturel',
-  PSV: 'Prestataire',
-  SRV: 'Service',
-  VIL: 'Ville',
-  COM: 'Commune',
-};
+const SERVICE_TYPES = new Set(['PSV', 'VIL', 'COM', 'ORG', 'ASC', 'PCU', 'FMA']);
 
 interface DetailViewProps {
   data: ObjectDetail;
@@ -2009,7 +1991,7 @@ function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
               <strong>{item.name}</strong>
               <span className="detail-chip detail-chip--soft">{item.relationship}</span>
             </div>
-            <p>{TYPE_LABEL[item.type] ?? item.type}</p>
+            <p>{OBJECT_TYPE_LABELS[item.type] ?? item.type}</p>
           </div>
         ))}
       </div>

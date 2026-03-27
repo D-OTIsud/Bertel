@@ -19,6 +19,7 @@ const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   LOI: 'Loisirs',
   PCU: 'Culture',
   PNA: 'Nature',
+  ORG: 'Organisations',
   VIL: 'Villages',
   COM: 'Commerces',
   PSV: 'Services',

@@ -16,6 +16,7 @@ export type BackendObjectTypeCode =
   | 'LOI'
   | 'PCU'
   | 'PNA'
+  | 'ORG'
   | 'VIL'
   | 'COM'
   | 'PSV'

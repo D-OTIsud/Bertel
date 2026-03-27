@@ -4,14 +4,10 @@ import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
 
-const mockUseObjectModifierQuery = jest.fn();
+const mockUseObjectDetailQuery = jest.fn();
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
-  useObjectModifierQuery: (...args: unknown[]) => mockUseObjectModifierQuery(...args),
-  useSaveObjectModifierMutation: () => ({
-    mutateAsync: jest.fn(),
-    isPending: false,
-  }),
+  useObjectDetailQuery: (...args: unknown[]) => mockUseObjectDetailQuery(...args),
   useAddObjectPrivateNoteMutation: () => ({
     mutateAsync: jest.fn(),
     isPending: false,
@@ -47,14 +43,14 @@ describe('ObjectDrawer drafts', () => {
   beforeEach(() => {
     useUiStore.setState({ drawerObjectId: 'obj-1' });
     // mode must be 'edit' for these tests — they assert on form inputs in the edit panels
-    useObjectDrawerStore.setState({ activeSection: 'overview', mode: 'edit', draftsByObject: {} });
+    useObjectDrawerStore.setState({ activeSection: 'general', mode: 'edit', draftsByObject: {} });
     useSessionStore.setState({ role: 'tourism_agent', status: 'ready' });
-    mockUseObjectModifierQuery.mockClear();
+    mockUseObjectDetailQuery.mockClear();
   });
 
   it('does not overwrite a local draft when the same object refetches', () => {
-    mockUseObjectModifierQuery.mockReturnValue({
-      data: { id: 'obj-1', name: 'Hotel A', type: 'HOT', raw: { description: 'Initial description' } },
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: { id: 'obj-1', name: 'Hotel A', raw: { description: 'Initial description' } },
       isLoading: false,
       isError: false,
       error: null,
@@ -69,8 +65,8 @@ describe('ObjectDrawer drafts', () => {
     fireEvent.change(nameInput, { target: { value: 'Hotel A Draft' } });
     expect(screen.getByDisplayValue('Hotel A Draft')).toBeInTheDocument();
 
-    mockUseObjectModifierQuery.mockReturnValue({
-      data: { id: 'obj-1', name: 'Hotel A Refetched', type: 'HOT', raw: { description: 'Server update' } },
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: { id: 'obj-1', name: 'Hotel A Refetched', raw: { description: 'Server update' } },
       isLoading: false,
       isError: false,
       error: null,
@@ -83,8 +79,8 @@ describe('ObjectDrawer drafts', () => {
   });
 
   it('resets the draft when switching to another object', () => {
-    mockUseObjectModifierQuery.mockReturnValue({
-      data: { id: 'obj-1', name: 'Hotel A', type: 'HOT', raw: { description: 'Initial description' } },
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: { id: 'obj-1', name: 'Hotel A', raw: { description: 'Initial description' } },
       isLoading: false,
       isError: false,
       error: null,
@@ -96,8 +92,8 @@ describe('ObjectDrawer drafts', () => {
     });
     fireEvent.change(screen.getByDisplayValue('Hotel A'), { target: { value: 'Hotel A Draft' } });
 
-    mockUseObjectModifierQuery.mockReturnValue({
-      data: { id: 'obj-2', name: 'Restaurant B', type: 'RES', raw: { description: 'Fresh record' } },
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: { id: 'obj-2', name: 'Restaurant B', raw: { description: 'Fresh record' } },
       isLoading: false,
       isError: false,
       error: null,
@@ -113,9 +109,9 @@ describe('ObjectDrawer drafts', () => {
   });
 
   it('shows a loading skeleton instead of the object technical id while the detail is fetching', () => {
-    useObjectDrawerStore.setState({ activeSection: 'overview', mode: 'view', draftsByObject: {} });
+    useObjectDrawerStore.setState({ activeSection: 'general', mode: 'view', draftsByObject: {} });
 
-    mockUseObjectModifierQuery.mockReturnValue({
+    mockUseObjectDetailQuery.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,

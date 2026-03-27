@@ -5864,6 +5864,232 @@ END;
 $$;
 
 -- =====================================================
+-- Canonical modifier payload for the left-menu editor
+-- Enriches get_object_resource with edit-oriented satellites and caches
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_modifier_payload(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[],
+  p_options JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_base JSONB;
+  v_reviews JSONB;
+  v_room_types JSONB;
+BEGIN
+  v_base := COALESCE(
+    api.get_object_resource(
+      p_object_id,
+      p_lang_prefs,
+      'geojson',
+      COALESCE(p_options, '{}'::jsonb)
+    )::jsonb,
+    '{}'::jsonb
+  );
+
+  IF v_base = '{}'::jsonb THEN
+    RETURN NULL;
+  END IF;
+
+  v_reviews := COALESCE(api.get_object_reviews(p_object_id, 20, 0, p_lang_prefs)::jsonb, '{}'::jsonb);
+  v_room_types := COALESCE(api.get_object_room_types(p_object_id, p_lang_prefs)::jsonb, '[]'::jsonb);
+
+  RETURN (
+    v_base
+    || jsonb_strip_nulls(
+      jsonb_build_object(
+        'business_timezone', (
+          SELECT o.business_timezone
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'secondary_types', (
+          SELECT to_jsonb(o.secondary_types)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'current_version', (
+          SELECT o.current_version
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_min_price', (
+          SELECT to_jsonb(o.cached_min_price)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_rating', (
+          SELECT to_jsonb(o.cached_rating)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_review_count', (
+          SELECT to_jsonb(o.cached_review_count)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_is_open_now', (
+          SELECT to_jsonb(o.cached_is_open_now)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_language_codes', (
+          SELECT to_jsonb(o.cached_language_codes)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_classification_codes', (
+          SELECT to_jsonb(o.cached_classification_codes)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'cached_payment_codes', (
+          SELECT to_jsonb(o.cached_payment_codes)
+          FROM object o
+          WHERE o.id = p_object_id
+        ),
+        'object_locations', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(ol) ORDER BY ol.is_main_location DESC, ol.position NULLS LAST, ol.created_at),
+            '[]'::jsonb
+          )
+          FROM object_location ol
+          WHERE ol.object_id = p_object_id
+        ),
+        'object_zones', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(oz) ORDER BY oz.position NULLS LAST, oz.created_at),
+            '[]'::jsonb
+          )
+          FROM object_zone oz
+          WHERE oz.object_id = p_object_id
+        ),
+        'object_places', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(op) ORDER BY op.is_primary DESC, op.position NULLS LAST, op.created_at),
+            '[]'::jsonb
+          )
+          FROM object_place op
+          WHERE op.object_id = p_object_id
+        ),
+        'object_memberships', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(om) ORDER BY om.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM object_membership om
+          WHERE om.object_id = p_object_id
+        ),
+        'memberships', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(om) ORDER BY om.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM object_membership om
+          WHERE om.object_id = p_object_id
+        ),
+        'object_act', (
+          SELECT to_jsonb(oa)
+          FROM object_act oa
+          WHERE oa.object_id = p_object_id
+        ),
+        'crm_interactions', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(ci) ORDER BY ci.occurred_at DESC NULLS LAST, ci.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM crm_interaction ci
+          WHERE ci.object_id = p_object_id
+        ),
+        'crm_tasks', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(ct) ORDER BY ct.due_at ASC NULLS LAST, ct.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM crm_task ct
+          WHERE ct.object_id = p_object_id
+        ),
+        'origins', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(oo) ORDER BY oo.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM object_origin oo
+          WHERE oo.object_id = p_object_id
+        ),
+        'external_ids', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(oei) ORDER BY oei.updated_at DESC NULLS LAST, oei.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM object_external_id oei
+          WHERE oei.object_id = p_object_id
+        ),
+        'legal_records', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(olr) ORDER BY olr.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM object_legal olr
+          WHERE olr.object_id = p_object_id
+        ),
+        'promotions', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(po) ORDER BY po.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM promotion_object po
+          WHERE po.object_id = p_object_id
+        ),
+        'publications', (
+          SELECT COALESCE(
+            jsonb_agg(to_jsonb(po2) ORDER BY po2.created_at DESC),
+            '[]'::jsonb
+          )
+          FROM publication_object po2
+          WHERE po2.object_id = p_object_id
+        ),
+        'object_room_types', v_room_types,
+        'room_types', v_room_types,
+        'review_summary', COALESCE(v_reviews->'summary', '{}'::jsonb),
+        'reviews', COALESCE(v_reviews->'reviews', '[]'::jsonb),
+        'actor_consents', (
+          SELECT COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'actor_id', ac.actor_id,
+                'channel', ac.channel,
+                'consent_given', ac.consent_given,
+                'timestamp', ac.timestamp,
+                'source', ac.source,
+                'actor_name', a.display_name
+              )
+              ORDER BY ac.timestamp DESC
+            ),
+            '[]'::jsonb
+          )
+          FROM actor_consent ac
+          JOIN actor a ON a.id = ac.actor_id
+          WHERE EXISTS (
+            SELECT 1
+            FROM actor_object_role aor
+            WHERE aor.object_id = p_object_id
+              AND aor.actor_id = ac.actor_id
+          )
+        )
+      )
+    )
+  )::json;
+END;
+$$;
+
+-- =====================================================
 -- Validate promotion code for an object
 -- =====================================================
 CREATE OR REPLACE FUNCTION api.validate_promotion_code(

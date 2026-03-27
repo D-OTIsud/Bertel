@@ -6,9 +6,11 @@ import { listExplorerReferences } from '../services/explorer-reference';
 import {
   canWriteObjectPrivateNote,
   createObjectPrivateNote,
+  getObjectModifierResource,
   deleteObjectPrivateNote,
   getObjectResource,
   listExplorerCards,
+  saveObjectModifierDraft,
   updateObjectPrivateNote,
 } from '../services/rpc';
 import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
@@ -84,6 +86,47 @@ export function useObjectDetailQuery(objectId: string | null) {
     queryKey: ['object-detail', objectId, langPrefs],
     queryFn: () => getObjectResource(objectId ?? '', langPrefs),
     enabled: Boolean(objectId),
+  });
+}
+
+export function useObjectModifierQuery(objectId: string | null) {
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useQuery({
+    queryKey: ['object-modifier', objectId, langPrefs],
+    queryFn: () => getObjectModifierResource(objectId ?? '', langPrefs),
+    enabled: Boolean(objectId),
+  });
+}
+
+export function useSaveObjectModifierMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      name: string;
+      description: string;
+      fields: Record<string, string>;
+    }) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour enregistrer l'edition.");
+      }
+
+      return saveObjectModifierDraft({
+        objectId,
+        draft: input,
+      });
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-modifier', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
   });
 }
 

@@ -11,7 +11,48 @@ import {
   listExplorerCards,
   updateObjectPrivateNote,
 } from '../services/rpc';
+import {
+  saveObjectWorkspaceCharacteristics,
+  saveObjectWorkspaceCapacityPolicies,
+  getObjectWorkspaceResource,
+  publishObjectWorkspace,
+  saveObjectWorkspaceContacts,
+  saveObjectWorkspaceDescriptions,
+  saveObjectWorkspaceGeneralInfo,
+  saveObjectWorkspaceLocation,
+  saveObjectWorkspaceLegal,
+  saveObjectWorkspaceMemberships,
+  saveObjectWorkspaceMedia,
+  saveObjectWorkspacePricing,
+  saveObjectWorkspaceTaxonomy,
+} from '../services/object-workspace';
 import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
+import type {
+  ObjectWorkspaceCapacityPoliciesModule,
+  ObjectWorkspaceCharacteristicsModule,
+  ObjectWorkspaceContactsModule,
+  ObjectWorkspaceDescriptionsModule,
+  ObjectWorkspaceGeneralInfo,
+  ObjectWorkspaceMembershipModule,
+  ObjectWorkspaceLocationModule,
+  ObjectWorkspaceLegalModule,
+  ObjectWorkspaceMediaModule,
+  ObjectWorkspacePricingModule,
+  ObjectWorkspaceTaxonomyModule,
+} from '../services/object-workspace-parser';
+
+type SaveWorkspaceModuleInput =
+  | { moduleId: 'general-info'; value: ObjectWorkspaceGeneralInfo }
+  | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
+  | { moduleId: 'location'; value: ObjectWorkspaceLocationModule }
+  | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditPlaceDescriptions: boolean }
+  | { moduleId: 'media'; value: ObjectWorkspaceMediaModule; canEditPlaceMedia: boolean }
+  | { moduleId: 'contacts'; value: ObjectWorkspaceContactsModule }
+  | { moduleId: 'characteristics'; value: ObjectWorkspaceCharacteristicsModule }
+  | { moduleId: 'capacity-policies'; value: ObjectWorkspaceCapacityPoliciesModule }
+  | { moduleId: 'pricing'; value: ObjectWorkspacePricingModule }
+  | { moduleId: 'memberships'; value: ObjectWorkspaceMembershipModule }
+  | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule };
 
 function useExplorerFilters() {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
@@ -87,6 +128,108 @@ export function useObjectDetailQuery(objectId: string | null) {
   });
 }
 
+export function useObjectWorkspaceQuery(objectId: string | null) {
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useQuery({
+    queryKey: ['object-workspace', objectId, langPrefs],
+    queryFn: () => getObjectWorkspaceResource(objectId ?? '', langPrefs),
+    enabled: Boolean(objectId),
+  });
+}
+
+export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: SaveWorkspaceModuleInput) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour enregistrer ce module.");
+      }
+
+      if (input.moduleId === 'general-info') {
+        return saveObjectWorkspaceGeneralInfo(objectId, input.value);
+      }
+
+      if (input.moduleId === 'taxonomy') {
+        return saveObjectWorkspaceTaxonomy(objectId, input.value);
+      }
+
+      if (input.moduleId === 'location') {
+        return saveObjectWorkspaceLocation(objectId, input.value);
+      }
+
+      if (input.moduleId === 'media') {
+        return saveObjectWorkspaceMedia(objectId, input.value, {
+          canEditPlaceMedia: input.canEditPlaceMedia,
+        });
+      }
+
+      if (input.moduleId === 'contacts') {
+        return saveObjectWorkspaceContacts(objectId, input.value);
+      }
+
+      if (input.moduleId === 'characteristics') {
+        return saveObjectWorkspaceCharacteristics(objectId, input.value);
+      }
+
+      if (input.moduleId === 'capacity-policies') {
+        return saveObjectWorkspaceCapacityPolicies(objectId, input.value);
+      }
+
+      if (input.moduleId === 'pricing') {
+        return saveObjectWorkspacePricing(objectId, input.value);
+      }
+
+      if (input.moduleId === 'memberships') {
+        return saveObjectWorkspaceMemberships(objectId, input.value);
+      }
+
+      if (input.moduleId === 'legal') {
+        return saveObjectWorkspaceLegal(objectId, input.value);
+      }
+
+      return saveObjectWorkspaceDescriptions(objectId, input.value, {
+        canEditPlaceDescriptions: input.canEditPlaceDescriptions,
+      });
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
+  });
+}
+
+export function usePublishObjectWorkspaceMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (publish: boolean) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour gerer la publication.");
+      }
+
+      return publishObjectWorkspace(objectId, publish);
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
+  });
+}
+
 export function useAddObjectPrivateNoteMutation(objectId: string | null) {
   const queryClient = useQueryClient();
 
@@ -107,7 +250,10 @@ export function useAddObjectPrivateNoteMutation(objectId: string | null) {
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+      ]);
     },
   });
 }
@@ -140,7 +286,10 @@ export function useUpdateObjectPrivateNoteMutation(objectId: string | null) {
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+      ]);
     },
   });
 }
@@ -155,7 +304,10 @@ export function useDeleteObjectPrivateNoteMutation(objectId: string | null) {
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+      ]);
     },
   });
 }

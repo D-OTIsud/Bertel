@@ -1,82 +1,134 @@
-import type { ObjectDrawerSection } from '../../store/object-drawer-store';
+import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 
 export interface SectionDef {
-  id: ObjectDrawerSection;
+  id: WorkspaceModuleId;
   label: string;
+  eyebrow: string;
+  description: string;
+  isVisible: (resource: ObjectWorkspaceResource) => boolean;
 }
 
-// Canonical section list in display order.
-// Single source of truth for section ordering and labels across nav and shell.
-const ALL_SECTION_DEFS: SectionDef[] = [
-  { id: 'general',       label: 'General' },
-  { id: 'contacts',      label: 'Contacts' },
-  { id: 'media',         label: 'Media' },
-  { id: 'legal',         label: 'Legal' },
-  { id: 'pricing',       label: 'Tarifs' },
-  { id: 'openings',      label: 'Ouvertures' },
-  { id: 'rooms',         label: 'Chambres' },
-  { id: 'mice',          label: 'MICE' },
-  { id: 'memberships',   label: 'Adhesions' },
-  { id: 'external-sync', label: 'Sync' },
+const WORKSPACE_SECTION_DEFS: SectionDef[] = [
+  {
+    id: 'general-info',
+    label: 'Infos generales',
+    eyebrow: 'A1',
+    description: 'Identite, cadrage metier et visibilite commerciale.',
+    isVisible: () => true,
+  },
+  {
+    id: 'taxonomy',
+    label: 'Taxonomie',
+    eyebrow: 'A2',
+    description: 'Classifications structurantes sans melanger distinctions et labels.',
+    isVisible: () => true,
+  },
+  {
+    id: 'publication',
+    label: 'Publication',
+    eyebrow: 'A3',
+    description: 'Workflow editorial, publication et moderation.',
+    isVisible: () => true,
+  },
+  {
+    id: 'location',
+    label: 'Localisation',
+    eyebrow: 'B1',
+    description: 'Adresse principale, sous-lieux et coherence territoriale.',
+    isVisible: () => true,
+  },
+  {
+    id: 'descriptions',
+    label: 'Descriptions',
+    eyebrow: 'B2',
+    description: 'Contenus multilingues et scopes objet / sous-lieu.',
+    isVisible: () => true,
+  },
+  {
+    id: 'media',
+    label: 'Medias',
+    eyebrow: 'B3',
+    description: 'Galerie, droits, media principal et portee.',
+    isVisible: () => true,
+  },
+  {
+    id: 'contacts',
+    label: 'Contacts',
+    eyebrow: 'B4',
+    description: 'Coordonnees publiques propres a l objet.',
+    isVisible: () => true,
+  },
+  {
+    id: 'characteristics',
+    label: 'Caracteristiques',
+    eyebrow: 'C1',
+    description: 'Langues, equipements, paiements et environnement.',
+    isVisible: () => true,
+  },
+  {
+    id: 'distinctions',
+    label: 'Distinctions',
+    eyebrow: 'C2',
+    description: 'Distinctions certifiees, labels d accessibilite et couverture accessibilite.',
+    isVisible: () => true,
+  },
+  {
+    id: 'capacity-policies',
+    label: 'Capacites',
+    eyebrow: 'C4',
+    description: 'Capacites metier, groupes et animaux.',
+    isVisible: () => true,
+  },
+  {
+    id: 'pricing',
+    label: 'Tarifs',
+    eyebrow: 'C5',
+    description: 'Tarifs, periodes, remises bornees et promotions liees.',
+    isVisible: () => true,
+  },
+  {
+    id: 'openings',
+    label: 'Horaires',
+    eyebrow: 'C6',
+    description: 'Periodes d ouverture et creneaux par jour sans flattening preview.',
+    isVisible: () => true,
+  },
+  {
+    id: 'provider-follow-up',
+    label: 'Suivi relation',
+    eyebrow: 'D1',
+    description: 'Notes internes et memoire de relation prestataire, sans pipeline commercial.',
+    isVisible: () => true,
+  },
+  {
+    id: 'relationships',
+    label: 'Relations',
+    eyebrow: 'D2',
+    description: 'Rattachements ORG, acteurs lies et relations objet sans les confondre avec les contacts publics.',
+    isVisible: () => true,
+  },
+  {
+    id: 'memberships',
+    label: 'Adhesions',
+    eyebrow: 'D3',
+    description: 'Suivi des adhesions objet et organisationnelles, sans pipeline commercial.',
+    isVisible: () => true,
+  },
+  {
+    id: 'legal',
+    label: 'Conformite',
+    eyebrow: 'D6',
+    description: 'Documents juridiques, echeances et resume de conformite.',
+    isVisible: () => true,
+  },
 ];
 
-// Sections exposed for every object type in edit mode.
-const CORE: ObjectDrawerSection[] = ['general', 'contacts', 'media', 'legal', 'external-sync'];
+export const DEFAULT_SECTION: WorkspaceModuleId = 'general-info';
 
-function sectionSet(...extra: ObjectDrawerSection[]): ReadonlySet<ObjectDrawerSection> {
-  return new Set([...CORE, ...extra]);
-}
-
-// Per-type section visibility.
-// Types absent from this map fall back to ALL_SECTION_DEFS (safe for unknown codes).
-const TYPE_SECTION_MAP: Readonly<Record<string, ReadonlySet<ObjectDrawerSection>>> = {
-  // Accommodation — HOT is the only type with dedicated meeting rooms (MICE)
-  HOT:  sectionSet('pricing', 'openings', 'rooms', 'mice', 'memberships'),
-  HPA:  sectionSet('pricing', 'openings', 'rooms', 'memberships'),
-  HLO:  sectionSet('pricing', 'openings', 'rooms', 'memberships'),
-  CAMP: sectionSet('pricing', 'openings', 'rooms', 'memberships'),
-  RVA:  sectionSet('pricing', 'openings', 'memberships'),
-
-  // Restaurant
-  RES:  sectionSet('pricing', 'openings', 'memberships'),
-
-  // Itinerary — no commercial or capacity sections
-  ITI:  sectionSet('openings'),
-  FMA:  sectionSet('openings'),
-
-  // Activity / guided prestation
-  ASC:  sectionSet('pricing', 'openings', 'memberships'),
-
-  // Visitable — commercial
-  LOI:  sectionSet('pricing', 'openings', 'memberships'),
-  // Visitable — heritage / cultural (no membership)
-  PCU:  sectionSet('pricing', 'openings'),
-
-  // Service provider (no openings — services are available on demand)
-  PSV:  sectionSet('pricing', 'memberships'),
-
-  // Natural site / protected area
-  PNA:  sectionSet('openings'),
-
-  // Administrative / geographic references — edit surface minimal
-  VIL:  new Set<ObjectDrawerSection>(CORE),
-  COM:  new Set<ObjectDrawerSection>(CORE),
-};
-
-/** The default edit section — always present in every type's allowed set. */
-export const DEFAULT_SECTION: ObjectDrawerSection = 'general';
-
-/**
- * Returns the ordered section definitions visible in edit mode for a given object type.
- * Falls back to all sections for unrecognised type codes so new types degrade gracefully.
- */
-export function getSectionsForType(objectType?: string): SectionDef[] {
-  if (!objectType) {
-    return ALL_SECTION_DEFS;
+export function getSectionsForResource(resource?: ObjectWorkspaceResource): SectionDef[] {
+  if (!resource) {
+    return WORKSPACE_SECTION_DEFS;
   }
-  const allowed = TYPE_SECTION_MAP[objectType.toUpperCase()];
-  if (!allowed) {
-    return ALL_SECTION_DEFS;
-  }
-  return ALL_SECTION_DEFS.filter((s) => allowed.has(s.id));
+
+  return WORKSPACE_SECTION_DEFS.filter((section) => section.isVisible(resource));
 }

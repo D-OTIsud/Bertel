@@ -35,7 +35,7 @@ export function AppFooter() {
   const liveUsersCount = useUiStore((state) => state.liveUsersCount);
   const footerActionMode = useUiStore((state) => state.footerActionMode);
   const drawerDirty = useObjectDrawerStore((state) =>
-    drawerObjectId ? Boolean(state.draftsByObject[drawerObjectId]?.dirty) : false,
+    drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
   const networkTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
 

@@ -43,6 +43,7 @@ import { ObjectWorkspaceProviderFollowUpPanel } from './ObjectWorkspaceProviderF
 import { ObjectWorkspacePublicationPanel } from './ObjectWorkspacePublicationPanel';
 import { ObjectWorkspacePricingPanel } from './ObjectWorkspacePricingPanel';
 import { ObjectWorkspaceRelationshipsPanel } from './ObjectWorkspaceRelationshipsPanel';
+import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
 import { ObjectWorkspaceTaxonomyPanel } from './ObjectWorkspaceTaxonomyPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
@@ -193,66 +194,53 @@ function DrawerEditSkeleton() {
   );
 }
 
+const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = {
+  'general-info': 'generalInfo',
+  taxonomy: 'taxonomy',
+  publication: 'publication',
+  'sync-identifiers': 'syncIdentifiers',
+  location: 'location',
+  descriptions: 'descriptions',
+  media: 'media',
+  contacts: 'contacts',
+  characteristics: 'characteristics',
+  distinctions: 'distinctions',
+  'capacity-policies': 'capacityPolicies',
+  pricing: 'pricing',
+  openings: 'openings',
+  'provider-follow-up': 'providerFollowUp',
+  relationships: 'relationships',
+  memberships: 'memberships',
+  legal: 'legal',
+};
+
+const READONLY_MODULES = new Set<WorkspaceModuleId>([
+  'publication',
+  'sync-identifiers',
+  'distinctions',
+  'openings',
+  'provider-follow-up',
+  'relationships',
+]);
+
 function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<WorkspaceModuleId, boolean>> {
   if (!snapshot) {
     return {};
   }
 
-  return {
-    'general-info': serialize(snapshot.draft.generalInfo) !== serialize(snapshot.baseline.generalInfo),
-    taxonomy: serialize(snapshot.draft.taxonomy) !== serialize(snapshot.baseline.taxonomy),
-    publication: false,
-    location: serialize(snapshot.draft.location) !== serialize(snapshot.baseline.location),
-    descriptions: serialize(snapshot.draft.descriptions) !== serialize(snapshot.baseline.descriptions),
-    media: serialize(snapshot.draft.media) !== serialize(snapshot.baseline.media),
-    contacts: serialize(snapshot.draft.contacts) !== serialize(snapshot.baseline.contacts),
-    characteristics: serialize(snapshot.draft.characteristics) !== serialize(snapshot.baseline.characteristics),
-    distinctions: false,
-    'capacity-policies': serialize(snapshot.draft.capacityPolicies) !== serialize(snapshot.baseline.capacityPolicies),
-    pricing: serialize(snapshot.draft.pricing) !== serialize(snapshot.baseline.pricing),
-    openings: false,
-    'provider-follow-up': false,
-    relationships: false,
-    memberships: serialize(snapshot.draft.memberships) !== serialize(snapshot.baseline.memberships),
-    legal: serialize(snapshot.draft.legal) !== serialize(snapshot.baseline.legal),
-  };
+  const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
+  for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
+    if (READONLY_MODULES.has(moduleId)) {
+      dirty[moduleId] = false;
+    } else {
+      dirty[moduleId] = serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
+    }
+  }
+  return dirty;
 }
 
 function resolveCurrentSectionAccess(resource: ObjectWorkspaceResource, section: WorkspaceModuleId) {
-  switch (section) {
-    case 'general-info':
-      return resource.permissions.generalInfo;
-    case 'taxonomy':
-      return resource.permissions.taxonomy;
-    case 'publication':
-      return resource.permissions.publication;
-    case 'location':
-      return resource.permissions.location;
-    case 'descriptions':
-      return resource.permissions.descriptions;
-    case 'media':
-      return resource.permissions.media;
-    case 'contacts':
-      return resource.permissions.contacts;
-    case 'characteristics':
-      return resource.permissions.characteristics;
-    case 'distinctions':
-      return resource.permissions.distinctions;
-    case 'capacity-policies':
-      return resource.permissions.capacityPolicies;
-    case 'pricing':
-      return resource.permissions.pricing;
-    case 'openings':
-      return resource.permissions.openings;
-    case 'provider-follow-up':
-      return resource.permissions.providerFollowUp;
-    case 'relationships':
-      return resource.permissions.relationships;
-    case 'memberships':
-      return resource.permissions.memberships;
-    case 'legal':
-      return resource.permissions.legal;
-  }
+  return resource.permissions[MODULE_KEY_MAP[section]] as ObjectWorkspaceModuleAccess;
 }
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
@@ -278,6 +266,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     'general-info': { saving: false, message: null },
     taxonomy: { saving: false, message: null },
     publication: { saving: false, message: null },
+    'sync-identifiers': { saving: false, message: null },
     location: { saving: false, message: null },
     descriptions: { saving: false, message: null },
     media: { saving: false, message: null },
@@ -395,85 +384,23 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     }));
 
     try {
-      switch (section) {
-        case 'general-info':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'general-info',
-            value: editorSnapshot.draft.generalInfo,
-          });
-          break;
-        case 'taxonomy':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'taxonomy',
-            value: editorSnapshot.draft.taxonomy,
-          });
-          break;
-        case 'location':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'location',
-            value: editorSnapshot.draft.location,
-          });
-          break;
-        case 'descriptions':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'descriptions',
-            value: editorSnapshot.draft.descriptions,
-            canEditPlaceDescriptions: resolvedData.permissions.descriptions.canEditPlaceDescriptions,
-          });
-          break;
-        case 'media':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'media',
-            value: editorSnapshot.draft.media,
-            canEditPlaceMedia: resolvedData.permissions.media.canEditPlaceMedia,
-          });
-          break;
-        case 'contacts':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'contacts',
-            value: editorSnapshot.draft.contacts,
-          });
-          break;
-        case 'characteristics':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'characteristics',
-            value: editorSnapshot.draft.characteristics,
-          });
-          break;
-        case 'distinctions':
-          return;
-        case 'capacity-policies':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'capacity-policies',
-            value: editorSnapshot.draft.capacityPolicies,
-          });
-          break;
-        case 'pricing':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'pricing',
-            value: editorSnapshot.draft.pricing,
-          });
-          break;
-        case 'openings':
-          return;
-        case 'provider-follow-up':
-        case 'relationships':
-          return;
-        case 'memberships':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'memberships',
-            value: editorSnapshot.draft.memberships,
-          });
-          break;
-        case 'legal':
-          await saveModuleMutation.mutateAsync({
-            moduleId: 'legal',
-            value: editorSnapshot.draft.legal,
-          });
-          break;
-        case 'publication':
-          return;
+      if (READONLY_MODULES.has(section)) {
+        return;
       }
+
+      const key = MODULE_KEY_MAP[section];
+      const mutationArgs: any = {
+        moduleId: section,
+        value: editorSnapshot.draft[key],
+      };
+
+      if (section === 'descriptions') {
+        mutationArgs.canEditPlaceDescriptions = resolvedData.permissions.descriptions.canEditPlaceDescriptions;
+      } else if (section === 'media') {
+        mutationArgs.canEditPlaceMedia = resolvedData.permissions.media.canEditPlaceMedia;
+      }
+
+      await saveModuleMutation.mutateAsync(mutationArgs);
 
       setEditorSnapshot((previous) => {
         if (!previous) {
@@ -482,25 +409,10 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
         return {
           ...previous,
-            baseline: {
-              ...previous.baseline,
-              generalInfo: section === 'general-info' ? cloneModules(previous.draft).generalInfo : previous.baseline.generalInfo,
-              taxonomy: section === 'taxonomy' ? cloneModules(previous.draft).taxonomy : previous.baseline.taxonomy,
-              publication: previous.baseline.publication,
-              location: section === 'location' ? cloneModules(previous.draft).location : previous.baseline.location,
-              descriptions: section === 'descriptions' ? cloneModules(previous.draft).descriptions : previous.baseline.descriptions,
-              media: section === 'media' ? cloneModules(previous.draft).media : previous.baseline.media,
-              contacts: section === 'contacts' ? cloneModules(previous.draft).contacts : previous.baseline.contacts,
-              characteristics: section === 'characteristics' ? cloneModules(previous.draft).characteristics : previous.baseline.characteristics,
-              distinctions: previous.baseline.distinctions,
-              capacityPolicies: section === 'capacity-policies' ? cloneModules(previous.draft).capacityPolicies : previous.baseline.capacityPolicies,
-              pricing: section === 'pricing' ? cloneModules(previous.draft).pricing : previous.baseline.pricing,
-              openings: previous.baseline.openings,
-              providerFollowUp: previous.baseline.providerFollowUp,
-              relationships: previous.baseline.relationships,
-              memberships: section === 'memberships' ? cloneModules(previous.draft).memberships : previous.baseline.memberships,
-              legal: section === 'legal' ? cloneModules(previous.draft).legal : previous.baseline.legal,
-            },
+          baseline: {
+            ...previous.baseline,
+            [key]: cloneModules(previous.draft)[key],
+          },
         };
       });
 
@@ -1011,105 +923,18 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         return previous;
       }
 
-      switch (resolvedSection) {
-        case 'general-info':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              generalInfo: cloneModules(previous.baseline).generalInfo,
-            },
-          };
-        case 'taxonomy':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              taxonomy: cloneModules(previous.baseline).taxonomy,
-            },
-          };
-        case 'publication':
-          return previous;
-        case 'location':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              location: cloneModules(previous.baseline).location,
-            },
-          };
-        case 'descriptions':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              descriptions: cloneModules(previous.baseline).descriptions,
-            },
-          };
-        case 'media':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              media: cloneModules(previous.baseline).media,
-            },
-          };
-        case 'contacts':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              contacts: cloneModules(previous.baseline).contacts,
-            },
-          };
-        case 'characteristics':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              characteristics: cloneModules(previous.baseline).characteristics,
-            },
-          };
-        case 'distinctions':
-          return previous;
-        case 'capacity-policies':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              capacityPolicies: cloneModules(previous.baseline).capacityPolicies,
-            },
-          };
-        case 'pricing':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              pricing: cloneModules(previous.baseline).pricing,
-            },
-          };
-        case 'openings':
-          return previous;
-        case 'provider-follow-up':
-        case 'relationships':
-          return previous;
-        case 'memberships':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              memberships: cloneModules(previous.baseline).memberships,
-            },
-          };
-        case 'legal':
-          return {
-            ...previous,
-            draft: {
-              ...previous.draft,
-              legal: cloneModules(previous.baseline).legal,
-            },
-          };
+      if (READONLY_MODULES.has(resolvedSection)) {
+        return previous;
       }
+
+      const key = MODULE_KEY_MAP[resolvedSection];
+      return {
+        ...previous,
+        draft: {
+          ...previous.draft,
+          [key]: cloneModules(previous.baseline)[key],
+        },
+      };
     });
 
     setSaveStateBySection((state) => ({
@@ -1294,6 +1119,13 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
                   saving={saveStateBySection.publication.saving}
                   statusMessage={saveStateBySection.publication.message}
                   onTogglePublication={(publish) => void handlePublicationToggle(publish)}
+                />
+              )}
+              {resolvedSection === 'sync-identifiers' && (
+                <ObjectWorkspaceSyncIdentifiersPanel
+                  value={resolvedData.modules.syncIdentifiers}
+                  access={resolvedData.permissions.syncIdentifiers}
+                  statusMessage={saveStateBySection['sync-identifiers'].message}
                 />
               )}
               {resolvedSection === 'location' && (

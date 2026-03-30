@@ -14,16 +14,16 @@ describe('mergeSelectedObjectIds', () => {
 
 describe('isPointInPolygon', () => {
   it('treats inside and boundary points as selected', () => {
-    const polygon = [
+    const polygon: [number, number][] = [
       [55.4, -21.2],
       [55.7, -21.2],
       [55.7, -21.0],
       [55.4, -21.0],
-    ] as const;
+    ];
 
-    expect(isPointInPolygon([55.5, -21.1], [...polygon])).toBe(true);
-    expect(isPointInPolygon([55.4, -21.1], [...polygon])).toBe(true);
-    expect(isPointInPolygon([55.9, -21.1], [...polygon])).toBe(false);
+    expect(isPointInPolygon([55.5, -21.1], polygon)).toBe(true);
+    expect(isPointInPolygon([55.4, -21.1], polygon)).toBe(true);
+    expect(isPointInPolygon([55.9, -21.1], polygon)).toBe(false);
   });
 });
 

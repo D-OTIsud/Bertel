@@ -1,5 +1,6 @@
 # Bertel
 
+**B**ase d'**E**nregistrement et de **R**éférentiel **T**ouristique des **É**tablissements et **L**ieux.  
 Espace de développement pour le projet Bertel - API de gestion touristique avec système de données unifié.
 
 ## 📁 Structure du projet

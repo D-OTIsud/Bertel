@@ -35,15 +35,15 @@ Bertel repose sur une architecture moderne et flexible :
 
 Le projet Bertel utilise un système de données unifié PostgreSQL avec des fonctionnalités avancées :
 
-### ✨ Fonctionnalités principales
+### Fonctionnalités principales
 
-- **📍 Système de localisation unifié** : Table `object_location` fusionnant adresses et coordonnées géographiques
-- **⏰ Système d'ouverture riche** : Gestion flexible des horaires avec périodes, plannings et créneaux
-- **🛡️ Workflow de modération** : Système d'approbation des modifications avec `pending_change`
-- **🔧 Référentiel unifié** : Table `ref_code` partitionnée par domaine pour tous les codes de référence
-- **🏨 Gestion complète** : Hôtels, restaurants, activités, itinéraires, événements, etc.
+- **Système de localisation unifié** : Table `object_location` fusionnant adresses et coordonnées géographiques
+- **Système d'ouverture riche** : Gestion flexible des horaires avec périodes, plannings et créneaux
+- **Workflow de modération** : Système d'approbation des modifications avec `pending_change`
+- **Référentiel unifié** : Table `ref_code` partitionnée par domaine pour tous les codes de référence
+- **Gestion complète** : Hôtels, restaurants, activités, itinéraires, événements, etc.
 
-### 📊 Documentation technique
+### Documentation technique
 
 - **Schéma complet** : [`Base de donnée DLL et API/schema_unified.sql`](./Base de donnée DLL et API/schema_unified.sql)
 - **Documentation détaillée** : [`Base de donnée DLL et API/README.md`](./Base de donnée DLL et API/README.md)
@@ -53,14 +53,14 @@ Le projet Bertel utilise un système de données unifié PostgreSQL avec des fon
 
 La documentation complète de l'API Bertel v3.0 est disponible dans le dossier [`docs/`](./docs/).
 
-### 📖 Accès rapide
+### Accès rapide
 
 - **Documentation web** : [docs/index.html](./docs/index.html)
 - **Collection Postman** : [docs/Bertel_API_v3.postman_collection.json](./docs/Bertel_API_v3.postman_collection.json)
 - **Guide Postman** : [docs/README_Postman.md](./docs/README_Postman.md)
 - **Vidéos explicatives** : [docs/media/](./docs/media/)
 
-### 🌐 Déploiement
+### Déploiement
 
 La documentation peut être déployée via Coolify en utilisant les fichiers dans le dossier `docs/` :
 
@@ -121,11 +121,11 @@ SELECT api.submit_pending_change(
 ## 📝 Développement
 
 Ce repository contient :
-- **🗄️ Base de données** : Schéma PostgreSQL unifié avec fonctionnalités avancées
-- **🔌 API RPC** : Fonctions PostgreSQL dans le schéma `api` avec authentification et workflow de modération
-- **📚 Documentation** : Interface moderne avec navigation synchronisée
-- **🧪 Collection Postman** : Tests et exemples d'utilisation des fonctions RPC
-- **📹 Vidéos** : Explications techniques du système unifié
+- **Base de données** : Schéma PostgreSQL unifié avec fonctionnalités avancées
+- **API RPC** : Fonctions PostgreSQL dans le schéma `api` avec authentification et workflow de modération
+- **Documentation** : Interface moderne avec navigation synchronisée
+- **Collection Postman** : Tests et exemples d'utilisation des fonctions RPC
+- **Vidéos** : Explications techniques du système unifié
 
 ### Branding public et schema `api`
 

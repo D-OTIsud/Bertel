@@ -232,9 +232,9 @@ export function ObjectWorkspaceTaxonomyFields({
                 ) : (
                   <div className="field-block field-block--wide">
                     <span className="text-sm font-medium">Elements a retenir</span>
-                    <div className="stack-list">
+                    <div className="drawer-choice-list">
                       {options.map((option) => (
-                        <label key={option.id} className="inline-flex items-center gap-2 text-sm">
+                        <label key={option.id} className="drawer-choice-item">
                           <input
                             type="checkbox"
                             checked={selectedCodes.has(option.code)}

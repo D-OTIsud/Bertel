@@ -54,9 +54,9 @@ function renderCheckboxList(props: {
   return (
     <article className="panel-card panel-card--nested">
       <span className="facet-title">{title}</span>
-      <div className="stack-list">
+      <div className="drawer-choice-list">
         {options.length > 0 ? options.map((option) => (
-          <label key={option.id} className="inline-flex items-center gap-2 text-sm">
+          <label key={option.id} className="drawer-choice-item">
             <input
               type="checkbox"
               checked={selected.has(option.code)}
@@ -289,9 +289,9 @@ export function ObjectWorkspaceCharacteristicsPanel({
             {value.amenityGroups.length > 0 ? value.amenityGroups.map((group) => (
               <article key={group.familyCode} className="panel-card panel-card--nested">
                 <span className="facet-title">{group.familyLabel}</span>
-                <div className="stack-list">
+                <div className="drawer-choice-list">
                   {group.options.map((option) => (
-                    <label key={option.id} className="inline-flex items-center gap-2 text-sm">
+                    <label key={option.id} className="drawer-choice-item">
                       <input
                         type="checkbox"
                         checked={value.selectedAmenityCodes.includes(option.code)}

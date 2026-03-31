@@ -149,9 +149,7 @@ export function ObjectWorkspaceMediaPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">B3</span>
-            <h2>Medias</h2>
-            <p>La portee objet et la portee sous-lieu restent visibles distinctement. Cette premiere iteration edite completement les medias objet.</p>
+            <h2>Médias</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -171,13 +169,14 @@ export function ObjectWorkspaceMediaPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Portee objet</span>
             <strong>{value.objectItems.length} media(s)</strong>
-            <p>Edition complete: titre, URL, type, droits, visibilite, ordre, publication et media principal.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Portee sous-lieu</span>
             <strong>{value.placeItems.length} media(s)</strong>
-            <p>{access.canEditPlaceMedia ? 'Edition autorisee pour les medias de sous-lieu.' : value.placeScopeUnavailableReason ?? 'Lecture seule sur cette premiere livraison.'}</p>
+            {!access.canEditPlaceMedia && (value.placeScopeUnavailableReason || null) && (
+              <p className="text-sm text-muted-foreground">{value.placeScopeUnavailableReason}</p>
+            )}
           </article>
         </div>
       </article>
@@ -218,7 +217,7 @@ export function ObjectWorkspaceMediaPanel({
         )) : (
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Sous-lieux</span>
-            <p>Aucun media de sous-lieu n est expose par le payload courant.</p>
+            <p>Aucun media de sous-lieu.</p>
           </article>
         )}
       </section>

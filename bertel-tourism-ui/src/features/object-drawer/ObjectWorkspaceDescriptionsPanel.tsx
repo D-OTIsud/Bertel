@@ -182,7 +182,6 @@ export function ObjectWorkspaceDescriptionsPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Langue locale</span>
             <strong>{value.localLanguage.toUpperCase()}</strong>
-            <p>Cette langue alimente aussi les champs source utilises par les vues detail et les exports actuels.</p>
           </article>
 
           <div className="field-block">
@@ -226,7 +225,7 @@ export function ObjectWorkspaceDescriptionsPanel({
         )) : (
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Sous-lieux</span>
-            <p>Aucun sous-lieu descriptif n'est expose dans le payload courant.</p>
+            <p>Aucun sous-lieu.</p>
           </article>
         )}
 

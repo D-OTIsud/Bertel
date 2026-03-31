@@ -215,9 +215,7 @@ export function ObjectWorkspacePricingPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">C5</span>
-            <h2>Tarifs et promotions</h2>
-            <p>Les tarifs, periodes et remises bornees partagent une seule frontiere de sauvegarde. Les promotions rattachees restent en lecture seule.</p>
+            <h2>Tarifs</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -240,19 +238,18 @@ export function ObjectWorkspacePricingPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Tarifs</span>
             <strong>{value.prices.length}</strong>
-            <p>Tarifs racine avec periodes detaillees et plages de validite.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Remises</span>
             <strong>{value.discounts.length}</strong>
-            <p>{value.unavailableReason ?? 'Remises bornees par dates, montant ou pourcentage, et taille de groupe.'}</p>
+            {value.unavailableReason && <p className="text-sm text-muted-foreground">{value.unavailableReason}</p>}
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Promotions liees</span>
             <strong>{value.promotions.length}</strong>
-            <p>{value.promotionsUnavailableReason ?? 'Le rattachement a des promotions admin reste visible sans etre editable depuis cette fiche.'}</p>
+            {value.promotionsUnavailableReason && <p className="text-sm text-muted-foreground">{value.promotionsUnavailableReason}</p>}
           </article>
         </div>
       </article>

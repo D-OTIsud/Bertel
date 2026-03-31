@@ -279,7 +279,6 @@ export function ObjectWorkspaceLegalPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Taux</span>
             <strong>{value.compliance.compliancePercentage}%</strong>
-            <p>Resume calcule par le backend sur les types requis.</p>
           </article>
         </div>
       </article>

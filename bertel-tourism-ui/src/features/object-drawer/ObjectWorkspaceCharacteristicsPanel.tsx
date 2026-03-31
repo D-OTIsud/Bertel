@@ -173,19 +173,16 @@ export function ObjectWorkspaceCharacteristicsPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Langues</span>
             <strong>{value.selectedLanguages.length}</strong>
-            <p>Langues de service et niveau eventuel.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Paiements</span>
             <strong>{value.selectedPaymentCodes.length}</strong>
-            <p>Moyens de paiement publics rattaches a la fiche.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Environnement</span>
             <strong>{value.selectedEnvironmentCodes.length}</strong>
-            <p>Tags contextuels et cadres d environnement.</p>
           </article>
 
           <article className="panel-card panel-card--nested">

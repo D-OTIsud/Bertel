@@ -142,9 +142,7 @@ export function ObjectWorkspaceMembershipsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">D3</span>
-            <h2>Adhesions</h2>
-            <p>Le module D3 suit les adhesions objet et organisationnelles, ainsi que leur impact sur la visibilite commerciale. Il ne doit pas etre traite comme un pipeline CRM.</p>
+            <h2>Adhésions</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -169,19 +167,16 @@ export function ObjectWorkspaceMembershipsPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Adhesions actives</span>
             <strong>{activeCount}</strong>
-            <p>Lignes actuellement en `paid` ou `invoiced`, avec effet potentiel sur la visibilite.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Portee objet</span>
             <strong>{objectScopeCount}</strong>
-            <p>Adhesions rattachees directement a cette fiche.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Portee organisation</span>
             <strong>{organizationScopeCount}</strong>
-            <p>Adhesions de niveau organisation parent ou structure porteuse.</p>
           </article>
 
           <article className="panel-card panel-card--nested">

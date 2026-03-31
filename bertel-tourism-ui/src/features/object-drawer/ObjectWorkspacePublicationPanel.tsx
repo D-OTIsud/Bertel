@@ -113,7 +113,6 @@ export function ObjectWorkspacePublicationPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Premiere publication</span>
             <strong>{formatDateLabel(value.publishedAt, 'Non publiee')}</strong>
-            <p>Le backend conserve la date de premiere publication meme en cas de retrait temporaire.</p>
           </article>
         </div>
       </article>

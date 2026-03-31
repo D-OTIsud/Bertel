@@ -33,9 +33,7 @@ export function ObjectWorkspaceLocationPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">B1</span>
             <h2>Localisation</h2>
-            <p>Gardez l'adresse principale, les sous-lieux et la coherence territoriale dans un meme module.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -131,10 +129,7 @@ export function ObjectWorkspaceLocationPanel({
                 <p>{place.locationLabel || 'Aucune localisation dediee remontee.'}</p>
                 {place.isPrimary && <small>Sous-lieu principal</small>}
               </article>
-            )) : <p>Aucun sous-lieu expose dans le payload courant.</p>}
-            <small className="text-muted-foreground">
-              La gestion complete des sous-lieux reste preparee ici, mais cette premiere livraison ne modifie que la localisation principale.
-            </small>
+            )) : <p>Aucun sous-lieu.</p>}
           </div>
         </article>
 
@@ -143,10 +138,7 @@ export function ObjectWorkspaceLocationPanel({
           <div className="stack-list">
             {value.zoneCodes.length > 0 ? value.zoneCodes.map((code) => (
               <span key={code} className="drawer-header__chip">{code}</span>
-            )) : <p>Aucune zone explicite n'est exposee par le payload courant.</p>}
-            <small className="text-muted-foreground">
-              L'edition des zones n'est pas encore branchee sur une surface d'ecriture stable.
-            </small>
+            )) : <p>Aucune zone.</p>}
           </div>
         </article>
       </div>

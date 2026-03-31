@@ -2589,19 +2589,29 @@ a {
 .drawer-location-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem 1rem;
+  align-items: start;
+  gap: 0.75rem 1.2rem;
 }
 
 .drawer-inline-field {
   display: grid;
-  grid-template-columns: minmax(120px, 156px) minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(132px, 148px) minmax(0, 1fr);
+  align-items: start;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .drawer-inline-field label {
-  font-size: 0.95rem;
-  line-height: 1.35;
+  padding-top: 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+}
+
+.drawer-inline-field input {
+  min-width: 0;
 }
 
 .drawer-inline-field--full {
@@ -2609,36 +2619,46 @@ a {
 }
 
 .drawer-inline-field--compact {
-  min-width: 0;
+  grid-template-columns: minmax(84px, 104px) minmax(0, 1fr);
 }
 
 .drawer-location-preview-inline {
   grid-column: 1 / -1;
-  margin: -0.1rem 0 0.15rem;
-  padding-left: 168px;
+  display: grid;
+  grid-template-columns: minmax(132px, 148px) minmax(0, 1fr) minmax(132px, 148px) minmax(0, 1fr);
+  gap: 0.75rem;
+  margin: -0.15rem 0 0.05rem;
+}
+
+.drawer-location-preview-inline span {
+  grid-column: 2 / -1;
+  display: block;
   color: var(--text-muted);
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .drawer-location-map-card {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .drawer-location-map-toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem 1rem;
+  align-items: start;
+  gap: 0.75rem 1.2rem;
 }
 
 .drawer-location-map-card__canvas {
-  min-height: 220px;
+  min-height: 200px;
 }
 
 .drawer-location-map-note {
-  margin: 0;
+  margin: -0.1rem 0 0;
   color: var(--text-muted);
-  line-height: 1.55;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .drawer-location-pin {
@@ -2666,12 +2686,20 @@ a {
 
   .drawer-inline-field {
     grid-template-columns: 1fr;
-    gap: 0.4rem;
+    gap: 0.35rem;
+  }
+
+  .drawer-inline-field label {
+    padding-top: 0;
   }
 
   .drawer-location-preview-inline {
-    padding-left: 0;
+    grid-template-columns: 1fr;
     margin-top: -0.05rem;
+  }
+
+  .drawer-location-preview-inline span {
+    grid-column: 1;
   }
 }
 

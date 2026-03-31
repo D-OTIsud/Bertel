@@ -43,6 +43,37 @@ const DEFAULT_LOCATION_CENTER: LocationCoordinates = {
 
 const DEFAULT_LOCATION_ZOOM = 10.2;
 const FOCUSED_LOCATION_ZOOM = 15;
+const KNOWN_ADDRESS_SUFFIXES = new Set(['bis', 'ter', 'quater', 'quinquies', 'sexies']);
+const KNOWN_STREET_TOKENS = new Set([
+  'allee',
+  'all',
+  'av',
+  'avenue',
+  'bd',
+  'boulevard',
+  'carreau',
+  'chemin',
+  'ch',
+  'cours',
+  'impasse',
+  'imp',
+  'lotissement',
+  'montee',
+  'passage',
+  'place',
+  'pl',
+  'quartier',
+  'residence',
+  'route',
+  'rte',
+  'rue',
+  'ruelle',
+  'sentier',
+  'square',
+  'traverse',
+  'vc',
+  'voie',
+]);
 
 function parseCoordinate(value: string): number | null {
   const normalized = value.trim().replace(',', '.');
@@ -80,11 +111,37 @@ function normalizeAddressSuffix(value: string): string {
   }
 
   const lower = compact.toLowerCase();
-  if (['bis', 'ter', 'quater', 'quinquies', 'sexies'].includes(lower)) {
+  if (KNOWN_ADDRESS_SUFFIXES.has(lower)) {
     return lower;
   }
 
   return compact.toUpperCase();
+}
+
+function normalizeAddressToken(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z]/g, '')
+    .toLowerCase();
+}
+
+function looksLikeAddressSuffix(value: string, mode: 'compact' | 'spaced'): boolean {
+  const normalized = normalizeAddressToken(value);
+  if (!normalized || KNOWN_STREET_TOKENS.has(normalized)) {
+    return false;
+  }
+
+  if (KNOWN_ADDRESS_SUFFIXES.has(normalized)) {
+    return true;
+  }
+
+  if (mode === 'spaced') {
+    return /^[a-z]$/.test(normalized) || /^[a-z]{1,2}(bis|ter)$/.test(normalized);
+  }
+
+  return /^[a-z]{1,3}$/.test(normalized)
+    || /^[a-z]{1,3}(bis|ter|quater|quinquies|sexies)$/.test(normalized);
 }
 
 function coordinatesMatch(left: LocationCoordinates, right: LocationCoordinates): boolean {
@@ -113,7 +170,7 @@ function parseStructuredAddress(value: ObjectWorkspaceLocationModule['main']): S
   }
 
   const compactMatch = combined.match(/^(\d+)([A-Za-z]+)\s+(.+)$/);
-  if (compactMatch) {
+  if (compactMatch && looksLikeAddressSuffix(compactMatch[2] ?? '', 'compact')) {
     return {
       number: compactMatch[1] ?? '',
       suffix: (compactMatch[2] ?? '').trim(),
@@ -123,7 +180,7 @@ function parseStructuredAddress(value: ObjectWorkspaceLocationModule['main']): S
   }
 
   const spacedMatch = combined.match(/^(\d+)\s+([A-Za-z]+)\s+(.+)$/);
-  if (spacedMatch) {
+  if (spacedMatch && looksLikeAddressSuffix(spacedMatch[2] ?? '', 'spaced')) {
     return {
       number: spacedMatch[1] ?? '',
       suffix: (spacedMatch[2] ?? '').trim(),
@@ -283,11 +340,11 @@ export function ObjectWorkspaceLocationPanel({
             </div>
 
             <div className="drawer-inline-field">
-              <Label htmlFor="workspace-location-number-suffix">Suffixe</Label>
+              <Label htmlFor="workspace-location-number-suffix">Suffixe du numero</Label>
               <Input
                 id="workspace-location-number-suffix"
                 value={structuredAddress.suffix}
-                placeholder="Ex. bis, ter, A, ABIS"
+                placeholder="Ex. bis, ter, A"
                 onChange={(event) => patchStructuredAddress({ suffix: event.target.value })}
                 onBlur={() => normalizeStructuredField('suffix')}
               />
@@ -316,7 +373,9 @@ export function ObjectWorkspaceLocationPanel({
             </div>
 
             {addressPreview && (
-              <p className="drawer-location-preview-inline">{addressPreview}</p>
+              <div className="drawer-location-preview-inline">
+                <span>{addressPreview}</span>
+              </div>
             )}
 
             <div className="drawer-inline-field">
@@ -374,7 +433,7 @@ export function ObjectWorkspaceLocationPanel({
         <article className="panel-card panel-card--nested drawer-location-map-card">
           <div className="panel-heading">
             <div>
-              <span className="facet-title">Carte interactive</span>
+              <span className="facet-title">Carte</span>
             </div>
           </div>
 
@@ -401,7 +460,7 @@ export function ObjectWorkspaceLocationPanel({
           </div>
 
           <p className="drawer-location-map-note">
-            Saisissez des coordonnees valides ou deplacez l epingle. Le point se recale automatiquement des que les deux valeurs sont exploitables.
+            Modifiez les coordonnees ou deplacez l epingle.
           </p>
 
           <div className="detail-map-card__canvas drawer-location-map-card__canvas">

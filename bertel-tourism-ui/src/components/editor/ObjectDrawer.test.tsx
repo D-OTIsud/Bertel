@@ -1272,16 +1272,44 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
 
-    expect(screen.getByLabelText(/numero/i)).toHaveValue('12');
+    expect(screen.getByLabelText(/^numero$/i)).toHaveValue('12');
     expect(screen.getByLabelText(/suffixe/i)).toHaveValue('bis');
     expect(screen.getByLabelText(/^voie$/i)).toHaveValue('Rue Alfred Picard');
     expect(screen.getByLabelText(/complement d'adresse/i)).toHaveValue('Batiment A, appartement 4');
     expect(screen.getByLabelText(/quartier \/ lieu-dit/i)).toHaveValue('La Plaine des Cafres');
-    expect(screen.getByPlaceholderText(/ex\. bis, ter, a, abis/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ex\. bis, ter, a/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/ex\. sud sauvage/i)).toBeInTheDocument();
     expect(screen.getByText(/12 bis Rue Alfred Picard, Batiment A, appartement 4/i)).toBeInTheDocument();
     expect(screen.queryByText(/aucun lieu rattache disponible/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/aucune zone touristique disponible/i)).not.toBeInTheDocument();
+  });
+
+  it('does not treat a street type as an address suffix when parsing a single address line', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        address1: '8 RUE Josemont Lauret',
+        postcode: '97418',
+        city: 'Le Tampon',
+        latitude: '-21.203853',
+        longitude: '55.578477',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+
+    expect(screen.getByLabelText(/^numero$/i)).toHaveValue('8');
+    expect(screen.getByLabelText(/suffixe/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^voie$/i)).toHaveValue('RUE Josemont Lauret');
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

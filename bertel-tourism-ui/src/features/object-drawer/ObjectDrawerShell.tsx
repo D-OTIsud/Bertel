@@ -1063,7 +1063,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
           <AvatarStack people={peers} />
           {mode === 'view' && canEdit && (
             <Button variant="outline" size="sm" onClick={() => handleModeToggle('edit')}>
-              Workspace
+              Modifier
             </Button>
           )}
           {mode === 'edit' && (

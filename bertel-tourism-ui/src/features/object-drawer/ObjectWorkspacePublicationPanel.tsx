@@ -87,9 +87,7 @@ export function ObjectWorkspacePublicationPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">A3</span>
-            <h2>Publication et moderation</h2>
-            <p>Ce module porte l etat editorial, la publication et les surfaces internes de validation sans les melanger aux onglets metier.</p>
+            <h2>Publication</h2>
           </div>
           <div className="stack-list text-right">
             <Button
@@ -138,7 +136,7 @@ export function ObjectWorkspacePublicationPanel({
               <p>Aucune proposition en attente pour cette fiche.</p>
             )
           ) : (
-            <p>{value.moderation.unavailableReason ?? 'La file de moderation n est pas encore exposee dans ce contexte live.'}</p>
+            <p>{value.moderation.unavailableReason ?? 'Non disponible dans ce contexte.'}</p>
           )}
         </article>
 
@@ -159,7 +157,7 @@ export function ObjectWorkspacePublicationPanel({
               <p>Aucun support print n est actuellement rattache a cette fiche.</p>
             )
           ) : (
-            <p>{value.printPublications.unavailableReason ?? 'Le workflow print n est pas encore raccorde a ce profil.'}</p>
+            <p>{value.printPublications.unavailableReason ?? 'Non disponible dans ce contexte.'}</p>
           )}
         </article>
       </div>

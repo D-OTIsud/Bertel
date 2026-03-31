@@ -153,9 +153,7 @@ export function ObjectWorkspaceCharacteristicsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">C1</span>
-            <h2>Caracteristiques</h2>
-            <p>Ce module transversal regroupe langues, equipements, moyens de paiement et tags d environnement dans un meme cadre metier.</p>
+            <h2>Équipements & services</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -193,7 +191,7 @@ export function ObjectWorkspaceCharacteristicsPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Equipements</span>
             <strong>{value.selectedAmenityCodes.length}</strong>
-            <p>{value.unavailableReason ?? 'Le perimetre C1 reste distinct des distinctions, accessibilite et durabilite.'}</p>
+            {value.unavailableReason && <p className="text-sm text-muted-foreground">{value.unavailableReason}</p>}
           </article>
         </div>
       </article>

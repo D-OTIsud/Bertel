@@ -167,9 +167,7 @@ export function ObjectWorkspaceDescriptionsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">B2</span>
-            <h2>Descriptions et langues</h2>
-            <p>Le contenu objet et le contenu sous-lieu restent separes, avec un selecteur global de langue pour l'edition.</p>
+            <h2>Descriptions</h2>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -235,7 +233,7 @@ export function ObjectWorkspaceDescriptionsPanel({
         {!canEditPlaceDescriptions && value.places.length > 0 && (
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Moderation</span>
-            <p>Les descriptions de sous-lieu restent visibles, mais leur ecriture attend la surface admin / moderation qui arrivera avec A3.</p>
+            <p>Les descriptions de sous-lieu sont en lecture seule dans ce contexte.</p>
           </article>
         )}
       </section>

@@ -241,9 +241,7 @@ export function ObjectWorkspaceLegalPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">D6</span>
-            <h2>Juridique et conformite</h2>
-            <p>Le module D6 regroupe les pieces juridiques, leur cycle de validite et un resume de conformite, sans les melanger aux contenus publics.</p>
+            <h2>Documents légaux</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -263,7 +261,7 @@ export function ObjectWorkspaceLegalPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Etat</span>
             <strong>{renderComplianceLabel(value.compliance.complianceStatus)}</strong>
-            <p>{value.records.length} document(s) remontes dans le module D6.</p>
+            <p>{value.records.length} document(s) enregistre(s).</p>
           </article>
 
           <article className="panel-card panel-card--nested">

@@ -121,9 +121,7 @@ export function ObjectWorkspaceContactsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">B4</span>
-            <h2>Contacts publics et web</h2>
-            <p>Cet onglet gere uniquement les contacts de l objet. Les contacts d acteurs et d organisations restent dans les modules de relations.</p>
+            <h2>Contacts</h2>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -147,7 +145,7 @@ export function ObjectWorkspaceContactsPanel({
           </article>
 
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Hors perimetre B4</span>
+            <span className="facet-title">Contacts liés</span>
             <p>{value.relatedActorContactsCount} contact(s) acteur et {value.relatedOrganizationContactsCount} contact(s) organisation sont visibles ailleurs, mais non editables ici.</p>
           </article>
         </div>

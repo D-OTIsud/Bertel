@@ -20,12 +20,18 @@ jest.mock('react-map-gl/maplibre', () => ({
   Marker: ({
     children,
     onDragEnd,
+    latitude,
+    longitude,
   }: {
     children?: ReactNode;
     onDragEnd?: (event: { lngLat: { lng: number; lat: number } }) => void;
+    latitude?: number;
+    longitude?: number;
   }) => (
     <div
       data-testid="workspace-location-marker"
+      data-latitude={latitude}
+      data-longitude={longitude}
       onClick={() => onDragEnd?.({ lngLat: { lng: 55.501234, lat: -21.123456 } })}
     >
       {children}
@@ -1170,7 +1176,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getAllByText(/09:30 -> 17:00/i)).toHaveLength(2);
   });
 
-  it('confirms a pin move before updating latitude and longitude in localisation', () => {
+  it('keeps coordinates editable in the map card and syncs them back to the pin', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({
         id: 'obj-1',
@@ -1190,10 +1196,41 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
 
+    expect(screen.getAllByLabelText(/latitude/i)).toHaveLength(1);
+    expect(screen.getAllByLabelText(/longitude/i)).toHaveLength(1);
     expect(screen.getByDisplayValue('-21.339100')).toBeInTheDocument();
     expect(screen.getByDisplayValue('55.478100')).toBeInTheDocument();
     expect(screen.getByTestId('workspace-location-map')).toBeInTheDocument();
     expect(screen.getByTestId('workspace-location-map')).toHaveAttribute('data-map-style', expect.stringContaining('openfreemap'));
+    expect(screen.getByTestId('workspace-location-marker')).toHaveAttribute('data-latitude', '-21.3391');
+    expect(screen.getByTestId('workspace-location-marker')).toHaveAttribute('data-longitude', '55.4781');
+
+    fireEvent.change(screen.getByLabelText(/latitude/i), { target: { value: '-21.300000' } });
+    fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '55.600000' } });
+
+    expect(screen.getByTestId('workspace-location-marker')).toHaveAttribute('data-latitude', '-21.3');
+    expect(screen.getByTestId('workspace-location-marker')).toHaveAttribute('data-longitude', '55.6');
+  });
+
+  it('confirms a pin move before updating latitude and longitude in localisation', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        latitude: '-21.339100',
+        longitude: '55.478100',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
 
     fireEvent.click(screen.getByTestId('workspace-location-marker'));
 
@@ -1240,6 +1277,8 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByLabelText(/^voie$/i)).toHaveValue('Rue Alfred Picard');
     expect(screen.getByLabelText(/complement d'adresse/i)).toHaveValue('Batiment A, appartement 4');
     expect(screen.getByLabelText(/quartier \/ lieu-dit/i)).toHaveValue('La Plaine des Cafres');
+    expect(screen.getByPlaceholderText(/ex\. bis, ter, a, abis/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/ex\. sud sauvage/i)).toBeInTheDocument();
     expect(screen.getByText(/12 bis Rue Alfred Picard, Batiment A, appartement 4/i)).toBeInTheDocument();
     expect(screen.queryByText(/aucun lieu rattache disponible/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/aucune zone touristique disponible/i)).not.toBeInTheDocument();

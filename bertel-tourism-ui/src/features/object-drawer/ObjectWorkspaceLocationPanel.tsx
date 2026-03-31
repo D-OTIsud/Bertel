@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapPinned } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
-import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
 import type { ObjectWorkspaceLocationModule } from '../../services/object-workspace-parser';
 import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import { Button } from '@/components/ui/button';
@@ -15,14 +14,8 @@ interface SaveActionState {
   hint: string | null;
 }
 
-interface LocationAccess extends ObjectWorkspaceModuleAccess {
-  canEditPlaces: boolean;
-  canEditZones: boolean;
-}
-
 interface ObjectWorkspaceLocationPanelProps {
   value: ObjectWorkspaceLocationModule;
-  access: LocationAccess;
   dirty: boolean;
   saving: boolean;
   statusMessage: string | null;
@@ -50,7 +43,6 @@ const DEFAULT_LOCATION_CENTER: LocationCoordinates = {
 
 const DEFAULT_LOCATION_ZOOM = 10.2;
 const FOCUSED_LOCATION_ZOOM = 15;
-const ADDRESS_SUFFIX_OPTIONS = ['', 'bis', 'ter', 'quater', 'A', 'B', 'C'];
 
 function parseCoordinate(value: string): number | null {
   const normalized = value.trim().replace(',', '.');
@@ -75,6 +67,24 @@ function readCoordinates(value: ObjectWorkspaceLocationModule['main']): Location
 
 function formatCoordinate(value: number): string {
   return value.toFixed(6);
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function normalizeAddressSuffix(value: string): string {
+  const compact = value.replace(/\s+/g, '').trim();
+  if (!compact) {
+    return '';
+  }
+
+  const lower = compact.toLowerCase();
+  if (['bis', 'ter', 'quater', 'quinquies', 'sexies'].includes(lower)) {
+    return lower;
+  }
+
+  return compact.toUpperCase();
 }
 
 function coordinatesMatch(left: LocationCoordinates, right: LocationCoordinates): boolean {
@@ -102,21 +112,21 @@ function parseStructuredAddress(value: ObjectWorkspaceLocationModule['main']): S
     };
   }
 
-  const compactMatch = combined.match(/^(\d+)([A-Za-z])\s+(.+)$/);
+  const compactMatch = combined.match(/^(\d+)([A-Za-z]+)\s+(.+)$/);
   if (compactMatch) {
     return {
       number: compactMatch[1] ?? '',
-      suffix: (compactMatch[2] ?? '').toUpperCase(),
+      suffix: (compactMatch[2] ?? '').trim(),
       street: (compactMatch[3] ?? '').trim(),
       complement: value.address3.trim(),
     };
   }
 
-  const spacedMatch = combined.match(/^(\d+)\s+(bis|ter|quater|quinquies|A|B|C)\s+(.+)$/i);
+  const spacedMatch = combined.match(/^(\d+)\s+([A-Za-z]+)\s+(.+)$/);
   if (spacedMatch) {
     return {
       number: spacedMatch[1] ?? '',
-      suffix: spacedMatch[2]?.length === 1 ? spacedMatch[2].toUpperCase() : (spacedMatch[2] ?? '').toLowerCase(),
+      suffix: (spacedMatch[2] ?? '').trim(),
       street: (spacedMatch[3] ?? '').trim(),
       complement: value.address3.trim(),
     };
@@ -141,8 +151,8 @@ function parseStructuredAddress(value: ObjectWorkspaceLocationModule['main']): S
 }
 
 function buildStreetLine(address: StructuredAddress): string {
-  const baseLine = [address.number, address.suffix, address.street].filter(Boolean).join(' ').trim();
-  return [baseLine, address.complement].filter(Boolean).join(', ');
+  const firstLine = [address.number, address.suffix, address.street].filter(Boolean).join(' ').trim();
+  return [firstLine, address.complement].filter(Boolean).join(', ');
 }
 
 function buildAddressPreview(address: StructuredAddress, value: ObjectWorkspaceLocationModule['main']): string {
@@ -152,7 +162,6 @@ function buildAddressPreview(address: StructuredAddress, value: ObjectWorkspaceL
 
 export function ObjectWorkspaceLocationPanel({
   value,
-  access,
   dirty,
   saving,
   statusMessage,
@@ -173,9 +182,9 @@ export function ObjectWorkspaceLocationPanel({
     [structuredAddress, value.main.city, value.main.lieuDit, value.main.postcode],
   );
   const coordinatesAreBlank = value.main.latitude.trim() === '' && value.main.longitude.trim() === '';
+  const hasRelatedPlaces = value.places.length > 0;
+  const hasZoneCards = value.zoneCodes.length > 0;
   const canMovePin = !saveAction.disabled && !saving;
-  const hasRelatedPlaces = value.places.length > 0 || access.canEditPlaces;
-  const hasZoneCards = value.zoneCodes.length > 0 || access.canEditZones;
   const [mapCoordinates, setMapCoordinates] = useState<LocationCoordinates>(
     parsedCoordinates ?? DEFAULT_LOCATION_CENTER,
   );
@@ -204,6 +213,15 @@ export function ObjectWorkspaceLocationPanel({
       address2: nextAddress.street,
       address3: nextAddress.complement,
     });
+  }
+
+  function normalizeStructuredField(field: keyof StructuredAddress) {
+    if (field === 'suffix') {
+      patchStructuredAddress({ suffix: normalizeAddressSuffix(structuredAddress.suffix) });
+      return;
+    }
+
+    patchStructuredAddress({ [field]: normalizeWhitespace(structuredAddress[field]) });
   }
 
   function handleMarkerDragEnd(nextCoordinates: LocationCoordinates) {
@@ -251,117 +269,103 @@ export function ObjectWorkspaceLocationPanel({
             </div>
           </div>
 
-          <div className="drawer-grid">
-            <div className="field-block">
+          <div className="drawer-location-form-grid">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-number">Numero</Label>
               <Input
                 id="workspace-location-number"
                 inputMode="numeric"
                 value={structuredAddress.number}
+                placeholder="Ex. 12"
                 onChange={(event) => patchStructuredAddress({ number: event.target.value })}
+                onBlur={() => normalizeStructuredField('number')}
               />
             </div>
 
-            <div className="field-block">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-number-suffix">Suffixe</Label>
-              <select
+              <Input
                 id="workspace-location-number-suffix"
                 value={structuredAddress.suffix}
+                placeholder="Ex. bis, ter, A, ABIS"
                 onChange={(event) => patchStructuredAddress({ suffix: event.target.value })}
-              >
-                <option value="">Aucun</option>
-                {ADDRESS_SUFFIX_OPTIONS.filter(Boolean).map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
+                onBlur={() => normalizeStructuredField('suffix')}
+              />
             </div>
 
-            <div className="field-block field-block--wide">
+            <div className="drawer-inline-field drawer-inline-field--full">
               <Label htmlFor="workspace-location-street">Voie</Label>
               <Input
                 id="workspace-location-street"
                 value={structuredAddress.street}
+                placeholder="Ex. Rue Alfred Picard"
                 onChange={(event) => patchStructuredAddress({ street: event.target.value })}
+                onBlur={() => normalizeStructuredField('street')}
               />
             </div>
 
-            <div className="field-block field-block--wide">
+            <div className="drawer-inline-field drawer-inline-field--full">
               <Label htmlFor="workspace-location-complement">Complement d'adresse</Label>
               <Input
                 id="workspace-location-complement"
                 value={structuredAddress.complement}
+                placeholder="Ex. Batiment A, appartement 4"
                 onChange={(event) => patchStructuredAddress({ complement: event.target.value })}
-                placeholder="Batiment, appartement, etage..."
+                onBlur={() => normalizeStructuredField('complement')}
               />
             </div>
 
-            <div className="field-block field-block--wide">
-              <Label>Adresse enregistree</Label>
-              <div className="drawer-location-preview">
-                {addressPreview || 'Aucune adresse detaillee pour le moment.'}
-              </div>
-            </div>
+            {addressPreview && (
+              <p className="drawer-location-preview-inline">{addressPreview}</p>
+            )}
 
-            <div className="field-block">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-postcode">Code postal</Label>
               <Input
                 id="workspace-location-postcode"
                 value={value.main.postcode}
+                placeholder="Ex. 97430"
                 onChange={(event) => onChange({ postcode: event.target.value })}
               />
             </div>
 
-            <div className="field-block">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-city">Ville</Label>
               <Input
                 id="workspace-location-city"
                 value={value.main.city}
+                placeholder="Ex. Le Tampon"
                 onChange={(event) => onChange({ city: event.target.value })}
               />
             </div>
 
-            <div className="field-block">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-lieudit">Quartier / lieu-dit</Label>
               <Input
                 id="workspace-location-lieudit"
                 value={value.main.lieuDit}
+                placeholder="Ex. La Plaine des Cafres"
                 onChange={(event) => onChange({ lieuDit: event.target.value })}
               />
             </div>
 
-            <div className="field-block field-block--wide">
-              <Label htmlFor="workspace-location-direction">Indications d'acces</Label>
-              <Input
-                id="workspace-location-direction"
-                value={value.main.direction}
-                onChange={(event) => onChange({ direction: event.target.value })}
-              />
-            </div>
-
-            <div className="field-block">
-              <Label htmlFor="workspace-location-latitude">Latitude</Label>
-              <Input
-                id="workspace-location-latitude"
-                value={value.main.latitude}
-                onChange={(event) => onChange({ latitude: event.target.value })}
-              />
-            </div>
-
-            <div className="field-block">
-              <Label htmlFor="workspace-location-longitude">Longitude</Label>
-              <Input
-                id="workspace-location-longitude"
-                value={value.main.longitude}
-                onChange={(event) => onChange({ longitude: event.target.value })}
-              />
-            </div>
-
-            <div className="field-block">
+            <div className="drawer-inline-field">
               <Label htmlFor="workspace-location-zone">Zone touristique</Label>
               <Input
                 id="workspace-location-zone"
                 value={value.main.zoneTouristique}
+                placeholder="Ex. Sud sauvage"
                 onChange={(event) => onChange({ zoneTouristique: event.target.value })}
+              />
+            </div>
+
+            <div className="drawer-inline-field drawer-inline-field--full">
+              <Label htmlFor="workspace-location-direction">Indications d'acces</Label>
+              <Input
+                id="workspace-location-direction"
+                value={value.main.direction}
+                placeholder="Ex. Depuis Saint-Pierre, au rond-point apres la station..."
+                onChange={(event) => onChange({ direction: event.target.value })}
               />
             </div>
           </div>
@@ -371,20 +375,34 @@ export function ObjectWorkspaceLocationPanel({
           <div className="panel-heading">
             <div>
               <span className="facet-title">Carte interactive</span>
-              <h3>Position de la fiche</h3>
             </div>
           </div>
 
-          <div className="drawer-location-coordinate-list">
-            <div className="drawer-location-coordinate-item">
-              <span>Latitude</span>
-              <strong>{parsedCoordinates ? formatCoordinate(parsedCoordinates.latitude) : 'Non renseignee'}</strong>
+          <div className="drawer-location-map-toolbar">
+            <div className="drawer-inline-field drawer-inline-field--compact">
+              <Label htmlFor="workspace-location-latitude">Latitude</Label>
+              <Input
+                id="workspace-location-latitude"
+                value={value.main.latitude}
+                placeholder="-21.203853"
+                onChange={(event) => onChange({ latitude: event.target.value })}
+              />
             </div>
-            <div className="drawer-location-coordinate-item">
-              <span>Longitude</span>
-              <strong>{parsedCoordinates ? formatCoordinate(parsedCoordinates.longitude) : 'Non renseignee'}</strong>
+
+            <div className="drawer-inline-field drawer-inline-field--compact">
+              <Label htmlFor="workspace-location-longitude">Longitude</Label>
+              <Input
+                id="workspace-location-longitude"
+                value={value.main.longitude}
+                placeholder="55.578477"
+                onChange={(event) => onChange({ longitude: event.target.value })}
+              />
             </div>
           </div>
+
+          <p className="drawer-location-map-note">
+            Saisissez des coordonnees valides ou deplacez l epingle. Le point se recale automatiquement des que les deux valeurs sont exploitables.
+          </p>
 
           <div className="detail-map-card__canvas drawer-location-map-card__canvas">
             <Map
@@ -424,12 +442,6 @@ export function ObjectWorkspaceLocationPanel({
               <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
             </Map>
           </div>
-
-          <p className="drawer-location-map-note">
-            {canMovePin
-              ? "Deplacez l epingle pour proposer une nouvelle latitude et longitude."
-              : 'Les coordonnees restent en lecture seule pour votre profil.'}
-          </p>
         </article>
 
         {(hasRelatedPlaces || hasZoneCards) && (
@@ -438,13 +450,13 @@ export function ObjectWorkspaceLocationPanel({
               <article className="panel-card panel-card--nested">
                 <span className="facet-title">Lieux rattaches</span>
                 <div className="stack-list">
-                  {value.places.length > 0 ? value.places.map((place) => (
+                  {value.places.map((place) => (
                     <article key={place.id} className="panel-card panel-card--nested">
                       <strong>{place.label}</strong>
                       <p>{place.locationLabel || 'Aucune localisation dediee remontee.'}</p>
                       {place.isPrimary && <small>Lieu principal</small>}
                     </article>
-                  )) : <p>Aucun lieu rattache disponible.</p>}
+                  ))}
                 </div>
               </article>
             )}
@@ -453,9 +465,9 @@ export function ObjectWorkspaceLocationPanel({
               <article className="panel-card panel-card--nested">
                 <span className="facet-title">Zones touristiques</span>
                 <div className="stack-list">
-                  {value.zoneCodes.length > 0 ? value.zoneCodes.map((code) => (
+                  {value.zoneCodes.map((code) => (
                     <span key={code} className="drawer-header__chip">{code}</span>
-                  )) : <p>Aucune zone touristique disponible.</p>}
+                  ))}
                 </div>
               </article>
             )}

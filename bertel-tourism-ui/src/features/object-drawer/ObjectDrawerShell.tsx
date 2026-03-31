@@ -1299,7 +1299,6 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               {resolvedSection === 'location' && (
                 <ObjectWorkspaceLocationPanel
                   value={editorSnapshot.draft.location}
-                  access={resolvedData.permissions.location}
                   dirty={dirtySections.location === true}
                   saving={saveStateBySection.location.saving}
                   statusMessage={saveStateBySection.location.message}

@@ -659,6 +659,17 @@ function readString(value: unknown, fallback = ''): string {
   return fallback;
 }
 
+function pickFirstText(...values: unknown[]): string {
+  for (const value of values) {
+    const normalized = readString(value).trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return '';
+}
+
 function readBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -753,32 +764,71 @@ function buildLocationLabel(location: ObjectWorkspaceLocationForm): string {
 }
 
 function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocationForm {
+  const addressRecord = readRecord(raw.address);
+  const locationRecord = readRecord(raw.location);
   const candidates = [
-    readRecord(raw.object_location),
-    ...readArray(raw.object_location),
     ...readArray(raw.object_locations),
-    readRecord(raw.address),
-    readRecord(raw.location),
+    ...readArray(raw.object_location),
+    ...readArray(raw.locations),
   ];
-  const mainCandidate = candidates.find((candidate) => Object.keys(candidate).length > 0 && candidate.is_main_location !== false) ?? {};
-  const parsed = parseLocationRecord(mainCandidate);
-
-  if (!parsed.address1 && !parsed.city && !parsed.latitude && !parsed.longitude) {
-    const addressRecord = readRecord(raw.address);
-    const locationRecord = readRecord(raw.location);
-    return {
-      ...parsed,
-      address1: readString(addressRecord.address1, readString(raw.address1)),
-      postcode: readString(addressRecord.postcode, readString(raw.postcode)),
-      city: readString(addressRecord.city, readString(raw.city)),
-      lieuDit: readString(addressRecord.lieu_dit, readString(raw.lieu_dit)),
-      direction: readString(addressRecord.direction, readString(raw.direction)),
-      latitude: readString(locationRecord.latitude, readString(raw.latitude)),
-      longitude: readString(locationRecord.longitude, readString(raw.longitude)),
-    };
+  if (isRecord(raw.object_location)) {
+    candidates.unshift(raw.object_location);
   }
+  const mainCandidate = candidates.find((candidate) => Object.keys(candidate).length > 0 && candidate.is_main_location !== false) ?? {};
+  const mainLocationRecord = readRecord(mainCandidate);
+  const parsed = parseLocationRecord(mainLocationRecord);
+  const geometryRecord = readRecord(locationRecord.geometry ?? mainLocationRecord.geometry ?? raw.geometry);
+  const coordinateSource = Array.isArray(locationRecord.coordinates)
+    ? locationRecord.coordinates
+    : Array.isArray(mainLocationRecord.coordinates)
+      ? mainLocationRecord.coordinates
+      : Array.isArray(geometryRecord.coordinates)
+        ? geometryRecord.coordinates
+        : [];
 
-  return parsed;
+  return {
+    ...parsed,
+    address1: pickFirstText(
+      parsed.address1,
+      addressRecord.address1,
+      addressRecord.street,
+      mainLocationRecord.address1,
+      mainLocationRecord.address,
+      locationRecord.address,
+      raw.address1,
+      raw.address,
+    ),
+    postcode: pickFirstText(
+      parsed.postcode,
+      addressRecord.postcode,
+      addressRecord.zipcode,
+      mainLocationRecord.postcode,
+      raw.postcode,
+    ),
+    city: pickFirstText(parsed.city, addressRecord.city, mainLocationRecord.city, locationRecord.city, raw.city),
+    lieuDit: pickFirstText(parsed.lieuDit, addressRecord.lieu_dit, mainLocationRecord.lieu_dit, raw.lieu_dit),
+    direction: pickFirstText(parsed.direction, addressRecord.direction, mainLocationRecord.direction, raw.direction),
+    latitude: pickFirstText(
+      parsed.latitude,
+      locationRecord.latitude,
+      locationRecord.lat,
+      mainLocationRecord.latitude,
+      mainLocationRecord.lat,
+      coordinateSource[1],
+      raw.latitude,
+      raw.lat,
+    ),
+    longitude: pickFirstText(
+      parsed.longitude,
+      locationRecord.longitude,
+      locationRecord.lon,
+      mainLocationRecord.longitude,
+      mainLocationRecord.lon,
+      coordinateSource[0],
+      raw.longitude,
+      raw.lon,
+    ),
+  };
 }
 
 function parsePlaceSummary(place: GenericRecord, index: number): ObjectWorkspacePlaceSummary {

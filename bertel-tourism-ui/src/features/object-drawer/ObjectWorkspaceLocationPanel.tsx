@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapPinned } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import type { ObjectWorkspaceLocationModule } from '../../services/object-workspace-parser';
-import { env } from '../../lib/env';
+import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -143,8 +143,71 @@ export function ObjectWorkspaceLocationPanel({
             </div>
           </div>
 
-          <div className="drawer-location-layout">
-            <div className="drawer-grid">
+          <article className="detail-map-card drawer-location-map-card">
+            <div className="detail-map-card__canvas drawer-location-map-card__canvas">
+              <Map
+                key={`${mapCoordinates.latitude}:${mapCoordinates.longitude}`}
+                reuseMaps
+                mapStyle={DEFAULT_APP_MAP_STYLE}
+                initialViewState={{
+                  longitude: mapCoordinates.longitude,
+                  latitude: mapCoordinates.latitude,
+                  zoom: parsedCoordinates ? FOCUSED_LOCATION_ZOOM : DEFAULT_LOCATION_ZOOM,
+                }}
+                attributionControl={false}
+                scrollZoom
+                dragPan
+                dragRotate={false}
+                doubleClickZoom
+                touchZoomRotate
+                keyboard
+                style={{ width: '100%', height: '100%' }}
+              >
+                <Marker
+                  longitude={mapCoordinates.longitude}
+                  latitude={mapCoordinates.latitude}
+                  anchor="bottom"
+                  draggable={canMovePin}
+                  onDragEnd={(event) => handleMarkerDragEnd({
+                    latitude: event.lngLat.lat,
+                    longitude: event.lngLat.lng,
+                  })}
+                >
+                  <span className="drawer-location-pin" aria-hidden="true">
+                    <span className="drawer-location-pin__glyph">
+                      <MapPinned size={18} />
+                    </span>
+                  </span>
+                </Marker>
+                <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
+              </Map>
+            </div>
+
+            <div className="detail-map-card__body">
+              <div className="detail-map-card__address">
+                <span className="facet-title">Coordonnees</span>
+                {parsedCoordinates ? (
+                  <p>{formatCoordinate(parsedCoordinates.latitude)}, {formatCoordinate(parsedCoordinates.longitude)}</p>
+                ) : coordinatesAreBlank ? (
+                  <p>Aucune coordonnee enregistree pour le moment.</p>
+                ) : (
+                  <p>Coordonnees en cours de saisie.</p>
+                )}
+                <small>
+                  {canMovePin
+                    ? "Deplacez l epingle pour proposer une nouvelle latitude et longitude."
+                    : 'Les coordonnees restent en lecture seule pour votre profil.'}
+                </small>
+              </div>
+              {!parsedCoordinates && (
+                <p className="drawer-location-map-note">
+                  La carte reste centree sur La Reunion tant qu aucune coordonnee exploitable n est renseignee.
+                </p>
+              )}
+            </div>
+          </article>
+
+          <div className="drawer-grid">
               <div className="field-block field-block--wide">
                 <Label htmlFor="workspace-location-address1">Adresse principale</Label>
                 <Input
@@ -216,71 +279,6 @@ export function ObjectWorkspaceLocationPanel({
                   onChange={(event) => onChange({ zoneTouristique: event.target.value })}
                 />
               </div>
-            </div>
-
-            <article className="detail-map-card drawer-location-map-card">
-              <div className="detail-map-card__canvas drawer-location-map-card__canvas">
-                <Map
-                  key={`${mapCoordinates.latitude}:${mapCoordinates.longitude}`}
-                  reuseMaps
-                  mapStyle={env.mapStyles.classic}
-                  initialViewState={{
-                    longitude: mapCoordinates.longitude,
-                    latitude: mapCoordinates.latitude,
-                    zoom: parsedCoordinates ? FOCUSED_LOCATION_ZOOM : DEFAULT_LOCATION_ZOOM,
-                  }}
-                  attributionControl={false}
-                  scrollZoom
-                  dragPan
-                  dragRotate={false}
-                  doubleClickZoom
-                  touchZoomRotate
-                  keyboard
-                  style={{ width: '100%', height: '100%' }}
-                >
-                  <Marker
-                    longitude={mapCoordinates.longitude}
-                    latitude={mapCoordinates.latitude}
-                    anchor="bottom"
-                    draggable={canMovePin}
-                    onDragEnd={(event) => handleMarkerDragEnd({
-                      latitude: event.lngLat.lat,
-                      longitude: event.lngLat.lng,
-                    })}
-                  >
-                    <span className="drawer-location-pin" aria-hidden="true">
-                      <span className="drawer-location-pin__glyph">
-                        <MapPinned size={18} />
-                      </span>
-                    </span>
-                  </Marker>
-                  <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
-                </Map>
-              </div>
-
-              <div className="detail-map-card__body">
-                <div className="detail-map-card__address">
-                  <span className="facet-title">Coordonnees</span>
-                  {parsedCoordinates ? (
-                    <p>{formatCoordinate(parsedCoordinates.latitude)}, {formatCoordinate(parsedCoordinates.longitude)}</p>
-                  ) : coordinatesAreBlank ? (
-                    <p>Aucune coordonnee enregistree pour le moment.</p>
-                  ) : (
-                    <p>Coordonnees en cours de saisie.</p>
-                  )}
-                  <small>
-                    {canMovePin
-                      ? "Deplacez l epingle pour proposer une nouvelle latitude et longitude."
-                      : 'Les coordonnees restent en lecture seule pour votre profil.'}
-                  </small>
-                </div>
-                {!parsedCoordinates && (
-                  <p className="drawer-location-map-note">
-                    La carte reste centree sur La Reunion tant qu aucune coordonnee exploitable n est renseignee.
-                  </p>
-                )}
-              </div>
-            </article>
           </div>
         </article>
 

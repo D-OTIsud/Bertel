@@ -9,7 +9,7 @@ import {
   defaultMarkerStyles,
   getMarkerImageId,
 } from '../../config/map-markers';
-import { env } from '../../lib/env';
+import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
@@ -184,7 +184,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
-  const mapStyle = env.mapStyles.satellite;
+  const mapStyle = DEFAULT_APP_MAP_STYLE;
   const markerPoints = useMemo(
     () =>
       objects.flatMap((card) => {

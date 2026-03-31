@@ -465,6 +465,7 @@ describe('parseObjectWorkspace', () => {
       distinctionGroups: [],
       accessibilityLabels: [],
       accessibilityAmenityCoverage: [],
+      schemeOptions: [],
       unavailableReason: null,
     });
     expect(parsed.pricing.prices[0]).toMatchObject({
@@ -577,6 +578,37 @@ describe('parseObjectWorkspace', () => {
       hasPolicy: true,
       accepted: true,
       conditions: 'Supplement menage',
+    });
+  });
+
+  it('recovers initial coordinates from geometry sources when direct latitude fields are absent', () => {
+    const detail: ObjectDetail = {
+      id: 'HOTRUN0000000002',
+      name: 'Cote Volcan',
+      type: 'HOT',
+      raw: {
+        address: {
+          address1: '45 route du volcan',
+          postcode: '97418',
+          city: 'Le Tampon',
+        },
+        location: {
+          geometry: {
+            type: 'Point',
+            coordinates: [55.517913, -21.219988],
+          },
+        },
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.location.main).toMatchObject({
+      address1: '45 route du volcan',
+      postcode: '97418',
+      city: 'Le Tampon',
+      latitude: '-21.219988',
+      longitude: '55.517913',
     });
   });
 });

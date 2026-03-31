@@ -2586,19 +2586,12 @@ a {
   color: var(--theme-primary);
 }
 
-.drawer-location-layout {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.92fr);
-  align-items: start;
-}
-
 .drawer-location-map-card {
   height: 100%;
 }
 
 .drawer-location-map-card__canvas {
-  min-height: 320px;
+  min-height: 360px;
 }
 
 .drawer-location-map-note {
@@ -3576,10 +3569,6 @@ a {
   }
 
   .detail-map-card {
-    grid-template-columns: 1fr;
-  }
-
-  .drawer-location-layout {
     grid-template-columns: 1fr;
   }
 

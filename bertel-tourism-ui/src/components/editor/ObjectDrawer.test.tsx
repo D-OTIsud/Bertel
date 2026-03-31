@@ -10,7 +10,13 @@ const mockSaveWorkspaceMutateAsync = jest.fn();
 const mockPublishWorkspaceMutateAsync = jest.fn();
 
 jest.mock('react-map-gl/maplibre', () => ({
-  Map: ({ children }: { children?: ReactNode }) => <div data-testid="workspace-location-map">{children}</div>,
+  Map: ({
+    children,
+    mapStyle,
+  }: {
+    children?: ReactNode;
+    mapStyle?: string;
+  }) => <div data-testid="workspace-location-map" data-map-style={mapStyle}>{children}</div>,
   Marker: ({
     children,
     onDragEnd,
@@ -1179,6 +1185,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByDisplayValue('-21.339100')).toBeInTheDocument();
     expect(screen.getByDisplayValue('55.478100')).toBeInTheDocument();
     expect(screen.getByTestId('workspace-location-map')).toBeInTheDocument();
+    expect(screen.getByTestId('workspace-location-map')).toHaveAttribute('data-map-style', expect.stringContaining('openfreemap'));
 
     fireEvent.click(screen.getByTestId('workspace-location-marker'));
 

@@ -37,7 +37,7 @@ import {
   useObjectPrivateNoteWriteAccessQuery,
   useUpdateObjectPrivateNoteMutation,
 } from '../../hooks/useExplorerQueries';
-import { env } from '../../lib/env';
+import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import {
   type PrivateNoteEntry,
   parseObjectDetail,
@@ -1656,7 +1656,7 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
         <div className="detail-map-card__canvas">
           <Map
             reuseMaps
-            mapStyle={env.mapStyles.satellite}
+            mapStyle={DEFAULT_APP_MAP_STYLE}
             initialViewState={{
               longitude: location.longitude,
               latitude: location.latitude,

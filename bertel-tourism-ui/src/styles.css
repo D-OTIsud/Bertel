@@ -2614,6 +2614,20 @@ a {
   min-width: 0;
 }
 
+.drawer-reference-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.drawer-reference-field__hint,
+.drawer-location-reference-status {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
 .drawer-inline-field--full {
   grid-column: 1 / -1;
 }
@@ -2636,6 +2650,11 @@ a {
   color: var(--text-muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.drawer-location-reference-status {
+  grid-column: 1 / -1;
+  margin-top: -0.05rem;
 }
 
 .drawer-location-map-card {

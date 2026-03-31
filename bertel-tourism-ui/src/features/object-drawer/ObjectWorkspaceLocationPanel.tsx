@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { MapPinned } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import type { ObjectWorkspaceLocationModule } from '../../services/object-workspace-parser';
 import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
+import {
+  dedupeLocationReferenceValues,
+  normalizeLocationReferenceKey,
+  normalizeLocationReferenceText,
+  normalizeLocationReferenceValue,
+  normalizePostcodeValue,
+} from '../../lib/location-normalization';
+import type { LocationReferenceOptions } from '../../services/location-reference';
+import { useLocationReferenceOptionsQuery } from '../../hooks/useExplorerQueries';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -36,6 +45,8 @@ interface StructuredAddress {
   complement: string;
 }
 
+type ReferenceFieldKind = 'postcode' | 'city' | 'lieuDit' | 'zoneTouristique';
+
 const DEFAULT_LOCATION_CENTER: LocationCoordinates = {
   latitude: -21.130568,
   longitude: 55.536384,
@@ -43,6 +54,12 @@ const DEFAULT_LOCATION_CENTER: LocationCoordinates = {
 
 const DEFAULT_LOCATION_ZOOM = 10.2;
 const FOCUSED_LOCATION_ZOOM = 15;
+const EMPTY_LOCATION_REFERENCE_OPTIONS: LocationReferenceOptions = {
+  postcodes: [],
+  cities: [],
+  lieuDits: [],
+  touristZones: [],
+};
 const KNOWN_ADDRESS_SUFFIXES = new Set(['bis', 'ter', 'quater', 'quinquies', 'sexies']);
 const KNOWN_STREET_TOKENS = new Set([
   'allee',
@@ -102,6 +119,16 @@ function formatCoordinate(value: number): string {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeAddressNumberInput(value: string): string {
+  return value.replace(/[^\d/\-\s]/g, '');
+}
+
+function normalizeAddressNumber(value: string): string {
+  return normalizeWhitespace(sanitizeAddressNumberInput(value))
+    .replace(/\s*([/-])\s*/g, '$1')
+    .replace(/^[/-]+|[/-]+$/g, '');
 }
 
 function normalizeAddressSuffix(value: string): string {
@@ -217,6 +244,144 @@ function buildAddressPreview(address: StructuredAddress, value: ObjectWorkspaceL
   return [buildStreetLine(address), value.lieuDit.trim(), cityLine].filter(Boolean).join(' · ');
 }
 
+function buildReferenceOptions(
+  values: readonly string[],
+  currentValue: string,
+  kind: ReferenceFieldKind,
+): string[] {
+  return dedupeLocationReferenceValues(
+    [...values, currentValue],
+    kind === 'postcode' ? 'postcode' : 'text',
+  );
+}
+
+function resolveReferenceValue(
+  value: string,
+  options: readonly string[],
+  kind: ReferenceFieldKind,
+): { normalizedValue: string; resolvedValue: string; hasExistingMatch: boolean } {
+  const referenceKind = kind === 'postcode' ? 'postcode' : 'text';
+  const normalizedValue = normalizeLocationReferenceValue(value, referenceKind);
+  if (!normalizedValue) {
+    return {
+      normalizedValue: '',
+      resolvedValue: '',
+      hasExistingMatch: false,
+    };
+  }
+
+  const normalizedKey = kind === 'postcode'
+    ? normalizedValue
+    : normalizeLocationReferenceKey(normalizedValue);
+
+  const matchedOption = options.find((option) => (
+    kind === 'postcode'
+      ? normalizePostcodeValue(option) === normalizedKey
+      : normalizeLocationReferenceKey(option) === normalizedKey
+  ));
+
+  return {
+    normalizedValue,
+    resolvedValue: matchedOption ?? normalizedValue,
+    hasExistingMatch: Boolean(matchedOption),
+  };
+}
+
+function describeReferenceHint(
+  rawValue: string,
+  resolvedValue: string,
+  hasExistingMatch: boolean,
+): string | null {
+  if (!resolvedValue) {
+    return null;
+  }
+
+  if (!hasExistingMatch) {
+    if (rawValue === resolvedValue) {
+      return 'Nouvelle valeur: elle rejoindra la liste apres enregistrement.';
+    }
+
+    return `Nouvelle valeur: elle sera normalisee en "${resolvedValue}" puis ajoutee a la liste apres enregistrement.`;
+  }
+
+  if (rawValue !== resolvedValue) {
+    return `Forme retenue: "${resolvedValue}".`;
+  }
+
+  return null;
+}
+
+interface LocationReferenceInputProps {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: readonly string[];
+  kind: ReferenceFieldKind;
+  onChange: (nextValue: string) => void;
+}
+
+function LocationReferenceInput({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  kind,
+  onChange,
+}: LocationReferenceInputProps) {
+  const corpusOptions = useMemo(
+    () => dedupeLocationReferenceValues(
+      options,
+      kind === 'postcode' ? 'postcode' : 'text',
+    ),
+    [kind, options],
+  );
+  const listId = useId();
+  const fieldOptions = useMemo(
+    () => buildReferenceOptions(options, value, kind),
+    [kind, options, value],
+  );
+  const resolvedState = useMemo(
+    () => resolveReferenceValue(value, corpusOptions, kind),
+    [corpusOptions, kind, value],
+  );
+  const helperText = describeReferenceHint(
+    value.trim(),
+    resolvedState.resolvedValue,
+    resolvedState.hasExistingMatch,
+  );
+
+  return (
+    <div className="drawer-inline-field">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="drawer-reference-field">
+        <Input
+          id={id}
+          list={listId}
+          autoComplete="off"
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(
+            kind === 'postcode'
+              ? normalizePostcodeValue(event.target.value)
+              : event.target.value,
+          )}
+          onBlur={() => onChange(resolvedState.resolvedValue)}
+        />
+        <datalist id={listId}>
+          {fieldOptions.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+        {helperText && (
+          <small className="drawer-reference-field__hint">{helperText}</small>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ObjectWorkspaceLocationPanel({
   value,
   dirty,
@@ -226,6 +391,7 @@ export function ObjectWorkspaceLocationPanel({
   onChange,
   onSave,
 }: ObjectWorkspaceLocationPanelProps) {
+  const locationReferencesQuery = useLocationReferenceOptionsQuery();
   const parsedCoordinates = useMemo(
     () => readCoordinates(value.main),
     [value.main.latitude, value.main.longitude],
@@ -242,6 +408,7 @@ export function ObjectWorkspaceLocationPanel({
   const hasRelatedPlaces = value.places.length > 0;
   const hasZoneCards = value.zoneCodes.length > 0;
   const canMovePin = !saveAction.disabled && !saving;
+  const locationReferences = locationReferencesQuery.data ?? EMPTY_LOCATION_REFERENCE_OPTIONS;
   const [mapCoordinates, setMapCoordinates] = useState<LocationCoordinates>(
     parsedCoordinates ?? DEFAULT_LOCATION_CENTER,
   );
@@ -273,8 +440,18 @@ export function ObjectWorkspaceLocationPanel({
   }
 
   function normalizeStructuredField(field: keyof StructuredAddress) {
+    if (field === 'number') {
+      patchStructuredAddress({ number: normalizeAddressNumber(structuredAddress.number) });
+      return;
+    }
+
     if (field === 'suffix') {
       patchStructuredAddress({ suffix: normalizeAddressSuffix(structuredAddress.suffix) });
+      return;
+    }
+
+    if (field === 'street') {
+      patchStructuredAddress({ street: normalizeLocationReferenceText(structuredAddress.street) });
       return;
     }
 
@@ -333,8 +510,8 @@ export function ObjectWorkspaceLocationPanel({
                 id="workspace-location-number"
                 inputMode="numeric"
                 value={structuredAddress.number}
-                placeholder="Ex. 12"
-                onChange={(event) => patchStructuredAddress({ number: event.target.value })}
+                placeholder="Ex. 12 ou 12-14"
+                onChange={(event) => patchStructuredAddress({ number: sanitizeAddressNumberInput(event.target.value) })}
                 onBlur={() => normalizeStructuredField('number')}
               />
             </div>
@@ -378,45 +555,51 @@ export function ObjectWorkspaceLocationPanel({
               </div>
             )}
 
-            <div className="drawer-inline-field">
-              <Label htmlFor="workspace-location-postcode">Code postal</Label>
-              <Input
-                id="workspace-location-postcode"
-                value={value.main.postcode}
-                placeholder="Ex. 97430"
-                onChange={(event) => onChange({ postcode: event.target.value })}
-              />
-            </div>
+            <LocationReferenceInput
+              id="workspace-location-postcode"
+              label="Code postal"
+              kind="postcode"
+              value={value.main.postcode}
+              placeholder="Selectionnez ou saisissez 5 chiffres"
+              options={locationReferences.postcodes}
+              onChange={(postcode) => onChange({ postcode })}
+            />
 
-            <div className="drawer-inline-field">
-              <Label htmlFor="workspace-location-city">Ville</Label>
-              <Input
-                id="workspace-location-city"
-                value={value.main.city}
-                placeholder="Ex. Le Tampon"
-                onChange={(event) => onChange({ city: event.target.value })}
-              />
-            </div>
+            <LocationReferenceInput
+              id="workspace-location-city"
+              label="Ville"
+              kind="city"
+              value={value.main.city}
+              placeholder="Selectionnez ou ajoutez une ville"
+              options={locationReferences.cities}
+              onChange={(city) => onChange({ city })}
+            />
 
-            <div className="drawer-inline-field">
-              <Label htmlFor="workspace-location-lieudit">Quartier / lieu-dit</Label>
-              <Input
-                id="workspace-location-lieudit"
-                value={value.main.lieuDit}
-                placeholder="Ex. La Plaine des Cafres"
-                onChange={(event) => onChange({ lieuDit: event.target.value })}
-              />
-            </div>
+            <LocationReferenceInput
+              id="workspace-location-lieudit"
+              label="Quartier / lieu-dit"
+              kind="lieuDit"
+              value={value.main.lieuDit}
+              placeholder="Selectionnez ou ajoutez un lieu-dit"
+              options={locationReferences.lieuDits}
+              onChange={(lieuDit) => onChange({ lieuDit })}
+            />
 
-            <div className="drawer-inline-field">
-              <Label htmlFor="workspace-location-zone">Zone touristique</Label>
-              <Input
-                id="workspace-location-zone"
-                value={value.main.zoneTouristique}
-                placeholder="Ex. Sud sauvage"
-                onChange={(event) => onChange({ zoneTouristique: event.target.value })}
-              />
-            </div>
+            <LocationReferenceInput
+              id="workspace-location-zone"
+              label="Zone touristique"
+              kind="zoneTouristique"
+              value={value.main.zoneTouristique}
+              placeholder="Selectionnez ou ajoutez une zone"
+              options={locationReferences.touristZones}
+              onChange={(zoneTouristique) => onChange({ zoneTouristique })}
+            />
+
+            {locationReferencesQuery.isError && (
+              <p className="drawer-location-reference-status">
+                Les listes existantes sont temporairement indisponibles. La saisie reste possible et sera normalisee au mieux.
+              </p>
+            )}
 
             <div className="drawer-inline-field drawer-inline-field--full">
               <Label htmlFor="workspace-location-direction">Indications d'acces</Label>

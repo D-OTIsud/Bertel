@@ -6,6 +6,7 @@ import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
 
 const mockUseObjectWorkspaceQuery = jest.fn();
+const mockUseLocationReferenceOptionsQuery = jest.fn();
 const mockSaveWorkspaceMutateAsync = jest.fn();
 const mockPublishWorkspaceMutateAsync = jest.fn();
 
@@ -52,6 +53,7 @@ function buildWorkspaceResource(params: {
   postcode?: string;
   city?: string;
   lieuDit?: string;
+  zoneTouristique?: string;
   direction?: string;
   latitude?: string;
   longitude?: string;
@@ -156,7 +158,7 @@ function buildWorkspaceResource(params: {
           direction: params.direction ?? '',
           latitude: params.latitude ?? '',
           longitude: params.longitude ?? '',
-          zoneTouristique: '',
+          zoneTouristique: params.zoneTouristique ?? '',
         },
         places: [],
         zoneCodes: [],
@@ -735,6 +737,7 @@ function buildWorkspaceResource(params: {
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectWorkspaceQuery: (...args: unknown[]) => mockUseObjectWorkspaceQuery(...args),
+  useLocationReferenceOptionsQuery: (...args: unknown[]) => mockUseLocationReferenceOptionsQuery(...args),
   useSaveObjectWorkspaceModuleMutation: () => ({
     mutateAsync: mockSaveWorkspaceMutateAsync,
   }),
@@ -778,8 +781,20 @@ describe('ObjectDrawer workspace drafts', () => {
     useObjectDrawerStore.setState({ activeSection: 'general-info', mode: 'edit', dirtyObjects: {} });
     useSessionStore.setState({ role: 'tourism_agent', status: 'ready' });
     mockUseObjectWorkspaceQuery.mockClear();
+    mockUseLocationReferenceOptionsQuery.mockReset();
     mockSaveWorkspaceMutateAsync.mockReset();
     mockPublishWorkspaceMutateAsync.mockReset();
+    mockUseLocationReferenceOptionsQuery.mockReturnValue({
+      data: {
+        postcodes: ['97418', '97430'],
+        cities: ['Le Tampon', 'Saint-Pierre'],
+        lieuDits: ['La Plaine des Cafres', 'Bourg-Murat'],
+        touristZones: ['Sud Sauvage'],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
   });
 
   it('does not overwrite a local tab draft when the same object refetches', () => {
@@ -1278,7 +1293,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByLabelText(/complement d'adresse/i)).toHaveValue('Batiment A, appartement 4');
     expect(screen.getByLabelText(/quartier \/ lieu-dit/i)).toHaveValue('La Plaine des Cafres');
     expect(screen.getByPlaceholderText(/ex\. bis, ter, a/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/ex\. sud sauvage/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/selectionnez ou ajoutez une zone/i)).toBeInTheDocument();
     expect(screen.getByText(/12 bis Rue Alfred Picard, Batiment A, appartement 4/i)).toBeInTheDocument();
     expect(screen.queryByText(/aucun lieu rattache disponible/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/aucune zone touristique disponible/i)).not.toBeInTheDocument();
@@ -1310,6 +1325,58 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByLabelText(/^numero$/i)).toHaveValue('8');
     expect(screen.getByLabelText(/suffixe/i)).toHaveValue('');
     expect(screen.getByLabelText(/^voie$/i)).toHaveValue('RUE Josemont Lauret');
+  });
+
+  it('normalizes corpus-backed location fields and constrains the address number', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        address1: '8',
+        address2: 'Rue Josemont Lauret',
+        postcode: '97418',
+        city: 'Le Tampon',
+        lieuDit: 'La Plaine des Cafres',
+        zoneTouristique: 'Sud Sauvage',
+        latitude: '-21.203853',
+        longitude: '55.578477',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+
+    const numberField = screen.getByLabelText(/^numero$/i);
+    fireEvent.change(numberField, { target: { value: '12bis' } });
+    expect(numberField).toHaveValue('12');
+
+    const streetField = screen.getByLabelText(/^voie$/i);
+    fireEvent.change(streetField, { target: { value: 'rue alfred PICARD' } });
+    fireEvent.blur(streetField);
+    expect(streetField).toHaveValue('Rue Alfred Picard');
+
+    const cityField = screen.getByLabelText(/^ville$/i);
+    fireEvent.change(cityField, { target: { value: 'le tampon' } });
+    expect(screen.getByText(/forme retenue: "Le Tampon"/i)).toBeInTheDocument();
+    fireEvent.blur(cityField);
+    expect(cityField).toHaveValue('Le Tampon');
+
+    const postcodeField = screen.getByLabelText(/code postal/i);
+    fireEvent.change(postcodeField, { target: { value: '97a418xx' } });
+    expect(postcodeField).toHaveValue('97418');
+
+    const zoneField = screen.getByLabelText(/zone touristique/i);
+    fireEvent.change(zoneField, { target: { value: 'plaine des sables' } });
+    expect(screen.getByText(/nouvelle valeur/i)).toBeInTheDocument();
+    fireEvent.blur(zoneField);
+    expect(zoneField).toHaveValue('Plaine des Sables');
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

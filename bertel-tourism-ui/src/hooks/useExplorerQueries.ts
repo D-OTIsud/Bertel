@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
+import { listLocationReferenceOptions } from '../services/location-reference';
 import {
   canWriteObjectPrivateNote,
   createObjectPrivateNote,
@@ -141,6 +142,14 @@ export function useObjectWorkspaceQuery(objectId: string | null) {
   });
 }
 
+export function useLocationReferenceOptionsQuery() {
+  return useQuery({
+    queryKey: ['location-reference-options'],
+    queryFn: listLocationReferenceOptions,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
   const queryClient = useQueryClient();
 
@@ -214,6 +223,7 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
         queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['location-reference-options'] }),
       ]);
     },
   });

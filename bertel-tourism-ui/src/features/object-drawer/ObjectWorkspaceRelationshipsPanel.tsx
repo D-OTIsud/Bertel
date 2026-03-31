@@ -135,9 +135,7 @@ export function ObjectWorkspaceRelationshipsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">D2</span>
-            <h2>Relations et rattachements</h2>
-            <p>Ce module rassemble les rattachements organisationnels, les acteurs lies et les relations objet. Il ne gere pas les contacts publics de l objet et ne doit pas glisser vers un pipeline commercial.</p>
+            <h2>Rattachements</h2>
           </div>
           <div className="stack-list text-right">
             <strong>Lecture seule</strong>
@@ -147,27 +145,23 @@ export function ObjectWorkspaceRelationshipsPanel({
 
         <div className="drawer-grid">
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Structures liees</span>
+            <span className="facet-title">Structures liées</span>
             <strong>{value.organizationLinks.length}</strong>
-            <p>Rattachements ORG et structures porteuses deja visibles dans le contrat workspace.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Acteurs lies</span>
+            <span className="facet-title">Acteurs liés</span>
             <strong>{value.actors.length}</strong>
-            <p>Roles acteur attaches a la fiche avec leurs canaux eventuellement exposes.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Relations objet</span>
             <strong>{value.relatedObjects.length}</strong>
-            <p>Liens entrants, sortants ou associes hors structure organisationnelle.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Canaux lies</span>
+            <span className="facet-title">Canaux liés</span>
             <strong>{linkedContactsCount}</strong>
-            <p>Contacts remontes via les acteurs et les organisations, sans les confondre avec B4.</p>
           </article>
         </div>
       </article>
@@ -227,36 +221,6 @@ export function ObjectWorkspaceRelationshipsPanel({
           </div>
         </article>
 
-        <article className="panel-card panel-card--nested">
-          <div className="panel-heading">
-            <div>
-              <span className="facet-title">Frontieres backend</span>
-              <h3>Ce qui reste hors write-path live</h3>
-            </div>
-          </div>
-
-          <div className="drawer-grid">
-            <article className="panel-card panel-card--nested">
-              <span className="facet-title">ORG</span>
-              <p>{value.organizationLinkWriteUnavailableReason}</p>
-            </article>
-
-            <article className="panel-card panel-card--nested">
-              <span className="facet-title">Acteurs</span>
-              <p>{value.actorWriteUnavailableReason}</p>
-            </article>
-
-            <article className="panel-card panel-card--nested">
-              <span className="facet-title">Consentements</span>
-              <p>{value.actorConsentUnavailableReason}</p>
-            </article>
-
-            <article className="panel-card panel-card--nested">
-              <span className="facet-title">Relations</span>
-              <p>{value.relatedObjectWriteUnavailableReason}</p>
-            </article>
-          </div>
-        </article>
       </section>
     </div>
   );

@@ -4,7 +4,7 @@ interface GenericRecord {
   [key: string]: unknown;
 }
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
 
 export interface WorkspaceTranslatableField {
   baseValue: string;
@@ -147,6 +147,35 @@ export interface ObjectWorkspacePublicationModule {
   };
 }
 
+export interface ObjectWorkspaceExternalIdentifierItem {
+  id: string;
+  organizationObjectId: string;
+  sourceSystem: string;
+  externalId: string;
+  lastSyncedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ObjectWorkspaceOriginItem {
+  sourceSystem: string;
+  sourceObjectId: string;
+  importBatchId: string;
+  firstImportedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ObjectWorkspaceSyncIdentifiersModule {
+  objectCreatedAt: string;
+  objectUpdatedAt: string;
+  objectUpdatedAtSource: string;
+  externalIdentifiers: ObjectWorkspaceExternalIdentifierItem[];
+  origins: ObjectWorkspaceOriginItem[];
+  externalIdentifiersVisibilityNote: string | null;
+  originsVisibilityNote: string | null;
+}
+
 export interface WorkspaceReferenceOption {
   id: string;
   code: string;
@@ -239,10 +268,20 @@ export interface ObjectWorkspaceAccessibilityAmenityItem {
   disabilityTypes: string[];
 }
 
+export interface ObjectWorkspaceDistinctionSchemeOption {
+  id: string;
+  code: string;
+  label: string;
+  selectionMode: 'single' | 'multiple';
+  isAccessibility: boolean;
+  valueOptions: WorkspaceReferenceOption[];
+}
+
 export interface ObjectWorkspaceDistinctionsModule {
   distinctionGroups: ObjectWorkspaceDistinctionGroup[];
   accessibilityLabels: ObjectWorkspaceDistinctionItem[];
   accessibilityAmenityCoverage: ObjectWorkspaceAccessibilityAmenityItem[];
+  schemeOptions: ObjectWorkspaceDistinctionSchemeOption[];
   unavailableReason: string | null;
 }
 
@@ -583,6 +622,7 @@ export interface ObjectWorkspaceModules {
   taxonomy: ObjectWorkspaceTaxonomyModule;
   distinctions: ObjectWorkspaceDistinctionsModule;
   publication: ObjectWorkspacePublicationModule;
+  syncIdentifiers: ObjectWorkspaceSyncIdentifiersModule;
   location: ObjectWorkspaceLocationModule;
   descriptions: ObjectWorkspaceDescriptionsModule;
   media: ObjectWorkspaceMediaModule;
@@ -923,6 +963,76 @@ function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorks
   };
 }
 
+function parseWorkspaceExternalIdentifier(record: GenericRecord, index: number): ObjectWorkspaceExternalIdentifierItem | null {
+  const sourceSystem = readString(record.source_system, readString(record.source)).trim();
+  const externalId = readString(record.external_id).trim();
+
+  if (!sourceSystem && !externalId) {
+    return null;
+  }
+
+  return {
+    id: readString(record.id, `external-id-${index}`),
+    organizationObjectId: readString(record.organization_object_id),
+    sourceSystem: sourceSystem || 'Source',
+    externalId: externalId || 'non renseigne',
+    lastSyncedAt: readString(record.last_synced_at, readString(record.last_sync_at)),
+    createdAt: readString(record.created_at),
+    updatedAt: readString(record.updated_at),
+  };
+}
+
+function parseWorkspaceOrigin(record: GenericRecord): ObjectWorkspaceOriginItem | null {
+  const sourceSystem = readString(record.source_system).trim();
+  const sourceObjectId = readString(record.source_object_id).trim();
+  const importBatchId = readString(record.import_batch_id).trim();
+  const firstImportedAt = readString(record.first_imported_at).trim();
+  const createdAt = readString(record.created_at).trim();
+  const updatedAt = readString(record.updated_at).trim();
+
+  if (!sourceSystem && !sourceObjectId && !importBatchId && !firstImportedAt && !createdAt && !updatedAt) {
+    return null;
+  }
+
+  return {
+    sourceSystem,
+    sourceObjectId,
+    importBatchId,
+    firstImportedAt,
+    createdAt,
+    updatedAt,
+  };
+}
+
+function parseWorkspaceSyncIdentifiersModule(raw: Record<string, unknown>): ObjectWorkspaceSyncIdentifiersModule {
+  const externalIdentifiers = readArray(raw.external_ids ?? raw.object_external_ids)
+    .map((record, index) => parseWorkspaceExternalIdentifier(record, index))
+    .filter((item): item is ObjectWorkspaceExternalIdentifierItem => item !== null)
+    .sort((left, right) =>
+      left.sourceSystem.localeCompare(right.sourceSystem, 'fr')
+      || left.externalId.localeCompare(right.externalId, 'fr')
+      || left.lastSyncedAt.localeCompare(right.lastSyncedAt, 'fr'),
+    );
+
+  const origins = [
+    ...readArray(raw.origins).map((record) => parseWorkspaceOrigin(record)),
+    ...((() => {
+      const singular = parseWorkspaceOrigin(readRecord(raw.origin));
+      return singular ? [singular] : [];
+    })()),
+  ].filter((item): item is ObjectWorkspaceOriginItem => item !== null);
+
+  return {
+    objectCreatedAt: readString(raw.created_at),
+    objectUpdatedAt: readString(raw.updated_at),
+    objectUpdatedAtSource: readString(raw.updated_at_source),
+    externalIdentifiers,
+    origins,
+    externalIdentifiersVisibilityNote: null,
+    originsVisibilityNote: null,
+  };
+}
+
 function parseWorkspaceCharacteristicsModule(raw: Record<string, unknown>): ObjectWorkspaceCharacteristicsModule {
   const languageOptions = dedupeReferenceOptions(
     readArray(raw.languages).map((record) => ({
@@ -1054,6 +1164,7 @@ function parseWorkspaceDistinctionsModule(): ObjectWorkspaceDistinctionsModule {
     distinctionGroups: [],
     accessibilityLabels: [],
     accessibilityAmenityCoverage: [],
+    schemeOptions: [],
     unavailableReason: null,
   };
 }
@@ -1895,6 +2006,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
         items: [],
       },
     },
+    syncIdentifiers: parseWorkspaceSyncIdentifiersModule(raw),
     location: {
       main: mainLocation,
       places,

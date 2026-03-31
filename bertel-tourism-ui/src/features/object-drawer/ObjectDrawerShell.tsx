@@ -13,6 +13,7 @@ import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
   ObjectWorkspaceContactItem,
+  ObjectWorkspaceDistinctionsModule,
   ObjectWorkspaceGeneralInfo,
   ObjectWorkspaceLegalRecord,
   ObjectWorkspaceLocationModule,
@@ -217,7 +218,6 @@ const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = 
 const READONLY_MODULES = new Set<WorkspaceModuleId>([
   'publication',
   'sync-identifiers',
-  'distinctions',
   'openings',
   'provider-follow-up',
   'relationships',
@@ -466,6 +466,17 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       },
     }) : previous);
     setSaveStateBySection((state) => ({ ...state, taxonomy: { saving: false, message: null } }));
+  }
+
+  function replaceDistinctions(nextValue: ObjectWorkspaceDistinctionsModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        distinctions: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, distinctions: { saving: false, message: null } }));
   }
 
   function replaceCharacteristics(nextValue: ObjectWorkspaceCharacteristicsModule) {
@@ -1197,9 +1208,14 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               )}
               {resolvedSection === 'distinctions' && (
                 <ObjectWorkspaceDistinctionsPanel
-                  value={resolvedData.modules.distinctions}
-                  access={resolvedData.permissions.distinctions}
+                  value={editorSnapshot.draft.distinctions}
+                  dirty={dirtySections.distinctions === true}
+                  saving={saveStateBySection.distinctions.saving}
                   statusMessage={saveStateBySection.distinctions.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.distinctions)}
+                  access={resolvedData.permissions.distinctions}
+                  onChange={replaceDistinctions}
+                  onSave={() => void handleSaveSection('distinctions')}
                 />
               )}
               {resolvedSection === 'capacity-policies' && (

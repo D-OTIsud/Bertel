@@ -14,6 +14,7 @@ import {
 import {
   saveObjectWorkspaceCharacteristics,
   saveObjectWorkspaceCapacityPolicies,
+  saveObjectWorkspaceDistinctions,
   getObjectWorkspaceResource,
   publishObjectWorkspace,
   saveObjectWorkspaceContacts,
@@ -32,6 +33,7 @@ import type {
   ObjectWorkspaceCharacteristicsModule,
   ObjectWorkspaceContactsModule,
   ObjectWorkspaceDescriptionsModule,
+  ObjectWorkspaceDistinctionsModule,
   ObjectWorkspaceGeneralInfo,
   ObjectWorkspaceMembershipModule,
   ObjectWorkspaceLocationModule,
@@ -44,6 +46,7 @@ import type {
 type SaveWorkspaceModuleInput =
   | { moduleId: 'general-info'; value: ObjectWorkspaceGeneralInfo }
   | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
+  | { moduleId: 'distinctions'; value: ObjectWorkspaceDistinctionsModule }
   | { moduleId: 'location'; value: ObjectWorkspaceLocationModule }
   | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditPlaceDescriptions: boolean }
   | { moduleId: 'media'; value: ObjectWorkspaceMediaModule; canEditPlaceMedia: boolean }
@@ -153,6 +156,10 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
 
       if (input.moduleId === 'taxonomy') {
         return saveObjectWorkspaceTaxonomy(objectId, input.value);
+      }
+
+      if (input.moduleId === 'distinctions') {
+        return saveObjectWorkspaceDistinctions(objectId, input.value);
       }
 
       if (input.moduleId === 'location') {

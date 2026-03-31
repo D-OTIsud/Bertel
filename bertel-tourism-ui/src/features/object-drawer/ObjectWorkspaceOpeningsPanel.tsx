@@ -94,9 +94,7 @@ export function ObjectWorkspaceOpeningsPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">C6</span>
-            <h2>Horaires et periodes</h2>
-            <p>Le module C6 expose les periodes d ouverture et les creneaux par jour sans repasser par le flattening du preview.</p>
+            <h2>Horaires</h2>
           </div>
           <div className="stack-list text-right">
             <strong>Lecture seule</strong>
@@ -108,25 +106,21 @@ export function ObjectWorkspaceOpeningsPanel({
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Periodes</span>
             <strong>{value.periods.length}</strong>
-            <p>Total des periodes remontees dans le contrat workspace.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Annee en cours</span>
             <strong>{currentCount}</strong>
-            <p>Periodes courantes exposees par `opening_times.periods_current`.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Annee suivante</span>
             <strong>{nextYearCount}</strong>
-            <p>Periodes futures deja preparees dans le read model.</p>
           </article>
 
           <article className="panel-card panel-card--nested">
             <span className="facet-title">Jours typés</span>
             <strong>{weekdayCount}</strong>
-            <p>Jours avec au moins un creneau detaille.</p>
           </article>
         </div>
       </article>

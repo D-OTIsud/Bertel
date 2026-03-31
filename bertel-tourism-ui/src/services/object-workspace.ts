@@ -15,6 +15,7 @@ import {
   type ObjectWorkspaceDescriptionsModule,
   type ObjectWorkspaceDistinctionGroup,
   type ObjectWorkspaceDistinctionItem,
+  type ObjectWorkspaceDistinctionSchemeOption,
   type ObjectWorkspaceDistinctionsModule,
   type ObjectWorkspaceGeneralInfo,
   type ObjectWorkspaceLanguageItem,
@@ -27,6 +28,7 @@ import {
   type ObjectWorkspacePublicationSelectionItem,
   type ObjectWorkspacePricingModule,
   type ObjectWorkspaceOpeningsModule,
+  type ObjectWorkspaceSyncIdentifiersModule,
   type ObjectWorkspaceMembershipItem,
   type ObjectWorkspaceMembershipModule,
   type ObjectWorkspaceMembershipScopeOption,
@@ -45,7 +47,7 @@ import {
   type WorkspaceReferenceOption,
 } from './object-workspace-parser';
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
 
 export interface ObjectWorkspaceModuleAccess {
   canDirectWrite: boolean;
@@ -58,6 +60,7 @@ export interface ObjectWorkspacePermissions {
   generalInfo: ObjectWorkspaceModuleAccess;
   taxonomy: ObjectWorkspaceModuleAccess;
   publication: ObjectWorkspaceModuleAccess;
+  syncIdentifiers: ObjectWorkspaceModuleAccess;
   location: ObjectWorkspaceModuleAccess & {
     canEditPlaces: boolean;
     canEditZones: boolean;
@@ -215,6 +218,27 @@ function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspa
       payload: row.payload,
       metadata: row.metadata,
     }),
+  };
+}
+
+async function getObjectWorkspaceSyncIdentifiersModule(
+  _objectId: string,
+  baseModule: ObjectWorkspaceSyncIdentifiersModule,
+): Promise<ObjectWorkspaceSyncIdentifiersModule> {
+  const session = useSessionStore.getState();
+
+  return {
+    ...baseModule,
+    externalIdentifiersVisibilityNote:
+      baseModule.externalIdentifiers.length > 0
+        ? null
+        : session.demoMode
+          ? null
+          : "Les identifiants externes sont soumis a une lecture restreinte cote backend; l'absence de ligne ici ne prouve pas l'absence en base.",
+    originsVisibilityNote:
+      baseModule.origins.length > 0
+        ? null
+        : 'Aucune provenance amont n est actuellement exposee pour cette fiche.',
   };
 }
 
@@ -935,6 +959,19 @@ async function getObjectWorkspaceDistinctionsModule(
     }))
     .filter((group) => group.items.length > 0);
 
+  const allDistinctionSchemesForOptions = [...distinctionSchemes, ...accessibilitySchemes];
+  const schemeOptions: ObjectWorkspaceDistinctionSchemeOption[] = allDistinctionSchemesForOptions.map((scheme) => ({
+    id: scheme.id,
+    code: scheme.code,
+    label: scheme.label,
+    selectionMode: scheme.selectionMode,
+    isAccessibility: accessibilitySchemes.some((s) => s.id === scheme.id),
+    valueOptions: valueRefs
+      .filter((value) => value.schemeId === scheme.id)
+      .sort((left, right) => left.ordinal - right.ordinal || left.label.localeCompare(right.label, 'fr'))
+      .map((value) => ({ id: value.id, code: value.code, label: value.label })),
+  }));
+
   let accessibilityAmenityCoverage: ObjectWorkspaceAccessibilityAmenityItem[] = [];
   let unavailableReason: string | null = null;
 
@@ -972,6 +1009,7 @@ async function getObjectWorkspaceDistinctionsModule(
       || left.valueLabel.localeCompare(right.valueLabel, 'fr'),
     ),
     accessibilityAmenityCoverage,
+    schemeOptions,
     unavailableReason,
   };
 }
@@ -2008,6 +2046,12 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canSubmitProposal: false,
       disabledReason: canPublishObject ? null : "Vos droits actuels ne permettent pas de publier ou de depublier cette fiche.",
     },
+    syncIdentifiers: {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: "Le module A4 reste en lecture seule tant que l'administration des identifiants externes et des origines n'est pas branchee dans le workspace.",
+    },
     location: {
       ...directOrBlocked(),
       canEditPlaces: false,
@@ -2028,12 +2072,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canSubmitProposal: false,
       disabledReason: session.demoMode ? null : "Le live actuel n'expose pas encore l'ecriture du module C1.",
     },
-    distinctions: {
-      canDirectWrite: false,
-      canPrepareProposal: false,
-      canSubmitProposal: false,
-      disabledReason: 'Le module C2 reste en lecture seule tant que le write-path live des distinctions et labels n est pas verrouille.',
-    },
+    distinctions: directOrBlocked(),
     capacityPolicies: {
       canDirectWrite: session.demoMode,
       canPrepareProposal: false,
@@ -2086,10 +2125,11 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
   const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
-  const [taxonomyModule, distinctionsModule, publicationModule, mediaModule, contactsModule, characteristicsModule, capacityPoliciesModule, pricingModule, openingsModule, relationshipsModule, membershipsModule, legalModule, permissions] = await Promise.all([
+  const [taxonomyModule, distinctionsModule, publicationModule, syncIdentifiersModule, mediaModule, contactsModule, characteristicsModule, capacityPoliciesModule, pricingModule, openingsModule, relationshipsModule, membershipsModule, legalModule, permissions] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
+    getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
     getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
     getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
@@ -2107,6 +2147,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     taxonomy: taxonomyModule,
     distinctions: distinctionsModule,
     publication: publicationModule,
+    syncIdentifiers: syncIdentifiersModule,
     media: mediaModule,
     contacts: contactsModule,
     characteristics: characteristicsModule,
@@ -2279,6 +2320,112 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
     const { error } = await client.from('object_classification').delete().in('id', idsToDelete);
     if (error) {
       throw mapMutationError(error, "Impossible de supprimer les classifications retirees.");
+    }
+  }
+}
+
+export async function saveObjectWorkspaceDistinctions(objectId: string, input: ObjectWorkspaceDistinctionsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les labels et distinctions.');
+  }
+
+  const [schemeRefsResult, valueRefsResult, existingClassificationsResult] = await Promise.all([
+    client
+      .from('ref_classification_scheme')
+      .select('id, code, name, description, selection, position, display_group, is_distinction')
+      .or('is_distinction.eq.true,display_group.eq.accessibility_labels')
+      .order('position', { ascending: true }),
+    client.from('ref_classification_value').select('id, scheme_id, code, name, ordinal, metadata'),
+    client.from('object_classification').select('id, scheme_id, value_id').eq('object_id', objectId),
+  ]);
+
+  if (schemeRefsResult.error) {
+    throw mapMutationError(schemeRefsResult.error, 'Impossible de charger les schemas de distinction.');
+  }
+  if (valueRefsResult.error) {
+    throw mapMutationError(valueRefsResult.error, 'Impossible de charger les valeurs de distinction.');
+  }
+  if (existingClassificationsResult.error) {
+    throw mapMutationError(existingClassificationsResult.error, 'Impossible de charger les labels existants.');
+  }
+
+  const schemeRows = (schemeRefsResult.data ?? []) as Record<string, unknown>[];
+  const allSchemes = [
+    ...schemeRows.filter(isDistinctionClassificationScheme).map(normalizeClassificationSchemeRef),
+    ...schemeRows.filter(isAccessibilityClassificationScheme).map(normalizeClassificationSchemeRef),
+  ];
+  const schemeById = new Map(allSchemes.map((scheme) => [scheme.id, scheme]));
+  const allowedSchemeIds = new Set(allSchemes.map((scheme) => scheme.id));
+
+  const valueRefs = (valueRefsResult.data ?? [])
+    .map((row) => row as Record<string, unknown>)
+    .map(normalizeClassificationValueRef)
+    .filter((value) => allowedSchemeIds.has(value.schemeId));
+  const valueByCompositeKey = new Map(valueRefs.map((value) => [`${value.schemeId}:${value.code.toLowerCase()}`, value]));
+
+  const existingRows = ((existingClassificationsResult.data ?? []) as Record<string, unknown>[])
+    .filter((row) => allowedSchemeIds.has(readString(row.scheme_id)));
+  const existingIds = new Set(existingRows.map((row) => readString(row.id)).filter(Boolean));
+  const reusableRowsByKey = new Map(existingRows.map((row) => [`${readString(row.scheme_id)}:${readString(row.value_id)}`, readString(row.id)]));
+  const keptIds = new Set<string>();
+
+  const allItems: ObjectWorkspaceDistinctionItem[] = [
+    ...input.distinctionGroups.flatMap((group) => group.items),
+    ...input.accessibilityLabels,
+  ];
+
+  for (const item of allItems) {
+    const normalizedSchemeId = item.schemeId || (allSchemes.find((s) => s.code === item.schemeCode)?.id ?? '');
+    const schemeRef = schemeById.get(normalizedSchemeId);
+    if (!schemeRef) {
+      continue;
+    }
+
+    const normalizedValue = valueByCompositeKey.get(`${schemeRef.id}:${item.valueCode.toLowerCase()}`);
+    if (!normalizedValue) {
+      throw new Error(`Valeur de distinction inconnue: ${item.valueCode || 'vide'}.`);
+    }
+
+    const payload = {
+      object_id: objectId,
+      scheme_id: schemeRef.id,
+      value_id: normalizedValue.id,
+      status: toNullableText(item.status),
+      awarded_at: toNullableText(item.awardedAt),
+      valid_until: toNullableText(item.validUntil),
+    };
+
+    const existingId =
+      (item.recordId && existingIds.has(item.recordId) ? item.recordId : null)
+      ?? reusableRowsByKey.get(`${schemeRef.id}:${normalizedValue.id}`)
+      ?? null;
+
+    if (existingId) {
+      const { error } = await client.from('object_classification').update(payload).eq('id', existingId);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un label ou une distinction.");
+      }
+      keptIds.add(existingId);
+    } else {
+      const { data, error } = await client.from('object_classification').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, "Impossible de creer un label ou une distinction.");
+      }
+      keptIds.add(readString((data as Record<string, unknown>).id));
+    }
+  }
+
+  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
+  if (idsToDelete.length > 0) {
+    const { error } = await client.from('object_classification').delete().in('id', idsToDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de supprimer les labels retires.");
     }
   }
 }

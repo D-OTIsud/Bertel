@@ -694,10 +694,10 @@ export function ObjectWorkspaceLocationPanel({
                 id="workspace-location-direction"
                 aria-label="Modifier les indications d'acces"
                 aria-haspopup="dialog"
-                className="flex min-h-[3.25rem] w-full items-start rounded-xl border border-input bg-background/80 px-4 py-3 text-left text-sm shadow-sm transition-colors hover:border-[rgba(23,107,106,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex h-11 w-full items-center overflow-hidden rounded-xl border border-input bg-background/80 px-4 py-2 text-left text-sm shadow-sm ring-offset-background transition-colors hover:border-[rgba(23,107,106,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 onClick={openDirectionDialog}
               >
-                <span className={`block max-h-24 overflow-hidden whitespace-pre-wrap leading-6 ${value.main.direction.trim() ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <span className={`block w-full truncate whitespace-nowrap ${value.main.direction.trim() ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {value.main.direction.trim() || "Ex. Depuis Saint-Pierre, au rond-point apres la station..."}
                 </span>
               </button>

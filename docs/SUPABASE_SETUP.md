@@ -106,6 +106,20 @@ GRANT EXECUTE ON FUNCTION api.export_publication_indesign(uuid, integer, integer
 
 Troubleshooting is identical to the self‑hosted section below (404 → expose `api`; 42883 → add `extensions` to DB Extra Search Path; 401/406/415 → headers/roles/body).
 
+### Auth hardening for password sign-in
+
+If `bertel-tourism-ui` keeps email/password login enabled (`signInWithPassword`), also harden the Supabase Auth password policy in your project's Auth settings:
+
+- Set a stronger minimum password length (12+ recommended for this project).
+- Require digits, lowercase, uppercase, and symbols.
+- Enable leaked password protection so Supabase rejects passwords already exposed in public breaches.
+
+Notes:
+
+- Supabase documents leaked password protection as a Pro-plan feature and backs it with HaveIBeenPwned's Pwned Passwords data.
+- Existing users whose current password no longer satisfies the policy can hit `WeakPasswordError` on `signInWithPassword`, so plan a password-reset/support path before rolling stricter rules out broadly.
+- If you standardize on Google-only sign-in, review whether email/password auth should stay enabled at all.
+
 6) Optional: schedule filtered materialized-view refresh (5-15 minute staleness budget)
 
 ```sql

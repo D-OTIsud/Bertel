@@ -1,4 +1,31 @@
+import { isAuthWeakPasswordError, type WeakPasswordReasons } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
+
+const weakPasswordReasonLabels: Readonly<Record<WeakPasswordReasons, string>> = {
+  length: 'longueur minimale non respectee',
+  characters: 'caracteres obligatoires manquants',
+  pwned: 'mot de passe deja divulgue dans une fuite de donnees',
+};
+
+export function toFriendlyAuthError(error: unknown): Error {
+  if (isAuthWeakPasswordError(error)) {
+    const reasons = [...new Set(error.reasons)]
+      .map((reason) => weakPasswordReasonLabels[reason])
+      .filter(Boolean)
+      .join(', ');
+    const detail = reasons ? ` (${reasons}).` : '.';
+
+    return new Error(
+      `Ce mot de passe n'est plus accepte par la politique de securite du projet${detail} Utilisez un mot de passe plus robuste ou demandez sa reinitialisation.`
+    );
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error('Une erreur d authentification est survenue.');
+}
 
 export async function signInWithGoogle() {
   const client = getSupabaseClient();
@@ -18,7 +45,7 @@ export async function signInWithGoogle() {
   });
 
   if (error) {
-    throw error;
+    throw toFriendlyAuthError(error);
   }
 }
 
@@ -29,7 +56,7 @@ export async function signInWithEmailPassword(email: string, password: string) {
   }
 
   const { error } = await client.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) throw toFriendlyAuthError(error);
 }
 
 export async function signOut() {
@@ -40,6 +67,6 @@ export async function signOut() {
 
   const { error } = await client.auth.signOut();
   if (error) {
-    throw error;
+    throw toFriendlyAuthError(error);
   }
 }

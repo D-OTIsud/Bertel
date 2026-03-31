@@ -834,7 +834,26 @@ function GalleryLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="detail-gallery-dialog" showClose={false}>
+      <DialogContent
+        className="detail-gallery-dialog"
+        showClose={false}
+        onKeyDown={(event) => {
+          if (event.defaultPrevented || total < 2 || event.altKey || event.ctrlKey || event.metaKey) {
+            return;
+          }
+
+          if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            goToPrevious();
+            return;
+          }
+
+          if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            goToNext();
+          }
+        }}
+      >
         <DialogTitle className="sr-only">Galerie photo de {data.name}</DialogTitle>
         <DialogDescription className="sr-only">
           Visionneuse plein ecran des photos disponibles pour cette fiche.

@@ -476,6 +476,8 @@ export function ObjectWorkspaceLocationPanel({
     parsedCoordinates ?? DEFAULT_LOCATION_CENTER,
   );
   const [pendingCoordinates, setPendingCoordinates] = useState<LocationCoordinates | null>(null);
+  const [directionDialogOpen, setDirectionDialogOpen] = useState(false);
+  const [directionDraft, setDirectionDraft] = useState(value.main.direction);
 
   useEffect(() => {
     if (parsedCoordinates) {
@@ -487,6 +489,12 @@ export function ObjectWorkspaceLocationPanel({
       setMapCoordinates(DEFAULT_LOCATION_CENTER);
     }
   }, [coordinatesAreBlank, parsedCoordinates]);
+
+  useEffect(() => {
+    if (!directionDialogOpen) {
+      setDirectionDraft(value.main.direction);
+    }
+  }, [directionDialogOpen, value.main.direction]);
 
   function patchStructuredAddress(patch: Partial<StructuredAddress>) {
     const nextAddress = {
@@ -547,6 +555,21 @@ export function ObjectWorkspaceLocationPanel({
 
   function cancelCoordinateUpdate() {
     setPendingCoordinates(null);
+  }
+
+  function openDirectionDialog() {
+    setDirectionDraft(value.main.direction);
+    setDirectionDialogOpen(true);
+  }
+
+  function closeDirectionDialog() {
+    setDirectionDialogOpen(false);
+    setDirectionDraft(value.main.direction);
+  }
+
+  function applyDirectionDialog() {
+    onChange({ direction: directionDraft });
+    setDirectionDialogOpen(false);
   }
 
   return (
@@ -666,12 +689,18 @@ export function ObjectWorkspaceLocationPanel({
 
             <div className="drawer-inline-field drawer-inline-field--full">
               <Label htmlFor="workspace-location-direction">Indications d'acces</Label>
-              <Input
+              <button
+                type="button"
                 id="workspace-location-direction"
-                value={value.main.direction}
-                placeholder="Ex. Depuis Saint-Pierre, au rond-point apres la station..."
-                onChange={(event) => onChange({ direction: event.target.value })}
-              />
+                aria-label="Modifier les indications d'acces"
+                aria-haspopup="dialog"
+                className="flex min-h-[3.25rem] w-full items-start rounded-xl border border-input bg-background/80 px-4 py-3 text-left text-sm shadow-sm transition-colors hover:border-[rgba(23,107,106,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                onClick={openDirectionDialog}
+              >
+                <span className={`block max-h-24 overflow-hidden whitespace-pre-wrap leading-6 ${value.main.direction.trim() ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {value.main.direction.trim() || "Ex. Depuis Saint-Pierre, au rond-point apres la station..."}
+                </span>
+              </button>
             </div>
           </div>
         </article>
@@ -808,6 +837,33 @@ export function ObjectWorkspaceLocationPanel({
             </Button>
             <Button type="button" onClick={confirmCoordinateUpdate}>
               Confirmer la position
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={directionDialogOpen} onOpenChange={(nextOpen) => { if (!nextOpen) closeDirectionDialog(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogTitle>Modifier les indications d'acces</DialogTitle>
+          <DialogDescription>
+            Redigez des consignes d'acces plus detaillees dans un espace plus confortable.
+          </DialogDescription>
+          <div className="grid gap-3">
+            <Label htmlFor="workspace-location-direction-dialog">Indications d'acces</Label>
+            <textarea
+              id="workspace-location-direction-dialog"
+              className="textarea-field min-h-[280px]"
+              value={directionDraft}
+              placeholder="Ex. Depuis Saint-Pierre, au rond-point apres la station..."
+              onChange={(event) => setDirectionDraft(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" onClick={closeDirectionDialog}>
+              Annuler
+            </Button>
+            <Button type="button" onClick={applyDirectionDialog}>
+              Appliquer
             </Button>
           </div>
         </DialogContent>

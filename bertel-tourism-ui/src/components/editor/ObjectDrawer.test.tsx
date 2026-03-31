@@ -1410,6 +1410,39 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.queryByRole('combobox', { name: /zone touristique/i })).not.toBeInTheDocument();
   });
 
+  it('opens access directions in a modal editor and applies the updated text', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        direction: 'Depuis Saint-Pierre, au rond-point apres la station.',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /modifier les indications d'acces/i }));
+
+    expect(screen.getByRole('heading', { name: /modifier les indications d'acces/i })).toBeInTheDocument();
+
+    const directionTextarea = screen.getByRole('textbox', { name: /indications d'acces/i });
+    fireEvent.change(directionTextarea, {
+      target: { value: 'Depuis Saint-Pierre,\nprendre la deuxieme sortie puis suivre les panneaux.' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /appliquer/i }));
+
+    expect(screen.queryByRole('heading', { name: /modifier les indications d'acces/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/prendre la deuxieme sortie puis suivre les panneaux/i)).toBeInTheDocument();
+  });
+
   it('renders the legal compliance module as an internal workspace tab', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({

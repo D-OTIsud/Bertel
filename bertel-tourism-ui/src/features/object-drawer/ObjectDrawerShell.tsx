@@ -25,7 +25,7 @@ import type {
   WorkspaceTranslatableField,
 } from '../../services/object-workspace-parser';
 import { useSessionStore } from '../../store/session-store';
-import { useObjectDrawerStore } from '../../store/object-drawer-store';
+import { useObjectDrawerStore, type ObjectDrawerSection } from '../../store/object-drawer-store';
 import { Button } from '@/components/ui/button';
 import { ObjectDetailView } from './ObjectDetailView';
 import { ObjectDrawerNav } from './ObjectDrawerNav';
@@ -61,7 +61,7 @@ interface EditorSnapshot {
 }
 
 type PendingNavigation =
-  | { type: 'section'; section: WorkspaceModuleId }
+  | { type: 'section'; section: ObjectDrawerSection }
   | { type: 'mode'; mode: 'view' | 'edit' }
   | null;
 

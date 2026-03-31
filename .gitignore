@@ -48,6 +48,7 @@ test_results.txt
 CLAUDE.md
 .claude/
 .cursor/
+claude_brief/
 *.mdc
 GEMINI.md
 AGENTS.md

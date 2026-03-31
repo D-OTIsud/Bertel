@@ -694,7 +694,13 @@ export function ObjectWorkspaceLocationPanel({
                 id="workspace-location-direction"
                 aria-label="Modifier les indications d'acces"
                 aria-haspopup="dialog"
-                className="flex h-11 w-full items-center overflow-hidden rounded-xl border border-input bg-background/80 px-4 py-2 text-left text-sm shadow-sm ring-offset-background transition-colors hover:border-[rgba(23,107,106,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex h-11 w-full items-center overflow-hidden rounded-xl border px-4 py-2 text-left text-sm ring-offset-background transition-colors hover:border-[rgba(23,107,106,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.78)',
+                  borderColor: 'var(--line)',
+                  color: 'var(--text)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                }}
                 onClick={openDirectionDialog}
               >
                 <span className={`block w-full truncate whitespace-nowrap ${value.main.direction.trim() ? 'text-foreground' : 'text-muted-foreground'}`}>

@@ -39,6 +39,14 @@ function buildWorkspaceResource(params: {
   name: string;
   type?: string;
   description?: string;
+  address1?: string;
+  address1Suite?: string;
+  address2?: string;
+  address3?: string;
+  postcode?: string;
+  city?: string;
+  lieuDit?: string;
+  direction?: string;
   latitude?: string;
   longitude?: string;
 }) {
@@ -131,15 +139,15 @@ function buildWorkspaceResource(params: {
       location: {
         main: {
           recordId: null,
-          address1: '',
-          address1Suite: '',
-          address2: '',
-          address3: '',
-          postcode: '',
-          city: '',
+          address1: params.address1 ?? '',
+          address1Suite: params.address1Suite ?? '',
+          address2: params.address2 ?? '',
+          address3: params.address3 ?? '',
+          postcode: params.postcode ?? '',
+          city: params.city ?? '',
           codeInsee: '',
-          lieuDit: '',
-          direction: '',
+          lieuDit: params.lieuDit ?? '',
+          direction: params.direction ?? '',
           latitude: params.latitude ?? '',
           longitude: params.longitude ?? '',
           zoneTouristique: '',
@@ -1197,6 +1205,44 @@ describe('ObjectDrawer workspace drafts', () => {
 
     expect(screen.getByDisplayValue('-21.123456')).toBeInTheDocument();
     expect(screen.getByDisplayValue('55.501234')).toBeInTheDocument();
+  });
+
+  it('renders a structured address form and hides empty read-only location side cards', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        address1: '12',
+        address1Suite: 'bis',
+        address2: 'Rue Alfred Picard',
+        address3: 'Batiment A, appartement 4',
+        postcode: '97430',
+        city: 'Le Tampon',
+        lieuDit: 'La Plaine des Cafres',
+        direction: 'Depuis Saint-Pierre, au rond-point apres la station.',
+        latitude: '-21.203853',
+        longitude: '55.578477',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+
+    expect(screen.getByLabelText(/numero/i)).toHaveValue('12');
+    expect(screen.getByLabelText(/suffixe/i)).toHaveValue('bis');
+    expect(screen.getByLabelText(/^voie$/i)).toHaveValue('Rue Alfred Picard');
+    expect(screen.getByLabelText(/complement d'adresse/i)).toHaveValue('Batiment A, appartement 4');
+    expect(screen.getByLabelText(/quartier \/ lieu-dit/i)).toHaveValue('La Plaine des Cafres');
+    expect(screen.getByText(/12 bis Rue Alfred Picard, Batiment A, appartement 4/i)).toBeInTheDocument();
+    expect(screen.queryByText(/aucun lieu rattache disponible/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/aucune zone touristique disponible/i)).not.toBeInTheDocument();
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

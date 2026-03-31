@@ -752,10 +752,19 @@ function parseLocation(raw: Record<string, unknown>): ParsedLocation | null {
         ? geometryRecord.coordinates
         : [];
 
+  const buildStreetAddress = (record: Record<string, unknown>): string => {
+    const firstLine = [
+      readString(record.address1),
+      readString(record.address1_suite),
+      readString(record.address2, readString(record.street)),
+    ].filter(Boolean).join(' ').trim();
+    return [firstLine, readString(record.address3)].filter(Boolean).join(', ');
+  };
+
   const address = pickFirstText(
-    addressRecord.address1,
-    addressRecord.street,
-    mainLocationRecord.address1,
+    buildStreetAddress(addressRecord),
+    buildStreetAddress(mainLocationRecord),
+    buildStreetAddress(locationRecord),
     mainLocationRecord.address,
     locationRecord.address,
     raw.address1,

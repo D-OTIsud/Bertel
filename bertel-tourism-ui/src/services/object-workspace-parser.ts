@@ -759,8 +759,9 @@ function parseLocationRecord(value: unknown): ObjectWorkspaceLocationForm {
 }
 
 function buildLocationLabel(location: ObjectWorkspaceLocationForm): string {
+  const streetLine = [location.address1, location.address1Suite, location.address2].filter(Boolean).join(' ').trim();
   const cityLine = [location.postcode, location.city].filter(Boolean).join(' ');
-  return [location.address1, location.lieuDit, cityLine].filter(Boolean).join(' · ');
+  return [streetLine, location.address3, location.lieuDit, cityLine].filter(Boolean).join(' · ');
 }
 
 function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocationForm {

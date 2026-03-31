@@ -97,8 +97,22 @@ function serialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function stripCommercialVisibility(value: ObjectWorkspaceGeneralInfo) {
+  const { commercialVisibility, ...rest } = value;
+  return rest;
+}
+
 function isModuleDirty(snapshot: EditorSnapshot, key: keyof ObjectWorkspaceModules): boolean {
   return serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
+}
+
+function isGeneralInfoContentDirty(snapshot: EditorSnapshot): boolean {
+  return serialize(stripCommercialVisibility(snapshot.draft.generalInfo))
+    !== serialize(stripCommercialVisibility(snapshot.baseline.generalInfo));
+}
+
+function isPublicationSettingsDirty(snapshot: EditorSnapshot): boolean {
+  return snapshot.draft.generalInfo.commercialVisibility !== snapshot.baseline.generalInfo.commercialVisibility;
 }
 
 function updateTranslatableField(
@@ -219,7 +233,6 @@ const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = 
 };
 
 const READONLY_MODULES = new Set<WorkspaceModuleId>([
-  'publication',
   'sync-identifiers',
   'openings',
   'provider-follow-up',
@@ -231,12 +244,18 @@ function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<Works
     return {};
   }
 
-  const generalInfoDirty = isModuleDirty(snapshot, 'generalInfo');
+  const generalInfoDirty = isGeneralInfoContentDirty(snapshot);
+  const publicationDirty = isPublicationSettingsDirty(snapshot);
   const taxonomyDirty = isModuleDirty(snapshot, 'taxonomy');
   const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
   for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
     if (moduleId === 'general-info') {
       dirty[moduleId] = generalInfoDirty || taxonomyDirty;
+      continue;
+    }
+
+    if (moduleId === 'publication') {
+      dirty[moduleId] = publicationDirty;
       continue;
     }
 
@@ -276,12 +295,16 @@ function resolveSaveAction(
   section: WorkspaceModuleId,
   snapshot: EditorSnapshot | null,
 ) {
+  if (section === 'publication' && snapshot) {
+    return buildSaveAction(resource.permissions.generalInfo);
+  }
+
   if (section !== 'general-info' || !snapshot) {
     return buildSaveAction(resolveCurrentSectionAccess(resource, section));
   }
 
   const relevantAccesses: ObjectWorkspaceModuleAccess[] = [];
-  if (isModuleDirty(snapshot, 'generalInfo')) {
+  if (isGeneralInfoContentDirty(snapshot)) {
     relevantAccesses.push(resource.permissions.generalInfo);
   }
   if (isModuleDirty(snapshot, 'taxonomy')) {
@@ -416,16 +439,22 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     }
 
     const isGeneralInfoSection = section === 'general-info';
-    const generalInfoDirty = isGeneralInfoSection ? isModuleDirty(editorSnapshot, 'generalInfo') : false;
+    const isPublicationSection = section === 'publication';
+    const generalInfoDirty = isGeneralInfoSection ? isGeneralInfoContentDirty(editorSnapshot) : false;
     const taxonomyDirty = isGeneralInfoSection ? isModuleDirty(editorSnapshot, 'taxonomy') : false;
+    const publicationSettingsDirty = isPublicationSection ? isPublicationSettingsDirty(editorSnapshot) : false;
     const relevantAccesses = isGeneralInfoSection
       ? [
           ...(generalInfoDirty ? [resolvedData.permissions.generalInfo] : []),
           ...(taxonomyDirty ? [resolvedData.permissions.taxonomy] : []),
         ]
+      : isPublicationSection
+        ? [
+            ...(publicationSettingsDirty ? [resolvedData.permissions.generalInfo] : []),
+          ]
       : [resolveCurrentSectionAccess(resolvedData, section)];
 
-    if (isGeneralInfoSection && relevantAccesses.length === 0) {
+    if ((isGeneralInfoSection || isPublicationSection) && relevantAccesses.length === 0) {
       setPendingNavigation(null);
       if (navigationTarget?.type === 'section') {
         setActiveSection(navigationTarget.section);
@@ -463,7 +492,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
       const key = MODULE_KEY_MAP[section];
       const mutationArgs: any = {
-        moduleId: section,
+        moduleId: isPublicationSection ? 'general-info' : section,
       };
 
       if (section === 'general-info') {
@@ -473,6 +502,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         if (taxonomyDirty) {
           mutationArgs.taxonomyValue = editorSnapshot.draft.taxonomy;
         }
+      } else if (isPublicationSection) {
+        mutationArgs.value = editorSnapshot.draft.generalInfo;
       } else {
         mutationArgs.value = editorSnapshot.draft[key];
       }
@@ -499,6 +530,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
                   ...(generalInfoDirty ? { generalInfo: cloneModules(previous.draft).generalInfo } : {}),
                   ...(taxonomyDirty ? { taxonomy: cloneModules(previous.draft).taxonomy } : {}),
                 }
+              : isPublicationSection
+                ? { generalInfo: cloneModules(previous.draft).generalInfo }
               : { [key]: cloneModules(previous.draft)[key] }),
           },
         };
@@ -543,6 +576,20 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       },
     }) : previous);
     setSaveStateBySection((state) => ({ ...state, 'general-info': { saving: false, message: null } }));
+  }
+
+  function patchPublicationSettings(patch: Pick<ObjectWorkspaceGeneralInfo, 'commercialVisibility'>) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        generalInfo: {
+          ...previous.draft.generalInfo,
+          ...patch,
+        },
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, publication: { saving: false, message: null } }));
   }
 
   function replaceTaxonomy(nextValue: ObjectWorkspaceTaxonomyModule) {
@@ -1038,6 +1085,19 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         };
       }
 
+      if (resolvedSection === 'publication') {
+        return {
+          ...previous,
+          draft: {
+            ...previous.draft,
+            generalInfo: {
+              ...previous.draft.generalInfo,
+              commercialVisibility: previous.baseline.generalInfo.commercialVisibility,
+            },
+          },
+        };
+      }
+
       const key = MODULE_KEY_MAP[resolvedSection];
       return {
         ...previous,
@@ -1217,9 +1277,14 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               {resolvedSection === 'publication' && (
                 <ObjectWorkspacePublicationPanel
                   value={resolvedData.modules.publication}
+                  commercialVisibility={editorSnapshot.draft.generalInfo.commercialVisibility}
+                  visibilityDirty={dirtySections.publication === true}
                   access={resolvedData.permissions.publication}
                   saving={saveStateBySection.publication.saving}
                   statusMessage={saveStateBySection.publication.message}
+                  settingsSaveAction={currentSaveAction}
+                  onCommercialVisibilityChange={(commercialVisibility) => patchPublicationSettings({ commercialVisibility })}
+                  onSaveSettings={() => void handleSaveSection('publication')}
                   onTogglePublication={(publish) => void handlePublicationToggle(publish)}
                 />
               )}

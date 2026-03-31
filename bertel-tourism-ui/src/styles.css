@@ -1289,6 +1289,30 @@ a {
   background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(249, 243, 234, 0.94));
 }
 
+.drawer__panel-area select {
+  min-height: 2.75rem;
+  padding-top: 0.62rem;
+  padding-right: 2.75rem;
+  padding-bottom: 0.62rem;
+  line-height: 1.35;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3.5 5.25L7 8.75L10.5 5.25' stroke='%23655245' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.95rem center;
+  background-size: 0.9rem;
+}
+
+.drawer__panel-area select:disabled {
+  color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
+}
+
+.drawer__panel-area select option {
+  color: var(--text);
+}
+
 .drawer-header {
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--line);

@@ -45,7 +45,7 @@ export function ObjectWorkspaceGeneralPanel({
           <div>
             <span className="eyebrow">Informations generales</span>
             <h2>Informations generales et classements</h2>
-            <p>Renseignez l identite de la fiche et ses classements utiles sans melanger publication et moderation.</p>
+            <p>Renseignez ici l identite de la fiche et ses classements utiles.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -84,19 +84,6 @@ export function ObjectWorkspaceGeneralPanel({
             />
           </div>
 
-          <div className="field-block">
-            <Label htmlFor="workspace-commercial-visibility">Visibilite commerciale</Label>
-            <select
-              id="workspace-commercial-visibility"
-              className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-              value={value.commercialVisibility}
-              onChange={(event) => onChange({ commercialVisibility: event.target.value })}
-            >
-              <option value="active">Active</option>
-              <option value="lapsed">En pause</option>
-              <option value="suspended">Suspendue</option>
-            </select>
-          </div>
         </div>
       </article>
 
@@ -119,7 +106,7 @@ export function ObjectWorkspaceGeneralPanel({
 
       <article className="panel-card panel-card--nested">
         <span className="facet-title">Bon a savoir</span>
-        <p>La publication et la moderation se gerent dans l onglet Publication.</p>
+        <p>La visibilite commerciale, la publication et la moderation se gerent dans l onglet Publication.</p>
       </article>
     </div>
   );

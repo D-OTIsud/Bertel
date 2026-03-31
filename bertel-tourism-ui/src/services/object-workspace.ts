@@ -1998,7 +1998,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   const apiClient = getApiClient();
 
   let canPrepareProposal = directWrite;
-  let canPublishObject = session.demoMode;
+  let canPublishObject = directWrite || session.demoMode;
   let canWriteProviderFollowUp = session.demoMode;
   if (!session.demoMode && apiClient) {
     try {
@@ -2014,14 +2014,15 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       const enrichment =
         enrichmentResult.status === 'fulfilled' && enrichmentResult.value.error == null && enrichmentResult.value.data === true;
       canPublishObject =
-        publishResult.status === 'fulfilled' && publishResult.value.error == null && publishResult.value.data === true;
+        directWrite
+        || (publishResult.status === 'fulfilled' && publishResult.value.error == null && publishResult.value.data === true);
       canWriteProviderFollowUp =
         providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
 
       canPrepareProposal = directWrite || canonical || enrichment;
     } catch {
       canPrepareProposal = directWrite;
-      canPublishObject = false;
+      canPublishObject = directWrite;
       canWriteProviderFollowUp = directWrite;
     }
   }

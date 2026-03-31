@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ObjectDrawer } from './ObjectDrawer';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -838,9 +838,14 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
+    const navigation = screen.getByRole('navigation', { name: /navigation workspace objet/i });
+    const navigationButtons = within(navigation).getAllByRole('button');
+    expect(navigationButtons[navigationButtons.length - 1]).toHaveTextContent(/publication/i);
+
     fireEvent.click(screen.getByRole('button', { name: /publication/i }));
 
     expect(screen.getByRole('heading', { name: /^publication$/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/visibilite commerciale/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /publier/i })).toBeInTheDocument();
   });
 
@@ -864,6 +869,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByRole('button', { name: /informations generales/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /informations generales et classements/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /classements et categories/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/visibilite commerciale/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/classement/i)).toBeInTheDocument();
   });
 

@@ -24,6 +24,13 @@ Bertel/
 └── README.md                      # Ce fichier
 ```
 
+## 🛠️ Stack Technique
+
+Bertel repose sur une architecture moderne et flexible :
+- **Front-end / UI** : Next.js (React), Tailwind CSS, Zustand.
+- **Base de données / Backend** : **Supabase** (PostgreSQL). 
+  *Note : Le projet utilise actuellement Supabase pour profiter de son écosystème (Auth, API), mais le cœur du schéma est standard. Il est donc tout à fait possible d'adapter et de faire tourner le projet sur **n'importe quelle base de données PostgreSQL classic**.*
+
 ## 🗄️ Base de données unifiée
 
 Le projet Bertel utilise un système de données unifié PostgreSQL avec des fonctionnalités avancées :

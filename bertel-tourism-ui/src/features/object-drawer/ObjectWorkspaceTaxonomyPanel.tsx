@@ -7,6 +7,7 @@ import type {
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -214,9 +215,8 @@ export function ObjectWorkspaceTaxonomyFields({
                 {scheme.selectionMode === 'single' ? (
                   <div className="field-block field-block--wide">
                     <Label htmlFor={`taxonomy-scheme-${scheme.id}`}>Classement</Label>
-                    <select
+                    <Select
                       id={`taxonomy-scheme-${scheme.id}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={selectedSingleValue}
                       disabled={disabled}
                       onChange={(event) => handleSingleSelection(scheme.id, event.target.value)}
@@ -227,7 +227,7 @@ export function ObjectWorkspaceTaxonomyFields({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 ) : (
                   <div className="field-block field-block--wide">
@@ -272,9 +272,8 @@ export function ObjectWorkspaceTaxonomyFields({
                     <div className="drawer-grid">
                       <div className="field-block">
                         <Label htmlFor={`taxonomy-status-${scheme.id}-${item.valueCode}`}>Statut</Label>
-                        <select
+                        <Select
                           id={`taxonomy-status-${scheme.id}-${item.valueCode}`}
-                          className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                           value={item.status}
                           disabled={disabled}
                           onChange={(event) => handleItemPatch(scheme.id, item.valueCode, { status: event.target.value })}
@@ -284,7 +283,7 @@ export function ObjectWorkspaceTaxonomyFields({
                           <option value="granted">Obtenu</option>
                           <option value="suspended">Suspendu</option>
                           <option value="expired">Expire</option>
-                        </select>
+                        </Select>
                       </div>
 
                       <div className="field-block">

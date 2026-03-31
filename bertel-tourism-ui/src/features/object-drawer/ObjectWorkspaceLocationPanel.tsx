@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPinned } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import type { ObjectWorkspaceLocationModule } from '../../services/object-workspace-parser';
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -311,6 +312,8 @@ function describeReferenceHint(
   return null;
 }
 
+const CUSTOM_VALUE_SENTINEL = '__custom__';
+
 interface LocationReferenceInputProps {
   id: string;
   label: string;
@@ -337,43 +340,111 @@ function LocationReferenceInput({
     ),
     [kind, options],
   );
-  const listId = useId();
-  const fieldOptions = useMemo(
-    () => buildReferenceOptions(options, value, kind),
-    [kind, options, value],
-  );
   const resolvedState = useMemo(
     () => resolveReferenceValue(value, corpusOptions, kind),
     [corpusOptions, kind, value],
   );
-  const helperText = describeReferenceHint(
-    value.trim(),
-    resolvedState.resolvedValue,
-    resolvedState.hasExistingMatch,
+  const trimmedValue = value.trim();
+  const selectValue = trimmedValue
+    ? (resolvedState.hasExistingMatch ? resolvedState.resolvedValue : trimmedValue)
+    : '';
+  const fieldOptions = useMemo(
+    () => buildReferenceOptions(options, selectValue, kind),
+    [kind, options, selectValue],
   );
+  const isCustomValue = trimmedValue !== '' && !resolvedState.hasExistingMatch;
+  const [manualEntryRequested, setManualEntryRequested] = useState(false);
+  const customMode = manualEntryRequested || isCustomValue;
+
+  useEffect(() => {
+    if (!trimmedValue) {
+      setManualEntryRequested(false);
+    }
+  }, [trimmedValue]);
+
+  function handleSelectChange(nextValue: string) {
+    if (nextValue === CUSTOM_VALUE_SENTINEL) {
+      setManualEntryRequested(true);
+      return;
+    }
+
+    setManualEntryRequested(false);
+    onChange(nextValue);
+  }
+
+  function handleCustomBlur() {
+    const resolved = resolvedState.resolvedValue;
+    onChange(resolved);
+
+    if (resolvedState.hasExistingMatch && resolved) {
+      setManualEntryRequested(false);
+    }
+  }
+
+  const helperText = customMode
+    ? describeReferenceHint(trimmedValue, resolvedState.resolvedValue, resolvedState.hasExistingMatch)
+    : (
+      trimmedValue && resolvedState.hasExistingMatch && trimmedValue !== resolvedState.resolvedValue
+        ? `Forme retenue: "${resolvedState.resolvedValue}".`
+        : null
+    );
+  const statusLabel = customMode
+    ? 'Saisie manuelle'
+    : (trimmedValue ? 'Valeur issue de la liste' : null);
 
   return (
     <div className="drawer-inline-field">
       <Label htmlFor={id}>{label}</Label>
       <div className="drawer-reference-field">
-        <Input
-          id={id}
-          list={listId}
-          autoComplete="off"
-          value={value}
-          placeholder={placeholder}
-          onChange={(event) => onChange(
-            kind === 'postcode'
-              ? normalizePostcodeValue(event.target.value)
-              : event.target.value,
-          )}
-          onBlur={() => onChange(resolvedState.resolvedValue)}
-        />
-        <datalist id={listId}>
-          {fieldOptions.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
+        {customMode ? (
+          <>
+            <Input
+              id={id}
+              autoComplete="off"
+              value={value}
+              placeholder={placeholder}
+              onChange={(event) => onChange(
+                kind === 'postcode'
+                  ? normalizePostcodeValue(event.target.value)
+                  : event.target.value,
+              )}
+              onBlur={handleCustomBlur}
+            />
+            <button
+              type="button"
+              className="drawer-reference-field__toggle"
+              onClick={() => {
+                setManualEntryRequested(false);
+                if (isCustomValue) {
+                  onChange('');
+                }
+              }}
+            >
+              Revenir a la liste
+            </button>
+          </>
+        ) : (
+          <>
+            <Select
+              id={id}
+              value={selectValue}
+              onChange={(event) => handleSelectChange(event.target.value)}
+            >
+              <option value="">{placeholder}</option>
+              {fieldOptions.filter(Boolean).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+              <option value={CUSTOM_VALUE_SENTINEL}>Saisir manuellement...</option>
+            </Select>
+          </>
+        )}
+        {statusLabel && (
+          <span className="inline-flex min-h-[1.6rem] justify-self-start items-center rounded-full border border-[rgba(var(--theme-primary-rgb),0.12)] bg-[rgba(var(--theme-primary-rgb),0.08)] px-[0.55rem] py-[0.1rem] text-[0.74rem] font-bold tracking-[0.01em] text-[color:var(--theme-primary,#176b6a)]">
+            {statusLabel}
+          </span>
+        )}
         {helperText && (
           <small className="drawer-reference-field__hint">{helperText}</small>
         )}

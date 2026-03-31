@@ -3,6 +3,7 @@ import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspac
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -47,9 +48,8 @@ function ContactCard(props: {
       <div className="drawer-grid">
         <div className="field-block">
           <Label htmlFor={`contact-kind-${item.id}`}>Type</Label>
-          <select
+          <Select
             id={`contact-kind-${item.id}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.kindCode}
             disabled={disabled}
             onChange={(event) => onChange({ kindCode: event.target.value })}
@@ -59,14 +59,13 @@ function ContactCard(props: {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="field-block">
           <Label htmlFor={`contact-role-${item.id}`}>Role</Label>
-          <select
+          <Select
             id={`contact-role-${item.id}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.roleCode}
             disabled={disabled}
             onChange={(event) => onChange({ roleCode: event.target.value })}
@@ -77,7 +76,7 @@ function ContactCard(props: {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="field-block field-block--wide">

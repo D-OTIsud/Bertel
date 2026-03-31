@@ -6,6 +6,7 @@ import type {
 import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -221,16 +222,15 @@ export function ObjectWorkspacePublicationPanel({
         <div className="drawer-grid">
           <div className="field-block">
             <Label htmlFor="publication-commercial-visibility">Visibilite commerciale</Label>
-            <select
+            <Select
               id="publication-commercial-visibility"
-              className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
               value={commercialVisibility}
               onChange={(event) => onCommercialVisibilityChange(event.target.value)}
             >
               <option value="active">Active</option>
               <option value="lapsed">En pause</option>
               <option value="suspended">Suspendue</option>
-            </select>
+            </Select>
             <p>Choisissez si la fiche peut etre diffusee commercialement, mise en pause ou suspendue.</p>
           </div>
 

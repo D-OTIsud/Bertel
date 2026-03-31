@@ -6,6 +6,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -161,9 +162,8 @@ export function ObjectWorkspaceCapacityPoliciesPanel({
                 <div className="drawer-grid">
                   <div className="field-block">
                     <Label htmlFor={`capacity-metric-${index}`}>Metrique</Label>
-                    <select
+                    <Select
                       id={`capacity-metric-${index}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={item.metricCode}
                       disabled={disabled}
                       onChange={(event) => updateCapacityItem(index, { metricCode: event.target.value })}
@@ -173,7 +173,7 @@ export function ObjectWorkspaceCapacityPoliciesPanel({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="field-block">

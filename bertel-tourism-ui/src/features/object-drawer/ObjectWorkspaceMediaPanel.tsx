@@ -3,6 +3,7 @@ import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspac
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -47,9 +48,8 @@ function MediaEditorCard(props: {
       <div className="drawer-grid">
         <div className="field-block">
           <Label htmlFor={`media-type-${item.id}`}>Type</Label>
-          <select
+          <Select
             id={`media-type-${item.id}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.typeCode}
             disabled={disabled}
             onChange={(event) => onChange({ typeCode: event.target.value })}
@@ -59,7 +59,7 @@ function MediaEditorCard(props: {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="field-block field-block--wide">
@@ -79,9 +79,8 @@ function MediaEditorCard(props: {
 
         <div className="field-block">
           <Label htmlFor={`media-visibility-${item.id}`}>Visibilite</Label>
-          <select
+          <Select
             id={`media-visibility-${item.id}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.visibility}
             disabled={disabled}
             onChange={(event) => onChange({ visibility: event.target.value })}
@@ -89,7 +88,7 @@ function MediaEditorCard(props: {
             <option value="public">public</option>
             <option value="partners">partners</option>
             <option value="private">private</option>
-          </select>
+          </Select>
         </div>
 
         <div className="field-block">

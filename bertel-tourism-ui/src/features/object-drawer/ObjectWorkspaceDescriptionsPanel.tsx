@@ -5,6 +5,7 @@ import type {
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -71,9 +72,8 @@ function DescriptionScopeCard(props: {
       <div className="drawer-grid">
         <div className="field-block">
           <Label htmlFor={`${scope.scope}-${scope.placeId ?? 'object'}-visibility`}>Visibilite</Label>
-          <select
+          <Select
             id={`${scope.scope}-${scope.placeId ?? 'object'}-visibility`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={scope.visibility}
             disabled={disabled}
             onChange={(event) => onVisibilityChange(event.target.value)}
@@ -81,7 +81,7 @@ function DescriptionScopeCard(props: {
             <option value="public">public</option>
             <option value="partners">partners</option>
             <option value="private">private</option>
-          </select>
+          </Select>
         </div>
 
         <div className="field-block field-block--wide">
@@ -186,9 +186,8 @@ export function ObjectWorkspaceDescriptionsPanel({
 
           <div className="field-block">
             <Label htmlFor="workspace-description-language">Langue de travail</Label>
-            <select
+            <Select
               id="workspace-description-language"
-              className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
               value={value.activeLanguage}
               onChange={(event) => onLanguageChange(event.target.value)}
             >
@@ -197,7 +196,7 @@ export function ObjectWorkspaceDescriptionsPanel({
                   {language.toUpperCase()}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </article>

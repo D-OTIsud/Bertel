@@ -8,6 +8,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -72,9 +73,8 @@ function DistinctionItemCard(props: {
       <div className="drawer-grid">
         <div className="field-block">
           <Label htmlFor={`distinction-status-${item.recordId ?? item.valueCode}`}>Statut</Label>
-          <select
+          <Select
             id={`distinction-status-${item.recordId ?? item.valueCode}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.status || 'active'}
             disabled={disabled}
             onChange={(event) => onChange({ status: event.target.value })}
@@ -83,7 +83,7 @@ function DistinctionItemCard(props: {
             <option value="pending">pending</option>
             <option value="suspended">suspended</option>
             <option value="expired">expired</option>
-          </select>
+          </Select>
         </div>
         <div className="field-block">
           <Label htmlFor={`distinction-awarded-${item.recordId ?? item.valueCode}`}>Attribue le</Label>
@@ -266,9 +266,8 @@ export function ObjectWorkspaceDistinctionsPanel({
           <div className="drawer-grid">
             <div className="field-block">
               <Label htmlFor="new-label-scheme">Schema</Label>
-              <select
+              <Select
                 id="new-label-scheme"
-                className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                 value={draftSchemeId}
                 onChange={(event) => { setDraftSchemeId(event.target.value); setDraftValueId(''); }}
               >
@@ -276,13 +275,12 @@ export function ObjectWorkspaceDistinctionsPanel({
                 {value.schemeOptions.map((scheme) => (
                   <option key={scheme.id} value={scheme.id}>{scheme.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="field-block">
               <Label htmlFor="new-label-value">Valeur</Label>
-              <select
+              <Select
                 id="new-label-value"
-                className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                 value={draftValueId}
                 disabled={!selectedScheme}
                 onChange={(event) => setDraftValueId(event.target.value)}
@@ -291,7 +289,7 @@ export function ObjectWorkspaceDistinctionsPanel({
                 {(selectedScheme?.valueOptions ?? []).map((option) => (
                   <option key={option.id} value={option.id}>{option.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         </article>

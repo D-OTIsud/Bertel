@@ -8,6 +8,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -284,9 +285,8 @@ export function ObjectWorkspacePricingPanel({
                 <div className="drawer-grid">
                   <div className="field-block">
                     <Label htmlFor={`pricing-kind-${priceIndex}`}>Type de tarif</Label>
-                    <select
+                    <Select
                       id={`pricing-kind-${priceIndex}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={price.kindCode}
                       disabled={disabled}
                       onChange={(event) => updatePrice(priceIndex, { kindCode: event.target.value })}
@@ -296,14 +296,13 @@ export function ObjectWorkspacePricingPanel({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="field-block">
                     <Label htmlFor={`pricing-unit-${priceIndex}`}>Unite</Label>
-                    <select
+                    <Select
                       id={`pricing-unit-${priceIndex}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={price.unitCode}
                       disabled={disabled}
                       onChange={(event) => updatePrice(priceIndex, { unitCode: event.target.value })}
@@ -314,7 +313,7 @@ export function ObjectWorkspacePricingPanel({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="field-block">

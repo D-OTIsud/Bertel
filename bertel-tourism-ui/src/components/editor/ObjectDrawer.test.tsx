@@ -1291,9 +1291,9 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByLabelText(/suffixe/i)).toHaveValue('bis');
     expect(screen.getByLabelText(/^voie$/i)).toHaveValue('Rue Alfred Picard');
     expect(screen.getByLabelText(/complement d'adresse/i)).toHaveValue('Batiment A, appartement 4');
-    expect(screen.getByLabelText(/quartier \/ lieu-dit/i)).toHaveValue('La Plaine des Cafres');
+    expect(screen.getByRole('combobox', { name: /quartier \/ lieu-dit/i })).toHaveValue('La Plaine des Cafres');
     expect(screen.getByPlaceholderText(/ex\. bis, ter, a/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/selectionnez ou ajoutez une zone/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /zone touristique/i })).toBeInTheDocument();
     expect(screen.getByText(/12 bis Rue Alfred Picard, Batiment A, appartement 4/i)).toBeInTheDocument();
     expect(screen.queryByText(/aucun lieu rattache disponible/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/aucune zone touristique disponible/i)).not.toBeInTheDocument();
@@ -1362,21 +1362,54 @@ describe('ObjectDrawer workspace drafts', () => {
     fireEvent.blur(streetField);
     expect(streetField).toHaveValue('Rue Alfred Picard');
 
-    const cityField = screen.getByLabelText(/^ville$/i);
-    fireEvent.change(cityField, { target: { value: 'le tampon' } });
+    const cityField = screen.getByRole('combobox', { name: /^ville$/i });
+    fireEvent.change(cityField, { target: { value: '__custom__' } });
+    const cityInput = screen.getByRole('textbox', { name: /^ville$/i });
+    fireEvent.change(cityInput, { target: { value: 'le tampon' } });
     expect(screen.getByText(/forme retenue: "Le Tampon"/i)).toBeInTheDocument();
-    fireEvent.blur(cityField);
-    expect(cityField).toHaveValue('Le Tampon');
+    fireEvent.blur(cityInput);
+    expect(screen.getByRole('combobox', { name: /^ville$/i })).toHaveValue('Le Tampon');
 
-    const postcodeField = screen.getByLabelText(/code postal/i);
-    fireEvent.change(postcodeField, { target: { value: '97a418xx' } });
-    expect(postcodeField).toHaveValue('97418');
+    const postcodeField = screen.getByRole('combobox', { name: /code postal/i });
+    fireEvent.change(postcodeField, { target: { value: '__custom__' } });
+    const postcodeInput = screen.getByRole('textbox', { name: /code postal/i });
+    fireEvent.change(postcodeInput, { target: { value: '97a418xx' } });
+    expect(postcodeInput).toHaveValue('97418');
 
-    const zoneField = screen.getByLabelText(/zone touristique/i);
-    fireEvent.change(zoneField, { target: { value: 'plaine des sables' } });
+    const zoneField = screen.getByRole('combobox', { name: /zone touristique/i });
+    fireEvent.change(zoneField, { target: { value: '__custom__' } });
+    const zoneInput = screen.getByRole('textbox', { name: /zone touristique/i });
+    fireEvent.change(zoneInput, { target: { value: 'plaine des sables' } });
     expect(screen.getByText(/nouvelle valeur/i)).toBeInTheDocument();
-    fireEvent.blur(zoneField);
-    expect(zoneField).toHaveValue('Plaine des Sables');
+    fireEvent.blur(zoneInput);
+    expect(screen.getByRole('textbox', { name: /zone touristique/i })).toHaveValue('Plaine des Sables');
+    expect(screen.getAllByText(/saisie manuelle/i).length).toBeGreaterThan(0);
+  });
+
+  it('shows existing custom location values in manual mode instead of an empty dropdown', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        postcode: '97418',
+        city: 'Le Tampon',
+        zoneTouristique: 'Plaine des Sables',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+
+    expect(screen.getByRole('textbox', { name: /zone touristique/i })).toHaveValue('Plaine des Sables');
+    expect(screen.queryByRole('combobox', { name: /zone touristique/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/saisie manuelle/i)).toBeInTheDocument();
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

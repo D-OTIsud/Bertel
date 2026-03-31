@@ -7,6 +7,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -87,9 +88,8 @@ function LegalRecordCard(props: {
       <div className="drawer-grid">
         <div className="field-block">
           <Label htmlFor={`legal-type-${item.recordId ?? item.typeCode}`}>Type</Label>
-          <select
+          <Select
             id={`legal-type-${item.recordId ?? item.typeCode}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.typeCode}
             disabled={disabled}
             onChange={(event) => onChange({ typeCode: event.target.value })}
@@ -99,14 +99,13 @@ function LegalRecordCard(props: {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="field-block">
           <Label htmlFor={`legal-status-${item.recordId ?? item.typeCode}`}>Statut</Label>
-          <select
+          <Select
             id={`legal-status-${item.recordId ?? item.typeCode}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.status}
             disabled={disabled}
             onChange={(event) => onChange({ status: event.target.value })}
@@ -116,14 +115,13 @@ function LegalRecordCard(props: {
             <option value="expired">expired</option>
             <option value="suspended">suspended</option>
             <option value="revoked">revoked</option>
-          </select>
+          </Select>
         </div>
 
         <div className="field-block">
           <Label htmlFor={`legal-validity-${item.recordId ?? item.typeCode}`}>Mode de validite</Label>
-          <select
+          <Select
             id={`legal-validity-${item.recordId ?? item.typeCode}`}
-            className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
             value={item.validityMode || 'fixed_end_date'}
             disabled={disabled}
             onChange={(event) => onChange({ validityMode: event.target.value })}
@@ -131,7 +129,7 @@ function LegalRecordCard(props: {
             <option value="fixed_end_date">fixed_end_date</option>
             <option value="forever">forever</option>
             <option value="tacit_renewal">tacit_renewal</option>
-          </select>
+          </Select>
         </div>
 
         <div className="field-block">

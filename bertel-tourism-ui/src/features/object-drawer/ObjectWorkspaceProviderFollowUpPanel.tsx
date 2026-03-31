@@ -11,6 +11,7 @@ import type {
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 const NOTE_CATEGORY_OPTIONS: Array<ObjectWorkspaceFollowUpNote['category']> = [
   'general',
@@ -238,9 +239,8 @@ export function ObjectWorkspaceProviderFollowUpPanel({
           <div className="drawer-grid">
             <div className="field-block">
               <Label htmlFor="follow-up-note-category">Categorie</Label>
-              <select
+              <Select
                 id="follow-up-note-category"
-                className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                 value={draftCategory}
                 disabled={disabled}
                 onChange={(event) => setDraftCategory(event.target.value as ObjectWorkspaceFollowUpNote['category'])}
@@ -250,7 +250,7 @@ export function ObjectWorkspaceProviderFollowUpPanel({
                     {categoryLabel(option)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <label className="field-block">
@@ -311,9 +311,8 @@ export function ObjectWorkspaceProviderFollowUpPanel({
                 <div className="drawer-grid">
                   <div className="field-block">
                     <Label htmlFor={`follow-up-edit-category-${note.id}`}>Categorie</Label>
-                    <select
+                    <Select
                       id={`follow-up-edit-category-${note.id}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={editCategory}
                       onChange={(event) => setEditCategory(event.target.value as ObjectWorkspaceFollowUpNote['category'])}
                     >
@@ -322,7 +321,7 @@ export function ObjectWorkspaceProviderFollowUpPanel({
                           {categoryLabel(option)}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <label className="field-block">

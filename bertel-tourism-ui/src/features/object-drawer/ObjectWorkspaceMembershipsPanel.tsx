@@ -6,6 +6,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -206,23 +207,21 @@ export function ObjectWorkspaceMembershipsPanel({
             <div className="drawer-grid">
               <div className="field-block">
                 <Label htmlFor={`membership-scope-${index}`}>Portee</Label>
-                <select
+                <Select
                   id={`membership-scope-${index}`}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                   value={item.scope}
                   disabled={disabled}
                   onChange={(event) => updateItem(index, { scope: event.target.value as ObjectWorkspaceMembershipItem['scope'] })}
                 >
                   <option value="object">Objet</option>
                   <option value="organization">Organisation</option>
-                </select>
+                </Select>
               </div>
 
               <div className="field-block">
                 <Label htmlFor={`membership-org-${index}`}>Organisation porteuse</Label>
-                <select
+                <Select
                   id={`membership-org-${index}`}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                   value={item.orgObjectId}
                   disabled={disabled || value.scopeOptions.length === 0}
                   onChange={(event) => updateItem(index, { orgObjectId: event.target.value })}
@@ -232,14 +231,13 @@ export function ObjectWorkspaceMembershipsPanel({
                       {option.label}{option.isPrimary ? ' (principale)' : ''}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="field-block">
                 <Label htmlFor={`membership-campaign-${index}`}>Campagne</Label>
-                <select
+                <Select
                   id={`membership-campaign-${index}`}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                   value={item.campaignCode}
                   disabled={disabled}
                   onChange={(event) => updateItem(index, { campaignCode: event.target.value })}
@@ -249,14 +247,13 @@ export function ObjectWorkspaceMembershipsPanel({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="field-block">
                 <Label htmlFor={`membership-tier-${index}`}>Palier</Label>
-                <select
+                <Select
                   id={`membership-tier-${index}`}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                   value={item.tierCode}
                   disabled={disabled}
                   onChange={(event) => updateItem(index, { tierCode: event.target.value })}
@@ -266,14 +263,13 @@ export function ObjectWorkspaceMembershipsPanel({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="field-block">
                 <Label htmlFor={`membership-status-${index}`}>Statut</Label>
-                <select
+                <Select
                   id={`membership-status-${index}`}
-                  className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                   value={item.status}
                   disabled={disabled}
                   onChange={(event) => updateItem(index, { status: event.target.value })}
@@ -283,7 +279,7 @@ export function ObjectWorkspaceMembershipsPanel({
                       {status}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="field-block">

@@ -6,6 +6,7 @@ import type {
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
@@ -218,9 +219,8 @@ export function ObjectWorkspaceCharacteristicsPanel({
                 <div className="drawer-grid">
                   <div className="field-block">
                     <Label htmlFor={`characteristics-language-${index}`}>Langue</Label>
-                    <select
+                    <Select
                       id={`characteristics-language-${index}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={item.code}
                       disabled={disabled}
                       onChange={(event) => updateLanguage(index, { code: event.target.value })}
@@ -230,14 +230,13 @@ export function ObjectWorkspaceCharacteristicsPanel({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   <div className="field-block">
                     <Label htmlFor={`characteristics-level-${index}`}>Niveau</Label>
-                    <select
+                    <Select
                       id={`characteristics-level-${index}`}
-                      className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
                       value={item.levelCode}
                       disabled={disabled}
                       onChange={(event) => updateLanguage(index, { levelCode: event.target.value })}
@@ -248,7 +247,7 @@ export function ObjectWorkspaceCharacteristicsPanel({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </article>

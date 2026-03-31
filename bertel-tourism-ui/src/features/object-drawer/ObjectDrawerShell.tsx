@@ -346,7 +346,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const isShellLoading = !isError && !resolvedData;
   const title = resolvedData?.name ?? '';
   const typeLabel = resolvedData?.type ? DRAWER_TYPE_LABELS[(resolvedData.type ?? '').toUpperCase()] ?? resolvedData.type : '';
-  const eyebrow = mode === 'edit' ? 'Workspace objet' : typeLabel;
+  const eyebrow = mode === 'edit' ? 'Edition' : typeLabel;
   const headerChips = resolvedData
     ? parsedPreview.taxonomy.groups
       .filter((group) => ['classifications', 'tags'].includes(group.key))

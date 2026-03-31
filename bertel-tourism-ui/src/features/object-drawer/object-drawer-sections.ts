@@ -3,123 +3,94 @@ import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/
 export interface SectionDef {
   id: WorkspaceModuleId;
   label: string;
-  eyebrow: string;
-  description: string;
   isVisible: (resource: ObjectWorkspaceResource) => boolean;
 }
 
 const WORKSPACE_SECTION_DEFS: SectionDef[] = [
   {
     id: 'general-info',
-    label: 'Infos generales',
-    eyebrow: 'A1',
-    description: 'Identite, cadrage metier et visibilite commerciale.',
+    label: 'Fiche',
     isVisible: () => true,
   },
   {
     id: 'taxonomy',
-    label: 'Taxonomie',
-    eyebrow: 'A2',
-    description: 'Classifications structurantes sans melanger distinctions et labels.',
+    label: 'Classifications',
     isVisible: () => true,
   },
   {
     id: 'publication',
     label: 'Publication',
-    eyebrow: 'A3',
-    description: 'Workflow editorial, publication et moderation.',
+    isVisible: () => true,
+  },
+  {
+    id: 'sync-identifiers',
+    label: 'Synchronisation',
     isVisible: () => true,
   },
   {
     id: 'location',
     label: 'Localisation',
-    eyebrow: 'B1',
-    description: 'Adresse principale, sous-lieux et coherence territoriale.',
     isVisible: () => true,
   },
   {
     id: 'descriptions',
     label: 'Descriptions',
-    eyebrow: 'B2',
-    description: 'Contenus multilingues et scopes objet / sous-lieu.',
     isVisible: () => true,
   },
   {
     id: 'media',
-    label: 'Medias',
-    eyebrow: 'B3',
-    description: 'Galerie, droits, media principal et portee.',
+    label: 'Médias',
     isVisible: () => true,
   },
   {
     id: 'contacts',
     label: 'Contacts',
-    eyebrow: 'B4',
-    description: 'Coordonnees publiques propres a l objet.',
-    isVisible: () => true,
+    isVisible: (resource) => resource.type !== 'ITI',
   },
   {
     id: 'characteristics',
-    label: 'Caracteristiques',
-    eyebrow: 'C1',
-    description: 'Langues, equipements, paiements et environnement.',
+    label: 'Équipements & services',
     isVisible: () => true,
   },
   {
     id: 'distinctions',
-    label: 'Distinctions',
-    eyebrow: 'C2',
-    description: 'Distinctions certifiees, labels d accessibilite et couverture accessibilite.',
+    label: 'Labels & certifications',
     isVisible: () => true,
   },
   {
     id: 'capacity-policies',
-    label: 'Capacites',
-    eyebrow: 'C4',
-    description: 'Capacites metier, groupes et animaux.',
-    isVisible: () => true,
+    label: 'Capacités',
+    isVisible: (resource) => resource.type !== 'ITI' && resource.type !== 'COM',
   },
   {
     id: 'pricing',
     label: 'Tarifs',
-    eyebrow: 'C5',
-    description: 'Tarifs, periodes, remises bornees et promotions liees.',
-    isVisible: () => true,
+    isVisible: (resource) => resource.type !== 'ITI',
   },
   {
     id: 'openings',
     label: 'Horaires',
-    eyebrow: 'C6',
-    description: 'Periodes d ouverture et creneaux par jour sans flattening preview.',
     isVisible: () => true,
   },
   {
     id: 'provider-follow-up',
-    label: 'Suivi relation',
-    eyebrow: 'D1',
-    description: 'Notes internes et memoire de relation prestataire, sans pipeline commercial.',
-    isVisible: () => true,
+    label: 'Suivi prestataire',
+    isVisible: (resource) => resource.type !== 'ITI' && resource.type !== 'COM',
   },
   {
     id: 'relationships',
-    label: 'Relations',
-    eyebrow: 'D2',
-    description: 'Rattachements ORG, acteurs lies et relations objet sans les confondre avec les contacts publics.',
+    label: 'Rattachements',
     isVisible: () => true,
   },
   {
     id: 'memberships',
-    label: 'Adhesions',
-    eyebrow: 'D3',
-    description: 'Suivi des adhesions objet et organisationnelles, sans pipeline commercial.',
-    isVisible: () => true,
+    label: 'Adhésions',
+    isVisible: (resource) => resource.modules.memberships.campaignOptions.length > 0,
   },
   {
     id: 'legal',
-    label: 'Conformite',
-    eyebrow: 'D6',
-    description: 'Documents juridiques, echeances et resume de conformite.',
-    isVisible: () => true,
+    label: 'Documents légaux',
+    isVisible: (resource) => resource.type !== 'ITI' && resource.type !== 'COM',
   },
 ];
 

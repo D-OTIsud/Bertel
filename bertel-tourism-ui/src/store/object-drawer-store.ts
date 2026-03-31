@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ObjectDrawerSection = 'general-info' | 'taxonomy' | 'publication' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type ObjectDrawerSection = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
 export type DrawerMode = 'view' | 'edit';
 
 interface ObjectDrawerState {

@@ -150,3 +150,8 @@ Le schema par defaut `public` reste utilise pour les tables via `getSupabaseClie
 ## 🏢 Organisation
 
 Projet développé par **OTI du Sud** - Office de Tourisme Intercommunal du Sud.
+
+## 📄 Licence et Open Source
+
+Ce projet est publié en **Open Source** sous la licence **MIT**. 
+Vous êtes libre d'utiliser, de modifier et de distribuer ce code. Voir le fichier [LICENSE](./LICENSE) pour plus de détails.

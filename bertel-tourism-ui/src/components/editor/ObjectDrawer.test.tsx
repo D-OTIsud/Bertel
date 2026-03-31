@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { ObjectDrawer } from './ObjectDrawer';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -8,11 +9,32 @@ const mockUseObjectWorkspaceQuery = jest.fn();
 const mockSaveWorkspaceMutateAsync = jest.fn();
 const mockPublishWorkspaceMutateAsync = jest.fn();
 
+jest.mock('react-map-gl/maplibre', () => ({
+  Map: ({ children }: { children?: ReactNode }) => <div data-testid="workspace-location-map">{children}</div>,
+  Marker: ({
+    children,
+    onDragEnd,
+  }: {
+    children?: ReactNode;
+    onDragEnd?: (event: { lngLat: { lng: number; lat: number } }) => void;
+  }) => (
+    <div
+      data-testid="workspace-location-marker"
+      onClick={() => onDragEnd?.({ lngLat: { lng: 55.501234, lat: -21.123456 } })}
+    >
+      {children}
+    </div>
+  ),
+  NavigationControl: () => <div data-testid="workspace-location-map-zoom" />,
+}));
+
 function buildWorkspaceResource(params: {
   id: string;
   name: string;
   type?: string;
   description?: string;
+  latitude?: string;
+  longitude?: string;
 }) {
   return {
     id: params.id,
@@ -72,6 +94,34 @@ function buildWorkspaceResource(params: {
           items: [],
         },
       },
+      syncIdentifiers: {
+        objectCreatedAt: '2026-01-01T09:00:00Z',
+        objectUpdatedAt: '2026-03-20T12:00:00Z',
+        objectUpdatedAtSource: 'Apidae',
+        externalIdentifiers: [
+          {
+            id: 'sync-ext-1',
+            organizationObjectId: 'ORG0001',
+            sourceSystem: 'Apidae',
+            externalId: 'APIDAE-12345',
+            lastSyncedAt: '2026-03-20T12:00:00Z',
+            createdAt: '2026-01-01T09:00:00Z',
+            updatedAt: '2026-03-20T12:00:00Z',
+          },
+        ],
+        origins: [
+          {
+            sourceSystem: 'Apidae',
+            sourceObjectId: 'OBJ-12345',
+            importBatchId: 'IMPORT-2026-03',
+            firstImportedAt: '2026-01-01T09:00:00Z',
+            createdAt: '2026-01-01T09:00:00Z',
+            updatedAt: '2026-03-20T12:00:00Z',
+          },
+        ],
+        externalIdentifiersVisibilityNote: null,
+        originsVisibilityNote: null,
+      },
       location: {
         main: {
           recordId: null,
@@ -84,8 +134,8 @@ function buildWorkspaceResource(params: {
           codeInsee: '',
           lieuDit: '',
           direction: '',
-          latitude: '',
-          longitude: '',
+          latitude: params.latitude ?? '',
+          longitude: params.longitude ?? '',
           zoneTouristique: '',
         },
         places: [],
@@ -571,6 +621,12 @@ function buildWorkspaceResource(params: {
         canSubmitProposal: false,
         disabledReason: null,
       },
+      syncIdentifiers: {
+        canDirectWrite: false,
+        canPrepareProposal: false,
+        canSubmitProposal: false,
+        disabledReason: 'Lecture seule',
+      },
       location: {
         canDirectWrite: true,
         canPrepareProposal: true,
@@ -849,6 +905,52 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByRole('button', { name: /publier/i })).toBeInTheDocument();
   });
 
+  it('hides the synchronisation tab for non super admins', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    expect(screen.queryByRole('button', { name: /synchronisation/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the synchronisation tab only for super admins and keeps it last', () => {
+    useSessionStore.setState({ role: 'super_admin', status: 'ready' });
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    const navigation = screen.getByRole('navigation', { name: /navigation workspace objet/i });
+    const navigationButtons = within(navigation).getAllByRole('button');
+    expect(navigationButtons[navigationButtons.length - 1]).toHaveTextContent(/synchronisation/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /synchronisation/i }));
+
+    expect(screen.getByRole('heading', { name: /^synchronisation$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /liens de synchronisation/i })).toBeInTheDocument();
+  });
+
   it('merges classifications into the general information tab', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({
@@ -1052,6 +1154,42 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByRole('heading', { name: /^horaires$/i })).toBeInTheDocument();
     expect(screen.getByText(/periode courante/i)).toBeInTheDocument();
     expect(screen.getAllByText(/09:30 -> 17:00/i)).toHaveLength(2);
+  });
+
+  it('confirms a pin move before updating latitude and longitude in localisation', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        latitude: '-21.339100',
+        longitude: '55.478100',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /localisation/i }));
+
+    expect(screen.getByDisplayValue('-21.339100')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('55.478100')).toBeInTheDocument();
+    expect(screen.getByTestId('workspace-location-map')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('workspace-location-marker'));
+
+    expect(screen.getByRole('heading', { name: /confirmer la nouvelle position/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('-21.339100')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('55.478100')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /confirmer la position/i }));
+
+    expect(screen.getByDisplayValue('-21.123456')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('55.501234')).toBeInTheDocument();
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

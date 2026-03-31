@@ -401,7 +401,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   }, [data, objectId]);
 
   const resolvedData = objectId && data?.id === objectId ? data : null;
-  const sections = getSectionsForResource(resolvedData ?? undefined);
+  const sections = getSectionsForResource(resolvedData ?? undefined)
+    .filter((section) => section.id !== 'sync-identifiers' || role === 'super_admin');
   const allowedSectionIds = new Set(sections.map((section) => section.id));
   const resolvedSection = allowedSectionIds.has(activeSection) ? activeSection : DEFAULT_SECTION;
   const dirtySections = useMemo(() => getDirtySections(editorSnapshot), [editorSnapshot]);

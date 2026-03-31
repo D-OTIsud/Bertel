@@ -13,11 +13,6 @@ const WORKSPACE_SECTION_DEFS: SectionDef[] = [
     isVisible: () => true,
   },
   {
-    id: 'sync-identifiers',
-    label: 'Synchronisation',
-    isVisible: () => true,
-  },
-  {
     id: 'location',
     label: 'Localisation',
     isVisible: () => true,
@@ -85,6 +80,11 @@ const WORKSPACE_SECTION_DEFS: SectionDef[] = [
   {
     id: 'publication',
     label: 'Publication',
+    isVisible: () => true,
+  },
+  {
+    id: 'sync-identifiers',
+    label: 'Synchronisation',
     isVisible: () => true,
   },
 ];

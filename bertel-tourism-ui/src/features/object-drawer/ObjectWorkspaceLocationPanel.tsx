@@ -388,9 +388,6 @@ function LocationReferenceInput({
         ? `Forme retenue: "${resolvedState.resolvedValue}".`
         : null
     );
-  const statusLabel = customMode
-    ? 'Saisie manuelle'
-    : (trimmedValue ? 'Valeur issue de la liste' : null);
 
   return (
     <div className="drawer-inline-field">
@@ -439,11 +436,6 @@ function LocationReferenceInput({
               <option value={CUSTOM_VALUE_SENTINEL}>Saisir manuellement...</option>
             </Select>
           </>
-        )}
-        {statusLabel && (
-          <span className="inline-flex min-h-[1.6rem] justify-self-start items-center rounded-full border border-[rgba(var(--theme-primary-rgb),0.12)] bg-[rgba(var(--theme-primary-rgb),0.08)] px-[0.55rem] py-[0.1rem] text-[0.74rem] font-bold tracking-[0.01em] text-[color:var(--theme-primary,#176b6a)]">
-            {statusLabel}
-          </span>
         )}
         {helperText && (
           <small className="drawer-reference-field__hint">{helperText}</small>

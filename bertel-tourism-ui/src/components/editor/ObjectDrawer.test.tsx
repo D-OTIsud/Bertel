@@ -1383,7 +1383,6 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByText(/nouvelle valeur/i)).toBeInTheDocument();
     fireEvent.blur(zoneInput);
     expect(screen.getByRole('textbox', { name: /zone touristique/i })).toHaveValue('Plaine des Sables');
-    expect(screen.getAllByText(/saisie manuelle/i).length).toBeGreaterThan(0);
   });
 
   it('shows existing custom location values in manual mode instead of an empty dropdown', () => {
@@ -1409,7 +1408,6 @@ describe('ObjectDrawer workspace drafts', () => {
 
     expect(screen.getByRole('textbox', { name: /zone touristique/i })).toHaveValue('Plaine des Sables');
     expect(screen.queryByRole('combobox', { name: /zone touristique/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/saisie manuelle/i)).toBeInTheDocument();
   });
 
   it('renders the legal compliance module as an internal workspace tab', () => {

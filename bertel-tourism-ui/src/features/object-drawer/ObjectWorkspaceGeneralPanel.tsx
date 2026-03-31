@@ -1,7 +1,9 @@
-import type { ObjectWorkspaceGeneralInfo } from '../../services/object-workspace-parser';
+import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
+import type { ObjectWorkspaceGeneralInfo, ObjectWorkspaceTaxonomyModule } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ObjectWorkspaceTaxonomyFields } from './ObjectWorkspaceTaxonomyPanel';
 
 interface SaveActionState {
   label: string;
@@ -11,21 +13,29 @@ interface SaveActionState {
 
 interface ObjectWorkspaceGeneralPanelProps {
   value: ObjectWorkspaceGeneralInfo;
+  taxonomy: ObjectWorkspaceTaxonomyModule;
+  objectType?: string;
+  taxonomyAccess: ObjectWorkspaceModuleAccess;
   dirty: boolean;
   saving: boolean;
   statusMessage: string | null;
   saveAction: SaveActionState;
   onChange: (patch: Partial<ObjectWorkspaceGeneralInfo>) => void;
+  onTaxonomyChange: (nextValue: ObjectWorkspaceTaxonomyModule) => void;
   onSave: () => void;
 }
 
 export function ObjectWorkspaceGeneralPanel({
   value,
+  taxonomy,
+  objectType,
+  taxonomyAccess,
   dirty,
   saving,
   statusMessage,
   saveAction,
   onChange,
+  onTaxonomyChange,
   onSave,
 }: ObjectWorkspaceGeneralPanelProps) {
   return (
@@ -33,9 +43,9 @@ export function ObjectWorkspaceGeneralPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">A1</span>
-            <h2>Infos generales</h2>
-            <p>Cadrez les informations essentielles de la fiche sans melanger publication et moderation.</p>
+            <span className="eyebrow">Informations generales</span>
+            <h2>Informations generales et classements</h2>
+            <p>Renseignez l identite de la fiche et ses classements utiles sans melanger publication et moderation.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -76,23 +86,40 @@ export function ObjectWorkspaceGeneralPanel({
 
           <div className="field-block">
             <Label htmlFor="workspace-commercial-visibility">Visibilite commerciale</Label>
-          <select
+            <select
               id="workspace-commercial-visibility"
               className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
               value={value.commercialVisibility}
               onChange={(event) => onChange({ commercialVisibility: event.target.value })}
             >
-              <option value="active">active</option>
-              <option value="lapsed">lapsed</option>
-              <option value="suspended">suspended</option>
+              <option value="active">Active</option>
+              <option value="lapsed">En pause</option>
+              <option value="suspended">Suspendue</option>
             </select>
           </div>
         </div>
       </article>
 
       <article className="panel-card panel-card--nested">
-        <span className="facet-title">Cadre</span>
-        <p>Le statut editorial, la moderation et la publication vivent maintenant dans le module A3 dedie. A1 reste centre sur l identite racine et les parametres metier generaux.</p>
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Classements</span>
+            <h2>Classements et categories</h2>
+            <p>Seuls les classements adaptes a ce type de fiche sont proposes ici.</p>
+          </div>
+        </div>
+      </article>
+
+      <ObjectWorkspaceTaxonomyFields
+        value={taxonomy}
+        objectType={objectType}
+        access={taxonomyAccess}
+        onChange={onTaxonomyChange}
+      />
+
+      <article className="panel-card panel-card--nested">
+        <span className="facet-title">Bon a savoir</span>
+        <p>La publication et la moderation se gerent dans l onglet Publication.</p>
       </article>
     </div>
   );

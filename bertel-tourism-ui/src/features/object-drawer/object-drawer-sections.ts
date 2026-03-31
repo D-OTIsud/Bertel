@@ -9,12 +9,7 @@ export interface SectionDef {
 const WORKSPACE_SECTION_DEFS: SectionDef[] = [
   {
     id: 'general-info',
-    label: 'Fiche',
-    isVisible: () => true,
-  },
-  {
-    id: 'taxonomy',
-    label: 'Classifications',
+    label: 'Informations generales',
     isVisible: () => true,
   },
   {

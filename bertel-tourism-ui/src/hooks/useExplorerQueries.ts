@@ -44,7 +44,7 @@ import type {
 } from '../services/object-workspace-parser';
 
 type SaveWorkspaceModuleInput =
-  | { moduleId: 'general-info'; value: ObjectWorkspaceGeneralInfo }
+  | { moduleId: 'general-info'; value?: ObjectWorkspaceGeneralInfo; taxonomyValue?: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'distinctions'; value: ObjectWorkspaceDistinctionsModule }
   | { moduleId: 'location'; value: ObjectWorkspaceLocationModule }
@@ -151,7 +151,13 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
       }
 
       if (input.moduleId === 'general-info') {
-        return saveObjectWorkspaceGeneralInfo(objectId, input.value);
+        if (input.value) {
+          await saveObjectWorkspaceGeneralInfo(objectId, input.value);
+        }
+        if (input.taxonomyValue) {
+          await saveObjectWorkspaceTaxonomy(objectId, input.taxonomyValue);
+        }
+        return;
       }
 
       if (input.moduleId === 'taxonomy') {

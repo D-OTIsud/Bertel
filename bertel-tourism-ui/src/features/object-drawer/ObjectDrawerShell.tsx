@@ -45,7 +45,6 @@ import { ObjectWorkspacePublicationPanel } from './ObjectWorkspacePublicationPan
 import { ObjectWorkspacePricingPanel } from './ObjectWorkspacePricingPanel';
 import { ObjectWorkspaceRelationshipsPanel } from './ObjectWorkspaceRelationshipsPanel';
 import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
-import { ObjectWorkspaceTaxonomyPanel } from './ObjectWorkspaceTaxonomyPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
 
@@ -96,6 +95,10 @@ function cloneModules(value: ObjectWorkspaceModules): ObjectWorkspaceModules {
 
 function serialize(value: unknown): string {
   return JSON.stringify(value);
+}
+
+function isModuleDirty(snapshot: EditorSnapshot, key: keyof ObjectWorkspaceModules): boolean {
+  return serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
 }
 
 function updateTranslatableField(
@@ -228,12 +231,24 @@ function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<Works
     return {};
   }
 
+  const generalInfoDirty = isModuleDirty(snapshot, 'generalInfo');
+  const taxonomyDirty = isModuleDirty(snapshot, 'taxonomy');
   const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
   for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
+    if (moduleId === 'general-info') {
+      dirty[moduleId] = generalInfoDirty || taxonomyDirty;
+      continue;
+    }
+
+    if (moduleId === 'taxonomy') {
+      dirty[moduleId] = false;
+      continue;
+    }
+
     if (READONLY_MODULES.has(moduleId)) {
       dirty[moduleId] = false;
     } else {
-      dirty[moduleId] = serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
+      dirty[moduleId] = isModuleDirty(snapshot, key);
     }
   }
   return dirty;
@@ -241,6 +256,43 @@ function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<Works
 
 function resolveCurrentSectionAccess(resource: ObjectWorkspaceResource, section: WorkspaceModuleId) {
   return resource.permissions[MODULE_KEY_MAP[section]] as ObjectWorkspaceModuleAccess;
+}
+
+function mergeModuleAccess(...accesses: ObjectWorkspaceModuleAccess[]): ObjectWorkspaceModuleAccess {
+  const reasons = Array.from(
+    new Set(accesses.map((access) => access.disabledReason).filter((reason): reason is string => Boolean(reason))),
+  );
+
+  return {
+    canDirectWrite: accesses.every((access) => access.canDirectWrite),
+    canPrepareProposal: accesses.every((access) => access.canPrepareProposal),
+    canSubmitProposal: accesses.every((access) => access.canSubmitProposal),
+    disabledReason: reasons.length > 0 ? reasons.join(' ') : null,
+  };
+}
+
+function resolveSaveAction(
+  resource: ObjectWorkspaceResource,
+  section: WorkspaceModuleId,
+  snapshot: EditorSnapshot | null,
+) {
+  if (section !== 'general-info' || !snapshot) {
+    return buildSaveAction(resolveCurrentSectionAccess(resource, section));
+  }
+
+  const relevantAccesses: ObjectWorkspaceModuleAccess[] = [];
+  if (isModuleDirty(snapshot, 'generalInfo')) {
+    relevantAccesses.push(resource.permissions.generalInfo);
+  }
+  if (isModuleDirty(snapshot, 'taxonomy')) {
+    relevantAccesses.push(resource.permissions.taxonomy);
+  }
+
+  if (relevantAccesses.length === 0) {
+    relevantAccesses.push(resource.permissions.generalInfo);
+  }
+
+  return buildSaveAction(mergeModuleAccess(...relevantAccesses));
 }
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
@@ -325,8 +377,12 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     });
   }, [data, objectId]);
 
+  const resolvedData = objectId && data?.id === objectId ? data : null;
+  const sections = getSectionsForResource(resolvedData ?? undefined);
+  const allowedSectionIds = new Set(sections.map((section) => section.id));
+  const resolvedSection = allowedSectionIds.has(activeSection) ? activeSection : DEFAULT_SECTION;
   const dirtySections = useMemo(() => getDirtySections(editorSnapshot), [editorSnapshot]);
-  const isCurrentSectionDirty = dirtySections[activeSection] === true;
+  const isCurrentSectionDirty = dirtySections[resolvedSection] === true;
   const hasAnyDirtySection = Object.values(dirtySections).some(Boolean);
 
   useEffect(() => {
@@ -340,7 +396,6 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     return null;
   }
 
-  const resolvedData = data?.id === objectId ? data : null;
   const previewRaw = resolvedData?.detail.raw ?? {};
   const parsedPreview = parseObjectDetail(previewRaw as Record<string, unknown>);
   const isShellLoading = !isError && !resolvedData;
@@ -354,16 +409,34 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       .filter((label, index, items) => items.indexOf(label) === index)
       .slice(0, 6)
     : [];
-  const sections = getSectionsForResource(resolvedData ?? undefined);
-  const allowedSectionIds = new Set(sections.map((section) => section.id));
-  const resolvedSection = allowedSectionIds.has(activeSection) ? activeSection : DEFAULT_SECTION;
 
   async function handleSaveSection(section: WorkspaceModuleId, navigationTarget: PendingNavigation = null) {
     if (!resolvedData || !editorSnapshot) {
       return;
     }
 
-    const access = resolveCurrentSectionAccess(resolvedData, section);
+    const isGeneralInfoSection = section === 'general-info';
+    const generalInfoDirty = isGeneralInfoSection ? isModuleDirty(editorSnapshot, 'generalInfo') : false;
+    const taxonomyDirty = isGeneralInfoSection ? isModuleDirty(editorSnapshot, 'taxonomy') : false;
+    const relevantAccesses = isGeneralInfoSection
+      ? [
+          ...(generalInfoDirty ? [resolvedData.permissions.generalInfo] : []),
+          ...(taxonomyDirty ? [resolvedData.permissions.taxonomy] : []),
+        ]
+      : [resolveCurrentSectionAccess(resolvedData, section)];
+
+    if (isGeneralInfoSection && relevantAccesses.length === 0) {
+      setPendingNavigation(null);
+      if (navigationTarget?.type === 'section') {
+        setActiveSection(navigationTarget.section);
+      }
+      if (navigationTarget?.type === 'mode') {
+        setMode(navigationTarget.mode);
+      }
+      return;
+    }
+
+    const access = mergeModuleAccess(...relevantAccesses);
     if (!access.canDirectWrite) {
       setSaveStateBySection((state) => ({
         ...state,
@@ -391,8 +464,18 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       const key = MODULE_KEY_MAP[section];
       const mutationArgs: any = {
         moduleId: section,
-        value: editorSnapshot.draft[key],
       };
+
+      if (section === 'general-info') {
+        if (generalInfoDirty) {
+          mutationArgs.value = editorSnapshot.draft.generalInfo;
+        }
+        if (taxonomyDirty) {
+          mutationArgs.taxonomyValue = editorSnapshot.draft.taxonomy;
+        }
+      } else {
+        mutationArgs.value = editorSnapshot.draft[key];
+      }
 
       if (section === 'descriptions') {
         mutationArgs.canEditPlaceDescriptions = resolvedData.permissions.descriptions.canEditPlaceDescriptions;
@@ -411,7 +494,12 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
           ...previous,
           baseline: {
             ...previous.baseline,
-            [key]: cloneModules(previous.draft)[key],
+            ...(section === 'general-info'
+              ? {
+                  ...(generalInfoDirty ? { generalInfo: cloneModules(previous.draft).generalInfo } : {}),
+                  ...(taxonomyDirty ? { taxonomy: cloneModules(previous.draft).taxonomy } : {}),
+                }
+              : { [key]: cloneModules(previous.draft)[key] }),
           },
         };
       });
@@ -465,7 +553,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         taxonomy: nextValue,
       },
     }) : previous);
-    setSaveStateBySection((state) => ({ ...state, taxonomy: { saving: false, message: null } }));
+    setSaveStateBySection((state) => ({ ...state, 'general-info': { saving: false, message: null } }));
   }
 
   function replaceDistinctions(nextValue: ObjectWorkspaceDistinctionsModule) {
@@ -938,6 +1026,18 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         return previous;
       }
 
+      if (resolvedSection === 'general-info') {
+        const baseline = cloneModules(previous.baseline);
+        return {
+          ...previous,
+          draft: {
+            ...previous.draft,
+            generalInfo: baseline.generalInfo,
+            taxonomy: baseline.taxonomy,
+          },
+        };
+      }
+
       const key = MODULE_KEY_MAP[resolvedSection];
       return {
         ...previous,
@@ -1030,9 +1130,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     }
   }
 
-  const currentSectionAccess = resolvedData ? resolveCurrentSectionAccess(resolvedData, resolvedSection) : null;
   const currentSectionSaveState = saveStateBySection[resolvedSection];
-  const currentSaveAction = currentSectionAccess ? buildSaveAction(currentSectionAccess) : {
+  const currentSaveAction = resolvedData ? resolveSaveAction(resolvedData, resolvedSection, editorSnapshot) : {
     label: 'Enregistrer',
     disabled: true,
     hint: null,
@@ -1103,24 +1202,16 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               {resolvedSection === 'general-info' && (
                 <ObjectWorkspaceGeneralPanel
                   value={editorSnapshot.draft.generalInfo}
+                  taxonomy={editorSnapshot.draft.taxonomy}
+                  objectType={resolvedData.type}
+                  taxonomyAccess={resolvedData.permissions.taxonomy}
                   dirty={dirtySections['general-info'] === true}
                   saving={saveStateBySection['general-info'].saving}
                   statusMessage={saveStateBySection['general-info'].message}
-                  saveAction={buildSaveAction(resolvedData.permissions.generalInfo)}
+                  saveAction={currentSaveAction}
                   onChange={patchGeneralInfo}
+                  onTaxonomyChange={replaceTaxonomy}
                   onSave={() => void handleSaveSection('general-info')}
-                />
-              )}
-              {resolvedSection === 'taxonomy' && (
-                <ObjectWorkspaceTaxonomyPanel
-                  value={editorSnapshot.draft.taxonomy}
-                  dirty={dirtySections.taxonomy === true}
-                  saving={saveStateBySection.taxonomy.saving}
-                  statusMessage={saveStateBySection.taxonomy.message}
-                  saveAction={buildSaveAction(resolvedData.permissions.taxonomy)}
-                  access={resolvedData.permissions.taxonomy}
-                  onChange={replaceTaxonomy}
-                  onSave={() => void handleSaveSection('taxonomy')}
                 />
               )}
               {resolvedSection === 'publication' && (

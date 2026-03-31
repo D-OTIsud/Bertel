@@ -197,7 +197,7 @@ export function ObjectWorkspaceRelationshipsPanel({
             {value.actors.length > 0 ? value.actors.map(renderActor) : (
               <article className="panel-card panel-card--nested">
                 <span className="facet-title">Acteurs</span>
-                <p>Aucun acteur lie n est actuellement remonte dans le workspace.</p>
+                <p>Aucun acteur lie n est actuellement renseigne pour cette fiche.</p>
               </article>
             )}
           </div>

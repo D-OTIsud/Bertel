@@ -14,8 +14,22 @@ interface SaveActionState {
   hint: string | null;
 }
 
+const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
+const ACTIVITY_TYPES = new Set(['ACT', 'ASC', 'LOI']);
+const ACCOMMODATION_SCHEME_CODES = new Set([
+  'type_hot',
+  'official_classification',
+  'hot_stars',
+  'camp_stars',
+  'meuble_stars',
+  'gites_epics',
+  'clevacances_keys',
+]);
+const ACTIVITY_SCHEME_CODES = new Set(['type_act']);
+
 interface ObjectWorkspaceTaxonomyPanelProps {
   value: ObjectWorkspaceTaxonomyModule;
+  objectType?: string;
   dirty: boolean;
   saving: boolean;
   statusMessage: string | null;
@@ -23,6 +37,13 @@ interface ObjectWorkspaceTaxonomyPanelProps {
   access: ObjectWorkspaceModuleAccess;
   onChange: (nextValue: ObjectWorkspaceTaxonomyModule) => void;
   onSave: () => void;
+}
+
+interface ObjectWorkspaceTaxonomyFieldsProps {
+  value: ObjectWorkspaceTaxonomyModule;
+  objectType?: string;
+  access: ObjectWorkspaceModuleAccess;
+  onChange: (nextValue: ObjectWorkspaceTaxonomyModule) => void;
 }
 
 function resolveValueOptions(scheme: ObjectWorkspaceTaxonomyScheme): WorkspaceReferenceOption[] {
@@ -72,17 +93,49 @@ function updateScheme(module: ObjectWorkspaceTaxonomyModule, schemeId: string, u
   };
 }
 
-export function ObjectWorkspaceTaxonomyPanel({
+function shouldShowTaxonomySchemeForType(scheme: ObjectWorkspaceTaxonomyScheme, objectType?: string): boolean {
+  const normalizedType = String(objectType ?? '').trim().toUpperCase();
+  const normalizedCode = scheme.code.trim().toLowerCase();
+  const normalizedDisplayGroup = scheme.displayGroup.trim().toLowerCase();
+
+  if (ACCOMMODATION_TYPES.has(normalizedType)) {
+    return normalizedDisplayGroup === 'official_classification' || ACCOMMODATION_SCHEME_CODES.has(normalizedCode);
+  }
+
+  if (ACTIVITY_TYPES.has(normalizedType)) {
+    return ACTIVITY_SCHEME_CODES.has(normalizedCode);
+  }
+
+  return false;
+}
+
+export function getVisibleTaxonomySchemes(
+  value: ObjectWorkspaceTaxonomyModule,
+  objectType?: string,
+): ObjectWorkspaceTaxonomyScheme[] {
+  if (!objectType) {
+    return value.schemes;
+  }
+
+  const schemesWithCurrentValues = new Set(
+    value.schemes
+      .filter((scheme) => scheme.items.length > 0)
+      .map((scheme) => scheme.id),
+  );
+
+  return value.schemes.filter(
+    (scheme) => schemesWithCurrentValues.has(scheme.id) || shouldShowTaxonomySchemeForType(scheme, objectType),
+  );
+}
+
+export function ObjectWorkspaceTaxonomyFields({
   value,
-  dirty,
-  saving,
-  statusMessage,
-  saveAction,
+  objectType,
   access,
   onChange,
-  onSave,
-}: ObjectWorkspaceTaxonomyPanelProps) {
+}: ObjectWorkspaceTaxonomyFieldsProps) {
   const disabled = !access.canDirectWrite;
+  const visibleSchemes = getVisibleTaxonomySchemes(value, objectType);
 
   function handleSingleSelection(schemeId: string, valueCode: string) {
     onChange(updateScheme(value, schemeId, (scheme) => {
@@ -137,43 +190,12 @@ export function ObjectWorkspaceTaxonomyPanel({
       items: scheme.items.map((item) => (
         item.valueCode === valueCode ? { ...item, ...patch } : item
       )),
-    })));
+      })));
   }
 
   return (
-    <div className="drawer-form-stack">
-      <article className="panel-card panel-card--nested">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">A2</span>
-            <h2>Taxonomie structurante</h2>
-            <p>Ce module gere les classifications structurantes de l objet. Les distinctions, labels d accessibilite et labels de durabilite restent hors de ce perimetre.</p>
-          </div>
-          <div className="stack-list text-right">
-            <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-              {saving ? 'Enregistrement...' : saveAction.label}
-            </Button>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
-          </div>
-        </div>
-
-        <div className="drawer-grid">
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Schemas structurants</span>
-            <strong>{value.schemes.length}</strong>
-            <p>Chaque schema est gere comme un module metier, pas comme un simple formulaire table-driven.</p>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Perimetre</span>
-            <p>{value.unavailableReason ?? 'A2 exclut explicitement les distinctions et les labels transversaux qui seront traites ailleurs.'}</p>
-          </article>
-        </div>
-      </article>
-
-      <section className="drawer-form-stack">
-        {value.schemes.length > 0 ? value.schemes.map((scheme) => {
+    <section className="drawer-form-stack">
+      {visibleSchemes.length > 0 ? visibleSchemes.map((scheme) => {
           const options = resolveValueOptions(scheme);
           const selectedCodes = new Set(scheme.items.map((item) => item.valueCode));
           const selectedSingleValue = scheme.items[0]?.valueCode ?? '';
@@ -191,7 +213,7 @@ export function ObjectWorkspaceTaxonomyPanel({
               <div className="drawer-grid">
                 {scheme.selectionMode === 'single' ? (
                   <div className="field-block field-block--wide">
-                    <Label htmlFor={`taxonomy-scheme-${scheme.id}`}>Valeur</Label>
+                    <Label htmlFor={`taxonomy-scheme-${scheme.id}`}>Classement</Label>
                     <select
                       id={`taxonomy-scheme-${scheme.id}`}
                       className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
@@ -209,7 +231,7 @@ export function ObjectWorkspaceTaxonomyPanel({
                   </div>
                 ) : (
                   <div className="field-block field-block--wide">
-                    <span className="text-sm font-medium">Valeurs</span>
+                    <span className="text-sm font-medium">Elements a retenir</span>
                     <div className="stack-list">
                       {options.map((option) => (
                         <label key={option.id} className="inline-flex items-center gap-2 text-sm">
@@ -258,10 +280,10 @@ export function ObjectWorkspaceTaxonomyPanel({
                           onChange={(event) => handleItemPatch(scheme.id, item.valueCode, { status: event.target.value })}
                         >
                           <option value="">Non precise</option>
-                          <option value="requested">requested</option>
-                          <option value="granted">granted</option>
-                          <option value="suspended">suspended</option>
-                          <option value="expired">expired</option>
+                          <option value="requested">En demande</option>
+                          <option value="granted">Obtenu</option>
+                          <option value="suspended">Suspendu</option>
+                          <option value="expired">Expire</option>
                         </select>
                       </div>
 
@@ -293,7 +315,7 @@ export function ObjectWorkspaceTaxonomyPanel({
                 )) : (
                   <article className="panel-card panel-card--nested">
                     <span className="facet-title">{scheme.label}</span>
-                    <p>Aucune valeur n est encore selectionnee pour ce schema.</p>
+                    <p>Aucun classement n est encore renseigne pour cette rubrique.</p>
                   </article>
                 )}
               </div>
@@ -301,11 +323,50 @@ export function ObjectWorkspaceTaxonomyPanel({
           );
         }) : (
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Taxonomie structurante</span>
-            <p>Aucun schema structurant n est actuellement expose par le contrat workspace.</p>
+            <span className="facet-title">Classements et categories</span>
+            <p>Aucun classement ou categorie specifique n est prevu pour ce type de fiche.</p>
           </article>
         )}
-      </section>
+    </section>
+  );
+}
+
+export function ObjectWorkspaceTaxonomyPanel({
+  value,
+  objectType,
+  dirty,
+  saving,
+  statusMessage,
+  saveAction,
+  access,
+  onChange,
+  onSave,
+}: ObjectWorkspaceTaxonomyPanelProps) {
+  return (
+    <div className="drawer-form-stack">
+      <article className="panel-card panel-card--nested">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Classements</span>
+            <h2>Classements et categories</h2>
+            <p>Renseignez ici les classements, categories ou sous-types utiles a cette fiche.</p>
+          </div>
+          <div className="stack-list text-right">
+            <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
+              {saving ? 'Enregistrement...' : saveAction.label}
+            </Button>
+            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
+            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
+          </div>
+        </div>
+      </article>
+
+      <ObjectWorkspaceTaxonomyFields
+        value={value}
+        objectType={objectType}
+        access={access}
+        onChange={onChange}
+      />
     </div>
   );
 }

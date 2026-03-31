@@ -214,6 +214,24 @@ function buildWorkspaceResource(params: {
             disabilityTypes: ['motor'],
           },
         ],
+        schemeOptions: [
+          {
+            id: 'scheme-distinction-1',
+            code: 'LBL_QUALITE_TOURISME',
+            label: 'Qualite Tourisme',
+            selectionMode: 'single',
+            isAccessibility: false,
+            valueOptions: [{ id: 'value-distinction-1', code: 'GRANTED', label: 'Titulaire' }],
+          },
+          {
+            id: 'scheme-accessibility-1',
+            code: 'LBL_TOURISME_HANDICAP',
+            label: 'Tourisme & Handicap',
+            selectionMode: 'single',
+            isAccessibility: true,
+            valueOptions: [{ id: 'value-accessibility-1', code: 'GRANTED', label: 'Attribue' }],
+          },
+        ],
         unavailableReason: null,
       },
       capacityPolicies: {
@@ -822,11 +840,11 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /publication/i }));
 
-    expect(screen.getByRole('heading', { name: /publication et moderation/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^publication$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /publier/i })).toBeInTheDocument();
   });
 
-  it('renders the taxonomy module as a dedicated workspace tab', () => {
+  it('merges classifications into the general information tab', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({
         id: 'obj-1',
@@ -842,10 +860,33 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /taxonomie/i }));
+    expect(screen.queryByRole('button', { name: /classifications/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /informations generales/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /informations generales et classements/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /classements et categories/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/classement/i)).toBeInTheDocument();
+  });
 
-    expect(screen.getByRole('heading', { name: /taxonomie structurante/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/valeur/i)).toBeInTheDocument();
+  it('adapts visible classifications to the object type', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-2',
+        name: 'Restaurant B',
+        type: 'RES',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-2" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    expect(screen.getByRole('heading', { name: /informations generales et classements/i })).toBeInTheDocument();
+    expect(screen.getByText(/aucun classement ou categorie specifique n est prevu pour ce type de fiche/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/classement/i)).not.toBeInTheDocument();
   });
 
   it('renders the media module as a dedicated workspace tab', () => {
@@ -864,9 +905,9 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /medias/i }));
+    fireEvent.click(screen.getByRole('button', { name: /médias/i }));
 
-    expect(screen.getByRole('heading', { name: /medias/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /médias/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ajouter un media/i })).toBeInTheDocument();
   });
 
@@ -888,7 +929,7 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByText(/^Contacts$/i).closest('button') as HTMLElement);
 
-    expect(screen.getByRole('heading', { name: /contacts publics et web/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^contacts$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ajouter un contact/i })).toBeInTheDocument();
   });
 
@@ -908,11 +949,11 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /caracteristiques/i }));
+    fireEvent.click(screen.getByRole('button', { name: /équipements & services/i }));
 
-    expect(screen.getByRole('heading', { name: /caracteristiques/i })).toBeInTheDocument();
-    expect(screen.getByText(/langues de service et niveau eventuel/i)).toBeInTheDocument();
-    expect(screen.getByText(/tags contextuels et cadres d environnement/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /équipements & services/i })).toBeInTheDocument();
+    expect(screen.getByText(/service et accueil/i)).toBeInTheDocument();
+    expect(screen.getByText(/carte bancaire/i)).toBeInTheDocument();
   });
 
   it('renders the distinctions module as a dedicated workspace tab', () => {
@@ -931,9 +972,9 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByText(/^Distinctions$/i).closest('button') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /labels & certifications/i }));
 
-    expect(screen.getByRole('heading', { name: /distinctions et accessibilite/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /labels & certifications/i })).toBeInTheDocument();
     expect(screen.getAllByText(/tourisme & handicap/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/parking adapte/i)).toBeInTheDocument();
   });
@@ -954,10 +995,10 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /capacites/i }));
+    fireEvent.click(screen.getByRole('button', { name: /capacités/i }));
 
     expect(screen.getByRole('heading', { name: /capacites et politiques/i })).toBeInTheDocument();
-    expect(screen.getByText(/minimum, maximum et notes d accueil groupes/i)).toBeInTheDocument();
+    expect(screen.getByText(/accueil collectif/i)).toBeInTheDocument();
     expect(screen.getByText(/conditions d accueil/i)).toBeInTheDocument();
   });
 
@@ -979,7 +1020,7 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByText(/^Tarifs$/i).closest('button') as HTMLElement);
 
-    expect(screen.getByRole('heading', { name: /tarifs et promotions/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^tarifs$/i })).toBeInTheDocument();
     expect(screen.getByText(/petit-dejeuner inclus/i)).toBeInTheDocument();
     expect(screen.getByText(/summer26/i)).toBeInTheDocument();
   });
@@ -1002,7 +1043,7 @@ describe('ObjectDrawer workspace drafts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /horaires/i }));
 
-    expect(screen.getByRole('heading', { name: /horaires et periodes/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^horaires$/i })).toBeInTheDocument();
     expect(screen.getByText(/periode courante/i)).toBeInTheDocument();
     expect(screen.getAllByText(/09:30 -> 17:00/i)).toHaveLength(2);
   });
@@ -1023,11 +1064,11 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /conformite/i }));
+    fireEvent.click(screen.getByRole('button', { name: /documents légaux/i }));
 
-    expect(screen.getByRole('heading', { name: /juridique et conformite/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /documents légaux/i })).toBeInTheDocument();
     expect(screen.getAllByText(/certificat de securite/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/resume calcule par le backend/i)).toBeInTheDocument();
+    expect(screen.getByText(/lecture backend/i)).toBeInTheDocument();
   });
 
   it('renders the memberships module as an internal workspace tab', () => {
@@ -1046,9 +1087,9 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /adhesions/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adhésions/i }));
 
-    expect(screen.getByRole('heading', { name: /^adhesions$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^adhésions$/i })).toBeInTheDocument();
     expect(screen.getAllByText(/campagne 2026/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/visibilite active/i)).toBeInTheDocument();
   });
@@ -1069,7 +1110,7 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /suivi relation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /suivi prestataire/i }));
 
     expect(screen.getByRole('heading', { name: /suivi relation prestataires/i })).toBeInTheDocument();
     expect(screen.getByText(/convention 2026/i)).toBeInTheDocument();
@@ -1092,12 +1133,12 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    fireEvent.click(screen.getByText(/^Relations$/i).closest('button') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /rattachements/i }));
 
-    expect(screen.getByRole('heading', { name: /relations et rattachements/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /rattachements/i })).toBeInTheDocument();
     expect(screen.getByText(/office de tourisme/i)).toBeInTheDocument();
     expect(screen.getAllByText(/claire martin/i)[0]).toBeInTheDocument();
     expect(screen.getByText(/belvedere des hauts/i)).toBeInTheDocument();
-    expect(screen.getByText(/consentements non exposes/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^lecture seule$/i).length).toBeGreaterThanOrEqual(1);
   });
 });

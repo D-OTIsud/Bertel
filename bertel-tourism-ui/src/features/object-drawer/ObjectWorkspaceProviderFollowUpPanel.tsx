@@ -174,9 +174,9 @@ export function ObjectWorkspaceProviderFollowUpPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">D1</span>
+            <span className="eyebrow">Suivi prestataire</span>
             <h2>Suivi relation prestataires</h2>
-            <p>Ce module privilegie le suivi interne et la memoire de relation. Les notes sont direct-save; le journal CRM et les taches restent bloques tant que le backend live ne les expose pas proprement.</p>
+            <p>Centralisez ici les notes internes utiles au suivi du prestataire et a l historique de la relation.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={() => setComposerOpen((current) => !current)} disabled={disabled}>

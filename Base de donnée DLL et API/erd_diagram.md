@@ -133,8 +133,19 @@ erDiagram
         uuid scheme_id FK "Schéma"
         uuid value_id FK "Valeur"
         uuid document_id FK "Document de référence"
+        date requested_at "Demandé le"
         date awarded_at "Attribué le"
         date valid_until "Valide jusqu'au"
+        text status "Statut"
+        text source "Source"
+        text note "Note"
+    }
+
+    OBJECT_TAXONOMY {
+        uuid id PK "Identifiant unique"
+        text object_id FK "Référence objet"
+        text domain FK "Domaine taxonomique"
+        uuid ref_code_id FK "Noeud ref_code assigné"
         text source "Source"
         text note "Note"
     }
@@ -277,12 +288,32 @@ erDiagram
         text code UK "Code de référence"
         text name "Nom de référence"
         text description "Description"
+        uuid parent_id FK "Parent hiérarchique"
         integer position "Position d'affichage"
+        boolean is_assignable "Assignation objet autorisée"
         boolean is_active "Actif"
         jsonb metadata "Métadonnées"
         jsonb extra "Données additionnelles"
         timestamptz created_at "Date de création"
         timestamptz updated_at "Date de mise à jour"
+    }
+
+    REF_CODE_DOMAIN_REGISTRY {
+        text domain PK "Domaine ref_code"
+        text name "Nom fonctionnel"
+        text description "Description"
+        text object_type "Type d'objet ciblé"
+        boolean is_hierarchical "Hiérarchie active"
+        boolean is_taxonomy "Domaine utilisé comme taxonomie"
+        integer position "Ordre d'affichage"
+        boolean is_active "Actif"
+    }
+
+    REF_CODE_TAXONOMY_CLOSURE {
+        text domain PK,FK "Domaine taxonomique"
+        uuid ancestor_id PK,FK "Ancêtre"
+        uuid descendant_id PK,FK "Descendant"
+        integer depth "Distance hiérarchique"
     }
 
     %% Tables de référence spécialisées (partitions de REF_CODE)
@@ -461,7 +492,6 @@ erDiagram
     %% Tables spécifiques
     OBJECT_HOT {
         text object_id PK,FK "Référence objet"
-        uuid type_hot_id FK "Type d'hôtel"
         boolean has_restaurant "A un restaurant"
         boolean has_spa "A un spa"
         boolean has_pool "A une piscine"
@@ -679,6 +709,7 @@ erDiagram
     OBJECT ||--o{ SOCIAL_NETWORK : "a des réseaux sociaux"
     OBJECT ||--o{ MEDIA : "a des médias"
     OBJECT ||--o{ OBJECT_CLASSIFICATION : "a des classements/labels"
+    OBJECT ||--o{ OBJECT_TAXONOMY : "a des sous-catégories hiérarchiques"
     OBJECT ||--o{ OBJECT_CAPACITY : "a des capacités"
     OBJECT ||--o| LEGAL : "a des informations légales"
     OBJECT ||--o| ACCOMMODATION_LEGAL : "a des informations légales d'hébergement"
@@ -711,11 +742,14 @@ erDiagram
     REF_CODE_CONTACT_KIND ||--o{ CONTACT_CHANNEL : "type de canal"
 
     REF_CLASSIFICATION_PREFECTORAL ||--o{ CLASSIFICATION : "classifie"
-    REF_TYPE_HOT ||--o{ OBJECT_HOT : "type d'hôtel"
     REF_CLASSIFICATION_SCHEME ||--o{ REF_CLASSIFICATION_VALUE : "définit des valeurs"
     REF_CLASSIFICATION_SCHEME ||--o{ OBJECT_CLASSIFICATION : "schéma utilisé"
     REF_CLASSIFICATION_VALUE ||--o{ OBJECT_CLASSIFICATION : "valeur attribuée"
     REF_DOCUMENT ||--o{ OBJECT_CLASSIFICATION : "justifie"
+    REF_CODE_DOMAIN_REGISTRY ||--o{ OBJECT_TAXONOMY : "porte des domaines de taxonomie"
+    REF_CODE_DOMAIN_REGISTRY ||--o{ REF_CODE_TAXONOMY_CLOSURE : "borne la fermeture"
+    REF_CODE ||--o{ OBJECT_TAXONOMY : "noeud assigné"
+    REF_CODE ||--o{ REF_CODE_TAXONOMY_CLOSURE : "ancêtre/descendant"
     REF_DOCUMENT ||--o{ LEGAL : "justifie"
     REF_DOCUMENT ||--o{ ACCOMMODATION_LEGAL : "justifie"
     REF_SUSTAINABILITY_ACTION_CATEGORY ||--o{ REF_SUSTAINABILITY_ACTION : "catégorise"

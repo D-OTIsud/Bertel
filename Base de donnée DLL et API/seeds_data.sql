@@ -655,15 +655,15 @@ SELECT rcs.id, v.code, v.name
 FROM ref_classification_scheme rcs,
      (VALUES
        ('hotel','Hôtel'),
-       ('hotel_restaurant','Hôtel-restaurant'),
-       ('hotel_boutique','Hôtel boutique'),
-       ('hotel_ecologique','Hôtel écologique'),
-       ('hotel_historique','Hôtel historique'),
-       ('hotel_moderne','Hôtel moderne'),
-       ('hotel_traditionnel','Hôtel traditionnel'),
-       ('hotel_familial','Hôtel familial'),
-       ('hotel_romantique','Hôtel romantique'),
-       ('hotel_affaires','Hôtel d''affaires')
+       ('hotel_with_restaurant','Hôtel-restaurant'),
+       ('boutique_hotel','Hôtel boutique'),
+       ('eco_hotel','Hôtel écologique'),
+       ('heritage_hotel','Hôtel historique'),
+       ('modern_hotel','Hôtel moderne'),
+       ('traditional_hotel','Hôtel traditionnel'),
+       ('family_hotel','Hôtel familial'),
+       ('romantic_hotel','Hôtel romantique'),
+       ('business_hotel','Hôtel d''affaires')
      ) AS v(code,name)
 WHERE rcs.code='type_hot'
   AND NOT EXISTS (
@@ -1092,18 +1092,18 @@ INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, v.code, v.name, v.ordinal
 FROM ref_classification_scheme s
 JOIN (VALUES
-  ('canyoning',        'Canyoning',                   1),
-  ('plongee',          'Plongée sous-marine',          2),
-  ('parapente',        'Parapente',                    3),
-  ('kayak',            'Kayak / Paddle',               4),
-  ('randonnee_guidee', 'Randonnée guidée',             5),
-  ('escalade',         'Escalade encadrée',            6),
-  ('snorkeling',       'Snorkeling encadré',           7),
-  ('surf_cours',       'Cours de surf',                8),
-  ('vtt_guide',        'VTT guidé',                    9),
-  ('equitation',       'Équitation',                  10),
-  ('remise_en_forme',  'Remise en forme / Fitness',   11),
-  ('autre',            'Autre activité encadrée',     12)
+  ('canyoning',                'Canyoning',                   1),
+  ('scuba_diving',             'Plongée sous-marine',         2),
+  ('paragliding',              'Parapente',                   3),
+  ('kayaking_paddleboarding',  'Kayak / Paddle',              4),
+  ('guided_hiking',            'Randonnée guidée',            5),
+  ('guided_climbing',          'Escalade encadrée',           6),
+  ('guided_snorkeling',        'Snorkeling encadré',          7),
+  ('surf_lessons',             'Cours de surf',               8),
+  ('guided_mountain_biking',   'VTT guidé',                   9),
+  ('horse_riding',             'Équitation',                 10),
+  ('fitness_wellness',         'Remise en forme / Fitness',  11),
+  ('other_guided_activity',    'Autre activité encadrée',    12)
 ) AS v(code, name, ordinal) ON TRUE
 WHERE s.code = 'type_act'
   AND NOT EXISTS (
@@ -1826,15 +1826,15 @@ WITH scheme_ids AS (
 ), value_translations(scheme_code, value_code, name_en, name_es) AS (
   VALUES
     ('type_hot','hotel','Hotel','Hotel'),
-    ('type_hot','hotel_restaurant','Hotel with restaurant','Hotel con restaurante'),
-    ('type_hot','hotel_boutique','Boutique hotel','Hotel boutique'),
-    ('type_hot','hotel_ecologique','Eco hotel','Hotel ecológico'),
-    ('type_hot','hotel_historique','Heritage hotel','Hotel histórico'),
-    ('type_hot','hotel_moderne','Modern hotel','Hotel moderno'),
-    ('type_hot','hotel_traditionnel','Traditional hotel','Hotel tradicional'),
-    ('type_hot','hotel_familial','Family hotel','Hotel familiar'),
-    ('type_hot','hotel_romantique','Romantic hotel','Hotel romántico'),
-    ('type_hot','hotel_affaires','Business hotel','Hotel de negocios'),
+    ('type_hot','hotel_with_restaurant','Hotel with restaurant','Hotel con restaurante'),
+    ('type_hot','boutique_hotel','Boutique hotel','Hotel boutique'),
+    ('type_hot','eco_hotel','Eco hotel','Hotel ecológico'),
+    ('type_hot','heritage_hotel','Heritage hotel','Hotel histórico'),
+    ('type_hot','modern_hotel','Modern hotel','Hotel moderno'),
+    ('type_hot','traditional_hotel','Traditional hotel','Hotel tradicional'),
+    ('type_hot','family_hotel','Family hotel','Hotel familiar'),
+    ('type_hot','romantic_hotel','Romantic hotel','Hotel romántico'),
+    ('type_hot','business_hotel','Business hotel','Hotel de negocios'),
     ('hot_stars','1','1 star','1 estrella'),
     ('hot_stars','2','2 stars','2 estrellas'),
     ('hot_stars','3','3 stars','3 estrellas'),
@@ -1867,6 +1867,25 @@ SET name_i18n = COALESCE(cv.name_i18n, '{}'::jsonb) || jsonb_build_object('en', 
 FROM scheme_ids s
 JOIN value_translations vt ON vt.scheme_code = s.code
 WHERE cv.scheme_id = s.id AND cv.code = vt.value_code;
+
+WITH taxonomy_translations(domain_code, node_code, name_en, name_es) AS (
+  VALUES
+    ('taxonomy_hot','hotel','Hotel','Hotel'),
+    ('taxonomy_hot','hotel_with_restaurant','Hotel with restaurant','Hotel con restaurante'),
+    ('taxonomy_hot','boutique_hotel','Boutique hotel','Hotel boutique'),
+    ('taxonomy_hot','eco_hotel','Eco hotel','Hotel ecológico'),
+    ('taxonomy_hot','heritage_hotel','Heritage hotel','Hotel histórico'),
+    ('taxonomy_hot','modern_hotel','Modern hotel','Hotel moderno'),
+    ('taxonomy_hot','traditional_hotel','Traditional hotel','Hotel tradicional'),
+    ('taxonomy_hot','family_hotel','Family hotel','Hotel familiar'),
+    ('taxonomy_hot','romantic_hotel','Romantic hotel','Hotel romántico'),
+    ('taxonomy_hot','business_hotel','Business hotel','Hotel de negocios')
+)
+UPDATE ref_code rc
+SET name_i18n = COALESCE(rc.name_i18n, '{}'::jsonb) || jsonb_build_object('en', tt.name_en, 'es', tt.name_es)
+FROM taxonomy_translations tt
+WHERE rc.domain = tt.domain_code
+  AND rc.code = tt.node_code;
 
 -- ref_sustainability_action_category translations: pre-V5 block removed 2026-03-22.
 -- V5 categories (CAT_*) have name_i18n and description_i18n set inline in SECTION A.
@@ -1916,8 +1935,8 @@ WITH s AS (
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, v.code, v.name, v.ord
 FROM s, (VALUES
-  ('souvenir','Boutique de souvenirs',1),
-  ('artisanal','Artisanat / produits locaux',2),
+  ('souvenir_shop','Boutique de souvenirs',1),
+  ('local_crafts','Artisanat / produits locaux',2),
   ('bakery','Boulangerie / pâtisserie',3),
   ('pharmacy','Pharmacie',4),
   ('supermarket','Supermarché',5)
@@ -1926,6 +1945,333 @@ WHERE NOT EXISTS (
   SELECT 1 FROM ref_classification_value cv
   WHERE cv.scheme_id = s.id AND cv.code = v.code
 );
+
+-- 1b) Hierarchical taxonomy backed by ref_code
+INSERT INTO ref_code_domain_registry (
+  domain,
+  name,
+  description,
+  object_type,
+  is_hierarchical,
+  is_taxonomy,
+  position,
+  is_active,
+  name_i18n,
+  description_i18n
+)
+VALUES
+  (
+    'taxonomy_hot',
+    'Taxonomie HOT',
+    'Sous-categories metier hierarchiques pour les objets HOT.',
+    'HOT',
+    TRUE,
+    TRUE,
+    10,
+    TRUE,
+    jsonb_build_object('fr', 'Taxonomie HOT', 'en', 'HOT taxonomy'),
+    jsonb_build_object('fr', 'Sous-categories metier hierarchiques pour les objets HOT.', 'en', 'Hierarchical business subcategories for HOT objects.')
+  ),
+  (
+    'taxonomy_act',
+    'Taxonomie ACT',
+    'Sous-categories metier hierarchiques pour les objets ACT.',
+    'ACT',
+    TRUE,
+    TRUE,
+    20,
+    TRUE,
+    jsonb_build_object('fr', 'Taxonomie ACT', 'en', 'ACT taxonomy'),
+    jsonb_build_object('fr', 'Sous-categories metier hierarchiques pour les objets ACT.', 'en', 'Hierarchical business subcategories for ACT objects.')
+  ),
+  (
+    'taxonomy_com',
+    'Taxonomie COM',
+    'Sous-categories metier hierarchiques pour les objets COM.',
+    'COM',
+    TRUE,
+    TRUE,
+    30,
+    TRUE,
+    jsonb_build_object('fr', 'Taxonomie COM', 'en', 'COM taxonomy'),
+    jsonb_build_object('fr', 'Sous-categories metier hierarchiques pour les objets COM.', 'en', 'Hierarchical business subcategories for COM objects.')
+  )
+ON CONFLICT (domain) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  object_type = EXCLUDED.object_type,
+  is_hierarchical = EXCLUDED.is_hierarchical,
+  is_taxonomy = EXCLUDED.is_taxonomy,
+  position = EXCLUDED.position,
+  is_active = EXCLUDED.is_active,
+  name_i18n = COALESCE(ref_code_domain_registry.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb),
+  description_i18n = COALESCE(ref_code_domain_registry.description_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.description_i18n, '{}'::jsonb);
+
+WITH taxonomy_roots(domain, code, name, description, position, parent_id, is_assignable, name_i18n, description_i18n) AS (
+  VALUES
+    (
+      'taxonomy_hot',
+      'root',
+      'HOT',
+      'Racine technique de la taxonomie HOT',
+      0,
+      NULL::uuid,
+      FALSE,
+      jsonb_build_object('fr', 'HOT', 'en', 'HOT'),
+      jsonb_build_object('fr', 'Racine technique de la taxonomie HOT', 'en', 'Technical root for the HOT taxonomy')
+    ),
+    (
+      'taxonomy_act',
+      'root',
+      'ACT',
+      'Racine technique de la taxonomie ACT',
+      0,
+      NULL::uuid,
+      FALSE,
+      jsonb_build_object('fr', 'ACT', 'en', 'ACT'),
+      jsonb_build_object('fr', 'Racine technique de la taxonomie ACT', 'en', 'Technical root for the ACT taxonomy')
+    ),
+    (
+      'taxonomy_com',
+      'root',
+      'COM',
+      'Racine technique de la taxonomie COM',
+      0,
+      NULL::uuid,
+      FALSE,
+      jsonb_build_object('fr', 'COM', 'en', 'COM'),
+      jsonb_build_object('fr', 'Racine technique de la taxonomie COM', 'en', 'Technical root for the COM taxonomy')
+    )
+)
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, name_i18n, description_i18n)
+SELECT tr.domain, tr.code, tr.name, tr.description, tr.position, tr.parent_id, tr.is_assignable, tr.name_i18n, tr.description_i18n
+FROM taxonomy_roots tr
+ON CONFLICT (domain, code) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  position = EXCLUDED.position,
+  parent_id = EXCLUDED.parent_id,
+  is_assignable = EXCLUDED.is_assignable,
+  name_i18n = COALESCE(ref_code.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb),
+  description_i18n = COALESCE(ref_code.description_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.description_i18n, '{}'::jsonb);
+
+WITH hot_root AS (
+  SELECT id
+  FROM ref_code
+  WHERE domain = 'taxonomy_hot'
+    AND code = 'root'
+)
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, name_i18n)
+SELECT
+  'taxonomy_hot',
+  'hotel',
+  'Hotel',
+  'Noeud parent visible pour les sous-categories hotelieres',
+  1,
+  hot_root.id,
+  TRUE,
+  jsonb_build_object('fr', 'Hotel', 'en', 'Hotel')
+FROM hot_root
+ON CONFLICT (domain, code) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  position = EXCLUDED.position,
+  parent_id = EXCLUDED.parent_id,
+  is_assignable = EXCLUDED.is_assignable,
+  name_i18n = COALESCE(ref_code.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb);
+
+WITH type_hot_values AS (
+  SELECT
+    cv.code,
+    cv.name,
+    ROW_NUMBER() OVER (
+      ORDER BY
+        COALESCE(cv.ordinal, 999999),
+        COALESCE(cv.position, 999999),
+        cv.name,
+        cv.code
+    ) + 1 AS display_position
+  FROM ref_classification_value cv
+  JOIN ref_classification_scheme s
+    ON s.id = cv.scheme_id
+  WHERE s.code = 'type_hot'
+    AND cv.code <> 'hotel'
+),
+hot_parent AS (
+  SELECT id
+  FROM ref_code
+  WHERE domain = 'taxonomy_hot'
+    AND code = 'hotel'
+)
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, name_i18n)
+SELECT
+  'taxonomy_hot',
+  thv.code,
+  thv.name,
+  thv.name,
+  thv.display_position,
+  hot_parent.id,
+  TRUE,
+  jsonb_build_object('fr', thv.name)
+FROM type_hot_values thv
+CROSS JOIN hot_parent
+ON CONFLICT (domain, code) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  position = EXCLUDED.position,
+  parent_id = EXCLUDED.parent_id,
+  is_assignable = EXCLUDED.is_assignable,
+  name_i18n = COALESCE(ref_code.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb);
+
+WITH act_root AS (
+  SELECT id
+  FROM ref_code
+  WHERE domain = 'taxonomy_act'
+    AND code = 'root'
+),
+type_act_values AS (
+  SELECT
+    cv.code,
+    cv.name,
+    ROW_NUMBER() OVER (
+      ORDER BY
+        COALESCE(cv.ordinal, 999999),
+        COALESCE(cv.position, 999999),
+        cv.name,
+        cv.code
+    ) AS display_position
+  FROM ref_classification_value cv
+  JOIN ref_classification_scheme s
+    ON s.id = cv.scheme_id
+  WHERE s.code = 'type_act'
+)
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, name_i18n)
+SELECT
+  'taxonomy_act',
+  tav.code,
+  tav.name,
+  tav.name,
+  tav.display_position,
+  act_root.id,
+  TRUE,
+  jsonb_build_object('fr', tav.name)
+FROM type_act_values tav
+CROSS JOIN act_root
+ON CONFLICT (domain, code) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  position = EXCLUDED.position,
+  parent_id = EXCLUDED.parent_id,
+  is_assignable = EXCLUDED.is_assignable,
+  name_i18n = COALESCE(ref_code.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb);
+
+WITH com_root AS (
+  SELECT id
+  FROM ref_code
+  WHERE domain = 'taxonomy_com'
+    AND code = 'root'
+),
+retail_values AS (
+  SELECT
+    cv.code,
+    cv.name,
+    ROW_NUMBER() OVER (
+      ORDER BY
+        COALESCE(cv.ordinal, 999999),
+        COALESCE(cv.position, 999999),
+        cv.name,
+        cv.code
+    ) AS display_position
+  FROM ref_classification_value cv
+  JOIN ref_classification_scheme s
+    ON s.id = cv.scheme_id
+  WHERE s.code = 'retail_category'
+)
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, name_i18n)
+SELECT
+  'taxonomy_com',
+  rv.code,
+  rv.name,
+  rv.name,
+  rv.display_position,
+  com_root.id,
+  TRUE,
+  jsonb_build_object('fr', rv.name)
+FROM retail_values rv
+CROSS JOIN com_root
+ON CONFLICT (domain, code) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  position = EXCLUDED.position,
+  parent_id = EXCLUDED.parent_id,
+  is_assignable = EXCLUDED.is_assignable,
+  name_i18n = COALESCE(ref_code.name_i18n, '{}'::jsonb) || COALESCE(EXCLUDED.name_i18n, '{}'::jsonb);
+
+SELECT api.refresh_ref_code_taxonomy_closure('taxonomy_hot');
+SELECT api.refresh_ref_code_taxonomy_closure('taxonomy_act');
+SELECT api.refresh_ref_code_taxonomy_closure('taxonomy_com');
+
+WITH migration_source AS (
+  SELECT DISTINCT ON (oc.object_id, mapped.target_domain)
+    oc.object_id,
+    mapped.target_domain AS domain,
+    rc.id AS ref_code_id,
+    oc.source,
+    oc.note,
+    oc.created_at,
+    oc.updated_at
+  FROM object_classification oc
+  JOIN ref_classification_scheme s
+    ON s.id = oc.scheme_id
+  JOIN ref_classification_value cv
+    ON cv.id = oc.value_id
+  JOIN LATERAL (
+    SELECT CASE s.code
+      WHEN 'type_hot' THEN 'taxonomy_hot'
+      WHEN 'type_act' THEN 'taxonomy_act'
+      WHEN 'retail_category' THEN 'taxonomy_com'
+      ELSE NULL
+    END AS target_domain
+  ) mapped
+    ON mapped.target_domain IS NOT NULL
+  JOIN ref_code rc
+    ON rc.domain = mapped.target_domain
+   AND rc.code = cv.code
+  ORDER BY
+    oc.object_id,
+    mapped.target_domain,
+    oc.awarded_at DESC NULLS LAST,
+    oc.updated_at DESC NULLS LAST,
+    oc.created_at DESC,
+    oc.id DESC
+)
+INSERT INTO object_taxonomy (object_id, domain, ref_code_id, source, note, created_at, updated_at)
+SELECT
+  ms.object_id,
+  ms.domain,
+  ms.ref_code_id,
+  ms.source,
+  ms.note,
+  ms.created_at,
+  ms.updated_at
+FROM migration_source ms
+ON CONFLICT (object_id, domain) DO UPDATE
+SET
+  ref_code_id = EXCLUDED.ref_code_id,
+  source = COALESCE(EXCLUDED.source, object_taxonomy.source),
+  note = COALESCE(EXCLUDED.note, object_taxonomy.note),
+  updated_at = GREATEST(object_taxonomy.updated_at, EXCLUDED.updated_at);
+
+DELETE FROM object_classification oc
+USING ref_classification_scheme s
+WHERE s.id = oc.scheme_id
+  AND s.code IN ('type_hot', 'type_act', 'retail_category');
 
 -- 2) Tags useful for retail use-cases
 INSERT INTO ref_tag (slug, name, description, position)

@@ -130,6 +130,7 @@ BEGIN
       'cached_environment_tags',
       'cached_language_codes',
       'cached_classification_codes',
+      'cached_taxonomy_codes',
       'current_version'
     ]
   ) IS NOT DISTINCT FROM (
@@ -147,6 +148,7 @@ BEGIN
       'cached_environment_tags',
       'cached_language_codes',
       'cached_classification_codes',
+      'cached_taxonomy_codes',
       'current_version'
     ]
   ) THEN
@@ -481,6 +483,42 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_code ON ref_code_m
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_campaign_code ON ref_code_membership_campaign(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_incident_category_code ON ref_code_incident_category(code);
 
+ALTER TABLE IF EXISTS ref_code
+  ADD COLUMN IF NOT EXISTS is_assignable BOOLEAN;
+
+UPDATE ref_code
+SET is_assignable = TRUE
+WHERE is_assignable IS NULL;
+
+ALTER TABLE IF EXISTS ref_code
+  ALTER COLUMN is_assignable SET DEFAULT TRUE;
+
+ALTER TABLE IF EXISTS ref_code
+  ALTER COLUMN is_assignable SET NOT NULL;
+
+DROP INDEX IF EXISTS idx_ref_code_domain_code;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_domain_code
+ON ref_code(domain, code);
+
+CREATE INDEX IF NOT EXISTS idx_ref_code_domain_parent_id
+ON ref_code(domain, parent_id);
+
+CREATE TABLE IF NOT EXISTS ref_code_domain_registry (
+  domain TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  object_type object_type,
+  is_hierarchical BOOLEAN NOT NULL DEFAULT FALSE,
+  is_taxonomy BOOLEAN NOT NULL DEFAULT FALSE,
+  position INTEGER,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  name_i18n JSONB,
+  description_i18n JSONB,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- =====================================================
 -- Référentiels et i18n
 -- =====================================================
@@ -712,6 +750,7 @@ SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
   v_scheme_code TEXT;
+  v_is_allowed BOOLEAN;
 BEGIN
   IF NEW.value_id IS NOT NULL
      AND NEW.scheme_id IS NOT NULL
@@ -722,6 +761,20 @@ BEGIN
          AND v.scheme_id = NEW.scheme_id
      ) THEN
     RAISE EXCEPTION 'value_id % does not belong to scheme_id %', NEW.value_id, NEW.scheme_id;
+  END IF;
+
+  SELECT (
+    COALESCE(s.is_distinction, FALSE)
+    OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+  ), s.code
+  INTO v_is_allowed, v_scheme_code
+  FROM ref_classification_scheme s
+  WHERE s.id = NEW.scheme_id;
+
+  IF COALESCE(v_is_allowed, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'classification scheme % is reserved for taxonomy and cannot be stored in object_classification',
+      COALESCE(v_scheme_code, NEW.scheme_id::TEXT)
+      USING ERRCODE = '23514';
   END IF;
 
   IF NEW.status = 'granted'
@@ -834,6 +887,7 @@ CREATE TABLE IF NOT EXISTS object (
   cached_environment_tags TEXT[],
   cached_language_codes TEXT[],
   cached_classification_codes TEXT[],
+  cached_taxonomy_codes TEXT[],
   -- Current version number (for efficient versioning without MAX() scan)
   current_version INTEGER NOT NULL DEFAULT 0,
   extra JSONB,
@@ -868,6 +922,7 @@ ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_payment_codes TEXT[
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_environment_tags TEXT[];
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_language_codes TEXT[];
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_classification_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_taxonomy_codes TEXT[];
 
 -- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
 -- TRANSITOIRE / NON-CANONIQUE / OPT-IN
@@ -1516,11 +1571,316 @@ CREATE TABLE IF NOT EXISTS object_classification (
   CONSTRAINT chk_label_dates CHECK (valid_until IS NULL OR awarded_at IS NULL OR valid_until >= awarded_at),
   CONSTRAINT chk_object_classification_status CHECK (status IS NULL OR status IN ('requested','granted','suspended','expired'))
 );
+
+CREATE TABLE IF NOT EXISTS ref_code_taxonomy_closure (
+  domain TEXT NOT NULL,
+  ancestor_id UUID NOT NULL,
+  descendant_id UUID NOT NULL,
+  depth INTEGER NOT NULL CHECK (depth >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (domain, ancestor_id, descendant_id),
+  CONSTRAINT fk_ref_code_taxonomy_closure_domain
+    FOREIGN KEY (domain)
+    REFERENCES ref_code_domain_registry(domain)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_ref_code_taxonomy_closure_ancestor
+    FOREIGN KEY (ancestor_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_ref_code_taxonomy_closure_descendant
+    FOREIGN KEY (descendant_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS object_taxonomy (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL,
+  ref_code_id UUID NOT NULL,
+  source TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_object_taxonomy_domain
+    FOREIGN KEY (domain)
+    REFERENCES ref_code_domain_registry(domain)
+    ON DELETE RESTRICT,
+  CONSTRAINT fk_object_taxonomy_ref_code
+    FOREIGN KEY (ref_code_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE RESTRICT,
+  CONSTRAINT uq_object_taxonomy_object_domain UNIQUE (object_id, domain)
+);
+
 CREATE TABLE IF NOT EXISTS object_sustainability_action_label (
   object_sustainability_action_id UUID NOT NULL REFERENCES object_sustainability_action(id) ON DELETE CASCADE,
   object_classification_id UUID NOT NULL REFERENCES object_classification(id) ON DELETE CASCADE,
   PRIMARY KEY (object_sustainability_action_id, object_classification_id)
 );
+
+CREATE OR REPLACE FUNCTION api.is_ref_code_taxonomy_domain(p_domain TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT COALESCE((
+    SELECT d.is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = p_domain
+  ), FALSE);
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_ref_code_taxonomy_closure(p_domain TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF COALESCE(api.is_ref_code_taxonomy_domain(p_domain), FALSE) = FALSE THEN
+    DELETE FROM ref_code_taxonomy_closure
+    WHERE domain = p_domain;
+    RETURN;
+  END IF;
+
+  DELETE FROM ref_code_taxonomy_closure
+  WHERE domain = p_domain;
+
+  INSERT INTO ref_code_taxonomy_closure (domain, ancestor_id, descendant_id, depth)
+  WITH RECURSIVE closure AS (
+    SELECT
+      rc.domain,
+      rc.id AS ancestor_id,
+      rc.id AS descendant_id,
+      0 AS depth
+    FROM ref_code rc
+    WHERE rc.domain = p_domain
+
+    UNION ALL
+
+    SELECT
+      closure.domain,
+      closure.ancestor_id,
+      child.id AS descendant_id,
+      closure.depth + 1 AS depth
+    FROM closure
+    JOIN ref_code child
+      ON child.domain = closure.domain
+     AND child.parent_id = closure.descendant_id
+  )
+  SELECT domain, ancestor_id, descendant_id, depth
+  FROM closure;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_object_taxonomy_cache_for_domain(p_domain TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  UPDATE object o
+  SET cached_taxonomy_codes = sub.codes
+  FROM (
+    SELECT
+      o2.id AS object_id,
+      COALESCE((
+        SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+        FROM object_taxonomy ot
+        JOIN ref_code_taxonomy_closure cl
+          ON cl.domain = ot.domain
+         AND cl.descendant_id = ot.ref_code_id
+        JOIN ref_code anc
+          ON anc.id = cl.ancestor_id
+         AND anc.domain = cl.domain
+        WHERE ot.object_id = o2.id
+          AND anc.is_assignable = TRUE
+      ), ARRAY[]::TEXT[]) AS codes
+    FROM object o2
+    WHERE EXISTS (
+      SELECT 1
+      FROM object_taxonomy ot
+      WHERE ot.object_id = o2.id
+        AND ot.domain = p_domain
+    )
+  ) sub
+  WHERE o.id = sub.object_id
+    AND o.cached_taxonomy_codes IS DISTINCT FROM sub.codes;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.validate_ref_code_taxonomy_hierarchy()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_is_taxonomy BOOLEAN;
+BEGIN
+  SELECT COALESCE(d.is_taxonomy, FALSE)
+  INTO v_is_taxonomy
+  FROM ref_code_domain_registry d
+  WHERE d.domain = NEW.domain;
+
+  IF COALESCE(v_is_taxonomy, FALSE) = FALSE THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.parent_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.parent_id = NEW.id THEN
+    RAISE EXCEPTION 'taxonomy node % cannot be its own parent', COALESCE(NEW.code, NEW.id::TEXT)
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM ref_code parent_code
+    WHERE parent_code.id = NEW.parent_id
+      AND parent_code.domain = NEW.domain
+  ) THEN
+    RAISE EXCEPTION 'taxonomy parent % must belong to the same ref_code domain %', NEW.parent_id, NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    WITH RECURSIVE ancestors AS (
+      SELECT rc.id, rc.parent_id
+      FROM ref_code rc
+      WHERE rc.domain = NEW.domain
+        AND rc.id = NEW.parent_id
+
+      UNION ALL
+
+      SELECT rc.id, rc.parent_id
+      FROM ref_code rc
+      JOIN ancestors a
+        ON rc.id = a.parent_id
+      WHERE rc.domain = NEW.domain
+    )
+    SELECT 1
+    FROM ancestors
+    WHERE id = NEW.id
+  ) THEN
+    RAISE EXCEPTION 'taxonomy move would create a cycle in domain % for node %', NEW.domain, COALESCE(NEW.code, NEW.id::TEXT)
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.trg_refresh_ref_code_taxonomy_closure()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_old_is_taxonomy BOOLEAN := FALSE;
+  v_new_is_taxonomy BOOLEAN := FALSE;
+BEGIN
+  IF TG_OP IN ('UPDATE', 'DELETE') THEN
+    SELECT COALESCE(d.is_taxonomy, FALSE)
+    INTO v_old_is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = OLD.domain;
+  END IF;
+
+  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+    SELECT COALESCE(d.is_taxonomy, FALSE)
+    INTO v_new_is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = NEW.domain;
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.domain IS DISTINCT FROM NEW.domain THEN
+    IF v_old_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(OLD.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(OLD.domain);
+    END IF;
+    IF v_new_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(NEW.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(NEW.domain);
+    END IF;
+    RETURN NULL;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    IF v_old_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(OLD.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(OLD.domain);
+    END IF;
+    RETURN NULL;
+  END IF;
+
+  IF v_new_is_taxonomy THEN
+    PERFORM api.refresh_ref_code_taxonomy_closure(NEW.domain);
+    PERFORM api.refresh_object_taxonomy_cache_for_domain(NEW.domain);
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.validate_object_taxonomy_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_is_taxonomy BOOLEAN;
+  v_domain_object_type object_type;
+  v_object_type object_type;
+  v_node_code TEXT;
+  v_is_assignable BOOLEAN;
+BEGIN
+  SELECT COALESCE(d.is_taxonomy, FALSE), d.object_type
+  INTO v_is_taxonomy, v_domain_object_type
+  FROM ref_code_domain_registry d
+  WHERE d.domain = NEW.domain;
+
+  IF COALESCE(v_is_taxonomy, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'object_taxonomy only accepts domains registered as taxonomy, got %', NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  SELECT o.object_type
+  INTO v_object_type
+  FROM object o
+  WHERE o.id = NEW.object_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'unknown object id % for object_taxonomy assignment', NEW.object_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF v_domain_object_type IS NOT NULL AND v_object_type IS DISTINCT FROM v_domain_object_type THEN
+    RAISE EXCEPTION 'taxonomy domain % only accepts object_type %, got % for object %', NEW.domain, v_domain_object_type, v_object_type, NEW.object_id
+      USING ERRCODE = '23514';
+  END IF;
+
+  SELECT rc.code, rc.is_assignable
+  INTO v_node_code, v_is_assignable
+  FROM ref_code rc
+  WHERE rc.id = NEW.ref_code_id
+    AND rc.domain = NEW.domain;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'taxonomy node % does not exist in domain %', NEW.ref_code_id, NEW.domain
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF COALESCE(v_is_assignable, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'taxonomy node % in domain % cannot be assigned to objects', COALESCE(v_node_code, NEW.ref_code_id::TEXT), NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 
 -- Relations objets
 CREATE TABLE IF NOT EXISTS ref_object_relation_type (
@@ -2188,6 +2548,144 @@ $$;
 CREATE INDEX IF NOT EXISTS idx_app_user_profile_role ON app_user_profile(role);
 CREATE INDEX IF NOT EXISTS idx_app_user_profile_locale ON app_user_profile(locale);
 CREATE INDEX IF NOT EXISTS idx_app_user_profile_preferences_gin ON app_user_profile USING GIN (preferences);
+
+CREATE OR REPLACE FUNCTION api.sync_app_user_profile_from_auth_user(
+  p_user_id UUID,
+  p_email TEXT,
+  p_raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
+  p_raw_app_meta_data JSONB DEFAULT '{}'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth
+AS $$
+DECLARE
+  v_user_meta JSONB := COALESCE(p_raw_user_meta_data, '{}'::jsonb);
+  v_app_meta JSONB := COALESCE(p_raw_app_meta_data, '{}'::jsonb);
+  v_display_name TEXT;
+  v_avatar_url TEXT;
+  v_locale TEXT;
+  v_timezone TEXT;
+  v_role TEXT;
+  v_lang_source JSONB;
+  v_lang_prefs TEXT[] := ARRAY['fr','en'];
+  v_preferences JSONB := '{}'::jsonb;
+BEGIN
+  v_display_name := NULLIF(COALESCE(
+    v_user_meta->>'display_name',
+    v_user_meta->>'full_name',
+    v_user_meta->>'name',
+    v_app_meta->>'display_name',
+    v_app_meta->>'full_name',
+    p_email,
+    p_user_id::TEXT
+  ), '');
+
+  v_avatar_url := NULLIF(COALESCE(
+    v_user_meta->>'avatar_url',
+    v_user_meta->>'picture',
+    v_app_meta->>'avatar_url',
+    v_app_meta->>'picture'
+  ), '');
+
+  v_locale := NULLIF(COALESCE(
+    v_user_meta->>'locale',
+    v_app_meta->>'locale'
+  ), '');
+
+  v_timezone := NULLIF(COALESCE(
+    v_user_meta->>'timezone',
+    v_app_meta->>'timezone'
+  ), '');
+
+  v_role := NULLIF(COALESCE(
+    v_app_meta->>'role',
+    v_user_meta->>'role'
+  ), '');
+
+  IF v_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN
+    v_role := NULL;
+  END IF;
+
+  v_lang_source := COALESCE(
+    v_user_meta->'lang_prefs',
+    v_user_meta->'langPrefs',
+    v_app_meta->'lang_prefs',
+    v_app_meta->'langPrefs'
+  );
+
+  IF jsonb_typeof(v_lang_source) = 'array' THEN
+    SELECT COALESCE(array_agg(NULLIF(BTRIM(lang_item.value), '') ORDER BY lang_item.ord), ARRAY[]::TEXT[])
+    INTO v_lang_prefs
+    FROM jsonb_array_elements_text(v_lang_source) WITH ORDINALITY AS lang_item(value, ord)
+    WHERE NULLIF(BTRIM(lang_item.value), '') IS NOT NULL;
+  END IF;
+
+  IF COALESCE(array_length(v_lang_prefs, 1), 0) = 0 THEN
+    v_lang_prefs := ARRAY['fr','en'];
+  END IF;
+
+  IF jsonb_typeof(v_user_meta->'preferences') = 'object' THEN
+    v_preferences := v_user_meta->'preferences';
+  ELSIF jsonb_typeof(v_app_meta->'preferences') = 'object' THEN
+    v_preferences := v_app_meta->'preferences';
+  END IF;
+
+  INSERT INTO app_user_profile (
+    id,
+    display_name,
+    avatar_url,
+    locale,
+    timezone,
+    role,
+    lang_prefs,
+    preferences
+  )
+  VALUES (
+    p_user_id,
+    v_display_name,
+    v_avatar_url,
+    COALESCE(v_locale, 'fr'),
+    COALESCE(v_timezone, 'Indian/Reunion'),
+    v_role,
+    v_lang_prefs,
+    v_preferences
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET display_name = COALESCE(app_user_profile.display_name, EXCLUDED.display_name),
+      avatar_url = COALESCE(app_user_profile.avatar_url, EXCLUDED.avatar_url),
+      locale = COALESCE(app_user_profile.locale, EXCLUDED.locale),
+      timezone = COALESCE(app_user_profile.timezone, EXCLUDED.timezone),
+      role = COALESCE(app_user_profile.role, EXCLUDED.role),
+      lang_prefs = CASE
+        WHEN COALESCE(array_length(app_user_profile.lang_prefs, 1), 0) = 0 THEN EXCLUDED.lang_prefs
+        ELSE app_user_profile.lang_prefs
+      END,
+      preferences = CASE
+        WHEN app_user_profile.preferences = '{}'::jsonb THEN EXCLUDED.preferences
+        ELSE app_user_profile.preferences
+      END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.handle_auth_user_profile_created()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth
+AS $$
+BEGIN
+  PERFORM api.sync_app_user_profile_from_auth_user(
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data,
+    NEW.raw_app_meta_data
+  );
+
+  RETURN NEW;
+END;
+$$;
 
 -- =====================================================
 -- Spécifiques FMA (événements)
@@ -3220,7 +3718,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=partition_name) THEN
     RETURN 'Partition ' || partition_name || ' already exists';
   END IF;
-  sql_stmt := format('CREATE TABLE %I PARTITION OF object_version FOR VALUES FROM (%L) TO (%L)', partition_name, start_date, end_date);
+  sql_stmt := format(
+    'CREATE TABLE public.%I PARTITION OF public.object_version FOR VALUES FROM (%L) TO (%L)',
+    partition_name,
+    start_date,
+    end_date
+  );
   EXECUTE sql_stmt;
   RETURN 'Created partition: ' || partition_name;
 END; $$ LANGUAGE plpgsql;
@@ -3229,7 +3732,7 @@ SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE)
 SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');
 
 -- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
-CREATE TABLE IF NOT EXISTS object_version_default PARTITION OF object_version DEFAULT;
+CREATE TABLE IF NOT EXISTS public.object_version_default PARTITION OF public.object_version DEFAULT;
 CREATE INDEX IF NOT EXISTS idx_object_version_object_id_created
 ON object_version(object_id, created_at DESC);
 
@@ -3263,6 +3766,7 @@ BEGIN
         'cached_environment_tags',
         'cached_language_codes',
         'cached_classification_codes',
+        'cached_taxonomy_codes',
         'current_version'
       ]
     ) IS NOT DISTINCT FROM (
@@ -3280,6 +3784,7 @@ BEGIN
         'cached_environment_tags',
         'cached_language_codes',
         'cached_classification_codes',
+        'cached_taxonomy_codes',
         'current_version'
       ]
     ) THEN
@@ -3322,6 +3827,7 @@ CREATE INDEX IF NOT EXISTS idx_object_cached_payment_codes_gin ON object USING G
 CREATE INDEX IF NOT EXISTS idx_object_cached_environment_tags_gin ON object USING GIN (cached_environment_tags);
 CREATE INDEX IF NOT EXISTS idx_object_cached_language_codes_gin ON object USING GIN (cached_language_codes);
 CREATE INDEX IF NOT EXISTS idx_object_cached_classification_codes_gin ON object USING GIN (cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_taxonomy_codes_gin ON object USING GIN (cached_taxonomy_codes);
 CREATE INDEX IF NOT EXISTS idx_object_location_city_search_vector ON object_location USING GIN (city_search_vector);
 
 -- Covering index for map view and filtered list base CTE (index-only scan)
@@ -3605,7 +4111,8 @@ SELECT
   o.cached_payment_codes,
   o.cached_environment_tags,
   o.cached_language_codes,
-  o.cached_classification_codes
+  o.cached_classification_codes,
+  o.cached_taxonomy_codes
 FROM object o
 LEFT JOIN object_location ol
   ON ol.object_id = o.id
@@ -3630,6 +4137,8 @@ CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_language_codes_gin
 ON internal.mv_filtered_objects USING GIN(cached_language_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_classification_codes_gin
 ON internal.mv_filtered_objects USING GIN(cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_taxonomy_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_taxonomy_codes);
 CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_updated_at_id
 ON internal.mv_filtered_objects(updated_at, id);
 
@@ -3906,6 +4415,7 @@ DECLARE
   v_cached_environment_tags TEXT[];
   v_cached_language_codes TEXT[];
   v_cached_classification_codes TEXT[];
+  v_cached_taxonomy_codes TEXT[];
 BEGIN
   IF p_object_id IS NULL THEN
     RETURN;
@@ -3950,8 +4460,26 @@ BEGIN
     JOIN ref_classification_value v ON v.id = oc.value_id
     WHERE oc.object_id = p_object_id
       AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
   ), ARRAY[]::TEXT[])
   INTO v_cached_classification_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = p_object_id
+      AND anc.is_assignable = TRUE
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_taxonomy_codes;
 
   UPDATE object o
   SET
@@ -3959,7 +4487,8 @@ BEGIN
     cached_payment_codes = v_cached_payment_codes,
     cached_environment_tags = v_cached_environment_tags,
     cached_language_codes = v_cached_language_codes,
-    cached_classification_codes = v_cached_classification_codes
+    cached_classification_codes = v_cached_classification_codes,
+    cached_taxonomy_codes = v_cached_taxonomy_codes
   WHERE o.id = p_object_id
     AND (
       o.cached_amenity_codes IS DISTINCT FROM v_cached_amenity_codes
@@ -3967,6 +4496,7 @@ BEGIN
       OR o.cached_environment_tags IS DISTINCT FROM v_cached_environment_tags
       OR o.cached_language_codes IS DISTINCT FROM v_cached_language_codes
       OR o.cached_classification_codes IS DISTINCT FROM v_cached_classification_codes
+      OR o.cached_taxonomy_codes IS DISTINCT FROM v_cached_taxonomy_codes
     );
 END;
 $$;
@@ -4021,6 +4551,11 @@ CREATE TRIGGER trg_refresh_object_filter_caches_object_classification
 AFTER INSERT OR UPDATE OR DELETE ON object_classification
 FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
 
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_taxonomy ON object_taxonomy;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_taxonomy
+AFTER INSERT OR UPDATE OR DELETE ON object_taxonomy
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
 -- One-time/upgrade backfill for existing object rows
 UPDATE object o
 SET
@@ -4055,6 +4590,22 @@ SET
     JOIN ref_classification_value v ON v.id = oc.value_id
     WHERE oc.object_id = o.id
       AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
+  ), ARRAY[]::TEXT[]),
+  cached_taxonomy_codes = COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = o.id
+      AND anc.is_assignable = TRUE
   ), ARRAY[]::TEXT[])
 WHERE
   o.cached_amenity_codes IS DISTINCT FROM COALESCE((
@@ -4088,6 +4639,22 @@ WHERE
     JOIN ref_classification_value v ON v.id = oc.value_id
     WHERE oc.object_id = o.id
       AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
+  ), ARRAY[]::TEXT[])
+  OR o.cached_taxonomy_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = o.id
+      AND anc.is_assignable = TRUE
   ), ARRAY[]::TEXT[]);
 
 -- Backfill cached review metrics
@@ -4333,6 +4900,8 @@ DROP TRIGGER IF EXISTS update_ref_language_updated_at ON ref_language;
 CREATE TRIGGER update_ref_language_updated_at BEFORE UPDATE ON ref_language FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_ref_code_updated_at ON ref_code;
 CREATE TRIGGER update_ref_code_updated_at BEFORE UPDATE ON ref_code FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_code_domain_registry_updated_at ON ref_code_domain_registry;
+CREATE TRIGGER update_ref_code_domain_registry_updated_at BEFORE UPDATE ON ref_code_domain_registry FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_ref_amenity_updated_at ON ref_amenity;
 CREATE TRIGGER update_ref_amenity_updated_at BEFORE UPDATE ON ref_amenity FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_ref_sustainability_action_category_updated_at ON ref_sustainability_action_category;
@@ -4384,6 +4953,7 @@ BEGIN
         'cached_environment_tags',
         'cached_language_codes',
         'cached_classification_codes',
+        'cached_taxonomy_codes',
         'current_version'
       ]
     ) IS NOT DISTINCT FROM (
@@ -4400,6 +4970,7 @@ BEGIN
         'cached_environment_tags',
         'cached_language_codes',
         'cached_classification_codes',
+        'cached_taxonomy_codes',
         'current_version'
       ]
     ) THEN
@@ -4456,10 +5027,24 @@ CREATE TRIGGER lock_object_private_description_system_fields
   FOR EACH ROW EXECUTE FUNCTION api.lock_object_private_description_system_fields();
 DROP TRIGGER IF EXISTS update_object_classification_updated_at ON object_classification;
 CREATE TRIGGER update_object_classification_updated_at BEFORE UPDATE ON object_classification FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_taxonomy_updated_at ON object_taxonomy;
+CREATE TRIGGER update_object_taxonomy_updated_at BEFORE UPDATE ON object_taxonomy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS trg_enforce_classification_single_selection ON object_classification;
 CREATE TRIGGER trg_enforce_classification_single_selection
 BEFORE INSERT OR UPDATE ON object_classification
 FOR EACH ROW EXECUTE FUNCTION enforce_classification_single_selection();
+DROP TRIGGER IF EXISTS trg_validate_ref_code_taxonomy_hierarchy ON ref_code;
+CREATE TRIGGER trg_validate_ref_code_taxonomy_hierarchy
+BEFORE INSERT OR UPDATE OF domain, parent_id ON ref_code
+FOR EACH ROW EXECUTE FUNCTION api.validate_ref_code_taxonomy_hierarchy();
+DROP TRIGGER IF EXISTS trg_refresh_ref_code_taxonomy_closure ON ref_code;
+CREATE TRIGGER trg_refresh_ref_code_taxonomy_closure
+AFTER INSERT OR UPDATE OR DELETE ON ref_code
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_ref_code_taxonomy_closure();
+DROP TRIGGER IF EXISTS trg_validate_object_taxonomy_assignment ON object_taxonomy;
+CREATE TRIGGER trg_validate_object_taxonomy_assignment
+BEFORE INSERT OR UPDATE ON object_taxonomy
+FOR EACH ROW EXECUTE FUNCTION api.validate_object_taxonomy_assignment();
 -- Legacy legal triggers removed (using object_legal only)
 -- Simple opening table triggers removed
 DROP TRIGGER IF EXISTS update_object_fma_updated_at ON object_fma;
@@ -4567,6 +5152,36 @@ CREATE TRIGGER enforce_app_user_profile_role_change
   BEFORE INSERT OR UPDATE ON app_user_profile
   FOR EACH ROW
   EXECUTE FUNCTION api.enforce_app_user_profile_role_change();
+DROP TRIGGER IF EXISTS on_auth_user_created_app_user_profile ON auth.users;
+CREATE TRIGGER on_auth_user_created_app_user_profile
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION api.handle_auth_user_profile_created();
+
+DO $$
+DECLARE
+  v_user RECORD;
+BEGIN
+  FOR v_user IN
+    SELECT
+      u.id,
+      u.email,
+      u.raw_user_meta_data,
+      u.raw_app_meta_data
+    FROM auth.users u
+    LEFT JOIN app_user_profile p
+      ON p.id = u.id
+    WHERE p.id IS NULL
+  LOOP
+    PERFORM api.sync_app_user_profile_from_auth_user(
+      v_user.id,
+      v_user.email,
+      v_user.raw_user_meta_data,
+      v_user.raw_app_meta_data
+    );
+  END LOOP;
+END;
+$$;
 DROP TRIGGER IF EXISTS update_object_iti_profile_updated_at ON object_iti_profile;
 CREATE TRIGGER update_object_iti_profile_updated_at BEFORE UPDATE ON object_iti_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -4582,6 +5197,11 @@ CREATE INDEX IF NOT EXISTS idx_object_classification_scheme_id ON object_classif
 CREATE INDEX IF NOT EXISTS idx_object_classification_value_id ON object_classification(value_id);
 CREATE INDEX IF NOT EXISTS idx_object_classification_subvalue_ids_gin ON object_classification USING GIN (subvalue_ids);
 CREATE INDEX IF NOT EXISTS idx_object_classification_document_id ON object_classification(document_id);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_object_id ON object_taxonomy(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_domain ON object_taxonomy(domain);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_ref_code_id ON object_taxonomy(ref_code_id);
+CREATE INDEX IF NOT EXISTS idx_ref_code_taxonomy_closure_descendant ON ref_code_taxonomy_closure(domain, descendant_id, depth);
+CREATE INDEX IF NOT EXISTS idx_ref_code_taxonomy_closure_ancestor ON ref_code_taxonomy_closure(domain, ancestor_id, depth);
 
 
 -- =====================================================

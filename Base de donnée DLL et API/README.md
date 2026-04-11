@@ -155,10 +155,37 @@ SELECT api.list_objects_with_validated_changes_since(
 
 - `object` (entite centrale + colonnes de cache)
 - `object_location` (adresse + geolocalisation unifiees, `geog2`)
+- `object_taxonomy` (rattachement hierarchique d un objet a un noeud `ref_code`)
+- `ref_code_domain_registry` (registre des domaines `ref_code` utilises comme taxonomies)
+- `ref_code_taxonomy_closure` (ancetres/descendants denormalises pour filtres et breadcrumbs)
+- `object_classification` (classements officiels, labels, distinctions et donnees datees associees)
 - `pending_change` (workflow de moderation)
 - `object_version` (historisation/versions)
 - `object_legal` (suivi legal unifie)
 - `media`, `object_review`, `object_room_type`, `object_menu*`
+
+## Taxonomie hierarchique
+
+La sous-categorisation metier n est plus stockee dans `object_classification`.
+
+- `object_type` reste le type structurel principal de la fiche.
+- `object_taxonomy` porte la sous-categorie hierarchique la plus precise par domaine.
+- `ref_code` porte les noeuds de taxonomie, scopes par `domain`, avec `parent_id` pour la hierarchie.
+- `object_classification` reste reserve aux vraies qualifications: etoiles, labels, distinctions, et enregistrements avec `status`, `requested_at`, `awarded_at`, `valid_until`, `document_id` ou `subvalue_ids`.
+
+Impacts API:
+
+- `api.get_object_resource(...)` expose un bloc top-level `taxonomy`.
+- Le bloc `classifications` est qualification-only.
+- Les filtres de listing peuvent utiliser `taxonomy_any` pour filtrer sur les noeuds et leurs descendants.
+
+## Note de deploiement `ref_code`
+
+Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.
+
+- Le schema cree donc `uq_ref_code_domain_code`.
+- Les seeds doivent rester idempotentes via des upserts deterministes sur `(domain, code)`.
+- Si vous voyez encore `could not create unique index ... (domain, code)=... is duplicated`, cela veut dire que la base contient deja des lignes dupliquees issues d un chargement partiel precedent. Dans ce cas, sur une base de projet neuve, le bon choix est de nettoyer ou recreer la base puis de relancer le bootstrap complet.
 
 ## Performance
 

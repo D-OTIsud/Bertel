@@ -974,6 +974,14 @@ AS $$
             AND COALESCE(j->>'value_code', '') <> ''
         )
       END AS classifications_any_codes,
+      CASE WHEN n.filters ? 'taxonomy_any'
+        THEN ARRAY(
+          SELECT ((j->>'domain') || ':' || (j->>'code'))
+          FROM jsonb_array_elements(n.filters->'taxonomy_any') AS j
+          WHERE COALESCE(j->>'domain', '') <> ''
+            AND COALESCE(j->>'code', '') <> ''
+        )
+      END AS taxonomy_any_codes,
       -- accessibility type filters (2026-03-22)
       -- disability_types_any: TEXT[] of canonical disability types (motor/hearing/visual/cognitive).
       -- label_disability_types_any: TEXT[] of canonical disability types matched against LBL_TOURISME_HANDICAP subvalue_ids.
@@ -1016,7 +1024,8 @@ AS $$
       m.cached_payment_codes,
       m.cached_environment_tags,
       m.cached_language_codes,
-      m.cached_classification_codes
+      m.cached_classification_codes,
+      m.cached_taxonomy_codes
     FROM internal.mv_filtered_objects m
     CROSS JOIN params
     WHERE params.use_mv
@@ -1038,7 +1047,8 @@ AS $$
       o.cached_payment_codes,
       o.cached_environment_tags,
       o.cached_language_codes,
-      o.cached_classification_codes
+      o.cached_classification_codes,
+      o.cached_taxonomy_codes
     FROM object o
     CROSS JOIN params
     LEFT JOIN LATERAL (
@@ -1194,6 +1204,7 @@ AS $$
          )
     ))
     AND (params.classifications_any_codes IS NULL OR COALESCE(src.cached_classification_codes, ARRAY[]::TEXT[]) && params.classifications_any_codes)
+    AND (params.taxonomy_any_codes IS NULL OR COALESCE(src.cached_taxonomy_codes, ARRAY[]::TEXT[]) && params.taxonomy_any_codes)
     AND (params.tags_any IS NULL OR EXISTS (
       SELECT 1
       FROM tag_link tl
@@ -1493,7 +1504,7 @@ SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
     'capacity','amenities','environment_tags','payment_methods',
-    'prices','discounts','group_policies','classifications','tags',
+    'prices','discounts','group_policies','classifications','taxonomy','tags',
     'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types'
   ]);
 $$;
@@ -1546,7 +1557,7 @@ AS $$
     'external_ids','contacts','languages','actors',
     'media','meeting_rooms',
     'capacity','amenities','environment_tags','payment_methods',
-    'prices','discounts','group_policies','classifications','tags',
+    'prices','discounts','group_policies','classifications','taxonomy','tags',
     'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types',
     'legal_records','pet_policy','origins','org_links',
     'itinerary_details','itinerary','outgoing_relations','incoming_relations',
@@ -2235,6 +2246,7 @@ BEGIN
   END IF;
 
   -- Classifications (enriched)
+  -- Qualification-only block: excludes hierarchical business taxonomy, which now lives in 'taxonomy'.
   -- disability_types_covered: for LBL_TOURISME_HANDICAP rows only, resolves object_classification.subvalue_ids
   -- to disability type strings via ref_classification_value.metadata->>'disability_type'.
   -- Returns '[]' for all other schemes and for LBL_TOURISME_HANDICAP rows with no subvalue_ids populated.
@@ -2270,12 +2282,84 @@ BEGIN
                  oc.ctid
              )
       FROM object_classification oc
-      -- Partition: keep only non-sustainability schemes in 'classifications'.
-      -- LBL_* sustainability and accessibility labels go to 'sustainability_labels' block below.
       JOIN ref_classification_scheme sc_grp ON sc_grp.id = oc.scheme_id
       WHERE oc.object_id = obj.id
+        AND COALESCE(sc_grp.is_distinction, FALSE) = TRUE
         AND COALESCE(sc_grp.display_group, '') NOT IN ('sustainability_labels', 'accessibility_labels')
       ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- Hierarchical taxonomy (enriched)
+  IF v_fields IS NULL OR 'taxonomy' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'taxonomy',
+      jsonb_build_object(
+        'domains',
+        COALESCE((
+          SELECT jsonb_agg(
+                   jsonb_build_object(
+                     'domain', ot.domain,
+                     'domain_name', COALESCE(api.i18n_pick_strict(reg.name_i18n, lang, 'fr'), reg.name),
+                     'object_type', reg.object_type::text,
+                     'assigned_node', jsonb_build_object(
+                       'id', assigned.id,
+                       'code', assigned.code,
+                       'name', COALESCE(api.i18n_pick_strict(assigned.name_i18n, lang, 'fr'), assigned.name),
+                       'description', COALESCE(api.i18n_pick_strict(assigned.description_i18n, lang, 'fr'), assigned.description),
+                       'depth', COALESCE((
+                         SELECT GREATEST(COUNT(*) FILTER (WHERE anc_depth.is_assignable = TRUE) - 1, 0)
+                         FROM ref_code_taxonomy_closure cl_depth
+                         JOIN ref_code anc_depth
+                           ON anc_depth.id = cl_depth.ancestor_id
+                          AND anc_depth.domain = cl_depth.domain
+                         WHERE cl_depth.domain = ot.domain
+                           AND cl_depth.descendant_id = assigned.id
+                       ), 0)
+                     ),
+                     'path', COALESCE((
+                       SELECT jsonb_agg(
+                                jsonb_build_object(
+                                  'id', path_item.id,
+                                  'code', path_item.code,
+                                  'name', path_item.name,
+                                  'description', path_item.description,
+                                  'depth', path_item.public_depth
+                                )
+                                ORDER BY path_item.public_depth
+                              )
+                       FROM (
+                         SELECT
+                           anc.id,
+                           anc.code,
+                           COALESCE(api.i18n_pick_strict(anc.name_i18n, lang, 'fr'), anc.name) AS name,
+                           COALESCE(api.i18n_pick_strict(anc.description_i18n, lang, 'fr'), anc.description) AS description,
+                           row_number() OVER (ORDER BY cl.depth DESC) - 1 AS public_depth
+                         FROM ref_code_taxonomy_closure cl
+                         JOIN ref_code anc
+                           ON anc.id = cl.ancestor_id
+                          AND anc.domain = cl.domain
+                         WHERE cl.domain = ot.domain
+                           AND cl.descendant_id = assigned.id
+                           AND anc.is_assignable = TRUE
+                       ) path_item
+                     ), '[]'::jsonb),
+                     'updated_at', ot.updated_at,
+                     'source', ot.source
+                   )
+                   ORDER BY COALESCE(reg.position, 999999),
+                            COALESCE(api.i18n_pick_strict(reg.name_i18n, lang, 'fr'), reg.name),
+                            ot.domain
+                 )
+          FROM object_taxonomy ot
+          JOIN ref_code_domain_registry reg
+            ON reg.domain = ot.domain
+          JOIN ref_code assigned
+            ON assigned.id = ot.ref_code_id
+           AND assigned.domain = ot.domain
+          WHERE ot.object_id = obj.id
+        ), '[]'::jsonb)
+      )
     );
   END IF;
 
@@ -3387,8 +3471,54 @@ BEGIN
         JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
         JOIN ref_classification_value cv ON cv.id = oc.value_id
         WHERE oc.object_id = obj.id
+          AND COALESCE(sc.is_distinction, FALSE) = TRUE
+          AND COALESCE(sc.display_group, '') NOT IN ('sustainability_labels', 'accessibility_labels')
       ) lines;
       v_render := v_render || jsonb_build_object('classification_lines', COALESCE(v_tmp_json, '[]'::jsonb));
+    END IF;
+
+    -- Taxonomy
+    IF v_fields IS NULL OR 'taxonomy' = ANY(v_fields) THEN
+      SELECT jsonb_agg(to_jsonb(line_text) ORDER BY domain_name, path_text)
+      INTO v_tmp_json
+      FROM (
+        SELECT
+          COALESCE(api.i18n_pick_strict(reg.name_i18n, lang, 'fr'), reg.name) || ' : ' ||
+          COALESCE((
+            SELECT string_agg(
+                     COALESCE(api.i18n_pick_strict(anc.name_i18n, lang, 'fr'), anc.name),
+                     ' > '
+                     ORDER BY cl.depth DESC
+                   )
+            FROM ref_code_taxonomy_closure cl
+            JOIN ref_code anc
+              ON anc.id = cl.ancestor_id
+             AND anc.domain = cl.domain
+            WHERE cl.domain = ot.domain
+              AND cl.descendant_id = ot.ref_code_id
+              AND anc.is_assignable = TRUE
+          ), COALESCE(api.i18n_pick_strict(node.name_i18n, lang, 'fr'), node.name)) AS line_text,
+          COALESCE(api.i18n_pick_strict(reg.name_i18n, lang, 'fr'), reg.name) AS domain_name,
+          COALESCE((
+            SELECT string_agg(
+                     COALESCE(api.i18n_pick_strict(anc.name_i18n, lang, 'fr'), anc.name),
+                     ' > '
+                     ORDER BY cl.depth DESC
+                   )
+            FROM ref_code_taxonomy_closure cl
+            JOIN ref_code anc
+              ON anc.id = cl.ancestor_id
+             AND anc.domain = cl.domain
+            WHERE cl.domain = ot.domain
+              AND cl.descendant_id = ot.ref_code_id
+              AND anc.is_assignable = TRUE
+          ), COALESCE(api.i18n_pick_strict(node.name_i18n, lang, 'fr'), node.name)) AS path_text
+        FROM object_taxonomy ot
+        JOIN ref_code_domain_registry reg ON reg.domain = ot.domain
+        JOIN ref_code node ON node.id = ot.ref_code_id AND node.domain = ot.domain
+        WHERE ot.object_id = obj.id
+      ) lines;
+      v_render := v_render || jsonb_build_object('taxonomy_lines', COALESCE(v_tmp_json, '[]'::jsonb));
     END IF;
 
     -- Discounts

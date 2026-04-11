@@ -1,32 +1,19 @@
+import { useMemo, useState } from 'react';
 import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
 import type {
-  ObjectWorkspaceTaxonomyItem,
+  ObjectWorkspaceTaxonomyAssignment,
+  ObjectWorkspaceTaxonomyDomain,
   ObjectWorkspaceTaxonomyModule,
-  ObjectWorkspaceTaxonomyScheme,
-  WorkspaceReferenceOption,
+  ObjectWorkspaceTaxonomyNodeOption,
+  ObjectWorkspaceTaxonomyPathNode,
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 
 interface SaveActionState {
   label: string;
   disabled: boolean;
   hint: string | null;
 }
-
-const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
-const ACTIVITY_TYPES = new Set(['ACT', 'ASC', 'LOI']);
-const ACCOMMODATION_SCHEME_CODES = new Set([
-  'type_hot',
-  'official_classification',
-  'hot_stars',
-  'camp_stars',
-  'meuble_stars',
-  'gites_epics',
-  'clevacances_keys',
-]);
-const ACTIVITY_SCHEME_CODES = new Set(['type_act']);
 
 interface ObjectWorkspaceTaxonomyPanelProps {
   value: ObjectWorkspaceTaxonomyModule;
@@ -47,85 +34,185 @@ interface ObjectWorkspaceTaxonomyFieldsProps {
   onChange: (nextValue: ObjectWorkspaceTaxonomyModule) => void;
 }
 
-function resolveValueOptions(scheme: ObjectWorkspaceTaxonomyScheme): WorkspaceReferenceOption[] {
-  if (scheme.valueOptions.length > 0) {
-    return scheme.valueOptions;
+interface TaxonomyTreeNode extends ObjectWorkspaceTaxonomyNodeOption {
+  children: TaxonomyTreeNode[];
+}
+
+function buildTaxonomyTree(nodes: ObjectWorkspaceTaxonomyNodeOption[]): TaxonomyTreeNode[] {
+  const nodesByCode = new Map<string, TaxonomyTreeNode>();
+  const roots: TaxonomyTreeNode[] = [];
+
+  for (const node of nodes) {
+    nodesByCode.set(node.code, {
+      ...node,
+      children: [],
+    });
   }
 
-  return scheme.items.map((item) => ({
-    id: item.valueId || `${scheme.id}:${item.valueCode}`,
-    code: item.valueCode,
-    label: item.valueLabel,
+  for (const node of nodesByCode.values()) {
+    if (node.parentCode) {
+      const parent = nodesByCode.get(node.parentCode);
+      if (parent) {
+        parent.children.push(node);
+        continue;
+      }
+    }
+
+    roots.push(node);
+  }
+
+  const sortNodes = (items: TaxonomyTreeNode[]) => {
+    items.sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+    for (const item of items) {
+      sortNodes(item.children);
+    }
+  };
+
+  sortNodes(roots);
+  return roots;
+}
+
+function buildPathFromNodes(domain: ObjectWorkspaceTaxonomyDomain, node: ObjectWorkspaceTaxonomyNodeOption): ObjectWorkspaceTaxonomyPathNode[] {
+  const nodeById = new Map(domain.nodes.map((candidate) => [candidate.id, candidate]));
+  const path: ObjectWorkspaceTaxonomyPathNode[] = [];
+  let cursor: ObjectWorkspaceTaxonomyNodeOption | undefined = node;
+
+  while (cursor) {
+    path.push({
+      id: cursor.id,
+      code: cursor.code,
+      label: cursor.label,
+      description: cursor.description,
+      depth: 0,
+    });
+    cursor = cursor.parentId ? nodeById.get(cursor.parentId) : undefined;
+  }
+
+  return path.reverse().map((pathNode, index) => ({
+    ...pathNode,
+    depth: index,
   }));
 }
 
-function buildTaxonomyItem(
-  scheme: ObjectWorkspaceTaxonomyScheme,
-  option: WorkspaceReferenceOption,
-  existing?: ObjectWorkspaceTaxonomyItem,
-): ObjectWorkspaceTaxonomyItem {
-  return existing ?? {
-    recordId: null,
-    schemeId: scheme.id,
-    schemeCode: scheme.code,
-    schemeLabel: scheme.label,
-    valueId: option.id,
-    valueCode: option.code,
-    valueLabel: option.label,
-    status: '',
-    awardedAt: '',
-    validUntil: '',
-  };
-}
-
-function sortSchemeItems(scheme: ObjectWorkspaceTaxonomyScheme, items: ObjectWorkspaceTaxonomyItem[]): ObjectWorkspaceTaxonomyItem[] {
-  const orderByCode = new Map(resolveValueOptions(scheme).map((option, index) => [option.code, index]));
-  return [...items].sort((left, right) => {
-    const leftOrder = orderByCode.get(left.valueCode) ?? Number.MAX_SAFE_INTEGER;
-    const rightOrder = orderByCode.get(right.valueCode) ?? Number.MAX_SAFE_INTEGER;
-    return leftOrder - rightOrder || left.valueLabel.localeCompare(right.valueLabel, 'fr');
-  });
-}
-
-function updateScheme(module: ObjectWorkspaceTaxonomyModule, schemeId: string, updater: (scheme: ObjectWorkspaceTaxonomyScheme) => ObjectWorkspaceTaxonomyScheme): ObjectWorkspaceTaxonomyModule {
+function updateDomainAssignment(
+  module: ObjectWorkspaceTaxonomyModule,
+  domainCode: string,
+  nextAssignment: ObjectWorkspaceTaxonomyAssignment | null,
+): ObjectWorkspaceTaxonomyModule {
   return {
     ...module,
-    schemes: module.schemes.map((scheme) => (scheme.id === schemeId ? updater(scheme) : scheme)),
+    domains: module.domains.map((domain) => (
+      domain.domain === domainCode
+        ? {
+            ...domain,
+            assignment: nextAssignment,
+          }
+        : domain
+    )),
   };
 }
 
-function shouldShowTaxonomySchemeForType(scheme: ObjectWorkspaceTaxonomyScheme, objectType?: string): boolean {
+function shouldShowTaxonomyDomainForType(domain: ObjectWorkspaceTaxonomyDomain, objectType?: string): boolean {
   const normalizedType = String(objectType ?? '').trim().toUpperCase();
-  const normalizedCode = scheme.code.trim().toLowerCase();
-  const normalizedDisplayGroup = scheme.displayGroup.trim().toLowerCase();
+  const normalizedDomainType = String(domain.objectType ?? '').trim().toUpperCase();
 
-  if (ACCOMMODATION_TYPES.has(normalizedType)) {
-    return normalizedDisplayGroup === 'official_classification' || ACCOMMODATION_SCHEME_CODES.has(normalizedCode);
+  if (!normalizedType || !normalizedDomainType) {
+    return true;
   }
 
-  if (ACTIVITY_TYPES.has(normalizedType)) {
-    return ACTIVITY_SCHEME_CODES.has(normalizedCode);
-  }
-
-  return false;
+  return normalizedType === normalizedDomainType || Boolean(domain.assignment);
 }
 
-export function getVisibleTaxonomySchemes(
+export function getVisibleTaxonomyDomains(
   value: ObjectWorkspaceTaxonomyModule,
   objectType?: string,
-): ObjectWorkspaceTaxonomyScheme[] {
-  if (!objectType) {
-    return value.schemes;
+): ObjectWorkspaceTaxonomyDomain[] {
+  const domains = Array.isArray(value?.domains) ? value.domains : [];
+  return domains.filter((domain) => shouldShowTaxonomyDomainForType(domain, objectType));
+}
+
+function renderBreadcrumb(assignment: ObjectWorkspaceTaxonomyAssignment | null): string {
+  if (!assignment) {
+    return 'Aucune sous-categorie selectionnee.';
   }
 
-  const schemesWithCurrentValues = new Set(
-    value.schemes
-      .filter((scheme) => scheme.items.length > 0)
-      .map((scheme) => scheme.id),
-  );
+  const labels = assignment.path.map((item) => item.label).filter(Boolean);
+  return labels.length > 0 ? labels.join(' > ') : assignment.label;
+}
 
-  return value.schemes.filter(
-    (scheme) => schemesWithCurrentValues.has(scheme.id) || shouldShowTaxonomySchemeForType(scheme, objectType),
+function TaxonomyTree({
+  domain,
+  nodes,
+  selectedNodeId,
+  activeNodeCodes,
+  disabled,
+  expandedState,
+  onToggleExpanded,
+  onSelectNode,
+}: {
+  domain: ObjectWorkspaceTaxonomyDomain;
+  nodes: TaxonomyTreeNode[];
+  selectedNodeId: string | null;
+  activeNodeCodes: Set<string>;
+  disabled: boolean;
+  expandedState: Record<string, boolean>;
+  onToggleExpanded: (nodeCode: string) => void;
+  onSelectNode: (node: ObjectWorkspaceTaxonomyNodeOption) => void;
+}) {
+  return (
+    <div className="stack-list">
+      {nodes.map((node) => {
+        const hasChildren = node.children.length > 0;
+        const isSelected = selectedNodeId === node.id;
+        const isExpanded = expandedState[node.code] ?? (activeNodeCodes.has(node.code) || node.depth < 1);
+
+        return (
+          <div key={node.id} className="panel-card panel-card--nested">
+            <div className="panel-heading">
+              <div style={{ paddingLeft: `${node.depth * 1.25}rem` }}>
+                <span className="facet-title">{node.depth === 0 ? domain.label : 'Sous-categorie'}</span>
+                <h3>{node.label}</h3>
+                {node.description ? <p>{node.description}</p> : null}
+              </div>
+
+              <div className="inline-actions">
+                {hasChildren ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={disabled}
+                    onClick={() => onToggleExpanded(node.code)}
+                  >
+                    {isExpanded ? 'Masquer' : 'Afficher'}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant={isSelected ? 'default' : 'outline'}
+                  disabled={disabled || !node.isAssignable}
+                  onClick={() => onSelectNode(node)}
+                >
+                  {isSelected ? 'Selectionne' : node.isAssignable ? 'Choisir' : 'Dossier'}
+                </Button>
+              </div>
+            </div>
+
+            {isExpanded && hasChildren ? (
+              <TaxonomyTree
+                domain={domain}
+                nodes={node.children}
+                selectedNodeId={selectedNodeId}
+                activeNodeCodes={activeNodeCodes}
+                disabled={disabled}
+                expandedState={expandedState}
+                onToggleExpanded={onToggleExpanded}
+                onSelectNode={onSelectNode}
+              />
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -136,194 +223,99 @@ export function ObjectWorkspaceTaxonomyFields({
   onChange,
 }: ObjectWorkspaceTaxonomyFieldsProps) {
   const disabled = !access.canDirectWrite;
-  const visibleSchemes = getVisibleTaxonomySchemes(value, objectType);
+  const visibleDomains = getVisibleTaxonomyDomains(value, objectType);
+  const [expandedByDomain, setExpandedByDomain] = useState<Record<string, Record<string, boolean>>>({});
 
-  function handleSingleSelection(schemeId: string, valueCode: string) {
-    onChange(updateScheme(value, schemeId, (scheme) => {
-      if (!valueCode) {
-        return {
-          ...scheme,
-          items: [],
-        };
-      }
+  const treeByDomain = useMemo(
+    () => new Map(visibleDomains.map((domain) => [domain.domain, buildTaxonomyTree(domain.nodes)])),
+    [visibleDomains],
+  );
 
-      const option = resolveValueOptions(scheme).find((candidate) => candidate.code === valueCode);
-      if (!option) {
-        return scheme;
-      }
+  function handleSelect(domain: ObjectWorkspaceTaxonomyDomain, node: ObjectWorkspaceTaxonomyNodeOption) {
+    const currentAssignment = domain.assignment;
+    const path = buildPathFromNodes(domain, node);
 
-      const existing = scheme.items.find((item) => item.valueCode === valueCode);
-      return {
-        ...scheme,
-        items: [buildTaxonomyItem(scheme, option, existing)],
-      };
+    onChange(updateDomainAssignment(value, domain.domain, {
+      recordId: currentAssignment?.recordId ?? null,
+      nodeId: node.id,
+      code: node.code,
+      label: node.label,
+      description: node.description,
+      depth: Math.max(0, path.length - 1),
+      path,
+      updatedAt: currentAssignment?.updatedAt ?? '',
+      source: currentAssignment?.source ?? '',
     }));
   }
 
-  function handleMultiSelection(schemeId: string, valueCode: string, checked: boolean) {
-    onChange(updateScheme(value, schemeId, (scheme) => {
-      const option = resolveValueOptions(scheme).find((candidate) => candidate.code === valueCode);
-      if (!option) {
-        return scheme;
-      }
-
-      if (!checked) {
-        return {
-          ...scheme,
-          items: scheme.items.filter((item) => item.valueCode !== valueCode),
-        };
-      }
-
-      if (scheme.items.some((item) => item.valueCode === valueCode)) {
-        return scheme;
-      }
-
-      return {
-        ...scheme,
-        items: sortSchemeItems(scheme, [...scheme.items, buildTaxonomyItem(scheme, option)]),
-      };
-    }));
+  function handleClear(domain: ObjectWorkspaceTaxonomyDomain) {
+    onChange(updateDomainAssignment(value, domain.domain, null));
   }
 
-  function handleItemPatch(schemeId: string, valueCode: string, patch: Partial<ObjectWorkspaceTaxonomyItem>) {
-    onChange(updateScheme(value, schemeId, (scheme) => ({
-      ...scheme,
-      items: scheme.items.map((item) => (
-        item.valueCode === valueCode ? { ...item, ...patch } : item
-      )),
-      })));
+  function toggleExpanded(domainCode: string, nodeCode: string) {
+    setExpandedByDomain((previous) => ({
+      ...previous,
+      [domainCode]: {
+        ...(previous[domainCode] ?? {}),
+        [nodeCode]: !((previous[domainCode] ?? {})[nodeCode] ?? true),
+      },
+    }));
   }
 
   return (
     <section className="drawer-form-stack">
-      {visibleSchemes.length > 0 ? visibleSchemes.map((scheme) => {
-          const options = resolveValueOptions(scheme);
-          const selectedCodes = new Set(scheme.items.map((item) => item.valueCode));
-          const selectedSingleValue = scheme.items[0]?.valueCode ?? '';
+      {visibleDomains.length > 0 ? visibleDomains.map((domain) => {
+          const tree = treeByDomain.get(domain.domain) ?? [];
+          const selectedNodeId = domain.assignment?.nodeId ?? null;
+          const activeNodeCodes = new Set(domain.assignment?.path.map((node) => node.code) ?? []);
 
           return (
-            <article key={scheme.id} className="panel-card panel-card--nested">
+            <article key={domain.domain} className="panel-card panel-card--nested">
               <div className="panel-heading">
                 <div>
-                  <span className="facet-title">{scheme.selectionMode === 'multiple' ? 'Selection multiple' : 'Selection unique'}</span>
-                  <h3>{scheme.label}</h3>
-                  {scheme.description && <p>{scheme.description}</p>}
+                  <span className="facet-title">Taxonomie</span>
+                  <h3>{domain.label}</h3>
+                  <p>{domain.description || 'Choisissez la feuille la plus precise dans cet arbre de sous-categories.'}</p>
+                </div>
+                <div className="stack-list text-right">
+                  <strong>{renderBreadcrumb(domain.assignment)}</strong>
+                  <small className="text-muted-foreground">
+                    {domain.assignment?.source ? `Source: ${domain.assignment.source}` : 'Selection manuelle dans la taxonomie.'}
+                  </small>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={disabled || !domain.assignment}
+                    onClick={() => handleClear(domain)}
+                  >
+                    Effacer
+                  </Button>
                 </div>
               </div>
 
-              <div className="drawer-grid">
-                {scheme.selectionMode === 'single' ? (
-                  <div className="field-block field-block--wide">
-                    <Label htmlFor={`taxonomy-scheme-${scheme.id}`}>Classement</Label>
-                    <Select
-                      id={`taxonomy-scheme-${scheme.id}`}
-                      value={selectedSingleValue}
-                      disabled={disabled}
-                      onChange={(event) => handleSingleSelection(scheme.id, event.target.value)}
-                    >
-                      <option value="">Aucune valeur</option>
-                      {options.map((option) => (
-                        <option key={option.id} value={option.code}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="field-block field-block--wide">
-                    <span className="text-sm font-medium">Elements a retenir</span>
-                    <div className="drawer-choice-list">
-                      {options.map((option) => (
-                        <label key={option.id} className="drawer-choice-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedCodes.has(option.code)}
-                            disabled={disabled}
-                            onChange={(event) => handleMultiSelection(scheme.id, option.code, event.target.checked)}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="stack-list">
-                {scheme.items.length > 0 ? sortSchemeItems(scheme, scheme.items).map((item) => (
-                  <article key={`${scheme.id}-${item.valueCode}`} className="panel-card panel-card--nested">
-                    <div className="panel-heading">
-                      <div>
-                        <span className="facet-title">{scheme.label}</span>
-                        <h3>{item.valueLabel}</h3>
-                      </div>
-                      {scheme.selectionMode === 'multiple' && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          disabled={disabled}
-                          onClick={() => handleMultiSelection(scheme.id, item.valueCode, false)}
-                        >
-                          Retirer
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="drawer-grid">
-                      <div className="field-block">
-                        <Label htmlFor={`taxonomy-status-${scheme.id}-${item.valueCode}`}>Statut</Label>
-                        <Select
-                          id={`taxonomy-status-${scheme.id}-${item.valueCode}`}
-                          value={item.status}
-                          disabled={disabled}
-                          onChange={(event) => handleItemPatch(scheme.id, item.valueCode, { status: event.target.value })}
-                        >
-                          <option value="">Non precise</option>
-                          <option value="requested">En demande</option>
-                          <option value="granted">Obtenu</option>
-                          <option value="suspended">Suspendu</option>
-                          <option value="expired">Expire</option>
-                        </Select>
-                      </div>
-
-                      <div className="field-block">
-                        <Label htmlFor={`taxonomy-awarded-${scheme.id}-${item.valueCode}`}>Attribue le</Label>
-                        <input
-                          id={`taxonomy-awarded-${scheme.id}-${item.valueCode}`}
-                          className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-                          type="date"
-                          value={item.awardedAt}
-                          disabled={disabled}
-                          onChange={(event) => handleItemPatch(scheme.id, item.valueCode, { awardedAt: event.target.value })}
-                        />
-                      </div>
-
-                      <div className="field-block">
-                        <Label htmlFor={`taxonomy-valid-${scheme.id}-${item.valueCode}`}>Valide jusqu au</Label>
-                        <input
-                          id={`taxonomy-valid-${scheme.id}-${item.valueCode}`}
-                          className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-                          type="date"
-                          value={item.validUntil}
-                          disabled={disabled}
-                          onChange={(event) => handleItemPatch(scheme.id, item.valueCode, { validUntil: event.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </article>
-                )) : (
-                  <article className="panel-card panel-card--nested">
-                    <span className="facet-title">{scheme.label}</span>
-                    <p>Aucun classement n est encore renseigne pour cette rubrique.</p>
-                  </article>
-                )}
-              </div>
+              {tree.length > 0 ? (
+                <TaxonomyTree
+                  domain={domain}
+                  nodes={tree}
+                  selectedNodeId={selectedNodeId}
+                  activeNodeCodes={activeNodeCodes}
+                  disabled={disabled}
+                  expandedState={expandedByDomain[domain.domain] ?? {}}
+                  onToggleExpanded={(nodeCode) => toggleExpanded(domain.domain, nodeCode)}
+                  onSelectNode={(node) => handleSelect(domain, node)}
+                />
+              ) : (
+                <article className="panel-card panel-card--nested">
+                  <span className="facet-title">{domain.label}</span>
+                  <p>La taxonomie de ce domaine n est pas encore chargee dans le workspace.</p>
+                </article>
+              )}
             </article>
           );
         }) : (
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Classements et categories</span>
-            <p>Aucun classement ou categorie specifique n est prevu pour ce type de fiche.</p>
+            <span className="facet-title">Taxonomie</span>
+            <p>Aucune taxonomie specifique n est actuellement configuree pour ce type de fiche.</p>
           </article>
         )}
     </section>
@@ -346,16 +338,16 @@ export function ObjectWorkspaceTaxonomyPanel({
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Classements</span>
-            <h2>Classements et categories</h2>
-            <p>Renseignez ici les classements, categories ou sous-types utiles a cette fiche.</p>
+            <span className="eyebrow">Taxonomie</span>
+            <h2>Sous-categories hierarchiques</h2>
+            <p>Rattachez la fiche au noeud le plus precis de l arbre metier. Les classifications officielles restent dans le module distinctions.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
               {saving ? 'Enregistrement...' : saveAction.label}
             </Button>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
+            {saveAction.hint ? <small className="text-muted-foreground">{saveAction.hint}</small> : null}
+            {statusMessage ? <small className="text-muted-foreground">{statusMessage}</small> : null}
           </div>
         </div>
       </article>

@@ -34,6 +34,11 @@ function serializeCapacityFilters(filters: Array<{ code: string; min?: number; m
   return encoded || null;
 }
 
+function normalizeHotTaxonomyDomain(domain: string): string {
+  const normalized = domain.trim().toLowerCase();
+  return normalized === 'type_hot' ? 'taxonomy_hot' : domain;
+}
+
 export function parseSearchParams(searchParams: URLSearchParams): Partial<ExplorerFilters> {
   const bucketsParam = searchParams.get('buckets');
   const selectedBuckets =
@@ -43,12 +48,12 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
 
   const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
-  const hotClassifications = searchParams.get('hotClassifications')?.split(',').filter(Boolean).flatMap((value) => {
-    const [schemeCode = '', valueCode = ''] = value.split(':');
-    if (!schemeCode || !valueCode) {
+  const hotTaxonomy = (searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))?.split(',').filter(Boolean).flatMap((value) => {
+    const [domain = '', code = ''] = value.split(':');
+    if (!domain || !code) {
       return [];
     }
-    return [{ schemeCode, valueCode }];
+    return [{ domain: normalizeHotTaxonomyDomain(domain), code }];
   }) ?? undefined;
 
   const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
@@ -101,12 +106,12 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
         ...commonPatch,
       },
     }),
-    ...(hotSubtypes !== undefined || hotClassifications !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
+    ...(hotSubtypes !== undefined || hotTaxonomy !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
       ? {
           hot: {
             ...DEFAULT_EXPLORER_FILTERS.hot,
             ...(hotSubtypes !== undefined && { subtypes: hotSubtypes as ExplorerFilters['hot']['subtypes'] }),
-            ...(hotClassifications !== undefined && { classifications: hotClassifications }),
+            ...(hotTaxonomy !== undefined && { taxonomy: hotTaxonomy }),
             ...(parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined && {
               capacityFilters: parseCapacityFilters(searchParams.get('hotCapacity')),
             }),
@@ -165,8 +170,8 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   if (filters.hot.subtypes.length > 0) {
     p.set('hotSubtypes', filters.hot.subtypes.join(','));
   }
-  if (filters.hot.classifications.length > 0) {
-    p.set('hotClassifications', filters.hot.classifications.map((item) => `${item.schemeCode}:${item.valueCode}`).join(','));
+  if (filters.hot.taxonomy.length > 0) {
+    p.set('hotTaxonomy', filters.hot.taxonomy.map((item) => `${item.domain}:${item.code}`).join(','));
   }
   const hotCapacity = serializeCapacityFilters(filters.hot.capacityFilters);
   if (hotCapacity) {

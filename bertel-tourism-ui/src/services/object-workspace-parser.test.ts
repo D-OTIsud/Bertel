@@ -18,17 +18,40 @@ describe('parseObjectWorkspace', () => {
         status: 'draft',
         published_at: '2026-03-27T08:00:00Z',
         is_editing: true,
-        classifications: [
-          {
-            scheme: 'OFFICIAL_CLASSIFICATION',
-            scheme_name: 'Classement officiel',
-            value: '3_ETOILES',
-            value_name: '3 etoiles',
-            status: 'granted',
-            awarded_at: '2026-01-10',
-            valid_until: '2031-01-09',
-          },
-        ],
+        taxonomy: {
+          domains: [
+            {
+              domain: 'taxonomy_hot',
+              domain_name: 'Taxonomie HOT',
+              object_type: 'HOT',
+              assigned_node: {
+                id: 'node-hotel-familial',
+                code: 'family_hotel',
+                name: 'Hôtel familial',
+                description: 'Hotels adaptes aux familles',
+                depth: 1,
+              },
+              path: [
+                {
+                  id: 'node-hotel',
+                  code: 'hotel',
+                  name: 'Hotel',
+                  description: 'Hotellerie',
+                  depth: 0,
+                },
+                {
+                  id: 'node-hotel-familial',
+                  code: 'family_hotel',
+                  name: 'Hôtel familial',
+                  description: 'Hotels adaptes aux familles',
+                  depth: 1,
+                },
+              ],
+              updated_at: '2026-01-10T00:00:00Z',
+              source: 'migration_taxonomy',
+            },
+          ],
+        },
         object_location: {
           id: 'location-1',
           address1: '12 promenade du lagon',
@@ -407,19 +430,22 @@ describe('parseObjectWorkspace', () => {
       publishedAt: '2026-03-27T08:00:00Z',
       isEditing: true,
     });
-    expect(parsed.taxonomy.schemes).toHaveLength(1);
-    expect(parsed.taxonomy.schemes[0]).toMatchObject({
-      code: 'OFFICIAL_CLASSIFICATION',
-      label: 'Classement officiel',
-      selectionMode: 'single',
+    expect(parsed.taxonomy.domains).toHaveLength(1);
+    expect(parsed.taxonomy.domains[0]).toMatchObject({
+      domain: 'taxonomy_hot',
+      label: 'Taxonomie HOT',
+      objectType: 'HOT',
     });
-    expect(parsed.taxonomy.schemes[0].items[0]).toMatchObject({
-      valueCode: '3_ETOILES',
-      valueLabel: '3 etoiles',
-      status: 'granted',
-      awardedAt: '2026-01-10',
-      validUntil: '2031-01-09',
+    expect(parsed.taxonomy.domains[0].assignment).toMatchObject({
+      code: 'family_hotel',
+      label: 'Hôtel familial',
+      source: 'migration_taxonomy',
     });
+    expect(parsed.taxonomy.domains[0].assignment?.path).toEqual([
+      expect.objectContaining({ code: 'hotel', label: 'Hotel', depth: 0 }),
+      expect.objectContaining({ code: 'family_hotel', label: 'Hôtel familial', depth: 1 }),
+    ]);
+    expect(parsed.taxonomy.domains[0].nodes).toEqual([]);
 
     expect(parsed.location.main).toMatchObject({
       address1: '12 promenade du lagon',

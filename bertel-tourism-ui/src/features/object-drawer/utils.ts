@@ -691,6 +691,32 @@ function buildClassificationItems(value: unknown): TaxonomyItem[] {
     .filter((item): item is TaxonomyItem => item !== null);
 }
 
+function buildObjectTaxonomyItems(value: unknown): TaxonomyItem[] {
+  const taxonomyRecord = readRecord(value);
+  const domains = readArray(taxonomyRecord.domains);
+
+  return domains
+    .map((item, index) => {
+      const path = readArray(readRecord(item).path)
+        .map((entry) => readNamedValue(entry))
+        .filter(Boolean);
+      const assignedNode = readRecord(readRecord(item).assigned_node);
+      const label = path.join(' > ') || readNamedValue(assignedNode);
+      const domainName = readString(readRecord(item).domain_name, readString(readRecord(item).domain, 'Taxonomie'));
+
+      if (!label) {
+        return null;
+      }
+
+      return {
+        id: makeItemId('taxonomy', readRecord(item), index, label),
+        label,
+        meta: [domainName, readString(readRecord(item).source)].filter(Boolean).join(' · '),
+      };
+    })
+    .filter((item): item is TaxonomyItem => item !== null);
+}
+
 function buildSustainabilityItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
     .map((item, index) => {
@@ -1019,6 +1045,7 @@ export function parseTaxonomyGroups(raw: Record<string, unknown>): TaxonomyGroup
     (item) => item.label.toLowerCase(),
   );
   const groups = [
+    createTaxonomyGroup('taxonomy', 'Taxonomie', buildObjectTaxonomyItems(raw.taxonomy)),
     createTaxonomyGroup('labels', 'Labels', buildBasicTaxonomyItems(raw.labels, 'label')),
     createTaxonomyGroup('badges', 'Badges', buildBasicTaxonomyItems(raw.badges, 'badge')),
     createTaxonomyGroup('tags', 'Tags', buildBasicTaxonomyItems(raw.tags, 'tag')),

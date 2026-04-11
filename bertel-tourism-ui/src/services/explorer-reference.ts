@@ -1,7 +1,13 @@
 import { getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import type { ExplorerClassificationGroup, ExplorerReferenceOption, ExplorerReferences, ExplorerBucketKey } from '../types/domain';
-import { EXPLORER_BUCKET_TYPE_MAP, HOT_CLASSIFICATION_SCHEME_CODES } from '../utils/facets';
+import type {
+  ExplorerReferenceOption,
+  ExplorerReferences,
+  ExplorerBucketKey,
+  ExplorerTaxonomyDomain,
+  ExplorerTaxonomyNode,
+} from '../types/domain';
+import { EXPLORER_BUCKET_TYPE_MAP } from '../utils/facets';
 
 type CapacityMetricRow = {
   id: string;
@@ -15,19 +21,21 @@ type CapacityApplicabilityRow = {
   object_type: string;
 };
 
-type ClassificationSchemeRow = {
-  id: string;
-  code: string;
+type TaxonomyDomainRow = {
+  domain: string;
   name: string;
+  object_type: string;
   position: number | null;
 };
 
-type ClassificationValueRow = {
-  scheme_id: string;
+type TaxonomyNodeRow = {
+  id: string;
+  domain: string;
   code: string;
   name: string;
+  parent_id: string | null;
+  is_assignable: boolean | null;
   position: number | null;
-  ordinal: number | null;
 };
 
 type PracticeRow = {
@@ -67,6 +75,59 @@ function bucketCapacityOptions(
   );
 }
 
+function computeTaxonomyDepth(nodeId: string, parentIdByNodeId: Map<string, string | null>, cache: Map<string, number>): number {
+  const cached = cache.get(nodeId);
+  if (cached != null) {
+    return cached;
+  }
+
+  const parentId = parentIdByNodeId.get(nodeId) ?? null;
+  const depth = parentId ? computeTaxonomyDepth(parentId, parentIdByNodeId, cache) + 1 : 0;
+  cache.set(nodeId, depth);
+  return depth;
+}
+
+function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: TaxonomyNodeRow[]): ExplorerTaxonomyDomain[] {
+  const nodesByDomain = new Map<string, TaxonomyNodeRow[]>();
+  for (const node of nodeRows) {
+    const current = nodesByDomain.get(node.domain) ?? [];
+    current.push(node);
+    nodesByDomain.set(node.domain, current);
+  }
+
+  return sortByPositionAndName(domainRows.map((row) => ({ ...row, name: row.name }))).map((domainRow) => {
+    const domainNodes = nodesByDomain.get(domainRow.domain) ?? [];
+    const nodeById = new Map(domainNodes.map((node) => [node.id, node]));
+    const parentIdByNodeId = new Map(domainNodes.map((node) => [node.id, node.parent_id]));
+    const depthCache = new Map<string, number>();
+
+    const nodes: ExplorerTaxonomyNode[] = domainNodes
+      .filter((node) => node.code !== 'root')
+      .map((node) => ({
+        code: node.code,
+        name: node.name,
+        parentCode: node.parent_id ? (nodeById.get(node.parent_id)?.code ?? null) : null,
+        depth: Math.max(0, computeTaxonomyDepth(node.id, parentIdByNodeId, depthCache) - 1),
+        isAssignable: node.is_assignable !== false,
+        position: node.position,
+      }))
+      .sort((left, right) => {
+        const positionCompare = (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER);
+        if (positionCompare !== 0) {
+          return positionCompare;
+        }
+        return left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' });
+      });
+
+    return {
+      domain: domainRow.domain,
+      name: domainRow.name,
+      objectType: domainRow.object_type,
+      nodes,
+    };
+  });
+}
+
 // Representative Réunion municipalities for demo mode city dropdown.
 // Live mode derives from api.get_dashboard_filter_options() (object_location corpus).
 const DEMO_CITIES = ['Le Tampon', 'Saint-Benoît', 'Saint-Denis', 'Saint-Paul', 'Saint-Pierre', 'Sainte-Marie'];
@@ -75,23 +136,16 @@ function buildDemoReferences(): ExplorerReferences {
   return {
     cities: DEMO_CITIES,
     lieuDits: [],
-    hotClassifications: [
+    hotTaxonomy: [
       {
-        schemeCode: 'type_hot',
-        schemeName: 'Type d hotel',
-        values: [
-          { code: 'hotel_boutique', name: 'Hotel boutique' },
-          { code: 'hotel_familial', name: 'Hotel familial' },
-          { code: 'hotel_affaires', name: 'Hotel affaires' },
-        ],
-      },
-      {
-        schemeCode: 'hot_stars',
-        schemeName: 'Classement hotelier',
-        values: [
-          { code: '3', name: '3 etoiles' },
-          { code: '4', name: '4 etoiles' },
-          { code: '5', name: '5 etoiles' },
+        domain: 'taxonomy_hot',
+        name: 'Taxonomie HOT',
+        objectType: 'HOT',
+        nodes: [
+          { code: 'hotel', name: 'Hôtel', parentCode: null, depth: 0, isAssignable: true, position: 1 },
+          { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2 },
+          { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3 },
+          { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4 },
         ],
       },
     ],
@@ -124,18 +178,19 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const [
     metricsResult,
     applicabilityResult,
-    schemesResult,
+    taxonomyDomainsResult,
     practicesResult,
     locationOptionsResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
-    client.from('ref_classification_scheme').select('id,code,name,position').in('code', [...HOT_CLASSIFICATION_SCHEME_CODES]).order('position', { ascending: true }),
-    // PostgREST does not expose child partition tables in its schema cache.
-    // Query the parent ref_code table with a domain filter instead.
+    client
+      .from('ref_code_domain_registry')
+      .select('domain,name,object_type,position')
+      .eq('is_taxonomy', true)
+      .in('domain', ['taxonomy_hot'])
+      .order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
-    // City and lieu-dit options — same SQL function as dashboard, reused here to
-    // avoid a separate fetch. Both datasets are always needed at Explorer mount.
     client.schema('api').rpc('get_dashboard_filter_options'),
   ]);
 
@@ -145,8 +200,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (applicabilityResult.error) {
     throw applicabilityResult.error;
   }
-  if (schemesResult.error) {
-    throw schemesResult.error;
+  if (taxonomyDomainsResult.error) {
+    throw taxonomyDomainsResult.error;
   }
   if (practicesResult.error) {
     throw practicesResult.error;
@@ -155,47 +210,33 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     throw locationOptionsResult.error;
   }
 
-  const schemes = (schemesResult.data ?? []) as ClassificationSchemeRow[];
-  const schemeIds = schemes.map((scheme) => scheme.id);
-  const valuesResult = await client
-    .from('ref_classification_value')
-    .select('scheme_id,code,name,position,ordinal')
-    .in('scheme_id', schemeIds)
-    .order('position', { ascending: true });
+  const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
+  const domainCodes = taxonomyDomains.map((domain) => domain.domain);
+  const taxonomyNodesResult = domainCodes.length > 0
+    ? await client
+        .from('ref_code')
+        .select('id,domain,code,name,parent_id,is_assignable,position')
+        .in('domain', domainCodes)
+        .eq('is_active', true)
+        .order('position', { ascending: true })
+    : { data: [], error: null };
 
-  if (valuesResult.error) {
-    throw valuesResult.error;
+  if (taxonomyNodesResult.error) {
+    throw taxonomyNodesResult.error;
   }
 
   const metrics = (metricsResult.data ?? []) as CapacityMetricRow[];
   const applicability = (applicabilityResult.data ?? []) as CapacityApplicabilityRow[];
-  const values = (valuesResult.data ?? []) as ClassificationValueRow[];
+  const taxonomyNodes = (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
-
-  const hotClassifications: ExplorerClassificationGroup[] = sortByPositionAndName(schemes).map((scheme) => ({
-    schemeCode: scheme.code,
-    schemeName: scheme.name,
-    values: toReferenceOptions(
-      values
-        .filter((value) => value.scheme_id === scheme.id)
-        .sort((left, right) => {
-          const ordinalCompare = (left.ordinal ?? Number.MAX_SAFE_INTEGER) - (right.ordinal ?? Number.MAX_SAFE_INTEGER);
-          if (ordinalCompare !== 0) {
-            return ordinalCompare;
-          }
-          return (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER);
-        }),
-    ),
-  }));
-
   const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
 
   return {
-    hotClassifications,
+    hotTaxonomy: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
-    cities:   locationOptions?.cities    ?? [],
+    cities: locationOptions?.cities ?? [],
     lieuDits: locationOptions?.lieu_dits ?? [],
   };
 }

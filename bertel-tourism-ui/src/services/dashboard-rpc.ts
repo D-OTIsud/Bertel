@@ -43,10 +43,10 @@ function buildRpcParams(filters: DashboardFilters): RpcParams {
   if (filters.labelsAny && filters.labelsAny.length > 0) {
     p_filters.tags_any = filters.labelsAny;
   }
-  if (filters.classificationsAny && filters.classificationsAny.length > 0) {
-    p_filters.classifications_any = filters.classificationsAny.map((c) => ({
-      scheme_code: c.schemeCode,
-      value_code: c.valueCode,
+  if (filters.taxonomyAny && filters.taxonomyAny.length > 0) {
+    p_filters.taxonomy_any = filters.taxonomyAny.map((c) => ({
+      domain: c.domain,
+      code: c.code,
     }));
   }
   if (filters.petsAccepted) {

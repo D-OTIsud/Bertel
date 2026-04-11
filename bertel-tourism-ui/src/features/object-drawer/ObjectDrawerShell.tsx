@@ -97,8 +97,13 @@ function serialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function stripCommercialVisibility(value: ObjectWorkspaceGeneralInfo) {
-  const { commercialVisibility, ...rest } = value;
+function stripGeneralInfoManagedOutsideObject(value: ObjectWorkspaceGeneralInfo) {
+  const {
+    commercialVisibility,
+    businessTimezone,
+    regionCode,
+    ...rest
+  } = value;
   return rest;
 }
 
@@ -107,8 +112,8 @@ function isModuleDirty(snapshot: EditorSnapshot, key: keyof ObjectWorkspaceModul
 }
 
 function isGeneralInfoContentDirty(snapshot: EditorSnapshot): boolean {
-  return serialize(stripCommercialVisibility(snapshot.draft.generalInfo))
-    !== serialize(stripCommercialVisibility(snapshot.baseline.generalInfo));
+  return serialize(stripGeneralInfoManagedOutsideObject(snapshot.draft.generalInfo))
+    !== serialize(stripGeneralInfoManagedOutsideObject(snapshot.baseline.generalInfo));
 }
 
 function isPublicationSettingsDirty(snapshot: EditorSnapshot): boolean {

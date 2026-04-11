@@ -16,8 +16,8 @@ export interface DashboardFilters {
   lieuDits?: string[];
   /** Maps to p_filters.tags_any */
   labelsAny?: string[];
-  /** Maps to p_filters.classifications_any */
-  classificationsAny?: { schemeCode: string; valueCode: string }[];
+  /** Maps to p_filters.taxonomy_any */
+  taxonomyAny?: { domain: string; code: string }[];
   /** Maps to p_filters.pet_accepted */
   petsAccepted?: boolean;
   /** Maps to p_filters.amenities_any: ['wheelchair_access'] */

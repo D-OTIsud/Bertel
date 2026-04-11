@@ -26,7 +26,7 @@ interface ExplorerState extends ExplorerFilters {
   clearSelectedCard: () => void;
 
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
-  toggleHotClassification: (schemeCode: string, valueCode: string) => void;
+  toggleHotTaxonomy: (domain: string, code: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
   setResCapacityFilter: (code: string, min?: number, max?: number) => void;
   setHotMeetingRoom: (patch: Partial<MeetingRoomFilter>) => void;
@@ -64,7 +64,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
     hot: {
       ...currentBase.hot,
       ...partial.hot,
-      classifications: partial.hot?.classifications ?? currentBase.hot.classifications,
+      taxonomy: partial.hot?.taxonomy ?? currentBase.hot.taxonomy,
       capacityFilters: partial.hot?.capacityFilters ?? currentBase.hot.capacityFilters,
       meetingRoom: {
         ...currentBase.hot.meetingRoom,
@@ -165,15 +165,15 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         },
       };
     }),
-  toggleHotClassification: (schemeCode, valueCode) =>
+  toggleHotTaxonomy: (domain, code) =>
     set((state) => {
-      const exists = state.hot.classifications.some((item) => item.schemeCode === schemeCode && item.valueCode === valueCode);
+      const exists = state.hot.taxonomy.some((item) => item.domain === domain && item.code === code);
       return {
         hot: {
           ...state.hot,
-          classifications: exists
-            ? state.hot.classifications.filter((item) => !(item.schemeCode === schemeCode && item.valueCode === valueCode))
-            : [...state.hot.classifications, { schemeCode, valueCode }],
+          taxonomy: exists
+            ? state.hot.taxonomy.filter((item) => !(item.domain === domain && item.code === code))
+            : [...state.hot.taxonomy, { domain, code }],
         },
       };
     }),

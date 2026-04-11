@@ -82,19 +82,37 @@ function buildWorkspaceResource(params: {
         isEditing: false,
       },
       taxonomy: {
-        schemes: [
+        domains: [
           {
-            id: 'scheme-1',
-            code: 'OFFICIAL_CLASSIFICATION',
-            label: 'Classement officiel',
+            domain: 'taxonomy_hot',
+            label: 'Taxonomie HOT',
             description: '',
-            selectionMode: 'single',
-            displayGroup: '',
-            valueOptions: [
-              { id: 'value-1', code: '3_ETOILES', label: '3 etoiles' },
-              { id: 'value-2', code: '4_ETOILES', label: '4 etoiles' },
+            objectType: 'HOT',
+            nodes: [
+              {
+                id: 'node-hotel',
+                code: 'hotel',
+                label: 'Hotel',
+                description: '',
+                parentId: null,
+                parentCode: null,
+                depth: 0,
+                isAssignable: true,
+                position: 1,
+              },
+              {
+                id: 'node-hotel-familial',
+                code: 'family_hotel',
+                label: 'Hôtel familial',
+                description: '',
+                parentId: 'node-hotel',
+                parentCode: 'hotel',
+                depth: 1,
+                isAssignable: true,
+                position: 2,
+              },
             ],
-            items: [],
+            assignment: null,
           },
         ],
         unavailableReason: null,
@@ -986,7 +1004,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(screen.getByRole('heading', { name: /liens de synchronisation/i })).toBeInTheDocument();
   });
 
-  it('merges classifications into the general information tab', () => {
+  it('merges taxonomy into the general information tab', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({
         id: 'obj-1',
@@ -1004,13 +1022,17 @@ describe('ObjectDrawer workspace drafts', () => {
 
     expect(screen.queryByRole('button', { name: /classifications/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /informations generales/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /informations generales et classements/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /classements et categories/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /informations generales et taxonomie/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /classements et categories/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/bon a savoir/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/fuseau horaire/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/code region/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/visibilite commerciale/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/classement/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/taxonomie hot/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /^choisir$/i }).length).toBeGreaterThan(0);
   });
 
-  it('adapts visible classifications to the object type', () => {
+  it('adapts visible taxonomy domains to the object type', () => {
     mockUseObjectWorkspaceQuery.mockReturnValue({
       data: buildWorkspaceResource({
         id: 'obj-2',
@@ -1027,9 +1049,9 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    expect(screen.getByRole('heading', { name: /informations generales et classements/i })).toBeInTheDocument();
-    expect(screen.getByText(/aucun classement ou categorie specifique n est prevu pour ce type de fiche/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/classement/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /informations generales et taxonomie/i })).toBeInTheDocument();
+    expect(screen.getByText(/aucune taxonomie specifique n est actuellement configuree pour ce type de fiche/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^choisir$/i })).not.toBeInTheDocument();
   });
 
   it('renders the media module as a dedicated workspace tab', () => {

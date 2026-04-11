@@ -94,7 +94,7 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
   const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
-  const toggleHotClassification = useExplorerStore((state) => state.toggleHotClassification);
+  const toggleHotTaxonomy = useExplorerStore((state) => state.toggleHotTaxonomy);
   const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
   const setResCapacityFilter = useExplorerStore((state) => state.setResCapacityFilter);
   const setHotMeetingRoom = useExplorerStore((state) => state.setHotMeetingRoom);
@@ -214,19 +214,20 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
               </div>
             </FiltersSubsection>
 
-            {references?.hotClassifications.map((group) => (
-              <FiltersSubsection key={group.schemeCode} title={group.schemeName}>
+            {references?.hotTaxonomy.map((domain) => (
+              <FiltersSubsection key={domain.domain} title={domain.name}>
                 <div className="chip-grid">
-                  {group.values.map((value) => {
-                    const active = hot.classifications.some((item) => item.schemeCode === group.schemeCode && item.valueCode === value.code);
+                  {domain.nodes.map((node) => {
+                    const active = hot.taxonomy.some((item) => item.domain === domain.domain && item.code === node.code);
                     return (
                       <button
-                        key={`${group.schemeCode}:${value.code}`}
+                        key={`${domain.domain}:${node.code}`}
                         type="button"
                         className={active ? 'chip chip--active' : 'chip'}
-                        onClick={() => toggleHotClassification(group.schemeCode, value.code)}
+                        onClick={() => toggleHotTaxonomy(domain.domain, node.code)}
+                        style={{ marginLeft: `${Math.max(0, node.depth) * 0.5}rem` }}
                       >
-                        {value.name}
+                        {node.name}
                       </button>
                     );
                   })}

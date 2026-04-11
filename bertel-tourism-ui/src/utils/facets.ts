@@ -1,7 +1,6 @@
 import type {
   BackendObjectTypeCode,
   CapacityFilter,
-  ClassificationRef,
   ExplorerBucketKey,
   ExplorerCommonFilters,
   ExplorerFilters,
@@ -32,7 +31,6 @@ export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTy
 
 export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];
 export const DEFAULT_HOT_SUBTYPES: BackendObjectTypeCode[] = [...HOT_BUCKET_TYPES];
-export const HOT_CLASSIFICATION_SCHEME_CODES = ['type_hot', 'hot_stars', 'camp_stars', 'meuble_stars'] as const;
 
 export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTypeCode[]> = {
   HOT: [...EXPLORER_TYPE_CODE_FAMILIES.HOT],
@@ -61,7 +59,7 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
   common: DEFAULT_COMMON_FILTERS,
   hot: {
     subtypes: [...DEFAULT_HOT_SUBTYPES],
-    classifications: [],
+    taxonomy: [],
     capacityFilters: [],
     meetingRoom: {},
   },
@@ -141,14 +139,14 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   }
 
   if (bucket === 'HOT') {
-    const classifications = filters.hot.classifications.map((item: ClassificationRef) => ({
-      scheme_code: item.schemeCode,
-      value_code: item.valueCode,
+    const taxonomy = filters.hot.taxonomy.map((item) => ({
+      domain: item.domain,
+      code: item.code,
     }));
     const capacityFilters = normalizeCapacityFilters(filters.hot.capacityFilters);
 
-    if (classifications.length > 0) {
-      payload.classifications_any = classifications;
+    if (taxonomy.length > 0) {
+      payload.taxonomy_any = taxonomy;
     }
 
     if (capacityFilters.length > 0) {

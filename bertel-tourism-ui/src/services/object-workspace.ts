@@ -42,8 +42,11 @@ import {
   type ObjectWorkspacePricePeriod,
   type ObjectWorkspacePromotionSummary,
   type ObjectWorkspaceDiscountItem,
-  type ObjectWorkspaceTaxonomyItem,
+  type ObjectWorkspaceTaxonomyAssignment,
+  type ObjectWorkspaceTaxonomyDomain,
   type ObjectWorkspaceTaxonomyModule,
+  type ObjectWorkspaceTaxonomyNodeOption,
+  type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
 } from './object-workspace-parser';
 
@@ -620,12 +623,6 @@ interface ClassificationValueRef {
   disabilityType: string | null;
 }
 
-const NON_STRUCTURING_CLASSIFICATION_GROUPS = new Set(['sustainability_labels', 'accessibility_labels']);
-
-function isStructuringClassificationScheme(row: Record<string, unknown>): boolean {
-  return row.is_distinction !== true && !NON_STRUCTURING_CLASSIFICATION_GROUPS.has(readString(row.display_group));
-}
-
 function normalizeClassificationSchemeRef(row: Record<string, unknown>): ClassificationSchemeRef {
   const selection = readString(row.selection, 'single');
   return {
@@ -710,31 +707,196 @@ function isAccessibilityAmenity(amenity: AmenityRef): boolean {
   return amenity.familyCode === 'accessibility' || amenity.code.startsWith('acc_') || amenity.disabilityTypes.length > 0;
 }
 
-function normalizeWorkspaceTaxonomyItem(params: {
-  row: Record<string, unknown>;
-  schemeById: Map<string, ClassificationSchemeRef>;
-  valueById: Map<string, ClassificationValueRef>;
-}): ObjectWorkspaceTaxonomyItem | null {
-  const schemeId = readString(params.row.scheme_id);
-  const valueId = readString(params.row.value_id);
-  const schemeRef = params.schemeById.get(schemeId);
-  const valueRef = params.valueById.get(valueId);
+interface TaxonomyDomainRef {
+  domain: string;
+  label: string;
+  description: string;
+  objectType: string;
+  position: number;
+}
 
-  if (!schemeRef || !valueRef) {
+interface TaxonomyNodeRef {
+  id: string;
+  domain: string;
+  code: string;
+  label: string;
+  description: string;
+  parentId: string | null;
+  isAssignable: boolean;
+  position: number;
+}
+
+function normalizeTaxonomyDomainRef(row: Record<string, unknown>): TaxonomyDomainRef {
+  return {
+    domain: readString(row.domain),
+    label: readString(row.name, readString(row.domain)),
+    description: readString(row.description),
+    objectType: readString(row.object_type),
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef {
+  return {
+    id: readString(row.id),
+    domain: readString(row.domain),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    description: readString(row.description),
+    parentId: readString(row.parent_id) || null,
+    isAssignable: row.is_assignable == null ? true : readBoolean(row.is_assignable),
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function computeTaxonomyDepth(
+  nodeId: string,
+  nodeById: Map<string, TaxonomyNodeRef>,
+  cache: Map<string, number>,
+): number {
+  const cached = cache.get(nodeId);
+  if (cached != null) {
+    return cached;
+  }
+
+  const current = nodeById.get(nodeId);
+  if (!current || !current.parentId) {
+    cache.set(nodeId, 0);
+    return 0;
+  }
+
+  const depth = computeTaxonomyDepth(current.parentId, nodeById, cache) + 1;
+  cache.set(nodeId, depth);
+  return depth;
+}
+
+function buildTaxonomyPath(
+  nodeId: string,
+  nodeById: Map<string, TaxonomyNodeRef>,
+): ObjectWorkspaceTaxonomyPathNode[] {
+  const path: ObjectWorkspaceTaxonomyPathNode[] = [];
+  let cursor = nodeById.get(nodeId) ?? null;
+
+  while (cursor) {
+    if (cursor.code !== 'root') {
+      path.push({
+        id: cursor.id,
+        code: cursor.code,
+        label: cursor.label,
+        description: cursor.description,
+        depth: 0,
+      });
+    }
+    cursor = cursor.parentId ? (nodeById.get(cursor.parentId) ?? null) : null;
+  }
+
+  return path.reverse().map((node, index) => ({
+    ...node,
+    depth: index,
+  }));
+}
+
+function buildTaxonomyNodeOptions(domainNodes: TaxonomyNodeRef[]): ObjectWorkspaceTaxonomyNodeOption[] {
+  const nodeById = new Map(domainNodes.map((node) => [node.id, node]));
+  const depthCache = new Map<string, number>();
+
+  return domainNodes
+    .filter((node) => node.code !== 'root')
+    .map((node) => {
+      const parent = node.parentId ? (nodeById.get(node.parentId) ?? null) : null;
+      return {
+        id: node.id,
+        code: node.code,
+        label: node.label,
+        description: node.description,
+        parentId: parent?.code === 'root' ? null : node.parentId,
+        parentCode: parent && parent.code !== 'root' ? parent.code : null,
+        depth: Math.max(0, computeTaxonomyDepth(node.id, nodeById, depthCache) - 1),
+        isAssignable: node.isAssignable,
+        position: node.position,
+      };
+    })
+    .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+}
+
+function normalizeWorkspaceTaxonomyAssignment(params: {
+  row: Record<string, unknown>;
+  nodeById: Map<string, TaxonomyNodeRef>;
+}): ObjectWorkspaceTaxonomyAssignment | null {
+  const nodeId = readString(params.row.ref_code_id);
+  const node = params.nodeById.get(nodeId);
+
+  if (!node) {
     return null;
   }
 
+  const path = buildTaxonomyPath(nodeId, params.nodeById);
+
   return {
     recordId: readString(params.row.id) || null,
-    schemeId,
-    schemeCode: schemeRef.code,
-    schemeLabel: schemeRef.label,
-    valueId,
-    valueCode: valueRef.code,
-    valueLabel: valueRef.label,
-    status: readString(params.row.status),
-    awardedAt: readString(params.row.awarded_at),
-    validUntil: readString(params.row.valid_until),
+    nodeId,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    depth: Math.max(0, path.length - 1),
+    path,
+    updatedAt: readString(params.row.updated_at),
+    source: readString(params.row.source),
+  };
+}
+
+function reconcileTaxonomyAssignment(params: {
+  domain: ObjectWorkspaceTaxonomyDomain;
+  row?: Record<string, unknown>;
+}): ObjectWorkspaceTaxonomyDomain {
+  const liveNodeRefs = params.domain.nodes.map((node) => ({
+    id: node.id,
+    domain: params.domain.domain,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    parentId: node.parentId,
+    isAssignable: node.isAssignable,
+    position: node.position,
+  }));
+  const nodeById = new Map(liveNodeRefs.map((node) => [node.id, node]));
+  const nodeByCode = new Map(liveNodeRefs.map((node) => [node.code.toLowerCase(), node]));
+  const liveAssignment = params.row
+    ? normalizeWorkspaceTaxonomyAssignment({
+        row: params.row,
+        nodeById,
+      })
+    : null;
+
+  if (liveAssignment) {
+    return {
+      ...params.domain,
+      assignment: liveAssignment,
+    };
+  }
+
+  const fallback = params.domain.assignment;
+  if (!fallback) {
+    return params.domain;
+  }
+
+  const liveNode = nodeById.get(fallback.nodeId) ?? nodeByCode.get(fallback.code.toLowerCase()) ?? null;
+  if (!liveNode) {
+    return params.domain;
+  }
+
+  const path = buildTaxonomyPath(liveNode.id, nodeById);
+  return {
+    ...params.domain,
+    assignment: {
+      ...fallback,
+      nodeId: liveNode.id,
+      code: liveNode.code,
+      label: liveNode.label,
+      description: liveNode.description,
+      depth: Math.max(0, path.length - 1),
+      path,
+    },
   };
 }
 
@@ -755,85 +917,94 @@ async function getObjectWorkspaceTaxonomyModule(
     };
   }
 
-  const [schemeRefsResult, valueRefsResult, objectClassificationsResult] = await Promise.all([
-    client
-      .from('ref_classification_scheme')
-      .select('id, code, name, description, selection, position, display_group, is_distinction')
-      .eq('is_distinction', false)
-      .order('position', { ascending: true }),
-    client
-      .from('ref_classification_value')
-      .select('id, scheme_id, code, name, ordinal, metadata')
-      .order('ordinal', { ascending: true }),
-    client
-      .from('object_classification')
-      .select('id, scheme_id, value_id, status, awarded_at, valid_until')
-      .eq('object_id', objectId)
-      .order('created_at', { ascending: true }),
-  ]);
+  const objectResult = await client
+    .from('object')
+    .select('object_type')
+    .eq('id', objectId)
+    .maybeSingle();
 
-  if (schemeRefsResult.error || valueRefsResult.error || objectClassificationsResult.error) {
+  if (objectResult.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
     };
   }
 
-  const schemes = (schemeRefsResult.data ?? [])
+  const objectType = readString((objectResult.data as Record<string, unknown> | null)?.object_type).trim();
+  const fallbackByDomain = new Map(baseModule.domains.map((domain) => [domain.domain, domain]));
+  const domainRefsResult = await client
+    .from('ref_code_domain_registry')
+    .select('domain, name, description, object_type, position, is_taxonomy, is_active')
+    .eq('is_taxonomy', true)
+    .eq('is_active', true)
+    .order('position', { ascending: true });
+
+  if (domainRefsResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
+    };
+  }
+
+  const domainRefs = (domainRefsResult.data ?? [])
     .map((row) => row as Record<string, unknown>)
-    .filter(isStructuringClassificationScheme)
-    .map(normalizeClassificationSchemeRef)
+    .map(normalizeTaxonomyDomainRef)
+    .filter((domain) => !domain.objectType || domain.objectType === objectType || fallbackByDomain.has(domain.domain))
     .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
-  const allowedSchemeIds = new Set(schemes.map((scheme) => scheme.id));
-  const values = (valueRefsResult.data ?? [])
-    .map((row) => row as Record<string, unknown>)
-    .map(normalizeClassificationValueRef)
-    .filter((value) => allowedSchemeIds.has(value.schemeId))
-    .sort((left, right) => left.ordinal - right.ordinal || left.label.localeCompare(right.label, 'fr'));
 
-  const schemeById = new Map(schemes.map((scheme) => [scheme.id, scheme]));
-  const valueById = new Map(values.map((value) => [value.id, value]));
-  const valuesBySchemeId = new Map<string, WorkspaceReferenceOption[]>();
+  const domainCodes = domainRefs.map((domain) => domain.domain);
+  const [nodeRefsResult, assignmentsResult] = await Promise.all([
+    domainCodes.length > 0
+      ? client
+          .from('ref_code')
+          .select('id, domain, code, name, description, parent_id, is_assignable, position, is_active')
+          .in('domain', domainCodes)
+          .eq('is_active', true)
+          .order('position', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    client
+      .from('object_taxonomy')
+      .select('id, domain, ref_code_id, source, note, updated_at')
+      .eq('object_id', objectId)
+      .order('created_at', { ascending: true }),
+  ]);
 
-  for (const value of values) {
-    const current = valuesBySchemeId.get(value.schemeId) ?? [];
-    current.push({
-      id: value.id,
-      code: value.code,
-      label: value.label,
-    });
-    valuesBySchemeId.set(value.schemeId, current);
+  if (nodeRefsResult.error || assignmentsResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
+    };
   }
 
-  const itemsBySchemeId = new Map<string, ObjectWorkspaceTaxonomyItem[]>();
-  for (const row of (objectClassificationsResult.data ?? []) as Record<string, unknown>[]) {
-    const item = normalizeWorkspaceTaxonomyItem({
-      row,
-      schemeById,
-      valueById,
-    });
-    if (!item) {
-      continue;
-    }
-
-    const current = itemsBySchemeId.get(item.schemeId) ?? [];
-    current.push(item);
-    itemsBySchemeId.set(item.schemeId, current);
+  const nodeRefs = ((nodeRefsResult.data ?? []) as Record<string, unknown>[]).map(normalizeTaxonomyNodeRef);
+  const nodesByDomain = new Map<string, TaxonomyNodeRef[]>();
+  for (const node of nodeRefs) {
+    const current = nodesByDomain.get(node.domain) ?? [];
+    current.push(node);
+    nodesByDomain.set(node.domain, current);
   }
+
+  const assignmentRowsByDomain = new Map(
+    ((assignmentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => [readString(row.domain), row] as const),
+  );
 
   return {
-    schemes: schemes.map((scheme) => ({
-      id: scheme.id,
-      code: scheme.code,
-      label: scheme.label,
-      description: scheme.description,
-      selectionMode: scheme.selectionMode,
-      displayGroup: scheme.displayGroup,
-      valueOptions: valuesBySchemeId.get(scheme.id) ?? [],
-      items: (itemsBySchemeId.get(scheme.id) ?? []).sort((left, right) =>
-        left.valueLabel.localeCompare(right.valueLabel, 'fr'),
-      ),
-    })),
+    domains: [
+      ...domainRefs.map((domainRef) =>
+        reconcileTaxonomyAssignment({
+          row: assignmentRowsByDomain.get(domainRef.domain),
+          domain: {
+            domain: domainRef.domain,
+            label: domainRef.label,
+            description: domainRef.description,
+            objectType: domainRef.objectType,
+            nodes: buildTaxonomyNodeOptions(nodesByDomain.get(domainRef.domain) ?? []),
+            assignment: fallbackByDomain.get(domainRef.domain)?.assignment ?? null,
+          },
+        })),
+      ...baseModule.domains.filter((domain) => !domainCodes.includes(domain.domain)),
+    ].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
     unavailableReason: null,
   };
 }
@@ -2208,8 +2379,6 @@ export async function saveObjectWorkspaceGeneralInfo(objectId: string, input: Ob
     .from('object')
     .update({
       name: input.name,
-      business_timezone: toNullableText(input.businessTimezone) ?? 'Indian/Reunion',
-      region_code: toNullableText(input.regionCode),
       commercial_visibility: toNullableText(input.commercialVisibility) ?? 'active',
     })
     .eq('id', objectId);
@@ -2230,97 +2399,104 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
     throw new Error('Connexion backend indisponible pour enregistrer la taxonomie structurante.');
   }
 
-  const [schemeRefsResult, valueRefsResult, existingClassificationsResult] = await Promise.all([
-    client
-      .from('ref_classification_scheme')
-      .select('id, code, name, description, selection, position, display_group, is_distinction')
-      .eq('is_distinction', false)
-      .order('position', { ascending: true }),
-    client.from('ref_classification_value').select('id, scheme_id, code, name, ordinal, metadata'),
-    client.from('object_classification').select('id, scheme_id, value_id').eq('object_id', objectId),
+  const managedDomains = Array.from(new Set(
+    input.domains
+      .map((domain) => domain.domain.trim())
+      .filter(Boolean),
+  ));
+
+  const [taxonomyNodesResult, existingAssignmentsResult] = await Promise.all([
+    managedDomains.length > 0
+      ? client
+          .from('ref_code')
+          .select('id, domain, code, is_assignable')
+          .in('domain', managedDomains)
+      : Promise.resolve({ data: [], error: null }),
+    managedDomains.length > 0
+      ? client
+          .from('object_taxonomy')
+          .select('id, domain, ref_code_id, source, note')
+          .eq('object_id', objectId)
+          .in('domain', managedDomains)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (schemeRefsResult.error) {
-    throw mapMutationError(schemeRefsResult.error, 'Impossible de charger les schemas de classification.');
+  if (taxonomyNodesResult.error) {
+    throw mapMutationError(taxonomyNodesResult.error, 'Impossible de charger les noeuds de taxonomie.');
   }
 
-  if (valueRefsResult.error) {
-    throw mapMutationError(valueRefsResult.error, 'Impossible de charger les valeurs de classification.');
+  if (existingAssignmentsResult.error) {
+    throw mapMutationError(existingAssignmentsResult.error, 'Impossible de charger les affectations de taxonomie.');
   }
 
-  if (existingClassificationsResult.error) {
-    throw mapMutationError(existingClassificationsResult.error, 'Impossible de charger les classifications existantes.');
-  }
+  const nodeRows = ((taxonomyNodesResult.data ?? []) as Record<string, unknown>[])
+    .map((row) => ({
+      id: readString(row.id),
+      domain: readString(row.domain),
+      code: readString(row.code),
+      isAssignable: row.is_assignable == null ? true : readBoolean(row.is_assignable),
+    }));
+  const nodeByDomainAndId = new Map(nodeRows.map((row) => [`${row.domain}:${row.id}`, row]));
+  const nodeByDomainAndCode = new Map(nodeRows.map((row) => [`${row.domain}:${row.code.toLowerCase()}`, row]));
+  const existingByDomain = new Map(
+    ((existingAssignmentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => [readString(row.domain), row] as const),
+  );
 
-  const schemes = (schemeRefsResult.data ?? [])
-    .map((row) => row as Record<string, unknown>)
-    .filter(isStructuringClassificationScheme)
-    .map(normalizeClassificationSchemeRef);
-  const schemeById = new Map(schemes.map((scheme) => [scheme.id, scheme]));
-  const valueRefs = (valueRefsResult.data ?? [])
-    .map((row) => row as Record<string, unknown>)
-    .map(normalizeClassificationValueRef)
-    .filter((value) => schemeById.has(value.schemeId));
-  const valueByCompositeKey = new Map(valueRefs.map((value) => [`${value.schemeId}:${value.code.toLowerCase()}`, value]));
-  const allowedSchemeIds = new Set(schemes.map((scheme) => scheme.id));
-  const existingRows = ((existingClassificationsResult.data ?? []) as Record<string, unknown>[])
-    .filter((row) => allowedSchemeIds.has(readString(row.scheme_id)));
-  const existingIds = new Set(existingRows.map((row) => readString(row.id)).filter(Boolean));
-  const reusableRowsByKey = new Map(existingRows.map((row) => [`${readString(row.scheme_id)}:${readString(row.value_id)}`, readString(row.id)]));
-  const keptIds = new Set<string>();
+  const upsertRows: Array<Record<string, unknown>> = [];
+  const keptDomains = new Set<string>();
 
-  for (const scheme of input.schemes) {
-    const normalizedSchemeId = scheme.id || (schemes.find((candidate) => candidate.code === scheme.code)?.id ?? '');
-    const schemeRef = schemeById.get(normalizedSchemeId);
-    if (!schemeRef) {
+  for (const domain of input.domains) {
+    if (!domain.assignment) {
       continue;
     }
 
-    if (schemeRef.selectionMode === 'single' && scheme.items.length > 1) {
-      throw new Error(`Le schema ${scheme.label || scheme.code} n'accepte qu'une seule valeur.`);
+    const selectedNode =
+      (domain.assignment.nodeId
+        ? nodeByDomainAndId.get(`${domain.domain}:${domain.assignment.nodeId}`)
+        : null)
+      ?? nodeByDomainAndCode.get(`${domain.domain}:${domain.assignment.code.toLowerCase()}`)
+      ?? null;
+
+    if (!selectedNode) {
+      throw new Error(`Noeud de taxonomie inconnu pour le domaine ${domain.label || domain.domain}.`);
     }
 
-    for (const item of scheme.items) {
-      const normalizedValue = valueByCompositeKey.get(`${schemeRef.id}:${item.valueCode.toLowerCase()}`);
-      if (!normalizedValue) {
-        throw new Error(`Valeur de classification inconnue: ${item.valueCode || 'vide'}.`);
-      }
+    if (!selectedNode.isAssignable) {
+      throw new Error(`Le noeud ${domain.assignment.label || domain.assignment.code} ne peut pas etre assigne.`);
+    }
 
-      const payload = {
-        object_id: objectId,
-        scheme_id: schemeRef.id,
-        value_id: normalizedValue.id,
-        status: toNullableText(item.status),
-        awarded_at: toNullableText(item.awardedAt),
-        valid_until: toNullableText(item.validUntil),
-      };
+    const existing = existingByDomain.get(domain.domain);
+    upsertRows.push({
+      object_id: objectId,
+      domain: domain.domain,
+      ref_code_id: selectedNode.id,
+      source: 'workspace_taxonomy',
+      note: existing ? existing.note ?? null : null,
+    });
+    keptDomains.add(domain.domain);
+  }
 
-      const existingId =
-        (item.recordId && existingIds.has(item.recordId) ? item.recordId : null)
-        ?? reusableRowsByKey.get(`${schemeRef.id}:${normalizedValue.id}`)
-        ?? null;
+  if (upsertRows.length > 0) {
+    const { error } = await client
+      .from('object_taxonomy')
+      .upsert(upsertRows, { onConflict: 'object_id,domain' });
 
-      if (existingId) {
-        const { error } = await client.from('object_classification').update(payload).eq('id', existingId);
-        if (error) {
-          throw mapMutationError(error, "Impossible d'enregistrer une classification structurante.");
-        }
-        keptIds.add(existingId);
-      } else {
-        const { data, error } = await client.from('object_classification').insert(payload).select('id').single();
-        if (error) {
-          throw mapMutationError(error, "Impossible de creer une classification structurante.");
-        }
-        keptIds.add(readString((data as Record<string, unknown>).id));
-      }
+    if (error) {
+      throw mapMutationError(error, "Impossible d'enregistrer la taxonomie structurante.");
     }
   }
 
-  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
-  if (idsToDelete.length > 0) {
-    const { error } = await client.from('object_classification').delete().in('id', idsToDelete);
+  const domainsToDelete = managedDomains.filter((domain) => !keptDomains.has(domain));
+  if (domainsToDelete.length > 0) {
+    const { error } = await client
+      .from('object_taxonomy')
+      .delete()
+      .eq('object_id', objectId)
+      .in('domain', domainsToDelete);
+
     if (error) {
-      throw mapMutationError(error, "Impossible de supprimer les classifications retirees.");
+      throw mapMutationError(error, "Impossible de supprimer les affectations de taxonomie retirees.");
     }
   }
 }

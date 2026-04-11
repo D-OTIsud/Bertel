@@ -22,32 +22,49 @@ export interface ObjectWorkspaceGeneralInfo {
   isEditing: boolean;
 }
 
-export interface ObjectWorkspaceTaxonomyItem {
-  recordId: string | null;
-  schemeId: string;
-  schemeCode: string;
-  schemeLabel: string;
-  valueId: string;
-  valueCode: string;
-  valueLabel: string;
-  status: string;
-  awardedAt: string;
-  validUntil: string;
-}
-
-export interface ObjectWorkspaceTaxonomyScheme {
+export interface ObjectWorkspaceTaxonomyPathNode {
   id: string;
   code: string;
   label: string;
   description: string;
-  selectionMode: 'single' | 'multiple';
-  displayGroup: string;
-  valueOptions: WorkspaceReferenceOption[];
-  items: ObjectWorkspaceTaxonomyItem[];
+  depth: number;
+}
+
+export interface ObjectWorkspaceTaxonomyNodeOption {
+  id: string;
+  code: string;
+  label: string;
+  description: string;
+  parentId: string | null;
+  parentCode: string | null;
+  depth: number;
+  isAssignable: boolean;
+  position: number;
+}
+
+export interface ObjectWorkspaceTaxonomyAssignment {
+  recordId: string | null;
+  nodeId: string;
+  code: string;
+  label: string;
+  description: string;
+  depth: number;
+  path: ObjectWorkspaceTaxonomyPathNode[];
+  updatedAt: string;
+  source: string;
+}
+
+export interface ObjectWorkspaceTaxonomyDomain {
+  domain: string;
+  label: string;
+  description: string;
+  objectType: string;
+  nodes: ObjectWorkspaceTaxonomyNodeOption[];
+  assignment: ObjectWorkspaceTaxonomyAssignment | null;
 }
 
 export interface ObjectWorkspaceTaxonomyModule {
-  schemes: ObjectWorkspaceTaxonomyScheme[];
+  domains: ObjectWorkspaceTaxonomyDomain[];
   unavailableReason: string | null;
 }
 
@@ -954,62 +971,76 @@ function parseWorkspaceContactItem(record: GenericRecord, index: number): Object
   };
 }
 
-function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorkspaceTaxonomyModule {
-  const schemes = new Map<string, ObjectWorkspaceTaxonomyScheme>();
+function parseWorkspaceTaxonomyPathNode(record: GenericRecord, index: number): ObjectWorkspaceTaxonomyPathNode | null {
+  const code = readString(record.code).trim();
+  const label = readString(record.name, code).trim();
 
-  for (const record of readArray(raw.classifications)) {
-    const schemeCode = readString(record.scheme).trim();
-    const valueCode = readString(record.value).trim();
-
-    if (!schemeCode || !valueCode) {
-      continue;
-    }
-
-    const schemeKey = schemeCode.toLowerCase();
-    const schemeLabel = readString(record.scheme_name, schemeCode);
-    const valueLabel = readString(record.value_name, valueCode);
-    const existingScheme = schemes.get(schemeKey);
-    const nextScheme = existingScheme ?? {
-      id: schemeCode,
-      code: schemeCode,
-      label: schemeLabel,
-      description: '',
-      selectionMode: 'single' as const,
-      displayGroup: '',
-      valueOptions: [],
-      items: [],
-    };
-
-    if (!nextScheme.valueOptions.some((option) => option.code === valueCode)) {
-      nextScheme.valueOptions.push({
-        id: `${schemeCode}:${valueCode}`,
-        code: valueCode,
-        label: valueLabel,
-      });
-    }
-
-    nextScheme.items.push({
-      recordId: readString(record.id) || null,
-      schemeId: schemeCode,
-      schemeCode,
-      schemeLabel,
-      valueId: valueCode,
-      valueCode,
-      valueLabel,
-      status: readString(record.status),
-      awardedAt: readString(record.awarded_at),
-      validUntil: readString(record.valid_until),
-    });
-
-    schemes.set(schemeKey, nextScheme);
+  if (!code || !label) {
+    return null;
   }
 
   return {
-    schemes: Array.from(schemes.values()).map((scheme) => ({
-      ...scheme,
-      items: scheme.items.sort((left, right) => left.valueLabel.localeCompare(right.valueLabel, 'fr')),
-      valueOptions: scheme.valueOptions.sort((left, right) => left.label.localeCompare(right.label, 'fr')),
-    })),
+    id: readString(record.id, `${code}-${index}`),
+    code,
+    label,
+    description: readString(record.description),
+    depth: readPosition(record.depth, index),
+  };
+}
+
+function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorkspaceTaxonomyModule {
+  const taxonomyRecord = readRecord(raw.taxonomy);
+  const domains: ObjectWorkspaceTaxonomyDomain[] = [];
+
+  for (const record of readArray(taxonomyRecord.domains)) {
+    const domain = readString(record.domain).trim();
+    const label = readString(record.domain_name, domain).trim();
+    if (!domain || !label) {
+      continue;
+    }
+
+    const assignedNode = readRecord(record.assigned_node);
+    const assignedCode = readString(assignedNode.code).trim();
+    const assignedLabel = readString(assignedNode.name, assignedCode).trim();
+    const path = readArray(record.path)
+      .map((pathNode, index) => parseWorkspaceTaxonomyPathNode(pathNode, index))
+      .filter((item): item is ObjectWorkspaceTaxonomyPathNode => item !== null)
+      .sort((left, right) => left.depth - right.depth || left.label.localeCompare(right.label, 'fr'));
+
+    const assignment = assignedCode && assignedLabel
+      ? {
+          recordId: null,
+          nodeId: readString(assignedNode.id, assignedCode),
+          code: assignedCode,
+          label: assignedLabel,
+          description: readString(assignedNode.description),
+          depth: readPosition(assignedNode.depth, Math.max(path.length - 1, 0)),
+          path: path.length > 0
+            ? path
+            : [{
+                id: readString(assignedNode.id, assignedCode),
+                code: assignedCode,
+                label: assignedLabel,
+                description: readString(assignedNode.description),
+                depth: readPosition(assignedNode.depth, 0),
+              }],
+          updatedAt: readString(record.updated_at),
+          source: readString(record.source),
+        }
+      : null;
+
+    domains.push({
+      domain,
+      label,
+      description: readString(record.description),
+      objectType: readString(record.object_type),
+      nodes: [],
+      assignment,
+    });
+  }
+
+  return {
+    domains: domains.sort((left, right) => left.label.localeCompare(right.label, 'fr')),
     unavailableReason: null,
   };
 }

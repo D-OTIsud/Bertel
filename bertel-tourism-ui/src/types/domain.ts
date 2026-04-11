@@ -46,6 +46,11 @@ export interface ClassificationRef {
   valueCode: string;
 }
 
+export interface TaxonomyRef {
+  domain: string;
+  code: string;
+}
+
 export interface MeetingRoomFilter {
   minCount?: number;
   minAreaM2?: number;
@@ -67,7 +72,7 @@ export interface ExplorerCommonFilters {
 
 export interface HotBucketFilters {
   subtypes: BackendObjectTypeCode[];
-  classifications: ClassificationRef[];
+  taxonomy: TaxonomyRef[];
   capacityFilters: CapacityFilter[];
   meetingRoom: MeetingRoomFilter;
 }
@@ -130,14 +135,24 @@ export interface ExplorerReferenceOption {
   name: string;
 }
 
-export interface ExplorerClassificationGroup {
-  schemeCode: string;
-  schemeName: string;
-  values: ExplorerReferenceOption[];
+export interface ExplorerTaxonomyNode {
+  code: string;
+  name: string;
+  parentCode: string | null;
+  depth: number;
+  isAssignable: boolean;
+  position?: number | null;
+}
+
+export interface ExplorerTaxonomyDomain {
+  domain: string;
+  name: string;
+  objectType: BackendObjectTypeCode | string;
+  nodes: ExplorerTaxonomyNode[];
 }
 
 export interface ExplorerReferences {
-  hotClassifications: ExplorerClassificationGroup[];
+  hotTaxonomy: ExplorerTaxonomyDomain[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
   itiPractices: ExplorerReferenceOption[];

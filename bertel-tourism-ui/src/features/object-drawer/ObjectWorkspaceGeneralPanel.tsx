@@ -44,8 +44,8 @@ export function ObjectWorkspaceGeneralPanel({
         <div className="panel-heading">
           <div>
             <span className="eyebrow">Informations generales</span>
-            <h2>Informations generales et classements</h2>
-            <p>Renseignez ici l identite de la fiche et ses classements utiles.</p>
+            <h2>Informations generales et taxonomie</h2>
+            <p>Renseignez ici l identite de la fiche et sa taxonomie structurante.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -65,35 +65,6 @@ export function ObjectWorkspaceGeneralPanel({
               onChange={(event) => onChange({ name: event.target.value })}
             />
           </div>
-
-          <div className="field-block">
-            <Label htmlFor="workspace-timezone">Fuseau horaire</Label>
-            <Input
-              id="workspace-timezone"
-              value={value.businessTimezone}
-              onChange={(event) => onChange({ businessTimezone: event.target.value })}
-            />
-          </div>
-
-          <div className="field-block">
-            <Label htmlFor="workspace-region-code">Code region</Label>
-            <Input
-              id="workspace-region-code"
-              value={value.regionCode}
-              onChange={(event) => onChange({ regionCode: event.target.value.toUpperCase() })}
-            />
-          </div>
-
-        </div>
-      </article>
-
-      <article className="panel-card panel-card--nested">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">Classements</span>
-            <h2>Classements et categories</h2>
-            <p>Seuls les classements adaptes a ce type de fiche sont proposes ici.</p>
-          </div>
         </div>
       </article>
 
@@ -103,11 +74,6 @@ export function ObjectWorkspaceGeneralPanel({
         access={taxonomyAccess}
         onChange={onTaxonomyChange}
       />
-
-      <article className="panel-card panel-card--nested">
-        <span className="facet-title">Bon a savoir</span>
-        <p>La visibilite commerciale, la publication et la moderation se gerent dans l onglet Publication.</p>
-      </article>
     </div>
   );
 }

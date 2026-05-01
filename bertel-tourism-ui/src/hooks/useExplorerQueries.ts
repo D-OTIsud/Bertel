@@ -28,7 +28,7 @@ import {
   saveObjectWorkspacePricing,
   saveObjectWorkspaceTaxonomy,
 } from '../services/object-workspace';
-import { applyFrontendOnlyExplorerFilters, resolveExplorerStatuses } from '../utils/facets';
+import { applyClientPreviewFilters, applyFrontendOnlyExplorerFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
@@ -113,10 +113,13 @@ export function useExplorerCardsQuery() {
     placeholderData: keepPreviousData,
   });
 
-  const data = useMemo(
-    () => applyFrontendOnlyExplorerFilters(query.data ?? [], queryFilters),
-    [queryFilters, query.data],
-  );
+  const data = useMemo(() => {
+    const raw = query.data ?? [];
+    if (query.isPlaceholderData) {
+      return applyClientPreviewFilters(raw, queryFilters);
+    }
+    return applyFrontendOnlyExplorerFilters(raw, queryFilters);
+  }, [query.data, query.isPlaceholderData, queryFilters]);
 
   return {
     ...query,

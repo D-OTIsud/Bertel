@@ -85,6 +85,45 @@ function cleanString(value: string | null | undefined): string {
   return String(value ?? '').trim();
 }
 
+function normalizeNeedle(value: string | null | undefined): string {
+  return cleanString(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function isWithinBbox(
+  card: ObjectCard,
+  bbox: [number, number, number, number],
+): boolean {
+  const lat = card.location?.lat;
+  const lon = card.location?.lon;
+  if (typeof lat !== 'number' || typeof lon !== 'number') {
+    return false;
+  }
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
+}
+
+function isWithinPolygon(card: ObjectCard, coordinates: number[][]): boolean {
+  const lat = card.location?.lat;
+  const lon = card.location?.lon;
+  if (typeof lat !== 'number' || typeof lon !== 'number' || coordinates.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i, i += 1) {
+    const [xi, yi] = coordinates[i];
+    const [xj, yj] = coordinates[j];
+    const intersects = yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi || Number.EPSILON) + xi;
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 function normalizeCapacityFilters(filters: CapacityFilter[]): CapacityFilter[] {
   return filters.filter((filter) => filter.code && (filter.min != null || filter.max != null));
 }
@@ -244,6 +283,64 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
     }
     return allowedHotSubtypes.has(String(card.type).toUpperCase() as BackendObjectTypeCode);
   });
+}
+
+export function applyClientPreviewFilters(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
+  const selectedBuckets = new Set(getEffectiveSelectedBuckets(filters.selectedBuckets));
+  const allowedCities = new Set(filters.common.cities.map((city) => normalizeNeedle(city)).filter(Boolean));
+  const lieuDitNeedle = normalizeNeedle(filters.common.lieuDit);
+  const searchNeedle = normalizeNeedle(filters.common.search);
+  const polygonCoordinates = filters.common.polygon?.coordinates?.[0] ?? null;
+
+  const narrowed = cards.filter((card) => {
+    if (!selectedBuckets.has(normalizeExplorerObjectType(card.type))) {
+      return false;
+    }
+
+    if (allowedCities.size > 0) {
+      const city = normalizeNeedle(card.location?.city);
+      if (!allowedCities.has(city)) {
+        return false;
+      }
+    }
+
+    if (lieuDitNeedle) {
+      const lieuDit = normalizeNeedle(card.location?.lieu_dit);
+      if (!lieuDit.includes(lieuDitNeedle)) {
+        return false;
+      }
+    }
+
+    if (filters.common.openNow && card.open_now !== true) {
+      return false;
+    }
+
+    if (searchNeedle) {
+      const haystack = [
+        card.name,
+        card.description,
+        card.location?.city,
+        card.location?.address,
+      ]
+        .map((part) => normalizeNeedle(part))
+        .join(' ');
+      if (!haystack.includes(searchNeedle)) {
+        return false;
+      }
+    }
+
+    if (filters.common.bbox && !isWithinBbox(card, filters.common.bbox)) {
+      return false;
+    }
+
+    if (polygonCoordinates && !isWithinPolygon(card, polygonCoordinates)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return applyFrontendOnlyExplorerFilters(narrowed, filters);
 }
 
 export function dedupeExplorerCards(cards: ObjectCard[]): ObjectCard[] {

@@ -1,4 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Do not retry on permanent HTTP errors (auth failure, not found, forbidden).
 // Retrying these would hammer the backend while the session is already known bad.
@@ -14,8 +17,21 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30000,
+      gcTime: DAY_MS,
       retry: shouldRetry,
       refetchOnWindowFocus: false,
     },
   },
 });
+
+export const queryCacheBuster = 'v1';
+export const queryCacheStorageKey = 'bertel-rq-cache';
+export const queryCacheMaxAgeMs = DAY_MS;
+
+export const queryPersister =
+  typeof window !== 'undefined'
+    ? createSyncStoragePersister({
+        key: queryCacheStorageKey,
+        storage: window.localStorage,
+      })
+    : undefined;

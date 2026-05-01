@@ -1,9 +1,31 @@
 import { useEffect } from 'react';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
-import { getSupabaseClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
 import { useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
+
+// Resolves the user's "can edit any object" capability from the SQL helper
+// `api.current_user_can_edit_objects()`. Returns false if the helper is
+// unavailable or fails — keeps the Explorer's published-only default safe.
+async function fetchCanEditObjects(): Promise<boolean> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    return false;
+  }
+
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_can_edit_objects');
+    if (error) {
+      console.warn('current_user_can_edit_objects unavailable, defaulting to read-only.', error);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn('current_user_can_edit_objects threw, defaulting to read-only.', err);
+    return false;
+  }
+}
 
 function normalizeRole(value: unknown): UserRole | null {
   return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
@@ -91,6 +113,12 @@ export function useBootstrapSession() {
       const langPrefs = Array.isArray(profile?.lang_prefs) && profile.lang_prefs.every((item) => typeof item === 'string')
         ? profile.lang_prefs
         : fallbackLangPrefs;
+
+      const canEditObjects = await fetchCanEditObjects();
+      if (cancelled) {
+        return;
+      }
+
       hydrateFromAuth({
         role,
         userId: user.id,
@@ -98,6 +126,7 @@ export function useBootstrapSession() {
         userName,
         avatar: initialsFromName(userName),
         langPrefs,
+        canEditObjects,
       });
     }
 

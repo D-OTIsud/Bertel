@@ -151,6 +151,39 @@ export const mockCards: ObjectCard[] = [
     location: { lat: -21.133, lon: 55.470, city: 'Cilaos', postcode: '97413', address: 'Village de Cilaos' },
     render: { price: 'De 90 a 150 EUR', rating: '4.4 / 5', updated_at: 'Mis a jour le 10 mars 2026' },
   },
+  // Two draft cards used in demo mode to validate the editor-only status
+  // filter: a tourism_agent persona must NOT see them, an org_admin / owner
+  // / super_admin persona must see them when "Brouillon" is checked.
+  {
+    id: 'HOTRUN0000000201',
+    type: 'HOT',
+    name: 'Domaine Volcanique (en redaction)',
+    status: 'draft',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=900&q=80',
+    rating: null,
+    review_count: 0,
+    min_price: null,
+    open_now: null,
+    description: 'Fiche en cours de redaction, non encore publiee.',
+    updated_at: '2026-03-12T08:30:00Z',
+    location: { lat: -21.234, lon: 55.612, city: 'Saint-Joseph', postcode: '97480', address: 'Route du volcan' },
+    render: { updated_at: 'Brouillon mis a jour le 12 mars 2026' },
+  },
+  {
+    id: 'RESRUN0000000202',
+    type: 'RES',
+    name: 'Table des Hauts (brouillon)',
+    status: 'draft',
+    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=80',
+    rating: null,
+    review_count: 0,
+    min_price: null,
+    open_now: null,
+    description: 'Etablissement en cours de creation pour la prochaine saison.',
+    updated_at: '2026-03-13T15:45:00Z',
+    location: { lat: -21.205, lon: 55.626, city: 'Le Tampon', postcode: '97430', address: 'Avenue principale' },
+    render: { updated_at: 'Brouillon mis a jour le 13 mars 2026' },
+  },
 ];
 
 export const mockObjectDetails: Record<string, ObjectDetail> = {

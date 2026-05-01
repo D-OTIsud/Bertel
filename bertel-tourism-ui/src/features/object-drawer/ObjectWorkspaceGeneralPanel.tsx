@@ -15,6 +15,7 @@ interface ObjectWorkspaceGeneralPanelProps {
   value: ObjectWorkspaceGeneralInfo;
   taxonomy: ObjectWorkspaceTaxonomyModule;
   objectType?: string;
+  objectTypeLabel?: string;
   taxonomyAccess: ObjectWorkspaceModuleAccess;
   dirty: boolean;
   saving: boolean;
@@ -29,6 +30,7 @@ export function ObjectWorkspaceGeneralPanel({
   value,
   taxonomy,
   objectType,
+  objectTypeLabel,
   taxonomyAccess,
   dirty,
   saving,
@@ -38,14 +40,19 @@ export function ObjectWorkspaceGeneralPanel({
   onTaxonomyChange,
   onSave,
 }: ObjectWorkspaceGeneralPanelProps) {
+  const normalizedObjectType = String(objectType ?? '').trim().toUpperCase();
+  const resolvedObjectTypeLabel = String(objectTypeLabel ?? objectType ?? '').trim() || 'Type non renseigne';
+  const shouldShowObjectTypeCode = normalizedObjectType
+    && normalizedObjectType !== resolvedObjectTypeLabel.toUpperCase();
+
   return (
     <div className="drawer-form-stack">
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
             <span className="eyebrow">Informations generales</span>
-            <h2>Informations generales et taxonomie</h2>
-            <p>Renseignez ici l identite de la fiche et sa taxonomie structurante.</p>
+            <h2>Informations generales</h2>
+            <p>Renseignez ici l identite de la fiche. La taxonomie structurante se modifie dans la section ci-dessous.</p>
           </div>
           <div className="stack-list text-right">
             <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
@@ -64,6 +71,30 @@ export function ObjectWorkspaceGeneralPanel({
               value={value.name}
               onChange={(event) => onChange({ name: event.target.value })}
             />
+          </div>
+          <div className="field-block">
+            <span>Type de fiche</span>
+            <div className="drawer-reference-field">
+              <div className="panel-card panel-card--nested">
+                <strong>{resolvedObjectTypeLabel}</strong>
+                {shouldShowObjectTypeCode ? (
+                  <span className="status-pill status-pill--neutral">Code: {normalizedObjectType}</span>
+                ) : null}
+              </div>
+              <small className="drawer-reference-field__hint">
+                Ce type est affiche a titre informatif dans cette section et pilote la taxonomie visible ci-dessous.
+              </small>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article className="panel-card panel-card--nested">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Taxonomie</span>
+            <h3>Taxonomie structurante</h3>
+            <p>Choisissez le noeud metier le plus precis pour qualifier la fiche.</p>
           </div>
         </div>
       </article>

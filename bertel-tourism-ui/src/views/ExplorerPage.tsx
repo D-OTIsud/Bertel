@@ -71,6 +71,8 @@ export default function ExplorerPage() {
   usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
   const cards = cardsQuery.data ?? [];
+  const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;
+  const isRefreshing = cardsQuery.isFetching && cardsQuery.isPlaceholderData;
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
@@ -111,7 +113,8 @@ export default function ExplorerPage() {
       return (
         <ResultsList
           cards={cards}
-          loading={cardsQuery.isLoading || referencesQuery.isLoading}
+          loading={isInitialLoading}
+          isRefreshing={isRefreshing}
           headerActions={headerActions}
         />
       );

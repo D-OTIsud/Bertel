@@ -728,6 +728,59 @@ a {
   color: var(--text-muted);
 }
 
+.results-refreshing {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1f4b5a;
+  background: rgba(201, 232, 241, 0.9);
+}
+
+.results-list--skeleton {
+  gap: 0.8rem;
+}
+
+.result-card--skeleton {
+  pointer-events: none;
+}
+
+.results-skeleton__title,
+.results-skeleton__subtitle,
+.results-skeleton__chip,
+.results-skeleton__line,
+.results-skeleton__pill {
+  display: inline-flex;
+  border-radius: 999px;
+}
+
+.results-skeleton__title {
+  width: 11rem;
+  height: 0.9rem;
+}
+
+.results-skeleton__subtitle {
+  width: 8rem;
+  height: 0.75rem;
+}
+
+.results-skeleton__chip {
+  width: 2rem;
+  height: 2rem;
+}
+
+.results-skeleton__line {
+  width: 9rem;
+  height: 0.75rem;
+}
+
+.results-skeleton__pill {
+  width: 3.2rem;
+  height: 1.4rem;
+}
+
 .filters-panel,
 .results-panel,
 .panel-card--map {

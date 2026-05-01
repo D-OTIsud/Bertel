@@ -58,6 +58,17 @@ export interface MeetingRoomFilter {
   minCapClassroom?: number;
 }
 
+/**
+ * Visible publication statuses in the Explorer.
+ * - 'published'  : object is live (default for every user, including anonymous).
+ * - 'draft'      : object is being prepared by the publishing ORG.
+ *                  Only relevant for users with `canEditObjects = true`. RLS
+ *                  still gates which non-published rows are actually returned —
+ *                  cross-ORG drafts remain hidden regardless of this flag.
+ * archived/hidden are intentionally not surfaced here today.
+ */
+export type ExplorerStatusFilter = 'published' | 'draft';
+
 export interface ExplorerCommonFilters {
   search: string;
   cities: string[];
@@ -66,6 +77,13 @@ export interface ExplorerCommonFilters {
   petsAccepted: boolean;
   openNow: boolean;
   labelsAny: string[];
+  /**
+   * Active publication-status filter sent to api.list_object_resources_filtered_page
+   * as p_status. An empty array means "use the server default" (= published only),
+   * which is the safe baseline for read-only personas. Editors broaden the default
+   * to ['published','draft'] at session bootstrap.
+   */
+  statuses: ExplorerStatusFilter[];
   bbox?: [number, number, number, number] | null;
   polygon?: GeoPolygon | null;
 }

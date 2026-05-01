@@ -318,6 +318,41 @@ AS $$
   LIMIT 1;
 $$;
 
+-- =====================================================
+-- Capability check : "le user courant peut-il éditer des objets ?"
+-- =====================================================
+-- TRUE quand l'utilisateur a au moins une voie d'édition sur le périmètre
+-- de son organisation active :
+--   1. superuser plateforme (owner / super_admin / service_role / admin),
+--   2. rôle admin actif dans son ORG (peu importe le rang),
+--   3. permission métier d'édition sur n'importe quel objet : create_object,
+--      edit_canonical_when_publisher, edit_org_enrichment, publish_object.
+--
+-- Usage : la fonction est consommée par le frontend Explorer pour décider
+-- s'il doit afficher les statuts non publiés (draft) des objets de l'ORG.
+-- Elle ne porte AUCUNE logique d'autorisation sur une fiche précise — la RLS
+-- (cf. api.can_read_extended) reste seule à gater l'accès ligne par ligne.
+-- Un membre simple en lecture seule (pas d'admin role, pas de permission
+-- métier d'édition) renvoie FALSE et n'a donc accès qu'aux fiches publiées.
+-- STABLE + SECURITY DEFINER : pour traverser ref_permission / org_permission /
+-- user_permission sans dépendre des policies RLS de ces tables.
+CREATE OR REPLACE FUNCTION api.current_user_can_edit_objects()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT
+    api.is_platform_superuser()
+    OR api.current_user_admin_role_code() IS NOT NULL
+    OR api.user_has_permission('publish_object')
+    OR api.user_has_permission('edit_canonical_when_publisher')
+    OR api.user_has_permission('edit_org_enrichment')
+    OR api.user_has_permission('create_object');
+$$;
+
+REVOKE EXECUTE ON FUNCTION api.current_user_can_edit_objects() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.current_user_can_edit_objects() TO   authenticated, service_role;
+
 -- Retourne le rang admin de l'auteur de la note dans l'ORG de la note (NULL si aucun).
 CREATE OR REPLACE FUNCTION api.object_private_note_author_admin_rank(p_note_id uuid)
 RETURNS integer

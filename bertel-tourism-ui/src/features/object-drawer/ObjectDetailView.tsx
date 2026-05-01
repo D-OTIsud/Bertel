@@ -88,7 +88,7 @@ const TYPE_LABEL: Record<string, string> = {
   PSV: 'Prestataire',
   SRV: 'Service',
   VIL: 'Ville',
-  COM: 'Commune',
+  COM: 'Commerce',
 };
 
 interface DetailViewProps {

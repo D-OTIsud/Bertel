@@ -1022,12 +1022,19 @@ describe('ObjectDrawer workspace drafts', () => {
 
     expect(screen.queryByRole('button', { name: /classifications/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /informations generales/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /informations generales et taxonomie/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^informations generales$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /taxonomie structurante/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /classements et categories/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/bon a savoir/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/nom principal/i)).toHaveValue('Hotel A');
     expect(screen.queryByLabelText(/fuseau horaire/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/code region/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/visibilite commerciale/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /type de fiche/i })).not.toBeInTheDocument();
+    const typeField = screen.getByText(/^type de fiche$/i).closest('.field-block');
+    expect(typeField).not.toBeNull();
+    expect(within(typeField as HTMLElement).getByText(/^hotel$/i)).toBeInTheDocument();
+    expect(within(typeField as HTMLElement).getByText(/code:\s*hot/i)).toBeInTheDocument();
     expect(screen.getAllByText(/taxonomie hot/i).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /^choisir$/i }).length).toBeGreaterThan(0);
   });
@@ -1049,7 +1056,13 @@ describe('ObjectDrawer workspace drafts', () => {
       useObjectDrawerStore.setState({ mode: 'edit' });
     });
 
-    expect(screen.getByRole('heading', { name: /informations generales et taxonomie/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^informations generales$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /taxonomie structurante/i })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /type de fiche/i })).not.toBeInTheDocument();
+    const typeField = screen.getByText(/^type de fiche$/i).closest('.field-block');
+    expect(typeField).not.toBeNull();
+    expect(within(typeField as HTMLElement).getByText(/^restaurant$/i)).toBeInTheDocument();
+    expect(within(typeField as HTMLElement).getByText(/code:\s*res/i)).toBeInTheDocument();
     expect(screen.getByText(/aucune taxonomie specifique n est actuellement configuree pour ce type de fiche/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^choisir$/i })).not.toBeInTheDocument();
   });

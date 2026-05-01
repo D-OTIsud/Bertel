@@ -1,7 +1,8 @@
-import type { ExplorerBucketKey, ExplorerFilters } from '@/types/domain';
+import type { ExplorerBucketKey, ExplorerFilters, ExplorerStatusFilter } from '@/types/domain';
 import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS } from '@/utils/facets';
 
 const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
+const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = ['published', 'draft'];
 
 function parseCapacityFilters(value: string | null): Array<{ code: string; min?: number; max?: number }> | undefined {
   if (!value) {
@@ -47,6 +48,12 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       : undefined;
 
   const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const statuses =
+    searchParams
+      .get('status')
+      ?.split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item): item is ExplorerStatusFilter => (EXPLORER_STATUS_VALUES as readonly string[]).includes(item)) ?? undefined;
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const hotTaxonomy = (searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))?.split(',').filter(Boolean).flatMap((value) => {
     const [domain = '', code = ''] = value.split(':');
@@ -71,6 +78,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
     ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
     ...(labelsAny !== undefined && { labelsAny }),
+    ...(statuses !== undefined && { statuses }),
   };
 
   const itiPatch = {
@@ -166,6 +174,13 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (filters.common.openNow) {
     p.set('openNow', 'true');
+  }
+  if (filters.common.statuses.length > 0) {
+    // Persist explicit status picks only. Empty array means "use the
+    // session-aware default" (cf. resolveExplorerStatuses) and does NOT
+    // belong in the URL — keeps shareable links shorter and survives a
+    // role change between sessions.
+    p.set('status', filters.common.statuses.join(','));
   }
   if (filters.hot.subtypes.length > 0) {
     p.set('hotSubtypes', filters.hot.subtypes.join(','));

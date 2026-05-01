@@ -160,12 +160,21 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
     return paginateMock(filterMockCards(input.filters, input.bucket), input.cursor, pageSize);
   }
 
+  // The store carries the resolved statuses (cf. useExplorerCardsQuery →
+  // resolveExplorerStatuses). When non-empty we hand them to the SQL function
+  // as p_status so editors get drafts of their ORG; an empty array would let
+  // the function fall back to its hard-coded ['published'] default, which is
+  // never what we want here — the resolver already encodes the safe baseline.
+  const statuses = input.filters.common.statuses;
+  const pStatus = statuses.length > 0 ? statuses : null;
+
   const { data, error } = await client.schema('api').rpc('list_object_resources_filtered_page', {
     p_cursor: input.cursor ?? null,
     p_lang_prefs: input.langPrefs,
     p_page_size: pageSize,
     p_filters: buildBucketRpcFilters(input.filters, input.bucket),
     p_types: getBackendTypesForBucket(input.bucket),
+    p_status: pStatus,
     p_search: input.filters.common.search || null,
     p_track_format: 'none',
     p_view: 'card',

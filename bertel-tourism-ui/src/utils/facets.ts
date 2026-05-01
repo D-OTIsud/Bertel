@@ -132,6 +132,49 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
   return filter.minCount != null || filter.minAreaM2 != null || filter.minCapTheatre != null || filter.minCapClassroom != null;
 }
 
+/**
+ * True when at least one Explorer constraint is evaluated only by the RPC /
+ * `ObjectCard` payload cannot express it. Used to intersect the local IndexedDB
+ * view with API ids once the filtered query returns.
+ */
+export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
+  const { common, hot, res, iti, act } = filters;
+  if (common.pmr || common.petsAccepted) {
+    return true;
+  }
+  if (hot.taxonomy.length > 0) {
+    return true;
+  }
+  if (normalizeCapacityFilters(hot.capacityFilters).length > 0) {
+    return true;
+  }
+  if (hasMeetingRoomFilter(hot.meetingRoom)) {
+    return true;
+  }
+  if (normalizeCapacityFilters(res.capacityFilters).length > 0) {
+    return true;
+  }
+  if (iti.isLoop != null) {
+    return true;
+  }
+  if (iti.difficultyMin != null || iti.difficultyMax != null) {
+    return true;
+  }
+  if (iti.distanceMinKm != null || iti.distanceMaxKm != null) {
+    return true;
+  }
+  if (iti.durationMinH != null || iti.durationMaxH != null) {
+    return true;
+  }
+  if (iti.practicesAny.length > 0) {
+    return true;
+  }
+  if (act.environmentTagsAny.length > 0) {
+    return true;
+  }
+  return false;
+}
+
 export function getEffectiveSelectedBuckets(selectedBuckets: ExplorerBucketKey[]): ExplorerBucketKey[] {
   return selectedBuckets.length > 0 ? selectedBuckets : EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
 }

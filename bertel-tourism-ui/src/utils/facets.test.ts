@@ -4,6 +4,7 @@ import {
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   EXPLORER_TYPE_CODE_FAMILIES,
+  hasServerOnlyFilters,
   normalizeExplorerObjectType,
 } from './facets';
 
@@ -161,5 +162,81 @@ describe('applyClientPreviewFilters', () => {
 
     const result = applyClientPreviewFilters(cards, filters);
     expect(result.map((card) => card.id)).toEqual(['one']);
+  });
+});
+
+describe('hasServerOnlyFilters', () => {
+  it('is false for default explorer filters', () => {
+    expect(hasServerOnlyFilters(DEFAULT_EXPLORER_FILTERS)).toBe(false);
+  });
+
+  it('detects pmr and pets', () => {
+    expect(hasServerOnlyFilters(buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true } }))).toBe(true);
+    expect(hasServerOnlyFilters(buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, petsAccepted: true } }))).toBe(
+      true,
+    );
+  });
+
+  it('detects HOT taxonomy, capacity, and meeting room', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          hot: {
+            ...DEFAULT_EXPLORER_FILTERS.hot,
+            taxonomy: [{ domain: 'taxonomy_hot', code: 'X' }],
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          hot: { ...DEFAULT_EXPLORER_FILTERS.hot, capacityFilters: [{ code: 'beds', min: 1 }] },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          hot: { ...DEFAULT_EXPLORER_FILTERS.hot, meetingRoom: { minCount: 1 } },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects RES capacity filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          res: { capacityFilters: [{ code: 'covers', min: 10 }] },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects ITI filters', () => {
+    expect(hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true } }))).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, difficultyMin: 1 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, distanceMinKm: 1 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, durationMaxH: 2 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, practicesAny: ['trail'] } })),
+    ).toBe(true);
+  });
+
+  it('detects ACT environment tags', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          act: { environmentTagsAny: ['forest'] },
+        }),
+      ),
+    ).toBe(true);
   });
 });

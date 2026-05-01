@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { env } from '../lib/env';
+import { useCardCacheStore } from './card-cache-store';
 import type { UserRole } from '../types/domain';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
@@ -54,17 +55,19 @@ export const useSessionStore = create<SessionState>((set) => ({
   // Real auth: must wait for the SQL capability check to resolve before
   // broadening the Explorer.
   canEditObjects: env.demoMode,
-  setDemoRole: (role) =>
-    set((state) =>
-      state.demoMode
-        ? {
-            role,
-            // In demo mode the capability flag tracks the role: tourism_agent
-            // is treated as a read-only persona, super_admin/owner can edit.
-            canEditObjects: role !== 'tourism_agent',
-          }
-        : state,
-    ),
+  setDemoRole: (role) => {
+    const state = useSessionStore.getState();
+    if (!state.demoMode) {
+      return;
+    }
+    void useCardCacheStore.getState().clear();
+    set({
+      role,
+      // In demo mode the capability flag tracks the role: tourism_agent
+      // is treated as a read-only persona, super_admin/owner can edit.
+      canEditObjects: role !== 'tourism_agent',
+    });
+  },
   setLangPrefs: (langPrefs) => set({ langPrefs }),
   hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects }) =>
     set({
@@ -79,7 +82,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       errorMessage: null,
     }),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
-  setGuest: (message = null) =>
+  setGuest: (message = null) => {
+    void useCardCacheStore.getState().clear();
     set({
       status: 'guest',
       errorMessage: message,
@@ -89,8 +93,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
-    }),
-  setSessionError: (message) =>
+    });
+  },
+  setSessionError: (message) => {
+    void useCardCacheStore.getState().clear();
     set({
       status: 'error',
       errorMessage: message,
@@ -100,5 +106,6 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
-    }),
+    });
+  },
 }));

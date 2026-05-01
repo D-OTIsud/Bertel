@@ -72,7 +72,7 @@ export default function ExplorerPage() {
 
   const cards = cardsQuery.data ?? [];
   const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;
-  const isRefreshing = cardsQuery.isFetching && cardsQuery.isPlaceholderData;
+  const isRefreshing = cardsQuery.isRefreshing;
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const clearSelection = useExplorerStore((state) => state.clearSelection);

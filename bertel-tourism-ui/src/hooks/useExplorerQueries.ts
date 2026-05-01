@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
+import { useCardCacheStore } from '../store/card-cache-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
 import { listLocationReferenceOptions } from '../services/location-reference';
@@ -28,7 +29,7 @@ import {
   saveObjectWorkspacePricing,
   saveObjectWorkspaceTaxonomy,
 } from '../services/object-workspace';
-import { applyClientPreviewFilters, applyFrontendOnlyExplorerFilters, resolveExplorerStatuses } from '../utils/facets';
+import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
@@ -107,23 +108,45 @@ export function useExplorerCardsQuery() {
     };
   }, [canEditObjects, demoMode, filters]);
 
+  const hasServerOnly = useMemo(() => hasServerOnlyFilters(queryFilters), [queryFilters]);
+
+  const cacheCards = useCardCacheStore((state) => state.cards);
+  const cacheHydrated = useCardCacheStore((state) => state.hydrated);
+  const mergeCards = useCardCacheStore((state) => state.mergeCards);
+
   const query = useQuery({
     queryKey: ['explorer-cards', queryFilters, langPrefs],
     queryFn: () => listExplorerCards(queryFilters, langPrefs),
     placeholderData: keepPreviousData,
   });
 
-  const data = useMemo(() => {
-    const raw = query.data ?? [];
-    if (query.isPlaceholderData) {
-      return applyClientPreviewFilters(raw, queryFilters);
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) {
+      return;
     }
-    return applyFrontendOnlyExplorerFilters(raw, queryFilters);
-  }, [query.data, query.isPlaceholderData, queryFilters]);
+    mergeCards(query.data);
+  }, [mergeCards, query.data, query.isPlaceholderData]);
+
+  const data = useMemo(() => {
+    const allCards = Array.from(cacheCards.values());
+    const localView = applyClientPreviewFilters(allCards, queryFilters);
+    if (!hasServerOnly) {
+      return localView;
+    }
+    if (!query.data || query.isPlaceholderData) {
+      return localView;
+    }
+    const apiIds = new Set(query.data.map((card) => card.id));
+    return localView.filter((card) => apiIds.has(card.id));
+  }, [cacheCards, hasServerOnly, query.data, query.isPlaceholderData, queryFilters]);
+
+  const isRefreshing = query.isFetching && (query.isPlaceholderData || hasServerOnly);
 
   return {
     ...query,
     data,
+    isHydrated: cacheHydrated,
+    isRefreshing,
   };
 }
 

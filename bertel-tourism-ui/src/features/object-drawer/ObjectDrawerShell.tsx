@@ -86,7 +86,7 @@ const DRAWER_TYPE_LABELS: Record<string, string> = {
   PSV: 'Prestataire',
   SRV: 'Service',
   VIL: 'Ville',
-  COM: 'Commune',
+  COM: 'Commerce',
 };
 
 function cloneModules(value: ObjectWorkspaceModules): ObjectWorkspaceModules {
@@ -1270,6 +1270,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
                   value={editorSnapshot.draft.generalInfo}
                   taxonomy={editorSnapshot.draft.taxonomy}
                   objectType={resolvedData.type}
+                  objectTypeLabel={typeLabel || resolvedData.type}
                   taxonomyAccess={resolvedData.permissions.taxonomy}
                   dirty={dirtySections['general-info'] === true}
                   saving={saveStateBySection['general-info'].saving}

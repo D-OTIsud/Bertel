@@ -1,0 +1,781 @@
+Horaires_id,Object_id,jours,AM_Start,AM_Finish,PM_Start,PM_Finish,Révervation
+"586bd9f1,recjVuOypOyayuqqy,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:30,17:00,,,TRUE"
+"a2ec91c5,1076a83d,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",15:00,11:00,,,TRUE"
+"69ea617a,recBTZYAoY2XoBURV,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+0dbc67a8,rec2hFEtbYDCJhExh,Jeudi,09:00,12:00,13:30,16:00,FALSE
+172705db,recqlrw688v3ayk46,,,,,,TRUE
+e01b1ac5,rec2hFEtbYDCJhExh,Jeudi,09:00,16:00,,,
+adde6fb9,recG0bjzDHTmZQTzX,,,,,,TRUE
+"9f00ebaf,recKw9Ovn2xu93E1C,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,12:00,18:00,FALSE"
+"70e80f9e,recGtfya4sOtjkELr,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:30,17:30,,,TRUE"
+"1d6a33fb,f71e41e7,""Lundi , Vendredi"",09:30,17:30,,,FALSE"
+d3e0e2d8,recvBb0nTg5vjAZfJ,Dimanche,11:00,16:00,,,FALSE
+"d4bde6d2,recvBb0nTg5vjAZfJ,""Vendredi , Samedi"",11:00,15:00,,,FALSE"
+"65f77747,recvBb0nTg5vjAZfJ,""Mardi , Mercredi , Vendredi"",11:00,15:00,,,FALSE"
+1c52b6ca,recET3fUKEiA1NBPx,Jeudi,15:00,18:00,,,FALSE
+985c85ac,recET3fUKEiA1NBPx,Vendredi,10:00,18:00,,,
+b94679d9,recET3fUKEiA1NBPx,Samedi,15:00,18:00,,,
+04868caf,recNdYUMBvLOiGjBx,,14:00,10:30,,,
+"3edf0e4f,8f122929,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",08:00,12:00,13:00,16:30,"
+adc18cdf,8f122929,Samedi,08:30,12:00,13:00,16:30,
+ea3db7b6,recuTyBQOgIlWc2zY,,15:00,10:30,,,
+"e30eb1c9,recOcuxtjmr1W3lPa,""Lundi , Dimanche"",12:30,15:00,19:30,20:00,TRUE"
+03198b19,reccMrDJTa1lyK06z,,12:00,17:00,,,
+03ab8aa2,recxNoi9kbaEno5Up,,16:00,11:00,,,
+56d08dc9,rec32hF9oHx4POksO,,16:00,10:00,,,
+eac94751,reczq9MjKzK8unDnR,,15:30,11:30,,,
+e309dd44,recZx01uZHg0R4TGL,,04:00,12:00,,,
+8f0ead39,recF7jALDXSn1wIxA,,16:00,12:00,,,
+941c908c,recV3FbnKoB841Pz0,,14:00,14:00,,,
+9926a2b0,recQj57Xv9jXL2umf,,15:00,15:00,,,
+48cd09f8,rec3Z4Wn2JbHxb2lU,,14:00,10:00,,,
+e09e0077,recMNd8ISYzDXc7iM,,15:00,12:00,,,
+"6c106d39,recCSnhcZo4XxocjX,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,12:00,12:00,16:00,TRUE"
+"115e353e,recuzXY9up4hotU42,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",07:00,12:00,14:00,16:00,TRUE"
+"10abc0e2,recvzvSRCc069iAhQ,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:30,15:00,18:00,"
+897999fc,f28b7b1d,,16:00,10:00,,,
+"4584657a,recGrWckq8Ku6srPF,""Mardi , Samedi"",11:30,14:00,18:30,21:30,"
+7ebcb26d,recyxKNuVVPqRhSTR,,15:00,10:00,,,
+1697f7dd,recOk422JMgj9tU8L,,15:00,11:00,,,
+b187bb72,c93fda30,,15:00,12:00,,,
+bc48785d,0901db49,,12:00,10:00,,,
+"d0abdfa4,b9c7c5bf-f519-4d73-aad8-bb19cd0230bd,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,14:30,17:30,20:00,TRUE"
+9572dc8b,recMOIuUm6lKV3zN1,,15:00,11:00,,,
+8ceb3a76,recmdf4qFuVVyaFav,,14:00,08:30,,,
+"ffdfaa8f,rec6dejyDi7Joy3vA,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:30,12:00,13:00,16:00,TRUE"
+a1054b8b,2e66b898,,16:00,12:00,,,
+"75ae1271,af78e6d7,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,16:00,17:30,21:00,TRUE"
+8d831f76,0cfcf8dd,,15:00,11:00,,,
+"ba3872f1,ccd1add0,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:00,19:30,21:00,TRUE"
+4e802d05,recD5BtUZul1AMUmq,,15:00,10:00,,,
+745fbe33,recDHjG1lQVPlasLV,,15:00,10:00,,,
+16baec64,recIzjbG6ZkQo1moe,,15:00,10:00,,,
+8a66d847,recxQP6ZkcgLG5r3S,,15:00,11:00,,,
+24347f90,63d77262,,15:00,12:00,,,
+916a0c82,recLwYJ5mSKfz2cY4,,11:00,17:00,,,
+cae808b7,rec24oq9hEWo7CiRW,,10:30,17:00,,,
+fdfaee2e,113a206c,,18:00,11:00,,,
+516cc550,595f03c0,,14:00,11:00,,,
+"42acbb48,rec2GKrBMZznC55dv,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,18:00,,,TRUE"
+f4b64c4b,recUOCYFvmBoqRPQ9,,10:00,16:00,,,
+25974b5b,46b2c40c,,13:00,11:00,,,
+"831d93f3,883cb1c2,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",07:00,12:00,12:00,21:30,FALSE"
+e606ca5d,d5c7c61d,,10:00,15:00,,,
+73635c47,5cdf722a,,16:00,10:00,,,
+6649f707,986ea8dd,,14:00,11:00,,,
+5c7ba7f1,5c37ae83,,15:30,11:00,,,
+8fc358f6,d9f1c7dd,,15:00,10:30,,,
+30612316,recR8jq4A80w31rvT,,,,,,
+96ee9b55,2ed9f530,,18:00,18:00,,,
+"f16ffc68,recaryrqsrVPPIB2M,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",08:00,17:00,,,FALSE"
+"6e92d215,rec5yC36m9peYuToo,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:30,14:00,17:30,21:00,FALSE"
+048c3e2d,rec2SnUyGZpnGj7AB,,14:00,10:00,,,
+d82e8f3c,2740c3db,,16:00,10:00,,,
+0c4ee0e0,bf08aa73,,14:00,10:00,,,
+"1922cd89,recieRtH5ulY1vw33,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:45,14:00,18:45,21:00,"
+,,,,,,,
+5874cac8,6da7bb3a,,14:00,10:00,,,
+"fa1b09ff,03541d5a,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",07:00,13:00,07:00,13:00,TRUE"
+aa5fe886,recijAQ80kP0c42bK,,,,,,TRUE
+"adcd8c66,6e009b41,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+3e496fc9,8acd55dc,,15:00,10:00,,,
+3fb0bc95,302f8ece,,14:00,11:00,,,
+ee16c762,443fd2ae,,16:00,10:00,,,
+"f07c978c,4b149ed5,""Lundi , Mardi , Mercredi"",09:00,12:00,12:50,13:57,TRUE"
+d483bff4,reccZzX5MzB9ojrS1,Jeudi,09:00,,,,TRUE
+"3f1b8965,ceb8cd51,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,12:00,12:00,16:00,TRUE"
+404a7654,a4fe2628,,14:00,11:00,,,
+cb6ab298,recBHofXS36EJHBsE,,14:00,10:30,,,
+462bab6c,recs82ArpkH5fQU1c,,14:00,10:30,,,
+"1f94bb49,recHDhvcAecymLeQG,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",,,,,"
+"16a71ed7,recbqR9yn4YRURgzC,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",08:00,17:00,,,FALSE"
+"bc783b0a,recDvHw4sjf9E8DIn,""Samedi , Dimanche"",09:00,12:00,14:00,16:00,"
+95325d7a,reci48o801z9UJFB8,,,,,,
+"0996610f,reciRau4N0LIOVTld,""Samedi , Dimanche"",08:00,16:00,,,TRUE"
+9ef5ed0f,rec5HPtXtUxdNUhk6,,,,,,TRUE
+5b59f8ad,1b807167,,,,,,TRUE
+"55814882,01ebf129,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,17:00,,,"
+0ad096ec,recXXhBx8iC8nShoV,,16:00,11:00,,,
+edd3530e,b74aa3f4,,15:00,11:00,,,
+"c66f11f0,recjlkTcYHia3cCFI,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,15:00,19:00,23:00,TRUE"
+"38005a5a,69f746b8,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:00,,,"
+d1a6def4,recsIeI9EbAWzHyOB,Samedi,09:30,16:00,,,FALSE
+"a8b7fc1e,recsIeI9EbAWzHyOB,""Lundi , Jeudi"",09:30,17:30,,,FALSE"
+"60858aea,recFdQEKlRXOW6IiR,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:30,,,FALSE"
+"c111c5bc,recEt9TvXlcLiFND3,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:00,14:00,18:00,21:00,FALSE"
+576ec10c,rec2BIu67CJ4cBooH,Dimanche,10:00,14:00,,,FALSE
+"7ae3cadf,rec2BIu67CJ4cBooH,""Jeudi , Vendredi , Samedi"",10:00,14:00,18:00,21:00,FALSE"
+"c19a4662,rec2BIu67CJ4cBooH,""Lundi , Mardi"",10:00,14:30,17:30,21:00,FALSE"
+8b7a3f55,recpoMrt052WGicmB,Lundi,09:15,13:45,,,
+4ca56086,recpoMrt052WGicmB,Mercredi,09:15,13:45,,,
+f45a472a,rec4A2lhrwooZI0L8,Mercredi,09:00,12:00,,,
+a890ebce,rec4A2lhrwooZI0L8,Samedi,09:00,17:00,,,
+8611208f,060600ca,,15:00,11:00,,,
+"208ea4fd,cc0315bb,""Lundi , Mercredi"",09:00,17:00,,,FALSE"
+"c185332c,rec3bDNQbcQSRGepN,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,19:00,,,TRUE"
+"2d604033,rec74mTejOAzSsXH8,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:30,17:00,,,"
+"3a890599,reccRUqRPZ0v29qHD,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",08:30,12:00,,,"
+"b9f81ee6,reccRUqRPZ0v29qHD,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",13:30,16:00,,,"
+5ea53cea,reccRUqRPZ0v29qHD,,,,,,TRUE
+"e4c10d71,rece9uELyn8ZtWYFS,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:00,12:00,14:00,18:00,"
+b5b64c96,recbVgtiqqHlRN8XU,Mercredi,08:00,12:00,13:00,18:00,
+27ed54f1,recbVgtiqqHlRN8XU,Dimanche,15:00,18:00,,,
+"c32ea58c,recbVgtiqqHlRN8XU,""Jeudi , Vendredi , Samedi"",13:00,18:00,,,"
+"ae87db61,recbVgtiqqHlRN8XU,""Lundi , Mardi"",13:00,18:00,,,"
+2c0e6b94,recinMZzYcJs7t8DA,,15:00,10:00,,,
+c4f0a032,4c781fa8,,14:00,10:00,,,
+"227965c1,recEmvs9ixOOZTfhk,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:00,14:00,17:30,00:00,"
+"5ee66056,recSWQkXd82Rx7EWA,""Samedi , Dimanche"",07:00,20:00,,,TRUE"
+"940372c9,recR99OmSXnqpQRCv,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"a954e31f,recTNHzJV8A77bkdk,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",10:00,14:00,17:30,21:00,"
+"09e5baf8,recLzqL611NhOe615,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:30,11:30,,,"
+"893f6e69,rec0YE2DCxwxpaaIi,""Samedi , Dimanche"",,,,,"
+"437261bb,recasu4xsNx1F8mkD,""Lundi , Mardi , Mercredi"",11:00,14:00,17:00,21:00,"
+"d809c8d8,recasu4xsNx1F8mkD,""Vendredi , Samedi"",11:00,14:00,17:00,21:00,"
+a5744c15,recasu4xsNx1F8mkD,Dimanche,17:00,21:00,,,
+"dcaec188,rec4gEUX2zGWOym2M,""Vendredi , Samedi"",08:30,14:00,17:30,22:00,"
+"7a92559c,rec4gEUX2zGWOym2M,""Lundi , Mardi , Mercredi , Jeudi"",08:30,14:00,17:30,21:00,"
+"0d8cf023,recHUZ07cENhdZKpX,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,16:00,,,"
+72592661,330969dc,,15:00,15:00,,,
+"32d6aa3a,recsuYv0MT8JWatmt,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+669babb6,6063b8b1,,14:00,16:00,,,
+37970a47,recIap1BQMVhc9iDo,,16:00,11:00,,,
+de00bdfb,0dc15fb6,Lundi,08:00,16:00,,,FALSE
+b777b3ce,recVMxK2n2g0JqxYW,,16:00,11:00,,,
+"fd148b65,recxXRG93JqXCrVZr,""Lundi , Mardi , Mercredi , Jeudi"",08:00,18:00,,,"
+"0d71d26a,recPtO2ckGiW3Ndlr,""Vendredi , Samedi"",11:45,13:15,18:45,21:15,TRUE"
+"0461d5f7,recPtO2ckGiW3Ndlr,""Mardi , Mercredi , Jeudi"",11:45,13:15,18:45,21:00,TRUE"
+,,,,,,,
+,,,,,,,
+"99aacd59,recITvrU1rCT4eguQ,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,14:00,17:30,20:00,"
+f602e1e0,recNFyEXVeZzMZOAi,Dimanche,12:00,14:00,,,
+e0bc37d9,recNFyEXVeZzMZOAi,Mardi,12:00,14:00,,,
+86094fae,recNFyEXVeZzMZOAi,Lundi,12:00,14:00,,,
+"b051b601,recNFyEXVeZzMZOAi,""Jeudi , Vendredi , Samedi"",12:00,14:00,18:00,20:00,"
+a1044b1b,rec3mYOqM2ldm5hdI,Dimanche,12:00,16:00,,,TRUE
+"6d266567,rec3mYOqM2ldm5hdI,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",12:00,15:00,19:00,23:00,TRUE"
+"a86dc9af,rectoH9CeGaP9kY6Y,""Mercredi , Jeudi , Vendredi , Samedi"",12:00,14:00,19:00,21:30,"
+a168e1fb,rectoH9CeGaP9kY6Y,Dimanche,12:00,14:00,,,
+891539b2,recN5bNxgghhfpEHE,Dimanche,12:00,14:00,,,
+"ce9d2936,recN5bNxgghhfpEHE,""Lundi , Mardi , Mercredi , Samedi"",12:00,15:30,19:00,22:00,"
+383e26ee,recj2cmFvTc2F54pv,Dimanche,12:00,14:00,,,
+"dbddef81,recj2cmFvTc2F54pv,""Mercredi , Jeudi , Vendredi , Samedi"",12:00,13:45,19:00,20:45,"
+b285dbd0,recbTtVrr0l0DVGHj,Mercredi,12:00,14:00,,,
+"b76ca928,recbTtVrr0l0DVGHj,""Jeudi , Vendredi , Samedi"",12:00,14:00,19:00,21:30,"
+ac5dc8f5,recbTtVrr0l0DVGHj,Mardi,12:00,14:00,,,
+"bc7dabe5,reca5pLJzSFX1LfB0,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",10:00,14:00,17:00,21:00,"
+"17f6ab1e,recFI3gPgFIdt1ds1,""Vendredi , Samedi , Dimanche"",11:00,15:00,18:00,20:00,"
+"7f157bc4,recFI3gPgFIdt1ds1,""Lundi , Mardi"",11:00,15:00,,,"
+e0118b95,recFI3gPgFIdt1ds1,Jeudi,11:00,15:00,,,
+"6758ca09,recFI3gPgFIdt1ds1,""Vendredi , Samedi , Dimanche"",11:00,15:00,18:00,21:30,"
+,,,,,,,
+"31b24fbe,recDTnaJMOGrMbHRs,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",12:00,14:00,19:00,22:00,"
+"e0cf6244,recvSr38RvOo1oBlP,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:00,13:00,18:00,20:00,"
+"db4b258a,recS5v0Oj1S8jKlsT,""Lundi , Mardi"",18:30,21:00,,,"
+"bbdaeaac,recS5v0Oj1S8jKlsT,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,14:00,18:30,21:00,"
+"ce1e1eae,recYktplxCsh6Dsen,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,21:00,,,"
+ff605b67,recYktplxCsh6Dsen,Dimanche,09:00,14:00,,,
+"1d19534b,rectPEb7fUqmeGRb4,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:00,14:30,18:00,20:30,"
+"114f4465,recxXRG93JqXCrVZr,""Samedi , Dimanche"",08:00,18:00,,,"
+97cc6933,0615faa3,,15:00,11:00,,,
+52a61164,0dc15fb6,Mardi,08:00,16:00,,,FALSE
+083674a5,0dc15fb6,Jeudi,08:00,16:00,,,FALSE
+7f731479,0dc15fb6,Vendredi,08:00,16:00,,,FALSE
+"a9bee18d,recSXg93snF86tra4,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,20:00,,,"
+"8485ad23,reczmo44uNT3nvZZt,""Samedi , Dimanche"",11:15,16:00,,,"
+"e8c4b471,reczmo44uNT3nvZZt,""Mardi , Mercredi , Jeudi"",11:30,16:00,,,"
+1278d49a,759d38b7,,15:00,10:00,,,
+"1bc298bd,recgWmAh3cvUhcnp7,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+97d42d5c,recgWmAh3cvUhcnp7,,12:00,16:00,,,
+d37c0bf6,b76340fd,,15:00,11:00,,,
+6ce7a090,recm2AoRWbJBnq4SK,,15:00,12:00,,,
+6347a1e1,recM9zD9bItWPAN6l,,15:00,11:00,,,
+50ef7a71,recZYCbaJbEYDPyJv,,14:00,11:00,,,
+37fb02a2,recmOcTv8PqeQEtt3,,16:00,10:00,,,
+9012cbed,rechFFrgz5BbO2egc,,15:00,10:00,,,
+431feb77,1402749d,,14:00,11:00,,,
+3bbea377,9d4ae3ec,,15:00,11:00,,,
+b4b4d645,d05d63f5,,,,,,TRUE
+"af3b7dc7,recyyAOrP5ABYe0Qk,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",19:00,,,,TRUE"
+"eff4a31f,recaPQdy6VVmodk5M,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,13:30,16:30,"
+0f859aed,ebb42bed,,17:00,11:00,,,
+a24ea2f0,eb2505c0,,15:00,11:00,,,
+31532b9c,6a249061,,14:00,11:00,,,
+3548939c,7949ab8c,,15:00,11:00,,,
+021f8e16,5f50049f,,15:00,11:00,,,
+,,,,,,,
+61ef8da6,d730c38c,,16:00,11:00,,,
+404909c1,885199aa,,13:00,10:00,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+cd0baf76,recdYDKpysnem09GC,,16:00,10:00,,,
+"88f4d4ca,rec4Sp1Kc7fr9A3H4,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,16:30,,,TRUE"
+01702cbe,rec8MEwXzZOyroHld,,16:00,10:00,,,
+5c09e21d,rec8V96z3M3TU00Ae,,14:30,10:00,,,
+1f215c44,9239e8d7,,14:00,11:00,,,
+ba853760,ae3bc50f,,13:00,10:00,,,
+b70745c8,3fb285d5,,14:00,11:00,,,
+"cbee9abc,rec7PV8VcVqwUZH52,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,17:00,,,TRUE"
+"afb37577,rec7PV8VcVqwUZH52,""Samedi , Dimanche"",09:00,17:00,,,FALSE"
+89a16ac6,4f324b40,,16:00,11:00,,,
+6f834142,95b72d6a,,14:00,16:00,,,
+"5f1a9084,recxrcryp7RwEOD3d,""Lundi , Mardi , Mercredi , Jeudi , Samedi"",11:30,16:00,18:30,22:00,"
+97d89e88,e270df62,,15:00,10:00,,,
+f0b94379,ca79be2b,,14:00,11:00,,,
+b145908f,0fcf57e0,,14:00,10:00,,,
+104675b3,02f9f539,,14:00,10:00,,,
+621cd4ed,754604a0,,14:00,11:00,,,
+d8f639cd,e394dc72,,15:00,11:00,,,
+"83c77c12,recaDnwM100hMyG5t,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,17:00,,,TRUE"
+51a97040,rectgw5U8BugwUIyW,,12:00,10:00,,,
+c24fa629,rec2VkaNFgTUZQarj,,12:00,10:00,,,
+da671d1f,recEzS7wrcSBUBnRJ,,15:00,11:00,,,
+"c823e98b,recBwIkZXrkiVim1Q,""Lundi , Mardi , Mercredi , Jeudi"",11:30,14:00,,,TRUE"
+c84eb891,recQLIS5lMhCC9Bjz,,10:00,,09:00,18:00,FALSE
+f8f870f9,recsMK9lTsyDsnNal,,15:00,10:00,,,
+"e839dba7,recmBT3F3xQsKoKUc,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,14:00,17:30,TRUE"
+"4ecfbc84,recUu7UCrEm9QqdId,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",14:00,17:30,08:30,17:30,TRUE"
+"5d64c7e5,ceb8cd52,""Samedi , Dimanche"",10:00,,,,TRUE"
+a82265d5,recR9kjiaOAoduSpN,,16:00,11:00,,,
+"21633fbf,reciW2UlshxpoToFm,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,19:00,,,FALSE"
+"85ed5c69,recwJL4wMZc8BUN4B,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,14:00,18:00,TRUE"
+"e0a42e03,rechmcunWsnk7RIUK,""Lundi , Mercredi , Vendredi , Samedi , Dimanche"",09:00,17:00,,,TRUE"
+c4c2a045,recfcEj0VScC9avif,,15:00,11:00,,,
+68b924f3,recEqFurEd2CSBjqg,,15:00,11:00,,,
+"7f6fe37d,recHEZWTMQ8a8lBp6,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",19:00,21:00,,,TRUE"
+"45017f6c,recZUGINnXHGGNbNs,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,16:00,,,FALSE"
+e93fcf2b,recHEZWTMQ8a9lBp5,,15:00,10:00,,,
+06c28de4,3a3f3d60,,15:00,11:00,,,
+"62d45127,recMMMvP8mGoaRGgO,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+"8a6c5cc4,recsH7mY4eboRjWUR,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,14:00,17:00,FALSE"
+"953d2e52,recd35RAACGXmxl78,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,19:00,,,"
+"7fae4bbf,rech5cqzU6ONX2AVL,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:00,12:00,14:00,17:30,"
+13a23819,rech5cqzU6ONX2AVL,Samedi,09:00,12:00,14:00,17:00,
+"6e9b3452,recc7m3SkpexAuzvc,""Lundi , Mardi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,15:30,,,"
+"f4ccb919,recc7m3SkpexAuzvc,""Lundi , Mardi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"0e4a08f4,recMgWQrTWMVok83m,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+71fb063c,4a530b6e,,15:00,11:00,,,
+7e454bb1,92c88920,,15:00,11:00,,,
+511ed8d5,53c685de,,15:00,11:00,,,
+a83e97ce,05E89ADE3E,,16:00,13:00,,,
+4a7a012e,b7f612c9,,15:00,10:00,,,
+"83d839cb,recAz79tqNPNUQNYF,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,14:00,,,"
+6f77081d,367d6f26,,11:00,15:00,,,
+2f33a8dd,6952bda4,,14:00,11:00,,,
+"1432c55a,7f9e5843,""Lundi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,13:00,14:00,17:00,TRUE"
+"66d39e1b,5D60AA1162,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,12:00,15:00,18:00,TRUE"
+1dbdbbc3,3eedd265,,15:30,10:00,,,
+b561ce2b,57a90f0e,,17:00,11:00,,,
+316b6ce6,135b099f,,15:00,11:00,,,
+c478d191,4ab919e9,,14:00,11:00,,,
+c8a8a3a3,252be0b4,,14:00,11:00,,,
+827bb4be,d8d19440,,15:00,11:00,,,
+f12cb4cd,f97d103d,,14:00,11:00,,,
+f1b99dfe,recH4XTVM41h84nua,,15:00,11:00,,,
+4cfbd38b,38b6b043,,16:00,10:30,,,
+21f40842,recUIgVhbOSmVZOpH,,14:00,10:00,,,
+573d8b13,recnR46WWlEHXWJwF,,16:00,11:00,,,
+a04413c0,1a1a4e3a,,15:00,10:00,,,
+"a912f9ff,recxY4pUkZnofQw1g,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",08:00,12:00,12:00,15:00,TRUE"
+"db9fd6f7,faf05ed1,""Lundi , Mardi , Mercredi , Jeudi , Dimanche"",10:30,21:00,,,FALSE"
+"081aad44,faf05ed1,""Vendredi , Samedi"",10:30,22:00,,,FALSE"
+f12fd1ad,e46e5463,,17:00,09:00,,,
+d327e64a,f9dfc45a,,10:00,09:00,,,
+9b0df369,76821c69,,10:00,09:00,,,
+e16735d7,6d85b7c0,,10:00,09:00,,,
+fcb97c70,89572a7e,,15:00,12:00,,,
+4d52cabc,221b69ff,,15:00,11:00,,,
+50349320,533cff3f,,14:00,15:00,,,
+b729ba78,2b861bd2,,14:00,11:00,,,
+"40d1f694,5c171a96,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+442d3b87,3e9ccb68,,15:00,11:00,,,
+c55ae4f2,recQnhaVWed2cOYUi,,16:00,10:30,,,
+"1496f6ba,e50537ff,""Lundi , Mardi , Mercredi , Jeudi"",10:00,17:00,,,FALSE"
+"2b53d4dd,e50537ff,""Vendredi , Samedi"",10:00,21:00,,,FALSE"
+"f1d9d7f2,db67a035,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",,,,,TRUE"
+82a6cb22,recahr7MiYZML3KgU,,14:00,11:00,,,
+11afac28,rec9U1L9JFSF6w2UT,,14:00,12:00,,,
+06bb02b8,recsiobm7nPsxCU8B,,15:00,11:00,,,
+20a720bb,recEBk4LA7NmOo6cL,,15:00,11:00,,,
+5e60c7d0,recXQr75TtnS6XXik,,15:00,11:00,,,
+"a23e3d72,373a8c27,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"b99b9f4b,recCpFmi9ztG9pA4Q,""Lundi , Mardi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,14:00,,,FALSE"
+55a27fd1,recTR4EZHOjvNt0tr,,14:00,11:00,,,
+fba31d1a,recu2lcOsEa6JR1X9,,17:00,17:00,,,
+d56d72fe,93921678,,15:00,11:00,,,
+c9461523,e50537ff,Dimanche,09:00,17:00,,,FALSE
+63e0e529,rec6JNIwdrCJBAFrN,,14:00,10:00,,,
+25ad8468,dcdc2945,,14:00,10:00,,,
+"905aeeeb,fe7f6bb2,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,17:00,,,TRUE"
+b2ebe27b,ea42ebb4,,14:00,11:00,,,
+98d7e904,83237123,,15:00,11:00,,,
+5982762a,90d57727,,16:00,10:00,,,
+bd3d8b23,65396ef9,,14:00,10:00,,,
+"cbcc7096,recPVX5imIkKti6DB,""Lundi , Mardi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,17:00,12:00,17:00,TRUE"
+"5e95817e,recnjutP2i5dK4m2t,""Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:00,12:00,14:00,TRUE"
+"557f9930,recEMpzm8TU3vMA56,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,15:00,15:00,18:00,TRUE"
+2f571b38,recSC9OXFUnSkDFs7,,,,,,TRUE
+"a12bf871,recW7uGt8JkBfexcV,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,16:00,,,TRUE"
+162f2c25,recP65RYkZMUdYTBH,,15:00,10:00,,,
+"6b0697f0,recnrwOK2ZcOdiQDq,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,16:00,19:00,21:00,TRUE"
+"ebec3b2b,5EF05AAF2A,""Lundi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,14:00,18:00,22:00,TRUE"
+"b7dd4870,recEtCXzryjmXCyG3,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,15:00,12:00,15:00,TRUE"
+"5f2d3b5a,recBwIkZXrkiVim1Q,""Samedi , Dimanche"",11:30,15:00,,,TRUE"
+"d22f3e84,deb2bf1d,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"8d0535b3,rec2YX38fXWVZF9CF,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,16:00,,,TRUE"
+"e6b0f5b8,recvBb0nTg5vjAZfJ,""Mardi , Mercredi"",18:00,21:00,,,TRUE"
+"a6ba0a1e,recvBb0nTg5vjAZfJ,""Vendredi , Samedi"",18:00,00:00,,,TRUE"
+b4ff7509,99c29361,,13:00,10:00,,,
+6d6dfbe8,recI8HW0JOu8UrmFs,,,,,,TRUE
+ba13d762,4c57cea2,,15:00,10:00,,,
+fbe51d8a,6e82095d,,15:00,11:00,,,
+"ecfbd2d8,recN0yEGh5spNBVpa,""Lundi , Mardi"",11:30,14:00,,,FALSE"
+,,,,,,,
+"f68bb0de,recN0yEGh5spNBVpa,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,14:00,17:00,21:00,"
+39eb7863,recieRtH5ulY1vw33,Lundi,18:45,21:00,,,
+c306bcc4,c1b15fce,,14:00,10:00,,,
+98fc5681,f8006f39,Jeudi,08:00,12:00,13:30,17:00,TRUE
+15f7ead3,f8006f39,Mardi,13:30,17:30,,,TRUE
+6f38dde1,f8006f39,Dimanche,10:00,13:00,,,TRUE
+e0aa1bcd,f8006f39,Vendredi,08:00,12:00,13:30,16:00,TRUE
+7eab4e7a,f8006f39,Mercredi,08:00,17:00,,,TRUE
+b93b6fb5,f8006f39,Samedi,09:00,17:00,,,TRUE
+3b88df25,recyoVAha32J3VwKH,,15:00,10:00,,,
+"48df910b,da52a8c9,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:30,,,FALSE"
+"4890b770,da52a8c9,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",19:30,21:30,,,FALSE"
+"a1ec8fef,91debdd2,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",08:00,22:00,,,FALSE"
+"4f7fe135,recGdUh3I1diAtI6r,""Vendredi , Samedi"",10:00,14:00,18:00,22:00,TRUE"
+063d9ebd,recGdUh3I1diAtI6r,Dimanche,10:00,14:00,,,TRUE
+f3fcd551,recGdUh3I1diAtI6r,Mercredi,10:00,14:00,,,TRUE
+44a49f47,recGdUh3I1diAtI6r,Jeudi,10:00,14:00,18:00,22:00,TRUE
+c1cd2e18,recI8DJFuT3y2FjIh,,15:00,11:00,,,
+3715a395,276ec6e0,,15:00,11:00,,,
+a0553087,c97e2026,,16:00,10:00,,,
+907b9d6e,recJy5Jqc46L9JsWS,,15:00,10:00,,,
+181124eb,02d1cc38,,15:00,10:00,,,
+392b7dd5,recciMTLKdCTEQrfs,,14:00,11:00,,,
+a865c73c,rec5qmfxcwAOTt2xK,,16:00,10:00,,,
+8520fdc9,recdIs0HOgiZ1A0SS,,14:00,11:00,,,
+"592b9546,recC8nvXfXAN5qwki,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",10:00,,,,FALSE"
+"52422d32,cbf4f863,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,18:00,"
+ded9dc7b,78372796,,14:00,11:00,,,
+81e8c9de,recvlazHYiTRiE0nE,,15:00,16:00,,,
+"71c66c9a,2bb73403,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+dc2c66ad,rec1oPuqEslIrnIfE,,15:00,10:00,,,
+e97f89bc,recuLSFLTDZfmA6WQ,,14:00,11:00,,,
+15cab2e0,efc1fd94,,11:00,15:00,,,
+ceec809c,4bdad81d,,16:00,11:00,,,
+c13dc45f,3b723673,,16:30,11:00,,,
+c5bcbb64,e7637060,,15:00,11:00,,,
+9b9b854b,recUJhNJJKosGUk1J,,15:00,10:00,,,
+"ef3d550b,f18563bc,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+683f6e0c,recfEmpLnY5H9dk0r,,15:00,11:00,,,
+a619e6b7,recW5SKUQWWgrDLvC,,15:00,11:00,,,
+54fa43e6,d60bebd7,,,,,,
+c49ef335,606bbfd9,,10:00,17:00,,,
+"8882c5a3,a578f9ca,""Lundi , Mardi , Mercredi , Samedi , Dimanche"",10:30,20:30,,,"
+2465d961,4cc1e07e,,15:00,11:00,,,
+84ef9b5c,55e1b535,,14:00,10:00,,,
+b235ee97,c0a466e9,,15:00,10:00,,,
+"dc9461e0,387ab275,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:30,15:30,,,TRUE"
+8fd691fe,reckXTvApyYmMG2Jd,,15:00,11:00,,,
+abdad563,recEhQQSPAaY4hR5H,,17:00,17:00,,,
+a0319f33,reck1OmyoDIaptBoz,,14:00,11:00,,,
+32a100c5,7821a90e,,14:00,11:00,,,
+af1b42a7,58b8c676,,14:00,11:00,,,
+4f70837c,ca528e1d,,14:00,11:00,,,
+08add76f,4e8d0851,,15:00,11:00,,,
+2f6df812,38bc1fba,,,,,,
+4a916bf4,0e1c8279,,14:00,11:00,,,
+1917eac1,1c292624,,14:00,11:00,,,
+e6aef97a,430daa4e,,14:00,11:00,,,
+71973912,ff39cb07,,14:00,11:00,,,
+"99011ed6,72938470,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:00,12:00,13:30,16:00,"
+"07a9bf66,79b55a85,""Lundi , Mardi , Jeudi , Vendredi"",09:00,12:00,13:30,16:00,TRUE"
+e3e17dd5,a9a2f996,,15:00,11:00,,,
+90b6e3d2,e34b6c09,,15:00,16:00,,,
+1b39e6ff,48ba4dc1,,15:00,11:00,,,
+"b3d22773,91782aad,""Vendredi , Samedi"",,,,,TRUE"
+8ddd2ec9,0f08cd96,,15:00,11:00,,,
+f229c7d8,b21791cd,,14:00,11:00,,,
+4c80f9c1,bf5b8eff,,14:00,10:00,,,
+6953faa9,e49d2a13,,14:00,10:00,,,
+d1ad4121,a2266a5b,,14:00,10:00,,,
+fd906208,rec5sUyLAXxYXVrm5,,11:00,11:00,,,
+"6f3e7ad3,rec5bTILGfGPeLo90,""Lundi , Mardi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,14:30,,,FALSE"
+4813b0ac,a6fd5816,,16:00,11:00,,,
+ed4f3bb4,recmlvLf4TYUjpORe,,14:00,11:00,,,
+f367daed,033f1b3a,,16:00,11:00,,,
+,,,,,,,
+"e2c71bf6,6a07b6d5,""Lundi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,18:00,,,TRUE"
+"79aec8cb,recZ5vAJg2NRKxakb,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,12:00,14:00,17:00,"
+a09a9f20,recZ5vAJg2NRKxakb,Dimanche,09:00,12:00,,,
+"2b14745f,425e2aea,""Mardi , Mercredi , Jeudi , Dimanche"",,,,,TRUE"
+1b4f0429,ae04e116,,16:00,11:00,,,
+b2ae3335,8e814f97,,15:00,11:00,,,
+3a517996,recCqLvsDhPYApH8v,,14:00,10:00,,,
+2041819b,recWQ5fsS8jBPdiwd,,15:00,10:00,,,
+"dcd5c9d1,recyNTh7vGAYgzmHO,""Lundi , Mardi , Mercredi , Jeudi"",09:00,17:00,,,"
+8d353897,87c31917,,15:00,12:00,,,
+d1648cde,b7d17801,,,,,,
+f20f60e4,37c16813,,15:00,10:00,,,
+01e9689f,recbRr1ijxva6gcC2,,10:00,17:00,,,
+"b224eb84,reckN2z3ZiXgNosdi,""Lundi , Mardi , Mercredi , Vendredi , Samedi , Dimanche"",08:30,14:30,,,FALSE"
+52ac3142,a7ac4b90,,14:00,11:00,,,
+803928db,c9a5acce,,15:00,11:00,,,
+3a758ed4,d50abcd6,,15:00,10:00,,,
+"c25f83f2,b61e4fbe,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",12:00,14:00,19:00,21:00,FALSE"
+79161db5,b61e4fbe,Dimanche,12:00,14:00,19:00,20:00,FALSE
+bcb8571f,b2002b86,,16:00,14:00,,,
+058a071c,92a08ac5,,16:00,14:00,,,
+595a6c3b,6fffb3bc,,15:00,11:00,,,
+d80361e6,9989d8c6,,15:00,10:00,,,
+af6b7b47,6d6b6dbd,,14:00,17:00,,,
+89ba94e2,92492d93,,11:00,16:00,,,
+715b8250,68ffea41,,14:00,11:00,,,
+d4898eb9,a24cc0db,,15:00,10:00,,,
+"2bd17eb1,b652da63,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+943d9c8d,e75de991,,08:00,11:30,,,
+3e2539b8,81c5a1ef,,14:00,10:00,,,
+fe8fe9a9,rec3cYtpyPGVh6TPv,,15:00,11:00,,,
+9a184ddb,rec7avEaqvA8YmUOb,,16:00,10:00,,,
+6b6f5050,7f5a5d38,,14:00,11:00,,,
+"91aa06b8,3a638741,""Mardi , Mercredi , Samedi"",09:00,11:30,13:30,16:00,TRUE"
+"b498f8a3,24559a4f,""Mercredi , Samedi"",07:00,17:00,,,FALSE"
+e0f38fa4,recxEhup5GEjfdHRJ,,16:00,10:00,,,
+5641e1bc,recwBwWyOMkcf9oER,,13:00,10:00,,,
+4a24602b,recSaSdUkaXGjernW,,09:00,17:00,,,
+eed11abd,recHasOG2NWsJMjzz,,15:00,10:00,,,
+7c2b7019,recdol2FEBz3xzFYu,,14:00,14:00,,,
+9e5057b2,recUK1QpO3MfbSSCs,,15:00,10:00,,,
+b3ea3fe5,9da5a187,,14:00,11:00,,,
+c054fba5,c8c614c6,,15:30,11:00,,,
+22a60b5f,a7dc804c,,15:30,11:00,,,
+64b8ccde,2866c4fb,,15:30,11:00,,,
+6a3cc965,a80daa2c,,16:00,10:00,,,
+b2dc8b6a,71923fd5,,15:00,10:00,,,
+"a7ff7ae2,3619adfc,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:00,17:00,,,"
+6b1c1711,c48cf8d8,,16:00,10:00,,,
+086cec17,recsx8UCnt4S1dcKn,,14:00,10:30,,,
+01d66b33,3438063AE7,,14:30,11:00,,,
+eb5c06a3,7645983a,,14:00,12:00,,,
+3d1e3347,f1649a3c,Mercredi,08:00,17:00,,,FALSE
+936ecaa1,recQdZeT0zm9ohXqY,,16:00,16:00,,,
+"2057854c,c1f84e86,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",14:00,16:30,,,TRUE"
+75af64bb,6198f6c2,,15:00,11:00,,,
+8e1a45a8,recaWKHs93TXSvfJD,,15:00,08:00,,,
+8c69e8c9,recWCDXqagD1EKp55,,,,,,TRUE
+493a2326,f1649a3c,Dimanche,08:00,12:00,,,FALSE
+"63f9bbe9,reckvgwjsReKhseJi,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:00,,,"
+54d96b81,reccG1avgyGzG4Q3f,,14:00,12:00,,,
+c490ba5e,recL1ZsmHeU0Wqeup,,16:00,14:00,,,
+294a9b95,rec2EoBdt1h5g0Xo1,,16:00,11:00,,,
+061ca781,59a1e210,,16:00,10:00,,,
+300c70d2,6ecbd497,,15:00,14:00,,,
+7d44861e,recbAHayNmrYVipea,,10:00,10:00,,,
+2989138a,recwJLyh2VIc5yrFz,,15:00,11:00,,,
+1f0b1837,rec327C8WcSjvfiRg,,16:00,12:00,,,
+f18657ed,13ecf2d9,,15:00,11:00,,,
+fb77dd9f,1DBAACEE25,,14:00,10:00,,,
+f70cb083,recXYOu8iyDxwxsYj,,13:00,10:00,,,
+"6835b5f8,recR7TTdU2Cd6LXtY,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,13:30,,,"
+"c25b1d31,recR7TTdU2Cd6LXtY,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",19:00,20:30,,,"
+"87eeb9a6,recgWggnQnLivhwUK,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",10:00,14:00,,,"
+"2086bbe7,recgWggnQnLivhwUK,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",17:30,20:30,,,"
+52dbec5f,b0045aef,,14:00,11:00,,,
+44355be1,c2941514,,15:00,12:00,,,
+feebe459,f45e99ad,,15:00,12:00,,,
+8d3c9d11,4668316d,,14:00,11:00,,,
+f7b5e98f,recjNyNlDHdr2T8Rb,,17:00,14:00,,,
+b78cfd58,recJCSU5RfkAe6qm4,,,,,,TRUE
+b0e27a04,f4375377,,13:00,11:00,,,
+d9c6082a,6e56232a,,13:00,11:00,,,
+39e6e60a,c8b60ca4,,17:00,10:00,,,
+"ede2c9be,recLffXHD0G3WAVqh,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:00,22:00,,,FALSE"
+7c29e049,96b0af71,,15:30,11:00,,,
+"60ba0976,recZjgla28tff6c0B,""Lundi , Mardi , Jeudi , Vendredi , Samedi"",11:00,14:00,18:00,21:00,FALSE"
+"3508de48,reccZJ9INTTb7Mxtg,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:30,15:00,,,TRUE"
+84b019db,556d81ef,,16:00,11:00,,,
+b772a1f2,recBZmfIOETXxEgxz,,16:00,10:00,,,
+2952bb0b,9aabf635,,15:00,12:00,,,
+1185f8db,recI73ToLfFvZM51p,,14:00,11:00,,,
+,,,,,,,
+"1c4b9142,recuMxv5GGYZCUvaR,""Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:30,,,TRUE"
+"09eed410,recuMxv5GGYZCUvaR,""Vendredi , Samedi"",19:00,21:30,,,TRUE"
+c7aa8377,9077f262,,14:00,11:00,,,
+2543228c,c07c5e9a,,15:00,11:00,,,
+50ed4c4b,92e84c52,,15:00,11:00,,,
+ad9f3796,00c88cfc,,16:00,10:00,,,
+e45d88a8,18ad3951,,16:00,11:00,,,
+789cb139,72b22ee7,,15:00,11:00,,,
+bd16023d,f9262f00,,14:00,11:00,,,
+5c94a114,c3e9e4d5,,14:00,11:00,,,
+facc5bca,c3e9e4d5,,14:00,11:00,,,
+"a00e904b,a1a9fa58,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+4049c698,697971cb,,16:00,10:00,,,
+9e7877fa,recE5pXjJa4NwgWXw,,,,,,
+"5bf25551,recE5pXjJa4NwgWXw,""Lundi , Mardi , Jeudi , Vendredi , Samedi"",,,,,"
+"c6c757d3,recS8eNGPOw7ATrRy,""Lundi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+1aeb7b44,2d14b80e,,14:00,11:00,,,
+"99aeef60,recJ0tP4935MwgGZ2,""Lundi , Mardi , Mercredi , Jeudi , Samedi , Dimanche"",,,,,TRUE"
+"470f438e,recOgVXEaxn2YOO2r,""Lundi , Mardi , Jeudi , Vendredi"",09:00,15:30,,,"
+"e891b4e5,recQleTGwDegkThgA,""Mardi , Mercredi , Jeudi"",06:30,13:00,,,"
+"ca2f6bcf,recQleTGwDegkThgA,""Mardi , Mercredi , Jeudi"",17:30,21:00,,,"
+bb8c84cf,recQleTGwDegkThgA,Lundi,09:00,20:30,,,
+"87d32416,recQleTGwDegkThgA,""Vendredi , Samedi"",06:30,13:00,17:30,21:00,"
+"e9360d3b,rec7uNHsQPt5wZPCY,""Lundi , Mardi , Mercredi , Jeudi"",18:30,20:30,,,TRUE"
+"01f23422,rec7uNHsQPt5wZPCY,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",11:30,14:00,,,TRUE"
+2bbccdc4,73b25457,,15:00,11:00,,,
+b5095ed8,recvGLwzDSMSEwiXH,,11:00,14:00,,,
+642fbbe6,reczhuWwdniGCsFk9,,11:00,14:00,,,
+e6241a47,rec5VZhd6zBZNeCk5,,,,,,
+538d8f3f,rec7A3PQcyu4JvIDU,,11:00,14:00,,,
+4683a486,rec8AJUBJJfq4QsKF,,11:00,14:00,,,
+f550239f,recC3g4FIKoa4HtNL,,11:00,14:00,,,
+a6d41678,recN9vIKkkeiiy5xt,,11:00,14:00,,,
+4c2a77af,recwULghI2J0HRSLs,,11:00,14:00,,,
+4b59cc9b,recdcZS7keFGDATmz,,11:00,14:00,,,
+f77ae669,f782fb59,,14:00,11:00,,,
+66a90aa6,6f97e1cf,,15:00,11:00,,,
+d4c4a95d,reczXMtCwsT2mUUG6,,16:00,10:00,,,
+0c85d676,5c24ed9e,,14:00,11:00,,,
+"ca8f3e77,recjEjBFtNJ8wMqCg,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",11:00,21:00,,,"
+40960c6a,recjEjBFtNJ8wMqCg,Lundi,17:00,21:00,,,
+"505697b0,0cfea8b6,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",,,,,TRUE"
+d514c5e6,75f21fc4,,15:00,11:00,,,
+deaeea16,56570bad,,15:00,11:00,,,
+911b1a4f,5791a9b1,,16:00,10:00,,,
+00e1730e,6dcee182,,16:00,10:00,,,
+2956afe3,4fa4b5ab,,15:00,11:00,,,
+dd1292f0,60da4656,,14:00,10:00,,,
+46ea5b61,693a5c26,,13:00,10:00,,,
+"dbe01dc9,recsinOHawUF3oqCt,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",05:00,20:00,,,TRUE"
+b1dcfb4f,recX4sA6T4E9mpE4E,,,,,,TRUE
+76c9a930,24ee83fd,,15:00,12:00,,,
+96c237c9,recxrcryp7RwEOD3d,Vendredi,11:30,16:00,19:00,00:00,
+c4233833,recxrcryp7RwEOD3d,Dimanche,11:30,17:00,,,
+90180aad,recJEh4m2mJI2sOAe,Samedi,18:30,22:00,,,
+dd84886a,recJEh4m2mJI2sOAe,Mardi,11:45,14:00,18:30,22:00,
+24463aad,recJEh4m2mJI2sOAe,Vendredi,11:45,14:00,18:30,22:00,
+732f62c5,recJEh4m2mJI2sOAe,Mercredi,18:30,22:00,,,
+b0c3ce93,recXej1WibudDrBPL,,14:00,10:00,,,
+14875770,recgJDh7FHNgbmoP6,,17:00,12:00,,,
+86d1de03,cc7deed2,,17:00,12:00,,,
+269bf3a9,d89874c1,,16:00,11:00,,,
+cab38357,12ccef71,,,,,,TRUE
+"642f1a5d,recw7koVvxLQYlR3r,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+"5be8f6c4,reckvgwjsReKhseJi,""Vendredi , Samedi"",11:00,14:00,19:00,21:00,"
+"52723f19,17cb6388,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",19:00,21:00,,,TRUE"
+51bfec90,recARu2fgp1wFlXOc,,14:00,11:00,,,
+bb5e13cb,recdsWMTUwaltW3si,,14:00,11:00,,,
+"24597e5d,5685d96f,""Jeudi , Vendredi , Samedi"",09:00,16:00,,,FALSE"
+"3a0db8b2,2a048de0,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+3f3b31d1,4c3dc7d8,,15:00,11:00,,,
+190a28aa,recnyxIXeYaASu1CK,,16:30,12:00,,,
+7dce6366,recfS3ibqtiRSEOVy,,14:00,10:00,,,
+"b39fd999,recOgVXEaxn2YOO2r,""Samedi , Dimanche"",09:00,16:00,,,"
+c2198dcb,cc970d55,,14:00,11:00,,,
+49417cf3,fb45d590,,12:00,10:00,,,
+"d83533b8,402cda71,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,12:00,14:00,18:00,"
+6fc69289,402cda71,Dimanche,09:00,12:00,,,
+834dee31,29CCE76FFB,,14:00,10:00,,,
+cd4a7e71,recbTjQjQZULrhTNx,,14:00,10:00,,,
+4d120b37,recJQJSyzPhwSYxQq,,14:00,10:00,,,
+"258e4f25,022C4A9B1C,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",12:00,14:00,19:00,22:00,"
+f4227297,reco2MfzJdwyiquYE,,14:00,10:30,,,
+3c15d812,rec5vqdPwSdrFzsvs,,14:00,11:00,,,
+"d68bcb16,97c59f68,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",10:00,19:00,,,TRUE"
+2631e42a,recIx0OIAAGnmOiIg,,14:00,11:00,,,
+111b3bf0,recd0bjcfRVLbyOCv,,14:00,11:00,,,
+c7d0b25c,recjRyPmd9ypRv496,,17:00,10:00,,,
+"b2015091,recqN19d2eJTgPzZy,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",,,,,"
+11ce81ed,499267bc,,15:00,10:00,,,
+996d9eb9,ae555722,,15:00,10:00,,,
+"ffd3a589,rec4rk007rXcVl3F2,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:15,14:00,,,"
+d982fa20,1bfb8031,,14:00,10:00,,,
+"d0beba94,4ad9b1b1,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:30,12:00,14:30,16:30,"
+734a28e5,recj6bxDm7H2Yd6mt,,09:00,15:00,,,
+9d6302b2,recWzMtcGi7faKSct,,15:00,10:00,,,
+4ab9fa2f,recr1yhoYV0cSykCz,,15:30,10:00,,,
+"cb343787,rec07c8tTqu6IivCN,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"846d0ee2,59D0EA4483,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+"4dac5d3f,7f8d33e6,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",,,,,TRUE"
+c423281b,54cdc19e,,17:00,12:00,,,
+"0db831e0,cf8b073c,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+2404d7a9,rec1YVOft2oXH4wUP,,17:00,12:00,,,
+b8f695bf,99434ac2,,,,,,TRUE
+78eb8835,1e80996f,,16:00,10:00,,,
+"d95a986d,recB2JTuDBL25FrkJ,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"7ad64549,e4e5aa4a,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",08:00,16:00,,,"
+"bcccecc9,1260ca37,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",,,,,TRUE"
+d4f6a6a5,be82b4f3,,15:00,11:00,,,
+204a9523,2613753f,,14:00,11:00,,,
+0c19989a,7a7f6c8f,,,,,,TRUE
+01b420c3,f3da8e1d,,16:00,10:00,,,
+"49494967,4ca65b6f,""Mardi , Mercredi , Vendredi"",15:00,19:00,,,TRUE"
+3c6e19fd,fd7b6efe,,15:00,11:00,,,
+302df0ec,f27d27f0,,14:00,11:00,,,
+7fc84e01,6cdcafe1,,14:00,11:00,,,
+b7691ffa,recyKZtzYYBBrdqJo,,10:00,14:00,,,
+"377b2227,971c994a,""Vendredi , Samedi , Dimanche"",12:00,15:00,,,FALSE"
+c7cc97a1,a2517f5d,Lundi,13:00,18:30,,,FALSE
+"5f4e96cd,a2517f5d,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",10:00,18:30,,,FALSE"
+"4693d337,3ee94f31,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",09:00,18:00,,,TRUE"
+"4ab249f0,652efe0a,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:30,12:00,,,TRUE"
+4203fd55,recWhWauzB077mMAC,Samedi,09:00,12:00,,,TRUE
+2939fe1b,9f12dd21,,16:00,14:00,,,
+"cfb80fbb,971c994a,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",19:00,21:00,,,TRUE"
+8660aded,5d3c45ab,,10:00,14:00,,,
+"276e1bad,fcc3eb51,""Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",13:00,18:00,,,FALSE"
+ac42b841,24c9ee39,,16:00,11:00,,,
+e4b3e7cb,d20857f9,,14:00,11:00,,,
+a5d48353,129c8e42,,16:00,11:00,,,
+8028ca07,0f306351,,14:00,11:00,,,
+82bd69d4,353E2627B1,,14:00,11:00,,,
+43bc4385,a6ce3e91,,14:00,14:00,,,
+0d91e6c3,8d1d1389,,16:00,11:00,,,
+cbb06496,recFDv6ASx8x1hXN8,,15:00,10:00,,,
+2558ecb8,07D151EF55,,17:00,09:00,,,
+"d4a336b0,recSSTvKv6Jh4BYzZ,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,12:00,13:30,17:00,"
+"35e8986a,37c89345,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",10:00,17:00,,,"
+58f5f875,37c89345,Dimanche,10:00,16:00,,,FALSE
+"851137b2,recJbOa03QazF8GUQ,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+8b36927f,107182fa,,15:00,10:00,,,
+"c37467dd,403a832a,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:30,18:00,,,"
+4524aa98,recuP0b6rC8FOEl7B,,15:00,11:00,,,
+dbf92a30,6d65a518,,14:00,11:00,,,
+83f4ae53,8e65d113,,15:00,11:00,,,
+03406c04,6e9c7e26,,15:00,10:00,,,
+38f26285,4b4e0f99,,16:00,11:00,,,
+e8dc59fb,3fe4af77,,,,,,TRUE
+"dddc93cb,76db9c31,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,11:00,,,TRUE"
+64c92b5b,recywlCVj6wd5yGdt,,16:00,10:00,,,
+"bf98d36e,d42800d8,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+8f3a3796,d958f421,,15:00,10:00,,,
+974bfa13,1f6c6a99,,15:00,10:00,,,
+246fea7a,67551572,,16:00,10:00,,,
+c27f3fe1,1f64e736,,16:00,10:00,,,
+8ab90578,8f0bc955,,15:00,11:00,,,
+7c65835e,f2be7df6,,16:00,10:00,,,
+9595ee15,7d6fcc62,,14:00,11:00,,,
+"423e7ee3,f5205cba,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,"
+e48e90a6,3c5b87ac,,15:00,11:00,,,
+"20bf622a,b5309448,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:30,17:30,,,"
+aa3ad372,2685f41f,,10:00,15:00,,,
+"cb705e42,recqF6nWXZHiTjT7J,""Lundi , Mardi , Mercredi , Vendredi , Samedi"",14:00,18:00,,,"
+1dbaa9b9,d184f7a2,,15:00,11:00,,,
+"96c151f4,e6d7c9a1,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+910e9bc2,e79ea8ed,,16:00,11:00,,,
+98175c97,dd4fb432,,16:00,11:00,,,
+7490a843,recS5CY0vUJ4cR2J8,,15:00,10:00,,,
+7333ada1,a0fddb84,,15:00,11:00,,,
+43aaad9d,8ca02e8c,,15:00,11:00,,,
+1de8c283,9994a097,,16:00,10:00,,,
+"fe9d5184,1c92c8fa,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,18:00,,,"
+"78ac1fb3,fe196259,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",09:00,18:00,,,"
+"fc85eed0,4543234a,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"17e2f8e3,deb41a00,""Jeudi , Vendredi , Samedi"",09:00,15:00,,,TRUE"
+"690d2ca8,f5c25043,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",09:00,17:00,,,"
+0f723229,9cf70c46,,14:00,12:00,,,
+7d4a7f64,ebed52c4,,14:00,14:00,,,
+"d32a3924,fbe4184b,""Lundi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",11:30,15:00,,,"
+1f500f24,f62afb0c,,16:00,10:00,,,
+e20427b9,9fc6e702,,14:00,11:00,,,
+"d4ac4005,9cf1c808,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,19:00,,,TRUE"
+0eda0264,d09b00bc,,15:00,11:00,,,
+e475f0f3,fae9f8ac,,16:00,10:00,,,
+a0ab3088,6af31d20,,14:00,11:00,,,
+711446aa,237d3fcf,,15:00,,,,
+b8fbaa7d,0c52f4d6,,16:00,10:00,,,
+7587ea96,c6d5eae0,,,,,,TRUE
+697e99fe,0753592a,,15:00,10:00,,,
+6b430db2,2a93f4f3,,16:00,10:00,,,
+78d51a3b,644abebe,,,,,,TRUE
+04b13f98,de4e1be5,,,,,,TRUE
+"50aac720,828017bf,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",07:30,16:30,,,TRUE"
+911ab43d,b2b00f8b,,14:00,11:00,,,
+366786f8,dea8c68c,,14:00,11:00,,,
+"f26223cd,9fea8c0e,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",08:00,18:00,,,"
+2c06efe8,recIzyi9rbojMjaQa,,15:00,10:00,,,
+b55ab923,516604dd,,,,,,TRUE
+d5a707cd,712d54fa,,,,,,TRUE
+"c2341a0c,f373d39c,""Lundi , Mardi , Mercredi , Jeudi , Vendredi"",13:00,15:00,,,FALSE"
+58d3af43,86b3c972,,15:00,12:00,,,
+50578fec,c58d3d10,,15:00,10:00,,,
+2fe763b6,fda49707,,15:00,11:00,,,
+876bac8c,3f1a6fa1,,,,,,TRUE
+"3f04e400,e2a3dddd,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+8b95ee7f,38bee07f,,16:00,11:00,,,
+"aab536ee,9a8f7c6d,""Vendredi , Samedi"",19:00,20:30,,,FALSE"
+"c03166b1,9a8f7c6d,""Lundi , Samedi , Dimanche"",12:00,13:30,,,FALSE"
+"26ecf3ec,5E9276CCD3,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi"",14:00,,,,TRUE"
+bfa5e4ea,50a9f771,,15:00,10:00,,,
+"83c32e00,223f278c,""Mardi , Mercredi , Jeudi"",08:00,17:00,,,"
+c793db52,223f278c,Vendredi,13:30,17:00,,,
+"ebfa0323,223f278c,""Samedi , Dimanche"",06:00,13:00,,,"
+138d6dd4,59c9b4b0,,15:00,11:00,,,
+0cbb1e23,ad7f596b,,13:00,11:00,,,
+258ae6ce,ca865c08,,14:00,11:00,,,
+104667a8,a164d04c,,15:00,10:00,,,
+70dd1c37,a311fc46,,14:00,11:00,,,
+3f572912,fe3e77ff,,14:00,11:00,,,
+591d99c7,4c8bf0e8,,15:00,08:00,,,
+8bd1e177,3a4f632f,,16:00,11:00,,,
+1a3e0ef9,40de15c1,,,,,,
+aa638f8c,c51a5142,,15:00,11:00,,,
+3195d74c,989bb74a,,14:00,11:00,,,
+47ea05a3,b716cbe7,,15:00,,,,
+53c4077b,6183ed99,,14:00,11:00,,,
+0c23a214,2411e9e5,,,,,,TRUE
+f1e352f6,eccd29ab,,15:00,09:00,,,
+0a822c22,099dc85a,,15:00,11:00,,,
+e999b445,b74cbb62,,16:00,11:00,,,
+36100817,cdbfafea,,14:00,11:00,,,
+4baba985,7c8e2c3e,,15:00,10:00,,,
+5ca7a5b4,7f5f40e8,,15:00,11:00,,,
+eabaf202,recGIk7nWQkpYIgSf,,15:30,11:00,,,
+e5fcb760,e1affab8,,,,,,TRUE
+239295d5,18b25ce7,,15:00,11:00,,,
+6988a97f,f8c147fe,,15:00,11:00,,,
+ff28d46d,recm1N1ZbnALAYkhe,,08:00,18:00,,,
+7cb4106c,f6e247f4,,15:00,10:00,,,
+47b8d155,31c1d557,,15:00,11:00,,,
+"29c61f6b,785bec7f,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+bd78d177,88d1f2e1,,15:00,11:00,,,
+2f4d0614,352ab9ee,,,,,,TRUE
+70f35c76,ad68cb5d,,14:00,11:00,,,
+"c3edc32e,848d4886,""Mardi , Mercredi , Jeudi , Vendredi , Samedi"",,,,,TRUE"
+72a14a65,004315a7,,16:00,10:00,,,
+eb65c84e,d7e43f3b,,15:00,10:00,,,
+aa372596,b414150e,,14:00,11:00,,,
+9b3b47ee,39c50266,,15:00,10:00,,,
+bd82784d,cb9b8ef9,,16:00,10:00,,,
+3ed18b7a,49342f66,,14:30,11:00,,,
+7a493b16,17589b4c,,,,,,TRUE
+0e3ed0a6,f44a8ee8,,15:00,11:00,,,
+ac598d23,2ebf141a,,15:00,10:00,,,
+b18ca94f,5e8190a3,,11:00,16:00,,,
+6f23ca68,95b96890,,,,,,TRUE
+80b59fec,2fc0da0f,,,,,,TRUE
+a3375239,8e6858f0,,16:00,11:00,,,
+7e1926e0,4b957857,,15:00,11:00,,,
+e4747664,989d5201,,15:00,11:00,,,
+28e704a3,6c5daf60,,15:00,11:00,,,
+bad9bbc5,f5d77505,,,,,,TRUE
+74a4c871,b4120054,,16:00,12:00,,,
+"50ea5869,b08a3e5c,""Lundi , Mardi , Mercredi , Jeudi"",,,,,TRUE"
+28b8f2c2,recUBqeeg4AJGfuv4,,14:00,16:30,,,
+5f43c8dc,59a43d23,,14:00,10:00,,,
+b8b08c94,recunAFuk5TAReriR,Samedi,,,,,
+91c0874d,5c9e21e5,,14:00,11:00,,,
+"fc87eb67,db789d9c,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+"5926e13b,recwhRDfmwSLBFmGp,""Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche"",,,,,TRUE"
+7978ee8f,2805db88,,15:00,11:00,,,
+826c3033,a626b82d,,15:00,10:00,,,
+39634629,d7d60ec0,,15:30,10:30,,,
+16cce2a8,bee1c73f,,15:30,10:30,,,
+963f76bb,13e51a81,,15:00,12:00,,,
+3a02610a,c4ad25f4,,14:00,11:00,,,

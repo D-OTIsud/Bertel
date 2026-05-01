@@ -1,0 +1,675 @@
+{
+  "source_dir": "Base de donnée DLL et API\\Old_data",
+  "files": {
+    "Berta 2.0 - Berta 2.0 (2).csv": {
+      "columns": 58,
+      "usable_rows": 188,
+      "raw_rows": 5932,
+      "good_rows": 0,
+      "repaired_rows": 188,
+      "blank_rows": 1356,
+      "bad_rows": 4388,
+      "bad_widths": {
+        "1": 3459,
+        "2": 412,
+        "3": 198,
+        "4": 103,
+        "5": 58,
+        "6": 34,
+        "7": 28,
+        "8": 12
+      },
+      "bad_examples": [
+        {
+          "line": 2,
+          "width": 1,
+          "preview": "recPtO2ckGiW3Ndlr,Le Longboard ,,,oui,sud,Le Tampon,\"265   Rue Jules Bertaut, 97430 Le Tampon\",https://www.restaurant-le-longboard-tampon-974.fr/,Restauration,Restaurant,Restaurant,Centre ville,97430,Le Tampon,,,,\"Chèque,Carte Bancaire,Espè"
+        },
+        {
+          "line": 4,
+          "width": 6,
+          "preview": "Deux salles intérieures climatisées et chauffées |  remplies de couleurs |  disposées de petits coins intimes |  pour les amoureux |  ainsi qu'un petit coin enfants |  où ils pourront regarder des dessins animés au calme ...;;;;;"
+        },
+        {
+          "line": 6,
+          "width": 1,
+          "preview": "Une terrasse agréable et aérée pour les fumeurs pourra également convenir aux non fumeurs.;;;;;"
+        },
+        {
+          "line": 8,
+          "width": 3,
+          "preview": "Tous les plats sont faits minutes. La carte se compose d'une dizaine d'entrées |  d'une trentaine de plats et grillades |  ainsi que des pizzas et des pâtes.;;;;;"
+        },
+        {
+          "line": 10,
+          "width": 4,
+          "preview": "Quelques spécialités du restaurant : tartare de thon rouge |  magret de canard sauce miel et pain d'épices |  noix de saint jacques flambées au rhum |  émincé de poulet sauce gingembre mangue ... et bien d'autres. ;;;;;"
+        }
+      ],
+      "health": "blocked"
+    },
+    "Etablissements - Commentaires (2).csv": {
+      "columns": 9,
+      "usable_rows": 2657,
+      "raw_rows": 2657,
+      "good_rows": 2657,
+      "repaired_rows": 0,
+      "blank_rows": 0,
+      "bad_rows": 0,
+      "bad_widths": {},
+      "bad_examples": [],
+      "health": "ok"
+    },
+    "Etablissements - Contacts sup (1).csv": {
+      "columns": 12,
+      "usable_rows": 251,
+      "raw_rows": 257,
+      "good_rows": 251,
+      "repaired_rows": 0,
+      "blank_rows": 6,
+      "bad_rows": 0,
+      "bad_widths": {},
+      "bad_examples": [],
+      "health": "ok"
+    },
+    "Etablissements - CRM (2).csv": {
+      "columns": 14,
+      "usable_rows": 1980,
+      "raw_rows": 2351,
+      "good_rows": 1768,
+      "repaired_rows": 212,
+      "blank_rows": 15,
+      "bad_rows": 356,
+      "bad_widths": {
+        "1": 333,
+        "2": 12,
+        "9": 4,
+        "6": 4,
+        "27": 1,
+        "3": 1,
+        "5": 1
+      },
+      "bad_examples": [
+        {
+          "line": 114,
+          "width": 1,
+          "preview": "7e1ab224,SeJe3457kd,,Autres,,\"L'adresse mail entrée pour ce prestataire est invalide : jeannick.sery@orange.fr;"
+        },
+        {
+          "line": 115,
+          "width": 1,
+          "preview": "-> Message d'erreur quand on essaie de le contacter par mail\",🤔,27/08/2021,m.lallement@otisud.com,Traitée,21/09/2021,,recC3g4FIKoa4HtNL,;"
+        },
+        {
+          "line": 121,
+          "width": 1,
+          "preview": "a0473281,4381FE,,Promotion Facebook,,\"Mail reçu sur prestataires@otisud.com : \"\" Bonjour, le constat de ce jour est le retour de nombreux visiteurs qui déplorent un manque de visibilité (référencements) de mon atelier à Entre-Deux. N'étant "
+        },
+        {
+          "line": 122,
+          "width": 1,
+          "preview": "Je vous remercie par ailleurs pour le travail d'investigation que vous menez sur le beau territoire réunionné. ;"
+        },
+        {
+          "line": 123,
+          "width": 1,
+          "preview": "Cordialement, Claire Falconnet \"\"\",🤔,07/09/2021,m.lallement@otisud.com,Traitée,20/09/2021,,recbqR9yn4YRURgzC,;"
+        }
+      ],
+      "health": "needs_normalization"
+    },
+    "Etablissements - D_Durable (3).csv": {
+      "columns": 4,
+      "usable_rows": 68,
+      "raw_rows": 80,
+      "good_rows": 51,
+      "repaired_rows": 17,
+      "blank_rows": 2,
+      "bad_rows": 10,
+      "bad_widths": {
+        "1": 9,
+        "3": 1
+      },
+      "bad_examples": [
+        {
+          "line": 30,
+          "width": 1,
+          "preview": "Utilisation nettoyage vapeur\""
+        },
+        {
+          "line": 33,
+          "width": 1,
+          "preview": "Panneaux photovoltaiques"
+        },
+        {
+          "line": 34,
+          "width": 1,
+          "preview": "Chauffe eau solaire\""
+        },
+        {
+          "line": 39,
+          "width": 1,
+          "preview": "Suppression des consommables à usage unique et l’élimination des emballages plastiques."
+        },
+        {
+          "line": 40,
+          "width": 1,
+          "preview": "Les déchets compostables sont traités et stockés sur place, et le compost ainsi généré est utilisé pour les nombreux espaces végétalisés de l’hôtel.\""
+        }
+      ],
+      "health": "needs_normalization"
+    },
+    "Etablissements - form_j_h.csv": {
+      "columns": 8,
+      "usable_rows": 767,
+      "raw_rows": 780,
+      "good_rows": 528,
+      "repaired_rows": 239,
+      "blank_rows": 13,
+      "bad_rows": 0,
+      "bad_widths": {},
+      "bad_examples": [],
+      "health": "needs_normalization"
+    },
+    "Etablissements - galerie (4).csv": {
+      "columns": 5,
+      "usable_rows": 4893,
+      "raw_rows": 5109,
+      "good_rows": 4887,
+      "repaired_rows": 6,
+      "blank_rows": 213,
+      "bad_rows": 3,
+      "bad_widths": {
+        "1": 2,
+        "2": 1
+      },
+      "bad_examples": [
+        {
+          "line": 2679,
+          "width": 1,
+          "preview": "398f24da,recc7m3SkpexAuzvc,\"https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/398f24da.Path.093540.jpg"
+        },
+        {
+          "line": 2680,
+          "width": 1,
+          "preview": ",FALSE,\na5551b81,251f9919,https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/a5551b81.Path.114032.jpg,TRUE,\n39f071d0,251f9919,https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/39f071d0.Path"
+        },
+        {
+          "line": 2681,
+          "width": 2,
+          "preview": "ALSE | "
+        }
+      ],
+      "health": "needs_normalization"
+    },
+    "Etablissements - Prestataires (1).csv": {
+      "columns": 19,
+      "usable_rows": 939,
+      "raw_rows": 944,
+      "good_rows": 939,
+      "repaired_rows": 0,
+      "blank_rows": 5,
+      "bad_rows": 0,
+      "bad_widths": {},
+      "bad_examples": [],
+      "health": "ok"
+    },
+    "Etablissements - Tarifs (1).csv": {
+      "columns": 7,
+      "usable_rows": 917,
+      "raw_rows": 938,
+      "good_rows": 885,
+      "repaired_rows": 32,
+      "blank_rows": 21,
+      "bad_rows": 0,
+      "bad_widths": {},
+      "bad_examples": [],
+      "health": "needs_normalization"
+    }
+  },
+  "clean_main_fallback": {
+    "path": "C:\\Users\\dphil\\Downloads\\Berta 2.0 - Berta 2.0 (3).csv",
+    "columns": 58,
+    "usable_rows": 837,
+    "raw_rows": 837,
+    "good_rows": 837,
+    "repaired_rows": 0,
+    "blank_rows": 0,
+    "bad_rows": 0,
+    "bad_widths": {},
+    "bad_examples": [],
+    "health": "ok",
+    "online_counts": [
+      [
+        "non",
+        474
+      ],
+      [
+        "oui",
+        363
+      ]
+    ],
+    "category_counts": [
+      [
+        "Location saisonnière",
+        383
+      ],
+      [
+        "Restaurant",
+        79
+      ],
+      [
+        "Chambre d'hôtes",
+        78
+      ],
+      [
+        "Artisanat",
+        53
+      ],
+      [
+        "Terroir",
+        25
+      ],
+      [
+        "Terre",
+        24
+      ],
+      [
+        "Table d'hôtes",
+        21
+      ],
+      [
+        "Autre type de restauration",
+        20
+      ],
+      [
+        "Gîte d'étape et de randonnée",
+        20
+      ],
+      [
+        "Patrimoine culturel",
+        16
+      ],
+      [
+        "Divertissement",
+        13
+      ],
+      [
+        "Remise en forme",
+        12
+      ],
+      [
+        "Services",
+        12
+      ],
+      [
+        "Auberge",
+        10
+      ],
+      [
+        "Art",
+        9
+      ]
+    ],
+    "group_counts": [
+      [
+        "Hébergement",
+        492
+      ],
+      [
+        "Loisirs - se divertir",
+        142
+      ],
+      [
+        "Restauration",
+        136
+      ],
+      [
+        "Découverte",
+        50
+      ],
+      [
+        "Transport",
+        17
+      ]
+    ]
+  },
+  "crm": {
+    "topics": [
+      [
+        "Accompagnement Taxe de séjour",
+        627
+      ],
+      [
+        "Promotion SIT (reunion.fr)",
+        263
+      ],
+      [
+        "Demande signalétique",
+        184
+      ],
+      [
+        "Partenaire d'une action B To C",
+        144
+      ],
+      [
+        "Promotion Facebook",
+        139
+      ],
+      [
+        "Fermeture définitive",
+        124
+      ],
+      [
+        "Labels et classements étoiles",
+        120
+      ],
+      [
+        "Promotion  Explore",
+        91
+      ],
+      [
+        "Autres",
+        68
+      ],
+      [
+        "Modification infos BDD",
+        51
+      ],
+      [
+        "Fermeture provisoire",
+        33
+      ],
+      [
+        "Porteur de projet(s)",
+        29
+      ]
+    ],
+    "statuses": [
+      [
+        "Traitée",
+        1786
+      ],
+      [
+        "A traiter",
+        193
+      ],
+      [
+        "b962756d",
+        1
+      ]
+    ],
+    "rows_with_object_id": 1973,
+    "rows_with_prestataire_id": 1980,
+    "comment_parent_match": {
+      "matched": 2436,
+      "orphan": 221
+    }
+  },
+  "galerie": {
+    "objects": 923,
+    "main_true_rows": 943,
+    "objects_with_multiple_main_true": 26
+  },
+  "prestataires": {
+    "rows_with_formulaire": 933,
+    "newsletter": [
+      [
+        "TRUE",
+        853
+      ],
+      [
+        "FALSE",
+        81
+      ],
+      [
+        "<empty>",
+        5
+      ]
+    ],
+    "roles": [
+      [
+        "<empty>",
+        407
+      ],
+      [
+        "Propriétaire",
+        340
+      ],
+      [
+        "Gérant",
+        154
+      ],
+      [
+        "Co-gérant",
+        21
+      ],
+      [
+        "Agence/Conciergerie",
+        8
+      ],
+      [
+        "Manager",
+        4
+      ],
+      [
+        "Directeur",
+        3
+      ],
+      [
+        "Conjoint collaborator",
+        2
+      ]
+    ]
+  },
+  "contacts_sup": {
+    "types": [
+      [
+        "Site web",
+        125
+      ],
+      [
+        "Téléphone",
+        88
+      ],
+      [
+        "email",
+        38
+      ]
+    ],
+    "principal": [
+      [
+        "<empty>",
+        205
+      ],
+      [
+        "FALSE",
+        32
+      ],
+      [
+        "TRUE",
+        14
+      ]
+    ]
+  },
+  "tarifs": {
+    "labels": [
+      [
+        "<empty>",
+        177
+      ],
+      [
+        "nuit",
+        171
+      ],
+      [
+        "pers.",
+        78
+      ],
+      [
+        "semaine",
+        51
+      ],
+      [
+        "produit",
+        44
+      ],
+      [
+        "week-end",
+        40
+      ],
+      [
+        "chambre double/nuit",
+        30
+      ],
+      [
+        "bungalow/nuit",
+        30
+      ],
+      [
+        "pers./nuit",
+        29
+      ],
+      [
+        "repas",
+        29
+      ],
+      [
+        "chambre double",
+        21
+      ],
+      [
+        "article",
+        21
+      ]
+    ],
+    "mini": [
+      [
+        "À partir de",
+        692
+      ],
+      [
+        "<empty>",
+        225
+      ]
+    ]
+  },
+  "horaires": {
+    "reservation": [
+      [
+        "<empty>",
+        565
+      ],
+      [
+        "TRUE",
+        145
+      ],
+      [
+        "FALSE",
+        57
+      ]
+    ],
+    "jours": [
+      [
+        "<empty>",
+        466
+      ],
+      [
+        "Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche",
+        73
+      ],
+      [
+        "Lundi , Mardi , Mercredi , Jeudi , Vendredi",
+        22
+      ],
+      [
+        "Lundi , Mardi , Mercredi , Jeudi , Vendredi , Samedi",
+        20
+      ],
+      [
+        "Dimanche",
+        19
+      ],
+      [
+        "Mardi , Mercredi , Jeudi , Vendredi , Samedi",
+        16
+      ],
+      [
+        "Vendredi , Samedi",
+        13
+      ],
+      [
+        "Samedi , Dimanche",
+        11
+      ],
+      [
+        "Mardi , Mercredi , Jeudi , Vendredi , Samedi , Dimanche",
+        11
+      ],
+      [
+        "Samedi",
+        9
+      ],
+      [
+        "Jeudi",
+        8
+      ],
+      [
+        "Mercredi , Jeudi , Vendredi , Samedi , Dimanche",
+        8
+      ]
+    ]
+  },
+  "developpement_durable": {
+    "types": [
+      [
+        "Gestion des déchets",
+        17
+      ],
+      [
+        "Gestion de l'énergie",
+        10
+      ],
+      [
+        "Gestion de l'eau",
+        7
+      ],
+      [
+        "Sensibilisation de la clientèle",
+        6
+      ],
+      [
+        "recyclage des végétaux",
+        5
+      ],
+      [
+        "Produits labellisés bio",
+        5
+      ],
+      [
+        "Préservation de la biodiversité",
+        3
+      ],
+      [
+        "Produits en circuit court",
+        3
+      ],
+      [
+        "Soutien associatif",
+        3
+      ],
+      [
+        "Upcycling",
+        3
+      ],
+      [
+        "borne électrique (recharge VTT ou véhicule)",
+        2
+      ],
+      [
+        "Assainissement Durable",
+        2
+      ]
+    ]
+  }
+}

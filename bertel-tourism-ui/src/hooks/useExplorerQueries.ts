@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
@@ -28,7 +28,7 @@ import {
   saveObjectWorkspacePricing,
   saveObjectWorkspaceTaxonomy,
 } from '../services/object-workspace';
-import { applyFrontendOnlyExplorerFilters } from '../utils/facets';
+import { applyFrontendOnlyExplorerFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
@@ -87,25 +87,35 @@ export function useExplorerCardsQuery() {
   const filters = useExplorerFilters();
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const demoMode = useSessionStore((state) => state.demoMode);
-  const queryFilters = useMemo(
-    () => ({
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
+
+  // Resolve the effective status set sent to the RPC. We embed it in
+  // `queryFilters.common.statuses` so the React-Query cache key reflects the
+  // real query (a tourism_agent and an org_admin must NOT share cache entries).
+  const queryFilters = useMemo(() => {
+    const effectiveStatuses = resolveExplorerStatuses(filters.common.statuses, canEditObjects);
+    return {
       ...filters,
+      common: {
+        ...filters.common,
+        statuses: effectiveStatuses,
+      },
       hot: {
         ...filters.hot,
         subtypes: demoMode ? filters.hot.subtypes : [],
       },
-    }),
-    [demoMode, filters],
-  );
+    };
+  }, [canEditObjects, demoMode, filters]);
 
   const query = useQuery({
     queryKey: ['explorer-cards', queryFilters, langPrefs],
     queryFn: () => listExplorerCards(queryFilters, langPrefs),
+    placeholderData: keepPreviousData,
   });
 
   const data = useMemo(
-    () => applyFrontendOnlyExplorerFilters(query.data ?? [], filters),
-    [filters, query.data],
+    () => applyFrontendOnlyExplorerFilters(query.data ?? [], queryFilters),
+    [queryFilters, query.data],
   );
 
   return {
@@ -119,6 +129,8 @@ export function useExplorerReferencesQuery() {
     queryKey: ['explorer-references'],
     queryFn: listExplorerReferences,
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    meta: { persist: true },
   });
 }
 
@@ -147,6 +159,8 @@ export function useLocationReferenceOptionsQuery() {
     queryKey: ['location-reference-options'],
     queryFn: listLocationReferenceOptions,
     staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    meta: { persist: true },
   });
 }
 

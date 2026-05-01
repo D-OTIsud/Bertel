@@ -4,6 +4,7 @@ import type {
   ExplorerBucketKey,
   ExplorerCommonFilters,
   ExplorerFilters,
+  ExplorerStatusFilter,
   MeetingRoomFilter,
   ObjectCard,
   ObjectTypeCode,
@@ -50,6 +51,9 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   petsAccepted: false,
   openNow: false,
   labelsAny: [],
+  // Empty = "use the server default" (published only). Editors get the default
+  // broadened in `useExplorerFilters` once their canEditObjects flag is known.
+  statuses: [],
   bbox: null,
   polygon: null,
 };
@@ -91,6 +95,26 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
 
 export function getEffectiveSelectedBuckets(selectedBuckets: ExplorerBucketKey[]): ExplorerBucketKey[] {
   return selectedBuckets.length > 0 ? selectedBuckets : EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
+}
+
+/**
+ * Resolves the publication-status set the Explorer should query for.
+ *
+ * Rules:
+ *   - Explicit user/UI selection wins (any non-empty `configured`).
+ *   - Editors (admin role or one of create/edit/publish permissions) default
+ *     to ['published', 'draft'] so the Explorer surfaces drafts of their ORG.
+ *     RLS still limits drafts to their own scope (cf. api.can_read_extended).
+ *   - Read-only personas stay on ['published'] only.
+ */
+export function resolveExplorerStatuses(
+  configured: ExplorerStatusFilter[],
+  canEditObjects: boolean,
+): ExplorerStatusFilter[] {
+  if (configured.length > 0) {
+    return [...new Set(configured)];
+  }
+  return canEditObjects ? ['published', 'draft'] : ['published'];
 }
 
 export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObjectTypeCode[] {
@@ -199,7 +223,15 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
   const allowedHotSubtypes = new Set(effectiveHotSubtypes);
   const labelNeedles = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
   const requireLabelMatch = labelNeedles.length > 0;
+  // When the caller resolves statuses (cf. resolveExplorerStatuses) the array
+  // is non-empty and we apply it here too. Empty array = "no client-side
+  // filter": we defer to whatever the backend already filtered.
+  const statuses = filters.common.statuses;
+  const allowedStatuses = statuses.length > 0 ? new Set<string>(statuses) : null;
   return cards.filter((card) => {
+    if (allowedStatuses && card.status && !allowedStatuses.has(card.status)) {
+      return false;
+    }
     if (requireLabelMatch) {
       const hay = Array.isArray(card.labels) ? card.labels.map((label) => String(label).toLowerCase()) : [];
       const matches = labelNeedles.some((needle) => hay.includes(needle));

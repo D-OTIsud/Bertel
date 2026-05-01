@@ -1,10 +1,21 @@
 import type { ReactNode } from 'react';
 import { useExplorerStore } from '../../store/explorer-store';
-import type { BackendObjectTypeCode, ExplorerBucketKey, ExplorerReferences } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS, HOT_BUCKET_TYPES } from '../../utils/facets';
+import { useSessionStore } from '../../store/session-store';
+import type {
+  BackendObjectTypeCode,
+  ExplorerBucketKey,
+  ExplorerReferences,
+  ExplorerStatusFilter,
+} from '../../types/domain';
+import { EXPLORER_BUCKET_OPTIONS, HOT_BUCKET_TYPES, resolveExplorerStatuses } from '../../utils/facets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
+
+const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
+  { code: 'published', label: 'Publie' },
+  { code: 'draft', label: 'Brouillon' },
+];
 
 const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   HOT: 'Hotels',
@@ -104,9 +115,17 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
   const setItiDuration = useExplorerStore((state) => state.setItiDuration);
   const toggleItiPractice = useExplorerStore((state) => state.toggleItiPractice);
   const resetAll = useExplorerStore((state) => state.resetAll);
+  const setStatuses = useExplorerStore((state) => state.setStatuses);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
   const showIti = isBucketSelected(selectedBuckets, 'ITI');
+  // Effective set displayed in the UI: when nothing is configured, the
+  // resolver returns the editor default ['published','draft']. The toggle
+  // writes to common.statuses; an explicit empty pick is intentionally not
+  // distinguished from the default — both surface as "everything I'm allowed
+  // to see".
+  const effectiveStatuses = resolveExplorerStatuses(common.statuses, canEditObjects);
 
   return (
     <div className={compact ? 'filters-panel filters-panel--compact' : 'filters-panel'}>
@@ -180,6 +199,43 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
               </label>
             </div>
           </FiltersSubsection>
+
+          {canEditObjects ? (
+            <FiltersSubsection title="Statut">
+              <div className="chip-grid">
+                {STATUS_OPTIONS.map((option) => {
+                  const active = effectiveStatuses.includes(option.code);
+                  return (
+                    <button
+                      key={option.code}
+                      type="button"
+                      className={active ? 'chip chip--active' : 'chip'}
+                      onClick={() => {
+                        const nextEffective: ExplorerStatusFilter[] = active
+                          ? effectiveStatuses.filter((entry) => entry !== option.code)
+                          : [...effectiveStatuses, option.code];
+                        // Keep at least one status active to avoid an
+                        // empty-grid dead end. Empty selection collapses to
+                        // ['published'] for safety.
+                        const sanitized: ExplorerStatusFilter[] =
+                          nextEffective.length > 0 ? nextEffective : ['published'];
+                        // When the set matches the editor default we collapse
+                        // back to [] so the URL stays clean and the resolver
+                        // can recompute on session changes.
+                        const isEditorDefault =
+                          sanitized.length === STATUS_OPTIONS.length &&
+                          STATUS_OPTIONS.every((opt) => sanitized.includes(opt.code));
+                        setStatuses(isEditorDefault ? [] : sanitized);
+                      }}
+                      aria-pressed={active}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </FiltersSubsection>
+          ) : null}
 
           {common.labelsAny.length > 0 ? (
             <FiltersSubsection title="Labels">

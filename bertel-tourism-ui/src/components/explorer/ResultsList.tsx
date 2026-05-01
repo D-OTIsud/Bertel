@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 interface ResultsListProps {
   cards: ObjectCard[];
   loading: boolean;
+  isRefreshing?: boolean;
   headerActions?: ReactNode;
 }
 
@@ -36,7 +37,32 @@ function getResultCardBadgeIcon(type: string): { label: string; src: string } {
   };
 }
 
-export function ResultsList({ cards, loading, headerActions }: ResultsListProps) {
+function ResultsListSkeleton() {
+  return (
+    <div className="results-list results-list--skeleton" aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={`results-skeleton-${index}`} className="result-card result-card--skeleton">
+          <div className="result-card__media drawer-skeleton" />
+          <div className="result-card__body">
+            <div className="result-card__title-row">
+              <div className="result-card__title-copy">
+                <span className="drawer-skeleton results-skeleton__title" />
+                <span className="drawer-skeleton results-skeleton__subtitle" />
+              </div>
+              <span className="drawer-skeleton results-skeleton__chip" />
+            </div>
+            <div className="result-card__footer">
+              <span className="drawer-skeleton results-skeleton__line" />
+              <span className="drawer-skeleton results-skeleton__pill" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ResultsList({ cards, loading, isRefreshing = false, headerActions }: ResultsListProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
@@ -70,13 +96,14 @@ export function ResultsList({ cards, loading, headerActions }: ResultsListProps)
         <div className="results-panel__title-row">
           <span className="eyebrow">Resultats</span>
           <span className="results-count">{cards.length} fiches</span>
+          {isRefreshing ? <span className="results-refreshing">Mise a jour...</span> : null}
         </div>
         {headerActions ? <div className="results-panel__meta">{headerActions}</div> : null}
       </div>
 
-      {loading && <div className="panel-card panel-card--nested">Chargement des cartes...</div>}
+      {loading ? <ResultsListSkeleton /> : null}
 
-      {!loading && cards.length === 0 ? (
+      {!loading && !isRefreshing && cards.length === 0 ? (
         <div className="panel-card panel-card--nested empty-state">
           <strong>Aucun resultat pour ces filtres</strong>
           <p>Essayez d elargir la recherche ou de relacher les contraintes sur la carte.</p>

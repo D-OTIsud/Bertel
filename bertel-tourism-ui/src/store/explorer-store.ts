@@ -1,5 +1,13 @@
 import { create } from 'zustand';
-import type { BackendObjectTypeCode, CapacityFilter, ExplorerFilters, ExplorerBucketKey, GeoPolygon, MeetingRoomFilter } from '../types/domain';
+import type {
+  BackendObjectTypeCode,
+  CapacityFilter,
+  ExplorerFilters,
+  ExplorerBucketKey,
+  ExplorerStatusFilter,
+  GeoPolygon,
+  MeetingRoomFilter,
+} from '../types/domain';
 import { mergeSelectedObjectIds } from '../utils/explorer-selection';
 import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets';
 
@@ -17,6 +25,14 @@ interface ExplorerState extends ExplorerFilters {
   setOpenNow: (value: boolean) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
+  /**
+   * Toggle a publication-status entry in the Explorer filter set.
+   * Empty array = "let the server use its default (published)".
+   * The FiltersPanel only renders this control for users that have
+   * `canEditObjects = true`; for everyone else the array stays empty.
+   */
+  toggleStatus: (status: ExplorerStatusFilter) => void;
+  setStatuses: (statuses: ExplorerStatusFilter[]) => void;
   toggleSelectedObject: (objectId: string) => void;
   addSelectedObjects: (objectIds: string[]) => void;
   clearSelection: () => void;
@@ -59,6 +75,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
     common: {
       ...currentBase.common,
       ...partial.common,
+      statuses: partial.common?.statuses ?? currentBase.common.statuses,
       ...(replace ? { polygon: fallback.common.polygon, bbox: fallback.common.bbox } : {}),
     },
     hot: {
@@ -122,6 +139,18 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       };
     }),
   clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
+  toggleStatus: (status) =>
+    set((state) => {
+      const exists = state.common.statuses.includes(status);
+      const next = exists
+        ? state.common.statuses.filter((entry) => entry !== status)
+        : [...state.common.statuses, status];
+      return { common: { ...state.common, statuses: next } };
+    }),
+  setStatuses: (statuses) =>
+    set((state) => ({
+      common: { ...state.common, statuses: [...new Set(statuses)] },
+    })),
   toggleSelectedObject: (objectId) =>
     set((state) => {
       const needle = String(objectId).trim();

@@ -14,15 +14,15 @@ export default function PublicationsPage() {
   const query = useQuery({ queryKey: ['publication-board'], queryFn: listPublicationBoard });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide">Chargement des publications...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement des publications...</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide">{(query.error as Error).message}</section>;
+    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid p-4">
       <article className="hero-panel">
         <span className="eyebrow">Print workflow</span>
         <h2>Chemin de fer publications</h2>

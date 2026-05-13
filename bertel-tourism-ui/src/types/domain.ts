@@ -163,6 +163,8 @@ export interface ObjectCard {
     price?: string;
     rating?: string;
     updated_at?: string;
+    /** Optional capacity line from card view (e.g. "120 pers.") */
+    capacity?: string;
   };
 }
 

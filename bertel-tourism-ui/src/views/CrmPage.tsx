@@ -51,19 +51,19 @@ export default function CrmPage() {
   };
 
   if (tasksQuery.isLoading || timelineQuery.isLoading) {
-    return <section className="panel-card panel-card--wide">Chargement du CRM...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement du CRM...</section>;
   }
 
   if (tasksQuery.isError || timelineQuery.isError) {
     return (
-      <section className="panel-card panel-card--warning panel-card--wide">
+      <section className="panel-card panel-card--warning panel-card--wide m-4">
         {(tasksQuery.error as Error | null)?.message ?? (timelineQuery.error as Error | null)?.message}
       </section>
     );
   }
 
   return (
-    <section className="page-grid crm-page">
+    <section className="page-grid crm-page p-4">
       <article className="hero-panel crm-hero">
         <div>
           <span className="eyebrow">CRM live</span>

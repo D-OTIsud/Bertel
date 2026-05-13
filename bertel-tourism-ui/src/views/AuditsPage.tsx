@@ -7,15 +7,15 @@ export default function AuditsPage() {
   const query = useQuery({ queryKey: ['audit-template'], queryFn: listAuditTemplate });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide">Chargement du modele d audit...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement du modele d audit...</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide">{(query.error as Error).message}</section>;
+    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid p-4">
       <article className="hero-panel">
         <span className="eyebrow">Terrain</span>
         <h2>Audits & incidents mobile-first</h2>

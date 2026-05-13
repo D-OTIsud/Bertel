@@ -9,6 +9,9 @@ import type { ObjectCard } from '../../types/domain';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
 
+/** Max label pills shown before "+N" overflow (Explorer cards only). */
+const MAX_VISIBLE_LABELS = 5;
+
 interface ResultsListProps {
   cards: ObjectCard[];
   loading: boolean;
@@ -49,11 +52,17 @@ function ResultsListSkeleton() {
                 <span className="drawer-skeleton results-skeleton__title" />
                 <span className="drawer-skeleton results-skeleton__subtitle" />
               </div>
-              <span className="drawer-skeleton results-skeleton__chip" />
-            </div>
-            <div className="result-card__footer">
-              <span className="drawer-skeleton results-skeleton__line" />
-              <span className="drawer-skeleton results-skeleton__pill" />
+              <div className="result-card__title-actions">
+                <span className="drawer-skeleton results-skeleton__chip" />
+                <span className="drawer-skeleton results-skeleton__pill" />
+              </div>
+              <div className="label-stack label-stack--skeleton" aria-hidden>
+                <span className="label-stack__deck">
+                  <span className="drawer-skeleton results-skeleton__label-chip" />
+                  <span className="drawer-skeleton results-skeleton__label-chip" />
+                  <span className="drawer-skeleton results-skeleton__label-chip results-skeleton__label-chip--short" />
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -147,30 +156,31 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                     <h3>{card.name}</h3>
                     <span className="result-type">{card.location?.city ?? 'Territoire non renseigne'}</span>
                   </div>
-                  <button
-                    type="button"
-                    className={cn('result-card__select-btn', selectedObjectIds.includes(card.id) && 'result-card__select-btn--active')}
-                    aria-label={selectedObjectIds.includes(card.id) ? 'Retirer de la selection' : 'Ajouter a la selection'}
-                    aria-pressed={selectedObjectIds.includes(card.id)}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      toggleSelectedObject(card.id);
-                    }}
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                  </button>
+                  <div className="result-card__title-actions">
+                    <button
+                      type="button"
+                      className={cn('result-card__select-btn', selectedObjectIds.includes(card.id) && 'result-card__select-btn--active')}
+                      aria-label={selectedObjectIds.includes(card.id) ? 'Retirer de la selection' : 'Ajouter a la selection'}
+                      aria-pressed={selectedObjectIds.includes(card.id)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        toggleSelectedObject(card.id);
+                      }}
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                    </button>
+                    <StatusPill tone={card.open_now ? 'green' : 'neutral'}>{card.open_now ? 'Ouvert' : 'Fermeture'}</StatusPill>
+                  </div>
                   {(() => {
                     const labels = Array.isArray(card.labels) ? card.labels : [];
                     const hasLabels = labels.length > 0;
-                    const visibleCount = Math.min(labels.length, 3);
-                    const showOverflow = labels.length > 3;
-                    const stackRows = Math.max(1, visibleCount + (showOverflow ? 1 : 0));
+                    const showOverflow = labels.length > MAX_VISIBLE_LABELS;
 
                     return (
                       <span className="label-stack" aria-label={hasLabels ? `Tags et labels: ${labels.join(', ')}` : 'Aucun tag ou label'}>
-                        <span className="label-stack__deck" style={{ ['--label-stack-rows' as never]: stackRows }}>
-                          {labels.slice(0, 3).map((label) => (
+                        <span className="label-stack__deck">
+                          {labels.slice(0, MAX_VISIBLE_LABELS).map((label) => (
                             <span
                               key={label}
                               className="label-stack__badge result-card__label-badge"
@@ -190,17 +200,13 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                               className="label-stack__badge label-stack__badge--overflow result-card__label-badge"
                               data-tone="overflow"
                             >
-                              +{labels.length - 3}
+                              +{labels.length - MAX_VISIBLE_LABELS}
                             </span>
                           ) : null}
                         </span>
                       </span>
                     );
                   })()}
-                </div>
-                <div className="result-card__footer">
-                  <strong className="result-card__location">{card.location?.address ?? 'Adresse a completer'}</strong>
-                  <StatusPill tone={card.open_now ? 'green' : 'neutral'}>{card.open_now ? 'Ouvert' : 'Fermeture'}</StatusPill>
                 </div>
               </div>
             </div>

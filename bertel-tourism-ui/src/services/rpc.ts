@@ -196,6 +196,17 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
   };
 }
 
+// Page size kept small on purpose: the server-side enrichment in
+// api.get_object_cards_batch (taxonomy paths, badges, i18n) scales with the
+// number of rows per call. Larger pages here trade per-call latency for
+// Postgres' statement_timeout on the authenticated role.
+const EXPLORER_BUCKET_PAGE_SIZE = 50;
+
+// Buckets are paginated sequentially per bucket, but we run a small number of
+// buckets in parallel. Fanning out all 7 buckets at once reliably saturates
+// Postgres and surfaces as "canceling statement due to statement timeout".
+const EXPLORER_BUCKET_CONCURRENCY = 2;
+
 async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: ExplorerFilters, langPrefs: string[]): Promise<ObjectCard[]> {
   const cards: ObjectCard[] = [];
   let cursor: string | null = null;
@@ -204,7 +215,7 @@ async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: E
     const page = await listExplorerPage({
       bucket,
       cursor,
-      pageSize: 200,
+      pageSize: EXPLORER_BUCKET_PAGE_SIZE,
       filters,
       langPrefs,
     });
@@ -216,9 +227,30 @@ async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: E
   return cards;
 }
 
+async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function run(): Promise<void> {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) {
+        return;
+      }
+      results[index] = await worker(items[index]);
+    }
+  }
+
+  const runners = Array.from({ length: Math.min(limit, items.length) }, run);
+  await Promise.all(runners);
+  return results;
+}
+
 export async function listExplorerCards(filters: ExplorerFilters, langPrefs: string[]): Promise<ObjectCard[]> {
   const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
-  const results = await Promise.all(buckets.map((bucket) => fetchAllExplorerBucketCards(bucket, filters, langPrefs)));
+  const results = await mapWithConcurrency(buckets, EXPLORER_BUCKET_CONCURRENCY, (bucket) =>
+    fetchAllExplorerBucketCards(bucket, filters, langPrefs),
+  );
   return sortExplorerCards(dedupeExplorerCards(results.flat()));
 }
 

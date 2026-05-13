@@ -14,7 +14,6 @@ import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
-import { SelectionBar } from './SelectionBar';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
 import { normalizeExplorerObjectType } from '../../utils/facets';
@@ -712,7 +711,6 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
             </Popup>
           )}
         </Map>
-        <SelectionBar />
         {lassoArmed ? (
           <div
             className="map-panel__lasso-overlay"

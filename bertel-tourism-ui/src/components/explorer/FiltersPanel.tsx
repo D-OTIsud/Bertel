@@ -11,6 +11,7 @@ import { EXPLORER_BUCKET_OPTIONS, DEFAULT_HOT_SUBTYPES, HOT_BUCKET_TYPES, resolv
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
+import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publie' },
@@ -65,6 +66,21 @@ function renderNumber(value?: number): string {
 
 function isBucketSelected(selectedBuckets: ExplorerBucketKey[], bucket: ExplorerBucketKey): boolean {
   return selectedBuckets.includes(bucket);
+}
+
+/** Flat section header for Explorer column variant (no legacy card wrappers). */
+function FilterColumnGroup({ label, count, children }: { label: string; count?: number; children: ReactNode }) {
+  return (
+    <section className="border-b border-line py-3.5 last:border-0">
+      <div className="mb-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
+        <span>{label}</span>
+        {count != null ? (
+          <span className="rounded-full bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-ink-4">{count}</span>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 function FiltersSection({ eyebrow, title, children }: FiltersSectionProps) {
@@ -122,11 +138,6 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
   const showIti = isBucketSelected(selectedBuckets, 'ITI');
-  // Effective set displayed in the UI: when nothing is configured, the
-  // resolver returns the editor default ['published','draft']. The toggle
-  // writes to common.statuses; an explicit empty pick is intentionally not
-  // distinguished from the default — both surface as "everything I'm allowed
-  // to see".
   const effectiveStatuses = resolveExplorerStatuses(common.statuses, canEditObjects);
 
   const activeFilterCount = useExplorerStore((s) => {
@@ -158,29 +169,29 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
   const isColumn = variant === 'column';
 
+  const bucketChipClass = (active: boolean) =>
+    cn(
+      'inline-flex min-h-[34px] items-center rounded-full border px-3 py-1.5 text-[12px] font-semibold transition',
+      active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink hover:border-lineStrong hover:bg-surface2',
+    );
+
   return (
     <div
       className={
         isColumn
-          ? 'flex min-h-0 min-w-0 flex-col border-r border-line bg-[rgba(255,253,248,0.35)]'
+          ? 'flex min-h-0 min-w-0 flex-col border-r border-line bg-surface'
           : compact
             ? 'filters-panel filters-panel--compact'
             : 'filters-panel'
       }
     >
       {isColumn ? (
-        <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+        <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
           <div className="flex items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
             Filtres
-            <span className="font-sans text-xs font-medium text-ink-3">
-              {activeFilterCount} actifs
-            </span>
+            <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} actifs</span>
           </div>
-          <button
-            type="button"
-            onClick={resetAll}
-            className="text-[12px] font-semibold text-orange-2 hover:text-orange"
-          >
+          <button type="button" onClick={resetAll} className="text-[12px] font-semibold text-orange-2 hover:text-orange">
             Reinitialiser
           </button>
         </div>
@@ -199,88 +210,39 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
         </>
       )}
 
-      <div className={isColumn ? 'flex-1 overflow-y-auto px-4 pb-6 pt-1' : 'filters-panel__content'}>
-        <FiltersSection eyebrow="Base" title="Filtres generaux">
-          <FiltersSubsection title="Categories">
-            <div className="chip-grid">
+      {isColumn ? (
+        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-1">
+          <FilterColumnGroup label="Categorie">
+            <div className="flex flex-wrap gap-2">
               {EXPLORER_BUCKET_OPTIONS.map((option) => (
                 <button
                   key={option.code}
                   type="button"
-                  className={selectedBuckets.includes(option.code) ? 'chip chip--active' : 'chip'}
+                  className={bucketChipClass(selectedBuckets.includes(option.code))}
                   onClick={() => toggleBucket(option.code)}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
-          </FiltersSubsection>
-
-          <FiltersSubsection title="Localisation">
-            <div className="filters-panel__subsection">
-              <span className="facet-title">Ville</span>
-              <FilterDropdown<string>
-                mode="multi"
-                placeholder="Toutes les communes"
-                allLabel="Toutes les communes"
-                options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
-                selected={common.cities}
-                onChange={(vals) => setCities(vals)}
-              />
-            </div>
-            <div className="filters-panel__subsection">
-              <span className="facet-title">Lieu-dit</span>
-              <FilterDropdown<string>
-                mode="single"
-                placeholder="Tous les lieux-dits"
-                options={(references?.lieuDits ?? []).map((v) => ({ code: v, label: v }))}
-                selected={common.lieuDit ? [common.lieuDit] : []}
-                onChange={(vals) => setLieuDit(vals[0] ?? '')}
-              />
-            </div>
-          </FiltersSubsection>
-
-          <FiltersSubsection title="Accessibilite et services">
-            <div className="filters-panel__toggle-group">
-              <label className="switch-row">
-                <span>PMR</span>
-                <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
-              </label>
-
-              <label className="switch-row">
-                <span>Animaux acceptes</span>
-                <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
-              </label>
-
-              <label className="switch-row">
-                <span>Ouvert en ce moment</span>
-                <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
-              </label>
-            </div>
-          </FiltersSubsection>
+          </FilterColumnGroup>
 
           {canEditObjects ? (
-            <FiltersSubsection title="Statut">
-              <div className="chip-grid">
+            <FilterColumnGroup label="Statut">
+              <div className="flex flex-wrap gap-2">
                 {STATUS_OPTIONS.map((option) => {
                   const active = effectiveStatuses.includes(option.code);
                   return (
                     <button
                       key={option.code}
                       type="button"
-                      className={active ? 'chip chip--active' : 'chip'}
+                      className={bucketChipClass(active)}
                       onClick={() => {
                         const nextEffective: ExplorerStatusFilter[] = active
                           ? effectiveStatuses.filter((entry) => entry !== option.code)
                           : [...effectiveStatuses, option.code];
-                        // Keep at least one status active to avoid an
-                        // empty-grid dead end. Empty selection collapses to
-                        // ['published'] for safety.
                         const sanitized: ExplorerStatusFilter[] =
                           nextEffective.length > 0 ? nextEffective : ['published'];
-                        // When the set matches the editor default we collapse
-                        // back to [] so the URL stays clean and the resolver
-                        // can recompute on session changes.
                         const isEditorDefault =
                           sanitized.length === STATUS_OPTIONS.length &&
                           STATUS_OPTIONS.every((opt) => sanitized.includes(opt.code));
@@ -293,129 +255,196 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   );
                 })}
               </div>
-            </FiltersSubsection>
+            </FilterColumnGroup>
           ) : null}
 
-          {common.labelsAny.length > 0 ? (
-            <FiltersSubsection title="Labels">
-              <div className="chip-grid">
-                {common.labelsAny.map((label) => (
-                  <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
-                    {label}
-                  </button>
-                ))}
-                <button type="button" className="chip" onClick={clearLabels}>
-                  Effacer
+          <FilterColumnGroup label="Localisation">
+            <div className="space-y-3">
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Ville</span>
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Toutes les communes"
+                  allLabel="Toutes les communes"
+                  options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
+                  selected={common.cities}
+                  onChange={(vals) => setCities(vals)}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Lieu-dit</span>
+                <FilterDropdown<string>
+                  mode="single"
+                  placeholder="Tous les lieux-dits"
+                  options={(references?.lieuDits ?? []).map((v) => ({ code: v, label: v }))}
+                  selected={common.lieuDit ? [common.lieuDit] : []}
+                  onChange={(vals) => setLieuDit(vals[0] ?? '')}
+                />
+              </div>
+            </div>
+          </FilterColumnGroup>
+
+          <FilterColumnGroup label="Labels & certifications" count={common.labelsAny.length > 0 ? common.labelsAny.length : undefined}>
+            {common.labelsAny.length > 0 ? (
+              <div className="space-y-2">
+                <ul className="grid gap-2">
+                  {common.labelsAny.map((label) => (
+                    <li key={label}>
+                      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+                        <input type="checkbox" className="accent-teal" checked onChange={() => toggleLabel(label)} />
+                        <span className="font-medium">{label}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearLabels}>
+                  Effacer les labels
                 </button>
               </div>
-            </FiltersSubsection>
-          ) : null}
-        </FiltersSection>
+            ) : (
+              <p className="text-[12px] leading-snug text-ink-3">Cliquez une etiquette dans la liste des resultats pour filtrer.</p>
+            )}
+          </FilterColumnGroup>
 
-        {showHot ? (
-          <FiltersSection eyebrow="Categorie active" title="Hebergements">
-            <FiltersSubsection title="Sous-types hebergement">
-              <div className="chip-grid">
-                {HOT_BUCKET_TYPES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
-                    onClick={() => toggleHotSubtype(type)}
-                  >
-                    {hotSubtypeLabels[type]}
-                  </button>
-                ))}
-              </div>
-            </FiltersSubsection>
+          <FilterColumnGroup label="Accessibilite et services">
+            <div className="flex flex-col gap-2">
+              <label className="switch-row">
+                <span>PMR</span>
+                <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
+              </label>
+              <label className="switch-row">
+                <span>Animaux acceptes</span>
+                <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
+              </label>
+              <label className="switch-row">
+                <span>Ouvert en ce moment</span>
+                <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
+              </label>
+            </div>
+          </FilterColumnGroup>
 
-            {references?.hotTaxonomy.map((domain) => (
-              <FiltersSubsection key={domain.domain} title={domain.name}>
-                <div className="chip-grid">
-                  {domain.nodes.map((node) => {
-                    const active = hot.taxonomy.some((item) => item.domain === domain.domain && item.code === node.code);
-                    return (
+          {showHot ? (
+            <FilterColumnGroup label="Hebergements">
+              <div className="space-y-4">
+                <div>
+                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types hebergement</span>
+                  <div className="flex flex-wrap gap-2">
+                    {HOT_BUCKET_TYPES.map((type) => (
                       <button
-                        key={`${domain.domain}:${node.code}`}
+                        key={type}
                         type="button"
-                        className={active ? 'chip chip--active' : 'chip'}
-                        onClick={() => toggleHotTaxonomy(domain.domain, node.code)}
-                        style={{ marginLeft: `${Math.max(0, node.depth) * 0.5}rem` }}
+                        className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
+                        onClick={() => toggleHotSubtype(type)}
                       >
-                        {node.name}
+                        {hotSubtypeLabels[type]}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </FiltersSubsection>
-            ))}
 
-            {references?.hotCapacityMetrics.length ? (
-              <FiltersSubsection title="Capacites hebergement">
-                <div className="filters-panel__metric-stack">
-                  {references.hotCapacityMetrics.map((metric) => (
-                    <div key={metric.code} className="filters-panel__metric-row">
-                      <strong>{metric.name}</strong>
-                      <div className="filters-panel__range-grid">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
-                          onChange={(event) => setHotCapacityFilter(metric.code, event.target.value ? Number(event.target.value) : undefined, readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
-                          placeholder="Min"
-                        />
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
-                          onChange={(event) => setHotCapacityFilter(metric.code, readCapacityValue(hot.capacityFilters, metric.code, 'min'), event.target.value ? Number(event.target.value) : undefined)}
-                          placeholder="Max"
-                        />
-                      </div>
+                {references?.hotTaxonomy.map((domain) => (
+                  <div key={domain.domain}>
+                    <span className="mb-2 block text-[12px] font-semibold text-ink-2">{domain.name}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {domain.nodes.map((node) => {
+                        const active = hot.taxonomy.some((item) => item.domain === domain.domain && item.code === node.code);
+                        return (
+                          <button
+                            key={`${domain.domain}:${node.code}`}
+                            type="button"
+                            className={active ? 'chip chip--active' : 'chip'}
+                            onClick={() => toggleHotTaxonomy(domain.domain, node.code)}
+                            style={{ marginLeft: `${Math.max(0, node.depth) * 0.5}rem` }}
+                          >
+                            {node.name}
+                          </button>
+                        );
+                      })}
                     </div>
-                  ))}
+                  </div>
+                ))}
+
+                {references?.hotCapacityMetrics.length ? (
+                  <div className="filters-panel__metric-stack">
+                    {references.hotCapacityMetrics.map((metric) => (
+                      <div key={metric.code} className="filters-panel__metric-row">
+                        <strong>{metric.name}</strong>
+                        <div className="filters-panel__range-grid">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                event.target.value ? Number(event.target.value) : undefined,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'max'),
+                              )
+                            }
+                            placeholder="Min"
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'min'),
+                                event.target.value ? Number(event.target.value) : undefined,
+                              )
+                            }
+                            placeholder="Max"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div>
+                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Salles de reunion</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(hot.meetingRoom.minCount)}
+                      onChange={(event) => setHotMeetingRoom({ minCount: event.target.value ? Number(event.target.value) : undefined })}
+                      placeholder="Nb. salles min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(hot.meetingRoom.minAreaM2)}
+                      onChange={(event) => setHotMeetingRoom({ minAreaM2: event.target.value ? Number(event.target.value) : undefined })}
+                      placeholder="Surface min m2"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(hot.meetingRoom.minCapTheatre)}
+                      onChange={(event) =>
+                        setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })
+                      }
+                      placeholder="Cap. theatre min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(hot.meetingRoom.minCapClassroom)}
+                      onChange={(event) =>
+                        setHotMeetingRoom({ minCapClassroom: event.target.value ? Number(event.target.value) : undefined })
+                      }
+                      placeholder="Cap. classe min"
+                    />
+                  </div>
                 </div>
-              </FiltersSubsection>
-            ) : null}
-
-            <FiltersSubsection title="Salles de reunion">
-              <div className="filters-panel__range-grid">
-                <Input
-                  type="number"
-                  min={0}
-                  value={renderNumber(hot.meetingRoom.minCount)}
-                  onChange={(event) => setHotMeetingRoom({ minCount: event.target.value ? Number(event.target.value) : undefined })}
-                  placeholder="Nb. salles min"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={renderNumber(hot.meetingRoom.minAreaM2)}
-                  onChange={(event) => setHotMeetingRoom({ minAreaM2: event.target.value ? Number(event.target.value) : undefined })}
-                  placeholder="Surface min m2"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={renderNumber(hot.meetingRoom.minCapTheatre)}
-                  onChange={(event) => setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })}
-                  placeholder="Cap. theatre min"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={renderNumber(hot.meetingRoom.minCapClassroom)}
-                  onChange={(event) => setHotMeetingRoom({ minCapClassroom: event.target.value ? Number(event.target.value) : undefined })}
-                  placeholder="Cap. classe min"
-                />
               </div>
-            </FiltersSubsection>
-          </FiltersSection>
-        ) : null}
+            </FilterColumnGroup>
+          ) : null}
 
-        {showRes && references?.resCapacityMetrics.length ? (
-          <FiltersSection eyebrow="Categorie active" title="Restaurants">
-            <FiltersSubsection title="Capacites restaurant">
+          {showRes && references?.resCapacityMetrics.length ? (
+            <FilterColumnGroup label="Restaurants">
               <div className="filters-panel__metric-stack">
                 {references.resCapacityMetrics.map((metric) => (
                   <div key={metric.code} className="filters-panel__metric-row">
@@ -425,38 +454,154 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                         type="number"
                         min={0}
                         value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'min'))}
-                        onChange={(event) => setResCapacityFilter(metric.code, event.target.value ? Number(event.target.value) : undefined, readCapacityValue(res.capacityFilters, metric.code, 'max'))}
+                        onChange={(event) =>
+                          setResCapacityFilter(
+                            metric.code,
+                            event.target.value ? Number(event.target.value) : undefined,
+                            readCapacityValue(res.capacityFilters, metric.code, 'max'),
+                          )
+                        }
                         placeholder="Min"
                       />
                       <Input
                         type="number"
                         min={0}
                         value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'max'))}
-                        onChange={(event) => setResCapacityFilter(metric.code, readCapacityValue(res.capacityFilters, metric.code, 'min'), event.target.value ? Number(event.target.value) : undefined)}
+                        onChange={(event) =>
+                          setResCapacityFilter(
+                            metric.code,
+                            readCapacityValue(res.capacityFilters, metric.code, 'min'),
+                            event.target.value ? Number(event.target.value) : undefined,
+                          )
+                        }
                         placeholder="Max"
                       />
                     </div>
                   </div>
                 ))}
               </div>
-            </FiltersSubsection>
-          </FiltersSection>
-        ) : null}
+            </FilterColumnGroup>
+          ) : null}
 
-        {showIti ? (
-          <FiltersSection eyebrow="Categorie active" title="Itineraires">
-            <FiltersSubsection title="Type de parcours">
+          {showIti ? (
+            <FilterColumnGroup label="Itineraires">
+              <div className="space-y-4">
+                <div>
+                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de parcours</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: 'Tous', value: null as boolean | null },
+                      { label: 'Boucle', value: true },
+                      { label: 'Aller-retour', value: false },
+                    ].map((option) => (
+                      <button
+                        key={String(option.value)}
+                        type="button"
+                        className={iti.isLoop === option.value ? 'chip chip--active' : 'chip'}
+                        onClick={() => setItiIsLoop(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="facet-group">
+                  <span className="facet-title">Difficulte</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={renderNumber(iti.difficultyMin)}
+                      onChange={(event) => setItiDifficulty(event.target.value ? Number(event.target.value) : undefined, iti.difficultyMax)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={renderNumber(iti.difficultyMax)}
+                      onChange={(event) => setItiDifficulty(iti.difficultyMin, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+
+                <div className="facet-group">
+                  <span className="facet-title">Distance (km)</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(iti.distanceMinKm)}
+                      onChange={(event) => setItiDistance(event.target.value ? Number(event.target.value) : undefined, iti.distanceMaxKm)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(iti.distanceMaxKm)}
+                      onChange={(event) => setItiDistance(iti.distanceMinKm, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+
+                <div className="facet-group">
+                  <span className="facet-title">Duree (h)</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={renderNumber(iti.durationMinH)}
+                      onChange={(event) => setItiDuration(event.target.value ? Number(event.target.value) : undefined, iti.durationMaxH)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={renderNumber(iti.durationMaxH)}
+                      onChange={(event) => setItiDuration(iti.durationMinH, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+
+                {references?.itiPractices.length ? (
+                  <div>
+                    <span className="mb-2 block text-[12px] font-semibold text-ink-2">Pratiques</span>
+                    <div className="flex flex-wrap gap-2">
+                      {references.itiPractices.map((practice) => (
+                        <button
+                          key={practice.code}
+                          type="button"
+                          className={iti.practicesAny.includes(practice.code) ? 'chip chip--active' : 'chip'}
+                          onClick={() => toggleItiPractice(practice.code)}
+                        >
+                          {practice.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </FilterColumnGroup>
+          ) : null}
+        </div>
+      ) : (
+        <div className="filters-panel__content">
+          <FiltersSection eyebrow="Base" title="Filtres generaux">
+            <FiltersSubsection title="Categories">
               <div className="chip-grid">
-                {[
-                  { label: 'Tous', value: null },
-                  { label: 'Boucle', value: true },
-                  { label: 'Aller-retour', value: false },
-                ].map((option) => (
+                {EXPLORER_BUCKET_OPTIONS.map((option) => (
                   <button
-                    key={String(option.value)}
+                    key={option.code}
                     type="button"
-                    className={iti.isLoop === option.value ? 'chip chip--active' : 'chip'}
-                    onClick={() => setItiIsLoop(option.value)}
+                    className={selectedBuckets.includes(option.code) ? 'chip chip--active' : 'chip'}
+                    onClick={() => toggleBucket(option.code)}
                   >
                     {option.label}
                   </button>
@@ -464,91 +609,362 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               </div>
             </FiltersSubsection>
 
-            <FiltersSubsection title="Effort et distance">
-              <div className="facet-group">
-                <span className="facet-title">Difficulte</span>
-                <div className="filters-panel__range-grid">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={renderNumber(iti.difficultyMin)}
-                    onChange={(event) => setItiDifficulty(event.target.value ? Number(event.target.value) : undefined, iti.difficultyMax)}
-                    placeholder="Min"
-                  />
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={renderNumber(iti.difficultyMax)}
-                    onChange={(event) => setItiDifficulty(iti.difficultyMin, event.target.value ? Number(event.target.value) : undefined)}
-                    placeholder="Max"
-                  />
-                </div>
+            <FiltersSubsection title="Localisation">
+              <div className="filters-panel__subsection">
+                <span className="facet-title">Ville</span>
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Toutes les communes"
+                  allLabel="Toutes les communes"
+                  options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
+                  selected={common.cities}
+                  onChange={(vals) => setCities(vals)}
+                />
               </div>
-
-              <div className="facet-group">
-                <span className="facet-title">Distance (km)</span>
-                <div className="filters-panel__range-grid">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={renderNumber(iti.distanceMinKm)}
-                    onChange={(event) => setItiDistance(event.target.value ? Number(event.target.value) : undefined, iti.distanceMaxKm)}
-                    placeholder="Min"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    value={renderNumber(iti.distanceMaxKm)}
-                    onChange={(event) => setItiDistance(iti.distanceMinKm, event.target.value ? Number(event.target.value) : undefined)}
-                    placeholder="Max"
-                  />
-                </div>
-              </div>
-
-              <div className="facet-group">
-                <span className="facet-title">Duree (h)</span>
-                <div className="filters-panel__range-grid">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={renderNumber(iti.durationMinH)}
-                    onChange={(event) => setItiDuration(event.target.value ? Number(event.target.value) : undefined, iti.durationMaxH)}
-                    placeholder="Min"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={renderNumber(iti.durationMaxH)}
-                    onChange={(event) => setItiDuration(iti.durationMinH, event.target.value ? Number(event.target.value) : undefined)}
-                    placeholder="Max"
-                  />
-                </div>
+              <div className="filters-panel__subsection">
+                <span className="facet-title">Lieu-dit</span>
+                <FilterDropdown<string>
+                  mode="single"
+                  placeholder="Tous les lieux-dits"
+                  options={(references?.lieuDits ?? []).map((v) => ({ code: v, label: v }))}
+                  selected={common.lieuDit ? [common.lieuDit] : []}
+                  onChange={(vals) => setLieuDit(vals[0] ?? '')}
+                />
               </div>
             </FiltersSubsection>
 
-            {references?.itiPractices.length ? (
-              <FiltersSubsection title="Pratiques">
+            <FiltersSubsection title="Accessibilite et services">
+              <div className="filters-panel__toggle-group">
+                <label className="switch-row">
+                  <span>PMR</span>
+                  <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
+                </label>
+
+                <label className="switch-row">
+                  <span>Animaux acceptes</span>
+                  <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
+                </label>
+
+                <label className="switch-row">
+                  <span>Ouvert en ce moment</span>
+                  <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
+                </label>
+              </div>
+            </FiltersSubsection>
+
+            {canEditObjects ? (
+              <FiltersSubsection title="Statut">
                 <div className="chip-grid">
-                  {references.itiPractices.map((practice) => (
-                    <button
-                      key={practice.code}
-                      type="button"
-                      className={iti.practicesAny.includes(practice.code) ? 'chip chip--active' : 'chip'}
-                      onClick={() => toggleItiPractice(practice.code)}
-                    >
-                      {practice.name}
+                  {STATUS_OPTIONS.map((option) => {
+                    const active = effectiveStatuses.includes(option.code);
+                    return (
+                      <button
+                        key={option.code}
+                        type="button"
+                        className={active ? 'chip chip--active' : 'chip'}
+                        onClick={() => {
+                          const nextEffective: ExplorerStatusFilter[] = active
+                            ? effectiveStatuses.filter((entry) => entry !== option.code)
+                            : [...effectiveStatuses, option.code];
+                          const sanitized: ExplorerStatusFilter[] =
+                            nextEffective.length > 0 ? nextEffective : ['published'];
+                          const isEditorDefault =
+                            sanitized.length === STATUS_OPTIONS.length &&
+                            STATUS_OPTIONS.every((opt) => sanitized.includes(opt.code));
+                          setStatuses(isEditorDefault ? [] : sanitized);
+                        }}
+                        aria-pressed={active}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </FiltersSubsection>
+            ) : null}
+
+            {common.labelsAny.length > 0 ? (
+              <FiltersSubsection title="Labels">
+                <div className="chip-grid">
+                  {common.labelsAny.map((label) => (
+                    <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
+                      {label}
                     </button>
                   ))}
+                  <button type="button" className="chip" onClick={clearLabels}>
+                    Effacer
+                  </button>
                 </div>
               </FiltersSubsection>
             ) : null}
           </FiltersSection>
-        ) : null}
-      </div>
+
+          {showHot ? (
+            <FiltersSection eyebrow="Categorie active" title="Hebergements">
+              <FiltersSubsection title="Sous-types hebergement">
+                <div className="chip-grid">
+                  {HOT_BUCKET_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
+                      onClick={() => toggleHotSubtype(type)}
+                    >
+                      {hotSubtypeLabels[type]}
+                    </button>
+                  ))}
+                </div>
+              </FiltersSubsection>
+
+              {references?.hotTaxonomy.map((domain) => (
+                <FiltersSubsection key={domain.domain} title={domain.name}>
+                  <div className="chip-grid">
+                    {domain.nodes.map((node) => {
+                      const active = hot.taxonomy.some((item) => item.domain === domain.domain && item.code === node.code);
+                      return (
+                        <button
+                          key={`${domain.domain}:${node.code}`}
+                          type="button"
+                          className={active ? 'chip chip--active' : 'chip'}
+                          onClick={() => toggleHotTaxonomy(domain.domain, node.code)}
+                          style={{ marginLeft: `${Math.max(0, node.depth) * 0.5}rem` }}
+                        >
+                          {node.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FiltersSubsection>
+              ))}
+
+              {references?.hotCapacityMetrics.length ? (
+                <FiltersSubsection title="Capacites hebergement">
+                  <div className="filters-panel__metric-stack">
+                    {references.hotCapacityMetrics.map((metric) => (
+                      <div key={metric.code} className="filters-panel__metric-row">
+                        <strong>{metric.name}</strong>
+                        <div className="filters-panel__range-grid">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                event.target.value ? Number(event.target.value) : undefined,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'max'),
+                              )
+                            }
+                            placeholder="Min"
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'min'),
+                                event.target.value ? Number(event.target.value) : undefined,
+                              )
+                            }
+                            placeholder="Max"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </FiltersSubsection>
+              ) : null}
+
+              <FiltersSubsection title="Salles de reunion">
+                <div className="filters-panel__range-grid">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(hot.meetingRoom.minCount)}
+                    onChange={(event) => setHotMeetingRoom({ minCount: event.target.value ? Number(event.target.value) : undefined })}
+                    placeholder="Nb. salles min"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(hot.meetingRoom.minAreaM2)}
+                    onChange={(event) => setHotMeetingRoom({ minAreaM2: event.target.value ? Number(event.target.value) : undefined })}
+                    placeholder="Surface min m2"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(hot.meetingRoom.minCapTheatre)}
+                    onChange={(event) =>
+                      setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })
+                    }
+                    placeholder="Cap. theatre min"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={renderNumber(hot.meetingRoom.minCapClassroom)}
+                    onChange={(event) =>
+                      setHotMeetingRoom({ minCapClassroom: event.target.value ? Number(event.target.value) : undefined })
+                    }
+                    placeholder="Cap. classe min"
+                  />
+                </div>
+              </FiltersSubsection>
+            </FiltersSection>
+          ) : null}
+
+          {showRes && references?.resCapacityMetrics.length ? (
+            <FiltersSection eyebrow="Categorie active" title="Restaurants">
+              <FiltersSubsection title="Capacites restaurant">
+                <div className="filters-panel__metric-stack">
+                  {references.resCapacityMetrics.map((metric) => (
+                    <div key={metric.code} className="filters-panel__metric-row">
+                      <strong>{metric.name}</strong>
+                      <div className="filters-panel__range-grid">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'min'))}
+                          onChange={(event) =>
+                            setResCapacityFilter(
+                              metric.code,
+                              event.target.value ? Number(event.target.value) : undefined,
+                              readCapacityValue(res.capacityFilters, metric.code, 'max'),
+                            )
+                          }
+                          placeholder="Min"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'max'))}
+                          onChange={(event) =>
+                            setResCapacityFilter(
+                              metric.code,
+                              readCapacityValue(res.capacityFilters, metric.code, 'min'),
+                              event.target.value ? Number(event.target.value) : undefined,
+                            )
+                          }
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </FiltersSubsection>
+            </FiltersSection>
+          ) : null}
+
+          {showIti ? (
+            <FiltersSection eyebrow="Categorie active" title="Itineraires">
+              <FiltersSubsection title="Type de parcours">
+                <div className="chip-grid">
+                  {[
+                    { label: 'Tous', value: null },
+                    { label: 'Boucle', value: true },
+                    { label: 'Aller-retour', value: false },
+                  ].map((option) => (
+                    <button
+                      key={String(option.value)}
+                      type="button"
+                      className={iti.isLoop === option.value ? 'chip chip--active' : 'chip'}
+                      onClick={() => setItiIsLoop(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </FiltersSubsection>
+
+              <FiltersSubsection title="Effort et distance">
+                <div className="facet-group">
+                  <span className="facet-title">Difficulte</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={renderNumber(iti.difficultyMin)}
+                      onChange={(event) => setItiDifficulty(event.target.value ? Number(event.target.value) : undefined, iti.difficultyMax)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={renderNumber(iti.difficultyMax)}
+                      onChange={(event) => setItiDifficulty(iti.difficultyMin, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+
+                <div className="facet-group">
+                  <span className="facet-title">Distance (km)</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(iti.distanceMinKm)}
+                      onChange={(event) => setItiDistance(event.target.value ? Number(event.target.value) : undefined, iti.distanceMaxKm)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={renderNumber(iti.distanceMaxKm)}
+                      onChange={(event) => setItiDistance(iti.distanceMinKm, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+
+                <div className="facet-group">
+                  <span className="facet-title">Duree (h)</span>
+                  <div className="filters-panel__range-grid">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={renderNumber(iti.durationMinH)}
+                      onChange={(event) => setItiDuration(event.target.value ? Number(event.target.value) : undefined, iti.durationMaxH)}
+                      placeholder="Min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={renderNumber(iti.durationMaxH)}
+                      onChange={(event) => setItiDuration(iti.durationMinH, event.target.value ? Number(event.target.value) : undefined)}
+                      placeholder="Max"
+                    />
+                  </div>
+                </div>
+              </FiltersSubsection>
+
+              {references?.itiPractices.length ? (
+                <FiltersSubsection title="Pratiques">
+                  <div className="chip-grid">
+                    {references.itiPractices.map((practice) => (
+                      <button
+                        key={practice.code}
+                        type="button"
+                        className={iti.practicesAny.includes(practice.code) ? 'chip chip--active' : 'chip'}
+                        onClick={() => toggleItiPractice(practice.code)}
+                      >
+                        {practice.name}
+                      </button>
+                    ))}
+                  </div>
+                </FiltersSubsection>
+              ) : null}
+            </FiltersSection>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

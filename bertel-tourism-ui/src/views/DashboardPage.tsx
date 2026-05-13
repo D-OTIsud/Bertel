@@ -63,7 +63,8 @@ export default function DashboardPage() {
   }, [filters]);
 
   return (
-    <div className="dashboard-layout">
+    <div className="min-h-0 p-4">
+      <div className="dashboard-layout">
       <DashboardFiltersPanel
         availableCities={cityOptions}
         cityLoadError={filterOptionsError}
@@ -87,6 +88,7 @@ export default function DashboardPage() {
 
         {actualisation && <ActualisationTable data={actualisation} />}
       </main>
+    </div>
     </div>
   );
 }

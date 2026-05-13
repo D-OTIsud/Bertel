@@ -15,9 +15,10 @@ export function SelectionBar() {
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const [exporting, setExporting] = useState(false);
+  const empty = selectedObjectIds.length === 0;
 
   async function handlePrintSelection() {
-    if (selectedObjectIds.length === 0) return;
+    if (empty) return;
 
     const details = await Promise.all(selectedObjectIds.map((id) => getObjectResource(id, langPrefs)));
     const rowsHtml = details
@@ -59,7 +60,7 @@ export function SelectionBar() {
   }
 
   async function handleExportCsv() {
-    if (selectedObjectIds.length === 0) return;
+    if (empty) return;
     setExporting(true);
     try {
       await exportSelectedObjectsCsv(selectedObjectIds, langPrefs);
@@ -68,66 +69,87 @@ export function SelectionBar() {
     }
   }
 
-  if (selectedObjectIds.length === 0) return null;
-
   return (
     <div
-      className="pointer-events-auto absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-shellMd bg-ink p-1.5 text-white shadow-l"
+      className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-3"
       role="toolbar"
       aria-label="Actions de selection"
     >
-      <span className="inline-flex items-center gap-2 pl-2 pr-3 text-[12.5px] font-semibold tabular-nums">
-        <span className="grid h-[22px] w-[22px] place-items-center rounded-[6px] bg-orange text-[11px] font-bold text-white">
-          {selectedObjectIds.length}
-        </span>
-        fiches
-      </span>
-      <span className="h-[18px] w-px bg-white/10" aria-hidden />
-      <button
-        type="button"
-        onClick={() => selectAllVisible()}
-        className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white"
-      >
-        <ShoppingBag className="h-3.5 w-3.5" />
-        Selection
-      </button>
-      <button
-        type="button"
-        onClick={() => void handlePrintSelection()}
-        className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white"
-      >
-        <Printer className="h-3.5 w-3.5" />
-        Imprimer
-      </button>
-      <button
-        type="button"
-        onClick={() => void handleExportCsv()}
-        disabled={exporting}
+      <div
         className={cn(
-          'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
-          exporting && 'opacity-50',
+          'pointer-events-auto flex items-center gap-1 rounded-shellMd bg-ink p-1.5 text-white shadow-l',
+          empty && 'opacity-80',
         )}
       >
-        <Download className="h-3.5 w-3.5" />
-        CSV
-      </button>
-      <button
-        type="button"
-        onClick={() => clearSelection()}
-        className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-        Vider
-      </button>
-      <span className="h-[18px] w-px bg-white/10" aria-hidden />
-      <button
-        type="button"
-        onClick={() => toast.info('Envoi par mail : bientot disponible.')}
-        className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] bg-orange px-3 text-[12.5px] font-semibold text-white hover:bg-orange-2"
-      >
-        <Mail className="h-3.5 w-3.5" />
-        Envoyer
-      </button>
+        <span className="inline-flex items-center gap-2 pl-2 pr-3 text-[12.5px] font-semibold tabular-nums">
+          <span className="grid h-[22px] w-[22px] place-items-center rounded-[6px] bg-orange text-[11px] font-bold text-white">
+            {selectedObjectIds.length}
+          </span>
+          fiches
+        </span>
+        <span className="h-[18px] w-px bg-white/10" aria-hidden />
+        <button
+          type="button"
+          onClick={() => selectAllVisible()}
+          className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white"
+        >
+          <ShoppingBag className="h-3.5 w-3.5" />
+          Selection
+        </button>
+        <button
+          type="button"
+          disabled={empty}
+          onClick={() => void handlePrintSelection()}
+          className={cn(
+            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
+            empty && 'pointer-events-none opacity-40',
+          )}
+        >
+          <Printer className="h-3.5 w-3.5" />
+          Imprimer
+        </button>
+        <button
+          type="button"
+          disabled={empty || exporting}
+          onClick={() => void handleExportCsv()}
+          className={cn(
+            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
+            (empty || exporting) && 'pointer-events-none opacity-40',
+          )}
+        >
+          <Download className="h-3.5 w-3.5" />
+          CSV
+        </button>
+        <button
+          type="button"
+          disabled={empty}
+          onClick={() => clearSelection()}
+          className={cn(
+            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
+            empty && 'pointer-events-none opacity-40',
+          )}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Vider
+        </button>
+        <span className="h-[18px] w-px bg-white/10" aria-hidden />
+        <button
+          type="button"
+          disabled={empty}
+          onClick={() => {
+            if (!empty) toast.info('Envoi par mail : bientot disponible.');
+          }}
+          className={cn(
+            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white',
+            empty
+              ? 'pointer-events-none bg-orange/35 opacity-60'
+              : 'bg-orange hover:bg-orange-2',
+          )}
+        >
+          <Mail className="h-3.5 w-3.5" />
+          Envoyer
+        </button>
+      </div>
     </div>
   );
 }

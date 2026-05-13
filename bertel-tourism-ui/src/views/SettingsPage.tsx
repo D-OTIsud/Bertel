@@ -222,7 +222,7 @@ export default function SettingsPage() {
       : 'storage / URL publique';
 
   return (
-    <section className="page-grid">
+    <section className="page-grid p-4">
       <article className="hero-panel">
         <span className="eyebrow">Configuration</span>
         <h2>Session, langues et branding</h2>

@@ -27,7 +27,7 @@ export const mockCards: ObjectCard[] = [
     description: 'Hotel panoramique avec spa, grande capacite et vue sur l ocean.',
     updated_at: '2026-03-10T11:15:00Z',
     location: { lat: -21.349245712362077, lon: 55.48258886392355, city: 'Saint-Pierre', postcode: '97410', address: 'Front de mer, Saint-Pierre' },
-    render: { price: '149 EUR / nuit', rating: '4.6 / 5', updated_at: 'Mis a jour le 10 mars 2026' },
+    render: { price: '149 EUR / nuit', rating: '4.6 / 5', updated_at: 'Mis a jour le 10 mars 2026', capacity: '120 pers.' },
   },
   {
     id: 'RESRUN0000000002',

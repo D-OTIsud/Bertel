@@ -7,15 +7,15 @@ export default function ModerationPage() {
   const query = useQuery({ queryKey: ['pending-changes'], queryFn: listPendingChanges });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide">Chargement de la moderation...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement de la moderation...</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide">{(query.error as Error).message}</section>;
+    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid p-4">
       <article className="hero-panel">
         <span className="eyebrow">Controle</span>
         <h2>Pending changes</h2>

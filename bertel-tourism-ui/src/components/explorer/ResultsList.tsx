@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
-import { MapPin, ShoppingBag, Star } from 'lucide-react';
+import { MapPin, Plus, Star } from 'lucide-react';
 import { buildMarkerDataUri, defaultMarkerStyles } from '../../config/map-markers';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
-import type { ObjectCard } from '../../types/domain';
-import { normalizeExplorerObjectType } from '../../utils/facets';
+import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
+import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
 
-const MAX_TAGS_COLUMN = 2;
+const MAX_LABEL_TAGS = 1;
 
 interface ResultsListProps {
   cards: ObjectCard[];
@@ -30,25 +30,49 @@ function getResultCardBadgeIcon(type: string): { label: string; src: string } {
   };
 }
 
+function bucketForCardType(type: string): ExplorerBucketKey | null {
+  const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
+  for (const [bucket, types] of Object.entries(EXPLORER_BUCKET_TYPE_MAP) as [ExplorerBucketKey, BackendObjectTypeCode[]][]) {
+    if (types.includes(code)) {
+      return bucket;
+    }
+  }
+  return null;
+}
+
+function categoryTagClasses(bucket: ExplorerBucketKey | null): string {
+  if (bucket === 'HOT') return 'bg-teal-soft text-teal-2';
+  if (bucket === 'ACT') return 'bg-orange-soft text-orange-2';
+  return 'border border-line bg-surface2 text-ink-2';
+}
+
+function categoryTagLabel(bucket: ExplorerBucketKey | null, typeLabel: string): string {
+  if (bucket) {
+    const opt = EXPLORER_BUCKET_OPTIONS.find((o) => o.code === bucket);
+    if (opt) return opt.label;
+  }
+  return typeLabel;
+}
+
 function ResultsListSkeleton() {
   return (
     <div className="flex flex-col gap-2 p-3" aria-hidden="true">
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={`results-skeleton-${index}`}
-          className="grid h-[116px] grid-cols-[96px_1fr_auto] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
+          className="grid h-[120px] grid-cols-[104px_minmax(0,1fr)_28px] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
         >
-          <div className="h-24 w-24 rounded-shell bg-surface2 drawer-skeleton" />
+          <div className="h-[100px] w-[104px] rounded-[12px] bg-surface2 drawer-skeleton" />
           <div className="flex min-w-0 flex-col gap-2 py-0.5">
             <div className="h-4 w-[70%] rounded bg-surface2 drawer-skeleton" />
-            <div className="h-3 w-[45%] rounded bg-surface2 drawer-skeleton" />
+            <div className="h-3 w-[55%] rounded bg-surface2 drawer-skeleton" />
             <div className="mt-auto flex gap-1">
-              <div className="h-5 w-16 rounded-[5px] bg-surface2 drawer-skeleton" />
-              <div className="h-5 w-12 rounded-[5px] bg-surface2 drawer-skeleton" />
+              <div className="h-5 w-20 rounded-[5px] bg-surface2 drawer-skeleton" />
+              <div className="h-5 w-14 rounded-[5px] bg-surface2 drawer-skeleton" />
             </div>
           </div>
-          <div className="flex w-7 flex-col items-center justify-between py-0.5">
-            <div className="h-7 w-7 rounded-[8px] bg-surface2 drawer-skeleton" />
+          <div className="flex w-7 flex-col items-start justify-start py-0.5">
+            <div className="h-6 w-6 rounded-[8px] bg-surface2 drawer-skeleton" />
           </div>
         </div>
       ))}
@@ -101,8 +125,8 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col border-r border-line bg-[rgba(255,253,248,0.55)]">
-      <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+    <div className="flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
+      <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           <span className="truncate">Resultats</span>
           <span className="truncate font-sans text-xs font-medium text-ink-3">
@@ -135,12 +159,16 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         {orderedCards.map((card) => {
           const badge = getResultCardBadgeIcon(card.type);
           const typeLabel = normalizeExplorerObjectType(card.type);
+          const bucket = bucketForCardType(card.type);
+          const categoryLabel = categoryTagLabel(bucket, typeLabel);
           const city = card.location?.city ?? '—';
           const labels = Array.isArray(card.labels) ? card.labels : [];
-          const tags = labels.slice(0, MAX_TAGS_COLUMN);
-          const extraCount = Math.max(0, labels.length - MAX_TAGS_COLUMN);
+          const labelTags = labels.slice(0, MAX_LABEL_TAGS);
+          const extraLabelCount = Math.max(0, labels.length - MAX_LABEL_TAGS);
           const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
           const isOpen = Boolean(card.open_now);
+          const capacityLine = card.render?.capacity?.trim();
+          const inSelection = selectedObjectIds.includes(card.id);
 
           return (
             <div
@@ -156,12 +184,12 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                 }
               }}
               className={cn(
-                'grid h-[116px] cursor-pointer grid-cols-[96px_1fr_auto] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
+                'grid h-[120px] cursor-pointer grid-cols-[104px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
                 isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
               )}
             >
               <div
-                className="relative h-24 w-24 flex-none rounded-shell bg-surface2 bg-cover bg-center"
+                className="relative h-[100px] w-[104px] flex-none overflow-hidden rounded-[12px] bg-surface2 bg-cover bg-center"
                 style={
                   card.image
                     ? {
@@ -176,6 +204,24 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                 >
                   <img src={badge.src} alt="" className="h-3.5 w-3.5 object-contain" />
                 </span>
+                <button
+                  type="button"
+                  className={cn(
+                    'absolute right-1.5 top-1.5 grid h-[22px] w-[22px] place-items-center rounded-full border shadow-s transition',
+                    inSelection
+                      ? 'border-teal bg-teal text-white'
+                      : 'border-line bg-surface/95 text-ink-3 hover:border-teal hover:text-teal',
+                  )}
+                  aria-label={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
+                  aria-pressed={inSelection}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleSelectedObject(card.id);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                </button>
               </div>
 
               <div className="flex min-w-0 flex-col gap-1 overflow-hidden py-0.5">
@@ -187,7 +233,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                     )}
                     title={isOpen ? 'Ouvert' : 'Fermeture'}
                   />
-                  <h3 className="m-0 truncate font-display text-sm font-semibold leading-tight tracking-tight text-ink">
+                  <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
                     {card.name}
                   </h3>
                 </div>
@@ -198,9 +244,23 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                   </span>
                   <span className="text-ink-4">·</span>
                   <span className="shrink-0">{typeLabel}</span>
+                  {capacityLine ? (
+                    <>
+                      <span className="text-ink-4">·</span>
+                      <span className="shrink-0">{capacityLine}</span>
+                    </>
+                  ) : null}
                 </div>
                 <div className="mt-auto flex min-w-0 flex-nowrap items-center gap-1">
-                  {tags.map((label) => (
+                  <span
+                    className={cn(
+                      'inline-flex h-5 max-w-[10rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
+                      categoryTagClasses(bucket),
+                    )}
+                  >
+                    {categoryLabel}
+                  </span>
+                  {labelTags.map((label) => (
                     <button
                       key={label}
                       type="button"
@@ -210,20 +270,20 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                         event.stopPropagation();
                         toggleLabel(label);
                       }}
-                      className="inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] bg-teal-soft px-1.5 text-[11px] font-semibold tracking-wide text-teal-2"
+                      className="inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] border border-line bg-surface2 px-1.5 text-[11px] font-semibold tracking-wide text-ink-2"
                     >
                       {label}
                     </button>
                   ))}
-                  {extraCount > 0 ? (
+                  {extraLabelCount > 0 ? (
                     <span className="inline-flex h-5 shrink-0 items-center rounded-[5px] border border-line px-1.5 text-[11px] font-semibold text-ink-3">
-                      +{extraCount}
+                      +{extraLabelCount}
                     </span>
                   ) : null}
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-between gap-1.5 py-0.5">
+              <div className="flex flex-col items-end self-start py-0.5">
                 <button
                   type="button"
                   className="grid h-7 w-7 place-items-center rounded-[8px] text-ink-4 hover:bg-orange-soft hover:text-orange"
@@ -235,22 +295,6 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                   }}
                 >
                   <Star className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'grid h-7 w-7 place-items-center rounded-[8px] border border-line text-ink-3 hover:border-teal hover:text-teal',
-                    selectedObjectIds.includes(card.id) && 'border-teal bg-teal-tint text-teal',
-                  )}
-                  aria-label={selectedObjectIds.includes(card.id) ? 'Retirer de la selection' : 'Ajouter a la selection'}
-                  aria-pressed={selectedObjectIds.includes(card.id)}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleSelectedObject(card.id);
-                  }}
-                >
-                  <ShoppingBag className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

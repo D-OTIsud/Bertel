@@ -3,6 +3,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
+import { SelectionBar } from '../components/explorer/SelectionBar';
 import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
@@ -13,8 +14,8 @@ const MapPanel = lazy(async () => ({ default: (await import('../components/explo
 
 function MapFallback() {
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-line bg-[rgba(255,253,248,0.45)]">
-      <div className="flex h-14 flex-none items-center border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-line bg-surface">
+      <div className="flex h-14 flex-none items-center border-b border-line bg-surface px-4">
         <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
       </div>
       <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">Chargement de la carte...</div>
@@ -61,11 +62,11 @@ export default function ExplorerPage() {
   }, [clearSelection]);
 
   if (cardsQuery.isError) {
-    return <section className="panel-card panel-card--wide">{(cardsQuery.error as Error).message}</section>;
+    return <section className="panel-card panel-card--wide m-4">{(cardsQuery.error as Error).message}</section>;
   }
 
   if (referencesQuery.isError) {
-    return <section className="panel-card panel-card--wide">{(referencesQuery.error as Error).message}</section>;
+    return <section className="panel-card panel-card--wide m-4">{(referencesQuery.error as Error).message}</section>;
   }
 
   const renderMobilePanel = (panel: ExplorerPanelKey) => {
@@ -142,12 +143,15 @@ export default function ExplorerPage() {
           </div>
         </section>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden rounded-shellLg border border-line bg-[rgba(255,253,248,0.35)] shadow-s">
-          <FiltersPanel references={referencesQuery.data} variant="column" />
-          <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
-          <Suspense fallback={<MapFallback />}>
-            <MapPanel objects={cards} variant="column" />
-          </Suspense>
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden">
+            <FiltersPanel references={referencesQuery.data} variant="column" />
+            <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
+            <Suspense fallback={<MapFallback />}>
+              <MapPanel objects={cards} variant="column" />
+            </Suspense>
+          </div>
+          <SelectionBar />
         </div>
       )}
     </section>

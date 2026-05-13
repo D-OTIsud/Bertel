@@ -1705,6 +1705,49 @@ AS $$
     JOIN distinct_ids di ON di.id = o.id
     LEFT JOIN main_location ol ON ol.object_id = o.id
     LEFT JOIN main_description d ON d.object_id = o.id
+  ), distinct_taxonomy_assignments AS (
+    -- Unique (domain, descendant_id) pairs across the whole page.
+    -- Computing the closure path once per pair (instead of once per row of
+    -- taxonomy_items) collapses N per-row correlated subqueries into a single
+    -- batched join — historically the heaviest cost of this function on large
+    -- pages and the trigger for statement-timeout errors on the Explorer.
+    SELECT DISTINCT
+      ot.domain,
+      ot.ref_code_id AS descendant_id
+    FROM object_taxonomy ot
+    JOIN distinct_ids di ON di.id = ot.object_id
+  ), taxonomy_path_steps AS (
+    SELECT
+      dta.domain,
+      dta.descendant_id,
+      anc.code,
+      COALESCE(api.i18n_pick_strict(anc.name_i18n, lang.code, 'fr'), anc.name) AS name,
+      row_number() OVER (
+        PARTITION BY dta.domain, dta.descendant_id
+        ORDER BY cl.depth DESC
+      ) - 1 AS public_depth
+    FROM distinct_taxonomy_assignments dta
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = dta.domain
+     AND cl.descendant_id = dta.descendant_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    CROSS JOIN lang
+    WHERE anc.is_assignable IS TRUE
+  ), taxonomy_paths AS (
+    SELECT
+      tps.domain,
+      tps.descendant_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'code', tps.code,
+          'name', tps.name
+        )
+        ORDER BY tps.public_depth
+      ) AS path
+    FROM taxonomy_path_steps tps
+    GROUP BY tps.domain, tps.descendant_id
   ), taxonomy_items AS (
     SELECT
       ot.object_id,
@@ -1712,32 +1755,14 @@ AS $$
       assigned.code,
       COALESCE(api.i18n_pick_strict(assigned.name_i18n, lang.code, 'fr'), assigned.name) AS name,
       COALESCE(reg.position, 999999) AS domain_position,
-      COALESCE((
-        SELECT jsonb_agg(
-          jsonb_build_object(
-            'code', path_item.code,
-            'name', path_item.name
-          )
-          ORDER BY path_item.public_depth
-        )
-        FROM (
-          SELECT
-            anc.code,
-            COALESCE(api.i18n_pick_strict(anc.name_i18n, lang.code, 'fr'), anc.name) AS name,
-            row_number() OVER (ORDER BY cl.depth DESC) - 1 AS public_depth
-          FROM ref_code_taxonomy_closure cl
-          JOIN ref_code anc
-            ON anc.id = cl.ancestor_id
-           AND anc.domain = cl.domain
-          WHERE cl.domain = ot.domain
-            AND cl.descendant_id = assigned.id
-            AND anc.is_assignable IS TRUE
-        ) path_item
-      ), '[]'::jsonb) AS path
+      COALESCE(tp.path, '[]'::jsonb) AS path
     FROM object_taxonomy ot
     JOIN distinct_ids di ON di.id = ot.object_id
     JOIN ref_code_domain_registry reg ON reg.domain = ot.domain
     JOIN ref_code assigned ON assigned.id = ot.ref_code_id AND assigned.domain = ot.domain
+    LEFT JOIN taxonomy_paths tp
+      ON tp.domain = ot.domain
+     AND tp.descendant_id = ot.ref_code_id
     CROSS JOIN lang
   ), taxonomy AS (
     SELECT

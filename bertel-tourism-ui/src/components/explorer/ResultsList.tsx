@@ -7,6 +7,7 @@ import { useExplorerStore } from '../../store/explorer-store';
 import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
+import { SelectionBar } from './SelectionBar';
 
 const MAX_LABEL_TAGS = 1;
 
@@ -129,9 +130,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
       <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           <span className="truncate">Resultats</span>
-          <span className="truncate font-sans text-xs font-medium text-ink-3">
-            {cards.length} fiches · {selectedObjectIds.length} selectionnees
-          </span>
+          <span className="truncate font-sans text-xs font-medium text-ink-3">{cards.length} fiches</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {headerActions}
@@ -146,10 +145,12 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         </div>
       </div>
 
+      <SelectionBar />
+
       {loading ? <ResultsListSkeleton /> : null}
 
       {!loading && !isRefreshing && cards.length === 0 ? (
-        <div className="m-3 rounded-shellMd border border-dashed border-line bg-surface2/60 p-4 text-sm text-ink-3">
+        <div className="m-3 rounded-shellMd border border-dashed border-line bg-surface2 p-4 text-sm text-ink-3">
           <strong className="text-ink">Aucun resultat pour ces filtres</strong>
           <p className="mt-1">Essayez d elargir la recherche ou de relacher les contraintes sur la carte.</p>
         </div>
@@ -190,13 +191,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
             >
               <div
                 className="relative h-[100px] w-[104px] flex-none overflow-hidden rounded-[12px] bg-surface2 bg-cover bg-center"
-                style={
-                  card.image
-                    ? {
-                        backgroundImage: `linear-gradient(180deg, rgba(24,49,59,0.06), rgba(24,49,59,0.14)), url(${card.image})`,
-                      }
-                    : undefined
-                }
+                style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
               >
                 <span
                   className="absolute left-1.5 top-1.5 grid h-[22px] w-[22px] place-items-center rounded-full bg-surface shadow-s"
@@ -210,7 +205,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                     'absolute right-1.5 top-1.5 grid h-[22px] w-[22px] place-items-center rounded-full border shadow-s transition',
                     inSelection
                       ? 'border-teal bg-teal text-white'
-                      : 'border-line bg-surface/95 text-ink-3 hover:border-teal hover:text-teal',
+                      : 'border-line bg-surface text-ink-3 hover:border-teal hover:text-teal',
                   )}
                   aria-label={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
                   aria-pressed={inSelection}

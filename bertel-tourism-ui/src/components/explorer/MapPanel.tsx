@@ -533,11 +533,11 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     <section
       className={cn(
         'map-panel flex min-h-0 min-w-0 flex-col',
-        isColumn ? 'map-panel--column relative flex-1 overflow-hidden border-l border-line bg-[rgba(255,253,248,0.45)]' : 'panel-card panel-card--map',
+        isColumn ? 'map-panel--column relative flex-1 overflow-hidden border-l border-line bg-surface' : 'panel-card panel-card--map',
       )}
     >
       {isColumn ? (
-        <div className="flex h-14 flex-none items-center justify-between border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+        <div className="flex h-14 flex-none items-center justify-between border-b border-line bg-surface px-4">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
             <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>

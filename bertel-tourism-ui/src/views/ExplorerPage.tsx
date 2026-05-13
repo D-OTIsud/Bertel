@@ -3,7 +3,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
-import { SelectionBar } from '../components/explorer/SelectionBar';
 import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
@@ -143,15 +142,12 @@ export default function ExplorerPage() {
           </div>
         </section>
       ) : (
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden">
-            <FiltersPanel references={referencesQuery.data} variant="column" />
-            <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
-            <Suspense fallback={<MapFallback />}>
-              <MapPanel objects={cards} variant="column" />
-            </Suspense>
-          </div>
-          <SelectionBar />
+        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden">
+          <FiltersPanel references={referencesQuery.data} variant="column" />
+          <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
+          <Suspense fallback={<MapFallback />}>
+            <MapPanel objects={cards} variant="column" />
+          </Suspense>
         </div>
       )}
     </section>

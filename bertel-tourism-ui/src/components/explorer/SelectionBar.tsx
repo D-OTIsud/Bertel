@@ -9,6 +9,7 @@ import { exportSelectedObjectsCsv } from '@/services/selection-export';
 import { getObjectResource } from '../../services/rpc';
 import { cn } from '@/lib/utils';
 
+/** Docked under the results column header — solid bar, no viewport-wide float. */
 export function SelectionBar() {
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectAllVisible = useExplorerStore((state) => state.selectAllVisible);
@@ -71,85 +72,78 @@ export function SelectionBar() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-3"
+      className="flex w-full min-w-0 flex-none flex-wrap items-center gap-x-1 gap-y-1 border-b border-line bg-ink px-2 py-1.5 text-white shadow-none"
       role="toolbar"
       aria-label="Actions de selection"
     >
-      <div
+      <span className="inline-flex min-w-0 items-center gap-2 pl-1 pr-2 text-[12.5px] font-semibold tabular-nums">
+        <span className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px] bg-orange text-[11px] font-bold text-white">
+          {selectedObjectIds.length}
+        </span>
+        <span className="truncate">dans le panier</span>
+      </span>
+      <span className="hidden h-[18px] w-px bg-white/15 sm:block" aria-hidden />
+      <button
+        type="button"
+        onClick={() => selectAllVisible()}
+        className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/12"
+      >
+        <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+        Tout selectionner
+      </button>
+      <button
+        type="button"
+        disabled={empty}
+        onClick={() => void handlePrintSelection()}
         className={cn(
-          'pointer-events-auto flex items-center gap-1 rounded-shellMd bg-ink p-1.5 text-white shadow-l',
-          empty && 'opacity-80',
+          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/12',
+          empty && 'cursor-not-allowed text-white/40 hover:bg-transparent',
         )}
       >
-        <span className="inline-flex items-center gap-2 pl-2 pr-3 text-[12.5px] font-semibold tabular-nums">
-          <span className="grid h-[22px] w-[22px] place-items-center rounded-[6px] bg-orange text-[11px] font-bold text-white">
-            {selectedObjectIds.length}
-          </span>
-          fiches
-        </span>
-        <span className="h-[18px] w-px bg-white/10" aria-hidden />
-        <button
-          type="button"
-          onClick={() => selectAllVisible()}
-          className="inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white"
-        >
-          <ShoppingBag className="h-3.5 w-3.5" />
-          Selection
-        </button>
-        <button
-          type="button"
-          disabled={empty}
-          onClick={() => void handlePrintSelection()}
-          className={cn(
-            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
-            empty && 'pointer-events-none opacity-40',
-          )}
-        >
-          <Printer className="h-3.5 w-3.5" />
-          Imprimer
-        </button>
-        <button
-          type="button"
-          disabled={empty || exporting}
-          onClick={() => void handleExportCsv()}
-          className={cn(
-            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
-            (empty || exporting) && 'pointer-events-none opacity-40',
-          )}
-        >
-          <Download className="h-3.5 w-3.5" />
-          CSV
-        </button>
-        <button
-          type="button"
-          disabled={empty}
-          onClick={() => clearSelection()}
-          className={cn(
-            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/90 hover:bg-white/10 hover:text-white',
-            empty && 'pointer-events-none opacity-40',
-          )}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Vider
-        </button>
-        <span className="h-[18px] w-px bg-white/10" aria-hidden />
-        <button
-          type="button"
-          disabled={empty}
-          onClick={() => {
-            if (!empty) toast.info('Envoi par mail : bientot disponible.');
-          }}
-          className={cn(
-            'inline-flex h-[30px] items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white',
-            empty
-              ? 'pointer-events-none bg-orange/35 opacity-60'
-              : 'bg-orange hover:bg-orange-2',
-          )}
-        >
-          <Mail className="h-3.5 w-3.5" />
-          Envoyer
-        </button>
-      </div>
+        <Printer className="h-3.5 w-3.5 shrink-0" />
+        Imprimer
+      </button>
+      <button
+        type="button"
+        disabled={empty || exporting}
+        onClick={() => void handleExportCsv()}
+        className={cn(
+          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/12',
+          (empty || exporting) && 'cursor-not-allowed text-white/40 hover:bg-transparent',
+        )}
+      >
+        <Download className="h-3.5 w-3.5 shrink-0" />
+        CSV
+      </button>
+      <button
+        type="button"
+        disabled={empty}
+        onClick={() => clearSelection()}
+        className={cn(
+          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/12',
+          empty && 'cursor-not-allowed text-white/40 hover:bg-transparent',
+        )}
+      >
+        <Trash2 className="h-3.5 w-3.5 shrink-0" />
+        Vider
+      </button>
+      <span className="hidden h-[18px] w-px bg-white/15 sm:block" aria-hidden />
+      <button
+        type="button"
+        disabled={empty}
+        onClick={() => {
+          if (!empty) toast.info('Envoi par mail : bientot disponible.');
+        }}
+        className={cn(
+          'ml-auto inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white',
+          empty
+            ? 'cursor-not-allowed bg-[#6a4a32] text-white/50'
+            : 'bg-orange hover:bg-orange-2',
+        )}
+      >
+        <Mail className="h-3.5 w-3.5 shrink-0" />
+        Envoyer
+      </button>
     </div>
   );
 }

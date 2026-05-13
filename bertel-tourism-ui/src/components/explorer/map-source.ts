@@ -39,6 +39,7 @@ export function buildObjectFeatureCollection(objects: ObjectCard[]): MapFeatureC
       }
 
       const normalizedType = normalizeExplorerObjectType(item.type);
+      const city = item.location?.city ?? '';
 
       return [{
         type: 'Feature' as const,
@@ -50,8 +51,8 @@ export function buildObjectFeatureCollection(objects: ObjectCard[]): MapFeatureC
           id: item.id,
           name: item.name,
           type: normalizedType,
-          address: item.location?.address ?? 'Sans adresse',
-          city: item.location?.city ?? '',
+          address: city || 'Commune non renseignee',
+          city,
           price: item.render?.price ?? (item.min_price != null ? `${item.min_price} EUR` : ''),
           rating: item.rating == null ? '' : String(item.rating),
           markerIcon: getMarkerImageId(normalizedType),

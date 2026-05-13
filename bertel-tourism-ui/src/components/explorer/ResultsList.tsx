@@ -175,6 +175,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                               key={label}
                               className="label-stack__badge result-card__label-badge"
                               data-tone={String(hashLabel(label) % 6)}
+                              title={label}
                               onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();

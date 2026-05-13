@@ -4,6 +4,10 @@ function cleanText(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
 }
 
+function pluralizeFrenchUnit(count: string, singular: string, plural: string): string {
+  return Number(count) > 1 ? plural : singular;
+}
+
 function normalizeForCompare(value: string): string {
   return value
     .toLowerCase()
@@ -37,11 +41,37 @@ function readLabel(value: unknown): string {
   return cleanText(value.label) || cleanText(value.name) || cleanText(value.slug) || cleanText(value.code);
 }
 
+function shortenDisplayLabel(label: string): string {
+  const normalized = normalizeForCompare(label);
+  if (!normalized.includes('classement') && !normalized.includes('meuble')) {
+    return label;
+  }
+
+  const unitMatch = label.match(/(\d+)\s*(etoile|etoiles|étoile|étoiles|cle|cles|clé|clés|epi|epis|épi|épis)/i);
+  if (!unitMatch) {
+    return label;
+  }
+
+  const [, count, unit] = unitMatch;
+  const normalizedUnit = normalizeForCompare(unit);
+  if (normalizedUnit.startsWith('etoile')) {
+    return `${count} ${pluralizeFrenchUnit(count, 'étoile', 'étoiles')}`;
+  }
+  if (normalizedUnit.startsWith('cle')) {
+    return `${count} ${pluralizeFrenchUnit(count, 'clé', 'clés')}`;
+  }
+  if (normalizedUnit.startsWith('epi')) {
+    return `${count} ${pluralizeFrenchUnit(count, 'épi', 'épis')}`;
+  }
+
+  return label;
+}
+
 function dedupeLabels(labels: string[]): string[] {
   const seen = new Set<string>();
   const next: string[] = [];
 
-  for (const label of labels.map(cleanText).filter(Boolean)) {
+  for (const label of labels.map(cleanText).map(shortenDisplayLabel).filter(Boolean)) {
     const key = normalizeForCompare(label);
     if (!key || seen.has(key)) {
       continue;

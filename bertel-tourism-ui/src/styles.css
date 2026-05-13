@@ -4988,26 +4988,50 @@ body::after {
   object-fit: contain;
 }
 
+/* Explorer map: clustered results — brand greens, denser = larger + deeper */
 .map-cluster-pin {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
   border-radius: 50%;
-  background-color: var(--theme-text);
   color: var(--theme-surface);
   border: 2px solid var(--theme-surface);
   font-weight: 700;
-  font-size: 0.85rem;
   box-shadow: 0 4px 12px rgba(24, 49, 59, 0.18);
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.map-cluster-pin--density-small {
+  width: 36px;
+  height: 36px;
+  font-size: 0.82rem;
+  /* Softer than --theme-primary; still clearly “map / brand” not ink-black */
+  background-color: color-mix(in srgb, var(--theme-primary) 72%, white 28%);
+}
+
+.map-cluster-pin--density-medium {
+  width: 40px;
+  height: 40px;
+  font-size: 0.85rem;
+  background-color: var(--theme-primary);
+}
+
+.map-cluster-pin--density-large {
+  width: 46px;
+  height: 46px;
+  font-size: 0.9rem;
+  /* Deeper green for high-density clusters */
+  background-color: color-mix(in srgb, var(--theme-primary) 78%, black 22%);
 }
 
 .map-cluster-pin:hover {
   transform: scale(1.1);
-  background-color: var(--theme-primary);
+  box-shadow: 0 6px 16px rgba(24, 49, 59, 0.22);
+  filter: brightness(1.08) saturate(1.05);
 }
 
 .map-hover-card {

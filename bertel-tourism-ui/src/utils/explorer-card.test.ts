@@ -40,7 +40,7 @@ describe('normalizeExplorerCard', () => {
       tags: [{ slug: 'vue-mer', name: 'Vue mer' }],
       badges: [
         { kind: 'quality_label', code: 'qtir', label: 'Qualite Tourisme' },
-        { kind: 'classification', code: '3-stars', label: '3 etoiles' },
+        { kind: 'classification', code: '3-stars', label: 'Classement meubles · 3 étoiles' },
         { kind: 'accessibility_amenity', code: 'acc-pmr-parking', label: 'Places PMR' },
       ],
       environment_tags: [{ code: 'rural', name: 'Milieu rural' }],
@@ -49,7 +49,7 @@ describe('normalizeExplorerCard', () => {
     });
 
     expect(card.labels).toEqual([
-      '3 etoiles',
+      '3 étoiles',
       'Gite',
       'Clevacances',
       'Qualite Tourisme',

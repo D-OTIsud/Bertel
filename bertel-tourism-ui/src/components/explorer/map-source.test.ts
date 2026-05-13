@@ -40,7 +40,7 @@ describe('buildObjectFeatureCollection', () => {
         id: 'obj-1',
         name: 'Hotel Basalte',
         type: 'HOT',
-        address: 'Front de mer',
+        address: 'Saint-Pierre',
         city: 'Saint-Pierre',
         price: '149 EUR / nuit',
         rating: '4.6',

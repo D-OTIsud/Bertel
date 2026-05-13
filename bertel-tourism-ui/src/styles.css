@@ -94,33 +94,9 @@ body {
   margin: 0;
   font-family: 'Manrope', system-ui, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(23, 107, 106, 0.12), transparent 42%),
-    radial-gradient(circle at 100% 0%, rgba(242, 139, 84, 0.12), transparent 38%),
-    radial-gradient(circle at 100% 100%, rgba(50, 112, 144, 0.08), transparent 40%),
-    radial-gradient(circle at 0% 100%, rgba(23, 107, 106, 0.06), transparent 36%),
-    linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 100%);
-  background-attachment: fixed;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
-  background-size: 120px 120px;
-  mask-image: radial-gradient(circle at center, black, transparent 78%);
-  opacity: 0.35;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.24), transparent 24%, transparent 76%, rgba(255, 255, 255, 0.24));
-  opacity: 0.25;
+  /* Plain solid brand cream — the previous stack of 4 radial gradients +
+     grid mesh + diagonal sheen was too busy. Keep a single flat surface. */
+  background: var(--bg);
 }
 
 button,

@@ -14,6 +14,7 @@ import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
+import { SelectionBar } from './SelectionBar';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
 import { normalizeExplorerObjectType } from '../../utils/facets';
@@ -168,9 +169,10 @@ type HoverPopupState = {
 interface MapPanelProps {
   objects: ObjectCard[];
   headerActions?: ReactNode;
+  variant?: 'panel' | 'column';
 }
 
-export function MapPanel({ objects, headerActions }: MapPanelProps) {
+export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
   const openDrawer = useUiStore((state) => state.openDrawer);
 
@@ -183,6 +185,11 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   const [lassoDrawing, setLassoDrawing] = useState(false);
   const [lassoPoints, setLassoPoints] = useState<ScreenPoint[]>([]);
   const [lassoFeedback, setLassoFeedback] = useState<string | null>(null);
+  const isColumn = variant === 'column';
+  const geoZoneCount = useMemo(
+    () => objects.filter((o) => typeof o.location?.lat === 'number' && typeof o.location?.lon === 'number').length,
+    [objects],
+  );
   const hoverTimerRef = useRef<number | null>(null);
   const popupHoveredRef = useRef(false);
   const markerHoveredRef = useRef(false);
@@ -524,7 +531,30 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
   );
 
   return (
-    <section className="map-panel panel-card panel-card--map">
+    <section
+      className={cn(
+        'map-panel flex min-h-0 min-w-0 flex-col',
+        isColumn ? 'map-panel--column relative flex-1 overflow-hidden border-l border-line bg-[rgba(255,253,248,0.45)]' : 'panel-card panel-card--map',
+      )}
+    >
+      {isColumn ? (
+        <div className="flex h-14 flex-none items-center justify-between border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
+            <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHeaderExpanded((e) => !e)}
+            className="inline-flex items-center gap-1.5 rounded-[9px] border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-surface2"
+            aria-expanded={headerExpanded}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Couches
+          </button>
+        </div>
+      ) : null}
+      {(!isColumn || headerExpanded) ? (
       <div className={`map-panel__header-actions-wrap ${headerExpanded ? 'map-panel__header-actions-wrap--expanded' : ''}`}>
         {headerExpanded ? (
           <div className="map-panel__header-actions" role="toolbar" aria-label="Outils carte">
@@ -563,8 +593,9 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
           </button>
         )}
       </div>
+      ) : null}
 
-      <div className="map-canvas">
+      <div className={cn('map-canvas', isColumn && 'min-h-0 flex-1')}>
         <Map
           ref={mapRef}
           mapStyle={mapStyle}
@@ -681,6 +712,7 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             </Popup>
           )}
         </Map>
+        <SelectionBar />
         {lassoArmed ? (
           <div
             className="map-panel__lasso-overlay"

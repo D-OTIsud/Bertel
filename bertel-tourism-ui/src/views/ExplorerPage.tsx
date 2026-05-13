@@ -1,13 +1,11 @@
 "use client";
 
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Maximize2 } from 'lucide-react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useExplorerStore } from '../store/explorer-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -15,15 +13,12 @@ const MapPanel = lazy(async () => ({ default: (await import('../components/explo
 
 function MapFallback() {
   return (
-    <section className="panel-card panel-card--map">
-      <div className="panel-heading panel-heading--overlay">
-        <div>
-          <span className="eyebrow">Atlas</span>
-          <h2>Chargement de la carte</h2>
-          <p>Preparation du fond cartographique et des marqueurs...</p>
-        </div>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-line bg-[rgba(255,253,248,0.45)]">
+      <div className="flex h-14 flex-none items-center border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+        <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
       </div>
-    </section>
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">Chargement de la carte...</div>
+    </div>
   );
 }
 
@@ -36,36 +31,9 @@ const panelLabels: Record<ExplorerPanelKey, string> = {
   map: 'Carte',
 };
 
-function ExpandPanelButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button type="button" className="ghost-button explorer-panel__expand" onClick={onClick} aria-label={`Agrandir le panneau ${label}`}>
-      <Maximize2 className="h-4 w-4" />
-      <span className="sr-only">Agrandir {label}</span>
-    </button>
-  );
-}
-
-function PanelPlaceholder({ label, onRestore }: { label: string; onRestore: () => void }) {
-  return (
-    <section className="panel-card explorer-panel-placeholder">
-      <div className="panel-heading">
-        <div>
-          <span className="eyebrow">Panneau agrandi</span>
-          <h2>{label}</h2>
-          <p>Ce panneau est actuellement affiche dans une vue agrandie au-dessus de l espace de travail.</p>
-        </div>
-        <button type="button" className="ghost-button" onClick={onRestore}>
-          Revenir au canevas
-        </button>
-      </div>
-    </section>
-  );
-}
-
 export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
-  const [expandedPanel, setExpandedPanel] = useState<ExplorerPanelKey | null>(null);
   const cardsQuery = useExplorerCardsQuery();
   const referencesQuery = useExplorerReferencesQuery();
   usePresenceRoom('room:explorer', { syncGlobalStatus: true });
@@ -100,40 +68,29 @@ export default function ExplorerPage() {
     return <section className="panel-card panel-card--wide">{(referencesQuery.error as Error).message}</section>;
   }
 
-  const renderPanel = (panel: ExplorerPanelKey, mode: 'inline' | 'modal') => {
-    const headerActions = mode === 'inline'
-      ? <ExpandPanelButton label={panelLabels[panel]} onClick={() => setExpandedPanel(panel)} />
-      : null;
-
+  const renderMobilePanel = (panel: ExplorerPanelKey) => {
     if (panel === 'filters') {
-      return <FiltersPanel headerActions={headerActions} compact={isCompactExplorer} references={referencesQuery.data} />;
+      return <FiltersPanel compact={isCompactExplorer} references={referencesQuery.data} variant="column" />;
     }
-
     if (panel === 'results') {
       return (
         <ResultsList
           cards={cards}
           loading={isInitialLoading}
           isRefreshing={isRefreshing}
-          headerActions={headerActions}
+          variant="column"
         />
       );
     }
-
     return (
       <Suspense fallback={<MapFallback />}>
-        <MapPanel objects={cards} headerActions={headerActions} />
+        <MapPanel objects={cards} variant="column" />
       </Suspense>
     );
   };
 
-  const renderInlinePanel = (panel: ExplorerPanelKey) =>
-    expandedPanel === panel
-      ? <PanelPlaceholder label={panelLabels[panel]} onRestore={() => setExpandedPanel(null)} />
-      : renderPanel(panel, 'inline');
-
   return (
-    <section className="explorer-workspace">
+    <section className="explorer-workspace flex h-full min-h-0 w-full min-w-0 flex-col">
       <Sheet
         open={mobileSheetOpen}
         onOpenChange={(open) => {
@@ -167,8 +124,8 @@ export default function ExplorerPage() {
         </SheetContent>
       </Sheet>
       {isCompactExplorer ? (
-        <section className="explorer-layout explorer-layout--mobile">
-          <nav className="explorer-mobile-tabs" aria-label="Panneaux mobile explorateur">
+        <section className="explorer-layout explorer-layout--mobile grid min-h-0 w-full min-w-0 gap-3">
+          <nav className="explorer-mobile-tabs flex flex-wrap gap-2" aria-label="Panneaux mobile explorateur">
             {(['filters', 'results', 'map'] as ExplorerPanelKey[]).map((panel) => (
               <button
                 key={panel}
@@ -180,27 +137,19 @@ export default function ExplorerPage() {
               </button>
             ))}
           </nav>
-          <div className="explorer-layout__mobile-panel">
-            {renderInlinePanel(activeMobilePanel)}
+          <div className="explorer-layout__mobile-panel min-h-0 flex-1 overflow-hidden">
+            {renderMobilePanel(activeMobilePanel)}
           </div>
         </section>
       ) : (
-        <section className="explorer-layout explorer-layout--desktop">
-          <div className="explorer-layout__panel explorer-layout__panel--filters">{renderInlinePanel('filters')}</div>
-          <div className="explorer-layout__panel explorer-layout__panel--results">{renderInlinePanel('results')}</div>
-          <div className="explorer-layout__panel explorer-layout__panel--map">{renderInlinePanel('map')}</div>
-        </section>
+        <div className="grid min-h-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden rounded-shellLg border border-line bg-[rgba(255,253,248,0.35)] shadow-s">
+          <FiltersPanel references={referencesQuery.data} variant="column" />
+          <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
+          <Suspense fallback={<MapFallback />}>
+            <MapPanel objects={cards} variant="column" />
+          </Suspense>
+        </div>
       )}
-
-      <Dialog open={expandedPanel !== null} onOpenChange={(open) => { if (!open) setExpandedPanel(null); }}>
-        <DialogContent className="explorer-panel-dialog w-[min(1400px,calc(100vw-32px))] max-w-[min(1400px,calc(100vw-32px))] border-0 bg-transparent p-0 shadow-none" showClose>
-          <DialogTitle className="sr-only">{expandedPanel ? panelLabels[expandedPanel] : 'Panneau explorateur'}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Vue agrandie d un panneau de l explorateur sans dupliquer les donnees ou la carte.
-          </DialogDescription>
-          {expandedPanel ? renderPanel(expandedPanel, 'modal') : null}
-        </DialogContent>
-      </Dialog>
     </section>
   );
 }

@@ -7,7 +7,7 @@ import type {
   ExplorerReferences,
   ExplorerStatusFilter,
 } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS, HOT_BUCKET_TYPES, resolveExplorerStatuses } from '../../utils/facets';
+import { EXPLORER_BUCKET_OPTIONS, DEFAULT_HOT_SUBTYPES, HOT_BUCKET_TYPES, resolveExplorerStatuses } from '../../utils/facets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
@@ -40,6 +40,8 @@ interface FiltersPanelProps {
   compact?: boolean;
   headerActions?: ReactNode;
   references?: ExplorerReferences;
+  /** Desktop Explorer: flat column with 56px header */
+  variant?: 'panel' | 'column';
 }
 
 interface FiltersSectionProps {
@@ -90,7 +92,7 @@ function FiltersSubsection({ title, children }: FiltersSubsectionProps) {
   );
 }
 
-export function FiltersPanel({ compact = false, headerActions, references }: FiltersPanelProps) {
+export function FiltersPanel({ compact = false, headerActions, references, variant = 'panel' }: FiltersPanelProps) {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
   const common = useExplorerStore((state) => state.common);
   const hot = useExplorerStore((state) => state.hot);
@@ -127,20 +129,77 @@ export function FiltersPanel({ compact = false, headerActions, references }: Fil
   // to see".
   const effectiveStatuses = resolveExplorerStatuses(common.statuses, canEditObjects);
 
+  const activeFilterCount = useExplorerStore((s) => {
+    let n = 0;
+    if (s.selectedBuckets.length) n += 1;
+    if (s.common.search.trim()) n += 1;
+    if (s.common.cities.length) n += 1;
+    if (s.common.lieuDit.trim()) n += 1;
+    if (s.common.pmr) n += 1;
+    if (s.common.petsAccepted) n += 1;
+    if (s.common.openNow) n += 1;
+    if (s.common.labelsAny.length) n += 1;
+    if (s.common.statuses.length > 0) n += 1;
+    if (s.common.polygon) n += 1;
+    if (s.common.bbox) n += 1;
+    const subDefault =
+      s.hot.subtypes.length === DEFAULT_HOT_SUBTYPES.length && DEFAULT_HOT_SUBTYPES.every((t) => s.hot.subtypes.includes(t));
+    if (!subDefault) n += 1;
+    if (s.hot.taxonomy.length) n += 1;
+    if (s.hot.capacityFilters.length) n += 1;
+    if (Object.keys(s.hot.meetingRoom).length) n += 1;
+    if (s.res.capacityFilters.length) n += 1;
+    if (s.iti.isLoop !== null || s.iti.practicesAny.length || s.iti.difficultyMin != null || s.iti.difficultyMax != null) n += 1;
+    if (s.iti.distanceMinKm != null || s.iti.distanceMaxKm != null) n += 1;
+    if (s.iti.durationMinH != null || s.iti.durationMaxH != null) n += 1;
+    if (s.act.environmentTagsAny.length) n += 1;
+    return n;
+  });
+
+  const isColumn = variant === 'column';
+
   return (
-    <div className={compact ? 'filters-panel filters-panel--compact' : 'filters-panel'}>
-      <div className="panel-heading">
-        <div>
-          <span className="eyebrow">Filtres</span>
+    <div
+      className={
+        isColumn
+          ? 'flex min-h-0 min-w-0 flex-col border-r border-line bg-[rgba(255,253,248,0.35)]'
+          : compact
+            ? 'filters-panel filters-panel--compact'
+            : 'filters-panel'
+      }
+    >
+      {isColumn ? (
+        <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-[rgba(255,253,248,0.5)] px-4">
+          <div className="flex items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
+            Filtres
+            <span className="font-sans text-xs font-medium text-ink-3">
+              {activeFilterCount} actifs
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={resetAll}
+            className="text-[12px] font-semibold text-orange-2 hover:text-orange"
+          >
+            Reinitialiser
+          </button>
         </div>
-        {headerActions ? <div className="inline-actions">{headerActions}</div> : null}
-      </div>
+      ) : (
+        <>
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Filtres</span>
+            </div>
+            {headerActions ? <div className="inline-actions">{headerActions}</div> : null}
+          </div>
 
-      <Button type="button" variant="ghost" className="filters-panel__reset" onClick={resetAll}>
-        Reinitialiser
-      </Button>
+          <Button type="button" variant="ghost" className="filters-panel__reset" onClick={resetAll}>
+            Reinitialiser
+          </Button>
+        </>
+      )}
 
-      <div className="filters-panel__content">
+      <div className={isColumn ? 'flex-1 overflow-y-auto px-4 pb-6 pt-1' : 'filters-panel__content'}>
         <FiltersSection eyebrow="Base" title="Filtres generaux">
           <FiltersSubsection title="Categories">
             <div className="chip-grid">

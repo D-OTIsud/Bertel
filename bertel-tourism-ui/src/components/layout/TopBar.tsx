@@ -1,40 +1,44 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Menu, Search } from 'lucide-react';
-import { useSessionStore } from '../../store/session-store';
+import { useEffect, useMemo, useState, Fragment } from 'react';
+import { usePathname } from 'next/navigation';
+import { Menu, Search } from 'lucide-react';
+import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useExplorerStore } from '../../store/explorer-store';
-import { useThemeStore } from '../../store/theme-store';
+import { useUiStore } from '../../store/ui-store';
 import { Input } from '@/components/ui/input';
+import { StatusPill } from '../common/StatusPill';
 
-function initialsFromName(value: string | null | undefined): string {
-  const parts = String(value ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (parts.length === 0) {
-    return 'BT';
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+function pageLabelFromPath(pathname: string | null): string {
+  if (!pathname || pathname === '/') return 'Accueil';
+  const seg = pathname.replace(/^\//, '').split('/')[0] ?? '';
+  const map: Record<string, string> = {
+    explorer: 'Explorer',
+    dashboard: 'Dashboard',
+    crm: 'CRM',
+    moderation: 'Moderation',
+    audits: 'Audits',
+    publications: 'Publications',
+    settings: 'Parametres',
+    login: 'Connexion',
+  };
+  return map[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);
 }
 
-interface TopBarProps {
-  onOpenMenu: () => void;
-  onOpenProfile: () => void;
-}
-
-export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
-  const userName = useSessionStore((state) => state.userName);
-  const brandName = useThemeStore((state) => state.theme.brandName);
-  const logoUrl = useThemeStore((state) => state.theme.logoUrl);
+export function TopBar() {
+  const pathname = usePathname();
+  const pageLabel = pageLabelFromPath(pathname);
   const search = useExplorerStore((state) => state.common.search);
   const setSearch = useExplorerStore((state) => state.setSearch);
-  const userLabel = userName || 'Equipe Bertel';
-  const initials = initialsFromName(userLabel);
+  const networkStatus = useUiStore((state) => state.networkStatus);
+  const liveUsersCount = useUiStore((state) => state.liveUsersCount);
+  const drawerObjectId = useUiStore((state) => state.drawerObjectId);
+  const closeDrawer = useUiStore((state) => state.closeDrawer);
+  const drawerDirty = useObjectDrawerStore((state) =>
+    drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
+  );
+  const networkTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
+
   const [now, setNow] = useState(() => new Date());
   const [isMounted, setIsMounted] = useState(false);
 
@@ -66,58 +70,64 @@ export function TopBar({ onOpenMenu, onOpenProfile }: TopBarProps) {
   const safeDateLabel = isMounted ? dateLabel : '--';
 
   return (
-    <header className="topbar-shell">
-      <div className="topbar-zone topbar-zone--menu">
-        <button type="button" className="topbar-icon-button" aria-label="Ouvrir le menu principal" onClick={onOpenMenu}>
-          <Menu className="h-5 w-5" />
-        </button>
-      </div>
+    <Fragment>
+      {drawerObjectId ? (
+        <div className="flex flex-none items-center justify-between gap-3 border-b border-line bg-[rgba(255,253,248,0.88)] px-5 py-2 backdrop-blur-xl">
+          <span className="truncate text-xs font-semibold text-ink-3">
+            {drawerDirty ? 'Modifications locales non enregistrees' : 'Fiche ouverte'}
+          </span>
+          <button
+            type="button"
+            onClick={() => closeDrawer()}
+            className="shrink-0 rounded-shell border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface2"
+          >
+            Fermer la fiche
+          </button>
+        </div>
+      ) : null}
 
-      <div className="topbar-zone topbar-zone--brand">
-        <Link href="/explorer" className="topbar-brand" aria-label="Retour a l explorateur">
-          {logoUrl ? (
-            <img src={logoUrl} alt={brandName} className="topbar-brand__logo" />
-          ) : (
-            <span className="topbar-brand__mark">{brandName.slice(0, 1)}</span>
-          )}
-          <div className="topbar-brand__copy">
-            <strong>{brandName}</strong>
-            <span>Explorer</span>
-          </div>
-        </Link>
-      </div>
+      <header className="grid h-14 flex-none grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-[rgba(255,253,248,0.72)] px-5 backdrop-blur-xl">
+        <div className="flex items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
+          <button
+            type="button"
+            className="grid h-8 w-8 place-items-center rounded-[9px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
+            aria-label="Menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+          <span className="hidden font-medium text-ink-4 sm:inline">Tourism</span>
+          <span className="hidden text-ink-4 sm:inline">/</span>
+          <span className="text-ink">{pageLabel}</span>
+        </div>
 
-      <div className="topbar-zone topbar-zone--search">
-        <label className="topbar-search" aria-label="Recherche globale">
-          <Search className="h-4 w-4" />
+        <label className="mx-auto flex h-9 max-w-[520px] flex-1 items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3">
+          <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
           <Input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Rechercher une fiche, une ville ou une action..."
-            className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
+          <kbd className="hidden shrink-0 rounded-[6px] border border-line bg-surface px-1.5 py-px font-sans text-[11px] text-ink-3 sm:inline-block">
+            ⌘K
+          </kbd>
         </label>
-      </div>
 
-      <div className="topbar-zone topbar-zone--clock">
-        <div className="topbar-clock">
-          <Clock3 className="h-4 w-4" />
-          <div>
-            <strong suppressHydrationWarning>{safeTimeLabel}</strong>
-            <span suppressHydrationWarning>{safeDateLabel}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
+          <StatusPill tone="neutral">
+            {liveUsersCount} live
+          </StatusPill>
+          <button
+            type="button"
+            className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink hover:bg-surface2 sm:inline-flex"
+            suppressHydrationWarning
+          >
+            {safeDateLabel} · {safeTimeLabel}
+          </button>
         </div>
-      </div>
-
-      <div className="topbar-zone topbar-zone--profile">
-        <button type="button" className="topbar-user-button" aria-label="Ouvrir le profil et les parametres" onClick={onOpenProfile}>
-          <span className="topbar-user__avatar">{initials}</span>
-          <span className="sr-only">
-            Profil de {userLabel}
-          </span>
-        </button>
-      </div>
-    </header>
+      </header>
+    </Fragment>
   );
 }

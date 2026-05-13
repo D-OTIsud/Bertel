@@ -3,21 +3,17 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { coerceMarkerStyles, defaultMarkerStyles, normalizeMarkerIcon, sanitizeCustomMarkerSvg, sanitizeMarkerColor, type MarkerStyle } from '../config/map-markers';
 import type { MapLayerMode, NetworkStatus, ObjectTypeCode } from '../types/domain';
 
-export type FooterActionMode = 'default' | 'explorer' | 'drawer';
-
 interface UiState {
   drawerObjectId: string | null;
   mapLayer: MapLayerMode;
   networkStatus: NetworkStatus;
   liveUsersCount: number;
-  footerActionMode: FooterActionMode;
   markerStyles: Record<ObjectTypeCode, MarkerStyle>;
   openDrawer: (objectId: string) => void;
   closeDrawer: () => void;
   setMapLayer: (layer: MapLayerMode) => void;
   setNetworkStatus: (status: NetworkStatus) => void;
   setLiveUsersCount: (count: number) => void;
-  setFooterActionMode: (mode: FooterActionMode) => void;
   setMarkerStyles: (styles: unknown) => void;
   setMarkerColor: (type: ObjectTypeCode, color: string) => void;
   setMarkerIcon: (type: ObjectTypeCode, icon: string) => void;
@@ -34,14 +30,12 @@ export const useUiStore = create<UiState>()(
       mapLayer: 'satellite',
       networkStatus: 'connected',
       liveUsersCount: 3,
-      footerActionMode: 'default',
       markerStyles: defaultMarkerStyles,
       openDrawer: (objectId) => set({ drawerObjectId: objectId }),
       closeDrawer: () => set({ drawerObjectId: null }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
       setNetworkStatus: (status) => set({ networkStatus: status }),
       setLiveUsersCount: (count) => set({ liveUsersCount: count }),
-      setFooterActionMode: (mode) => set((state) => (state.footerActionMode === mode ? state : { footerActionMode: mode })),
       setMarkerStyles: (styles) => set({ markerStyles: coerceMarkerStyles(styles) }),
       setMarkerColor: (type, color) =>
         set((state) => ({

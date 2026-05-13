@@ -115,8 +115,10 @@ export function TopBar() {
         </label>
 
         <div className="flex items-center gap-2">
-          <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
-          <StatusPill tone="neutral">
+          {networkStatus !== 'connected' ? (
+            <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
+          ) : null}
+          <StatusPill tone={networkTone}>
             {liveUsersCount} live
           </StatusPill>
           <button

@@ -13,8 +13,10 @@ import { cn } from '@/lib/utils';
  * Floating selection bar over the map.
  *
  * Positioned absolutely at the bottom of the parent (MapPanel's `.map-canvas`).
- * Hidden when no card is selected — matches the redesign mock where the bar
- * surfaces only once at least one item has been added to the panier.
+ * Always visible — the bar is the persistent action surface for the Explorer
+ * (Sélection / Imprimer / CSV / Vider / Envoyer). When nothing is selected
+ * the count chip shows "0" and the destructive/export actions are disabled,
+ * but the bar itself stays mounted as a visual landmark.
  */
 export function SelectionBar() {
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
@@ -77,9 +79,10 @@ export function SelectionBar() {
     }
   }
 
-  if (empty) {
-    return null;
-  }
+  const idleAction =
+    'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold transition';
+  const enabledAction = `${idleAction} text-white/85 hover:bg-white/10 hover:text-white`;
+  const disabledAction = `${idleAction} cursor-not-allowed text-white/40 hover:bg-transparent`;
 
   return (
     <div
@@ -88,7 +91,12 @@ export function SelectionBar() {
       aria-label="Actions de selection"
     >
       <span className="inline-flex shrink-0 items-center gap-2 pl-2 pr-3 text-[12.5px] font-semibold tabular-nums">
-        <span className="grid h-[22px] w-[22px] place-items-center rounded-[6px] bg-orange text-[11px] font-bold text-white">
+        <span
+          className={cn(
+            'grid h-[22px] w-[22px] place-items-center rounded-[6px] text-[11px] font-bold text-white',
+            empty ? 'bg-white/15' : 'bg-orange',
+          )}
+        >
           {count}
         </span>
         <span>{count > 1 ? 'fiches' : 'fiche'}</span>
@@ -99,35 +107,34 @@ export function SelectionBar() {
       <button
         type="button"
         onClick={() => selectAllVisible()}
-        className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+        className={enabledAction}
       >
         <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
         Sélection
       </button>
       <button
         type="button"
+        disabled={empty}
         onClick={() => void handlePrintSelection()}
-        className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+        className={empty ? disabledAction : enabledAction}
       >
         <Printer className="h-3.5 w-3.5 shrink-0" />
         Imprimer
       </button>
       <button
         type="button"
-        disabled={exporting}
+        disabled={empty || exporting}
         onClick={() => void handleExportCsv()}
-        className={cn(
-          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white',
-          exporting && 'cursor-not-allowed text-white/40 hover:bg-transparent',
-        )}
+        className={empty || exporting ? disabledAction : enabledAction}
       >
         <Download className="h-3.5 w-3.5 shrink-0" />
         CSV
       </button>
       <button
         type="button"
+        disabled={empty}
         onClick={() => clearSelection()}
-        className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+        className={empty ? disabledAction : enabledAction}
       >
         <Trash2 className="h-3.5 w-3.5 shrink-0" />
         Vider
@@ -137,8 +144,14 @@ export function SelectionBar() {
 
       <button
         type="button"
-        onClick={() => toast.info('Envoi par mail : bientôt disponible.')}
-        className="inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] bg-orange px-3 text-[12.5px] font-semibold text-white transition hover:bg-orange-2"
+        disabled={empty}
+        onClick={() => {
+          if (!empty) toast.info('Envoi par mail : bientôt disponible.');
+        }}
+        className={cn(
+          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white transition',
+          empty ? 'cursor-not-allowed bg-orange/40' : 'bg-orange hover:bg-orange-2',
+        )}
       >
         <Mail className="h-3.5 w-3.5 shrink-0" />
         Envoyer

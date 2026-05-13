@@ -19,6 +19,7 @@ import type { BBox } from 'geojson';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 import { getObjectIdsInsidePolygon, type LngLatPoint } from '../../utils/explorer-selection';
 import { cn } from '@/lib/utils';
+import { SelectionBar } from './SelectionBar';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
@@ -725,6 +726,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
             </svg>
           </div>
         ) : null}
+        <SelectionBar />
       </div>
     </section>
   );

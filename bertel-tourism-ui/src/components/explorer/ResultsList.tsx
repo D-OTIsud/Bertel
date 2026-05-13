@@ -7,7 +7,6 @@ import { useExplorerStore } from '../../store/explorer-store';
 import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
-import { SelectionBar } from './SelectionBar';
 
 const MAX_LABEL_TAGS = 1;
 
@@ -144,8 +143,6 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
           </button>
         </div>
       </div>
-
-      <SelectionBar />
 
       {loading ? <ResultsListSkeleton /> : null}
 

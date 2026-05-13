@@ -1351,6 +1351,233 @@ END;
 $$;
 
 -- =====================================================
+-- Compact enriched payload helpers for cards/maps/LCPs
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.get_object_taxonomy_compact(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH lang AS (
+    SELECT api.pick_lang(p_lang_prefs) AS code
+  )
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'domain', ot.domain,
+        'code', assigned.code,
+        'name', COALESCE(api.i18n_pick_strict(assigned.name_i18n, lang.code, 'fr'), assigned.name),
+        'path', COALESCE((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'code', path_item.code,
+              'name', path_item.name
+            )
+            ORDER BY path_item.public_depth
+          )
+          FROM (
+            SELECT
+              anc.code,
+              COALESCE(api.i18n_pick_strict(anc.name_i18n, lang.code, 'fr'), anc.name) AS name,
+              row_number() OVER (ORDER BY cl.depth DESC) - 1 AS public_depth
+            FROM ref_code_taxonomy_closure cl
+            JOIN ref_code anc
+              ON anc.id = cl.ancestor_id
+             AND anc.domain = cl.domain
+            WHERE cl.domain = ot.domain
+              AND cl.descendant_id = assigned.id
+              AND anc.is_assignable IS TRUE
+          ) path_item
+        ), '[]'::jsonb)
+      )
+      ORDER BY COALESCE(reg.position, 999999), assigned.name, assigned.code
+    ),
+    '[]'::jsonb
+  )
+  FROM object_taxonomy ot
+  JOIN ref_code_domain_registry reg ON reg.domain = ot.domain
+  JOIN ref_code assigned ON assigned.id = ot.ref_code_id AND assigned.domain = ot.domain
+  CROSS JOIN lang
+  WHERE ot.object_id = p_object_id;
+$$;
+
+COMMENT ON FUNCTION api.get_object_taxonomy_compact(TEXT, TEXT[]) IS
+'Compact taxonomy payload for cards, maps and other LCP/list payloads.';
+
+CREATE OR REPLACE FUNCTION api.get_object_tags_compact(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'slug', t.slug,
+        'name', t.name,
+        'color', t.color,
+        'icon', t.icon,
+        'icon_url', t.icon_url
+      )
+      ORDER BY COALESCE(t.position, 999999), t.name, t.slug
+    ),
+    '[]'::jsonb
+  )
+  FROM tag_link tl
+  JOIN ref_tag t ON t.id = tl.tag_id
+  WHERE tl.target_table = 'object'
+    AND tl.target_pk = p_object_id;
+$$;
+
+COMMENT ON FUNCTION api.get_object_tags_compact(TEXT, TEXT[]) IS
+'Compact object tag payload for cards, maps and LCP/list payloads.';
+
+CREATE OR REPLACE FUNCTION api.get_object_amenity_codes_compact(
+  p_object_id TEXT
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT COALESCE(to_jsonb(o.cached_amenity_codes), '[]'::jsonb)
+  FROM object o
+  WHERE o.id = p_object_id;
+$$;
+
+COMMENT ON FUNCTION api.get_object_amenity_codes_compact(TEXT) IS
+'Compact amenity code array for cards, maps and LCP/list payloads. Uses canonical cached_amenity_codes, never legacy wheelchair_access.';
+
+CREATE OR REPLACE FUNCTION api.get_object_environment_tags_compact(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH lang AS (
+    SELECT api.pick_lang(p_lang_prefs) AS code
+  )
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'code', et.code,
+        'name', COALESCE(api.i18n_pick_strict(et.name_i18n, lang.code, 'fr'), et.name)
+      )
+      ORDER BY COALESCE(et.position, 999999), et.name, et.code
+    ),
+    '[]'::jsonb
+  )
+  FROM object_environment_tag oet
+  JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+  CROSS JOIN lang
+  WHERE oet.object_id = p_object_id;
+$$;
+
+COMMENT ON FUNCTION api.get_object_environment_tags_compact(TEXT, TEXT[]) IS
+'Compact environment tag payload for cards, maps and LCP/list payloads.';
+
+CREATE OR REPLACE FUNCTION api.get_object_badges_compact(
+  p_object_id TEXT,
+  p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH lang AS (
+    SELECT api.pick_lang(p_lang_prefs) AS code
+  ), classification_badges AS (
+    SELECT
+      CASE
+        WHEN s.display_group = 'sustainability_labels' THEN 'sustainability_label'
+        WHEN s.display_group = 'accessibility_labels' THEN 'accessibility_label'
+        WHEN s.display_group IS NOT NULL THEN s.display_group
+        ELSE 'classification'
+      END AS kind,
+      s.code || ':' || v.code AS code,
+      concat_ws(' · ',
+        COALESCE(api.i18n_pick_strict(s.name_i18n, lang.code, 'fr'), s.name),
+        COALESCE(api.i18n_pick_strict(v.name_i18n, lang.code, 'fr'), v.name)
+      ) AS label,
+      COALESCE(s.position, 999999) AS position
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    CROSS JOIN lang
+    WHERE oc.object_id = p_object_id
+      AND COALESCE(s.is_distinction, FALSE) IS TRUE
+      AND COALESCE(oc.status, 'granted') IN ('granted','requested')
+  ), sustainability_badges AS (
+    SELECT
+      'sustainability_action' AS kind,
+      a.code::text AS code,
+      COALESCE(api.i18n_pick_strict(a.label_i18n, lang.code, 'fr'), a.label) AS label,
+      COALESCE(a.position, 999999) AS position
+    FROM object_sustainability_action osa
+    JOIN ref_sustainability_action a ON a.id = osa.action_id
+    CROSS JOIN lang
+    WHERE osa.object_id = p_object_id
+  ), accessibility_badges AS (
+    SELECT
+      'accessibility_amenity' AS kind,
+      ra.code::text AS code,
+      COALESCE(api.i18n_pick_strict(ra.name_i18n, lang.code, 'fr'), ra.name) AS label,
+      COALESCE(ra.position, 999999) AS position
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    LEFT JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+    CROSS JOIN lang
+    WHERE oa.object_id = p_object_id
+      AND (ra.code LIKE 'acc_%' OR fam.code = 'accessibility')
+  ), all_badges AS (
+    SELECT * FROM classification_badges
+    UNION ALL
+    SELECT * FROM sustainability_badges
+    UNION ALL
+    SELECT * FROM accessibility_badges
+  ), deduped_badges AS (
+    SELECT DISTINCT ON (kind, code)
+      kind,
+      code,
+      label,
+      position
+    FROM all_badges
+    ORDER BY kind, code, position, label
+  )
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'kind', kind,
+        'code', code,
+        'label', label
+      )
+      ORDER BY kind, position, label, code
+    ),
+    '[]'::jsonb
+  )
+  FROM deduped_badges;
+$$;
+
+COMMENT ON FUNCTION api.get_object_badges_compact(TEXT, TEXT[]) IS
+'Compact badges from official classifications, sustainability actions and canonical acc_* accessibility amenities.';
+
+-- =====================================================
 -- Lightweight card read model (single + batch)
 -- =====================================================
 CREATE OR REPLACE FUNCTION api.get_object_card(
@@ -1392,6 +1619,11 @@ AS $$
       d.description_chapo,
       LEFT(d.description, 200)
     ), 200),
+    'taxonomy', api.get_object_taxonomy_compact(o.id, p_lang_prefs),
+    'tags', api.get_object_tags_compact(o.id, p_lang_prefs),
+    'amenity_codes', api.get_object_amenity_codes_compact(o.id),
+    'environment_tags', api.get_object_environment_tags_compact(o.id, p_lang_prefs),
+    'badges', api.get_object_badges_compact(o.id, p_lang_prefs),
     'updated_at',   o.updated_at
   )
   FROM object o
@@ -1414,12 +1646,269 @@ STABLE
 
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-  SELECT COALESCE(
-    json_agg(api.get_object_card(t.id, p_lang_prefs) ORDER BY t.ord),
-    '[]'::json
+  WITH lang AS (
+    SELECT api.pick_lang(p_lang_prefs) AS code
+  ), input_ids AS (
+    SELECT t.id, t.ord
+    FROM unnest(COALESCE(p_ids, ARRAY[]::text[])) WITH ORDINALITY AS t(id, ord)
+    WHERE t.id IS NOT NULL
+  ), distinct_ids AS (
+    SELECT DISTINCT id
+    FROM input_ids
+  ), main_location AS (
+    SELECT DISTINCT ON (ol.object_id)
+      ol.object_id,
+      ol.latitude,
+      ol.longitude,
+      ol.city,
+      ol.postcode,
+      ol.lieu_dit,
+      ol.address1
+    FROM object_location ol
+    JOIN distinct_ids di ON di.id = ol.object_id
+    WHERE ol.is_main_location IS TRUE
+    ORDER BY ol.object_id, ol.position NULLS LAST, ol.updated_at DESC, ol.id
+  ), main_description AS (
+    SELECT DISTINCT ON (d.object_id)
+      d.object_id,
+      d.description,
+      d.description_chapo,
+      d.description_chapo_i18n
+    FROM object_description d
+    JOIN distinct_ids di ON di.id = d.object_id
+    WHERE d.org_object_id IS NULL
+    ORDER BY d.object_id, d.position NULLS LAST, d.updated_at DESC, d.id
+  ), base AS (
+    SELECT
+      o.id,
+      o.object_type::text AS object_type,
+      o.name,
+      o.status::text AS status,
+      o.commercial_visibility,
+      o.cached_main_image_url,
+      o.cached_rating,
+      o.cached_review_count,
+      o.cached_min_price,
+      o.cached_is_open_now,
+      o.cached_amenity_codes,
+      o.updated_at,
+      ol.latitude,
+      ol.longitude,
+      ol.city,
+      ol.postcode,
+      ol.lieu_dit,
+      ol.address1,
+      d.description,
+      d.description_chapo,
+      d.description_chapo_i18n
+    FROM object o
+    JOIN distinct_ids di ON di.id = o.id
+    LEFT JOIN main_location ol ON ol.object_id = o.id
+    LEFT JOIN main_description d ON d.object_id = o.id
+  ), taxonomy_items AS (
+    SELECT
+      ot.object_id,
+      ot.domain,
+      assigned.code,
+      COALESCE(api.i18n_pick_strict(assigned.name_i18n, lang.code, 'fr'), assigned.name) AS name,
+      COALESCE(reg.position, 999999) AS domain_position,
+      COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'code', path_item.code,
+            'name', path_item.name
+          )
+          ORDER BY path_item.public_depth
+        )
+        FROM (
+          SELECT
+            anc.code,
+            COALESCE(api.i18n_pick_strict(anc.name_i18n, lang.code, 'fr'), anc.name) AS name,
+            row_number() OVER (ORDER BY cl.depth DESC) - 1 AS public_depth
+          FROM ref_code_taxonomy_closure cl
+          JOIN ref_code anc
+            ON anc.id = cl.ancestor_id
+           AND anc.domain = cl.domain
+          WHERE cl.domain = ot.domain
+            AND cl.descendant_id = assigned.id
+            AND anc.is_assignable IS TRUE
+        ) path_item
+      ), '[]'::jsonb) AS path
+    FROM object_taxonomy ot
+    JOIN distinct_ids di ON di.id = ot.object_id
+    JOIN ref_code_domain_registry reg ON reg.domain = ot.domain
+    JOIN ref_code assigned ON assigned.id = ot.ref_code_id AND assigned.domain = ot.domain
+    CROSS JOIN lang
+  ), taxonomy AS (
+    SELECT
+      object_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'domain', domain,
+          'code', code,
+          'name', name,
+          'path', path
+        )
+        ORDER BY domain_position, name, code
+      ) AS payload
+    FROM taxonomy_items
+    GROUP BY object_id
+  ), tags AS (
+    SELECT
+      tl.target_pk AS object_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'slug', t.slug,
+          'name', t.name,
+          'color', t.color,
+          'icon', t.icon,
+          'icon_url', t.icon_url
+        )
+        ORDER BY COALESCE(t.position, 999999), t.name, t.slug
+      ) AS payload
+    FROM tag_link tl
+    JOIN distinct_ids di ON di.id = tl.target_pk
+    JOIN ref_tag t ON t.id = tl.tag_id
+    WHERE tl.target_table = 'object'
+    GROUP BY tl.target_pk
+  ), environment_tags AS (
+    SELECT
+      oet.object_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'code', et.code,
+          'name', COALESCE(api.i18n_pick_strict(et.name_i18n, lang.code, 'fr'), et.name)
+        )
+        ORDER BY COALESCE(et.position, 999999), et.name, et.code
+      ) AS payload
+    FROM object_environment_tag oet
+    JOIN distinct_ids di ON di.id = oet.object_id
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    CROSS JOIN lang
+    GROUP BY oet.object_id
+  ), classification_badges AS (
+    SELECT
+      oc.object_id,
+      CASE
+        WHEN s.display_group = 'sustainability_labels' THEN 'sustainability_label'
+        WHEN s.display_group = 'accessibility_labels' THEN 'accessibility_label'
+        WHEN s.display_group IS NOT NULL THEN s.display_group
+        ELSE 'classification'
+      END AS kind,
+      s.code || ':' || v.code AS code,
+      concat_ws(' · ',
+        COALESCE(api.i18n_pick_strict(s.name_i18n, lang.code, 'fr'), s.name),
+        COALESCE(api.i18n_pick_strict(v.name_i18n, lang.code, 'fr'), v.name)
+      ) AS label,
+      COALESCE(s.position, 999999) AS position
+    FROM object_classification oc
+    JOIN distinct_ids di ON di.id = oc.object_id
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    CROSS JOIN lang
+    WHERE COALESCE(s.is_distinction, FALSE) IS TRUE
+      AND COALESCE(oc.status, 'granted') IN ('granted','requested')
+  ), sustainability_badges AS (
+    SELECT
+      osa.object_id,
+      'sustainability_action' AS kind,
+      a.code::text AS code,
+      COALESCE(api.i18n_pick_strict(a.label_i18n, lang.code, 'fr'), a.label) AS label,
+      COALESCE(a.position, 999999) AS position
+    FROM object_sustainability_action osa
+    JOIN distinct_ids di ON di.id = osa.object_id
+    JOIN ref_sustainability_action a ON a.id = osa.action_id
+    CROSS JOIN lang
+  ), accessibility_badges AS (
+    SELECT
+      oa.object_id,
+      'accessibility_amenity' AS kind,
+      ra.code::text AS code,
+      COALESCE(api.i18n_pick_strict(ra.name_i18n, lang.code, 'fr'), ra.name) AS label,
+      COALESCE(ra.position, 999999) AS position
+    FROM object_amenity oa
+    JOIN distinct_ids di ON di.id = oa.object_id
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    LEFT JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+    CROSS JOIN lang
+    WHERE ra.code LIKE 'acc_%' OR fam.code = 'accessibility'
+  ), all_badges AS (
+    SELECT * FROM classification_badges
+    UNION ALL
+    SELECT * FROM sustainability_badges
+    UNION ALL
+    SELECT * FROM accessibility_badges
+  ), deduped_badges AS (
+    SELECT DISTINCT ON (object_id, kind, code)
+      object_id,
+      kind,
+      code,
+      label,
+      position
+    FROM all_badges
+    ORDER BY object_id, kind, code, position, label
+  ), badges AS (
+    SELECT
+      object_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'kind', kind,
+          'code', code,
+          'label', label
+        )
+        ORDER BY kind, position, label, code
+      ) AS payload
+    FROM deduped_badges
+    GROUP BY object_id
+  ), cards AS (
+    SELECT
+      b.id,
+      jsonb_build_object(
+        'id', b.id,
+        'type', b.object_type,
+        'name', b.name,
+        'status', b.status,
+        'commercial_visibility', b.commercial_visibility,
+        'image', b.cached_main_image_url,
+        'rating', b.cached_rating,
+        'review_count', b.cached_review_count,
+        'min_price', b.cached_min_price,
+        'open_now', b.cached_is_open_now,
+        'location', jsonb_build_object(
+          'lat', b.latitude,
+          'lon', b.longitude,
+          'city', b.city,
+          'postcode', b.postcode,
+          'lieu_dit', b.lieu_dit,
+          'address', CONCAT_WS(', ',
+            NULLIF(b.address1, ''),
+            NULLIF(b.lieu_dit, ''),
+            NULLIF(b.postcode, ''),
+            NULLIF(b.city, '')
+          )
+        ),
+        'description', LEFT(COALESCE(
+          api.i18n_pick(b.description_chapo_i18n, lang.code, 'fr'),
+          b.description_chapo,
+          LEFT(b.description, 200)
+        ), 200),
+        'taxonomy', COALESCE(taxonomy.payload, '[]'::jsonb),
+        'tags', COALESCE(tags.payload, '[]'::jsonb),
+        'amenity_codes', COALESCE(to_jsonb(b.cached_amenity_codes), '[]'::jsonb),
+        'environment_tags', COALESCE(environment_tags.payload, '[]'::jsonb),
+        'badges', COALESCE(badges.payload, '[]'::jsonb),
+        'updated_at', b.updated_at
+      ) AS card
+    FROM base b
+    CROSS JOIN lang
+    LEFT JOIN taxonomy ON taxonomy.object_id = b.id
+    LEFT JOIN tags ON tags.object_id = b.id
+    LEFT JOIN environment_tags ON environment_tags.object_id = b.id
+    LEFT JOIN badges ON badges.object_id = b.id
   )
-  FROM unnest(COALESCE(p_ids, ARRAY[]::text[])) WITH ORDINALITY AS t(id, ord)
-  WHERE t.id IS NOT NULL;
+  SELECT COALESCE(json_agg(cards.card ORDER BY input_ids.ord), '[]'::json)
+  FROM input_ids
+  JOIN cards ON cards.id = input_ids.id;
 $$;
 
 -- =====================================================
@@ -5679,7 +6168,12 @@ AS $$
       WHEN o.cached_min_price IS NOT NULL THEN jsonb_build_object('amount', o.cached_min_price, 'currency', 'EUR')
       ELSE NULL
     END,
-    'image', o.cached_main_image_url
+    'image', o.cached_main_image_url,
+    'taxonomy', api.get_object_taxonomy_compact(o.id, p_lang_prefs),
+    'tags', api.get_object_tags_compact(o.id, p_lang_prefs),
+    'amenity_codes', api.get_object_amenity_codes_compact(o.id),
+    'environment_tags', api.get_object_environment_tags_compact(o.id, p_lang_prefs),
+    'badges', api.get_object_badges_compact(o.id, p_lang_prefs)
   )
   FROM object o
   LEFT JOIN object_location ol

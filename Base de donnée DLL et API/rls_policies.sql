@@ -44,6 +44,7 @@ ALTER TABLE object_private_description ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_classification_scheme ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_classification_value ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_classification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE object_taxonomy ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_external_id ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_review ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_capacity_metric ENABLE ROW LEVEL SECURITY;
@@ -79,6 +80,8 @@ ALTER TABLE audit.audit_log ENABLE ROW LEVEL SECURITY;
 
 -- Activation RLS sur les tables de référence (lecture publique)
 ALTER TABLE ref_language ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ref_code_domain_registry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ref_code_taxonomy_closure ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ref_code ENABLE ROW LEVEL SECURITY;
 -- Supabase peut linter la partition default séparément; on l'active explicitement.
 ALTER TABLE ref_code_other ENABLE ROW LEVEL SECURITY;
@@ -200,9 +203,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
       AND aor.is_primary = TRUE
   )
   OR auth.role() IN ('service_role','admin')
-  OR auth.uid() IN (
-    SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin'
-  );
+  OR api.is_platform_superuser();
 $$;
 
 -- Vérifie si l'utilisateur courant est owner plateforme (ou admin/service)
@@ -211,9 +212,6 @@ RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
   SELECT
     auth.role() IN ('service_role', 'admin')
-    OR auth.uid() IN (
-      SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin'
-    )
     OR EXISTS (
       SELECT 1
       FROM app_user_profile p
@@ -221,6 +219,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
         AND p.role = 'owner'
     );
 $$;
+
+GRANT EXECUTE ON FUNCTION api.is_object_owner(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.is_platform_owner() TO authenticated, service_role;
 
 -- =====================================================
 -- Phase 2 — Helpers RLS membership ORG
@@ -472,6 +473,8 @@ $$;
 -- Use explicit DROP POLICY IF EXISTS statements for policies managed in this file.
 -- Avoid blanket drops across schemas to prevent removing unrelated/custom policies.
 DROP POLICY IF EXISTS "Lecture publique des langues" ON ref_language;
+DROP POLICY IF EXISTS "Lecture publique du registre ref_code" ON ref_code_domain_registry;
+DROP POLICY IF EXISTS "Lecture publique de la clôture taxonomique" ON ref_code_taxonomy_closure;
 DROP POLICY IF EXISTS "Lecture publique des moyens de paiement" ON ref_code_payment_method;
 DROP POLICY IF EXISTS "Lecture publique des tags d'environnement" ON ref_code_environment_tag;
 DROP POLICY IF EXISTS "Lecture publique des équipements" ON ref_amenity;
@@ -536,6 +539,8 @@ DROP POLICY IF EXISTS "Accès admin/service_role (object)" ON object;
 DROP POLICY IF EXISTS "Accès admin/service_role (object_external_id)" ON object_external_id;
 DROP POLICY IF EXISTS "Accès admin/service_role (object_sustainability_action)" ON object_sustainability_action;
 DROP POLICY IF EXISTS "Accès admin/service_role (object_sustainability_action_label)" ON object_sustainability_action_label;
+DROP POLICY IF EXISTS "pub_object_sustainability_action_read" ON object_sustainability_action;
+DROP POLICY IF EXISTS "pub_object_sustainability_action_label_read" ON object_sustainability_action_label;
 DROP POLICY IF EXISTS "Lecture publique des avis" ON object_review;
 DROP POLICY IF EXISTS "Écriture admin des avis" ON object_review;
 DROP POLICY IF EXISTS "pub_fma_published" ON object_fma;
@@ -549,6 +554,7 @@ DROP POLICY IF EXISTS "pub_iti_associated_read" ON object_iti_associated_object;
 DROP POLICY IF EXISTS "pub_iti_info_read" ON object_iti_info;
 DROP POLICY IF EXISTS "pub_zone_read" ON object_zone;
 DROP POLICY IF EXISTS "pub_classification_read" ON object_classification;
+DROP POLICY IF EXISTS "pub_object_taxonomy_read" ON object_taxonomy;
 DROP POLICY IF EXISTS "pub_capacity_read" ON object_capacity;
 DROP POLICY IF EXISTS "pub_object_language_read" ON object_language;
 DROP POLICY IF EXISTS "pub_payment_method_read" ON object_payment_method;
@@ -665,6 +671,12 @@ DROP POLICY IF EXISTS "admin_ref_code_write" ON ref_code_other;
 CREATE POLICY "Lecture publique des langues" ON ref_language
     FOR SELECT USING (true);
 
+CREATE POLICY "Lecture publique du registre ref_code" ON ref_code_domain_registry
+    FOR SELECT USING (true);
+
+CREATE POLICY "Lecture publique de la clôture taxonomique" ON ref_code_taxonomy_closure
+    FOR SELECT USING (true);
+
 CREATE POLICY "Lecture publique des moyens de paiement" ON ref_code_payment_method
     FOR SELECT USING (true);
 
@@ -706,40 +718,28 @@ CREATE POLICY "Écriture admin des langues" ON ref_language
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 
 CREATE POLICY "Écriture admin des moyens de paiement" ON ref_code_payment_method
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 
 CREATE POLICY "Écriture admin des tags d'environnement" ON ref_code_environment_tag
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 
 CREATE POLICY "Écriture admin des équipements" ON ref_amenity
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 
 -- write policies for legacy classification refs removed
@@ -747,91 +747,61 @@ CREATE POLICY "Écriture admin des schémas de classification" ON ref_classifica
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des valeurs de classification" ON ref_classification_value
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des métriques de capacité" ON ref_capacity_metric
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des applicabilités de capacité" ON ref_capacity_applicability
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des documents de référence" ON ref_document
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des catégories DD" ON ref_sustainability_action_category
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des actions DD" ON ref_sustainability_action
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des traductions" ON i18n_translation
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des sources d'avis" ON ref_review_source
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Écriture admin des types de vue" ON ref_code_view_type
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 
 -- =====================================================
@@ -1068,20 +1038,33 @@ CREATE POLICY "Accès admin/service_role (object_sustainability_action)" ON obje
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
 CREATE POLICY "Accès admin/service_role (object_sustainability_action_label)" ON object_sustainability_action_label
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
-        auth.uid() IN (
-            SELECT id FROM auth.users 
-            WHERE raw_user_meta_data->>'role' = 'admin'
-        )
+        api.is_platform_superuser()
     );
+
+CREATE POLICY "pub_object_sustainability_action_read" ON object_sustainability_action
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM object o
+      WHERE o.id = object_sustainability_action.object_id
+    )
+  );
+
+CREATE POLICY "pub_object_sustainability_action_label_read" ON object_sustainability_action_label
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM object_sustainability_action osa
+      JOIN object o ON o.id = osa.object_id
+      WHERE osa.id = object_sustainability_action_label.object_sustainability_action_id
+    )
+  );
 
 -- Avis (reviews): lecture publique si publiés, écriture admin seulement
 CREATE POLICY "Lecture publique des avis" ON object_review
@@ -1089,7 +1072,7 @@ CREATE POLICY "Lecture publique des avis" ON object_review
 CREATE POLICY "Écriture admin des avis" ON object_review
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
-    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+    api.is_platform_superuser()
   );
 
 -- =====================================================
@@ -1131,6 +1114,14 @@ CREATE POLICY "pub_zone_read" ON object_zone
 -- Classifications - lecture publique
 CREATE POLICY "pub_classification_read" ON object_classification
   FOR SELECT USING (true);
+CREATE POLICY "pub_object_taxonomy_read" ON object_taxonomy
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM object o
+      WHERE o.id = object_taxonomy.object_id
+    )
+  );
 
 -- Capacités - lecture publique
 CREATE POLICY "pub_capacity_read" ON object_capacity
@@ -1221,7 +1212,7 @@ CREATE POLICY "Lecture publique des promotions" ON promotion
 CREATE POLICY "Écriture admin des promotions" ON promotion
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
-    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+    api.is_platform_superuser()
   );
 
 CREATE POLICY "Lecture publique des liaisons promotions" ON promotion_object
@@ -1229,18 +1220,18 @@ CREATE POLICY "Lecture publique des liaisons promotions" ON promotion_object
 CREATE POLICY "Écriture admin des liaisons promotions" ON promotion_object
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
-    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+    api.is_platform_superuser()
   );
 
 CREATE POLICY "Lecture admin des usages promotions" ON promotion_usage
   FOR SELECT USING (
     auth.role() IN ('service_role','admin') OR
-    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+    api.is_platform_superuser()
   );
 CREATE POLICY "Écriture admin des usages promotions" ON promotion_usage
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
-    auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+    api.is_platform_superuser()
   );
 
 -- =====================================================
@@ -1251,7 +1242,7 @@ CREATE POLICY "Écriture admin des usages promotions" ON promotion_usage
 CREATE POLICY "Lecture audit (admin/service_role)" ON audit.audit_log
     FOR SELECT USING (
         auth.role() IN ('service_role','admin') OR
-        auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' = 'admin')
+        api.is_platform_superuser()
     );
 
 -- Insertion autorisée par le rôle courant (triggers côté DB)
@@ -1613,7 +1604,7 @@ BEGIN
     EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', v_part.schema_name, v_part.table_name);
     EXECUTE format('DROP POLICY IF EXISTS "Lecture audit (admin/service_role)" ON %I.%I', v_part.schema_name, v_part.table_name);
     EXECUTE format(
-      'CREATE POLICY "Lecture audit (admin/service_role)" ON %I.%I FOR SELECT USING (auth.role() IN (''service_role'',''admin'') OR auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>''role'' = ''admin''))',
+      'CREATE POLICY "Lecture audit (admin/service_role)" ON %I.%I FOR SELECT USING (auth.role() IN (''service_role'',''admin'') OR api.is_platform_superuser())',
       v_part.schema_name, v_part.table_name
     );
     EXECUTE format('DROP POLICY IF EXISTS "Insertion via triggers" ON %I.%I', v_part.schema_name, v_part.table_name);
@@ -1765,6 +1756,8 @@ AS $$
         AND p.role IN ('owner', 'super_admin')
     );
 $$;
+
+GRANT EXECUTE ON FUNCTION api.is_platform_superuser() TO authenticated, service_role;
 
 -- =====================================================
 -- 1. ref_org_business_role — catalogue des rôles métier ORG
@@ -3203,6 +3196,17 @@ GRANT  EXECUTE ON FUNCTION api.rpc_publish_object(text, boolean)   TO   authenti
 -- api.get_filtered_object_ids is now SECURITY DEFINER to allow
 -- access to internal.mv_filtered_objects without exposing the
 -- internal schema to the authenticated role directly.
+GRANT EXECUTE ON FUNCTION api.current_user_email() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.user_actor_ids() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.can_read_extended(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.current_user_org_id() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.current_user_business_role_code() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.current_user_admin_role_code() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.current_user_admin_rank() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.is_object_owner(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.is_platform_owner() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.is_platform_superuser() TO authenticated, service_role;
+
 REVOKE EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], object_status[], text) TO authenticated, service_role;
 
@@ -3210,6 +3214,26 @@ GRANT  EXECUTE ON FUNCTION api.get_filtered_object_ids(jsonb, object_type[], obj
 -- The SUPABASE_SETUP.md documents a 10-param version — that signature is stale.
 REVOKE EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.list_object_resources_filtered_page(TEXT, TEXT[], INTEGER, JSONB, object_type[], object_status[], TEXT, TEXT, BOOLEAN, TEXT, TEXT) TO authenticated, service_role;
+
+-- Enriched card/map payload read surface used by list_object_resources_filtered_page.
+-- These tables are additive display data; object visibility is still governed by
+-- the object status/org filters applied by the RPC before these helpers run.
+GRANT SELECT ON TABLE object_taxonomy TO anon, authenticated, service_role;
+GRANT SELECT ON TABLE ref_code_domain_registry TO anon, authenticated, service_role;
+GRANT SELECT ON TABLE ref_code_taxonomy_closure TO anon, authenticated, service_role;
+GRANT SELECT ON TABLE ref_code, ref_code_amenity_family, ref_tag, tag_link, ref_amenity, object_amenity,
+  ref_code_environment_tag, object_environment_tag, ref_classification_scheme,
+  ref_classification_value, object_classification, ref_sustainability_action,
+  object_sustainability_action TO anon, authenticated, service_role;
+
+GRANT EXECUTE ON FUNCTION api.get_object_taxonomy_compact(TEXT, TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_tags_compact(TEXT, TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_amenity_codes_compact(TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_environment_tags_compact(TEXT, TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_badges_compact(TEXT, TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_card(TEXT, TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_cards_batch(TEXT[], TEXT[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_object_map_item(TEXT, TEXT[]) TO authenticated, service_role;
 
 -- Note: ref_code_iti_practice and other ref_code child partitions are NOT exposed
 -- directly via PostgREST (schema cache does not include partition children).

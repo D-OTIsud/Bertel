@@ -3,6 +3,7 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { AuditQuestion, ExplorerBucketKey, CrmTask, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
 import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
+import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
 
 interface ExplorerPageInput {
@@ -191,7 +192,7 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
 
   return {
     meta: payload.meta,
-    data: Array.isArray(payload.data) ? (payload.data as ObjectCard[]) : [],
+    data: Array.isArray(payload.data) ? normalizeExplorerCards(payload.data as ObjectCard[]) : [],
   };
 }
 

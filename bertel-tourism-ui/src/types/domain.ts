@@ -35,6 +35,30 @@ export interface LocationSummary {
   lieu_dit?: string | null;
 }
 
+export interface ObjectCardTag {
+  slug?: string | null;
+  code?: string | null;
+  name?: string | null;
+  label?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  icon_url?: string | null;
+}
+
+export interface ObjectCardBadge {
+  kind?: string | null;
+  code?: string | null;
+  label?: string | null;
+  name?: string | null;
+}
+
+export interface ObjectCardTaxonomy {
+  domain?: string | null;
+  code?: string | null;
+  name?: string | null;
+  path?: Array<{ code?: string | null; name?: string | null }>;
+}
+
 export interface CapacityFilter {
   code: string;
   min?: number;
@@ -119,6 +143,8 @@ export interface ObjectCard {
   type: BackendObjectTypeCode | string;
   name: string;
   status?: string;
+  commercial_visibility?: string | null;
+  pet_accepted?: boolean | null;
   image?: string | null;
   rating?: number | null;
   review_count?: number | null;
@@ -126,6 +152,11 @@ export interface ObjectCard {
   open_now?: boolean | null;
   description?: string | null;
   labels?: string[];
+  tags?: ObjectCardTag[];
+  badges?: ObjectCardBadge[];
+  taxonomy?: ObjectCardTaxonomy[];
+  environment_tags?: ObjectCardTag[];
+  amenity_codes?: string[];
   updated_at?: string | null;
   location?: LocationSummary;
   render?: {

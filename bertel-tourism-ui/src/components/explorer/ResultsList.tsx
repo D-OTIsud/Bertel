@@ -168,7 +168,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                     const stackRows = Math.max(1, visibleCount + (showOverflow ? 1 : 0));
 
                     return (
-                      <span className="label-stack" aria-label={hasLabels ? `Labels: ${labels.join(', ')}` : 'Aucun label'}>
+                      <span className="label-stack" aria-label={hasLabels ? `Tags et labels: ${labels.join(', ')}` : 'Aucun tag ou label'}>
                         <span className="label-stack__deck" style={{ ['--label-stack-rows' as never]: stackRows }}>
                           {labels.slice(0, 3).map((label) => (
                             <span

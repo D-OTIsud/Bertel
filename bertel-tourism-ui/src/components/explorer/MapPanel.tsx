@@ -52,6 +52,16 @@ function toSvgPointString(points: ScreenPoint[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(' ');
 }
 
+/** Cluster bubble size / shade tiers (Explorer map, supercluster point_count). */
+type ClusterDensityTier = 'small' | 'medium' | 'large';
+
+function getClusterDensityTier(pointCount: unknown): ClusterDensityTier {
+  const n = Math.max(0, Math.floor(Number(pointCount) || 0));
+  if (n >= 25) return 'large';
+  if (n >= 10) return 'medium';
+  return 'small';
+}
+
 function MapDrawControl() {
   const { map } = useMap();
   const polygon = useExplorerStore((state) => state.common.polygon);
@@ -587,10 +597,11 @@ export function MapPanel({ objects, headerActions }: MapPanelProps) {
             const pointCount = props.point_count;
 
             if (isCluster) {
+              const densityTier = getClusterDensityTier(pointCount);
               return (
                 <Marker key={`cluster-${cluster.id}`} longitude={longitude} latitude={latitude}>
                   <div
-                    className="map-cluster-pin"
+                    className={cn('map-cluster-pin', `map-cluster-pin--density-${densityTier}`)}
                     onClick={(e) => {
                       e.stopPropagation();
                       const expansionZoom = Math.min(supercluster?.getClusterExpansionZoom(cluster.id as number) ?? 20, 20);

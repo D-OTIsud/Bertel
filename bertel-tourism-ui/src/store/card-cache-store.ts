@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { clearCardCache, loadCardCache, saveCardCache } from '@/lib/card-cache-storage';
 import type { ObjectCard } from '@/types/domain';
+import { normalizeExplorerCards } from '@/utils/explorer-card';
 
 const DEBOUNCE_MS = 500;
 
@@ -46,8 +47,9 @@ export const useCardCacheStore = create<CardCacheState>((set, get) => ({
     set({ currentBuster: buster, hydrated: false });
     try {
       const { cards, savedAt } = await loadCardCache(buster);
+      const normalizedCards = normalizeExplorerCards(cards);
       set({
-        cards: new Map(cards.map((c) => [c.id, c])),
+        cards: new Map(normalizedCards.map((c) => [c.id, c])),
         lastBulkLoadAt: savedAt,
         hydrated: true,
       });
@@ -66,7 +68,7 @@ export const useCardCacheStore = create<CardCacheState>((set, get) => ({
       return;
     }
     const next = new Map(cards);
-    for (const card of incoming) {
+    for (const card of normalizeExplorerCards(incoming)) {
       next.set(card.id, card);
     }
     set({ cards: next });

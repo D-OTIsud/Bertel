@@ -1187,26 +1187,72 @@ a {
   min-width: 190px;
 }
 
-/* Wrapper for map pin hover popup: hit-testing + fade (see MapPanel sticky popup). */
+/* Map pin hover popup — compact result-card layout, matches site design tokens. */
 .map-hover-card-wrap {
   display: block;
+  width: 224px;
+  pointer-events: auto;
 }
 
 .map-hover-card {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.2rem 0;
+  gap: 0.45rem;
+  padding: 0;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--ink);
   transition: opacity 0.2s ease;
 }
 
 .map-hover-card--button {
-  width: 100%;
-  padding: 0.2rem 0;
-  border: none;
-  background: none;
-  text-align: left;
   cursor: pointer;
+}
+
+.map-hover-card--button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-brand) 52%, white);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+.map-hover-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.map-hover-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.map-hover-card__dot--open {
+  background: var(--brand-green, #2ca36f);
+  box-shadow: 0 0 0 3px rgba(44, 163, 111, 0.16);
+}
+
+.map-hover-card__dot--closed {
+  background: var(--brand-red, #c85c48);
+  box-shadow: 0 0 0 3px rgba(200, 92, 72, 0.14);
+}
+
+.map-hover-card__name {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .map-hover-card--button:hover .map-hover-card__name,
@@ -1214,35 +1260,70 @@ a {
   color: var(--accent-brand);
 }
 
-.map-hover-card--button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent-brand) 52%, white);
-  outline-offset: 4px;
-  border-radius: 8px;
+.map-hover-card__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--ink-3);
+}
+
+.map-hover-card__city {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.map-hover-card__city-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--ink-4);
+  flex: none;
+}
+
+.map-hover-card__sep {
+  color: var(--ink-4);
+}
+
+.map-hover-card__type {
+  font-weight: 500;
 }
 
 .map-hover-card__img {
   width: 100%;
-  max-width: 180px;
-  height: 92px;
+  height: 104px;
   object-fit: cover;
-  border-radius: 14px;
-  border: 1px solid rgba(24, 49, 59, 0.08);
-  background: rgba(24, 49, 59, 0.04);
-}
-
-.map-hover-card__name {
-  font-family: 'Sora', sans-serif;
-  font-size: 0.98rem;
-  line-height: 1.2;
-  font-weight: 700;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2, rgba(24, 49, 59, 0.04));
+  display: block;
 }
 
 .map-hover-card__cta {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--accent-brand);
+}
+
+.map-hover-card__cta-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  stroke-width: 2.25;
+  transition: transform 0.15s ease;
+}
+
+.map-hover-card--button:hover .map-hover-card__cta-icon {
+  transform: translate(1px, -1px);
 }
 
 .map-marker-pin {
@@ -1269,11 +1350,18 @@ a {
 
 .maplibregl-popup-content,
 .mapboxgl-popup-content {
-  border-radius: 20px !important;
-  border: 1px solid rgba(24, 49, 59, 0.08);
+  border-radius: 12px !important;
+  padding: 10px !important;
+  border: 1px solid var(--line);
   box-shadow: var(--shadow-soft) !important;
-  background: rgba(255, 253, 248, 0.96) !important;
+  background: var(--surface) !important;
   color: var(--text) !important;
+}
+
+.maplibregl-popup-tip,
+.mapboxgl-popup-tip {
+  border-top-color: var(--surface) !important;
+  border-bottom-color: var(--surface) !important;
 }
 
 .maplibregl-ctrl-group,
@@ -4928,9 +5016,7 @@ a {
   filter: brightness(1.08) saturate(1.05);
 }
 
-.map-hover-card {
-  pointer-events: auto;
-}
+/* (.map-hover-card pointer-events lifted onto .map-hover-card-wrap.) */
 
 /* ─── Dashboard KPI sections (Phase 2A) ──────────────────────────────────── */
 

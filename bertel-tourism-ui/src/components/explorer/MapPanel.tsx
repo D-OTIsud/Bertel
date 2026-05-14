@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { ArrowUpRight, MapPin, SlidersHorizontal, X } from 'lucide-react';
 import { Layer, Map, Marker, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -16,7 +16,12 @@ import type { GeoPolygon, ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
-import { normalizeExplorerObjectType } from '../../utils/facets';
+import {
+  EXPLORER_BUCKET_OPTIONS,
+  EXPLORER_BUCKET_TYPE_MAP,
+  normalizeExplorerObjectType,
+} from '../../utils/facets';
+import type { BackendObjectTypeCode, ExplorerBucketKey } from '../../types/domain';
 import { getObjectIdsInsidePolygon, type LngLatPoint } from '../../utils/explorer-selection';
 import { cn } from '@/lib/utils';
 import { SelectionBar } from './SelectionBar';
@@ -170,7 +175,22 @@ type HoverPopupState = {
   id: string;
   name: string;
   image?: string;
+  city?: string;
+  typeLabel?: string;
+  openNow?: boolean | null;
 };
+
+/** Resolve a card's display category label (matches the result-card pill). */
+function getCategoryLabel(type: string): string {
+  const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
+  for (const [bucket, types] of Object.entries(EXPLORER_BUCKET_TYPE_MAP) as [ExplorerBucketKey, BackendObjectTypeCode[]][]) {
+    if (types.includes(code)) {
+      const opt = EXPLORER_BUCKET_OPTIONS.find((o) => o.code === bucket);
+      if (opt) return opt.label;
+    }
+  }
+  return code;
+}
 
 interface MapPanelProps {
   objects: ObjectCard[];
@@ -403,6 +423,9 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
           id: card.id,
           name: card.name,
           image: card.image ?? undefined,
+          city: card.location?.city ?? undefined,
+          typeLabel: getCategoryLabel(card.type),
+          openNow: card.open_now ?? null,
           lngLat: [lng, lat],
         });
       }, HOVER_INTENT_DELAY_MS);
@@ -753,13 +776,47 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
                   onClick={() => handlePopupClick(hoverPopupState.id)}
                   aria-label={`Ouvrir la fiche ${hoverPopupState.name}`}
                 >
-                  <img
-                    className="map-hover-card__img"
-                    src={hoverPopupState.image ?? ''}
-                    alt={hoverPopupState.name}
-                  />
-                  <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
-                  <span className="map-hover-card__cta">Ouvrir la fiche</span>
+                  <div className="map-hover-card__head">
+                    {hoverPopupState.openNow != null ? (
+                      <span
+                        className={cn(
+                          'map-hover-card__dot',
+                          hoverPopupState.openNow
+                            ? 'map-hover-card__dot--open'
+                            : 'map-hover-card__dot--closed',
+                        )}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
+                  </div>
+                  {(hoverPopupState.city || hoverPopupState.typeLabel) ? (
+                    <p className="map-hover-card__meta">
+                      {hoverPopupState.city ? (
+                        <span className="map-hover-card__city">
+                          <MapPin className="map-hover-card__city-icon" aria-hidden="true" />
+                          {hoverPopupState.city}
+                        </span>
+                      ) : null}
+                      {hoverPopupState.city && hoverPopupState.typeLabel ? (
+                        <span className="map-hover-card__sep" aria-hidden="true">·</span>
+                      ) : null}
+                      {hoverPopupState.typeLabel ? (
+                        <span className="map-hover-card__type">{hoverPopupState.typeLabel}</span>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {hoverPopupState.image ? (
+                    <img
+                      className="map-hover-card__img"
+                      src={hoverPopupState.image}
+                      alt=""
+                    />
+                  ) : null}
+                  <span className="map-hover-card__cta">
+                    Ouvrir la fiche
+                    <ArrowUpRight className="map-hover-card__cta-icon" aria-hidden="true" />
+                  </span>
                 </button>
               </div>
             </Popup>

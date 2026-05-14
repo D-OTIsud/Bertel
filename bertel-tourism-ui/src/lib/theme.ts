@@ -14,8 +14,8 @@ export const defaultThemeSettings: ThemeSettings = {
   primaryColor: '#0F6B6D',
   accentColor: '#C79A4A',
   textColor: '#16323A',
-  backgroundColor: '#EDF4F3',
-  surfaceColor: '#FCFEFD',
+  backgroundColor: '#F7F5EF',
+  surfaceColor: '#FFFEFB',
 };
 
 function clamp(value: number, min = 0, max = 255): number {
@@ -225,11 +225,11 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--border': line,
     '--input': line,
     '--ring': primary,
-    '--radius': '0.875rem',
-    '--radius-xl': '32px',
-    '--radius-lg': '24px',
-    '--radius-md': '18px',
-    '--radius-sm': '14px',
+    '--radius': '8px',
+    '--radius-xl': '12px',
+    '--radius-lg': '10px',
+    '--radius-md': '8px',
+    '--radius-sm': '6px',
   };
 
   Object.entries(variables).forEach(([key, value]) => {

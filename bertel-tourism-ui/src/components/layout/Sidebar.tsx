@@ -76,7 +76,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
       style={{ width: 'var(--sidebar-w)' }}
       aria-label="Navigation principale"
     >
-      <div className="mb-3.5 grid h-[38px] w-[38px] place-items-center overflow-hidden rounded-[11px] bg-surface2">
+      <div className="mb-3.5 grid h-[38px] w-[38px] place-items-center overflow-hidden rounded-[8px] bg-surface2">
         {logoUrl ? (
           <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-1" />
         ) : (
@@ -94,7 +94,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
               href={item.to}
               title={item.label}
               className={cn(
-                'grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
+                'grid h-10 w-10 place-items-center rounded-[8px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
                 active && 'bg-teal text-white hover:bg-teal hover:text-white',
               )}
             >
@@ -110,7 +110,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
         href="/settings"
         title="Parametres"
         className={cn(
-          'grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
+          'grid h-10 w-10 place-items-center rounded-[8px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
           isActivePath(pathname, '/settings') && 'bg-teal text-white hover:bg-teal hover:text-white',
         )}
       >
@@ -121,7 +121,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
         <button
           type="button"
           title="Aide"
-          className="grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
+          className="grid h-10 w-10 place-items-center rounded-[8px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
           aria-label="Aide"
         >
           <CircleHelp className="h-[18px] w-[18px]" strokeWidth={1.8} />
@@ -129,7 +129,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
         <button
           type="button"
           title="Notifications"
-          className="relative grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
+          className="relative grid h-10 w-10 place-items-center rounded-[8px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />

@@ -22,7 +22,7 @@ export const useThemeStore = create<ThemeState>()(
       resetTheme: () => set({ theme: defaultThemeSettings }),
     }),
     {
-      name: 'bertel-theme-store',
+      name: 'bertel-theme-store-v2',
       storage: createJSONStorage(() => localStorage),
       merge: (persisted, current) => {
         const persistedState = (persisted as Partial<ThemeState> | undefined) ?? {};

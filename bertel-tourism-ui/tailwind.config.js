@@ -82,11 +82,11 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
-        /* Design scale (explicit px for Explorer / shell utilities) */
-        shell: '10px',
-        shellMd: '14px',
-        shellLg: '20px',
-        shellXl: '28px',
+        /* Design scale (explicit px for Explorer / shell utilities) — crisp */
+        shell: '6px',
+        shellMd: '8px',
+        shellLg: '10px',
+        shellXl: '12px',
       },
       borderColor: {
         subtle: 'var(--border-subtle)',

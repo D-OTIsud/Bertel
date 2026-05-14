@@ -90,7 +90,7 @@ export function TopBar() {
         <div className="flex items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
           <button
             type="button"
-            className="grid h-8 w-8 place-items-center rounded-[9px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
+            className="grid h-8 w-8 place-items-center rounded-[8px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
             aria-label="Menu"
           >
             <Menu className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function TopBar() {
           <span className="text-ink">{pageLabel}</span>
         </div>
 
-        <label className="mx-auto flex h-9 max-w-[520px] flex-1 items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3">
+        <label className="flex h-10 w-full max-w-[860px] items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
           <Input
             type="search"

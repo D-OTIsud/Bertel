@@ -18,10 +18,10 @@ describe('theme helpers', () => {
       brandName: 'Mon Office',
       logoUrl: 'https://example.com/logo.svg',
       primaryColor: '#123456',
-      accentColor: '#C79A4A',
-      textColor: '#16323A',
-      backgroundColor: '#EDF4F3',
-      surfaceColor: '#FCFEFD',
+      accentColor: defaultThemeSettings.accentColor,
+      textColor: defaultThemeSettings.textColor,
+      backgroundColor: defaultThemeSettings.backgroundColor,
+      surfaceColor: defaultThemeSettings.surfaceColor,
     });
   });
 

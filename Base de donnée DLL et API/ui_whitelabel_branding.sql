@@ -36,18 +36,24 @@ AS $$
     auth.role() IN ('service_role', 'admin')
     OR EXISTS (
       SELECT 1
+      FROM public.app_user_profile p
+      WHERE p.id = auth.uid()
+        AND p.role IN ('owner', 'super_admin')
+    )
+    OR EXISTS (
+      SELECT 1
       FROM auth.users u
       WHERE u.id = auth.uid()
         AND COALESCE(
           NULLIF(lower(u.raw_app_meta_data ->> 'role'), ''),
           NULLIF(lower(u.raw_user_meta_data ->> 'role'), ''),
           ''
-        ) IN ('admin', 'super_admin')
+        ) IN ('admin', 'owner', 'super_admin')
     );
 $$;
 
 COMMENT ON FUNCTION api.is_platform_admin() IS
-'Returns true when the current user can manage platform-level branding and UI theme settings.';
+'Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.';
 
 -- -----------------------------------------------------
 -- 2) Global branding settings (singleton row)

@@ -11,6 +11,7 @@ Base de donnee DLL et API/
 ├── schema_unified.sql
 ├── api_views_functions.sql
 ├── rls_policies.sql
+├── ui_whitelabel_branding.sql
 ├── seeds_data.sql
 ├── test_performance.sql
 ├── maintenance.sql
@@ -49,7 +50,10 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- 3) Politiques RLS
 \i rls_policies.sql
 
--- 4) Donnees de seed (optionnel)
+-- 4) Branding UI et parametres white-label
+\i ui_whitelabel_branding.sql
+
+-- 5) Donnees de seed (optionnel)
 \i seeds_data.sql
 ```
 

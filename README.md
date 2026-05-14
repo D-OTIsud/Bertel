@@ -18,6 +18,7 @@ Bertel/
 │   ├── api_views_functions.sql    # Vues et fonctions API (RPC)
 │   ├── seeds_data.sql             # Données de test
 │   ├── rls_policies.sql           # Politiques de sécurité
+│   ├── ui_whitelabel_branding.sql # Branding UI et paramètres white-label
 │   ├── README.md                  # Documentation technique complète
 │   └── erd_diagram.md             # Diagramme ER en Mermaid
 ├── bertel-tourism-ui/             # Application Next.js (front-end)
@@ -98,7 +99,10 @@ psql -d votre_database -f "Base de donnée DLL et API/api_views_functions.sql"
 # 3. Exécuter les politiques RLS
 psql -d votre_database -f "Base de donnée DLL et API/rls_policies.sql"
 
-# 4. Peupler avec les données de test
+# 4. Installer le branding UI et les paramètres white-label
+psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"
+
+# 5. Peupler avec les données de test
 psql -d votre_database -f "Base de donnée DLL et API/seeds_data.sql"
 ```
 
@@ -132,11 +136,16 @@ Ce repository contient :
 Le branding white-label de l'UI est gere par une migration SQL dediee :
 
 - Fichier : `Base de donnée DLL et API/ui_whitelabel_branding.sql`
+- Installation neuve : executer ce fichier dans le flux normal apres `rls_policies.sql`
 - Table singleton : `public.app_branding_settings`
 - Fonctions definies dans le schema `api` :
   - `api.get_public_branding()` : payload public pour la page de login / shell anonyme
   - `api.get_app_branding()` : payload complet pour l'application authentifiee (theme + styles de marqueurs)
   - `api.upsert_app_branding(...)` : mise a jour admin des reglages de branding
+
+Pour une base deja installee avec une ancienne version du branding, utilisez uniquement le patch ciblé
+`Base de donnée DLL et API/branding_admin_profile_role_patch.sql`; les nouvelles installations doivent
+passer par le fichier complet `ui_whitelabel_branding.sql`.
 
 Dans le front-end (`bertel-tourism-ui`), ces fonctions sont appelees via **un client Supabase dedie au schema `api`** :
 

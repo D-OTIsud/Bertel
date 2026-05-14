@@ -64,6 +64,8 @@ export interface LegalItem {
   validityMode: string;
   daysUntilExpiry: string;
   deliveredAt: string;
+  /** When false, hide from public fiche (detail drawer). Missing/unknown treated as public. */
+  isPublic: boolean;
 }
 
 export interface PriceItem {
@@ -912,14 +914,18 @@ export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
 }
 
 export function parseLegal(raw: Record<string, unknown>): LegalItem[] {
-  return readArray(raw.legal_records).map((record) => ({
-    label: readNamedValue(record.type, readString(record.label, 'Document legal')),
-    status: readString(record.status, 'Statut inconnu'),
-    documentId: readString(record.document_id, 'non fourni'),
-    validityMode: readString(record.validity_mode, 'non precisee'),
-    daysUntilExpiry: readString(record.days_until_expiry, 'n/a'),
-    deliveredAt: readString(record.document_delivered_at, readString(record.delivered_at, readString(record.document_requested_at, 'en attente'))),
-  }));
+  return readArray(raw.legal_records).map((record) => {
+    const explicit = readBoolean(record.is_public);
+    return {
+      label: readNamedValue(record.type, readString(record.label, 'Document legal')),
+      status: readString(record.status, 'Statut inconnu'),
+      documentId: readString(record.document_id, 'non fourni'),
+      validityMode: readString(record.validity_mode, 'non precisee'),
+      daysUntilExpiry: readString(record.days_until_expiry, 'n/a'),
+      deliveredAt: readString(record.document_delivered_at, readString(record.delivered_at, readString(record.document_requested_at, 'en attente'))),
+      isPublic: explicit !== false,
+    };
+  });
 }
 
 export function parsePrices(raw: Record<string, unknown>): PriceItem[] {

@@ -1,12 +1,14 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   AlertTriangle,
   Archive,
   Award,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Copy,
   CornerDownRight,
   FileText,
   Pencil,
@@ -17,6 +19,7 @@ import {
   Info,
   Loader2,
   Mail,
+  MapPin,
   MapPinned,
   Navigation,
   Download,
@@ -30,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
   useAddObjectPrivateNoteMutation,
@@ -53,6 +57,7 @@ import {
   type ContactItem,
   type ItinerarySummary,
   type MediaItem,
+  type LegalItem,
   type MembershipItem,
   type MeetingRoomItem,
   type OpeningItem,
@@ -125,6 +130,89 @@ interface PreviewData {
   relatedObjects: RelatedObjectItem[];
   itinerary: ItinerarySummary | null;
   privateNotes: PrivateNoteEntry[];
+  /** From card / raw payload when present; drives STATUT KPI. */
+  openNow: boolean | null;
+}
+
+const DRAWER_PREVIEW_ROOT_ID = 'object-drawer-preview';
+
+export interface DetailTabItem {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+export function buildDetailTabItems(preview: PreviewData, parsed: ParsedObjectDetail): DetailTabItem[] {
+  const amenitiesCount = preview.amenities.length;
+  const pricingCount = preview.prices.length + preview.openings.length;
+  const mediaCount = preview.media.length;
+  const legalCount = parsed.internal.legalRecords.filter(
+    (r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim()),
+  ).length;
+  const notesCount = preview.privateNotes.length;
+
+  return [
+    { id: 'detail-section-overview', label: 'Aperçu' },
+    { id: 'detail-section-amenities', label: 'Équipements', count: amenitiesCount },
+    { id: 'detail-section-pricing', label: 'Tarifs & horaires', count: pricingCount },
+    { id: 'detail-section-hero', label: 'Médias', count: mediaCount },
+    { id: 'detail-section-legal', label: 'Légal', count: legalCount },
+    { id: 'detail-section-notes', label: 'Activité', count: notesCount },
+  ];
+}
+
+function DetailTabs({ items }: { items: DetailTabItem[] }) {
+  const [activeId, setActiveId] = useState(items[0]?.id ?? '');
+
+  useEffect(() => {
+    const root = document.getElementById(DRAWER_PREVIEW_ROOT_ID);
+    if (!root || items.length === 0) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting && e.target.id)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) {
+          setActiveId(visible.target.id);
+        }
+      },
+      { root, rootMargin: '-38% 0px -38% 0px', threshold: [0.08, 0.15, 0.25, 0.4] },
+    );
+
+    for (const it of items) {
+      const el = document.getElementById(it.id);
+      if (el) observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, [items]);
+
+  const scrollTo = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  return (
+    <nav className="drawer-detail-tabs" aria-label="Sections de la fiche">
+      <div className="drawer-detail-tabs__inner">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={cn('drawer-detail-tab', activeId === item.id && 'drawer-detail-tab--active')}
+            onClick={() => scrollTo(item.id)}
+          >
+            <span>{item.label}</span>
+            {typeof item.count === 'number' && item.count > 0 ? (
+              <span className="drawer-detail-tab__count">{item.count}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
 }
 
 interface PracticalFact {
@@ -222,6 +310,7 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
     relatedObjects: parsed.relations.all,
     itinerary: parsed.itinerary.summary,
     privateNotes: parsed.text.privateNotes,
+    openNow: typeof data.raw.open_now === 'boolean' ? data.raw.open_now : null,
   };
 }
 
@@ -394,22 +483,41 @@ function toItineraryStats(itinerary: ItinerarySummary | null): StatDef[] {
 function buildPracticalFacts(preview: PreviewData): PracticalFact[] {
   const languages = getGroup(preview.taxonomyGroups, 'languages');
   const payments = getGroup(preview.taxonomyGroups, 'payments');
-  const environment = getGroup(preview.taxonomyGroups, 'environment');
+  const childLine = preview.petPolicy?.details.find((d) => /enfant/i.test(d));
   const facts: Array<PracticalFact | null> = [
     languages?.items.length ? { label: 'Langues', items: languages.items.map((item) => item.label) } : null,
     payments?.items.length ? { label: 'Paiements', items: payments.items.map((item) => item.label) } : null,
-    environment?.items.length
-      ? { label: 'Cadre', items: environment.items.map((item) => item.label) }
-      : null,
     preview.petPolicy
       ? {
           label: 'Animaux',
           items: [preview.petPolicy.label, ...preview.petPolicy.details].filter(Boolean),
         }
       : null,
+    childLine ? { label: 'Enfants', value: childLine } : null,
   ];
 
   return facts.filter((item): item is PracticalFact => item !== null);
+}
+
+function extractCheckInLine(openings: OpeningItem[]): string | null {
+  for (const o of openings) {
+    const label = o.label.toLowerCase();
+    const haystack = `${label} ${o.details.join(' ')}`.toLowerCase();
+    if (/(check|arriv|accueil|remise|cle|key)/.test(haystack)) {
+      const slot = o.slots.filter(Boolean).join(' · ');
+      if (slot) {
+        return slot;
+      }
+      const fromDetails = o.details.filter(Boolean).join(' · ');
+      if (fromDetails) {
+        return fromDetails;
+      }
+      if (o.weekdays.length) {
+        return o.weekdays.join(' · ');
+      }
+    }
+  }
+  return null;
 }
 
 function useActorVisibility(organizations: OrganizationItem[]): boolean {
@@ -616,6 +724,8 @@ function Section({
   children,
   aside = false,
   restricted = false,
+  id,
+  headerExtra,
 }: {
   title: string;
   kicker?: string;
@@ -623,22 +733,30 @@ function Section({
   children: ReactNode;
   aside?: boolean;
   restricted?: boolean;
+  id?: string;
+  headerExtra?: ReactNode;
 }) {
   return (
-    <article className={`detail-section panel-card panel-card--nested${aside ? ' detail-section--aside' : ''}`}>
+    <article
+      id={id}
+      className={`detail-section panel-card panel-card--nested${aside ? ' detail-section--aside' : ''}`}
+    >
       <div className="detail-section__header">
         <div className="detail-section__heading">
           {kicker && <span className="detail-section__eyebrow">{kicker}</span>}
           <h3 className="detail-section__title">{title}</h3>
           {description && <p className="detail-section__description">{description}</p>}
         </div>
-        {restricted && (
-          <DetailTooltip content="Visible uniquement pour les utilisateurs autorises">
-            <span className="detail-section__scope">
-              <Eye size={14} />
-            </span>
-          </DetailTooltip>
-        )}
+        <div className="detail-section__header-tools">
+          {headerExtra}
+          {restricted && (
+            <DetailTooltip content="Visible uniquement pour les utilisateurs autorises">
+              <span className="detail-section__scope">
+                <Eye size={14} />
+              </span>
+            </DetailTooltip>
+          )}
+        </div>
       </div>
       <div className="detail-section__body">{children}</div>
     </article>
@@ -662,6 +780,45 @@ function StatStrip({ stats }: { stats: StatDef[] }) {
   );
 }
 
+/** KPI row matching fiche-detail mockup (label kicker above value). */
+function KpiStrip({
+  stats,
+  statusLine,
+}: {
+  stats: StatDef[];
+  statusLine?: { label: string; value: string; open: boolean } | null;
+}) {
+  if (!stats.length && !statusLine) {
+    return null;
+  }
+
+  return (
+    <div className="detail-kpi-strip">
+      {stats.map((stat) => (
+        <div key={`${stat.label}-${stat.value}`} className="detail-kpi">
+          <span className="detail-kpi__label">{stat.label}</span>
+          <strong className="detail-kpi__value">{stat.value}</strong>
+        </div>
+      ))}
+      {statusLine ? (
+        <div
+          className={cn(
+            'detail-kpi',
+            'detail-kpi--status',
+            statusLine.open ? 'detail-kpi--status-open' : 'detail-kpi--status-closed',
+          )}
+        >
+          <span className="detail-kpi__label">{statusLine.label}</span>
+          <strong className="detail-kpi__value">
+            <span className="detail-kpi__dot" aria-hidden />
+            {statusLine.value}
+          </strong>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function HeroBlock({
   data,
   preview,
@@ -677,126 +834,96 @@ function HeroBlock({
 }) {
   const totalMedia = preview.media.length;
   const mainMedia = totalMedia > 0 ? preview.media[getWrappedIndex(activeIndex, totalMedia)] : null;
-  const indicatorCount = Math.min(totalMedia, 3);
-  const galleryLabel = totalMedia > 1 ? `${totalMedia} photos` : totalMedia === 1 ? '1 photo' : '';
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [suppressOpenClick, setSuppressOpenClick] = useState(false);
+  const loc = preview.location;
+  const locationPill =
+    loc && (loc.city || loc.lieuDit) ? [loc.city, loc.lieuDit].filter(Boolean).join(' · ') : '';
 
-  const goToPrevious = () => {
-    if (totalMedia <= 1) {
-      return;
+  const thumbSlots = 3;
+  const thumbSlotsData: Array<{ item: MediaItem; index: number }> = [];
+  if (totalMedia > 1) {
+    for (let i = 0; i < thumbSlots; i++) {
+      const idx = getWrappedIndex(activeIndex + 1 + i, totalMedia);
+      thumbSlotsData.push({ item: preview.media[idx], index: idx });
     }
-    onChange(getWrappedIndex(activeIndex - 1, totalMedia));
-  };
+  }
 
-  const goToNext = () => {
-    if (totalMedia <= 1) {
-      return;
-    }
-    onChange(getWrappedIndex(activeIndex + 1, totalMedia));
+  const extrasOverlay = totalMedia > 4 ? totalMedia - 4 : 0;
+
+  const openGalleryAt = (index: number) => {
+    onChange(index);
+    onOpenGallery();
   };
 
   return (
-    <section className={`detail-hero${mainMedia ? '' : ' detail-hero--placeholder'}${totalMedia > 1 ? ' detail-hero--carousel' : ''}`}>
+    <section
+      id="detail-section-hero"
+      className={cn('detail-hero detail-hero--mosaic', !mainMedia && 'detail-hero--placeholder')}
+    >
       <h1 className="sr-only">{data.name}</h1>
-      <div
-        className="detail-hero__frame"
-        role={mainMedia ? 'button' : undefined}
-        tabIndex={mainMedia ? 0 : -1}
-        aria-label={mainMedia ? 'Ouvrir la galerie photo' : undefined}
-        onClick={() => {
-          if (suppressOpenClick) {
-            setSuppressOpenClick(false);
-            return;
-          }
-
-          if (mainMedia) {
-            onOpenGallery();
-          }
-        }}
-        onKeyDown={(event) => {
-          if (!mainMedia) {
-            return;
-          }
-
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            onOpenGallery();
-          }
-        }}
-        onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
-        onTouchEnd={(event) => {
-          const endX = event.changedTouches[0]?.clientX ?? null;
-          if (touchStartX == null || endX == null) {
-            return;
-          }
-
-          const delta = endX - touchStartX;
-          setTouchStartX(null);
-
-          if (Math.abs(delta) < 40) {
-            return;
-          }
-
-          if (delta > 0) {
-            setSuppressOpenClick(true);
-            goToPrevious();
-            return;
-          }
-
-          setSuppressOpenClick(true);
-          goToNext();
-        }}
-      >
-        {mainMedia?.url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.title || data.name} />
-        ) : (
-          <div className="detail-hero__placeholder-art" aria-hidden="true" />
-        )}
-        <div className="detail-hero__veil" aria-hidden="true" />
-        {totalMedia > 1 && (
-          <>
-            <button
-              type="button"
-              className="detail-hero__nav detail-hero__nav--prev"
-              onClick={(event) => {
-                event.stopPropagation();
-                goToPrevious();
-              }}
-              aria-label="Image precedente"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              className="detail-hero__nav detail-hero__nav--next"
-              onClick={(event) => {
-                event.stopPropagation();
-                goToNext();
-              }}
-              aria-label="Image suivante"
-            >
-              <ChevronRight size={18} />
-            </button>
-            <div className="detail-hero__dots" aria-hidden="true">
-              {Array.from({ length: indicatorCount }, (_, index) => (
-                <span
-                  key={`dot-${index}`}
-                  className={`detail-hero__dot${index === activeIndex % indicatorCount ? ' detail-hero__dot--active' : ''}`}
-                />
-              ))}
+      <div className="detail-hero__mosaic">
+        <div
+          className="detail-hero__main-cell"
+          role={mainMedia ? 'button' : undefined}
+          tabIndex={mainMedia ? 0 : -1}
+          aria-label={mainMedia ? 'Ouvrir la galerie photo' : undefined}
+          onClick={() => {
+            if (mainMedia) {
+              onOpenGallery();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (!mainMedia) {
+              return;
+            }
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onOpenGallery();
+            }
+          }}
+        >
+          {mainMedia?.url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.title || data.name} />
+          ) : (
+            <div className="detail-hero__placeholder-art" aria-hidden="true" />
+          )}
+          {locationPill ? (
+            <div className="detail-hero__location-pill">
+              <MapPin size={12} aria-hidden />
+              <span>{locationPill}</span>
             </div>
-          </>
-        )}
-        {galleryLabel && (
-          <div className="detail-hero__gallery-cta" aria-hidden="true">
-            <span>{galleryLabel}</span>
-            <ChevronRight size={16} />
+          ) : null}
+          <div className="detail-hero__veil detail-hero__veil--light" aria-hidden="true" />
+          {mainMedia?.credit ? (
+            <p className="detail-hero__credit detail-hero__credit--overlay">Photo {mainMedia.credit}</p>
+          ) : null}
+        </div>
+        {thumbSlotsData.length > 0 ? (
+          <div className="detail-hero__thumbs">
+            {thumbSlotsData.map((slot, slotIdx) => {
+              const showOverlay = slotIdx === thumbSlots - 1 && extrasOverlay > 0;
+              return (
+                <button
+                  key={`${slot.item.id}-thumb-${slotIdx}`}
+                  type="button"
+                  className="detail-hero__thumb"
+                  onClick={() => openGalleryAt(slot.index)}
+                  aria-label={`Miniature ${slotIdx + 1} — ouvrir la photo ${slot.index + 1} dans la galerie`}
+                >
+                  {slot.item.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={slot.item.url} alt="" className="detail-hero__thumb-img" />
+                  ) : null}
+                  {showOverlay ? <span className="detail-hero__thumb-more">+{extrasOverlay}</span> : null}
+                </button>
+              );
+            })}
           </div>
-        )}
-        {mainMedia?.credit && <p className="detail-hero__credit detail-hero__credit--overlay">Photo {mainMedia.credit}</p>}
+        ) : null}
       </div>
+      {totalMedia > 0 ? (
+        <p className="detail-hero__media-count">{totalMedia} photos</p>
+      ) : null}
       {!mainMedia && (
         <p className="detail-hero__placeholder-copy">
           Pas encore de photo principale.
@@ -946,7 +1073,7 @@ function GalleryLightbox({
   );
 }
 
-function OverviewSection({ preview }: { preview: PreviewData }) {
+function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: ParsedObjectDetail }) {
   const [expanded, setExpanded] = useState(false);
   const summary = preview.summary || preview.description || preview.adaptedDescription;
   const fullText = preview.description || summary;
@@ -962,12 +1089,31 @@ function OverviewSection({ preview }: { preview: PreviewData }) {
   const hasOverview = Boolean(summary || alternateText);
   const showExtendedText = expanded && canRevealFull;
 
+  const descriptionLanguages = useMemo(() => {
+    const codes = new Set<string>();
+    for (const entry of parsed.text.descriptions) {
+      if (entry.language?.trim()) {
+        codes.add(entry.language.trim().toUpperCase());
+      }
+    }
+    return [...codes];
+  }, [parsed.text.descriptions]);
+
+  const versionsLink =
+    descriptionLanguages.length > 1 ? (
+      <button type="button" className="detail-section__link" disabled title="Bientot disponible">
+        Voir versions · {descriptionLanguages.slice(0, 3).join(' / ')}
+        {' '}
+        &gt;
+      </button>
+    ) : null;
+
   if (!hasOverview) {
     return null;
   }
 
   return (
-    <Section title="Description">
+    <Section title="Description" headerExtra={versionsLink}>
       <div className="detail-overview">
         <div className="detail-overview__copy">
           {summary && (
@@ -1261,7 +1407,7 @@ function TeamNotesSection({
   };
 
   return (
-    <Section title="Informations equipe" restricted>
+    <Section id="detail-section-notes" title="Informations equipe" restricted>
       <div className="detail-team-notes">
         {!noteAccessKnown && !hasContent ? (
           <span className="detail-team-notes__hint">Chargement des notes internes...</span>
@@ -1641,6 +1787,66 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
   );
 }
 
+function organizationInitials(name: string): string {
+  const cleaned = name.trim();
+  if (!cleaned) {
+    return '?';
+  }
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0]!}${parts[1]![0]!}`.toUpperCase();
+  }
+  return cleaned.slice(0, 2).toUpperCase();
+}
+
+function networkRolePillLabel(linkType: string): string {
+  const t = linkType.trim().toLowerCase();
+  if (!t) {
+    return 'PARTENAIRE';
+  }
+  if (/(publisher|publicateur|éditeur|edit|oti|diffuseur)/.test(t)) {
+    return 'PUBLISHER';
+  }
+  if (/(partner|partenaire)/.test(t)) {
+    return 'PARTENAIRE';
+  }
+  return 'PARTENAIRE';
+}
+
+function LegalSection({ records }: { records: LegalItem[] }) {
+  const publicRecords = records.filter((r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim()));
+  if (!publicRecords.length) {
+    return null;
+  }
+
+  return (
+    <Section id="detail-section-legal" title="Mentions legales">
+      <ul className="detail-legal-list">
+        {publicRecords.map((record, index) => {
+          const meta = [
+            record.status,
+            record.daysUntilExpiry && record.daysUntilExpiry !== 'n/a' ? `valide jusqu'au ${record.daysUntilExpiry}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+
+          return (
+            <li key={`${record.label}-${index}`} className="detail-legal-list__row">
+              <div className="detail-legal-list__main">
+                <strong>{record.label}</strong>
+                {meta ? <span className="detail-legal-list__meta">{meta}</span> : null}
+              </div>
+              {record.documentId && record.documentId !== 'non fourni' ? (
+                <span className="detail-legal-list__doc">{record.documentId}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
 function LocationMapSection({ preview }: { preview: PreviewData }) {
   const location = preview.location;
 
@@ -1649,11 +1855,28 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
   }
 
   const markerSrc = `/markers/${getMarkerImageId(preview.typeCode)}.png`;
+  const mapsHref = getGoogleMapsSearchUrl(location);
+  const addressLine = [location.address, location.lieuDit, [location.postcode, location.city].filter(Boolean).join(' ')]
+    .filter((part) => Boolean(part?.trim()))
+    .join(', ')
+    || location.label;
+  const coords =
+    location.latitude != null && location.longitude != null
+      ? `${location.latitude}, ${location.longitude}`
+      : '';
 
   return (
-    <Section title="Plan d'acces" aside>
-      <div className="detail-map-card">
-        <div className="detail-map-card__canvas">
+    <Section
+      title="Plan d'acces"
+      aside
+      headerExtra={(
+        <a className="detail-section__link" href={mapsHref} target="_blank" rel="noreferrer">
+          Ouvrir &gt;
+        </a>
+      )}
+    >
+      <div className="detail-map-card detail-map-card--compact">
+        <div className="detail-map-card__canvas detail-map-card__canvas--short">
           <Map
             reuseMaps
             mapStyle={DEFAULT_APP_MAP_STYLE}
@@ -1678,21 +1901,21 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
             <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
           </Map>
         </div>
-        <div className="detail-map-card__body">
-          <div className="detail-map-card__address">
-            <span className="detail-subtitle">Adresse</span>
-            <p>{location.label || `${location.latitude}, ${location.longitude}`}</p>
-            {location.coordinates && <small>{location.coordinates}</small>}
+        <div className="detail-map-card__body detail-map-card__body--stacked">
+          <div className="detail-map-card__address detail-map-card__address--muted">
+            <p className="detail-map-card__address-line">{addressLine}</p>
+            {coords ? <small className="detail-map-card__coords">{coords}</small> : null}
           </div>
-          <div className="detail-map-card__actions">
+          <div className="detail-map-card__actions detail-map-card__actions--row">
             <a
               className="detail-map-link"
-              href={getGoogleMapsSearchUrl(location)}
+              href={mapsHref}
               target="_blank"
               rel="noreferrer"
+              aria-label="Ouvrir dans Google Maps"
             >
               <MapPinned size={16} />
-              Ouvrir dans Google Maps
+              Google Maps
             </a>
             <a
               className="detail-map-link detail-map-link--accent"
@@ -1712,25 +1935,40 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
 
 function CapacitySection({
   capacities,
+  openNow,
 }: {
   capacities: CapacityItem[];
+  openNow?: boolean | null;
 }) {
   const stats = toCapacityStats(capacities);
+  const statusLine =
+    openNow === true ? { label: 'STATUT', value: 'Ouvert', open: true }
+    : openNow === false ? { label: 'STATUT', value: 'Ferme', open: false }
+    : null;
+  const statusSlots = statusLine ? 1 : 0;
+  const cappedStats = stats.slice(0, Math.max(0, 4 - statusSlots));
 
-  if (!stats.length) {
+  if (!cappedStats.length && !statusLine) {
     return null;
   }
 
   return (
     <Section title="Capacite d'accueil">
-      <StatStrip stats={stats} />
+      <KpiStrip stats={cappedStats} statusLine={statusLine} />
     </Section>
   );
 }
 
-function AmenitiesSection({ amenities }: { amenities: ParsedAmenityItem[] }) {
+function AmenitiesSection({
+  amenities,
+  environmentGroup,
+}: {
+  amenities: ParsedAmenityItem[];
+  environmentGroup: TaxonomyGroup | null;
+}) {
   const [expanded, setExpanded] = useState(false);
-  if (!amenities.length) {
+  const hasEnvironment = Boolean(environmentGroup?.items.length);
+  if (!amenities.length && !hasEnvironment) {
     return null;
   }
 
@@ -1744,42 +1982,56 @@ function AmenitiesSection({ amenities }: { amenities: ParsedAmenityItem[] }) {
   const showToggle = sortedAmenities.length > 3;
 
   return (
-    <Section title="Equipements">
-      <div className="detail-amenities">
-        {visibleFeatured.length > 0 && (
-          <div className="detail-feature-grid">
-            {visibleFeatured.map((amenity) => (
-              <div key={amenity.id} className="detail-feature-card">
-                <span className="detail-feature-card__icon" aria-hidden="true">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={amenity.iconUrl} alt="" />
+    <Section id="detail-section-amenities" title="Equipements">
+      {amenities.length > 0 ? (
+        <div className="detail-amenities">
+          {visibleFeatured.length > 0 && (
+            <div className="detail-feature-grid">
+              {visibleFeatured.map((amenity) => (
+                <div key={amenity.id} className="detail-feature-card">
+                  <span className="detail-feature-card__icon" aria-hidden="true">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={amenity.iconUrl} alt="" />
+                  </span>
+                  <strong>{amenity.label}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+          {visiblePlain.length > 0 && (
+            <div className="detail-chip-strip detail-chip-strip--compact">
+              {visiblePlain.map((amenity) => (
+                <span key={amenity.id} className="detail-chip detail-chip--soft detail-chip--equipment">
+                  {amenity.label}
                 </span>
-                <strong>{amenity.label}</strong>
-              </div>
-            ))}
-          </div>
-        )}
-        {visiblePlain.length > 0 && (
+              ))}
+            </div>
+          )}
+          {showToggle && (
+            <button
+              type="button"
+              className="detail-expand-button"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+            >
+              {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {expanded ? 'Voir moins' : 'Voir tous les equipements'}
+            </button>
+          )}
+        </div>
+      ) : null}
+      {hasEnvironment ? (
+        <div className="detail-cadre-env">
+          <h4 className="detail-cadre-env__title">Cadre & environnement</h4>
           <div className="detail-chip-strip detail-chip-strip--compact">
-            {visiblePlain.map((amenity) => (
-              <span key={amenity.id} className="detail-chip detail-chip--soft detail-chip--equipment">
-                {amenity.label}
+            {environmentGroup!.items.map((item) => (
+              <span key={item.id} className="detail-chip detail-chip--soft detail-chip--practical">
+                {item.label}
               </span>
             ))}
           </div>
-        )}
-        {showToggle && (
-          <button
-            type="button"
-            className="detail-expand-button"
-            onClick={() => setExpanded((value) => !value)}
-            aria-expanded={expanded}
-          >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            {expanded ? 'Voir moins' : 'Voir tous les equipements'}
-          </button>
-        )}
-      </div>
+        </div>
+      ) : null}
     </Section>
   );
 }
@@ -1793,7 +2045,7 @@ function ItineraryStatsSection({ itinerary }: { itinerary: ItinerarySummary | nu
 
   return (
     <Section title="Le parcours">
-      <StatStrip stats={stats} />
+      <KpiStrip stats={stats.slice(0, 4)} />
     </Section>
   );
 }
@@ -1878,9 +2130,11 @@ function MeetingRoomList({ rooms }: { rooms: MeetingRoomItem[] }) {
 function PricingAndOpeningsSection({
   prices,
   openings,
+  sectionId,
 }: {
   prices: PriceItem[];
   openings: OpeningItem[];
+  sectionId?: string;
 }) {
   if (!prices.length && !openings.length) {
     return null;
@@ -1893,7 +2147,7 @@ function PricingAndOpeningsSection({
       : 'Horaires';
 
   return (
-    <Section title={title}>
+    <Section id={sectionId} title={title}>
       <div className="detail-columns">
         {prices.length > 0 && (
           <div className="detail-column-block">
@@ -1935,31 +2189,34 @@ function PricingAndOpeningsSection({
   );
 }
 
-function PracticalSection({ facts }: { facts: PracticalFact[] }) {
-  if (!facts.length) {
+function PracticalSection({ facts, openings }: { facts: PracticalFact[]; openings: OpeningItem[] }) {
+  const checkIn = extractCheckInLine(openings);
+  const rows: PracticalFact[] = checkIn ? [...facts, { label: 'Check-in', value: checkIn }] : facts;
+
+  if (!rows.length) {
     return null;
   }
 
   return (
     <Section title="A savoir" aside>
-      <div className="detail-fact-grid">
-        {facts.map((fact) => (
-          <div key={`${fact.label}-${fact.value ?? fact.items?.join('-') ?? ''}`} className="detail-fact-card">
-            <span className="detail-fact-label">{fact.label}</span>
-            {fact.items && fact.items.length > 0 ? (
-              <div className="detail-chip-strip detail-chip-strip--compact">
-                {fact.items.map((item) => (
-                  <span key={`${fact.label}-${item}`} className="detail-chip detail-chip--soft detail-chip--practical">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <strong>{fact.value}</strong>
-            )}
-          </div>
-        ))}
-      </div>
+      <table className="detail-practical-table">
+        <tbody>
+          {rows.map((fact) => (
+            <tr key={`${fact.label}-${fact.value ?? fact.items?.join('-') ?? ''}`}>
+              <th scope="row" className="detail-practical-table__label">
+                {fact.label}
+              </th>
+              <td className="detail-practical-table__value">
+                {fact.items && fact.items.length > 0 ? (
+                  <span>{fact.items.join(' · ')}</span>
+                ) : (
+                  <span>{fact.value}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </Section>
   );
 }
@@ -1983,8 +2240,22 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
 }
 
 function ContactCard({ contact }: { contact: ContactItem }) {
+  const [copied, setCopied] = useState(false);
   const Icon = getContactIcon(contact.kindCode);
-  const content = (
+
+  const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(contact.value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1000);
+    } catch {
+      /* clipboard may be denied */
+    }
+  };
+
+  const inner = (
     <>
       <span className="detail-contact-card__icon" aria-hidden="true">
         {contact.iconUrl ? (
@@ -1995,23 +2266,39 @@ function ContactCard({ contact }: { contact: ContactItem }) {
         )}
       </span>
       <span className="detail-contact-card__value">{contact.value}</span>
+      <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
+        {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
+      </button>
     </>
   );
 
   if (contact.href) {
     return (
-      <a
-        className="detail-contact-row detail-contact-row--link"
-        href={contact.href}
-        target={contact.href.startsWith('http') ? '_blank' : undefined}
-        rel={contact.href.startsWith('http') ? 'noreferrer' : undefined}
-      >
-        {content}
-      </a>
+      <div className="detail-contact-row detail-contact-row--with-copy">
+        <a
+          className="detail-contact-row__link-body detail-contact-row--link"
+          href={contact.href}
+          target={contact.href.startsWith('http') ? '_blank' : undefined}
+          rel={contact.href.startsWith('http') ? 'noreferrer' : undefined}
+        >
+          <span className="detail-contact-card__icon" aria-hidden="true">
+            {contact.iconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={contact.iconUrl} alt="" className="detail-contact-card__icon-image" />
+            ) : (
+              <Icon size={18} />
+            )}
+          </span>
+          <span className="detail-contact-card__value">{contact.value}</span>
+        </a>
+        <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
+          {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
+        </button>
+      </div>
     );
   }
 
-  return <div className="detail-contact-row">{content}</div>;
+  return <div className="detail-contact-row detail-contact-row--with-copy">{inner}</div>;
 }
 
 function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
@@ -2075,14 +2362,19 @@ function NetworkSection({
         {organizations.length > 0 && (
           <div className="detail-network__group">
             <span className="detail-subtitle">Organisations</span>
-            <div className="detail-card-list">
+            <div className="detail-network__list">
               {organizations.slice(0, 5).map((organization) => (
-                <div key={organization.id} className="detail-mini-card">
-                  <div className="detail-mini-card__header">
-                    <strong>{organization.name}</strong>
-                    {organization.linkType && <span className="detail-chip detail-chip--soft">{organization.linkType}</span>}
+                <div key={organization.id} className="detail-network__card">
+                  <div className="detail-network__avatar" aria-hidden>
+                    {organizationInitials(organization.name)}
                   </div>
-                  {organization.contacts[0] && <p className="detail-mini-card__meta">{organization.contacts[0]}</p>}
+                  <div className="detail-network__text">
+                    <strong className="detail-network__name">{organization.name}</strong>
+                    <span className="detail-network__subtitle">
+                      {organization.linkType || organization.contacts[0] || organization.note || ''}
+                    </span>
+                  </div>
+                  <span className="detail-network__pill">{networkRolePillLabel(organization.linkType)}</span>
                 </div>
               ))}
             </div>
@@ -2149,21 +2441,31 @@ function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSee
   return [
     LocationMapSection({ preview }),
     ContactSection({ contacts: preview.contacts }),
-    PracticalSection({ facts }),
+    PracticalSection({ facts, openings: preview.openings }),
     RelatedObjectsSection({ items: preview.relatedObjects }),
     TeamSection({ actors: canSeeActors ? preview.actors : [] }),
     NetworkSection({ organizations: preview.organizations, memberships: preview.memberships }),
   ];
 }
 
+function ApercuRegion({ children }: { children: ReactNode }) {
+  return (
+    <div id="detail-section-overview" className="detail-apercu-region">
+      {children}
+    </div>
+  );
+}
+
 function DetailScaffold({
   data,
   preview,
+  tabItems,
   mainSections,
   asideSections,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
+  tabItems: DetailTabItem[];
   mainSections: ReactNode[];
   asideSections: ReactNode[];
 }) {
@@ -2188,6 +2490,7 @@ function DetailScaffold({
         onOpenChange={setLightboxOpen}
         onChange={setActiveMediaIndex}
       />
+      <DetailTabs items={tabItems} />
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
           <HeroBlock
@@ -2214,25 +2517,39 @@ function DetailScaffold({
 }
 
 function AccommodationDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        RoomList({ rooms: preview.roomTypes }),
-        MeetingRoomList({ rooms: preview.meetingRooms }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <RoomList key="rooms" rooms={preview.roomTypes} />,
+        <MeetingRoomList key="meetings" rooms={preview.meetingRooms} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2240,23 +2557,37 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
 }
 
 function RestaurantDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2264,23 +2595,38 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
 }
 
 function ItineraryDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        ItineraryStatsSection({ itinerary: preview.itinerary }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        ItineraryPracticalSection({ itinerary: preview.itinerary }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <ItineraryStatsSection itinerary={preview.itinerary} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2288,23 +2634,37 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
 }
 
 function ActivityDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2312,23 +2672,37 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
 }
 
 function VisitableDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2336,23 +2710,37 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
 }
 
 function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: taxonomyGroups }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
@@ -2360,22 +2748,37 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
 }
 
 function GenericDetailView({ data, raw }: DetailViewProps) {
-  const parsed = parseObjectDetail(raw);
-  const preview = buildPreviewData(data, parsed);
+  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
+  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
-  const practicalFacts = buildPracticalFacts(preview);
+  const taxonomyGroups = useMemo(
+    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
+    [preview.taxonomyGroups],
+  );
+  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
+  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
+      tabItems={tabItems}
       mainSections={[
-        OverviewSection({ preview }),
-        TaxonomySection({ groups: pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']) }),
-        CapacitySection({ capacities: preview.capacities }),
-        AmenitiesSection({ amenities: preview.amenities }),
-        PricingAndOpeningsSection({ prices: preview.prices, openings: preview.openings }),
-        TeamNotesSection({ objectId: data.id, notes: preview.privateNotes }),
+        <ApercuRegion key="apercu">
+          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+          <OverviewSection preview={preview} parsed={parsed} />
+          <TaxonomySection groups={taxonomyGroups} />
+        </ApercuRegion>,
+        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <PricingAndOpeningsSection
+          key="pricing"
+          prices={preview.prices}
+          openings={preview.openings}
+          sectionId="detail-section-pricing"
+        />,
+        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />

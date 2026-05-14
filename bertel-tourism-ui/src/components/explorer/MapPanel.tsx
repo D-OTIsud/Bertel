@@ -690,7 +690,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
           }}
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
-          <NavigationControl position="bottom-right" showCompass={false} />
+          <NavigationControl position="top-right" showCompass={false} />
           <MapDrawControl />
           {clusters.map((cluster) => {
             const [longitude, latitude] = cluster.geometry.coordinates;

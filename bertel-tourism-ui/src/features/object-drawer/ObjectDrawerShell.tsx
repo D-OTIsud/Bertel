@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Printer, Star, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
 import {
@@ -47,6 +48,7 @@ import { ObjectWorkspaceRelationshipsPanel } from './ObjectWorkspaceRelationship
 import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
+import type { ExternalSyncItem } from './utils';
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
@@ -68,6 +70,17 @@ type SaveState = {
   saving: boolean;
   message: string | null;
 };
+
+/** Public reference line in drawer header (mockup #FCH-…); prefers first external id when present. */
+function formatObjectRef(typeCode: string, externalIds: ExternalSyncItem[], objectId: string): string {
+  const first = externalIds[0];
+  if (first?.externalId && first.externalId.trim() && first.externalId !== 'non renseigne') {
+    return `#${first.externalId.trim().replace(/\s+/g, '')}`;
+  }
+  const compactId = objectId.replace(/[^a-zA-Z0-9]/g, '');
+  const tail = (compactId.slice(-5) || 'XXXXX').toUpperCase();
+  return `#${String(typeCode).toUpperCase()}-${tail}`;
+}
 
 const DRAWER_TYPE_LABELS: Record<string, string> = {
   HOT: 'Hotel',
@@ -324,6 +337,7 @@ function resolveSaveAction(
 }
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
+  const [headerFavorite, setHeaderFavorite] = useState(false);
   const { data, isError, error } = useObjectWorkspaceQuery(objectId);
   const saveModuleMutation = useSaveObjectWorkspaceModuleMutation(objectId);
   const publishObjectMutation = usePublishObjectWorkspaceMutation(objectId);
@@ -427,10 +441,20 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
   const previewRaw = resolvedData?.detail.raw ?? {};
   const parsedPreview = parseObjectDetail(previewRaw as Record<string, unknown>);
+  const drawerRefId =
+    resolvedData
+      ? formatObjectRef(
+        (resolvedData.type ?? 'OBJ').toUpperCase(),
+        parsedPreview.internal.externalIds,
+        resolvedData.id,
+      )
+      : '';
+  const typeLineUpper = resolvedData
+    ? (DRAWER_TYPE_LABELS[(resolvedData.type ?? '').toUpperCase()] ?? resolvedData.type).toUpperCase()
+    : '';
   const isShellLoading = !isError && !resolvedData;
   const title = resolvedData?.name ?? '';
   const typeLabel = resolvedData?.type ? DRAWER_TYPE_LABELS[(resolvedData.type ?? '').toUpperCase()] ?? resolvedData.type : '';
-  const eyebrow = mode === 'edit' ? 'Edition' : typeLabel;
   const headerChips = resolvedData
     ? parsedPreview.taxonomy.groups
       .filter((group) => ['classifications', 'tags'].includes(group.key))
@@ -1209,8 +1233,15 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         {isShellLoading ? (
           <DrawerHeaderSkeleton />
         ) : (
-          <div>
-            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+          <div className="drawer-header__left">
+            {resolvedData && (
+              <div className="drawer-header__eyebrow-row" aria-label="Type et reference">
+                <span className="drawer-header__type-line">{typeLineUpper}</span>
+                <span className="drawer-header__code-pill">{resolvedData.type}</span>
+                <span className="drawer-header__ref">{drawerRefId}</span>
+              </div>
+            )}
+            {mode === 'edit' && <span className="eyebrow drawer-header__mode-eyebrow">Edition</span>}
             <h2 className="font-display text-2xl font-semibold">{title}</h2>
             {headerChips.length > 0 && (
               <div className="drawer-header__meta">
@@ -1224,21 +1255,33 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
           </div>
         )}
         <div className="drawer-header__actions">
-          <StatusPill tone="neutral">{peers.length} live</StatusPill>
+          <StatusPill tone="green">{peers.length} live</StatusPill>
           <AvatarStack people={peers} />
+          <button
+            type="button"
+            className={`drawer-header__icon-btn${headerFavorite ? ' drawer-header__icon-btn--active' : ''}`}
+            onClick={() => setHeaderFavorite((v) => !v)}
+            aria-label={headerFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            aria-pressed={headerFavorite}
+          >
+            <Star className="h-4 w-4" strokeWidth={2} fill={headerFavorite ? 'currentColor' : 'none'} />
+          </button>
+          <button type="button" className="drawer-header__icon-btn" onClick={() => window.print()} aria-label="Imprimer">
+            <Printer className="h-4 w-4" strokeWidth={2} />
+          </button>
           {mode === 'view' && canEdit && (
-            <Button variant="outline" size="sm" onClick={() => handleModeToggle('edit')}>
+            <button type="button" className="drawer-header__btn-primary" onClick={() => handleModeToggle('edit')}>
               Modifier
-            </Button>
+            </button>
           )}
           {mode === 'edit' && (
             <Button variant="ghost" size="sm" onClick={() => handleModeToggle('view')}>
               Apercu
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Fermer
-          </Button>
+          <button type="button" className="drawer-header__icon-btn" onClick={onClose} aria-label="Fermer">
+            <X className="h-5 w-5" strokeWidth={2} />
+          </button>
         </div>
       </div>
 
@@ -1251,7 +1294,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       <div className={`drawer__content ${mode === 'view' ? 'drawer__content--preview' : 'drawer__content--modular'}`}>
         {mode === 'view' && isShellLoading && <DrawerPreviewSkeleton />}
         {mode === 'view' && resolvedData && (
-          <section className="drawer__preview-area">
+          <section id="object-drawer-preview" className="drawer__preview-area">
             <ObjectDetailView data={resolvedData.detail} raw={previewRaw as Record<string, unknown>} />
           </section>
         )}

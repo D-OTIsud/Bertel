@@ -66,7 +66,8 @@ CREATE TEMP TABLE old_data_objects ON COMMIT DROP AS
 WITH imported AS (
   SELECT DISTINCT ON (oei.external_id)
     oei.external_id AS legacy_id,
-    oei.object_id
+    oei.object_id,
+    o.object_type AS current_object_type
   FROM object_external_id oei
   JOIN object o ON o.id = oei.object_id
   WHERE oei.source_system = 'berta_v2_csv_export'
@@ -90,7 +91,7 @@ staged AS (
 SELECT
   i.object_id,
   s.legacy_id,
-  s.object_type,
+  i.current_object_type::text AS object_type,
   s.name,
   s.status,
   s.commercial_visibility,
@@ -410,7 +411,10 @@ SET ref_code_id = EXCLUDED.ref_code_id,
     updated_at = NOW()
 WHERE object_taxonomy.source IS NULL
    OR object_taxonomy.source = 'old_data_enrichment_20260512'
-   OR object_taxonomy.source LIKE 'old_data_%';
+   OR (
+     object_taxonomy.source LIKE 'old_data_%'
+     AND object_taxonomy.source <> 'old_data_type_correction_20260514'
+   );
 
 CREATE TEMP TABLE old_data_tag_catalog ON COMMIT DROP AS
 SELECT *

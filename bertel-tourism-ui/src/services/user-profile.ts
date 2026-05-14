@@ -91,9 +91,13 @@ export async function updateCurrentUserProfile(
     throw new Error('Session utilisateur introuvable.');
   }
 
-  const { error } = await client.from('app_user_profile').update(patch).eq('id', user.id);
+  const { data, error } = await client.from('app_user_profile').update(patch).eq('id', user.id).select('id').maybeSingle();
   if (error) {
-    throw new Error('Impossible de mettre a jour le profil utilisateur.');
+    throw new Error(`Impossible de mettre a jour le profil utilisateur: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Impossible de mettre a jour le profil utilisateur: profil applicatif introuvable.');
   }
 }
 

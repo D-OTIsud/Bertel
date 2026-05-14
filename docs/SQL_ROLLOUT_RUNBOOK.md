@@ -6,6 +6,7 @@ This runbook covers phased rollout and verification for SQL updates in:
 - `Base de donnée DLL et API/schema_unified.sql`
 - `Base de donnée DLL et API/api_views_functions.sql`
 - `Base de donnée DLL et API/rls_policies.sql`
+- `Base de donnée DLL et API/ui_whitelabel_branding.sql`
 - `Base de donnée DLL et API/test_performance.sql`
 
 ## Pre-Deployment Checklist
@@ -20,10 +21,11 @@ This runbook covers phased rollout and verification for SQL updates in:
 1. `schema_unified.sql` (indexes and schema-level changes)
 2. `api_views_functions.sql` (function updates)
 3. `rls_policies.sql` (policy refresh/hardening)
-4. Refresh materialized views introduced by this rollout:
+4. `ui_whitelabel_branding.sql` (UI branding/settings table and RPCs)
+5. Refresh materialized views introduced by this rollout:
    - `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ref_data_json;`
    - `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;`
-5. Smoke tests on key endpoints
+6. Smoke tests on key endpoints
 
 ## Verification (Before/After)
 

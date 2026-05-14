@@ -65,6 +65,25 @@ function isMissingBrandingBackend(error: unknown): boolean {
   return /get_public_branding|get_app_branding|upsert_app_branding|42883|could not find the function/i.test(message);
 }
 
+function readBackendErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? '');
+}
+
+function readBackendErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+function isBrandingPermissionError(error: unknown): boolean {
+  const code = readBackendErrorCode(error);
+  const message = readBackendErrorMessage(error);
+  return code === '42501' || /Only platform admins|permission denied|row-level security/i.test(message);
+}
+
 async function uploadBrandLogo(file: File, client: NonNullable<ReturnType<typeof getSupabaseClient>>) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
@@ -196,6 +215,9 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
   } catch (error) {
     if (isMissingBrandingBackend(error)) {
       throw new Error('La migration SQL ui_whitelabel_branding.sql n est pas encore appliquee sur la base principale.');
+    }
+    if (isBrandingPermissionError(error)) {
+      throw new Error('La base refuse cette modification de branding. Reappliquez la migration branding_admin_profile_role_patch.sql pour reconnaitre les super-admins declares dans app_user_profile.');
     }
     throw error;
   }

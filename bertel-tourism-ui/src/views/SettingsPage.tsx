@@ -63,10 +63,19 @@ export default function SettingsPage() {
 
   const toggleLanguage = (lang: string) => {
     const nextLangPrefs = langPrefs.includes(lang) ? langPrefs.filter((item) => item !== lang) : [...langPrefs, lang];
+    if (nextLangPrefs.length === 0) {
+      toast.error('Gardez au moins une langue active.');
+      return;
+    }
+
+    const previousLangPrefs = langPrefs;
     setLangPrefs(nextLangPrefs);
 
     if (!demoMode && status === 'ready') {
-      void updateCurrentUserProfile({ lang_prefs: nextLangPrefs }).catch((error: unknown) => {
+      void updateCurrentUserProfile({ lang_prefs: nextLangPrefs }).then(() => {
+        toast.success('Preferences de langue enregistrees.');
+      }).catch((error: unknown) => {
+        setLangPrefs(previousLangPrefs);
         toast.error((error as Error).message);
       });
     }

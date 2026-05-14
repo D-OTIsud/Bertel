@@ -11,6 +11,7 @@ import { EXPLORER_BUCKET_OPTIONS, DEFAULT_HOT_SUBTYPES, HOT_BUCKET_TYPES, resolv
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
+import { FilterColumnGroup } from '../common/FilterColumnGroup';
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
@@ -66,21 +67,6 @@ function renderNumber(value?: number): string {
 
 function isBucketSelected(selectedBuckets: ExplorerBucketKey[], bucket: ExplorerBucketKey): boolean {
   return selectedBuckets.includes(bucket);
-}
-
-/** Flat section header for Explorer column variant (no legacy card wrappers). */
-function FilterColumnGroup({ label, count, children }: { label: string; count?: number; children: ReactNode }) {
-  return (
-    <section className="border-b border-line py-3.5 last:border-0">
-      <div className="mb-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
-        <span>{label}</span>
-        {count != null ? (
-          <span className="rounded-full bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-ink-4">{count}</span>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 function FiltersSection({ eyebrow, title, children }: FiltersSectionProps) {
@@ -171,7 +157,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
   const bucketChipClass = (active: boolean) =>
     cn(
-      'inline-flex min-h-[34px] items-center rounded-full border px-3 py-1.5 text-[12px] font-semibold transition',
+      'inline-flex min-h-[28px] items-center rounded-[6px] border px-2.5 py-1 text-[12px] font-semibold transition',
       active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink hover:border-lineStrong hover:bg-surface2',
     );
 

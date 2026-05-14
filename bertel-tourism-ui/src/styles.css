@@ -12,15 +12,15 @@
   --theme-accent-rgb: 242 139 84;
   --theme-text: #18313b;
   --theme-text-rgb: 24 49 59;
-  --theme-bg: #f4eee5;
-  --theme-bg-rgb: 244 238 229;
-  --theme-surface: #fffdf8;
-  --theme-surface-rgb: 255 253 248;
-  --bg: #f4eee5;
-  --bg-strong: #ebe2d5;
-  --panel: rgba(255, 253, 248, 0.82);
-  --panel-strong: #fffdf8;
-  --surface: #fffdf8;        /* solid surface (menus, cards, sidebars) */
+  --theme-bg: #f7f5ef;
+  --theme-bg-rgb: 247 245 239;
+  --theme-surface: #fffefb;
+  --theme-surface-rgb: 255 254 251;
+  --bg: #f7f5ef;             /* page background — header/rail tone, de-creamed */
+  --bg-strong: #e8e5dd;
+  --panel: rgba(255, 254, 251, 0.82);
+  --panel-strong: #fffefb;
+  --surface: #fffefb;        /* solid surface (menus, cards, sidebars) — near-white, pops vs --bg */
   --surface-soft: #edf5f4;
   --line: rgba(24, 49, 59, 0.12);
   --text: #18313b;
@@ -51,17 +51,17 @@
   --border: var(--line);
   --input: var(--line);
   --ring: var(--theme-primary);
-  --radius: 0.875rem;
-  --radius-xl: 32px;
-  --radius-lg: 24px;
-  --radius-md: 18px;
-  --radius-sm: 14px;
+  --radius: 8px;
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
   --shell-chrome-height: 140px;
   --workspace-padding-y: 2.25rem;
   /* Design reskin tokens (Tailwind theme); alias theme-driven values where applicable */
   --sidebar-w: 64px;
-  --bg-tint: #faf6ef;
-  --surface-2: #f7f2e9;
+  --bg-tint: #f1efe8;
+  --surface-2: #f0ede6;
   --line-soft: rgba(24, 49, 59, 0.06);
   --line-strong: rgba(24, 49, 59, 0.18);
   --ink: var(--text);
@@ -115,7 +115,7 @@ select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 7px;
   padding: 0.85rem 1rem;
   background: var(--surface);
   color: var(--text);
@@ -655,8 +655,8 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border-radius: 999px;
-  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
   font-weight: 600;
   transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
@@ -821,7 +821,7 @@ a {
   display: grid;
   gap: 0.9rem;
   padding: 1rem;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: none;
@@ -1105,8 +1105,8 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.52rem 0.8rem;
-  border-radius: 999px;
+  padding: 0.42rem 0.7rem;
+  border-radius: 6px;
   font-size: 0.82rem;
 }
 
@@ -1211,7 +1211,7 @@ a {
 .map-hover-card--button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent-brand) 52%, white);
   outline-offset: 4px;
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .map-hover-card__img {
@@ -1318,7 +1318,7 @@ a {
 .media-card,
 .quick-list__item,
 .legal-card {
-  border-radius: 22px;
+  border-radius: 8px;
 }
 
 .kanban-column {
@@ -1356,7 +1356,7 @@ a {
 
 .inline-alert {
   padding: 0.85rem 1rem;
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(var(--theme-primary-rgb), 0.09);
   border: 1px solid rgba(var(--theme-primary-rgb), 0.14);
 }
@@ -1818,7 +1818,7 @@ a {
 }
 
 .textarea-field {
-  border-radius: 14px;
+  border-radius: 7px;
   padding: 1rem;
   background: var(--surface);
 }
@@ -1883,7 +1883,7 @@ a {
 
 .auth-hero,
 .auth-card {
-  border-radius: 28px;
+  border-radius: 10px;
   padding: 1.5rem;
 }
 
@@ -3904,7 +3904,7 @@ a {
   .auth-hero,
   .auth-card,
   .mobile-sheet {
-    border-radius: 28px;
+    border-radius: 8px;
   }
 
   .result-card {
@@ -4473,8 +4473,8 @@ a {
 
 .explorer-workspace .filters-panel .chip,
 .explorer-workspace .filters-panel .ghost-button {
-  padding: 0.46rem 0.78rem;
-  min-height: 34px;
+  padding: 0.34rem 0.6rem;
+  min-height: 28px;
   font-size: 0.85rem;
 }
 
@@ -4648,7 +4648,7 @@ a {
   stroke-dasharray: 7 5;
 }
 
-/* Tighten card radii to recover usable space */
+/* Crisp card radii — sharp, not bulky */
 
 .hero-panel,
 .filters-panel,
@@ -4667,7 +4667,7 @@ a {
 .media-card,
 .dropzone-card,
 .result-card {
-  border-radius: 18px;
+  border-radius: 8px;
 }
 
 .filters-summary__item,
@@ -4678,7 +4678,7 @@ a {
 .profile-drawer__card,
 .object-drawer-nav__item,
 .checklist-row {
-  border-radius: 14px;
+  border-radius: 6px;
 }
 
 .result-card__media,
@@ -4689,7 +4689,7 @@ a {
 .theme-preview-card__logo,
 .theme-preview-card__logo--fallback,
 .dashboard-brand-card__logo--fallback {
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .result-card__label-badge {
@@ -5334,10 +5334,9 @@ a {
 .dashboard-filters-sidebar {
   width: 300px;
   min-height: 100%;
-  border: 1px solid var(--line);
-  border-radius: 20px;
+  /* Flat hairline column — matches Explorer's filters column, not a card. */
+  border-right: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: var(--shadow-s);
   display: flex;
   flex-direction: column;
   align-self: stretch;
@@ -5364,7 +5363,9 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1rem 0.75rem;
+  height: 56px;
+  flex: none;
+  padding: 0 1rem;
   border-bottom: 1px solid var(--line);
 }
 

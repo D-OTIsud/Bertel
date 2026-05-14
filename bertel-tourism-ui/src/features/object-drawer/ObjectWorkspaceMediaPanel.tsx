@@ -34,7 +34,7 @@ function MediaEditorCard(props: {
   const { item, typeOptions, disabled, onChange, onRemove } = props;
 
   return (
-    <article className="panel-card panel-card--nested">
+    <article className="panel-card panel-card--nested drawer-editor-card drawer-media-editor-card">
       <div className="panel-heading">
         <div>
           <span className="facet-title">{item.scopeLabel}</span>
@@ -67,7 +67,7 @@ function MediaEditorCard(props: {
           <Input id={`media-title-${item.id}`} value={item.title} disabled={disabled} onChange={(event) => onChange({ title: event.target.value })} />
         </div>
 
-        <div className="field-block field-block--wide">
+        <div className="field-block field-block--wide drawer-long-value-field">
           <Label htmlFor={`media-url-${item.id}`}>URL</Label>
           <Input id={`media-url-${item.id}`} value={item.url} disabled={disabled} onChange={(event) => onChange({ url: event.target.value })} />
         </div>
@@ -144,7 +144,7 @@ export function ObjectWorkspaceMediaPanel({
   }, {});
 
   return (
-    <div className="drawer-form-stack">
+    <div className="drawer-form-stack drawer-form-stack--media">
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>
@@ -205,7 +205,7 @@ export function ObjectWorkspaceMediaPanel({
             <h3>{label}</h3>
             <div className="stack-list">
               {items.map((item) => (
-                <article key={item.id} className="panel-card panel-card--nested">
+                <article key={item.id} className="panel-card panel-card--nested drawer-media-summary-card">
                   <strong>{item.title || 'Media sans titre'}</strong>
                   <p>{item.typeLabel || item.typeCode || 'Type non precise'} · {item.visibility || 'public'} · {item.url}</p>
                   {item.tags.length > 0 && <small>{item.tags.join(', ')}</small>}

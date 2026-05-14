@@ -34,7 +34,7 @@ function ContactCard(props: {
   const { item, value, disabled, onChange, onRemove } = props;
 
   return (
-    <article className="panel-card panel-card--nested">
+    <article className="panel-card panel-card--nested drawer-editor-card drawer-contact-editor-card">
       <div className="panel-heading">
         <div>
           <span className="facet-title">{item.roleLabel || item.kindLabel}</span>
@@ -79,7 +79,7 @@ function ContactCard(props: {
           </Select>
         </div>
 
-        <div className="field-block field-block--wide">
+        <div className="field-block field-block--wide drawer-long-value-field">
           <Label htmlFor={`contact-value-${item.id}`}>Valeur</Label>
           <Input id={`contact-value-${item.id}`} value={item.value} disabled={disabled} onChange={(event) => onChange({ value: event.target.value })} />
         </div>
@@ -116,7 +116,7 @@ export function ObjectWorkspaceContactsPanel({
   onSave,
 }: ObjectWorkspaceContactsPanelProps) {
   return (
-    <div className="drawer-form-stack">
+    <div className="drawer-form-stack drawer-form-stack--contacts">
       <article className="panel-card panel-card--nested">
         <div className="panel-heading">
           <div>

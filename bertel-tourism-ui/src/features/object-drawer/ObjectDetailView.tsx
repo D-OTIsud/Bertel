@@ -165,8 +165,9 @@ function DetailTabs({ items }: { items: DetailTabItem[] }) {
   const [activeId, setActiveId] = useState(items[0]?.id ?? '');
 
   useEffect(() => {
-    const root = document.getElementById(DRAWER_PREVIEW_ROOT_ID);
-    if (!root || items.length === 0) {
+    const previewRoot = document.getElementById(DRAWER_PREVIEW_ROOT_ID);
+    const scrollRoot = previewRoot?.closest('.drawer__content') as HTMLElement | null;
+    if (!previewRoot || !scrollRoot || items.length === 0) {
       return undefined;
     }
 
@@ -179,7 +180,7 @@ function DetailTabs({ items }: { items: DetailTabItem[] }) {
           setActiveId(visible.target.id);
         }
       },
-      { root, rootMargin: '-38% 0px -38% 0px', threshold: [0.08, 0.15, 0.25, 0.4] },
+      { root: scrollRoot, rootMargin: '-38% 0px -38% 0px', threshold: [0.08, 0.15, 0.25, 0.4] },
     );
 
     for (const it of items) {
@@ -739,7 +740,7 @@ function Section({
   return (
     <article
       id={id}
-      className={`detail-section panel-card panel-card--nested${aside ? ' detail-section--aside' : ''}`}
+      className={cn('detail-section', aside && 'detail-section--aside')}
     >
       <div className="detail-section__header">
         <div className="detail-section__heading">
@@ -848,6 +849,7 @@ function HeroBlock({
   }
 
   const extrasOverlay = totalMedia > 4 ? totalMedia - 4 : 0;
+  const hasThumbs = thumbSlotsData.length > 0;
 
   const openGalleryAt = (index: number) => {
     onChange(index);
@@ -860,7 +862,7 @@ function HeroBlock({
       className={cn('detail-hero detail-hero--mosaic', !mainMedia && 'detail-hero--placeholder')}
     >
       <h1 className="sr-only">{data.name}</h1>
-      <div className="detail-hero__mosaic">
+      <div className={cn('detail-hero__mosaic', !hasThumbs && 'detail-hero__mosaic--single')}>
         <div
           className="detail-hero__main-cell"
           role={mainMedia ? 'button' : undefined}

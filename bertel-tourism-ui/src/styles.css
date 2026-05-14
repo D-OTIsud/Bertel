@@ -1187,11 +1187,17 @@ a {
   min-width: 190px;
 }
 
+/* Wrapper for map pin hover popup: hit-testing + fade (see MapPanel sticky popup). */
+.map-hover-card-wrap {
+  display: block;
+}
+
 .map-hover-card {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.2rem 0;
+  transition: opacity 0.2s ease;
 }
 
 .map-hover-card--button {

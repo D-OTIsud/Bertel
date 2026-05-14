@@ -142,7 +142,7 @@ export default function ExplorerPage() {
           </div>
         </section>
       ) : (
-        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(380px,1fr)_minmax(420px,1.2fr)] gap-0 overflow-hidden">
+        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(320px,0.8fr)_minmax(420px,1.4fr)] gap-0 overflow-hidden">
           <FiltersPanel references={referencesQuery.data} variant="column" />
           <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
           <Suspense fallback={<MapFallback />}>

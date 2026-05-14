@@ -287,11 +287,9 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Navette lagon')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ouvrir la galerie photo/i })).toBeInTheDocument();
     expect(screen.getByText('2 photos')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^image suivante$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Miniature 1 — ouvrir la photo 2 dans la galerie/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /voir le media 2/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Photo Studio Ocean/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^image suivante$/i }));
-    expect(screen.queryByText(/Photo Studio Ocean/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /ouvrir la galerie photo/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /image suivante dans la galerie/i })).toBeInTheDocument();

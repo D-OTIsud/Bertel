@@ -28,6 +28,12 @@ const DEFAULT_MAP_CENTER: [number, number] = [55.536384, -21.130568];
 const DEFAULT_MAP_ZOOM = 10.2;
 const SINGLE_POINT_ZOOM = 13;
 const MAP_FIT_PADDING = 48;
+/** Hover-intent: ignore brief cursor passes over pins (reduces flicker). */
+const HOVER_INTENT_DELAY_MS = 250;
+/** Once open, keep the pin info popup visible at least this long so the user can reach it. */
+const POPUP_MIN_VISIBLE_MS = 3000;
+/** After leaving both pin and popup, wait this long before closing (never before min-visible). */
+const POPUP_CLOSE_GRACE_MS = 1500;
 
 type ScreenPoint = {
   x: number;
@@ -190,7 +196,11 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     () => objects.filter((o) => typeof o.location?.lat === 'number' && typeof o.location?.lon === 'number').length,
     [objects],
   );
-  const hoverTimerRef = useRef<number | null>(null);
+  const openTimerRef = useRef<number | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  /** Popup must not auto-close before this timestamp (ms since epoch). */
+  const minVisibleUntilRef = useRef(0);
+  const popupContainerRef = useRef<HTMLDivElement | null>(null);
   const popupHoveredRef = useRef(false);
   const markerHoveredRef = useRef(false);
   const lassoPointsRef = useRef<ScreenPoint[]>([]);
@@ -250,28 +260,67 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     setHeaderExpanded(false);
     disableLasso();
   }, [disableLasso]);
-  const clearHoverTimer = useCallback(() => {
-    if (hoverTimerRef.current != null) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
+  const clearOpenTimer = useCallback(() => {
+    if (openTimerRef.current != null) {
+      window.clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
     }
   }, []);
 
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current != null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const clearPopupTimers = useCallback(() => {
+    clearOpenTimer();
+    clearCloseTimer();
+  }, [clearOpenTimer, clearCloseTimer]);
+
+  const dismissHoverPopup = useCallback(() => {
+    clearPopupTimers();
+    minVisibleUntilRef.current = 0;
+    setHoverPopupState(null);
+  }, [clearPopupTimers]);
+
   const schedulePopupClose = useCallback(() => {
-    clearHoverTimer();
-    hoverTimerRef.current = window.setTimeout(() => {
-      // Close only if the mouse is not over marker and not over the tooltip.
+    clearCloseTimer();
+    const untilMin = minVisibleUntilRef.current - Date.now();
+    const waitMs = Math.max(POPUP_CLOSE_GRACE_MS, untilMin);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
       if (popupHoveredRef.current || markerHoveredRef.current) return;
+      minVisibleUntilRef.current = 0;
       setHoverPopupState(null);
-    }, 500);
-  }, [clearHoverTimer]);
+    }, waitMs);
+  }, [clearCloseTimer]);
 
   useEffect(
     () => () => {
-      clearHoverTimer();
+      clearPopupTimers();
     },
-    [clearHoverTimer],
+    [clearPopupTimers],
   );
+
+  /** Close popup immediately on click outside the card and outside any map pin. */
+  useEffect(() => {
+    if (!hoverPopupState) return undefined;
+
+    const onDocPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (popupContainerRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('.map-marker-pin')) return;
+      dismissHoverPopup();
+    };
+
+    document.addEventListener('pointerdown', onDocPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDocPointerDown, true);
+    };
+  }, [hoverPopupState, dismissHoverPopup]);
 
   useEffect(() => {
     if (!mapLoaded) {
@@ -345,31 +394,32 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
   const handleMarkerEnter = useCallback(
     (card: ObjectCard, lng: number, lat: number) => {
       markerHoveredRef.current = true;
-      clearHoverTimer();
-      hoverTimerRef.current = window.setTimeout(() => {
+      clearCloseTimer();
+      clearOpenTimer();
+      openTimerRef.current = window.setTimeout(() => {
+        openTimerRef.current = null;
+        minVisibleUntilRef.current = Date.now() + POPUP_MIN_VISIBLE_MS;
         setHoverPopupState({
           id: card.id,
           name: card.name,
           image: card.image ?? undefined,
           lngLat: [lng, lat],
         });
-      }, 300);
+      }, HOVER_INTENT_DELAY_MS);
     },
-    [clearHoverTimer],
+    [clearCloseTimer, clearOpenTimer],
   );
 
-  const handleMarkerLeave = useCallback(
-    () => {
-      markerHoveredRef.current = false;
-      schedulePopupClose();
-    },
-    [schedulePopupClose],
-  );
+  const handleMarkerLeave = useCallback(() => {
+    markerHoveredRef.current = false;
+    clearOpenTimer();
+    schedulePopupClose();
+  }, [clearOpenTimer, schedulePopupClose]);
 
   const handlePopupEnter = useCallback(() => {
     popupHoveredRef.current = true;
-    clearHoverTimer();
-  }, [clearHoverTimer]);
+    clearCloseTimer();
+  }, [clearCloseTimer]);
 
   const handlePopupLeave = useCallback(() => {
     popupHoveredRef.current = false;
@@ -378,20 +428,18 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
 
   const handleMarkerClick = useCallback(
     (cardId: string) => {
-      clearHoverTimer();
-      setHoverPopupState(null);
+      dismissHoverPopup();
       selectCard(cardId);
     },
-    [clearHoverTimer, selectCard],
+    [dismissHoverPopup, selectCard],
   );
 
   const handlePopupClick = useCallback(
     (cardId: string) => {
-      clearHoverTimer();
-      setHoverPopupState(null);
+      dismissHoverPopup();
       openDrawer(cardId);
     },
-    [clearHoverTimer, openDrawer],
+    [dismissHoverPopup, openDrawer],
   );
 
   const appendLassoPoint = useCallback((point: ScreenPoint) => {
@@ -449,7 +497,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
   }, [addSelectedObjects, disableLasso, objects, selectedObjectIds]);
 
   const handleToggleLasso = useCallback(() => {
-    setHoverPopupState(null);
+    dismissHoverPopup();
     setLassoFeedback(null);
 
     if (lassoArmed) {
@@ -460,7 +508,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     resetLassoPath();
     setLassoArmed(true);
     setHeaderExpanded(false);
-  }, [disableLasso, lassoArmed, resetLassoPath]);
+  }, [disableLasso, dismissHoverPopup, lassoArmed, resetLassoPath]);
 
   const handleLassoPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -471,14 +519,14 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
       event.preventDefault();
       event.stopPropagation();
       event.currentTarget.setPointerCapture(event.pointerId);
-      setHoverPopupState(null);
+      dismissHoverPopup();
       setLassoDrawing(true);
       setLassoFeedback(null);
       lassoPointsRef.current = [];
       setLassoPoints([]);
       appendLassoPoint(getOverlayPoint(event));
     },
-    [appendLassoPoint, lassoArmed],
+    [appendLassoPoint, dismissHoverPopup, lassoArmed],
   );
 
   const handleLassoPointerMove = useCallback(
@@ -655,8 +703,8 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
                 <button
                   type="button"
                   className={cn('map-marker-pin', selectedObjectIdSet.has(card.id) && 'map-marker-pin--selected')}
-                  onMouseEnter={() => handleMarkerEnter(card, longitude, latitude)}
-                  onMouseLeave={() => handleMarkerLeave()}
+                  onPointerEnter={() => handleMarkerEnter(card, longitude, latitude)}
+                  onPointerLeave={() => handleMarkerLeave()}
                   onClick={() => handleMarkerClick(card.id)}
                   aria-label={`Ouvrir ${card.name}`}
                 >
@@ -688,27 +736,32 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
             <Popup
               longitude={hoverPopupState.lngLat[0]}
               latitude={hoverPopupState.lngLat[1]}
-              onClose={() => setHoverPopupState(null)}
+              onClose={dismissHoverPopup}
               offset={18}
               closeButton={false}
               closeOnClick={false}
             >
-              <button
-                type="button"
-                className="map-hover-card map-hover-card--button"
-                onClick={() => handlePopupClick(hoverPopupState.id)}
-                onMouseEnter={handlePopupEnter}
-                onMouseLeave={handlePopupLeave}
-                aria-label={`Ouvrir la fiche ${hoverPopupState.name}`}
+              <div
+                ref={popupContainerRef}
+                className="map-hover-card-wrap"
+                onPointerEnter={handlePopupEnter}
+                onPointerLeave={handlePopupLeave}
               >
-                <img
-                  className="map-hover-card__img"
-                  src={hoverPopupState.image ?? ''}
-                  alt={hoverPopupState.name}
-                />
-                <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
-                <span className="map-hover-card__cta">Ouvrir la fiche</span>
-              </button>
+                <button
+                  type="button"
+                  className="map-hover-card map-hover-card--button"
+                  onClick={() => handlePopupClick(hoverPopupState.id)}
+                  aria-label={`Ouvrir la fiche ${hoverPopupState.name}`}
+                >
+                  <img
+                    className="map-hover-card__img"
+                    src={hoverPopupState.image ?? ''}
+                    alt={hoverPopupState.name}
+                  />
+                  <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
+                  <span className="map-hover-card__cta">Ouvrir la fiche</span>
+                </button>
+              </div>
             </Popup>
           )}
         </Map>

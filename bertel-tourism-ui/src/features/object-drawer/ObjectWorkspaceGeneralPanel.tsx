@@ -1,6 +1,5 @@
 import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
 import type { ObjectWorkspaceGeneralInfo, ObjectWorkspaceTaxonomyModule } from '../../services/object-workspace-parser';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ObjectWorkspaceTaxonomyFields } from './ObjectWorkspaceTaxonomyPanel';
@@ -32,13 +31,8 @@ export function ObjectWorkspaceGeneralPanel({
   objectType,
   objectTypeLabel,
   taxonomyAccess,
-  dirty,
-  saving,
-  statusMessage,
-  saveAction,
   onChange,
   onTaxonomyChange,
-  onSave,
 }: ObjectWorkspaceGeneralPanelProps) {
   const normalizedObjectType = String(objectType ?? '').trim().toUpperCase();
   const resolvedObjectTypeLabel = String(objectTypeLabel ?? objectType ?? '').trim() || 'Type non renseigne';
@@ -53,13 +47,6 @@ export function ObjectWorkspaceGeneralPanel({
             <span className="eyebrow">Informations generales</span>
             <h2>Informations generales</h2>
             <p>Renseignez ici l identite de la fiche. La taxonomie structurante se modifie dans la section ci-dessous.</p>
-          </div>
-          <div className="stack-list text-right">
-            <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-              {saving ? 'Enregistrement...' : saveAction.label}
-            </Button>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

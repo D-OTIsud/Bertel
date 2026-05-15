@@ -1226,6 +1226,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     disabled: true,
     hint: null,
   };
+  const dirtyCount = Object.values(dirtySections).filter(Boolean).length;
 
   return (
     <div key={objectId} className="drawer-shell__inner">
@@ -1495,6 +1496,48 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
                   onSave={() => void handleSaveSection('legal')}
                 />
               )}
+
+              <div className="savebar">
+                <p className="savebar__msg">
+                  {dirtyCount > 0 ? (
+                    <>
+                      <strong>
+                        {dirtyCount} modification{dirtyCount > 1 ? 's' : ''}
+                      </strong>
+                      {' non enregistree'}
+                      {dirtyCount > 1 ? 's' : ''}
+                    </>
+                  ) : (
+                    'Aucune modification en attente'
+                  )}
+                </p>
+                <div className="savebar__actions">
+                  {currentSectionSaveState?.message && (
+                    <span className="savebar__status">{currentSectionSaveState.message}</span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={discardCurrentSection}
+                    disabled={!isCurrentSectionDirty || (currentSectionSaveState?.saving ?? false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleSaveSection(resolvedSection)}
+                    disabled={
+                      currentSaveAction.disabled
+                      || (currentSectionSaveState?.saving ?? false)
+                      || !isCurrentSectionDirty
+                    }
+                  >
+                    {currentSectionSaveState?.saving ? 'Enregistrement...' : currentSaveAction.label}
+                  </Button>
+                </div>
+              </div>
             </section>
           </>
         )}

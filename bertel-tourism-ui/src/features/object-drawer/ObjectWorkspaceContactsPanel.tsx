@@ -105,15 +105,11 @@ function ContactCard(props: {
 
 export function ObjectWorkspaceContactsPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onAddContact,
   onUpdateContact,
   onRemoveContact,
-  onSave,
 }: ObjectWorkspaceContactsPanelProps) {
   return (
     <div className="drawer-form-stack drawer-form-stack--contacts">
@@ -127,12 +123,7 @@ export function ObjectWorkspaceContactsPanel({
               <Button type="button" variant="ghost" onClick={onAddContact} disabled={!access.canDirectWrite || saving}>
                 Ajouter un contact
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

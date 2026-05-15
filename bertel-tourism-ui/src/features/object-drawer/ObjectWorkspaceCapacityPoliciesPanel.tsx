@@ -31,13 +31,9 @@ function sortCapacityItems(items: ObjectWorkspaceCapacityItem[]): ObjectWorkspac
 
 export function ObjectWorkspaceCapacityPoliciesPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspaceCapacityPoliciesPanelProps) {
   const disabled = !access.canDirectWrite;
 
@@ -107,12 +103,7 @@ export function ObjectWorkspaceCapacityPoliciesPanel({
               <Button type="button" variant="ghost" onClick={addCapacityItem} disabled={disabled || saving}>
                 Ajouter une capacite
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

@@ -157,7 +157,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
   const bucketChipClass = (active: boolean) =>
     cn(
-      'inline-flex min-h-[28px] items-center rounded-[6px] border px-2.5 py-1 text-[12px] font-semibold transition',
+      'inline-flex min-h-[28px] items-center rounded-[8px] border px-2.5 py-1 text-[12px] font-semibold transition',
       active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink hover:border-lineStrong hover:bg-surface2',
     );
 

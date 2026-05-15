@@ -3,7 +3,6 @@ import type {
   ObjectWorkspaceDescriptionsModule,
   WorkspaceTranslatableField,
 } from '../../services/object-workspace-parser';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 
@@ -150,17 +149,12 @@ function DescriptionScopeCard(props: {
 
 export function ObjectWorkspaceDescriptionsPanel({
   value,
-  dirty,
-  saving,
-  statusMessage,
-  saveAction,
   canEditPlaceDescriptions,
   onLanguageChange,
   onObjectFieldChange,
   onObjectVisibilityChange,
   onPlaceFieldChange,
   onPlaceVisibilityChange,
-  onSave,
 }: ObjectWorkspaceDescriptionsPanelProps) {
   return (
     <div className="drawer-form-stack">
@@ -168,13 +162,6 @@ export function ObjectWorkspaceDescriptionsPanel({
         <div className="panel-heading">
           <div>
             <h2>Descriptions</h2>
-          </div>
-          <div className="stack-list text-right">
-            <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-              {saving ? 'Enregistrement...' : saveAction.label}
-            </Button>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

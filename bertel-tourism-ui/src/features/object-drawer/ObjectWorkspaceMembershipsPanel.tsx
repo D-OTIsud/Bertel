@@ -73,13 +73,9 @@ function deriveVisibilityImpact(status: string): string {
 
 export function ObjectWorkspaceMembershipsPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspaceMembershipsPanelProps) {
   const disabled = !access.canDirectWrite;
   const objectScopeCount = value.items.filter((item) => item.scope === 'object').length;
@@ -155,12 +151,7 @@ export function ObjectWorkspaceMembershipsPanel({
               >
                 Ajouter une adhesion
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

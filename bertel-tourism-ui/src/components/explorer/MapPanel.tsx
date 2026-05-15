@@ -178,6 +178,7 @@ type HoverPopupState = {
   city?: string;
   typeLabel?: string;
   openNow?: boolean | null;
+  labels?: string[];
 };
 
 /** Resolve a card's display category label (matches the result-card pill). */
@@ -426,6 +427,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
           city: card.location?.city ?? undefined,
           typeLabel: getCategoryLabel(card.type),
           openNow: card.open_now ?? null,
+          labels: Array.isArray(card.labels) ? card.labels.slice(0, 2) : undefined,
           lngLat: [lng, lat],
         });
       }, HOVER_INTENT_DELAY_MS);
@@ -763,6 +765,7 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
               offset={18}
               closeButton={false}
               closeOnClick={false}
+              className="map-hover-popup"
             >
               <div
                 ref={popupContainerRef}
@@ -776,46 +779,55 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
                   onClick={() => handlePopupClick(hoverPopupState.id)}
                   aria-label={`Ouvrir la fiche ${hoverPopupState.name}`}
                 >
-                  <div className="map-hover-card__head">
+                  <span className="map-hover-card__media">
+                    {hoverPopupState.image ? (
+                      <img className="map-hover-card__img" src={hoverPopupState.image} alt="" />
+                    ) : null}
                     {hoverPopupState.openNow != null ? (
                       <span
                         className={cn(
-                          'map-hover-card__dot',
+                          'map-hover-card__status',
                           hoverPopupState.openNow
-                            ? 'map-hover-card__dot--open'
-                            : 'map-hover-card__dot--closed',
+                            ? 'map-hover-card__status--open'
+                            : 'map-hover-card__status--closed',
                         )}
-                        aria-hidden="true"
-                      />
+                      >
+                        <span className="map-hover-card__dot" aria-hidden="true" />
+                        {hoverPopupState.openNow ? 'Ouvert' : 'Ferme'}
+                      </span>
                     ) : null}
+                  </span>
+                  <span className="map-hover-card__body">
                     <strong className="map-hover-card__name">{hoverPopupState.name}</strong>
-                  </div>
-                  {(hoverPopupState.city || hoverPopupState.typeLabel) ? (
-                    <p className="map-hover-card__meta">
-                      {hoverPopupState.city ? (
-                        <span className="map-hover-card__city">
-                          <MapPin className="map-hover-card__city-icon" aria-hidden="true" />
-                          {hoverPopupState.city}
-                        </span>
-                      ) : null}
-                      {hoverPopupState.city && hoverPopupState.typeLabel ? (
-                        <span className="map-hover-card__sep" aria-hidden="true">·</span>
-                      ) : null}
-                      {hoverPopupState.typeLabel ? (
-                        <span className="map-hover-card__type">{hoverPopupState.typeLabel}</span>
-                      ) : null}
-                    </p>
-                  ) : null}
-                  {hoverPopupState.image ? (
-                    <img
-                      className="map-hover-card__img"
-                      src={hoverPopupState.image}
-                      alt=""
-                    />
-                  ) : null}
-                  <span className="map-hover-card__cta">
-                    Ouvrir la fiche
-                    <ArrowUpRight className="map-hover-card__cta-icon" aria-hidden="true" />
+                    {(hoverPopupState.city || hoverPopupState.typeLabel) ? (
+                      <span className="map-hover-card__meta">
+                        {hoverPopupState.city ? (
+                          <span className="map-hover-card__city">
+                            <MapPin className="map-hover-card__city-icon" aria-hidden="true" />
+                            {hoverPopupState.city}
+                          </span>
+                        ) : null}
+                        {hoverPopupState.city && hoverPopupState.typeLabel ? (
+                          <span className="map-hover-card__sep" aria-hidden="true">·</span>
+                        ) : null}
+                        {hoverPopupState.typeLabel ? (
+                          <span className="map-hover-card__type">{hoverPopupState.typeLabel}</span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                    {hoverPopupState.labels && hoverPopupState.labels.length > 0 ? (
+                      <span className="map-hover-card__tags">
+                        {hoverPopupState.labels.map((label) => (
+                          <span key={label} className="map-hover-card__tag">
+                            {label}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                    <span className="map-hover-card__cta">
+                      Ouvrir la fiche
+                      <ArrowUpRight className="map-hover-card__cta-icon" aria-hidden="true" />
+                    </span>
                   </span>
                 </button>
               </div>

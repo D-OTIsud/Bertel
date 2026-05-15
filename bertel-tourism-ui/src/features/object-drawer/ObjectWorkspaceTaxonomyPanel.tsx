@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
 import type { ObjectWorkspaceModuleAccess } from '../../services/object-workspace';
 import type {
   ObjectWorkspaceTaxonomyAssignment,
@@ -8,6 +9,7 @@ import type {
   ObjectWorkspaceTaxonomyPathNode,
 } from '../../services/object-workspace-parser';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface SaveActionState {
   label: string;
@@ -140,9 +142,20 @@ function renderBreadcrumb(assignment: ObjectWorkspaceTaxonomyAssignment | null):
   return labels.length > 0 ? labels.join(' > ') : assignment.label;
 }
 
-function TaxonomyTree({
-  domain,
+function nodeMatchesSearch(node: TaxonomyTreeNode, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+  if (node.label.toLowerCase().includes(query)) {
+    return true;
+  }
+  return node.children.some((child) => nodeMatchesSearch(child, query));
+}
+
+function TaxonomyRows({
   nodes,
+  depth,
+  query,
   selectedNodeId,
   activeNodeCodes,
   disabled,
@@ -150,8 +163,9 @@ function TaxonomyTree({
   onToggleExpanded,
   onSelectNode,
 }: {
-  domain: ObjectWorkspaceTaxonomyDomain;
   nodes: TaxonomyTreeNode[];
+  depth: number;
+  query: string;
   selectedNodeId: string | null;
   activeNodeCodes: Set<string>;
   disabled: boolean;
@@ -160,59 +174,91 @@ function TaxonomyTree({
   onSelectNode: (node: ObjectWorkspaceTaxonomyNodeOption) => void;
 }) {
   return (
-    <div className="stack-list">
-      {nodes.map((node) => {
-        const hasChildren = node.children.length > 0;
-        const isSelected = selectedNodeId === node.id;
-        const isExpanded = expandedState[node.code] ?? (activeNodeCodes.has(node.code) || node.depth < 1);
+    <>
+      {nodes
+        .filter((node) => nodeMatchesSearch(node, query))
+        .map((node) => {
+          const hasChildren = node.children.length > 0;
+          const isSelected = selectedNodeId === node.id;
+          const isExpanded = query
+            ? true
+            : expandedState[node.code] ?? (activeNodeCodes.has(node.code) || depth < 1);
+          const canSelect = node.isAssignable && !disabled;
+          const isFolder = !hasChildren && !node.isAssignable;
 
-        return (
-          <div key={node.id} className="panel-card panel-card--nested">
-            <div className="panel-heading">
-              <div style={{ paddingLeft: `${node.depth * 1.25}rem` }}>
-                <span className="facet-title">{node.depth === 0 ? domain.label : 'Sous-categorie'}</span>
-                <h3>{node.label}</h3>
-                {node.description ? <p>{node.description}</p> : null}
-              </div>
+          const activate = () => {
+            if (canSelect) {
+              onSelectNode(node);
+            } else if (hasChildren) {
+              onToggleExpanded(node.code);
+            }
+          };
 
-              <div className="inline-actions">
+          return (
+            <Fragment key={node.id}>
+              <div
+                className={cn(
+                  'taxo__row',
+                  hasChildren && 'taxo__row--cat',
+                  hasChildren && !isExpanded && 'taxo__row--collapsed',
+                  isSelected && 'taxo__row--on',
+                  isFolder && 'taxo__row--folder',
+                )}
+                style={{ paddingLeft: `${0.85 + depth * 1.15}rem` }}
+                role="button"
+                tabIndex={0}
+                aria-disabled={isFolder}
+                onClick={activate}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    activate();
+                  }
+                }}
+              >
                 {hasChildren ? (
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    disabled={disabled}
-                    onClick={() => onToggleExpanded(node.code)}
+                    className="taxo__caret"
+                    aria-label={isExpanded ? 'Reduire' : 'Developper'}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleExpanded(node.code);
+                    }}
                   >
-                    {isExpanded ? 'Masquer' : 'Afficher'}
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant={isSelected ? 'default' : 'outline'}
-                  disabled={disabled || !node.isAssignable}
-                  onClick={() => onSelectNode(node)}
-                >
-                  {isSelected ? 'Selectionne' : node.isAssignable ? 'Choisir' : 'Dossier'}
-                </Button>
+                    <ChevronDown className="h-3.5 w-3.5" strokeWidth={2} />
+                  </button>
+                ) : node.isAssignable ? (
+                  <span className="taxo__radio" aria-hidden="true" />
+                ) : (
+                  <span className="taxo__spacer" aria-hidden="true" />
+                )}
+                <span className="taxo__label">{node.label}</span>
+                <span className="taxo__meta">
+                  {hasChildren
+                    ? `${node.children.length} sous-categorie${node.children.length > 1 ? 's' : ''}`
+                    : node.isAssignable
+                      ? ''
+                      : 'Dossier'}
+                </span>
               </div>
-            </div>
-
-            {isExpanded && hasChildren ? (
-              <TaxonomyTree
-                domain={domain}
-                nodes={node.children}
-                selectedNodeId={selectedNodeId}
-                activeNodeCodes={activeNodeCodes}
-                disabled={disabled}
-                expandedState={expandedState}
-                onToggleExpanded={onToggleExpanded}
-                onSelectNode={onSelectNode}
-              />
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
+              {hasChildren && isExpanded ? (
+                <TaxonomyRows
+                  nodes={node.children}
+                  depth={depth + 1}
+                  query={query}
+                  selectedNodeId={selectedNodeId}
+                  activeNodeCodes={activeNodeCodes}
+                  disabled={disabled}
+                  expandedState={expandedState}
+                  onToggleExpanded={onToggleExpanded}
+                  onSelectNode={onSelectNode}
+                />
+              ) : null}
+            </Fragment>
+          );
+        })}
+    </>
   );
 }
 
@@ -225,6 +271,7 @@ export function ObjectWorkspaceTaxonomyFields({
   const disabled = !access.canDirectWrite;
   const visibleDomains = getVisibleTaxonomyDomains(value, objectType);
   const [expandedByDomain, setExpandedByDomain] = useState<Record<string, Record<string, boolean>>>({});
+  const [searchByDomain, setSearchByDomain] = useState<Record<string, string>>({});
 
   const treeByDomain = useMemo(
     () => new Map(visibleDomains.map((domain) => [domain.domain, buildTaxonomyTree(domain.nodes)])),
@@ -262,62 +309,101 @@ export function ObjectWorkspaceTaxonomyFields({
     }));
   }
 
+  if (visibleDomains.length === 0) {
+    return (
+      <section className="drawer-form-stack">
+        <article className="panel-card panel-card--nested">
+          <span className="facet-title">Taxonomie</span>
+          <p>Aucune taxonomie specifique n est actuellement configuree pour ce type de fiche.</p>
+        </article>
+      </section>
+    );
+  }
+
   return (
     <section className="drawer-form-stack">
-      {visibleDomains.length > 0 ? visibleDomains.map((domain) => {
-          const tree = treeByDomain.get(domain.domain) ?? [];
-          const selectedNodeId = domain.assignment?.nodeId ?? null;
-          const activeNodeCodes = new Set(domain.assignment?.path.map((node) => node.code) ?? []);
+      {visibleDomains.map((domain) => {
+        const tree = treeByDomain.get(domain.domain) ?? [];
+        const selectedNodeId = domain.assignment?.nodeId ?? null;
+        const activeNodeCodes = new Set(domain.assignment?.path.map((node) => node.code) ?? []);
+        const search = searchByDomain[domain.domain] ?? '';
+        const query = search.trim().toLowerCase();
+        const assignmentPath = domain.assignment?.path ?? [];
 
-          return (
-            <article key={domain.domain} className="panel-card panel-card--nested">
-              <div className="panel-heading">
-                <div>
-                  <span className="facet-title">Taxonomie</span>
-                  <h3>{domain.label}</h3>
-                  <p>{domain.description || 'Choisissez la feuille la plus precise dans cet arbre de sous-categories.'}</p>
+        return (
+          <article key={domain.domain} className="panel-card panel-card--nested">
+            <div className="panel-heading">
+              <div>
+                <span className="facet-title">Taxonomie</span>
+                <h3>{domain.label}</h3>
+                <p>{domain.description || 'Choisissez la feuille la plus precise dans cet arbre de sous-categories.'}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={disabled || !domain.assignment}
+                onClick={() => handleClear(domain)}
+              >
+                Effacer
+              </Button>
+            </div>
+
+            {tree.length > 0 ? (
+              <div className="taxo">
+                <div className="taxo__head">
+                  <div className="taxo__path" aria-label={renderBreadcrumb(domain.assignment)}>
+                    {assignmentPath.length > 0 ? (
+                      assignmentPath.map((node, index) => (
+                        <Fragment key={node.id}>
+                          {index > 0 ? <span className="taxo__path-sep">/</span> : null}
+                          <strong
+                            className={cn(index === assignmentPath.length - 1 && 'taxo__path-current')}
+                          >
+                            {node.label}
+                          </strong>
+                        </Fragment>
+                      ))
+                    ) : (
+                      <span className="taxo__path-empty">Aucune sous-categorie selectionnee</span>
+                    )}
+                  </div>
+                  <label className="taxo__search">
+                    <Search className="taxo__search-icon" strokeWidth={2} aria-hidden="true" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher..."
+                      value={search}
+                      onChange={(event) =>
+                        setSearchByDomain((previous) => ({
+                          ...previous,
+                          [domain.domain]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
                 </div>
-                <div className="stack-list text-right">
-                  <strong>{renderBreadcrumb(domain.assignment)}</strong>
-                  <small className="text-muted-foreground">
-                    {domain.assignment?.source ? `Source: ${domain.assignment.source}` : 'Selection manuelle dans la taxonomie.'}
-                  </small>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={disabled || !domain.assignment}
-                    onClick={() => handleClear(domain)}
-                  >
-                    Effacer
-                  </Button>
+                <div className="taxo__rows">
+                  <TaxonomyRows
+                    nodes={tree}
+                    depth={0}
+                    query={query}
+                    selectedNodeId={selectedNodeId}
+                    activeNodeCodes={activeNodeCodes}
+                    disabled={disabled}
+                    expandedState={expandedByDomain[domain.domain] ?? {}}
+                    onToggleExpanded={(nodeCode) => toggleExpanded(domain.domain, nodeCode)}
+                    onSelectNode={(node) => handleSelect(domain, node)}
+                  />
                 </div>
               </div>
-
-              {tree.length > 0 ? (
-                <TaxonomyTree
-                  domain={domain}
-                  nodes={tree}
-                  selectedNodeId={selectedNodeId}
-                  activeNodeCodes={activeNodeCodes}
-                  disabled={disabled}
-                  expandedState={expandedByDomain[domain.domain] ?? {}}
-                  onToggleExpanded={(nodeCode) => toggleExpanded(domain.domain, nodeCode)}
-                  onSelectNode={(node) => handleSelect(domain, node)}
-                />
-              ) : (
-                <article className="panel-card panel-card--nested">
-                  <span className="facet-title">{domain.label}</span>
-                  <p>La taxonomie de ce domaine n est pas encore chargee dans le workspace.</p>
-                </article>
-              )}
-            </article>
-          );
-        }) : (
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Taxonomie</span>
-            <p>Aucune taxonomie specifique n est actuellement configuree pour ce type de fiche.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                La taxonomie de ce domaine n est pas encore chargee dans le workspace.
+              </p>
+            )}
           </article>
-        )}
+        );
+      })}
     </section>
   );
 }
@@ -325,13 +411,8 @@ export function ObjectWorkspaceTaxonomyFields({
 export function ObjectWorkspaceTaxonomyPanel({
   value,
   objectType,
-  dirty,
-  saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspaceTaxonomyPanelProps) {
   return (
     <div className="drawer-form-stack">
@@ -341,13 +422,6 @@ export function ObjectWorkspaceTaxonomyPanel({
             <span className="eyebrow">Taxonomie</span>
             <h2>Sous-categories hierarchiques</h2>
             <p>Rattachez la fiche au noeud le plus precis de l arbre metier. Les classifications officielles restent dans le module distinctions.</p>
-          </div>
-          <div className="stack-list text-right">
-            <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-              {saving ? 'Enregistrement...' : saveAction.label}
-            </Button>
-            {saveAction.hint ? <small className="text-muted-foreground">{saveAction.hint}</small> : null}
-            {statusMessage ? <small className="text-muted-foreground">{statusMessage}</small> : null}
           </div>
         </div>
       </article>

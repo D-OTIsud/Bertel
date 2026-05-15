@@ -224,15 +224,11 @@ function LegalRecordCard(props: {
 
 export function ObjectWorkspaceLegalPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onAddRecord,
   onUpdateRecord,
   onRemoveRecord,
-  onSave,
 }: ObjectWorkspaceLegalPanelProps) {
   return (
     <div className="drawer-form-stack">
@@ -246,12 +242,7 @@ export function ObjectWorkspaceLegalPanel({
               <Button type="button" variant="ghost" onClick={onAddRecord} disabled={!access.canDirectWrite || saving || value.typeOptions.length === 0}>
                 Ajouter un document
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

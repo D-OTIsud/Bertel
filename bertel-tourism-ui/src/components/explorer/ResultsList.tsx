@@ -60,9 +60,9 @@ function ResultsListSkeleton() {
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={`results-skeleton-${index}`}
-          className="grid h-[120px] grid-cols-[104px_minmax(0,1fr)_28px] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
+          className="grid h-[116px] grid-cols-[96px_minmax(0,1fr)_28px] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
         >
-          <div className="h-[100px] w-[104px] rounded-[12px] bg-surface2 drawer-skeleton" />
+          <div className="h-24 w-24 rounded-[10px] bg-surface2 drawer-skeleton" />
           <div className="flex min-w-0 flex-col gap-2 py-0.5">
             <div className="h-4 w-[70%] rounded bg-surface2 drawer-skeleton" />
             <div className="h-3 w-[55%] rounded bg-surface2 drawer-skeleton" />
@@ -182,12 +182,12 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                 }
               }}
               className={cn(
-                'grid h-[120px] cursor-pointer grid-cols-[104px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
+                'grid h-[116px] cursor-pointer grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
                 isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
               )}
             >
               <div
-                className="relative h-[100px] w-[104px] flex-none overflow-hidden rounded-[12px] bg-surface2 bg-cover bg-center"
+                className="relative h-24 w-24 flex-none overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
                 style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
               >
                 <span

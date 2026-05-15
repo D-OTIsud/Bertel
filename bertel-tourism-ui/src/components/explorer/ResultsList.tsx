@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Star } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
@@ -82,24 +82,31 @@ function ResultsListSkeleton() {
 }
 
 export function ResultsList({ cards, loading, isRefreshing = false, headerActions, variant = 'column' }: ResultsListProps) {
+  const [hasMounted, setHasMounted] = useState(false);
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const visibleCards = hasMounted ? cards : [];
+  const showLoading = loading || !hasMounted;
 
   const orderedCards = useMemo(() => {
     if (selectedObjectIds.length === 0) {
-      return cards;
+      return visibleCards;
     }
-    const cardsById = new Map(cards.map((card) => [card.id, card] as const));
+    const cardsById = new Map(visibleCards.map((card) => [card.id, card] as const));
     const selectedCards = selectedObjectIds.flatMap((id) => {
       const card = cardsById.get(id);
       return card ? [card] : [];
     });
     const selectedSet = new Set(selectedCards.map((card) => card.id));
-    return [...selectedCards, ...cards.filter((card) => !selectedSet.has(card.id))];
-  }, [cards, selectedObjectIds]);
+    return [...selectedCards, ...visibleCards.filter((card) => !selectedSet.has(card.id))];
+  }, [selectedObjectIds, visibleCards]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!selectedCardId) return;
@@ -114,12 +121,12 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         <div className="panel-heading">
           <div className="results-panel__title-row">
             <span className="eyebrow">Resultats</span>
-            <span className="results-count">{cards.length} fiches</span>
+            <span className="results-count">{visibleCards.length} fiches</span>
             {isRefreshing ? <span className="results-refreshing">Mise a jour...</span> : null}
           </div>
           {headerActions ? <div className="results-panel__meta">{headerActions}</div> : null}
         </div>
-        {loading ? <ResultsListSkeleton /> : null}
+        {showLoading ? <ResultsListSkeleton /> : null}
         <p className="p-4 text-sm text-ink-3">Vue liste classique non utilisee.</p>
       </section>
     );
@@ -130,7 +137,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
       <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           <span className="truncate">Resultats</span>
-          <span className="truncate font-sans text-xs font-medium text-ink-3">{cards.length} fiches</span>
+          <span className="truncate font-sans text-xs font-medium text-ink-3">{visibleCards.length} fiches</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {headerActions}
@@ -145,9 +152,9 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         </div>
       </div>
 
-      {loading ? <ResultsListSkeleton /> : null}
+      {showLoading ? <ResultsListSkeleton /> : null}
 
-      {!loading && !isRefreshing && cards.length === 0 ? (
+      {!showLoading && !isRefreshing && visibleCards.length === 0 ? (
         <div className="m-3 rounded-shellMd border border-dashed border-line bg-surface2 p-4 text-sm text-ink-3">
           <strong className="text-ink">Aucun resultat pour ces filtres</strong>
           <p className="mt-1">Essayez d elargir la recherche ou de relacher les contraintes sur la carte.</p>

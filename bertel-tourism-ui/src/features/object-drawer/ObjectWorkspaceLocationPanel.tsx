@@ -447,12 +447,9 @@ function LocationReferenceInput({
 
 export function ObjectWorkspaceLocationPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
   saveAction,
   onChange,
-  onSave,
 }: ObjectWorkspaceLocationPanelProps) {
   const locationReferencesQuery = useLocationReferenceOptionsQuery();
   const parsedCoordinates = useMemo(
@@ -579,13 +576,6 @@ export function ObjectWorkspaceLocationPanel({
           <div className="panel-heading">
             <div>
               <h2>Localisation</h2>
-            </div>
-            <div className="stack-list text-right">
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
-              {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-              {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
             </div>
           </div>
 

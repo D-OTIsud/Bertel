@@ -76,13 +76,9 @@ function renderCheckboxList(props: {
 
 export function ObjectWorkspaceCharacteristicsPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspaceCharacteristicsPanelProps) {
   const disabled = !access.canDirectWrite;
 
@@ -161,12 +157,7 @@ export function ObjectWorkspaceCharacteristicsPanel({
               <Button type="button" variant="ghost" onClick={addLanguage} disabled={disabled || saving}>
                 Ajouter une langue
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

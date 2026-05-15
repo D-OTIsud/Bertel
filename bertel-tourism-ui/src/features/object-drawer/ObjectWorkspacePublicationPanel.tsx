@@ -149,13 +149,10 @@ function renderPublicationSelection(item: ObjectWorkspacePublicationSelectionIte
 export function ObjectWorkspacePublicationPanel({
   value,
   commercialVisibility,
-  visibilityDirty,
   access,
   saving,
   statusMessage,
-  settingsSaveAction,
   onCommercialVisibilityChange,
-  onSaveSettings,
   onTogglePublication,
 }: ObjectWorkspacePublicationPanelProps) {
   const isPublished = value.status === 'published';
@@ -180,21 +177,12 @@ export function ObjectWorkspacePublicationPanel({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onSaveSettings}
-                disabled={settingsSaveAction.disabled || saving || !visibilityDirty}
-              >
-                {saving ? 'Enregistrement...' : settingsSaveAction.label}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
                 onClick={() => onTogglePublication(!isPublished)}
                 disabled={saving || !access.canDirectWrite}
               >
                 {saving ? 'Traitement...' : actionLabel}
               </Button>
             </div>
-            {settingsSaveAction.hint && <small className="text-muted-foreground">{settingsSaveAction.hint}</small>}
             {!access.canDirectWrite && <small className="text-muted-foreground">{publishHint}</small>}
             {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>

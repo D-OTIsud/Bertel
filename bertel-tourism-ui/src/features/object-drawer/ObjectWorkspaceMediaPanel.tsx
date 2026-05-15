@@ -127,15 +127,11 @@ function MediaEditorCard(props: {
 
 export function ObjectWorkspaceMediaPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onAddObjectMedia,
   onUpdateObjectMedia,
   onRemoveObjectMedia,
-  onSave,
 }: ObjectWorkspaceMediaPanelProps) {
   const placeGroups = value.placeItems.reduce<Record<string, ObjectWorkspaceMediaItem[]>>((acc, item) => {
     const key = item.scopeLabel || 'Sous-lieu';
@@ -155,12 +151,7 @@ export function ObjectWorkspaceMediaPanel({
               <Button type="button" variant="ghost" onClick={onAddObjectMedia} disabled={!access.canDirectWrite || saving}>
                 Ajouter un media
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

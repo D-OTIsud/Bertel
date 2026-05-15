@@ -118,13 +118,9 @@ function DistinctionItemCard(props: {
 
 export function ObjectWorkspaceDistinctionsPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspaceDistinctionsPanelProps) {
   const disabled = !access.canDirectWrite;
   const [addingItem, setAddingItem] = useState(false);
@@ -220,12 +216,7 @@ export function ObjectWorkspaceDistinctionsPanel({
                   {addingItem ? 'Annuler' : 'Ajouter un label'}
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

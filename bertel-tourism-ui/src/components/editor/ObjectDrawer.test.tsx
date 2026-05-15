@@ -1036,7 +1036,7 @@ describe('ObjectDrawer workspace drafts', () => {
     expect(within(typeField as HTMLElement).getByText(/^hotel$/i)).toBeInTheDocument();
     expect(within(typeField as HTMLElement).getByText(/code:\s*hot/i)).toBeInTheDocument();
     expect(screen.getAllByText(/taxonomie hot/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /^choisir$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByPlaceholderText(/rechercher/i).length).toBeGreaterThan(0);
   });
 
   it('adapts visible taxonomy domains to the object type', () => {

@@ -51,13 +51,9 @@ function emptyPeriod(): ObjectWorkspacePricePeriod {
 
 export function ObjectWorkspacePricingPanel({
   value,
-  dirty,
   saving,
-  statusMessage,
-  saveAction,
   access,
   onChange,
-  onSave,
 }: ObjectWorkspacePricingPanelProps) {
   const disabled = !access.canDirectWrite;
 
@@ -226,12 +222,7 @@ export function ObjectWorkspacePricingPanel({
               <Button type="button" variant="ghost" onClick={addDiscount} disabled={disabled || saving}>
                 Ajouter une remise
               </Button>
-              <Button type="button" variant="outline" onClick={onSave} disabled={saveAction.disabled || saving || !dirty}>
-                {saving ? 'Enregistrement...' : saveAction.label}
-              </Button>
             </div>
-            {saveAction.hint && <small className="text-muted-foreground">{saveAction.hint}</small>}
-            {statusMessage && <small className="text-muted-foreground">{statusMessage}</small>}
           </div>
         </div>
 

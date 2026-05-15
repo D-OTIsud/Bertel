@@ -11,11 +11,11 @@ export interface ThemeSettings {
 export const defaultThemeSettings: ThemeSettings = {
   brandName: 'Bertel Tourism',
   logoUrl: '/Logo/image.png',
-  primaryColor: '#0F6B6D',
-  accentColor: '#C79A4A',
-  textColor: '#16323A',
-  backgroundColor: '#F7F5EF',
-  surfaceColor: '#FFFEFB',
+  primaryColor: '#176B6A',
+  accentColor: '#F28B54',
+  textColor: '#18313B',
+  backgroundColor: '#F4EEE5',
+  surfaceColor: '#FFFDF8',
 };
 
 function clamp(value: number, min = 0, max = 255): number {
@@ -172,7 +172,7 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
   const bgStrong = mixColors(background, primary, 0.08);
   const panel = mixColors(surface, background, 0.18);
   const surfaceSoft = mixColors(surface, primary, 0.06);
-  const line = mixColors(text, background, 0.82);
+  const line = mixColors(text, background, 0.9);
   const accentSoft = mixColors(accent, surface, 0.86);
   const accentStrong = mixColors(accent, text, 0.18);
   const muted = mixColors(text, background, 0.54);
@@ -205,9 +205,9 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--warning': '#D6933A',
     '--shadow-soft': `0 18px 48px rgba(${shadowColor}, 0.08)`,
     '--shadow': `0 30px 80px rgba(${shadowColor}, 0.14)`,
-    '--shadow-s': `0 2px 10px rgba(${shadowColor}, 0.06)`,
-    '--shadow-m': `0 8px 24px rgba(${shadowColor}, 0.08)`,
-    '--shadow-l': `0 20px 48px rgba(${shadowColor}, 0.14)`,
+    '--shadow-s': `0 1px 0 rgba(${shadowColor}, 0.04), 0 6px 16px -8px rgba(${shadowColor}, 0.1)`,
+    '--shadow-m': `0 1px 0 rgba(${shadowColor}, 0.04), 0 14px 30px -16px rgba(${shadowColor}, 0.18)`,
+    '--shadow-l': `0 24px 60px -20px rgba(${shadowColor}, 0.3)`,
     '--background': background,
     '--foreground': text,
     '--card': surface,
@@ -226,10 +226,10 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--input': line,
     '--ring': primary,
     '--radius': '8px',
-    '--radius-xl': '12px',
-    '--radius-lg': '10px',
-    '--radius-md': '8px',
-    '--radius-sm': '6px',
+    '--radius-xl': '28px',
+    '--radius-lg': '20px',
+    '--radius-md': '14px',
+    '--radius-sm': '10px',
   };
 
   Object.entries(variables).forEach(([key, value]) => {

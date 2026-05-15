@@ -3950,8 +3950,19 @@ a {
 }
 
 .detail-amenities {
+  position: relative;
   display: grid;
   gap: 0.85rem;
+}
+
+.detail-amenities__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .detail-feature-grid,

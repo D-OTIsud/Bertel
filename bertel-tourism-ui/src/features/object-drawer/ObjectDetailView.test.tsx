@@ -266,10 +266,9 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Piscine chauffee')).toBeInTheDocument();
     expect(screen.getAllByText('Spa').length).toBeGreaterThan(0);
     expect(screen.getByText('Balcon')).toBeInTheDocument();
-    expect(screen.queryByText('Wifi')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /voir tous les equipements/i }));
     expect(screen.getByText('Wifi')).toBeInTheDocument();
     expect(screen.getByText('Parking')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /voir tous les equipements/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Telephone')).not.toBeInTheDocument();
     expect(screen.queryByText('Email')).not.toBeInTheDocument();
     expect(screen.getByText('+262 262 10 10 10')).toBeInTheDocument();

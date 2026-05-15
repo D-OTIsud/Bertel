@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -68,6 +68,7 @@ import {
   type RoomTypeItem,
   type TaxonomyGroup,
 } from './utils';
+import { measureAmenitiesLineClamp } from './amenities-line-clamp';
 
 const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
 const RESTAURANT_TYPES = new Set(['RES']);
@@ -1978,24 +1979,90 @@ function AmenitiesSection({
   environmentGroup: TaxonomyGroup | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const amenitiesRootRef = useRef<HTMLDivElement>(null);
+  const featureMeasureRef = useRef<HTMLDivElement>(null);
+  const chipMeasureRef = useRef<HTMLDivElement>(null);
+  const [lineClamp, setLineClamp] = useState({
+    featureVisibleCount: 0,
+    chipVisibleCount: 0,
+    showToggle: false,
+  });
   const hasEnvironment = Boolean(environmentGroup?.items.length);
+  const sortedAmenities = sortAmenities(amenities);
+  const featuredAmenities = sortedAmenities.filter((item) => item.iconUrl);
+  const plainAmenities = sortedAmenities.filter((item) => !item.iconUrl);
+  const amenitySignature = sortedAmenities.map((item) => item.id).join('|');
+
+  const remeasureLineClamp = useCallback(() => {
+    setLineClamp(
+      measureAmenitiesLineClamp(featureMeasureRef.current, chipMeasureRef.current),
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    remeasureLineClamp();
+  }, [amenitySignature, remeasureLineClamp]);
+
+  useLayoutEffect(() => {
+    const root = amenitiesRootRef.current;
+    if (!root || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver(() => {
+      remeasureLineClamp();
+    });
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [amenitySignature, remeasureLineClamp]);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [amenitySignature]);
+
   if (!amenities.length && !hasEnvironment) {
     return null;
   }
 
-  const sortedAmenities = sortAmenities(amenities);
-  const featuredAmenities = sortedAmenities.filter((item) => item.iconUrl);
-  const plainAmenities = sortedAmenities.filter((item) => !item.iconUrl);
-  const previewFeatured = featuredAmenities.slice(0, 3);
-  const previewPlain = previewFeatured.length < 3 ? plainAmenities.slice(0, 3 - previewFeatured.length) : [];
-  const visibleFeatured = expanded ? featuredAmenities : previewFeatured;
-  const visiblePlain = expanded ? plainAmenities : previewPlain;
-  const showToggle = sortedAmenities.length > 3;
+  const showToggle = lineClamp.showToggle;
+  const visibleFeatured =
+    expanded || !showToggle
+      ? featuredAmenities
+      : featuredAmenities.slice(0, lineClamp.featureVisibleCount);
+  const visiblePlain =
+    expanded || !showToggle ? plainAmenities : plainAmenities.slice(0, lineClamp.chipVisibleCount);
 
   return (
     <Section id="detail-section-amenities" title="Equipements">
       {amenities.length > 0 ? (
-        <div className="detail-amenities">
+        <div className="detail-amenities" ref={amenitiesRootRef}>
+          <div className="detail-amenities__measure" aria-hidden="true">
+            {featuredAmenities.length > 0 ? (
+              <div ref={featureMeasureRef} className="detail-feature-grid">
+                {featuredAmenities.map((amenity) => (
+                  <div key={`measure-feature-${amenity.id}`} className="detail-feature-card">
+                    <span className="detail-feature-card__icon" aria-hidden="true">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={amenity.iconUrl} alt="" />
+                    </span>
+                    <strong>{amenity.label}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {plainAmenities.length > 0 ? (
+              <div ref={chipMeasureRef} className="detail-chip-strip detail-chip-strip--compact">
+                {plainAmenities.map((amenity) => (
+                  <span
+                    key={`measure-chip-${amenity.id}`}
+                    className="detail-chip detail-chip--soft detail-chip--equipment"
+                  >
+                    {amenity.label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
           {visibleFeatured.length > 0 && (
             <div className="detail-feature-grid">
               {visibleFeatured.map((amenity) => (
@@ -2018,7 +2085,7 @@ function AmenitiesSection({
               ))}
             </div>
           )}
-          {showToggle && (
+          {showToggle ? (
             <button
               type="button"
               className="detail-expand-button"
@@ -2028,7 +2095,7 @@ function AmenitiesSection({
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               {expanded ? 'Voir moins' : 'Voir tous les equipements'}
             </button>
-          )}
+          ) : null}
         </div>
       ) : null}
       {hasEnvironment ? (
@@ -2829,3 +2896,4 @@ export function ObjectDetailView({ data, raw }: DetailViewProps) {
 
   return <GenericDetailView data={data} raw={raw} />;
 }
+

@@ -363,13 +363,18 @@ function getGoogleMapsDirectionsUrl(location: DetailLocation): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
-function getContactIcon(kindCode: string) {
+function getContactIcon(kindCode: string, value = '') {
   const normalized = kindCode.trim().toLowerCase();
+  const normalizedValue = value.trim();
+  const digits = normalizedValue.replace(/[^\d]/g, '');
+  const isLikelyPhone = digits.length >= 6 && /^[+()\d\s.-]+$/.test(normalizedValue);
+  const isPhoneKind = ['phone', 'mobile', 'fax', 'tel', 'telephone', 'telephone_fixe', 'telephone_mobile', 'whatsapp'].includes(normalized)
+    || /(^|[_-])(phone|mobile|fax|tel)([_-]|$)/.test(normalized);
 
-  if (normalized === 'email') {
+  if (['email', 'mail', 'e-mail', 'courriel'].includes(normalized) || (!normalized && normalizedValue.includes('@'))) {
     return Mail;
   }
-  if (['phone', 'mobile', 'whatsapp'].includes(normalized)) {
+  if (isPhoneKind || (!normalized && isLikelyPhone)) {
     return Phone;
   }
   if (
@@ -2247,7 +2252,7 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
 
 function ContactCard({ contact }: { contact: ContactItem }) {
   const [copied, setCopied] = useState(false);
-  const Icon = getContactIcon(contact.kindCode);
+  const Icon = getContactIcon(contact.kindCode, contact.value);
 
   const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -2261,8 +2266,8 @@ function ContactCard({ contact }: { contact: ContactItem }) {
     }
   };
 
-  const inner = (
-    <>
+  const body = (
+    <span className="detail-contact-row__link-body">
       <span className="detail-contact-card__icon" aria-hidden="true">
         {contact.iconUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -2272,10 +2277,13 @@ function ContactCard({ contact }: { contact: ContactItem }) {
         )}
       </span>
       <span className="detail-contact-card__value">{contact.value}</span>
-      <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
-        {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
-      </button>
-    </>
+    </span>
+  );
+
+  const copyButton = (
+    <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
+      {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
+    </button>
   );
 
   if (contact.href) {
@@ -2297,14 +2305,17 @@ function ContactCard({ contact }: { contact: ContactItem }) {
           </span>
           <span className="detail-contact-card__value">{contact.value}</span>
         </a>
-        <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
-          {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
-        </button>
+        {copyButton}
       </div>
     );
   }
 
-  return <div className="detail-contact-row detail-contact-row--with-copy">{inner}</div>;
+  return (
+    <div className="detail-contact-row detail-contact-row--with-copy">
+      {body}
+      {copyButton}
+    </div>
+  );
 }
 
 function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {

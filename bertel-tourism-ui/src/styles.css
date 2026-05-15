@@ -1628,8 +1628,16 @@ a {
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   min-width: 0;
+}
+
+.drawer-header__actions .status-pill {
+  min-height: 40px;
+  padding: 0 0.85rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .drawer-header__eyebrow-row {
@@ -1647,21 +1655,6 @@ a {
   color: var(--ink-3);
 }
 
-.drawer-header__code-pill {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--teal-soft);
-  color: var(--teal-2, #0d4f4e);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.04em;
-}
-
-.drawer-header__ref {
-  font-size: 0.72rem;
-  color: var(--ink-4);
-}
-
 .drawer-header__mode-eyebrow {
   display: block;
   margin-bottom: 0.3rem;
@@ -1671,12 +1664,12 @@ a {
 .drawer-header__icon-btn {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  border: 0;
-  background: transparent;
-  color: var(--ink-3);
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
   transition: background 0.12s ease, color 0.12s ease;
 }
 
@@ -1685,24 +1678,51 @@ a {
   color: var(--ink);
 }
 
+.drawer-header__icon-btn--plain {
+  width: 36px;
+  height: 36px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-2);
+}
+
 .drawer-header__icon-btn--active,
 .drawer-header__icon-btn--active:hover {
   color: var(--accent-brand-strong);
 }
 
+.drawer-header__btn-secondary,
 .drawer-header__btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  gap: 0.48rem;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 1rem;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.drawer-header__btn-secondary {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.drawer-header__btn-secondary:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.drawer-header__btn-primary {
   border: 1px solid var(--teal);
   background: var(--teal);
   color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 .drawer-header__btn-primary:hover {
@@ -2607,7 +2627,7 @@ a {
 }
 
 .detail-contact-row--with-copy {
-  grid-template-columns: 38px minmax(0, 1fr) 2.1rem;
+  grid-template-columns: minmax(0, 1fr) 2.1rem;
   gap: 0.45rem;
   align-items: center;
 }
@@ -5904,8 +5924,7 @@ a {
 
 .object-detail-view {
   gap: 0.9rem;
-  /* Hero mosaic band: previous clamp +30%; fixed so portrait assets cannot grow the row */
-  --detail-hero-mosaic-height: clamp(143px, 20.15vw, 221px);
+  --detail-hero-mosaic-height: clamp(300px, 27vw, 400px);
 }
 
 .drawer-detail-tabs {
@@ -5936,8 +5955,8 @@ a {
 }
 
 .detail-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(318px, 338px);
+  gap: 1.25rem;
 }
 
 .detail-main,
@@ -5958,7 +5977,7 @@ a {
 }
 
 .detail-hero__mosaic {
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 280px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
   align-items: stretch;
   gap: 0.75rem;
   box-sizing: border-box;
@@ -6008,9 +6027,9 @@ a {
 
 .detail-section--aside,
 .detail-aside .detail-section {
-  padding: 1rem;
+  padding: 1rem 1.05rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
   background: var(--surface);
   box-shadow: none;
 }
@@ -6048,7 +6067,7 @@ a {
 }
 
 .detail-contact-row--with-copy {
-  grid-template-columns: 32px minmax(0, 1fr) 2rem;
+  grid-template-columns: minmax(0, 1fr) 2rem;
 }
 
 .detail-contact-row__link-body {
@@ -6082,6 +6101,105 @@ a {
 .detail-map-card__canvas,
 .detail-map-card__canvas--short {
   border-radius: 8px;
+}
+
+.detail-aside .detail-section__body {
+  gap: 0.8rem;
+}
+
+.detail-aside .detail-map-card,
+.detail-aside .detail-contact-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.detail-aside .detail-map-card--compact {
+  gap: 0.85rem;
+}
+
+.detail-aside .detail-map-card__canvas,
+.detail-aside .detail-map-card__canvas--short {
+  height: 176px;
+  min-height: 176px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.detail-aside .detail-map-card__body--stacked {
+  gap: 0.75rem;
+}
+
+.detail-aside .detail-map-card__actions--row {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 0.5rem;
+}
+
+.detail-aside .detail-map-link {
+  min-height: 36px;
+  padding: 0 0.72rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.detail-aside .detail-contact-list,
+.detail-aside .detail-contact-card--deck {
+  gap: 0;
+}
+
+.detail-aside .detail-contact-row {
+  min-height: 44px;
+  padding: 0.5rem 0;
+  border-radius: 0;
+}
+
+.detail-aside .detail-contact-row--with-copy {
+  grid-template-columns: minmax(0, 1fr) 1.55rem;
+}
+
+.detail-aside .detail-contact-row__link-body {
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 0.62rem;
+}
+
+.detail-aside .detail-contact-card__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-3);
+}
+
+.detail-aside .detail-contact-card__value {
+  font-size: 0.87rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.detail-aside .detail-contact-row__copy {
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+}
+
+.detail-aside .detail-contact-row__copy:hover {
+  background: var(--surface-2);
+}
+
+.detail-aside .detail-practical-table__label {
+  width: 42%;
+}
+
+.detail-aside .detail-practical-table__value {
+  overflow-wrap: anywhere;
 }
 
 .detail-gallery {
@@ -6128,7 +6246,7 @@ a {
   .detail-hero__main-cell {
     height: auto;
     max-height: none;
-    min-height: clamp(110px, 28vw, 200px);
+    min-height: clamp(220px, 55vw, 320px);
   }
 
   .detail-hero__thumbs {

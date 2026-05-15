@@ -795,12 +795,20 @@ function KpiStrip({
 
   return (
     <div className="detail-kpi-strip">
-      {stats.map((stat) => (
-        <div key={`${stat.label}-${stat.value}`} className="detail-kpi">
-          <span className="detail-kpi__label">{stat.label}</span>
-          <strong className="detail-kpi__value">{stat.value}</strong>
-        </div>
-      ))}
+      {stats.map((stat) => {
+        const valueMatch = stat.value.trim().match(/^(\S+)(?:\s+(.+))?$/);
+        const num = valueMatch?.[1] ?? stat.value;
+        const unit = valueMatch?.[2] ?? '';
+        return (
+          <div key={`${stat.label}-${stat.value}`} className="detail-kpi">
+            <span className="detail-kpi__label">{stat.label}</span>
+            <strong className="detail-kpi__value">
+              {num}
+              {unit ? <small>{unit}</small> : null}
+            </strong>
+          </div>
+        );
+      })}
       {statusLine ? (
         <div
           className={cn(
@@ -1954,11 +1962,7 @@ function CapacitySection({
     return null;
   }
 
-  return (
-    <Section title="Capacite d'accueil">
-      <KpiStrip stats={cappedStats} statusLine={statusLine} />
-    </Section>
-  );
+  return <KpiStrip stats={cappedStats} statusLine={statusLine} />;
 }
 
 function AmenitiesSection({

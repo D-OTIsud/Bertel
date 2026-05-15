@@ -1876,10 +1876,6 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
     .filter((part) => Boolean(part?.trim()))
     .join(', ')
     || location.label;
-  const coords =
-    location.latitude != null && location.longitude != null
-      ? `${location.latitude}, ${location.longitude}`
-      : '';
 
   return (
     <Section
@@ -1920,7 +1916,6 @@ function LocationMapSection({ preview }: { preview: PreviewData }) {
         <div className="detail-map-card__body detail-map-card__body--stacked">
           <div className="detail-map-card__address detail-map-card__address--muted">
             <p className="detail-map-card__address-line">{addressLine}</p>
-            {coords ? <small className="detail-map-card__coords">{coords}</small> : null}
           </div>
           <div className="detail-map-card__actions detail-map-card__actions--row">
             <a

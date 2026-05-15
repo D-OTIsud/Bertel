@@ -95,8 +95,6 @@ export function TopBar() {
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="hidden font-medium text-ink-4 sm:inline">Tourism</span>
-          <span className="hidden text-ink-4 sm:inline">/</span>
           <span className="text-ink">{pageLabel}</span>
         </div>
 

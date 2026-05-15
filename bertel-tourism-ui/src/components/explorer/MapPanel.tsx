@@ -1,10 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { ArrowUpRight, MapPin, SlidersHorizontal, X } from 'lucide-react';
-import { Layer, Map, Marker, NavigationControl, Popup, Source, useMap } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ArrowUpRight, LassoSelect, MapPin } from 'lucide-react';
+import { Layer, Map, Marker, NavigationControl, Popup, Source } from 'react-map-gl/maplibre';
 import {
   defaultMarkerStyles,
   getMarkerImageId,
@@ -12,7 +10,7 @@ import {
 import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
-import type { GeoPolygon, ObjectCard } from '../../types/domain';
+import type { ObjectCard } from '../../types/domain';
 import { buildObjectFeatureCollection } from './map-source';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
@@ -45,13 +43,6 @@ type ScreenPoint = {
   y: number;
 };
 
-function polygonToBounds(polygon: GeoPolygon): [number, number, number, number] {
-  const coords = polygon.coordinates[0] ?? [];
-  const lons = coords.map((coord) => coord[0]);
-  const lats = coords.map((coord) => coord[1]);
-  return [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
-}
-
 function getOverlayPoint(event: ReactPointerEvent<HTMLDivElement>): ScreenPoint {
   const bounds = event.currentTarget.getBoundingClientRect();
   return {
@@ -72,102 +63,6 @@ function getClusterDensityTier(pointCount: unknown): ClusterDensityTier {
   if (n >= 25) return 'large';
   if (n >= 10) return 'medium';
   return 'small';
-}
-
-function MapDrawControl() {
-  const { map } = useMap();
-  const polygon = useExplorerStore((state) => state.common.polygon);
-  const setPolygon = useExplorerStore((state) => state.setPolygon);
-  const resetSpatialFilter = useExplorerStore((state) => state.resetSpatialFilter);
-  const drawRef = useRef<MapboxDraw | null>(null);
-  const lastPolygonRef = useRef<string | null>(null);
-  const drawDebounceRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!map) return;
-    let isMounted = true;
-
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: { polygon: true, trash: true },
-    });
-    drawRef.current = draw;
-
-    const syncDraw = () => {
-      if (!isMounted) return;
-      if (drawDebounceRef.current != null) {
-        window.clearTimeout(drawDebounceRef.current);
-      }
-      drawDebounceRef.current = window.setTimeout(() => {
-        if (!isMounted) return;
-      const features = draw.getAll().features;
-      const geom = features[0]?.geometry;
-      if (!geom || geom.type !== 'Polygon') {
-        resetSpatialFilter();
-        return;
-      }
-      const typed: GeoPolygon = {
-        type: 'Polygon',
-        coordinates: geom.coordinates as number[][][],
-      };
-        const nextKey = JSON.stringify(typed.coordinates);
-        if (lastPolygonRef.current === nextKey) {
-          return;
-        }
-        lastPolygonRef.current = nextKey;
-        setPolygon(typed, polygonToBounds(typed));
-      }, 150);
-    };
-
-    const onLoad = () => {
-      if (!isMounted) return;
-      map.addControl(draw as unknown as { onAdd: () => HTMLElement; onRemove: () => void }, 'top-left');
-      (map as unknown as { on: (e: string, cb: () => void) => void }).on('draw.create', syncDraw);
-      (map as unknown as { on: (e: string, cb: () => void) => void }).on('draw.update', syncDraw);
-      (map as unknown as { on: (e: string, cb: () => void) => void }).on('draw.delete', resetSpatialFilter);
-      if (polygon) {
-        draw.deleteAll();
-        draw.add({ type: 'Feature', properties: {}, geometry: polygon });
-      }
-    };
-
-    if (map.isStyleLoaded()) onLoad();
-    else map.once('load', onLoad);
-
-    return () => {
-      isMounted = false;
-      if (drawDebounceRef.current != null) {
-        window.clearTimeout(drawDebounceRef.current);
-        drawDebounceRef.current = null;
-      }
-      (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.create', syncDraw);
-      (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.update', syncDraw);
-      (map as unknown as { off: (e: string, cb: () => void) => void }).off('draw.delete', resetSpatialFilter);
-      if (drawRef.current) {
-        map.removeControl(drawRef.current as unknown as { onAdd: () => HTMLElement; onRemove: () => void });
-        drawRef.current = null;
-      }
-    };
-  }, [map, resetSpatialFilter, setPolygon]);
-
-  useEffect(() => {
-    const draw = drawRef.current;
-    if (!draw || !map) return;
-
-    const currentFeatures = draw.getAll().features;
-    const currentGeom = currentFeatures[0]?.geometry;
-    const storeGeomString = polygon ? JSON.stringify(polygon.coordinates) : null;
-    const mapGeomString = currentGeom ? JSON.stringify((currentGeom as GeoPolygon).coordinates) : null;
-
-    if (storeGeomString !== mapGeomString) {
-      draw.deleteAll();
-      if (polygon) {
-        draw.add({ type: 'Feature', properties: {}, geometry: polygon });
-      }
-    }
-  }, [map, polygon]);
-
-  return null;
 }
 
 type HoverPopupState = {
@@ -195,11 +90,10 @@ function getCategoryLabel(type: string): string {
 
 interface MapPanelProps {
   objects: ObjectCard[];
-  headerActions?: ReactNode;
   variant?: 'panel' | 'column';
 }
 
-export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanelProps) {
+export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
   const openDrawer = useUiStore((state) => state.openDrawer);
 
@@ -207,7 +101,6 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
-  const [headerExpanded, setHeaderExpanded] = useState(false);
   const [lassoArmed, setLassoArmed] = useState(false);
   const [lassoDrawing, setLassoDrawing] = useState(false);
   const [lassoPoints, setLassoPoints] = useState<ScreenPoint[]>([]);
@@ -277,10 +170,6 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     resetLassoPath();
   }, [resetLassoPath]);
 
-  const collapseHeader = useCallback(() => {
-    setHeaderExpanded(false);
-    disableLasso();
-  }, [disableLasso]);
   const clearOpenTimer = useCallback(() => {
     if (openTimerRef.current != null) {
       window.clearTimeout(openTimerRef.current);
@@ -532,7 +421,6 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
 
     resetLassoPath();
     setLassoArmed(true);
-    setHeaderExpanded(false);
   }, [disableLasso, dismissHoverPopup, lassoArmed, resetLassoPath]);
 
   const handleLassoPointerDown = useCallback(
@@ -603,6 +491,20 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
     [disableLasso, lassoDrawing],
   );
 
+  const lassoTooltip = lassoArmed ? 'Annuler la selection par lasso' : 'Selection par lasso';
+  const lassoButton = (
+    <button
+      type="button"
+      className={cn('map-panel__tool-button', lassoArmed && 'map-panel__tool-button--active')}
+      onClick={handleToggleLasso}
+      title={lassoTooltip}
+      aria-label={lassoTooltip}
+      aria-pressed={lassoArmed}
+    >
+      <LassoSelect className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
+
   return (
     <section
       className={cn(
@@ -616,56 +518,17 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
             <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
             <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setHeaderExpanded((e) => !e)}
-            className="inline-flex items-center gap-1.5 rounded-[9px] border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink hover:bg-surface2"
-            aria-expanded={headerExpanded}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Couches
-          </button>
+          <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
+            {lassoButton}
+          </div>
         </div>
       ) : null}
-      {(!isColumn || headerExpanded) ? (
-      <div className={`map-panel__header-actions-wrap ${headerExpanded ? 'map-panel__header-actions-wrap--expanded' : ''}`}>
-        {headerExpanded ? (
-          <div className="map-panel__header-actions" role="toolbar" aria-label="Outils carte">
-            <div className="map-panel__header-top-row">
-              {headerActions}
-              <button
-                type="button"
-                className="map-panel__header-trigger map-panel__header-trigger--inline"
-                onClick={collapseHeader}
-                aria-label="Fermer les outils carte"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="map-panel__lasso-tools">
-              <button type="button" className={lassoArmed ? 'chip chip--active' : 'chip'} onClick={handleToggleLasso}>
-                {lassoArmed ? 'Annuler le lasso' : 'Lasso selection'}
-              </button>
-              <p className="map-panel__lasso-status">
-                {lassoArmed
-                  ? lassoDrawing
-                    ? 'Relachez pour ajouter les marqueurs de cette zone a la selection.'
-                    : 'Tracez une zone directement sur la carte pour remplir le panier de selection.'
-                  : lassoFeedback ?? 'Ajoutez plusieurs marqueurs a la selection en un seul geste.'}
-              </p>
-            </div>
+      {!isColumn ? (
+        <div className="map-panel__header-actions-wrap">
+          <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
+            {lassoButton}
           </div>
-        ) : (
-          <button
-            type="button"
-            className="map-panel__header-trigger"
-            onClick={() => setHeaderExpanded(true)}
-            aria-label="Ouvrir les outils carte"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+        </div>
       ) : null}
 
       <div className={cn('map-canvas', isColumn && 'min-h-0 flex-1')}>
@@ -693,7 +556,6 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="top-right" showCompass={false} />
-          <MapDrawControl />
           {clusters.map((cluster) => {
             const [longitude, latitude] = cluster.geometry.coordinates;
             const props = cluster.properties as any;
@@ -846,6 +708,15 @@ export function MapPanel({ objects, headerActions, variant = 'panel' }: MapPanel
               {lassoPoints.length > 2 ? <polygon className="map-panel__lasso-fill" points={lassoSvgPoints} /> : null}
               {lassoPoints.length > 1 ? <polyline className="map-panel__lasso-line" points={lassoSvgPoints} /> : null}
             </svg>
+          </div>
+        ) : null}
+        {lassoArmed || lassoFeedback ? (
+          <div className="map-panel__lasso-toast" role="status">
+            {lassoArmed
+              ? lassoDrawing
+                ? 'Relachez pour selectionner'
+                : 'Tracez une zone sur la carte'
+              : lassoFeedback}
           </div>
         ) : null}
         <SelectionBar />

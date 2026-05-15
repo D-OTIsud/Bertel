@@ -92,6 +92,7 @@ export function SelectionBar() {
     >
       <span className="inline-flex shrink-0 items-center gap-2 pl-2 pr-3 text-[12.5px] font-semibold tabular-nums">
         <span
+          data-selection-count-anchor
           className={cn(
             'grid h-[22px] w-[22px] place-items-center rounded-[6px] text-[11px] font-bold text-white',
             empty ? 'bg-white/15' : 'bg-orange',

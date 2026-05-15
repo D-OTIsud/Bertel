@@ -2408,6 +2408,10 @@ function getOpeningMeta(opening: OpeningItem): string {
   return [dateRange, opening.season && opening.season !== opening.label ? opening.season : ''].filter(Boolean).join(' · ');
 }
 
+// Bar covers 08:00–22:00 (840 min span, start at 480 min)
+const BAR_START_MINUTES = 8 * 60;
+const BAR_SPAN_MINUTES = 14 * 60;
+
 function OpeningWeekGrid({
   rows,
   todayKey,
@@ -2422,14 +2426,23 @@ function OpeningWeekGrid({
       {rows.map((row) => {
         const isToday = row.key === todayKey;
         const closed = row.slots.length === 0;
+        const ranges = row.slots.flatMap(getSlotRanges);
 
         return (
           <div key={row.key} className={cn('detail-opening-day', isToday && 'detail-opening-day--today', closed && 'detail-opening-day--closed')}>
             <span className="detail-opening-day__name">{row.label}</span>
             <span className="detail-opening-day__bar" aria-hidden="true">
-              {row.slots.length > 0 ? row.slots.map((slot, index) => (
-                <span key={`${row.key}-${slot}-${index}`} className="detail-opening-day__segment" />
-              )) : null}
+              {ranges.map((range, index) => {
+                const left = Math.max(0, Math.min(100, ((range.start - BAR_START_MINUTES) / BAR_SPAN_MINUTES) * 100));
+                const width = Math.max(0, Math.min(100 - left, ((range.end - range.start) / BAR_SPAN_MINUTES) * 100));
+                return (
+                  <span
+                    key={`${row.key}-${index}`}
+                    className="detail-opening-day__segment"
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                  />
+                );
+              })}
             </span>
             <span className="detail-opening-day__slots">{closed ? 'Fermé' : row.slots.join(' · ')}</span>
           </div>
@@ -2439,7 +2452,15 @@ function OpeningWeekGrid({
   );
 }
 
-function OpeningTimeline({ openings }: { openings: OpeningItem[] }) {
+function OpeningTimeline({
+  openings,
+  selectedIndex,
+  onSelect,
+}: {
+  openings: OpeningItem[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
   const segments = openings.slice(0, 4);
 
   return (
@@ -2451,14 +2472,16 @@ function OpeningTimeline({ openings }: { openings: OpeningItem[] }) {
       </div>
       <div className="detail-opening-timeline__track">
         {segments.map((opening, index) => (
-          <span
+          <button
             key={`${opening.label}-${index}`}
-            className={cn('detail-opening-timeline__segment', index === 0 && 'detail-opening-timeline__segment--active')}
+            type="button"
+            className={cn('detail-opening-timeline__segment', index === selectedIndex && 'detail-opening-timeline__segment--active')}
             style={{
               left: `${Math.min(84, 8 + index * 26)}%`,
               width: `${Math.max(16, 22 - index * 2)}%`,
             }}
             title={opening.label}
+            onClick={() => onSelect(index)}
           />
         ))}
       </div>
@@ -2466,8 +2489,29 @@ function OpeningTimeline({ openings }: { openings: OpeningItem[] }) {
   );
 }
 
+function OpeningsAsideSection({ openings, openNow }: { openings: OpeningItem[]; openNow: boolean | null }) {
+  if (!openings.length) {
+    return null;
+  }
+
+  return (
+    <Section
+      title="Horaires"
+      aside
+      headerExtra={(
+        <button type="button" className="detail-section__link" aria-label="Modifier les périodes d'ouverture">
+          Modifier &gt;
+        </button>
+      )}
+    >
+      <OpeningPeriodsCard openings={openings} openNow={openNow} />
+    </Section>
+  );
+}
+
 function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; openNow: boolean | null }) {
   const [mode, setMode] = useState<OpeningViewMode>('compact');
+  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
   const todayKey = getTodayWeekdayKey();
   const weekRows = useMemo(() => getCombinedWeekRows(openings), [openings]);
   const todaySlots = weekRows.find((row) => row.key === todayKey)?.slots ?? [];
@@ -2481,15 +2525,7 @@ function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; op
   }
 
   return (
-    <article className={cn('detail-opening-card', mode !== 'compact' && 'detail-opening-card--expanded')}>
-      <div className="detail-opening-card__top">
-        <strong>Périodes d'ouverture</strong>
-        <button type="button" className="detail-opening-card__edit" aria-label="Modifier les périodes d'ouverture">
-          Modifier
-          <ChevronRight size={14} aria-hidden />
-        </button>
-      </div>
-
+    <div className={cn('detail-opening-card', mode !== 'compact' && 'detail-opening-card--expanded')}>
       <button
         type="button"
         className="detail-opening-hero"
@@ -2499,7 +2535,7 @@ function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; op
         <span className={cn('detail-opening-hero__pulse', openNow === false && 'detail-opening-hero__pulse--closed')} aria-hidden="true" />
         <span className="detail-opening-hero__copy">
           <span className="detail-opening-hero__status">{status}</span>
-          <span className="detail-opening-hero__today">Aujourd'hui : {todayLabel}</span>
+          <span className="detail-opening-hero__today">Aujourd'hui · <strong>{todayLabel}</strong></span>
         </span>
         <ChevronDown className={cn('detail-opening-hero__chevron', mode !== 'compact' && 'detail-opening-hero__chevron--open')} size={15} aria-hidden />
       </button>
@@ -2538,76 +2574,60 @@ function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; op
             <ChevronLeft size={14} aria-hidden />
             Semaine en cours
           </button>
-          <OpeningTimeline openings={openings} />
-          {openings.slice(0, 4).map((opening, index) => {
+          <OpeningTimeline
+            openings={openings}
+            selectedIndex={selectedPeriodIndex}
+            onSelect={setSelectedPeriodIndex}
+          />
+          {(() => {
+            const opening = openings[selectedPeriodIndex] ?? openings[0];
             const rows = getOpeningRows(opening);
             const meta = getOpeningMeta(opening);
-
             return (
-              <section key={`${opening.label}-${index}`} className="detail-opening-period">
+              <section className="detail-opening-period">
                 <div className="detail-opening-period__header">
                   <div>
-                    <strong>{opening.label || `Période ${index + 1}`}</strong>
+                    <strong>{opening.label || `Période ${selectedPeriodIndex + 1}`}</strong>
                     {meta ? <p>{meta}</p> : null}
                   </div>
-                  {index === 0 ? <span>En cours</span> : null}
+                  {selectedPeriodIndex === 0 ? <span>En cours</span> : null}
                 </div>
                 <OpeningWeekGrid rows={rows} todayKey={todayKey} compact />
               </section>
             );
-          })}
+          })()}
         </div>
       ) : null}
-    </article>
+    </div>
   );
 }
 
 function PricingAndOpeningsSection({
   prices,
-  openings,
-  openNow,
   sectionId,
 }: {
   prices: PriceItem[];
-  openings: OpeningItem[];
-  openNow: boolean | null;
   sectionId?: string;
 }) {
-  if (!prices.length && !openings.length) {
+  if (!prices.length) {
     return null;
   }
 
-  const title = prices.length > 0 && openings.length > 0
-    ? 'Tarifs et horaires'
-    : prices.length > 0
-      ? 'Tarifs'
-      : 'Horaires';
-
   return (
-    <Section id={sectionId} title={title}>
-      <div className="detail-columns">
-        {prices.length > 0 && (
-          <div className="detail-column-block">
-            <span className="detail-subtitle">Tarifs</span>
-            <div className="detail-list">
-              {prices.slice(0, 8).map((price, index) => (
-                <div key={`${price.label}-${index}`} className="detail-list-row">
-                  <div>
-                    <strong>{price.label}</strong>
-                    {price.periodLabel && <p>{price.periodLabel}</p>}
-                    {price.details.length > 0 && <small>{price.details.join(' · ')}</small>}
-                  </div>
-                  <span className="detail-price-amount">
-                    {price.amount} {price.currency}
-                  </span>
-                </div>
-              ))}
+    <Section id={sectionId} title="Tarifs">
+      <div className="detail-list">
+        {prices.slice(0, 8).map((price, index) => (
+          <div key={`${price.label}-${index}`} className="detail-list-row">
+            <div>
+              <strong>{price.label}</strong>
+              {price.periodLabel && <p>{price.periodLabel}</p>}
+              {price.details.length > 0 && <small>{price.details.join(' · ')}</small>}
             </div>
+            <span className="detail-price-amount">
+              {price.amount} {price.currency}
+            </span>
           </div>
-        )}
-        {openings.length > 0 && (
-          <OpeningPeriodsCard openings={openings} openNow={openNow} />
-        )}
+        ))}
       </div>
     </Section>
   );
@@ -2870,6 +2890,7 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
 function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSeeActors: boolean): ReactNode[] {
   return [
     LocationMapSection({ preview }),
+    OpeningsAsideSection({ openings: preview.openings, openNow: preview.openNow }),
     ContactSection({ contacts: preview.contacts }),
     PracticalSection({ facts, openings: preview.openings }),
     RelatedObjectsSection({ items: preview.relatedObjects }),
@@ -2975,8 +2996,6 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3014,8 +3033,6 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3054,8 +3071,6 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3093,8 +3108,6 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3132,8 +3145,6 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3171,8 +3182,6 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -3210,8 +3219,6 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
-          openings={preview.openings}
-          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,

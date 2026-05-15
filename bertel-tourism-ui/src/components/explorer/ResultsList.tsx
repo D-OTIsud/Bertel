@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
-import { MapPin, Plus, Star } from 'lucide-react';
-import { buildMarkerDataUri, defaultMarkerStyles } from '../../config/map-markers';
+import { MapPin, Star } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
+import { flyStarToSelection } from '../../utils/fly-to-selection';
 import { cn } from '@/lib/utils';
 
 const MAX_LABEL_TAGS = 1;
@@ -20,14 +20,6 @@ interface ResultsListProps {
 
 function toResultCardDomId(cardId: string): string {
   return `result-card-${String(cardId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-}
-
-function getResultCardBadgeIcon(type: string): { label: string; src: string } {
-  const normalizedType = normalizeExplorerObjectType(type);
-  return {
-    label: normalizedType,
-    src: buildMarkerDataUri(defaultMarkerStyles[normalizedType]),
-  };
 }
 
 function bucketForCardType(type: string): ExplorerBucketKey | null {
@@ -52,6 +44,15 @@ function categoryTagLabel(bucket: ExplorerBucketKey | null, typeLabel: string): 
     if (opt) return opt.label;
   }
   return typeLabel;
+}
+
+function pickTaxonomyLabel(card: ObjectCard): string | null {
+  const first = card.taxonomy?.[0];
+  if (!first) return null;
+  const leaf = first.path?.[first.path.length - 1]?.name?.trim();
+  if (leaf) return leaf;
+  const fallback = first.name?.trim();
+  return fallback || null;
 }
 
 function ResultsListSkeleton() {
@@ -155,11 +156,11 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
         {orderedCards.map((card) => {
-          const badge = getResultCardBadgeIcon(card.type);
           const typeLabel = normalizeExplorerObjectType(card.type);
           const bucket = bucketForCardType(card.type);
           const categoryLabel = categoryTagLabel(bucket, typeLabel);
           const city = card.location?.city ?? '—';
+          const taxonomyLabel = pickTaxonomyLabel(card);
           const labels = Array.isArray(card.labels) ? card.labels : [];
           const labelTags = labels.slice(0, MAX_LABEL_TAGS);
           const extraLabelCount = Math.max(0, labels.length - MAX_LABEL_TAGS);
@@ -187,34 +188,9 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
               )}
             >
               <div
-                className="relative h-24 w-24 flex-none overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
+                className="h-24 w-24 flex-none overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
                 style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
-              >
-                <span
-                  className="absolute left-1.5 top-1.5 grid h-[22px] w-[22px] place-items-center rounded-full bg-surface shadow-s"
-                  aria-hidden
-                >
-                  <img src={badge.src} alt="" className="h-3.5 w-3.5 object-contain" />
-                </span>
-                <button
-                  type="button"
-                  className={cn(
-                    'absolute right-1.5 top-1.5 grid h-[22px] w-[22px] place-items-center rounded-full border shadow-s transition',
-                    inSelection
-                      ? 'border-teal bg-teal text-white'
-                      : 'border-line bg-surface text-ink-3 hover:border-teal hover:text-teal',
-                  )}
-                  aria-label={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
-                  aria-pressed={inSelection}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleSelectedObject(card.id);
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-                </button>
-              </div>
+              />
 
               <div className="flex min-w-0 flex-col gap-1 overflow-hidden py-0.5">
                 <div className="flex min-w-0 items-center gap-2">
@@ -234,8 +210,14 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
                     <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />
                     {city}
                   </span>
-                  <span className="text-ink-4">·</span>
-                  <span className="shrink-0">{typeLabel}</span>
+                  {taxonomyLabel ? (
+                    <>
+                      <span className="text-ink-4">·</span>
+                      <span className="max-w-[12rem] shrink-0 truncate" title={taxonomyLabel}>
+                        {taxonomyLabel}
+                      </span>
+                    </>
+                  ) : null}
                   {capacityLine ? (
                     <>
                       <span className="text-ink-4">·</span>
@@ -278,15 +260,23 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
               <div className="flex flex-col items-end self-start py-0.5">
                 <button
                   type="button"
-                  className="grid h-7 w-7 place-items-center rounded-[8px] text-ink-4 hover:bg-orange-soft hover:text-orange"
-                  aria-label="Favori (bientot disponible)"
-                  title="Favori"
+                  className={cn(
+                    'grid h-7 w-7 place-items-center rounded-[8px] transition',
+                    inSelection ? 'text-orange' : 'text-ink-4 hover:bg-orange-soft hover:text-orange',
+                  )}
+                  aria-label={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
+                  aria-pressed={inSelection}
+                  title={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                    if (!inSelection) {
+                      flyStarToSelection(event.currentTarget);
+                    }
+                    toggleSelectedObject(card.id);
                   }}
                 >
-                  <Star className="h-3.5 w-3.5" />
+                  <Star className={cn('h-4 w-4', inSelection && 'fill-current')} />
                 </button>
               </div>
             </div>

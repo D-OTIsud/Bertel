@@ -260,14 +260,14 @@ describe('ObjectDetailView', () => {
       'href',
       expect.stringContaining('google.com/maps/dir'),
     );
-    expect(screen.getByText('Capacite d\'accueil')).toBeInTheDocument();
-    expect(screen.getByText('120')).toBeInTheDocument();
+    const capacityKpi = screen.getByText('Personnes').closest('.detail-kpi');
+    expect(capacityKpi).toHaveTextContent('120');
     expect(screen.getByText('Equipements')).toBeInTheDocument();
-    expect(screen.getByText('Piscine chauffee')).toBeInTheDocument();
+    expect(screen.getAllByText('Piscine chauffee').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Spa').length).toBeGreaterThan(0);
-    expect(screen.getByText('Balcon')).toBeInTheDocument();
-    expect(screen.getByText('Wifi')).toBeInTheDocument();
-    expect(screen.getByText('Parking')).toBeInTheDocument();
+    expect(screen.getAllByText('Balcon').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wifi').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Parking').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /voir tous les equipements/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Telephone')).not.toBeInTheDocument();
     expect(screen.queryByText('Email')).not.toBeInTheDocument();
@@ -276,7 +276,12 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
     expect(screen.getByText('Tarifs et horaires')).toBeInTheDocument();
+    expect(screen.getByText('Périodes d\'ouverture')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /voir la semaine/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /voir la semaine/i }));
     expect(screen.getAllByText(/07:00/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /toutes les périodes/i }));
+    expect(screen.getByRole('button', { name: /semaine en cours/i })).toBeInTheDocument();
     expect(screen.getByText('Contact')).toBeInTheDocument();
     expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
     expect(screen.getByText('Equipe interne')).toBeInTheDocument();
@@ -590,7 +595,8 @@ describe('ObjectDetailView', () => {
 
     expect(screen.getByRole('heading', { name: 'Sentier des trois remparts' })).toBeInTheDocument();
     expect(screen.getByText('Avant de partir')).toBeInTheDocument();
-    expect(screen.getByText('12.5 km')).toBeInTheDocument();
+    const distanceKpi = screen.getByText('Distance').closest('.detail-kpi');
+    expect(distanceKpi).toHaveTextContent('12.5km');
     expect(screen.getByText('Duree')).toBeInTheDocument();
     expect(screen.getAllByText('Randonnee').length).toBeGreaterThan(0);
     expect(screen.getByText('Disponible (gpx)')).toBeInTheDocument();

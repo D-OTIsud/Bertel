@@ -974,8 +974,8 @@ function humanizeWeekday(value: string): string {
 }
 
 function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: string): OpeningItem {
-  const weekdaySlots = readRecord(period.weekday_slots);
-  const weekdayEntries = Object.entries(weekdaySlots).filter(([, slots]) => {
+  const rawWeekdaySlots = readRecord(period.weekday_slots);
+  const weekdayEntries = Object.entries(rawWeekdaySlots).filter(([, slots]) => {
     if (Array.isArray(slots)) {
       return slots.length > 0;
     }
@@ -986,11 +986,16 @@ function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: 
   });
   const weekdays = weekdayEntries.map(([day]) => humanizeWeekday(day));
   const slots = weekdayEntries.flatMap(([, slotValue]) => formatOpeningSlots(slotValue));
+  const weekdaySlots = weekdayEntries.map(([day, slotValue]) => ({
+    weekday: humanizeWeekday(day),
+    slots: formatOpeningSlots(slotValue),
+  }));
 
   return {
     label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
     slots,
     weekdays,
+    weekdaySlots,
     details: [formatDateRange(period.date_start, period.date_end, ''), season].filter(Boolean),
     season,
   };

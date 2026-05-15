@@ -80,6 +80,7 @@ export interface OpeningItem {
   label: string;
   slots: string[];
   weekdays: string[];
+  weekdaySlots?: Array<{ weekday: string; slots: string[] }>;
   details: string[];
   season: string;
 }
@@ -538,6 +539,7 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
       label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
       slots,
       weekdays,
+      weekdaySlots: weekdays.map((weekday) => ({ weekday, slots })),
       details: [readString(period.status), readString(period.note)].filter(Boolean),
       season: '',
     }];
@@ -552,11 +554,20 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
     const weekdays = timePeriods.flatMap((timePeriod) =>
       readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays).map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code))),
     ).filter(Boolean);
+    const weekdaySlots = timePeriods.flatMap((timePeriod) => {
+      const periodFrames = readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames)
+        .map((frame) => `${readString(frame.time_start, readString(frame.start_time, '00:00'))} -> ${readString(frame.time_end, readString(frame.end_time, '23:59'))}`);
+      return readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays)
+        .map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code)))
+        .filter(Boolean)
+        .map((weekday) => ({ weekday, slots: periodFrames }));
+    });
 
     return {
       label: readString(schedule.label, `${readString(period.label, 'Periode')} / ${readNamedValue(schedule.schedule_type, `Planning ${index + 1}`)}`),
       slots: frames,
       weekdays,
+      weekdaySlots,
       details: [
         formatDateRange(period.date_start, period.date_end, ''),
         readNamedValue(schedule.schedule_type),
@@ -610,8 +621,8 @@ function humanizeWeekday(value: string): string {
 }
 
 function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: string): OpeningItem {
-  const weekdaySlots = readRecord(period.weekday_slots);
-  const weekdayEntries = Object.entries(weekdaySlots).filter(([, slots]) => {
+  const rawWeekdaySlots = readRecord(period.weekday_slots);
+  const weekdayEntries = Object.entries(rawWeekdaySlots).filter(([, slots]) => {
     if (Array.isArray(slots)) {
       return slots.length > 0;
     }
@@ -622,11 +633,16 @@ function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: 
   });
   const weekdays = weekdayEntries.map(([day]) => humanizeWeekday(day));
   const slots = weekdayEntries.flatMap(([, slotValue]) => formatOpeningSlots(slotValue));
+  const weekdaySlots = weekdayEntries.map(([day, slotValue]) => ({
+    weekday: humanizeWeekday(day),
+    slots: formatOpeningSlots(slotValue),
+  }));
 
   return {
     label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
     slots,
     weekdays,
+    weekdaySlots,
     details: [formatDateRange(period.date_start, period.date_end, ''), season].filter(Boolean),
     season,
   };

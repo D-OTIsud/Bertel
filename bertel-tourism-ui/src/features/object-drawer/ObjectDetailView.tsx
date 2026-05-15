@@ -2200,13 +2200,377 @@ function MeetingRoomList({ rooms }: { rooms: MeetingRoomItem[] }) {
   );
 }
 
+type OpeningViewMode = 'compact' | 'week' | 'all';
+
+const OPENING_WEEKDAYS = [
+  { key: 'monday', short: 'Lun', letter: 'L' },
+  { key: 'tuesday', short: 'Mar', letter: 'M' },
+  { key: 'wednesday', short: 'Mer', letter: 'M' },
+  { key: 'thursday', short: 'Jeu', letter: 'J' },
+  { key: 'friday', short: 'Ven', letter: 'V' },
+  { key: 'saturday', short: 'Sam', letter: 'S' },
+  { key: 'sunday', short: 'Dim', letter: 'D' },
+] as const;
+
+type OpeningWeekdayKey = (typeof OPENING_WEEKDAYS)[number]['key'];
+
+interface OpeningWeekRow {
+  key: OpeningWeekdayKey;
+  label: string;
+  slots: string[];
+}
+
+function normalizeOpeningText(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeWeekdayKey(value: string): OpeningWeekdayKey | null {
+  const normalized = normalizeOpeningText(value);
+  const map: Record<string, OpeningWeekdayKey> = {
+    monday: 'monday',
+    mon: 'monday',
+    lundi: 'monday',
+    lun: 'monday',
+    tuesday: 'tuesday',
+    tue: 'tuesday',
+    mardi: 'tuesday',
+    mar: 'tuesday',
+    wednesday: 'wednesday',
+    wed: 'wednesday',
+    mercredi: 'wednesday',
+    mer: 'wednesday',
+    thursday: 'thursday',
+    thu: 'thursday',
+    jeudi: 'thursday',
+    jeu: 'thursday',
+    friday: 'friday',
+    fri: 'friday',
+    vendredi: 'friday',
+    ven: 'friday',
+    saturday: 'saturday',
+    sat: 'saturday',
+    samedi: 'saturday',
+    sam: 'saturday',
+    sunday: 'sunday',
+    sun: 'sunday',
+    dimanche: 'sunday',
+    dim: 'sunday',
+  };
+
+  return map[normalized] ?? null;
+}
+
+function getTodayWeekdayKey(): OpeningWeekdayKey {
+  const index = new Date().getDay();
+  return index === 0 ? 'sunday' : OPENING_WEEKDAYS[index - 1].key;
+}
+
+function normalizeSlotLabel(slot: string): string {
+  return slot
+    .trim()
+    .replace(/\s*->\s*/g, '–')
+    .replace(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/g, '$1–$2');
+}
+
+function getSlotTimes(slot: string): string[] {
+  return slot.match(/\d{1,2}:\d{2}/g) ?? [];
+}
+
+function getTimeMinutes(time: string): number | null {
+  const [hour, minute] = time.split(':').map((part) => Number.parseInt(part, 10));
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+
+  return hour * 60 + minute;
+}
+
+function getSlotRanges(slot: string): Array<{ start: number; end: number; startLabel: string; endLabel: string }> {
+  const times = getSlotTimes(slot);
+  const ranges: Array<{ start: number; end: number; startLabel: string; endLabel: string }> = [];
+
+  for (let index = 0; index < times.length - 1; index += 2) {
+    const start = getTimeMinutes(times[index]);
+    const end = getTimeMinutes(times[index + 1]);
+
+    if (start !== null && end !== null) {
+      ranges.push({
+        start,
+        end,
+        startLabel: times[index],
+        endLabel: times[index + 1],
+      });
+    }
+  }
+
+  return ranges;
+}
+
+function isMinuteInRange(minute: number, range: { start: number; end: number }): boolean {
+  if (range.end < range.start) {
+    return minute >= range.start || minute <= range.end;
+  }
+
+  return minute >= range.start && minute <= range.end;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function getOpeningRows(opening: OpeningItem): OpeningWeekRow[] {
+  const slotsByDay = new globalThis.Map<OpeningWeekdayKey, string[]>();
+  const addSlots = (key: OpeningWeekdayKey, slots: string[]) => {
+    slotsByDay.set(key, dedupeStrings([...(slotsByDay.get(key) ?? []), ...slots.map(normalizeSlotLabel)]));
+  };
+
+  if (opening.weekdaySlots?.length) {
+    for (const entry of opening.weekdaySlots) {
+      const key = normalizeWeekdayKey(entry.weekday);
+      if (key) {
+        addSlots(key, entry.slots);
+      }
+    }
+  } else if (opening.weekdays.length > 0) {
+    for (const weekday of opening.weekdays) {
+      const key = normalizeWeekdayKey(weekday);
+      if (key) {
+        addSlots(key, opening.slots);
+      }
+    }
+  } else if (opening.slots.length > 0) {
+    for (const weekday of OPENING_WEEKDAYS) {
+      addSlots(weekday.key, opening.slots);
+    }
+  }
+
+  return OPENING_WEEKDAYS.map((weekday) => ({
+    key: weekday.key,
+    label: weekday.short,
+    slots: slotsByDay.get(weekday.key) ?? [],
+  }));
+}
+
+function getCombinedWeekRows(openings: OpeningItem[]): OpeningWeekRow[] {
+  const merged = new globalThis.Map<OpeningWeekdayKey, string[]>();
+
+  for (const opening of openings) {
+    for (const row of getOpeningRows(opening)) {
+      if (row.slots.length > 0) {
+        merged.set(row.key, dedupeStrings([...(merged.get(row.key) ?? []), ...row.slots]));
+      }
+    }
+  }
+
+  return OPENING_WEEKDAYS.map((weekday) => ({
+    key: weekday.key,
+    label: weekday.short,
+    slots: merged.get(weekday.key) ?? [],
+  }));
+}
+
+function getOpeningStatus(openNow: boolean | null, todaySlots: string[]): string {
+  const now = new Date();
+  const currentMinute = now.getHours() * 60 + now.getMinutes();
+  const ranges = todaySlots.flatMap(getSlotRanges);
+  const activeRange = ranges
+    .filter((range) => isMinuteInRange(currentMinute, range))
+    .sort((left, right) => right.end - left.end)[0];
+  const nextRange = ranges
+    .filter((range) => range.start > currentMinute)
+    .sort((left, right) => left.start - right.start)[0];
+
+  if (openNow === true) {
+    return activeRange ? `Ouvert · ferme à ${activeRange.endLabel}` : 'Ouvert aujourd’hui';
+  }
+
+  if (openNow === false) {
+    return nextRange ? `Fermé · ouvre à ${nextRange.startLabel}` : 'Fermé aujourd’hui';
+  }
+
+  if (activeRange) {
+    return `Ouvert · ferme à ${activeRange.endLabel}`;
+  }
+
+  if (nextRange) {
+    return `Fermé · ouvre à ${nextRange.startLabel}`;
+  }
+
+  return 'Fermé aujourd’hui';
+}
+
+function getOpeningMeta(opening: OpeningItem): string {
+  const dateRange = opening.details.find((detail) => /\d{4}|\d{1,2}[/\-.]\d{1,2}/.test(detail));
+  return [dateRange, opening.season && opening.season !== opening.label ? opening.season : ''].filter(Boolean).join(' · ');
+}
+
+function OpeningWeekGrid({
+  rows,
+  todayKey,
+  compact = false,
+}: {
+  rows: OpeningWeekRow[];
+  todayKey: OpeningWeekdayKey;
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn('detail-opening-week', compact && 'detail-opening-week--compact')}>
+      {rows.map((row) => {
+        const isToday = row.key === todayKey;
+        const closed = row.slots.length === 0;
+
+        return (
+          <div key={row.key} className={cn('detail-opening-day', isToday && 'detail-opening-day--today', closed && 'detail-opening-day--closed')}>
+            <span className="detail-opening-day__name">{row.label}</span>
+            <span className="detail-opening-day__bar" aria-hidden="true">
+              {row.slots.length > 0 ? row.slots.map((slot, index) => (
+                <span key={`${row.key}-${slot}-${index}`} className="detail-opening-day__segment" />
+              )) : null}
+            </span>
+            <span className="detail-opening-day__slots">{closed ? 'Fermé' : row.slots.join(' · ')}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OpeningTimeline({ openings }: { openings: OpeningItem[] }) {
+  const segments = openings.slice(0, 4);
+
+  return (
+    <div className="detail-opening-timeline" aria-label="Ruban annuel des périodes">
+      <div className="detail-opening-timeline__months" aria-hidden="true">
+        {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((month, index) => (
+          <span key={`${month}-${index}`}>{month}</span>
+        ))}
+      </div>
+      <div className="detail-opening-timeline__track">
+        {segments.map((opening, index) => (
+          <span
+            key={`${opening.label}-${index}`}
+            className={cn('detail-opening-timeline__segment', index === 0 && 'detail-opening-timeline__segment--active')}
+            style={{
+              left: `${Math.min(84, 8 + index * 26)}%`,
+              width: `${Math.max(16, 22 - index * 2)}%`,
+            }}
+            title={opening.label}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; openNow: boolean | null }) {
+  const [mode, setMode] = useState<OpeningViewMode>('compact');
+  const todayKey = getTodayWeekdayKey();
+  const weekRows = useMemo(() => getCombinedWeekRows(openings), [openings]);
+  const todaySlots = weekRows.find((row) => row.key === todayKey)?.slots ?? [];
+  const primaryOpening = openings[0];
+  const status = getOpeningStatus(openNow, todaySlots);
+  const todayLabel = todaySlots.length > 0 ? todaySlots.join(' · ') : 'Fermé';
+  const periodLabel = primaryOpening?.season || primaryOpening?.label || 'Semaine en cours';
+
+  if (openings.length === 0) {
+    return null;
+  }
+
+  return (
+    <article className={cn('detail-opening-card', mode !== 'compact' && 'detail-opening-card--expanded')}>
+      <div className="detail-opening-card__top">
+        <strong>Périodes d'ouverture</strong>
+        <button type="button" className="detail-opening-card__edit" aria-label="Modifier les périodes d'ouverture">
+          Modifier
+          <ChevronRight size={14} aria-hidden />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="detail-opening-hero"
+        onClick={() => setMode((current) => current === 'compact' ? 'week' : 'compact')}
+        aria-expanded={mode !== 'compact'}
+      >
+        <span className={cn('detail-opening-hero__pulse', openNow === false && 'detail-opening-hero__pulse--closed')} aria-hidden="true" />
+        <span className="detail-opening-hero__copy">
+          <span className="detail-opening-hero__status">{status}</span>
+          <span className="detail-opening-hero__today">Aujourd'hui : {todayLabel}</span>
+        </span>
+        <ChevronDown className={cn('detail-opening-hero__chevron', mode !== 'compact' && 'detail-opening-hero__chevron--open')} size={15} aria-hidden />
+      </button>
+
+      {mode === 'compact' ? (
+        <div className="detail-opening-card__compact-row">
+          <span className="detail-opening-season-chip">
+            <span aria-hidden="true" />
+            {periodLabel}
+          </span>
+          <button type="button" className="detail-opening-card__link" onClick={() => setMode('week')}>
+            Voir la semaine
+          </button>
+        </div>
+      ) : null}
+
+      {mode === 'week' ? (
+        <>
+          <OpeningWeekGrid rows={weekRows} todayKey={todayKey} />
+          {openings.length > 1 ? (
+            <div className="detail-opening-alert">
+              <AlertTriangle size={14} aria-hidden />
+              <span>{openings.length - 1} autre{openings.length > 2 ? 's' : ''} période{openings.length > 2 ? 's' : ''} configurée{openings.length > 2 ? 's' : ''}</span>
+            </div>
+          ) : null}
+          <button type="button" className="detail-opening-card__all" onClick={() => setMode('all')}>
+            Toutes les périodes
+            <ChevronRight size={14} aria-hidden />
+          </button>
+        </>
+      ) : null}
+
+      {mode === 'all' ? (
+        <div className="detail-opening-all">
+          <button type="button" className="detail-opening-card__back" onClick={() => setMode('week')}>
+            <ChevronLeft size={14} aria-hidden />
+            Semaine en cours
+          </button>
+          <OpeningTimeline openings={openings} />
+          {openings.slice(0, 4).map((opening, index) => {
+            const rows = getOpeningRows(opening);
+            const meta = getOpeningMeta(opening);
+
+            return (
+              <section key={`${opening.label}-${index}`} className="detail-opening-period">
+                <div className="detail-opening-period__header">
+                  <div>
+                    <strong>{opening.label || `Période ${index + 1}`}</strong>
+                    {meta ? <p>{meta}</p> : null}
+                  </div>
+                  {index === 0 ? <span>En cours</span> : null}
+                </div>
+                <OpeningWeekGrid rows={rows} todayKey={todayKey} compact />
+              </section>
+            );
+          })}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function PricingAndOpeningsSection({
   prices,
   openings,
+  openNow,
   sectionId,
 }: {
   prices: PriceItem[];
   openings: OpeningItem[];
+  openNow: boolean | null;
   sectionId?: string;
 }) {
   if (!prices.length && !openings.length) {
@@ -2242,20 +2606,7 @@ function PricingAndOpeningsSection({
           </div>
         )}
         {openings.length > 0 && (
-          <div className="detail-column-block">
-            <span className="detail-subtitle">Ouvertures</span>
-            <div className="detail-list">
-              {openings.slice(0, 8).map((opening, index) => (
-                <div key={`${opening.label}-${index}`} className="detail-list-row">
-                  <div>
-                    <strong>{opening.label}</strong>
-                    {opening.weekdays.length > 0 && <p>{opening.weekdays.join(' · ')}</p>}
-                    {opening.slots.length > 0 && <small>{opening.slots.join(' · ')}</small>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <OpeningPeriodsCard openings={openings} openNow={openNow} />
         )}
       </div>
     </Section>
@@ -2625,6 +2976,7 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2663,6 +3015,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2702,6 +3055,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2740,6 +3094,7 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2778,6 +3133,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2816,6 +3172,7 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2854,6 +3211,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
           key="pricing"
           prices={preview.prices}
           openings={preview.openings}
+          openNow={preview.openNow}
           sectionId="detail-section-pricing"
         />,
         <LegalSection key="legal" records={parsed.internal.legalRecords} />,
@@ -2891,4 +3249,3 @@ export function ObjectDetailView({ data, raw }: DetailViewProps) {
 
   return <GenericDetailView data={data} raw={raw} />;
 }
-

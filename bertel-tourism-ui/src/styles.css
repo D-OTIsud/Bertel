@@ -5965,7 +5965,7 @@ a {
 }
 
 .detail-hero__main-cell {
-  min-height: clamp(220px, 31vw, 340px);
+  min-height: clamp(110px, 15.5vw, 170px);
   border-radius: var(--radius-lg);
 }
 

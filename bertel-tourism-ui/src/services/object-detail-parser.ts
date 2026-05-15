@@ -493,6 +493,16 @@ function normalizePhoneValue(value: string): string {
   return trimmed.replace(/[^\d]/g, '');
 }
 
+function isPhoneKind(kindCode: string): boolean {
+  return ['phone', 'mobile', 'fax', 'tel', 'telephone', 'telephone_fixe', 'telephone_mobile'].includes(kindCode)
+    || /(^|[_-])(phone|mobile|fax|tel)([_-]|$)/.test(kindCode);
+}
+
+function isLikelyPhoneValue(value: string): boolean {
+  const digits = value.replace(/[^\d]/g, '');
+  return digits.length >= 6 && /^[+()\d\s.-]+$/.test(value);
+}
+
 function buildContactHref(kindCode: string, value: string): string {
   const normalizedKind = kindCode.trim().toLowerCase();
   const normalizedValue = value.trim();
@@ -501,11 +511,11 @@ function buildContactHref(kindCode: string, value: string): string {
     return '';
   }
 
-  if (normalizedKind === 'email' || (!normalizedKind && normalizedValue.includes('@'))) {
+  if (['email', 'mail', 'e-mail', 'courriel'].includes(normalizedKind) || (!normalizedKind && normalizedValue.includes('@'))) {
     return `mailto:${normalizedValue}`;
   }
 
-  if (['phone', 'mobile', 'fax'].includes(normalizedKind)) {
+  if (isPhoneKind(normalizedKind) || (!normalizedKind && isLikelyPhoneValue(normalizedValue))) {
     const phone = normalizePhoneValue(normalizedValue);
     return phone ? `tel:${phone}` : '';
   }

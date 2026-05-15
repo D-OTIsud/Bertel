@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Printer, Star, X } from 'lucide-react';
+import { Pencil, Printer, Star, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
 import {
@@ -48,7 +48,6 @@ import { ObjectWorkspaceRelationshipsPanel } from './ObjectWorkspaceRelationship
 import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
-import type { ExternalSyncItem } from './utils';
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
@@ -70,17 +69,6 @@ type SaveState = {
   saving: boolean;
   message: string | null;
 };
-
-/** Public reference line in drawer header (mockup #FCH-…); prefers first external id when present. */
-function formatObjectRef(typeCode: string, externalIds: ExternalSyncItem[], objectId: string): string {
-  const first = externalIds[0];
-  if (first?.externalId && first.externalId.trim() && first.externalId !== 'non renseigne') {
-    return `#${first.externalId.trim().replace(/\s+/g, '')}`;
-  }
-  const compactId = objectId.replace(/[^a-zA-Z0-9]/g, '');
-  const tail = (compactId.slice(-5) || 'XXXXX').toUpperCase();
-  return `#${String(typeCode).toUpperCase()}-${tail}`;
-}
 
 const DRAWER_TYPE_LABELS: Record<string, string> = {
   HOT: 'Hotel',
@@ -441,14 +429,6 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
   const previewRaw = resolvedData?.detail.raw ?? {};
   const parsedPreview = parseObjectDetail(previewRaw as Record<string, unknown>);
-  const drawerRefId =
-    resolvedData
-      ? formatObjectRef(
-        (resolvedData.type ?? 'OBJ').toUpperCase(),
-        parsedPreview.internal.externalIds,
-        resolvedData.id,
-      )
-      : '';
   const typeLineUpper = resolvedData
     ? (DRAWER_TYPE_LABELS[(resolvedData.type ?? '').toUpperCase()] ?? resolvedData.type).toUpperCase()
     : '';
@@ -1236,10 +1216,8 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         ) : (
           <div className="drawer-header__left">
             {resolvedData && (
-              <div className="drawer-header__eyebrow-row" aria-label="Type et reference">
+              <div className="drawer-header__eyebrow-row" aria-label="Type">
                 <span className="drawer-header__type-line">{typeLineUpper}</span>
-                <span className="drawer-header__code-pill">{resolvedData.type}</span>
-                <span className="drawer-header__ref">{drawerRefId}</span>
               </div>
             )}
             {mode === 'edit' && <span className="eyebrow drawer-header__mode-eyebrow">Edition</span>}
@@ -1267,11 +1245,13 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
           >
             <Star className="h-4 w-4" strokeWidth={2} fill={headerFavorite ? 'currentColor' : 'none'} />
           </button>
-          <button type="button" className="drawer-header__icon-btn" onClick={() => window.print()} aria-label="Imprimer">
+          <button type="button" className="drawer-header__btn-secondary" onClick={() => window.print()}>
             <Printer className="h-4 w-4" strokeWidth={2} />
+            <span>Imprimer</span>
           </button>
           {mode === 'view' && canEdit && (
             <button type="button" className="drawer-header__btn-primary" onClick={() => handleModeToggle('edit')}>
+              <Pencil className="h-4 w-4" strokeWidth={2} />
               Modifier
             </button>
           )}
@@ -1280,7 +1260,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               Apercu
             </Button>
           )}
-          <button type="button" className="drawer-header__icon-btn" onClick={onClose} aria-label="Fermer">
+          <button type="button" className="drawer-header__icon-btn drawer-header__icon-btn--plain" onClick={onClose} aria-label="Fermer">
             <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>

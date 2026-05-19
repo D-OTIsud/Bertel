@@ -247,8 +247,11 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Plan d\'acces')).toBeInTheDocument();
     expect(screen.getByText('Informations equipe')).toBeInTheDocument();
     expect(screen.getAllByText('Client VIP a prevenir avant toute fermeture exceptionnelle.').length).toBeGreaterThan(0);
-    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /actions de la note/i }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /afficher la note complete/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map-zoom')).toBeInTheDocument();
@@ -275,8 +278,8 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
-    expect(screen.getByText('Tarifs et horaires')).toBeInTheDocument();
-    expect(screen.getByText('Périodes d\'ouverture')).toBeInTheDocument();
+    expect(screen.getByText('Tarifs & horaires')).toBeInTheDocument();
+    expect(screen.getByText('Horaires')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /voir la semaine/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /voir la semaine/i }));
     expect(screen.getAllByText(/07:00/).length).toBeGreaterThan(0);
@@ -488,6 +491,44 @@ describe('ObjectDetailView', () => {
     expect(screen.getAllByText('Deuxieme note').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Premiere note').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /voir moins/i })).toBeInTheDocument();
+  });
+
+  it('opens a dialog with the full note body when the user clicks a team note preview', async () => {
+    const longBody = `Fiche retiree de la publication SIT - fermeture administrative. ${'Detail complementaire. '.repeat(12)}`.trimEnd();
+
+    const data: ObjectDetail = {
+      id: 'hotel-long-note',
+      name: 'Hotel Long Note',
+      type: 'HOT',
+      raw: {
+        descriptions: {
+          description: 'Hotel avec note longue.',
+        },
+        private_notes: [
+          {
+            id: 'note-long',
+            body: longBody,
+            created_at: '2026-05-19T08:00:00.000Z',
+            audience: 'private',
+            category: 'important',
+            is_pinned: true,
+            created_by: {
+              id: 'usr-1',
+              display_name: 'Alice',
+              avatar_url: null,
+            },
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    fireEvent.click(screen.getByRole('button', { name: /afficher la note complete/i }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(screen.getByRole('heading', { name: /note interne/i })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(longBody);
   });
 
   it('lets an authorized user edit an existing private note', async () => {

@@ -16,11 +16,13 @@ Thumbs.db
 
 # Environment files
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Database files
 *.db
+*.duckdb
+*.duckdb.wal
 *.sqlite
 *.sqlite3
 
@@ -31,18 +33,29 @@ Thumbs.db
 # Python
 __pycache__/
 *.py[cod]
+.pip-cache/
 .pytest_cache/
 
 # Node
 node_modules/
 .npm-cache/
+.playwright-browsers/
 .next/
+storybook-static/
 
 # Test artifacts
 test_results.txt
+playwright-report/
+test-results/
+docs/schema-workbench/schemaspy-output/
 
 # Git worktrees
 .worktrees/
+
+# Repo-local tool installs and homes
+.tools/
+.supabase-home/
+.storybook-home/
 
 # AI assistant tooling (not part of the app)
 CLAUDE.md

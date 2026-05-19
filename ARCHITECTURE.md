@@ -25,6 +25,18 @@ La référence principale pour le **workspace objet Bertel V3** est ici :
 4. `Base de donnée DLL et API/erd_diagram.md`
 5. `Base de donnée DLL et API/api_views_functions.sql`
 6. `bertel-tourism-ui/src/services/object-detail-parser.ts`
+7. `docs/mapping-workbench/README.md`
+
+## Workbench de mapping
+
+Le dossier `docs/mapping-workbench/` contient les artefacts operationnels pour relier la carte canonique aux tables, aux payloads API, a l'UI d'edition et a l'import des anciennes donnees.
+
+Il ne remplace pas la carte canonique. Il sert de checklist executable pour :
+
+- comprendre la surface objet via DBML / ERD,
+- profiler les anciens CSV avant insertion,
+- valider la surface UI apres promotion en base,
+- cadrer les fixtures de tests du workspace objet.
 
 ## Règle simple
 

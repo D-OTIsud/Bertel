@@ -40,3 +40,4 @@ Toujours distinguer dans ce document :
 - [Diagramme ER](../../Base%20de%20donn%C3%A9e%20DLL%20et%20API/erd_diagram.md)
 - [Fonctions API](../../Base%20de%20donn%C3%A9e%20DLL%20et%20API/api_views_functions.sql)
 - [Parser UI](../../bertel-tourism-ui/src/services/object-detail-parser.ts)
+- [Mapping workbench](../mapping-workbench/README.md)

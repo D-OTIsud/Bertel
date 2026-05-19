@@ -918,80 +918,150 @@ AS $$
     SELECT COALESCE(p_filters, '{}'::jsonb) AS filters
   ),
   params AS (
+    -- Each *_any array is normalized so that an empty parse (either an empty
+    -- JSON array or all entries discarded by inner filters) collapses to NULL.
+    -- Downstream WHERE clauses short-circuit on `IS NULL`, so:
+    --   key absent      → NULL → no filter applied
+    --   key present []  → NULL → no filter applied
+    --   key present [x] → ARRAY['x'] → filter applied
+    -- This avoids the previous "match nothing" trap where an empty array was
+    -- compared with `= ANY()` / `&&` and dropped every row.
     SELECT
       n.filters,
       CASE WHEN n.filters ? 'commercial_visibility_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'commercial_visibility_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'commercial_visibility_any')),
+          ARRAY[]::text[]
+        )
       END AS commercial_visibility_any,
       CASE WHEN n.filters ? 'amenities_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenities_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenities_any')),
+          ARRAY[]::text[]
+        )
       END AS amenities_any,
       CASE WHEN n.filters ? 'amenities_all'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenities_all'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenities_all')),
+          ARRAY[]::text[]
+        )
       END AS amenities_all,
       CASE WHEN n.filters ? 'amenity_families_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenity_families_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'amenity_families_any')),
+          ARRAY[]::text[]
+        )
       END AS amenity_families_any,
       CASE WHEN n.filters ? 'payment_methods_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'payment_methods_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'payment_methods_any')),
+          ARRAY[]::text[]
+        )
       END AS payment_methods_any,
       CASE WHEN n.filters ? 'environment_tags_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'environment_tags_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'environment_tags_any')),
+          ARRAY[]::text[]
+        )
       END AS environment_tags_any,
       CASE WHEN n.filters ? 'languages_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'languages_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'languages_any')),
+          ARRAY[]::text[]
+        )
       END AS languages_any,
       CASE WHEN n.filters ? 'city_any'
-        THEN ARRAY(
-          SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'city_any')))
+        THEN NULLIF(
+          ARRAY(
+            SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'city_any')))
+          ),
+          ARRAY[]::text[]
         )
       END AS city_any,
       CASE WHEN n.filters ? 'lieu_dit_any'
-        THEN ARRAY(
-          SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'lieu_dit_any')))
+        THEN NULLIF(
+          ARRAY(
+            SELECT immutable_unaccent(lower(jsonb_array_elements_text(n.filters->'lieu_dit_any')))
+          ),
+          ARRAY[]::text[]
         )
       END AS lieu_dit_any,
       CASE WHEN n.filters ? 'media_types_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'media_types_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'media_types_any')),
+          ARRAY[]::text[]
+        )
       END AS media_types_any,
       CASE WHEN n.filters->'meeting_room' ? 'equipment_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'meeting_room'->'equipment_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'meeting_room'->'equipment_any')),
+          ARRAY[]::text[]
+        )
       END AS meeting_equipment_any,
       CASE WHEN n.filters->'meeting_room' ? 'equipment_all'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'meeting_room'->'equipment_all'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'meeting_room'->'equipment_all')),
+          ARRAY[]::text[]
+        )
       END AS meeting_equipment_all,
       CASE WHEN n.filters ? 'tags_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'tags_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'tags_any')),
+          ARRAY[]::text[]
+        )
       END AS tags_any,
       CASE WHEN n.filters->'itinerary' ? 'practices_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'itinerary'->'practices_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'itinerary'->'practices_any')),
+          ARRAY[]::text[]
+        )
       END AS iti_practices_any,
       CASE WHEN n.filters ? 'classifications_any'
-        THEN ARRAY(
-          SELECT ((j->>'scheme_code') || ':' || (j->>'value_code'))
-          FROM jsonb_array_elements(n.filters->'classifications_any') AS j
-          WHERE COALESCE(j->>'scheme_code', '') <> ''
-            AND COALESCE(j->>'value_code', '') <> ''
+        THEN NULLIF(
+          ARRAY(
+            SELECT ((j->>'scheme_code') || ':' || (j->>'value_code'))
+            FROM jsonb_array_elements(n.filters->'classifications_any') AS j
+            WHERE COALESCE(j->>'scheme_code', '') <> ''
+              AND COALESCE(j->>'value_code', '') <> ''
+          ),
+          ARRAY[]::text[]
         )
       END AS classifications_any_codes,
       CASE WHEN n.filters ? 'taxonomy_any'
-        THEN ARRAY(
-          SELECT ((j->>'domain') || ':' || (j->>'code'))
-          FROM jsonb_array_elements(n.filters->'taxonomy_any') AS j
-          WHERE COALESCE(j->>'domain', '') <> ''
-            AND COALESCE(j->>'code', '') <> ''
+        THEN NULLIF(
+          ARRAY(
+            SELECT ((j->>'domain') || ':' || (j->>'code'))
+            FROM jsonb_array_elements(n.filters->'taxonomy_any') AS j
+            WHERE COALESCE(j->>'domain', '') <> ''
+              AND COALESCE(j->>'code', '') <> ''
+          ),
+          ARRAY[]::text[]
         )
       END AS taxonomy_any_codes,
       -- accessibility type filters (2026-03-22)
       -- disability_types_any: TEXT[] of canonical disability types (motor/hearing/visual/cognitive).
       -- label_disability_types_any: TEXT[] of canonical disability types matched against LBL_TOURISME_HANDICAP subvalue_ids.
       CASE WHEN n.filters ? 'disability_types_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'disability_types_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'disability_types_any')),
+          ARRAY[]::text[]
+        )
       END AS disability_types_any,
       CASE WHEN n.filters ? 'label_disability_types_any'
-        THEN ARRAY(SELECT jsonb_array_elements_text(n.filters->'label_disability_types_any'))
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'label_disability_types_any')),
+          ARRAY[]::text[]
+        )
       END AS label_disability_types_any,
-      NOT (
+      -- use_mv: TRUE → read from internal.mv_filtered_objects (hot path).
+      -- The MV is built `WHERE o.status = 'published'` so any p_status that
+      -- includes a non-public value (draft / archived / …) MUST bypass the MV
+      -- and read the live `object` table — otherwise non-public rows are
+      -- silently invisible to editors/admins. Order is irrelevant because we
+      -- use the `<@` containment operator. NULL p_status means "no status
+      -- filter" at this layer (the wrapper functions already default it to
+      -- ['published']), so the MV stays safe.
+      (NOT (
         n.filters ? 'amenities_all'
         OR n.filters ? 'amenity_families_any'
         OR n.filters ? 'city_any'
@@ -1005,6 +1075,10 @@ AS $$
         OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
         OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)
         OR n.filters ? 'label_disability_types_any' -- requires live join on object_classification.subvalue_ids
+      ))
+      AND (
+        p_status IS NULL
+        OR p_status <@ ARRAY['published']::object_status[]
       ) AS use_mv
     FROM normalized n
   ),

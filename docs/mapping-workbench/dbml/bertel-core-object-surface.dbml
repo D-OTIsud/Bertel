@@ -1,0 +1,585 @@
+Project bertel_core_object_surface {
+  database_type: 'PostgreSQL'
+  Note: '''
+  Hand-curated V1 object-surface ERD for Bertel.
+  Source: Base de donnée DLL et API/schema_unified.sql.
+  Scope: object workspace, public detail, and old-data import mapping.
+  '''
+}
+
+Table object {
+  id text [pk]
+  object_type object_type [not null]
+  name text [not null]
+  name_i18n jsonb
+  business_timezone text [not null]
+  commercial_visibility text [not null]
+  region_code text
+  status object_status [not null]
+  published_at timestamptz
+  is_editing boolean [not null]
+  updated_at_source timestamptz
+  cached_min_price numeric
+  cached_main_image_url text
+  cached_rating numeric
+  cached_review_count integer
+  cached_is_open_now boolean
+  cached_amenity_codes text_array
+  cached_payment_codes text_array
+  cached_environment_tags text_array
+  cached_language_codes text_array
+  cached_classification_codes text_array
+  cached_taxonomy_codes text_array
+  secondary_types object_type_array
+  extra jsonb
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table object_location {
+  id uuid [pk]
+  object_id text
+  place_id uuid
+  address1 text
+  address1_suite text
+  address2 text
+  address3 text
+  postcode varchar
+  city text
+  code_insee varchar
+  lieu_dit text
+  direction text
+  latitude decimal
+  longitude decimal
+  altitude_m integer
+  zone_touristique text
+  is_main_location boolean
+  position integer
+  geog2 geography
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table object_zone {
+  id uuid [pk]
+  object_id text [not null]
+  insee_commune varchar [not null]
+  position integer
+}
+
+Table object_place {
+  id uuid [pk]
+  object_id text [not null]
+  label text
+  slug text
+  is_primary boolean
+  position integer
+  effective_from date
+  effective_to date
+  extra jsonb
+}
+
+Table object_description {
+  id uuid [pk]
+  object_id text [not null]
+  org_object_id text
+  description text
+  description_i18n jsonb
+  description_chapo text
+  description_chapo_i18n jsonb
+  description_mobile text
+  description_mobile_i18n jsonb
+  description_edition text
+  description_edition_i18n jsonb
+  description_adapted text
+  description_adapted_i18n jsonb
+  visibility text
+  position integer
+  extra jsonb
+}
+
+Table object_place_description {
+  id uuid [pk]
+  place_id uuid [not null]
+  description text
+  description_i18n jsonb
+  description_chapo text
+  description_chapo_i18n jsonb
+  description_mobile text
+  description_mobile_i18n jsonb
+  description_edition text
+  description_edition_i18n jsonb
+  description_adapted text
+  description_adapted_i18n jsonb
+  visibility text
+  position integer
+  extra jsonb
+}
+
+Table media {
+  id uuid [pk]
+  object_id text
+  place_id uuid
+  org_object_id text
+  media_type_id uuid [not null]
+  title text
+  title_i18n jsonb
+  credit text
+  url text [not null]
+  description text
+  description_i18n jsonb
+  width integer
+  height integer
+  is_main boolean
+  is_published boolean
+  visibility text
+  kind text
+  position integer
+  rights_expires_at date
+  analyse_data jsonb
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table contact_channel {
+  id uuid [pk]
+  object_id text [not null]
+  kind_id uuid [not null]
+  value text [not null]
+  role_id uuid
+  is_public boolean
+  is_primary boolean
+  position integer
+}
+
+Table object_taxonomy {
+  id uuid [pk]
+  object_id text [not null]
+  domain text [not null]
+  ref_code_id uuid [not null]
+  source text
+  note text
+}
+
+Table object_classification {
+  id uuid [pk]
+  object_id text [not null]
+  scheme_id uuid [not null]
+  value_id uuid [not null]
+  subvalue_ids uuid_array
+  document_id uuid
+  requested_at date
+  awarded_at date
+  valid_until date
+  status text
+  source text
+  note text
+}
+
+Table object_language {
+  object_id text [not null]
+  language_id uuid [not null]
+  level_id uuid
+  extra jsonb
+  Indexes {
+    (object_id, language_id) [pk]
+  }
+}
+
+Table object_payment_method {
+  object_id text [not null]
+  payment_method_id uuid [not null]
+  Indexes {
+    (object_id, payment_method_id) [pk]
+  }
+}
+
+Table object_environment_tag {
+  object_id text [not null]
+  environment_tag_id uuid [not null]
+  Indexes {
+    (object_id, environment_tag_id) [pk]
+  }
+}
+
+Table object_amenity {
+  object_id text [not null]
+  amenity_id uuid [not null]
+  Indexes {
+    (object_id, amenity_id) [pk]
+  }
+}
+
+Table object_capacity {
+  id uuid [pk]
+  object_id text [not null]
+  metric_id uuid [not null]
+  value_integer integer
+  unit varchar
+  effective_from date
+  effective_to date
+}
+
+Table object_price {
+  id uuid [pk]
+  object_id text [not null]
+  kind_id uuid [not null]
+  unit_id uuid
+  amount numeric
+  amount_max numeric
+  currency char
+  season_code text
+  indication_code text
+  valid_from date
+  valid_to date
+  conditions text
+  source text
+}
+
+Table object_price_period {
+  id uuid [pk]
+  price_id uuid [not null]
+  start_date date
+  end_date date
+  start_time time
+  end_time time
+  note text
+}
+
+Table opening_period {
+  id uuid [pk]
+  object_id text [not null]
+  name text
+  name_i18n jsonb
+  date_start date
+  date_end date
+  source_period_id text
+  all_years boolean
+  extra jsonb
+}
+
+Table opening_schedule {
+  id uuid [pk]
+  period_id uuid [not null]
+  schedule_type_id uuid [not null]
+  name text
+  name_i18n jsonb
+  note text
+  note_i18n jsonb
+  extra jsonb
+}
+
+Table opening_time_period {
+  id uuid [pk]
+  schedule_id uuid [not null]
+  closed boolean
+  note text
+}
+
+Table opening_time_period_weekday {
+  time_period_id uuid [not null]
+  weekday_id uuid [not null]
+  Indexes {
+    (time_period_id, weekday_id) [pk]
+  }
+}
+
+Table opening_time_frame {
+  id uuid [pk]
+  time_period_id uuid [not null]
+  start_time time
+  end_time time
+  recurrence interval
+}
+
+Table actor {
+  id uuid [pk]
+  display_name text [not null]
+  first_name text
+  last_name text
+  gender text
+  extra jsonb
+}
+
+Table actor_channel {
+  id uuid [pk]
+  actor_id uuid [not null]
+  kind_id uuid [not null]
+  value text [not null]
+  is_primary boolean
+  role_id uuid
+  position integer
+  extra jsonb
+}
+
+Table actor_object_role {
+  actor_id uuid [not null]
+  object_id text [not null]
+  role_id uuid [not null]
+  is_primary boolean
+  valid_from date
+  valid_to date
+  visibility text
+  note text
+  Indexes {
+    (actor_id, object_id, role_id) [pk]
+  }
+}
+
+Table object_org_link {
+  object_id text [not null]
+  org_object_id text [not null]
+  role_id uuid [not null]
+  is_primary boolean
+  note text
+  Indexes {
+    (object_id, org_object_id, role_id) [pk]
+  }
+}
+
+Table object_relation {
+  id uuid [pk]
+  source_object_id text [not null]
+  target_object_id text [not null]
+  relation_type_id uuid [not null]
+  distance_m numeric
+  note text
+  position integer
+}
+
+Table object_private_description {
+  id uuid [pk]
+  object_id text [not null]
+  org_object_id text
+  body text [not null]
+  audience text
+  language_id uuid
+  created_by_user_id uuid
+  category text
+  is_pinned boolean
+  is_archived boolean
+}
+
+Table object_external_id {
+  id uuid [pk]
+  object_id text [not null]
+  organization_object_id text [not null]
+  source_system text [not null]
+  external_id text [not null]
+  last_synced_at timestamptz
+}
+
+Table object_origin {
+  object_id text [pk]
+  source_system text
+  source_object_id text
+  import_batch_id uuid
+  first_imported_at timestamptz
+}
+
+Table pending_change {
+  id uuid [pk]
+  object_id text
+  target_table text [not null]
+  target_pk text
+  action text [not null]
+  payload jsonb [not null]
+  submitted_by uuid
+  submitted_at timestamptz
+  status text [not null]
+  reviewed_by uuid
+  reviewed_at timestamptz
+  review_note text
+  applied_at timestamptz
+  metadata jsonb
+}
+
+Table publication {
+  id uuid [pk]
+  code text [not null]
+  name text [not null]
+  target_audience text
+  year integer
+  status text [not null]
+  metadata jsonb
+}
+
+Table publication_object {
+  publication_id uuid [not null]
+  object_id text [not null]
+  custom_print_text text
+  workflow_status text [not null]
+  page_number integer
+  proof_sent_at timestamptz
+  validated_bat_at timestamptz
+  metadata jsonb
+  Indexes {
+    (publication_id, object_id) [pk]
+  }
+}
+
+Table object_membership {
+  id uuid [pk]
+  org_object_id text [not null]
+  object_id text
+  campaign_id uuid [not null]
+  tier_id uuid [not null]
+  status text [not null]
+  starts_at date
+  ends_at date
+  payment_date date
+  metadata jsonb
+}
+
+Table object_legal {
+  id uuid [pk]
+  object_id text [not null]
+  type_id uuid [not null]
+  value jsonb [not null]
+  document_id uuid
+  valid_from date
+  valid_to date
+  validity_mode legal_validity_mode
+  status text
+  document_requested_at timestamptz
+  document_delivered_at timestamptz
+  note text
+}
+
+Table object_iti {
+  object_id text [pk]
+  distance_km decimal
+  duration_hours decimal
+  difficulty_level integer
+  elevation_gain integer
+  is_loop boolean
+  geom geography
+  open_status text
+  status_note text
+}
+
+Table object_iti_stage {
+  id uuid [pk]
+  object_id text [not null]
+  name text
+  name_i18n jsonb
+  description text
+  description_i18n jsonb
+  position integer
+  geom geography
+  extra jsonb
+}
+
+Table object_act {
+  object_id text [pk]
+  duration_min integer
+  min_participants smallint
+  max_participants smallint
+  difficulty_level smallint
+  guide_required boolean
+  min_age smallint
+  equipment_provided boolean
+}
+
+Table object_fma {
+  object_id text [pk]
+  event_start_date date
+  event_end_date date
+  event_start_time time
+  event_end_time time
+  is_recurring boolean
+  recurrence_pattern text
+}
+
+Table object_room_type {
+  id uuid [pk]
+  object_id text [not null]
+  code text [not null]
+  name text [not null]
+  name_i18n jsonb
+  description text
+  description_i18n jsonb
+  capacity_total integer
+  size_sqm numeric
+  base_price numeric
+  currency text
+  is_accessible boolean
+  is_published boolean
+  position integer
+  extra jsonb
+}
+
+Table object_menu {
+  id uuid [pk]
+  object_id text [not null]
+  category_id uuid
+  name text [not null]
+  description text
+  is_active boolean
+  visibility text
+  position integer
+}
+
+Table object_menu_item {
+  id uuid [pk]
+  menu_id uuid [not null]
+  name text [not null]
+  description text
+  price numeric
+  currency char
+  kind_id uuid
+  unit_id uuid
+  media_id uuid
+  is_available boolean
+  position integer
+}
+
+Ref: object_location.object_id > object.id
+Ref: object_location.place_id > object_place.id
+Ref: object_zone.object_id > object.id
+Ref: object_place.object_id > object.id
+Ref: object_description.object_id > object.id
+Ref: object_description.org_object_id > object.id
+Ref: object_place_description.place_id > object_place.id
+Ref: media.object_id > object.id
+Ref: media.place_id > object_place.id
+Ref: contact_channel.object_id > object.id
+Ref: object_taxonomy.object_id > object.id
+Ref: object_classification.object_id > object.id
+Ref: object_language.object_id > object.id
+Ref: object_payment_method.object_id > object.id
+Ref: object_environment_tag.object_id > object.id
+Ref: object_amenity.object_id > object.id
+Ref: object_capacity.object_id > object.id
+Ref: object_price.object_id > object.id
+Ref: object_price_period.price_id > object_price.id
+Ref: opening_period.object_id > object.id
+Ref: opening_schedule.period_id > opening_period.id
+Ref: opening_time_period.schedule_id > opening_schedule.id
+Ref: opening_time_period_weekday.time_period_id > opening_time_period.id
+Ref: opening_time_frame.time_period_id > opening_time_period.id
+Ref: actor_channel.actor_id > actor.id
+Ref: actor_object_role.actor_id > actor.id
+Ref: actor_object_role.object_id > object.id
+Ref: object_org_link.object_id > object.id
+Ref: object_org_link.org_object_id > object.id
+Ref: object_relation.source_object_id > object.id
+Ref: object_relation.target_object_id > object.id
+Ref: object_private_description.object_id > object.id
+Ref: object_private_description.org_object_id > object.id
+Ref: object_external_id.object_id > object.id
+Ref: object_external_id.organization_object_id > object.id
+Ref: object_origin.object_id > object.id
+Ref: pending_change.object_id > object.id
+Ref: publication_object.publication_id > publication.id
+Ref: publication_object.object_id > object.id
+Ref: object_membership.org_object_id > object.id
+Ref: object_membership.object_id > object.id
+Ref: object_legal.object_id > object.id
+Ref: object_iti.object_id > object.id
+Ref: object_iti_stage.object_id > object.id
+Ref: object_act.object_id > object.id
+Ref: object_fma.object_id > object.id
+Ref: object_room_type.object_id > object.id
+Ref: object_menu.object_id > object.id
+Ref: object_menu_item.menu_id > object_menu.id

@@ -461,7 +461,7 @@ describe('parseObjectDetail', () => {
           label: 'Periode courante',
           season: 'Annee en cours',
           weekdays: expect.arrayContaining(['Lundi', 'Dimanche']),
-          slots: expect.arrayContaining(['09:30 -> 17:00']),
+          slots: expect.arrayContaining(['09:30–17:00']),
         }),
       ]),
     );

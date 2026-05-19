@@ -1,3 +1,4 @@
+import { formatOpeningTime, isOpeningPeriodAllYears } from '../features/object-drawer/utils';
 import type { ObjectDetail } from '../types/domain';
 
 interface GenericRecord {
@@ -391,6 +392,7 @@ export interface ObjectWorkspaceOpeningPeriod {
   label: string;
   startDate: string;
   endDate: string;
+  allYears: boolean;
   closedDays: string[];
   weekdays: ObjectWorkspaceOpeningWeekday[];
 }
@@ -1393,20 +1395,20 @@ function parseWorkspaceOpeningSlot(value: unknown): ObjectWorkspaceOpeningSlot |
     const parts = normalized.split(/\s*(?:->|-|–|—)\s*/).filter(Boolean);
     if (parts.length >= 2) {
       return {
-        start: parts[0] ?? '',
-        end: parts[1] ?? '',
+        start: formatOpeningTime(parts[0] ?? ''),
+        end: formatOpeningTime(parts[1] ?? ''),
       };
     }
 
     return {
-      start: normalized,
+      start: formatOpeningTime(normalized),
       end: '',
     };
   }
 
   const record = readRecord(value);
-  const start = readString(record.start, readString(record.start_time, readString(record.time_start)));
-  const end = readString(record.end, readString(record.end_time, readString(record.time_end)));
+  const start = formatOpeningTime(record.start ?? record.start_time ?? record.time_start);
+  const end = formatOpeningTime(record.end ?? record.end_time ?? record.time_end);
 
   if (!start && !end) {
     return null;
@@ -1498,6 +1500,8 @@ function parseWorkspaceOpeningPeriodRecord(
       ? weekdaySlots
       : buildWorkspaceOpeningWeekdaysFromLegacySchedules(record);
 
+  const allYears = isOpeningPeriodAllYears(record);
+
   return {
     recordId: readString(record.id) || null,
     order: readString(record.order, String(index + 1)),
@@ -1505,6 +1509,7 @@ function parseWorkspaceOpeningPeriodRecord(
     label: readString(record.label, readString(record.name, `Periode ${index + 1}`)),
     startDate: readString(record.date_start, readString(record.start_date)),
     endDate: readString(record.date_end, readString(record.end_date)),
+    allYears,
     closedDays: readStringList(record.closed_days),
     weekdays: fallbackWeekdays,
   };
@@ -1542,6 +1547,7 @@ function parseWorkspaceOpeningPeriodsFromRaw(raw: Record<string, unknown>): Obje
       label: readString(record.label, `Horaire ${index + 1}`),
       startDate: readString(record.date_start, readString(record.start_date)),
       endDate: readString(record.date_end, readString(record.end_date)),
+      allYears: isOpeningPeriodAllYears(record),
       closedDays: readStringList(record.closed_days),
       weekdays: sortWorkspaceOpeningWeekdays(weekdays),
     };

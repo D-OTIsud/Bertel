@@ -83,6 +83,114 @@ export interface OpeningItem {
   weekdaySlots?: Array<{ weekday: string; slots: string[] }>;
   details: string[];
   season: string;
+  allYears: boolean;
+  startDate: string;
+  endDate: string;
+}
+
+export function formatOpeningTime(value: unknown): string {
+  const raw = readString(value).trim();
+  if (!raw) {
+    return '';
+  }
+
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?$/);
+  if (match) {
+    return `${match[1].padStart(2, '0')}:${match[2]}`;
+  }
+
+  return raw;
+}
+
+function formatOpeningSlotRange(start: unknown, end: unknown): string {
+  const startLabel = formatOpeningTime(start);
+  const endLabel = formatOpeningTime(end);
+
+  if (startLabel && endLabel) {
+    return `${startLabel}–${endLabel}`;
+  }
+
+  return startLabel || endLabel;
+}
+
+function readOpeningPeriodDates(period: Record<string, unknown>): { startDate: string; endDate: string } {
+  return {
+    startDate: readString(period.date_start, readString(period.start_date)),
+    endDate: readString(period.date_end, readString(period.end_date)),
+  };
+}
+
+export function isOpeningPeriodAllYears(period: Record<string, unknown>): boolean {
+  const { startDate, endDate } = readOpeningPeriodDates(period);
+  const hasNoDates = !startDate && !endDate;
+  const allYearsFlag = period.all_years ?? period.allYears;
+
+  if (allYearsFlag === false || allYearsFlag === 'false' || allYearsFlag === 0) {
+    return false;
+  }
+
+  if (allYearsFlag === true || allYearsFlag === 'true' || allYearsFlag === 1) {
+    return hasNoDates;
+  }
+
+  return hasNoDates;
+}
+
+function getOpeningPeriodDateRangeLabel(period: Record<string, unknown>, allYears: boolean): string {
+  if (allYears) {
+    return 'Toute l\'annee';
+  }
+
+  return formatDateRange(period.date_start, period.date_end, '');
+}
+
+function getOpeningPeriodLabel(period: Record<string, unknown>, allYears: boolean): string {
+  const explicitLabel = readString(period.label, readString(period.name));
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  if (allYears) {
+    return 'Toute l\'annee';
+  }
+
+  return formatDateRange(period.date_start, period.date_end, 'Periode');
+}
+
+export function getOpeningYearTimelineSegment(
+  opening: Pick<OpeningItem, 'allYears' | 'startDate' | 'endDate'>,
+  year = new Date().getFullYear(),
+): { left: number; width: number } {
+  if (opening.allYears) {
+    return { left: 0, width: 100 };
+  }
+
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31);
+  const yearDayCount = Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86_400_000) + 1;
+  const periodStart = opening.startDate ? new Date(opening.startDate) : yearStart;
+  const periodEnd = opening.endDate ? new Date(opening.endDate) : yearEnd;
+
+  if (Number.isNaN(periodStart.getTime()) || Number.isNaN(periodEnd.getTime())) {
+    return { left: 0, width: 100 };
+  }
+
+  const clampedStart = periodStart < yearStart ? yearStart : periodStart;
+  const clampedEnd = periodEnd > yearEnd ? yearEnd : periodEnd;
+
+  if (clampedEnd < yearStart || clampedStart > yearEnd) {
+    return { left: 0, width: 0 };
+  }
+
+  const startDay = Math.floor((clampedStart.getTime() - yearStart.getTime()) / 86_400_000);
+  const endDay = Math.floor((clampedEnd.getTime() - yearStart.getTime()) / 86_400_000);
+  const left = (startDay / yearDayCount) * 100;
+  const width = ((endDay - startDay + 1) / yearDayCount) * 100;
+
+  return {
+    left: Math.max(0, Math.min(100, left)),
+    width: Math.max(2, Math.min(100 - left, width)),
+  };
 }
 
 export interface RoomTypeItem {
@@ -535,13 +643,19 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
     const slots = Array.isArray(period.slots) ? period.slots.map((slot) => String(slot)) : [];
     const weekdays = Array.isArray(period.weekdays) ? period.weekdays.map((day) => String(day)) : [];
 
+    const allYears = isOpeningPeriodAllYears(period);
+    const { startDate, endDate } = readOpeningPeriodDates(period);
+
     return [{
-      label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
+      label: getOpeningPeriodLabel(period, allYears),
       slots,
       weekdays,
       weekdaySlots: weekdays.map((weekday) => ({ weekday, slots })),
       details: [readString(period.status), readString(period.note)].filter(Boolean),
       season: '',
+      allYears,
+      startDate,
+      endDate,
     }];
   }
 
@@ -549,31 +663,43 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
     const timePeriods = readArray(schedule.time_periods ?? schedule.opening_time_periods);
     const frames = timePeriods.flatMap((timePeriod) => {
       const periodFrames = readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames);
-      return periodFrames.map((frame) => `${readString(frame.time_start, readString(frame.start_time, '00:00'))} -> ${readString(frame.time_end, readString(frame.end_time, '23:59'))}`);
+      return periodFrames.map((frame) => formatOpeningSlotRange(
+        frame.time_start ?? frame.start_time ?? '00:00',
+        frame.time_end ?? frame.end_time ?? '23:59',
+      ));
     });
     const weekdays = timePeriods.flatMap((timePeriod) =>
       readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays).map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code))),
     ).filter(Boolean);
     const weekdaySlots = timePeriods.flatMap((timePeriod) => {
       const periodFrames = readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames)
-        .map((frame) => `${readString(frame.time_start, readString(frame.start_time, '00:00'))} -> ${readString(frame.time_end, readString(frame.end_time, '23:59'))}`);
+        .map((frame) => formatOpeningSlotRange(
+          frame.time_start ?? frame.start_time ?? '00:00',
+          frame.time_end ?? frame.end_time ?? '23:59',
+        ));
       return readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays)
         .map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code)))
         .filter(Boolean)
         .map((weekday) => ({ weekday, slots: periodFrames }));
     });
 
+    const allYears = isOpeningPeriodAllYears(period);
+    const { startDate, endDate } = readOpeningPeriodDates(period);
+
     return {
-      label: readString(schedule.label, `${readString(period.label, 'Periode')} / ${readNamedValue(schedule.schedule_type, `Planning ${index + 1}`)}`),
+      label: readString(schedule.label, `${getOpeningPeriodLabel(period, allYears)} / ${readNamedValue(schedule.schedule_type, `Planning ${index + 1}`)}`),
       slots: frames,
       weekdays,
       weekdaySlots,
       details: [
-        formatDateRange(period.date_start, period.date_end, ''),
+        getOpeningPeriodDateRangeLabel(period, allYears),
         readNamedValue(schedule.schedule_type),
         readString(period.note),
       ].filter(Boolean),
       season: '',
+      allYears,
+      startDate,
+      endDate,
     };
   });
 }
@@ -584,15 +710,26 @@ function formatOpeningSlots(value: unknown): string[] {
   }
 
   const record = readRecord(value);
-  const start = readString(record.start, readString(record.start_time, readString(record.time_start)));
-  const end = readString(record.end, readString(record.end_time, readString(record.time_end)));
+  const start = record.start ?? record.start_time ?? record.time_start;
+  const end = record.end ?? record.end_time ?? record.time_end;
 
   if (start || end) {
-    return [`${start || '00:00'} -> ${end || '23:59'}`];
+    return [formatOpeningSlotRange(start ?? '00:00', end ?? '23:59')];
   }
 
   if (typeof value === 'string') {
-    return [value];
+    const normalized = value.trim();
+    if (!normalized) {
+      return [];
+    }
+
+    const parts = normalized.split(/\s*(?:->|-|–|—)\s*/).filter(Boolean);
+    if (parts.length >= 2) {
+      return [formatOpeningSlotRange(parts[0], parts[1])];
+    }
+
+    const formatted = formatOpeningTime(normalized);
+    return formatted ? [formatted] : [];
   }
 
   return [];
@@ -638,13 +775,19 @@ function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: 
     slots: formatOpeningSlots(slotValue),
   }));
 
+  const allYears = isOpeningPeriodAllYears(period);
+  const { startDate, endDate } = readOpeningPeriodDates(period);
+
   return {
-    label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
+    label: getOpeningPeriodLabel(period, allYears),
     slots,
     weekdays,
     weekdaySlots,
-    details: [formatDateRange(period.date_start, period.date_end, ''), season].filter(Boolean),
+    details: [getOpeningPeriodDateRangeLabel(period, allYears), season].filter(Boolean),
     season,
+    allYears,
+    startDate,
+    endDate,
   };
 }
 

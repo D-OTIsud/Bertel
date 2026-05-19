@@ -1,5 +1,8 @@
 import { mockObjectDetails } from '../../data/mock';
 import {
+  formatOpeningTime,
+  getOpeningYearTimelineSegment,
+  isOpeningPeriodAllYears,
   parseActors,
   parseCapacities,
   parseContacts,
@@ -121,8 +124,54 @@ describe('object drawer utils', () => {
     expect(prices[0].details).toContain('Haute saison');
 
     expect(openings).toHaveLength(1);
-    expect(openings[0].slots).toContain('09:00 -> 18:00');
+    expect(openings[0].slots).toContain('09:00–18:00');
     expect(openings[0].weekdays).toContain('Lundi');
+  });
+
+  it('formats opening times without seconds and treats all-year periods as full-year coverage', () => {
+    expect(formatOpeningTime('11:00:00')).toBe('11:00');
+    expect(formatOpeningTime('11:00')).toBe('11:00');
+    expect(formatOpeningTime(null)).toBe('');
+
+    const raw = {
+      opening_times: {
+        periods_current: [
+          {
+            all_years: true,
+            date_start: null,
+            date_end: null,
+            weekday_slots: {
+              monday: [
+                { start: '11:00:00', end: '13:00:00' },
+                { start: '18:00:00', end: '22:00:00' },
+              ],
+            },
+          },
+        ],
+      },
+    } as Record<string, unknown>;
+
+    const period = (raw.opening_times as { periods_current: Record<string, unknown>[] }).periods_current[0];
+    const openings = parseOpenings(raw);
+
+    expect(isOpeningPeriodAllYears(period)).toBe(true);
+    expect(openings).toHaveLength(1);
+    expect(openings[0]).toMatchObject({
+      allYears: true,
+      startDate: '',
+      endDate: '',
+      label: 'Toute l\'annee',
+    });
+    expect(openings[0].weekdaySlots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          weekday: 'Lundi',
+          slots: ['11:00–13:00', '18:00–22:00'],
+        }),
+      ]),
+    );
+    expect(getOpeningYearTimelineSegment(openings[0])).toEqual({ left: 0, width: 100 });
+    expect(openings[0].slots.join(' ')).not.toMatch(/:\d{2}:\d{2}/);
   });
 
   it('parses taxonomy groups, media metadata and capacity arrays', () => {

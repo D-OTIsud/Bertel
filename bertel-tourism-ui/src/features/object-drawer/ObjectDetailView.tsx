@@ -61,6 +61,7 @@ import {
   type MembershipItem,
   type MeetingRoomItem,
   type OpeningItem,
+  getOpeningYearTimelineSegment,
   type OrganizationItem,
   type PetPolicyItem,
   type PriceItem,
@@ -643,6 +644,65 @@ function getNoteExcerpt(note: PrivateNoteEntry): string {
   return `${value.slice(0, 117).trimEnd()}...`;
 }
 
+function isNoteExcerptTruncated(note: PrivateNoteEntry): boolean {
+  return note.body.trim().length > 120;
+}
+
+function TeamNoteDetailDialog({
+  note,
+  open,
+  onOpenChange,
+}: {
+  note: PrivateNoteEntry | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!note) {
+    return null;
+  }
+
+  const categoryMeta = NOTE_CATEGORY_META[note.category];
+  const NoteIcon = getNoteCategoryIcon(note.category);
+  const metaParts = [
+    categoryMeta.label,
+    note.isPinned ? 'Epinglee' : '',
+    note.isArchived ? 'Archivee' : '',
+  ].filter(Boolean);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="detail-team-note-dialog max-w-lg">
+        <DialogTitle>Note interne</DialogTitle>
+        <DialogDescription className="sr-only">
+          Contenu complet de la note interne de l equipe.
+        </DialogDescription>
+        <div className="detail-team-note-dialog__content">
+          <div className="detail-team-note-dialog__header">
+            <span
+              className={`detail-team-note__avatar detail-team-note__avatar--${categoryMeta.tone}`}
+              aria-hidden="true"
+            >
+              <NoteIcon size={14} />
+            </span>
+            <div className="detail-team-note-dialog__meta">
+              <p className="detail-team-note-dialog__author">{getNoteAuthorName(note)}</p>
+              {metaParts.length > 0 && (
+                <p className="detail-team-note-dialog__tags">{metaParts.join(' · ')}</p>
+              )}
+              {formatNoteDateTime(note.createdAt) && (
+                <time className="detail-team-note-dialog__date" dateTime={note.createdAt}>
+                  {formatNoteDateTime(note.createdAt)}
+                </time>
+              )}
+            </div>
+          </div>
+          <p className="detail-team-note-dialog__body">{note.body}</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function getNoteCategoryIcon(category: PrivateNoteEntry['category']) {
   switch (category) {
     case 'important':
@@ -704,23 +764,6 @@ function DetailTooltip({
         {content}
       </span>
     </Tag>
-  );
-}
-
-function NoteTooltipContent({ note }: { note: PrivateNoteEntry }) {
-  const meta = [
-    NOTE_CATEGORY_META[note.category].label,
-    note.isPinned ? 'Epinglée' : '',
-    note.isArchived ? 'Archivée' : '',
-  ].filter(Boolean).join(' · ');
-
-  return (
-    <span className="detail-tooltip__stack">
-      <strong>{getNoteAuthorName(note)}</strong>
-      {meta && <span>{meta}</span>}
-      {formatNoteDateTime(note.createdAt) && <span>{formatNoteDateTime(note.createdAt)}</span>}
-      <span className="detail-tooltip__body">{note.body}</span>
-    </span>
   );
 }
 
@@ -1190,6 +1233,7 @@ function TeamNotesSection({
   const [editCategory, setEditCategory] = useState<PrivateNoteEntry['category']>('general');
   const [editPinned, setEditPinned] = useState(false);
   const [editErrorMessage, setEditErrorMessage] = useState('');
+  const [viewingNote, setViewingNote] = useState<PrivateNoteEntry | null>(null);
 
   useEffect(() => {
     setComposerOpen(false);
@@ -1207,6 +1251,7 @@ function TeamNotesSection({
     setEditCategory('general');
     setEditPinned(false);
     setEditErrorMessage('');
+    setViewingNote(null);
   }, [objectId]);
 
   const mergedNotes = useMemo(() => {
@@ -1447,8 +1492,16 @@ function TeamNotesSection({
                 key={`${note.id}-${note.createdAt}`}
                 className={`detail-team-note${note.isArchived ? ' detail-team-note--archived' : ''}${openMenuNoteId === note.id ? ' detail-team-note--menu-open' : ''}`}
               >
-                <DetailTooltip content={<NoteTooltipContent note={note} />} block bubbleClassName="detail-tooltip__bubble--note">
-                  <div className="detail-team-note__row">
+                <div className="detail-team-note__row">
+                  <button
+                    type="button"
+                    className="detail-team-note__preview"
+                    aria-label="Afficher la note complete"
+                    onClick={() => {
+                      setOpenMenuNoteId(null);
+                      setViewingNote(note);
+                    }}
+                  >
                     <span
                       className={`detail-team-note__avatar detail-team-note__avatar--${NOTE_CATEGORY_META[note.category].tone}`}
                       aria-hidden="true"
@@ -1472,8 +1525,12 @@ function TeamNotesSection({
                         </time>
                       )}
                       <span className="detail-team-note__separator" aria-hidden="true">-</span>
-                      <span>{getNoteExcerpt(note)}</span>
+                      <span className="detail-team-note__excerpt">{getNoteExcerpt(note)}</span>
+                      {isNoteExcerptTruncated(note) && (
+                        <span className="detail-team-note__more" aria-hidden="true">Voir plus</span>
+                      )}
                     </p>
+                  </button>
                     {(canEditNote(note) || canDeleteNote(note)) && (
                       <div className="detail-team-note__menu-shell">
                         <button
@@ -1481,7 +1538,10 @@ function TeamNotesSection({
                           className="detail-team-note__menu-trigger"
                           aria-label="Actions de la note"
                           aria-expanded={openMenuNoteId === note.id}
-                          onClick={() => setOpenMenuNoteId((current) => (current === note.id ? null : note.id))}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenMenuNoteId((current) => (current === note.id ? null : note.id));
+                          }}
                         >
                           ...
                         </button>
@@ -1526,8 +1586,7 @@ function TeamNotesSection({
                         )}
                       </div>
                     )}
-                  </div>
-                </DetailTooltip>
+                </div>
                 {editingNoteId === note.id && (
                   <div className="detail-team-note__content">
                     <div className="detail-team-note__editor">
@@ -1709,6 +1768,15 @@ function TeamNotesSection({
           ) : null}
         </div>
       </div>
+      <TeamNoteDetailDialog
+        note={viewingNote}
+        open={viewingNote !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingNote(null);
+          }
+        }}
+      />
     </Section>
   );
 }
@@ -2273,11 +2341,11 @@ function normalizeSlotLabel(slot: string): string {
   return slot
     .trim()
     .replace(/\s*->\s*/g, '–')
-    .replace(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/g, '$1–$2');
+    .replace(/(\d{1,2}:\d{2})(?::\d{2})?\s*[-–]\s*(\d{1,2}:\d{2})(?::\d{2})?/g, (_, start, end) => `${start}–${end}`);
 }
 
 function getSlotTimes(slot: string): string[] {
-  return slot.match(/\d{1,2}:\d{2}/g) ?? [];
+  return [...slot.matchAll(/\d{1,2}:\d{2}(?::\d{2})?/g)].map((match) => match[0]);
 }
 
 function getTimeMinutes(time: string): number | null {
@@ -2287,6 +2355,11 @@ function getTimeMinutes(time: string): number | null {
   }
 
   return hour * 60 + minute;
+}
+
+function formatSlotTimeLabel(time: string): string {
+  const match = time.match(/^(\d{1,2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : time;
 }
 
 function getSlotRanges(slot: string): Array<{ start: number; end: number; startLabel: string; endLabel: string }> {
@@ -2301,8 +2374,8 @@ function getSlotRanges(slot: string): Array<{ start: number; end: number; startL
       ranges.push({
         start,
         end,
-        startLabel: times[index],
-        endLabel: times[index + 1],
+        startLabel: formatSlotTimeLabel(times[index]),
+        endLabel: formatSlotTimeLabel(times[index + 1]),
       });
     }
   }
@@ -2404,7 +2477,9 @@ function getOpeningStatus(openNow: boolean | null, todaySlots: string[]): string
 }
 
 function getOpeningMeta(opening: OpeningItem): string {
-  const dateRange = opening.details.find((detail) => /\d{4}|\d{1,2}[/\-.]\d{1,2}/.test(detail));
+  const dateRange = opening.allYears
+    ? 'Toute l\'annee'
+    : opening.details.find((detail) => /\d{4}|\d{1,2}[/\-.]\d{1,2}/.test(detail) || detail === 'Toute l\'annee');
   return [dateRange, opening.season && opening.season !== opening.label ? opening.season : ''].filter(Boolean).join(' · ');
 }
 
@@ -2471,19 +2546,22 @@ function OpeningTimeline({
         ))}
       </div>
       <div className="detail-opening-timeline__track">
-        {segments.map((opening, index) => (
-          <button
-            key={`${opening.label}-${index}`}
-            type="button"
-            className={cn('detail-opening-timeline__segment', index === selectedIndex && 'detail-opening-timeline__segment--active')}
-            style={{
-              left: `${Math.min(84, 8 + index * 26)}%`,
-              width: `${Math.max(16, 22 - index * 2)}%`,
-            }}
-            title={opening.label}
-            onClick={() => onSelect(index)}
-          />
-        ))}
+        {segments.map((opening, index) => {
+          const segment = getOpeningYearTimelineSegment(opening);
+          return (
+            <button
+              key={`${opening.label}-${index}`}
+              type="button"
+              className={cn('detail-opening-timeline__segment', index === selectedIndex && 'detail-opening-timeline__segment--active')}
+              style={{
+                left: `${segment.left}%`,
+                width: `${segment.width}%`,
+              }}
+              title={opening.label}
+              onClick={() => onSelect(index)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -3256,3 +3334,5 @@ export function ObjectDetailView({ data, raw }: DetailViewProps) {
 
   return <GenericDetailView data={data} raw={raw} />;
 }
+
+

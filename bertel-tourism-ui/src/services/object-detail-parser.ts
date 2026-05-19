@@ -932,90 +932,6 @@ function buildSustainabilityActionLabelItems(value: unknown): Array<{ id: string
     .filter((item): item is { id: string; label: string; meta: string } => item !== null);
 }
 
-function formatOpeningSlots(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => formatOpeningSlots(item));
-  }
-
-  const record = readRecord(value);
-  const start = readString(record.start, readString(record.start_time, readString(record.time_start)));
-  const end = readString(record.end, readString(record.end_time, readString(record.time_end)));
-  if (start || end) {
-    return [`${start || '00:00'} -> ${end || '23:59'}`];
-  }
-
-  if (typeof value === 'string') {
-    return [value];
-  }
-
-  return [];
-}
-
-function humanizeWeekday(value: string): string {
-  const normalized = value.trim().toLowerCase();
-  const map: Record<string, string> = {
-    monday: 'Lundi',
-    tuesday: 'Mardi',
-    wednesday: 'Mercredi',
-    thursday: 'Jeudi',
-    friday: 'Vendredi',
-    saturday: 'Samedi',
-    sunday: 'Dimanche',
-    mon: 'Lundi',
-    tue: 'Mardi',
-    wed: 'Mercredi',
-    thu: 'Jeudi',
-    fri: 'Vendredi',
-    sat: 'Samedi',
-    sun: 'Dimanche',
-  };
-
-  return map[normalized] ?? value;
-}
-
-function flattenCanonicalOpeningPeriod(period: Record<string, unknown>, season: string): OpeningItem {
-  const rawWeekdaySlots = readRecord(period.weekday_slots);
-  const weekdayEntries = Object.entries(rawWeekdaySlots).filter(([, slots]) => {
-    if (Array.isArray(slots)) {
-      return slots.length > 0;
-    }
-    if (isRecord(slots)) {
-      return Object.keys(slots).length > 0;
-    }
-    return false;
-  });
-  const weekdays = weekdayEntries.map(([day]) => humanizeWeekday(day));
-  const slots = weekdayEntries.flatMap(([, slotValue]) => formatOpeningSlots(slotValue));
-  const weekdaySlots = weekdayEntries.map(([day, slotValue]) => ({
-    weekday: humanizeWeekday(day),
-    slots: formatOpeningSlots(slotValue),
-  }));
-
-  return {
-    label: readString(period.label, formatDateRange(period.date_start, period.date_end, 'Periode')),
-    slots,
-    weekdays,
-    weekdaySlots,
-    details: [formatDateRange(period.date_start, period.date_end, ''), season].filter(Boolean),
-    season,
-  };
-}
-
-function normalizeCanonicalOpenings(raw: Record<string, unknown>): OpeningItem[] {
-  const openingTimes = readRecord(raw.opening_times);
-  const currentPeriods = readArray(
-    openingTimes.periods_current ?? openingTimes.PeriodeOuvertures ?? openingTimes.current_periods,
-  );
-  const nextPeriods = readArray(
-    openingTimes.periods_next_year ?? openingTimes.PeriodeOuverturesAnneeSuivantes ?? openingTimes.next_year_periods,
-  );
-
-  return [
-    ...currentPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee en cours')),
-    ...nextPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee suivante')),
-  ];
-}
-
 function normalizeAggregatedContacts(raw: Record<string, unknown>, organizations: OrganizationItem[]): ParsedContactGroup {
   const objectContacts = sortContacts(
     mapOwnerContacts({
@@ -1137,15 +1053,12 @@ function buildTaxonomy(raw: Record<string, unknown>, groups: TaxonomyGroup[], am
 }
 
 function buildOperations(raw: Record<string, unknown>): ParsedOperationsSection {
-  const canonicalOpenings = normalizeCanonicalOpenings(raw);
-  const openings = canonicalOpenings.length > 0 ? canonicalOpenings : parseOpenings(raw);
-
   return {
     capacities: parseCapacities(raw),
     roomTypes: parseRoomTypes(raw),
     meetingRooms: parseMeetingRooms(raw),
     prices: parsePrices(raw),
-    openings,
+    openings: parseOpenings(raw),
     discounts: readArray(raw.discounts),
     groupPolicies: readArray(raw.group_policies),
     petPolicy: parsePetPolicy(raw),

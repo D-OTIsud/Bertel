@@ -23,17 +23,29 @@ function bucketLabel(bucket: ObjectWorkspaceOpeningBucket): string {
   }
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
-  if (startDate && endDate) {
-    return `${startDate} -> ${endDate}`;
+function formatDateRange(period: ObjectWorkspaceOpeningPeriod): string {
+  if (period.allYears) {
+    return 'Toute l\'annee';
   }
 
-  return startDate || endDate || 'Dates non precisees';
+  if (period.startDate && period.endDate) {
+    return `${period.startDate} -> ${period.endDate}`;
+  }
+
+  return period.startDate || period.endDate || 'Dates non precisees';
+}
+
+function formatWorkspaceSlotLabel(slot: ObjectWorkspaceOpeningWeekday['slots'][number]): string {
+  if (slot.end) {
+    return `${slot.start}–${slot.end}`;
+  }
+
+  return slot.start;
 }
 
 function renderWeekdayRow(weekday: ObjectWorkspaceOpeningWeekday) {
   const slotLabel = weekday.slots.length > 0
-    ? weekday.slots.map((slot) => slot.end ? `${slot.start} -> ${slot.end}` : slot.start).join(' · ')
+    ? weekday.slots.map((slot) => formatWorkspaceSlotLabel(slot)).join(' · ')
     : 'Aucun creneau';
 
   return (
@@ -63,7 +75,7 @@ function renderPeriod(period: ObjectWorkspaceOpeningPeriod) {
       </div>
 
       <div className="stack-list text-sm text-muted-foreground">
-        <span>{formatDateRange(period.startDate, period.endDate)}</span>
+        <span>{formatDateRange(period)}</span>
         {period.closedDays.length > 0 && <span>Jours fermes: {period.closedDays.join(', ')}</span>}
       </div>
 

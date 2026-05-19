@@ -4438,12 +4438,15 @@ a {
 .detail-team-notes {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .detail-team-notes__list {
   display: grid;
   gap: 0.8rem;
-  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .detail-team-notes__toolbar {
@@ -4489,14 +4492,17 @@ a {
 
 .detail-team-note {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(24, 49, 59, 0.1);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .detail-team-note--menu-open {
   z-index: 6;
+  overflow: visible;
 }
 
 .detail-team-note--archived {
@@ -4507,8 +4513,37 @@ a {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
   min-height: 3.3rem;
   padding: 0.8rem 0.95rem;
+}
+
+.detail-team-note__preview {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background 160ms ease;
+}
+
+.detail-team-note__preview:hover,
+.detail-team-note__preview:focus-visible {
+  background: rgba(var(--theme-primary-rgb), 0.06);
+  outline: none;
+}
+
+.detail-team-note__preview:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--theme-primary-rgb), 0.22);
 }
 
 .detail-team-note__avatar {
@@ -4570,10 +4605,19 @@ a {
   font-size: 0.92rem;
 }
 
-.detail-team-note__line > span:last-child {
+.detail-team-note__excerpt {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.detail-team-note__more {
+  flex-shrink: 0;
+  color: var(--theme-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .detail-team-note__separator {
@@ -4839,6 +4883,48 @@ a {
   to {
     transform: rotate(360deg);
   }
+}
+
+.detail-team-note-dialog__content {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.35rem;
+}
+
+.detail-team-note-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.detail-team-note-dialog__meta {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.detail-team-note-dialog__author {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.detail-team-note-dialog__tags,
+.detail-team-note-dialog__date {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.detail-team-note-dialog__body {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .detail-network {

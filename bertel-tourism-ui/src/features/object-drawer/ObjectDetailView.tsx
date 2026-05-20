@@ -98,6 +98,96 @@ const TYPE_LABEL: Record<string, string> = {
   COM: 'Commerce',
 };
 
+type DetailAccentClass =
+  | 'acc-teal'
+  | 'acc-orange'
+  | 'acc-blue'
+  | 'acc-green'
+  | 'acc-plum'
+  | 'acc-rust';
+
+interface ArchetypeMeta {
+  archetype: 'HEB' | 'RES' | 'ASC' | 'ITI' | 'VIS' | 'SRV';
+  accent: DetailAccentClass;
+  codeName: string;
+  family: string;
+  covers: string;
+}
+
+const HEB_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'HEB',
+  accent: 'acc-teal',
+  codeName: 'Hébergement marchand',
+  family: 'Hôtel · Hébergement loisir · Camping · Résidence',
+  covers: 'HOT · HPA · HLO · CAMP · RVA',
+};
+
+const RES_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'RES',
+  accent: 'acc-orange',
+  codeName: 'Restaurant',
+  family: 'Restauration · Bar · Snack',
+  covers: 'RES',
+};
+
+const ASC_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'ASC',
+  accent: 'acc-blue',
+  codeName: 'Activité sportive & culturelle',
+  family: 'Activité encadrée · Stage · Initiation',
+  covers: 'ASC',
+};
+
+const ITI_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'ITI',
+  accent: 'acc-green',
+  codeName: 'Itinéraire',
+  family: 'Randonnée · Trail · VTT · Boucle',
+  covers: 'ITI · FMA',
+};
+
+const VIS_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'VIS',
+  accent: 'acc-plum',
+  codeName: 'Site & visite',
+  family: 'Patrimoine · Loisir · Site naturel',
+  covers: 'LOI · PCU · PNA',
+};
+
+const SRV_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'SRV',
+  accent: 'acc-rust',
+  codeName: 'Service & commerce',
+  family: 'OT · Commerce · Service · Ville',
+  covers: 'PSV · SRV · COM · VIL',
+};
+
+const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
+  HOT: HEB_ARCHETYPE,
+  HPA: HEB_ARCHETYPE,
+  HLO: HEB_ARCHETYPE,
+  CAMP: HEB_ARCHETYPE,
+  RVA: HEB_ARCHETYPE,
+  RES: RES_ARCHETYPE,
+  ASC: ASC_ARCHETYPE,
+  ITI: ITI_ARCHETYPE,
+  FMA: ITI_ARCHETYPE,
+  LOI: VIS_ARCHETYPE,
+  PCU: VIS_ARCHETYPE,
+  PNA: VIS_ARCHETYPE,
+  PSV: SRV_ARCHETYPE,
+  SRV: SRV_ARCHETYPE,
+  VIL: SRV_ARCHETYPE,
+  COM: SRV_ARCHETYPE,
+};
+
+function getArchetypeMeta(typeCode: string): ArchetypeMeta | null {
+  if (!typeCode) {
+    return null;
+  }
+  return TYPE_ARCHETYPES[typeCode.toUpperCase()] ?? null;
+}
+
 interface DetailViewProps {
   data: ObjectDetail;
   raw: Record<string, unknown>;
@@ -813,19 +903,15 @@ function Section({
   );
 }
 
-function StatStrip({ stats }: { stats: StatDef[] }) {
-  if (!stats.length) {
-    return null;
-  }
-
+function TypeRibbon({ meta }: { meta: ArchetypeMeta }) {
   return (
-    <div className="detail-stats-strip">
-      {stats.map((stat) => (
-        <div key={`${stat.label}-${stat.value}`} className="detail-stat">
-          <span className="detail-stat__value">{stat.value}</span>
-          <span className="detail-stat__label">{stat.label}</span>
-        </div>
-      ))}
+    <div className="detail-type-ribbon" role="presentation">
+      <span className="detail-type-ribbon__dot" aria-hidden />
+      <span className="detail-type-ribbon__label">
+        <strong>{meta.codeName}</strong>
+        <span className="detail-type-ribbon__family"> · {meta.family}</span>
+      </span>
+      <span className="detail-type-ribbon__codes">{meta.covers}</span>
     </div>
   );
 }
@@ -834,16 +920,18 @@ function StatStrip({ stats }: { stats: StatDef[] }) {
 function KpiStrip({
   stats,
   statusLine,
+  fiveColumns,
 }: {
   stats: StatDef[];
   statusLine?: { label: string; value: string; open: boolean } | null;
+  fiveColumns?: boolean;
 }) {
   if (!stats.length && !statusLine) {
     return null;
   }
 
   return (
-    <div className="detail-kpi-strip">
+    <div className={cn('detail-kpi-strip', fiveColumns && 'detail-kpi-strip--five')}>
       {stats.map((stat) => {
         const valueMatch = stat.value.trim().match(/^(\S+)(?:\s+(.+))?$/);
         const num = valueMatch?.[1] ?? stat.value;
@@ -2184,9 +2272,10 @@ function ItineraryStatsSection({ itinerary }: { itinerary: ItinerarySummary | nu
     return null;
   }
 
+  const visibleStats = stats.slice(0, 5);
   return (
     <Section title="Le parcours">
-      <KpiStrip stats={stats.slice(0, 4)} />
+      <KpiStrip stats={visibleStats} fiveColumns={visibleStats.length === 5} />
     </Section>
   );
 }
@@ -2196,34 +2285,61 @@ function RoomList({ rooms }: { rooms: RoomTypeItem[] }) {
     return null;
   }
 
+  const hasAnyDetail = rooms.some((r) => r.capacityAdults !== 'n/a' || r.beds !== 'n/a');
+  const hasAnyQty = rooms.some((r) => r.quantity && r.quantity !== 'n/a');
+
   return (
     <Section title="Chambres">
-      <div className="detail-card-list">
-        {rooms.map((room) => (
-          <div key={room.id} className="detail-mini-card">
-            <div className="detail-mini-card__header">
-              <strong>{room.name}</strong>
-              {room.quantity && room.quantity !== 'n/a' && (
-                <span className="detail-chip detail-chip--soft">{room.quantity} unite(s)</span>
-              )}
-            </div>
-            <p className="detail-mini-card__meta">
-              {[room.capacityAdults !== 'n/a' ? `${room.capacityAdults} adultes` : '', room.beds !== 'n/a' ? room.beds : '']
-                .filter(Boolean)
-                .join(' · ')}
-            </p>
-            {room.amenities.length > 0 && (
-              <div className="detail-chip-strip">
-                {room.amenities.map((amenity) => (
-                  <span key={`${room.id}-${amenity}`} className="detail-chip">
-                    {amenity}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <table className="detail-rooms-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            {hasAnyDetail ? <th>Couchages</th> : null}
+            {hasAnyQty ? <th className="detail-rooms-table__num">Unités</th> : null}
+            <th>Équipements</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rooms.map((room) => {
+            const bedsLine = [
+              room.capacityAdults !== 'n/a' ? `${room.capacityAdults} adultes` : '',
+              room.beds !== 'n/a' ? room.beds : '',
+            ]
+              .filter(Boolean)
+              .join(' · ');
+
+            return (
+              <tr key={room.id}>
+                <td>
+                  <strong>{room.name}</strong>
+                </td>
+                {hasAnyDetail ? <td>{bedsLine || '—'}</td> : null}
+                {hasAnyQty ? (
+                  <td className="detail-rooms-table__num">
+                    {room.quantity && room.quantity !== 'n/a' ? room.quantity : '—'}
+                  </td>
+                ) : null}
+                <td>
+                  {room.amenities.length > 0 ? (
+                    <div className="detail-chip-strip">
+                      {room.amenities.slice(0, 4).map((amenity) => (
+                        <span key={`${room.id}-${amenity}`} className="detail-chip detail-chip--soft">
+                          {amenity}
+                        </span>
+                      ))}
+                      {room.amenities.length > 4 ? (
+                        <span className="detail-chip detail-chip--soft">+{room.amenities.length - 4}</span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <span className="detail-rooms-table__dim">—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </Section>
   );
 }
@@ -2235,32 +2351,40 @@ function MeetingRoomList({ rooms }: { rooms: MeetingRoomItem[] }) {
 
   return (
     <Section title="Reunions et evenements">
-      <div className="detail-card-list">
+      <div className="detail-mice-grid">
         {rooms.map((room) => {
-          const stats = [
-            room.capacityTheatre !== 'n/a' ? { value: room.capacityTheatre, label: 'Theatre' } : null,
-            room.capacityClassroom !== 'n/a' ? { value: room.capacityClassroom, label: 'Classe' } : null,
-            room.capacityBoardroom !== 'n/a' ? { value: room.capacityBoardroom, label: 'Conseil' } : null,
-            room.capacityU !== 'n/a' ? { value: room.capacityU, label: 'U' } : null,
-            room.areaM2 !== 'n/a' ? { value: `${room.areaM2} m2`, label: 'Surface' } : null,
-          ].filter((item): item is StatDef => item !== null);
+          const caps: Array<{ label: string; value: string }> = [];
+          if (room.areaM2 !== 'n/a') caps.push({ label: 'Surface', value: `${room.areaM2} m²` });
+          if (room.capacityTheatre !== 'n/a') caps.push({ label: 'Théâtre', value: room.capacityTheatre });
+          if (room.capacityClassroom !== 'n/a') caps.push({ label: 'Classe', value: room.capacityClassroom });
+          if (room.capacityBoardroom !== 'n/a') caps.push({ label: 'Conseil', value: room.capacityBoardroom });
+          if (room.capacityU !== 'n/a') caps.push({ label: 'U', value: room.capacityU });
 
           return (
-            <div key={room.id} className="detail-mini-card">
-              <div className="detail-mini-card__header">
-                <strong>{room.name}</strong>
-              </div>
-              <StatStrip stats={stats} />
-              {room.equipment.length > 0 && (
-                <div className="detail-chip-strip">
-                  {room.equipment.map((equipment) => (
-                    <span key={`${room.id}-${equipment}`} className="detail-chip">
-                      {equipment}
+            <article key={room.id} className="detail-mice">
+              <h4 className="detail-mice__name">{room.name}</h4>
+              {caps.length > 0 ? (
+                <div className="detail-mice__caps">
+                  {caps.map((cap) => (
+                    <span key={`${room.id}-${cap.label}`}>
+                      {cap.label} <strong>{cap.value}</strong>
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
+              ) : null}
+              {room.equipment.length > 0 ? (
+                <div className="detail-chip-strip detail-mice__equip">
+                  {room.equipment.slice(0, 4).map((equipment) => (
+                    <span key={`${room.id}-${equipment}`} className="detail-chip detail-chip--soft">
+                      {equipment}
+                    </span>
+                  ))}
+                  {room.equipment.length > 4 ? (
+                    <span className="detail-chip detail-chip--soft">+{room.equipment.length - 4}</span>
+                  ) : null}
+                </div>
+              ) : null}
+            </article>
           );
         })}
       </div>
@@ -2693,20 +2817,132 @@ function PricingAndOpeningsSection({
 
   return (
     <Section id={sectionId} title="Tarifs">
-      <div className="detail-list">
+      <div className="detail-tariff-list">
         {prices.slice(0, 8).map((price, index) => (
-          <div key={`${price.label}-${index}`} className="detail-list-row">
-            <div>
-              <strong>{price.label}</strong>
-              {price.periodLabel && <p>{price.periodLabel}</p>}
-              {price.details.length > 0 && <small>{price.details.join(' · ')}</small>}
+          <div key={`${price.label}-${index}`} className="detail-tariff-row">
+            <div className="detail-tariff-row__main">
+              <span className="detail-tariff-row__label">{price.label}</span>
+              {(price.periodLabel || price.details.length > 0) && (
+                <span className="detail-tariff-row__sub">
+                  {[price.periodLabel, price.details.join(' · ')].filter(Boolean).join(' · ')}
+                </span>
+              )}
             </div>
-            <span className="detail-price-amount">
-              {price.amount} {price.currency}
+            <span className="detail-tariff-row__amount">
+              {price.amount}
+              <small>{' '}{price.currency}</small>
             </span>
           </div>
         ))}
       </div>
+    </Section>
+  );
+}
+
+function WeekScheduleSection({ openings }: { openings: OpeningItem[] }) {
+  const periodColumns = openings
+    .filter((opening) => opening.weekdaySlots?.length || opening.weekdays.length || opening.slots.length)
+    .slice(0, 3);
+
+  if (periodColumns.length < 2) {
+    return null;
+  }
+
+  const todayKey = getTodayWeekdayKey();
+  const rowsByPeriod = periodColumns.map((opening) => getOpeningRows(opening));
+  const headers = periodColumns.map((opening, index) => {
+    const explicit = opening.label || opening.season;
+    if (explicit) return explicit;
+    return `Période ${index + 1}`;
+  });
+  const gridTemplate = `72px repeat(${periodColumns.length}, minmax(0, 1fr))`;
+
+  return (
+    <Section title="Horaires par période">
+      <div className="detail-week-grid" style={{ gridTemplateColumns: gridTemplate }}>
+        <div className="detail-week-grid__head">Jour</div>
+        {headers.map((header, index) => (
+          <div key={`head-${index}`} className="detail-week-grid__head">
+            {header}
+          </div>
+        ))}
+        {OPENING_WEEKDAYS.map((weekday) => (
+          <Fragment key={weekday.key}>
+            <div
+              className={cn('detail-week-grid__day', weekday.key === todayKey && 'detail-week-grid__day--today')}
+            >
+              {weekday.short}
+              <small>{`${weekday.key.charAt(0).toUpperCase()}${weekday.key.slice(1)}`}</small>
+            </div>
+            {rowsByPeriod.map((rows, periodIdx) => {
+              const slots = rows.find((r) => r.key === weekday.key)?.slots ?? [];
+              const isToday = weekday.key === todayKey && periodIdx === 0;
+              const isClosed = slots.length === 0;
+              return (
+                <div
+                  key={`${weekday.key}-${periodIdx}`}
+                  className={cn(
+                    'detail-week-grid__slot',
+                    isClosed && 'detail-week-grid__slot--closed',
+                    isToday && !isClosed && 'detail-week-grid__slot--now',
+                  )}
+                >
+                  {isClosed ? 'Fermé' : slots.join(' · ')}
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function WaypointListSection({ itinerary }: { itinerary: ItinerarySummary | null }) {
+  if (!itinerary) {
+    return null;
+  }
+  const stages = itinerary.stagesCount;
+  const sections = itinerary.sectionsCount;
+  const count = Math.max(stages, sections);
+  if (count < 2) {
+    return null;
+  }
+
+  const points: Array<{ num: string; name: string; meta: string }> = [];
+  const distanceKm = Number.parseFloat(itinerary.distanceKm || '');
+  const elevation = itinerary.elevationGain ? `+${itinerary.elevationGain} m` : '';
+
+  points.push({ num: 'D', name: 'Départ', meta: ['0.0 km', elevation].filter(Boolean).join(' · ') });
+  const interior = Math.max(0, count - 2);
+  for (let i = 1; i <= interior; i++) {
+    const fraction = i / (interior + 1);
+    const distLabel = Number.isFinite(distanceKm) && distanceKm > 0
+      ? `${(fraction * distanceKm).toFixed(1)} km`
+      : `Étape ${i}`;
+    points.push({ num: String(i + 1), name: `Étape ${i + 1}`, meta: distLabel });
+  }
+  points.push({
+    num: 'A',
+    name: 'Arrivée',
+    meta: Number.isFinite(distanceKm) && distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—',
+  });
+
+  return (
+    <Section title="Profil & étapes">
+      <ol className="detail-waypoints">
+        {points.map((wp, idx) => (
+          <li key={`wp-${idx}`} className="detail-waypoint">
+            <span className="detail-waypoint__num" aria-hidden>
+              {wp.num}
+            </span>
+            <div className="detail-waypoint__body">
+              <strong className="detail-waypoint__name">{wp.name}</strong>
+            </div>
+            <span className="detail-waypoint__meta">{wp.meta}</span>
+          </li>
+        ))}
+      </ol>
     </Section>
   );
 }
@@ -3008,9 +3244,10 @@ function DetailScaffold({
 
   const visibleMain = mainSections.filter(Boolean);
   const visibleAside = asideSections.filter(Boolean);
+  const archetype = getArchetypeMeta(preview.typeCode || data.type || '');
 
   return (
-    <div className="object-detail-view">
+    <div className={cn('object-detail-view', archetype && archetype.accent)}>
       <GalleryLightbox
         data={data}
         media={preview.media}
@@ -3020,6 +3257,7 @@ function DetailScaffold({
         onChange={setActiveMediaIndex}
       />
       <DetailTabs items={tabItems} />
+      {archetype && <TypeRibbon meta={archetype} />}
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
           <HeroBlock
@@ -3108,6 +3346,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <WeekScheduleSection key="schedule" openings={preview.openings} />,
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
@@ -3144,6 +3383,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
           <OverviewSection preview={preview} parsed={parsed} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
+        <WaypointListSection key="waypoints" itinerary={preview.itinerary} />,
         <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
         <PricingAndOpeningsSection
@@ -3220,6 +3460,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <WeekScheduleSection key="schedule" openings={preview.openings} />,
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}
@@ -3294,6 +3535,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+        <WeekScheduleSection key="schedule" openings={preview.openings} />,
         <PricingAndOpeningsSection
           key="pricing"
           prices={preview.prices}

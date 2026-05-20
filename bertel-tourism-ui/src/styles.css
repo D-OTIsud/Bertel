@@ -2279,6 +2279,106 @@ a {
   display: grid;
   gap: 1.1rem;
   width: 100%;
+  /* Default accent — keyed to brand teal; per-type classes override below. */
+  --accent: var(--theme-primary);
+  --accent-deep: #0d4f4e;
+  --accent-tint: var(--teal-tint);
+}
+
+.object-detail-view.acc-teal {
+  --accent: #176b6a;
+  --accent-deep: #0d4f4e;
+  --accent-tint: rgba(23, 107, 106, 0.08);
+}
+
+.object-detail-view.acc-orange {
+  --accent: #c96d3b;
+  --accent-deep: #93501f;
+  --accent-tint: rgba(201, 109, 59, 0.10);
+}
+
+.object-detail-view.acc-blue {
+  --accent: #1e7491;
+  --accent-deep: #0e5872;
+  --accent-tint: rgba(30, 116, 145, 0.10);
+}
+
+.object-detail-view.acc-green {
+  --accent: #2a7a45;
+  --accent-deep: #1a5a30;
+  --accent-tint: rgba(42, 122, 69, 0.10);
+}
+
+.object-detail-view.acc-plum {
+  --accent: #6c4f8a;
+  --accent-deep: #4d3866;
+  --accent-tint: rgba(108, 79, 138, 0.10);
+}
+
+.object-detail-view.acc-rust {
+  --accent: #a45330;
+  --accent-deep: #7a3b20;
+  --accent-tint: rgba(164, 83, 48, 0.10);
+}
+
+.detail-type-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.85rem;
+  margin-top: -0.4rem;
+  font-size: 0.7188rem;
+  color: var(--ink-3);
+  background: linear-gradient(90deg, var(--accent-tint), transparent);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.detail-type-ribbon__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  flex: none;
+}
+
+.detail-type-ribbon__label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-type-ribbon strong {
+  color: var(--accent-deep);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.detail-type-ribbon__family {
+  color: var(--ink-3);
+}
+
+.detail-type-ribbon__codes {
+  margin-left: auto;
+  flex: none;
+  color: var(--ink-4);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6563rem;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 720px) {
+  .detail-type-ribbon__family {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .detail-type-ribbon__codes {
+    display: none;
+  }
 }
 
 .drawer-detail-tabs {
@@ -2319,7 +2419,7 @@ a {
 }
 
 .drawer-detail-tab--active {
-  color: var(--teal);
+  color: var(--accent-deep, var(--teal));
 }
 
 .drawer-detail-tab--active::after {
@@ -2330,7 +2430,7 @@ a {
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: var(--teal);
+  background: var(--accent, var(--teal));
 }
 
 .drawer-detail-tab__count {
@@ -2468,6 +2568,17 @@ a {
   gap: 0.75rem;
 }
 
+.detail-kpi-strip--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .detail-kpi-strip,
+  .detail-kpi-strip--five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .detail-kpi {
   display: grid;
   gap: 0.25rem;
@@ -2476,6 +2587,289 @@ a {
   border: 1px solid var(--line-soft);
   background: var(--bg-tint);
   min-width: 0;
+}
+
+/* ---------- Compact rooms table (HEB) ---------- */
+.detail-rooms-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.detail-rooms-table thead th {
+  text-align: left;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-rooms-table tbody td {
+  padding: 0.75rem 0.6rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+
+.detail-rooms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.detail-rooms-table tbody td strong {
+  display: block;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.detail-rooms-table__num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-rooms-table__dim {
+  color: var(--ink-4);
+}
+
+/* ---------- MICE / meeting rooms grid (HEB) ---------- */
+.detail-mice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (max-width: 720px) {
+  .detail-mice-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-mice {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-tint);
+  padding: 0.7rem 0.85rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.detail-mice__name {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.detail-mice__caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.7rem;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.detail-mice__caps span strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.detail-mice__equip {
+  margin-top: 0.2rem;
+}
+
+/* ---------- Tariff list (VIS pricing) ---------- */
+.detail-tariff-list {
+  display: grid;
+  gap: 0;
+}
+
+.detail-tariff-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 0.82rem;
+}
+
+.detail-tariff-row:last-child {
+  border-bottom: 0;
+}
+
+.detail-tariff-row__main {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.detail-tariff-row__label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail-tariff-row__sub {
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.detail-tariff-row__amount {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.detail-tariff-row__amount small {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+/* ---------- Week schedule grid (RES/VIS/SRV) ---------- */
+.detail-week-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.detail-week-grid > div {
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-week-grid__head {
+  background: var(--bg-tint);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.detail-week-grid__day {
+  background: var(--bg-tint);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.detail-week-grid__day small {
+  display: block;
+  color: var(--ink-3);
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+
+.detail-week-grid__day--today {
+  color: var(--accent-deep);
+}
+
+.detail-week-grid__slot {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.detail-week-grid__slot--closed {
+  color: var(--ink-4);
+  font-style: italic;
+  background: var(--bg-tint);
+}
+
+.detail-week-grid__slot--now {
+  background: linear-gradient(180deg, rgba(44, 163, 111, 0.10), rgba(44, 163, 111, 0.04));
+  color: #1a6b48;
+  font-weight: 700;
+}
+
+/* ---------- Waypoint list (ITI) ---------- */
+.detail-waypoints {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-waypoint {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px dashed var(--line-soft);
+  position: relative;
+}
+
+.detail-waypoint:last-child {
+  border-bottom: 0;
+}
+
+.detail-waypoint:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.94rem;
+  top: 2.3rem;
+  bottom: -0.1rem;
+  width: 2px;
+  background: repeating-linear-gradient(180deg, var(--accent) 0 4px, transparent 4px 8px);
+  opacity: 0.5;
+}
+
+.detail-waypoint__num {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--accent, var(--theme-primary));
+  color: var(--accent-deep, var(--theme-primary));
+  display: grid;
+  place-items: center;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  z-index: 1;
+}
+
+.detail-waypoint__body {
+  min-width: 0;
+}
+
+.detail-waypoint__name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 0.84rem;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+
+.detail-waypoint__meta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+  padding-top: 0.3rem;
 }
 
 .detail-kpi__label {

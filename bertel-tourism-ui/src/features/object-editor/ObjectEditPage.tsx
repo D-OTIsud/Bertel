@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
-import { resolveArchetypeMeta } from './archetypes';
+import { resolveArchetypeMeta, TYPE_LABEL } from './archetypes';
 import { useObjectEditorState } from './useObjectEditorState';
 import { useEditorSave } from './useEditorSave';
 import { makeSections, type SectionItem } from './section-config';
@@ -224,13 +224,22 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
 
   const refId = objectId.length > 12 ? objectId.slice(0, 12) : objectId;
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
+  const typeCode = resource.type ?? '';
+  const typeLabel = TYPE_LABEL[typeCode.toUpperCase()] ?? typeCode;
+  const taxoPath =
+    editor.draft.taxonomy.domains
+      .map((d) => d.assignment?.path.map((n) => n.label).join(' ▸ '))
+      .find(Boolean) ?? '';
+  const locationHint = [editor.draft.location.main.city, editor.draft.location.main.zoneTouristique]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className={`edit-flat object-editor ${meta.accent}`}>
       <EditorTopbar
         objectName={resource.name}
-        typeCode={resource.type ?? ''}
-        archetypeCodeName={meta.codeName}
+        typeCode={typeCode}
+        archetypeCodeName={typeLabel}
         refId={refId}
         mode={mode}
         dirtyCount={dirtyCount}
@@ -244,7 +253,14 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
       />
-      <TypeRibbon meta={meta} />
+      <TypeRibbon
+        meta={meta}
+        typeCode={typeCode}
+        typeLabel={typeLabel}
+        taxoPath={taxoPath}
+        status={editor.draft.generalInfo.status}
+        locationHint={locationHint}
+      />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
         <main className="edit-main">
@@ -263,6 +279,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
               editor={editor}
               permissions={resource.permissions}
               objectId={objectId}
+              typeCode={typeCode}
               archetype={meta.archetype}
               folded={mode === 'rapide' && !MODE_ESSENTIAL.has(num)}
             />

@@ -136,6 +136,10 @@
   font-size: 10.5px; letter-spacing: 0.04em;
   color: var(--ink-3);
 }
+.object-editor .type-ribbon__taxo {
+  font-weight: 500;
+  color: var(--ink-3);
+}
 
 /* ---------- Body grid (split-pane: each column scrolls independently) ---------- */
 .object-editor .edit-body {

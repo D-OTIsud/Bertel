@@ -5,7 +5,7 @@ interface GenericRecord {
   [key: string]: unknown;
 }
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
 
 export interface WorkspaceTranslatableField {
   baseValue: string;
@@ -789,6 +789,87 @@ export interface ObjectWorkspaceContactsModule {
   relatedOrganizationContactsCount: number;
 }
 
+export type ObjectWorkspaceTagColorVariant = 'teal' | 'orange' | 'neutral' | 'outline' | 'green';
+
+export type ObjectWorkspaceTagSource =
+  | 'thematic'
+  | 'audience'
+  | 'ambience'
+  | 'badges'
+  | 'classification'
+  | 'taxo';
+
+export interface ObjectWorkspaceTagItem {
+  tagId: string;
+  slug: string;
+  label: string;
+  colorVariant: ObjectWorkspaceTagColorVariant;
+  source: ObjectWorkspaceTagSource;
+}
+
+export interface ObjectWorkspaceTagsModule {
+  displayed: ObjectWorkspaceTagItem[];
+  derived: ObjectWorkspaceTagItem[];
+  library: ObjectWorkspaceTagItem[];
+}
+
+export interface ObjectWorkspaceSustainabilityAction {
+  id: string;
+  code: string;
+  label: string;
+  selected: boolean;
+  note: string;
+  documentId: string;
+}
+
+export interface ObjectWorkspaceSustainabilityCategory {
+  id: string;
+  code: string;
+  label: string;
+  actions: ObjectWorkspaceSustainabilityAction[];
+}
+
+export interface ObjectWorkspaceSustainabilityLabel {
+  code: string;
+  label: string;
+}
+
+export interface ObjectWorkspaceSustainabilityModule {
+  categories: ObjectWorkspaceSustainabilityCategory[];
+  equivalentLabels: ObjectWorkspaceSustainabilityLabel[];
+}
+
+export interface ObjectWorkspaceDistributionChannel {
+  id: string;
+  code: string;
+  name: string;
+  url: string;
+  syncStatus: string;
+  syncTone: 'ok' | 'warn';
+  group: 'booking' | 'social';
+}
+
+export interface ObjectWorkspaceDistributionModule {
+  channels: ObjectWorkspaceDistributionChannel[];
+  readonlyReason: string | null;
+}
+
+export interface ObjectWorkspaceProviderModule {
+  siret: string;
+  companyName: string;
+  sireneVerified: boolean;
+  legalForm: string;
+  nafCode: string;
+  consularChamber: string;
+  cfeOrganization: string;
+  directorFullName: string;
+  directorEmail: string;
+  directorPhone: string;
+  address: string;
+  incorporationDate: string;
+  readonlyReason: string | null;
+}
+
 export interface ObjectWorkspaceModules {
   generalInfo: ObjectWorkspaceGeneralInfo;
   taxonomy: ObjectWorkspaceTaxonomyModule;
@@ -813,6 +894,10 @@ export interface ObjectWorkspaceModules {
   relationships: ObjectWorkspaceRelationshipsModule;
   memberships: ObjectWorkspaceMembershipModule;
   legal: ObjectWorkspaceLegalModule;
+  tags: ObjectWorkspaceTagsModule;
+  sustainability: ObjectWorkspaceSustainabilityModule;
+  distribution: ObjectWorkspaceDistributionModule;
+  provider: ObjectWorkspaceProviderModule;
 }
 
 function isRecord(value: unknown): value is GenericRecord {
@@ -2451,6 +2536,243 @@ function dedupeReferenceOptions(options: WorkspaceReferenceOption[]): WorkspaceR
   return normalized.sort((left, right) => left.label.localeCompare(right.label, 'fr'));
 }
 
+const TAG_COLOR_VARIANTS = new Set<ObjectWorkspaceTagColorVariant>(['teal', 'orange', 'neutral', 'outline', 'green']);
+
+function normalizeTagColorVariant(value: string): ObjectWorkspaceTagColorVariant {
+  const normalized = value.trim().toLowerCase();
+  return TAG_COLOR_VARIANTS.has(normalized as ObjectWorkspaceTagColorVariant)
+    ? normalized as ObjectWorkspaceTagColorVariant
+    : 'teal';
+}
+
+function normalizeTagSource(value: string): ObjectWorkspaceTagSource {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'audience' || normalized === 'ambience' || normalized === 'badges' || normalized === 'classification' || normalized === 'taxo') {
+    return normalized;
+  }
+  return 'thematic';
+}
+
+function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string {
+  const raw = record.valueJson.trim();
+  if (!raw) {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed === 'string' || typeof parsed === 'number') {
+      return String(parsed).trim();
+    }
+    if (parsed && typeof parsed === 'object') {
+      const map = parsed as Record<string, unknown>;
+      return readString(map.value ?? map.label ?? map.name).trim();
+    }
+  } catch {
+    return raw;
+  }
+
+  return raw;
+}
+
+function findLegalRecordValue(records: ObjectWorkspaceLegalRecord[], patterns: string[]): string {
+  const record = records.find((item) => {
+    const haystack = `${item.typeCode} ${item.typeLabel}`.toLowerCase();
+    return patterns.some((pattern) => haystack.includes(pattern));
+  });
+  return record ? readLegalRecordScalarValue(record) : '';
+}
+
+function pickOperatorActorRecord(raw: Record<string, unknown>): GenericRecord | null {
+  const actors = readArray(raw.actors);
+  const operator = actors.find((record) => readString(readRecord(record.role).code) === 'operator');
+  if (operator) {
+    return operator;
+  }
+
+  const primary = actors.find((record) => readBoolean(record.is_primary));
+  return primary ?? actors[0] ?? null;
+}
+
+function isDistributionBookingKind(kindCode: string): boolean {
+  const normalized = kindCode.trim().toLowerCase();
+  return [
+    'booking',
+    'booking_engine',
+    'airbnb',
+    'abritel',
+    'leboncoin',
+    'vrbo',
+    'expedia',
+    'distribution_channel',
+  ].some((token) => normalized === token || normalized.includes(token));
+}
+
+function isDistributionSocialKind(kindCode: string): boolean {
+  const normalized = kindCode.trim().toLowerCase();
+  return ['facebook', 'instagram', 'tripadvisor', 'tiktok', 'twitter', 'youtube', 'linkedin', 'social']
+    .some((token) => normalized === token || normalized.includes(token));
+}
+
+function channelLogoCode(kindCode: string, kindName: string): string {
+  const source = kindCode.trim() || kindName.trim();
+  if (!source) {
+    return '??';
+  }
+  const parts = source.split(/[^a-z0-9]+/i).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
+
+function parseWorkspaceTagsModule(raw: Record<string, unknown>): ObjectWorkspaceTagsModule {
+  const displayed = readArray(raw.tags).map((record) => {
+    const extra = readRecord(record.extra);
+    const slug = readString(record.slug);
+    const label = readString(record.name, slug);
+    return {
+      tagId: readString(record.id, readString(record.tag_id)),
+      slug,
+      label,
+      colorVariant: normalizeTagColorVariant(readString(record.color, readString(extra.color_variant, 'teal'))),
+      source: normalizeTagSource(readString(extra.source, 'thematic')),
+    };
+  }).filter((item) => item.slug || item.label);
+
+  return {
+    displayed,
+    derived: [],
+    library: [],
+  };
+}
+
+function parseWorkspaceSustainabilityModule(raw: Record<string, unknown>): ObjectWorkspaceSustainabilityModule {
+  const categories = new Map<string, ObjectWorkspaceSustainabilityCategory>();
+  const equivalentLabels = new Map<string, ObjectWorkspaceSustainabilityLabel>();
+
+  for (const row of readArray(raw.sustainability_actions)) {
+    const actionRecord = readRecord(row.action);
+    const categoryRecord = readRecord(actionRecord.category);
+    const categoryCode = readString(categoryRecord.code, 'uncategorized');
+    const categoryId = readString(categoryRecord.id, categoryCode);
+    const actionCode = readString(actionRecord.code);
+    const actionId = readString(actionRecord.id, actionCode);
+
+    if (!categories.has(categoryId)) {
+      categories.set(categoryId, {
+        id: categoryId,
+        code: categoryCode,
+        label: readString(categoryRecord.name, categoryCode),
+        actions: [],
+      });
+    }
+
+    categories.get(categoryId)?.actions.push({
+      id: actionId,
+      code: actionCode,
+      label: readString(actionRecord.label, actionCode),
+      selected: true,
+      note: readString(row.note),
+      documentId: readString(row.document_id),
+    });
+
+    for (const labelRow of readArray(row.associated_labels)) {
+      const labelRecord = readRecord(labelRow);
+      const valueRecord = readRecord(labelRecord.label ?? labelRow);
+      const code = readString(valueRecord.value_code, readString(labelRecord.value_code));
+      const label = readString(valueRecord.value_name, readString(labelRecord.value_name, code));
+      if (code || label) {
+        equivalentLabels.set(`${code}:${label}`, { code, label });
+      }
+    }
+  }
+
+  return {
+    categories: Array.from(categories.values()).sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+    equivalentLabels: Array.from(equivalentLabels.values()).sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+  };
+}
+
+function parseWorkspaceDistributionModule(raw: Record<string, unknown>): ObjectWorkspaceDistributionModule {
+  const operator = pickOperatorActorRecord(raw);
+  const channels: ObjectWorkspaceDistributionChannel[] = [];
+
+  if (operator) {
+    readArray(operator.contacts).forEach((contact, index) => {
+      const kindRecord = readRecord(contact.kind);
+      const kindCode = readString(kindRecord.code);
+      const kindName = readString(kindRecord.name, kindCode);
+      const group = isDistributionSocialKind(kindCode)
+        ? 'social'
+        : isDistributionBookingKind(kindCode)
+          ? 'booking'
+          : null;
+
+      if (!group) {
+        return;
+      }
+
+      const url = readString(contact.value).trim();
+      const extra = readRecord(contact.extra);
+      channels.push({
+        id: readString(contact.id, `channel-${index}`),
+        code: channelLogoCode(kindCode, kindName),
+        name: kindName || kindCode,
+        url: url || '—',
+        syncStatus: readString(extra.sync_status, url ? 'Connecté' : 'Non connecté'),
+        syncTone: url ? 'ok' : 'warn',
+        group,
+      });
+    });
+  }
+
+  return {
+    channels,
+    readonlyReason:
+      "Les canaux sont projetés depuis l'acteur opérateur — le contrat d'écriture actor_channel est différé.",
+  };
+}
+
+function parseWorkspaceProviderModule(
+  raw: Record<string, unknown>,
+  legal: ObjectWorkspaceLegalModule,
+): ObjectWorkspaceProviderModule {
+  const operator = pickOperatorActorRecord(raw);
+  const records = legal.records;
+  const siret = findLegalRecordValue(records, ['siret', 'siren']);
+  const companyName =
+    findLegalRecordValue(records, ['raison', 'sociale', 'company', 'entreprise'])
+    || readString(operator?.display_name);
+
+  const emailContact = operator
+    ? readArray(operator.contacts).find((contact) => readString(readRecord(contact.kind).code).includes('email'))
+    : null;
+  const phoneContact = operator
+    ? readArray(operator.contacts).find((contact) => {
+        const kindCode = readString(readRecord(contact.kind).code).toLowerCase();
+        return kindCode.includes('phone') || kindCode.includes('mobile') || kindCode.includes('tel');
+      })
+    : null;
+
+  return {
+    siret,
+    companyName,
+    sireneVerified: Boolean(siret),
+    legalForm: findLegalRecordValue(records, ['forme', 'juridique', 'legal form']),
+    nafCode: findLegalRecordValue(records, ['naf', 'ape']),
+    consularChamber: findLegalRecordValue(records, ['chambre', 'consulaire', 'cci', 'cma']),
+    cfeOrganization: findLegalRecordValue(records, ['cfe']),
+    directorFullName: operator ? readString(operator.display_name) : findLegalRecordValue(records, ['dirigeant']),
+    directorEmail: emailContact ? readString(emailContact.value) : findLegalRecordValue(records, ['email']),
+    directorPhone: phoneContact ? readString(phoneContact.value) : findLegalRecordValue(records, ['phone', 'telephone']),
+    address: findLegalRecordValue(records, ['adresse', 'address', 'siege']),
+    incorporationDate: findLegalRecordValue(records, ['creation', 'immatriculation']),
+    readonlyReason:
+      "Compléments éditables via les modules Légal et Acteurs — branchement direct différé.",
+  };
+}
+
 export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]): ObjectWorkspaceModules {
   const raw = (detail.raw ?? {}) as Record<string, unknown>;
   const nameTranslations = readTextMap(raw.name_i18n);
@@ -2488,6 +2810,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     ...readArray(raw.org_links),
     ...readArray(raw.parent_objects),
   ].reduce((count, organization) => count + readArray(organization.contacts).length, 0);
+  const legal = parseWorkspaceLegalModule(raw);
   const availableLanguages = collectLanguages({
     langPrefs,
     nameTranslations,
@@ -2569,6 +2892,10 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     providerFollowUp: parseWorkspaceProviderFollowUpModule(raw),
     relationships: parseWorkspaceRelationshipsModule(raw),
     memberships: parseWorkspaceMembershipModule(raw, detail),
-    legal: parseWorkspaceLegalModule(raw),
+    legal,
+    tags: parseWorkspaceTagsModule(raw),
+    sustainability: parseWorkspaceSustainabilityModule(raw),
+    distribution: parseWorkspaceDistributionModule(raw),
+    provider: parseWorkspaceProviderModule(raw, legal),
   };
 }

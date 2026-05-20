@@ -34,6 +34,8 @@ import {
   saveObjectWorkspaceOpenings,
   saveObjectWorkspacePricing,
   saveObjectWorkspaceRooms,
+  saveObjectWorkspaceSustainability,
+  saveObjectWorkspaceTags,
   saveObjectWorkspaceTaxonomy,
 } from '../services/object-workspace';
 import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
@@ -56,6 +58,8 @@ import type {
   ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
   ObjectWorkspaceRoomsModule,
+  ObjectWorkspaceSustainabilityModule,
+  ObjectWorkspaceTagsModule,
   ObjectWorkspaceTaxonomyModule,
 } from '../services/object-workspace-parser';
 
@@ -78,7 +82,9 @@ export type SaveWorkspaceModuleInput =
   | { moduleId: 'itinerary'; value: ObjectWorkspaceItineraryModule }
   | { moduleId: 'openings'; value: ObjectWorkspaceOpeningsModule }
   | { moduleId: 'memberships'; value: ObjectWorkspaceMembershipModule }
-  | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule };
+  | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule }
+  | { moduleId: 'sustainability'; value: ObjectWorkspaceSustainabilityModule }
+  | { moduleId: 'tags'; value: ObjectWorkspaceTagsModule };
 
 function useExplorerFilters() {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
@@ -298,6 +304,14 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
 
       if (input.moduleId === 'legal') {
         return saveObjectWorkspaceLegal(objectId, input.value);
+      }
+
+      if (input.moduleId === 'sustainability') {
+        return saveObjectWorkspaceSustainability(objectId, input.value);
+      }
+
+      if (input.moduleId === 'tags') {
+        return saveObjectWorkspaceTags(objectId, input.value);
       }
 
       return saveObjectWorkspaceDescriptions(objectId, input.value, {

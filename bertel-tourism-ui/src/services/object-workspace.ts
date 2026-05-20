@@ -160,6 +160,42 @@ function toRpcUuid(value: string | null | undefined): string | null {
   return value && isUuid(value) ? value : null;
 }
 
+const OPENING_WEEKDAY_ALIASES: Record<string, string> = {
+  lundi: 'monday',
+  lun: 'monday',
+  monday: 'monday',
+  mon: 'monday',
+  mardi: 'tuesday',
+  mar: 'tuesday',
+  tuesday: 'tuesday',
+  tue: 'tuesday',
+  mercredi: 'wednesday',
+  mer: 'wednesday',
+  wednesday: 'wednesday',
+  wed: 'wednesday',
+  jeudi: 'thursday',
+  jeu: 'thursday',
+  thursday: 'thursday',
+  thu: 'thursday',
+  vendredi: 'friday',
+  ven: 'friday',
+  friday: 'friday',
+  fri: 'friday',
+  samedi: 'saturday',
+  sam: 'saturday',
+  saturday: 'saturday',
+  sat: 'saturday',
+  dimanche: 'sunday',
+  dim: 'sunday',
+  sunday: 'sunday',
+  sun: 'sunday',
+};
+
+function normalizeOpeningWeekdayCode(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  return OPENING_WEEKDAY_ALIASES[normalized] ?? normalized;
+}
+
 async function callObjectWorkspaceRpc(
   functionName: string,
   objectId: string,
@@ -2782,21 +2818,25 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   const apiClient = getApiClient();
 
   let canPrepareProposal = directWrite;
+  let canWriteSafeWorkspaceRpc = directWrite;
   let canPublishObject = directWrite || session.demoMode;
   let canWriteProviderFollowUp = session.demoMode;
   if (!session.demoMode && apiClient) {
     try {
-      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult] = await Promise.allSettled([
+      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult] = await Promise.allSettled([
         apiClient.schema('api').rpc('user_can_write_canonical', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_write_enrichment', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_publish_object', { p_object_id: objectId }),
         apiClient.schema('api').rpc('can_write_object_private_notes', { p_object_id: objectId }),
+        apiClient.schema('api').rpc('is_object_owner', { p_object_id: objectId }),
       ]);
 
       const canonical =
         canonicalResult.status === 'fulfilled' && canonicalResult.value.error == null && canonicalResult.value.data === true;
       const enrichment =
         enrichmentResult.status === 'fulfilled' && enrichmentResult.value.error == null && enrichmentResult.value.data === true;
+      const objectOwner =
+        ownerResult.status === 'fulfilled' && ownerResult.value.error == null && ownerResult.value.data === true;
       canPublishObject =
         directWrite
         || (publishResult.status === 'fulfilled' && publishResult.value.error == null && publishResult.value.data === true);
@@ -2804,8 +2844,10 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
 
       canPrepareProposal = directWrite || canonical || enrichment;
+      canWriteSafeWorkspaceRpc = directWrite || objectOwner;
     } catch {
       canPrepareProposal = directWrite;
+      canWriteSafeWorkspaceRpc = directWrite;
       canPublishObject = directWrite;
       canWriteProviderFollowUp = directWrite;
     }
@@ -2852,23 +2894,23 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     },
     contacts: directOrBlocked(),
     characteristics: {
-      canDirectWrite: session.demoMode,
+      canDirectWrite: canWriteSafeWorkspaceRpc,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: session.demoMode ? null : "Le live actuel n'expose pas encore l'ecriture du module C1.",
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
     },
     distinctions: directOrBlocked(),
     capacityPolicies: {
-      canDirectWrite: session.demoMode,
+      canDirectWrite: canWriteSafeWorkspaceRpc,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: session.demoMode ? null : "Le live actuel n'expose pas encore une sauvegarde complete du module C4.",
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
     },
     pricing: {
-      canDirectWrite: session.demoMode,
+      canDirectWrite: canWriteSafeWorkspaceRpc,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: session.demoMode ? null : "Le live actuel n'expose pas encore une sauvegarde transactionnelle du module C5.",
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
     },
     rooms: directOrBlocked(),
     meetingRooms: directOrBlocked(),
@@ -2882,10 +2924,10 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         : proposalUnavailableReason,
     },
     openings: {
-      canDirectWrite: false,
+      canDirectWrite: canWriteSafeWorkspaceRpc,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: "Le live actuel n'expose pas encore l'ecriture du module C6.",
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture des horaires.",
     },
     providerFollowUp: {
       canDirectWrite: directWrite || canWriteProviderFollowUp,
@@ -3367,6 +3409,61 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
       })),
     })),
   }, 'Impossible d enregistrer les tarifs.');
+}
+
+export async function saveObjectWorkspaceOpenings(objectId: string, input: ObjectWorkspaceOpeningsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc('save_object_openings', objectId, {
+    periods: input.periods.map((period, periodIndex) => {
+      const openTimePeriods = period.weekdays
+        .map((weekday) => {
+          const frames = weekday.slots
+            .map((slot) => ({
+              start_time: toNullableText(slot.start),
+              end_time: toNullableText(slot.end),
+            }))
+            .filter((slot) => slot.start_time || slot.end_time);
+
+          return {
+            closed: false,
+            weekdays: [{ weekday_code: normalizeOpeningWeekdayCode(weekday.code) }],
+            time_frames: frames,
+          };
+        })
+        .filter((timePeriod) => timePeriod.weekdays[0]?.weekday_code);
+      const openCodes = new Set(openTimePeriods.map((timePeriod) => timePeriod.weekdays[0]?.weekday_code));
+      const closedTimePeriods = Array.from(new Set(period.closedDays.map(normalizeOpeningWeekdayCode)))
+        .filter((weekdayCode) => weekdayCode && !openCodes.has(weekdayCode))
+        .map((weekdayCode) => ({
+          closed: true,
+          weekdays: [{ weekday_code: weekdayCode }],
+          time_frames: [],
+        }));
+
+      return {
+        id: toRpcUuid(period.recordId),
+        name: toNullableText(period.label),
+        date_start: period.allYears ? null : toNullableText(period.startDate),
+        date_end: period.allYears ? null : toNullableText(period.endDate),
+        all_years: period.allYears,
+        extra: {
+          workspace_bucket: period.bucket,
+          workspace_order: period.order || String(periodIndex + 1),
+        },
+        schedules: [
+          {
+            schedule_type_code: 'regular',
+            name: 'Horaires',
+            time_periods: [...openTimePeriods, ...closedTimePeriods],
+          },
+        ],
+      };
+    }),
+  }, 'Impossible d enregistrer les horaires.');
 }
 
 function buildCodeIdMap(rows: unknown[]): Map<string, string> {

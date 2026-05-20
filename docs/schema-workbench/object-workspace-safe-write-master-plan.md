@@ -20,15 +20,17 @@ Implemented now:
 - standardized RPC result shape: `success`, `changed_counts`, `skipped_fields`, `warnings`.
 - owner-write RLS policies with `WITH CHECK` for the new safe-write surface.
 - commercial modules now map frontend saves to `api.save_object_commercial` instead of direct multi-table writes.
+- commercial modules are unlocked for users accepted by `api.is_object_owner` or platform direct-write roles after the RPC script was reported applied successfully.
+- openings now have an editable core schedule surface backed by `api.save_object_openings`: periods, date ranges, all-year flag, weekday open/closed state, and time frames.
 - restaurant menu item multi-media support with ordered `mediaIds`.
 - legacy compatibility: first selected media is still written to `object_menu_item.media_id`.
 - parser coverage for legacy `media_id` plus `object_menu_item_media`.
 
 Still locked intentionally:
-- openings until the transactional RPC is applied to the DB, tested, and the edit panel produces DB-first payloads.
+- advanced openings fields until the UI exposes the full DB surface: `source_period_id`, i18n maps, schedule notes, recurrence editing, and `extra`.
 - relationships until object relation and organization link RPCs are applied, tested, and actor consent remains safely separated.
 - itinerary nested data beyond basic fields/practices.
-- commercial modules until live permissions and RPC/RLS tests are verified against the target DB.
+- full commercial rollout until live RPC/RLS smoke tests are captured against the target DB.
 - place-level place CRUD/zones until scope and geometry contracts are verified.
 
 ## Shared Safe Write Pattern

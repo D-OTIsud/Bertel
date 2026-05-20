@@ -31,6 +31,7 @@ import {
   saveObjectWorkspaceMemberships,
   saveObjectWorkspaceMedia,
   saveObjectWorkspaceMenus,
+  saveObjectWorkspaceOpenings,
   saveObjectWorkspacePricing,
   saveObjectWorkspaceRooms,
   saveObjectWorkspaceTaxonomy,
@@ -52,6 +53,7 @@ import type {
   ObjectWorkspaceLegalModule,
   ObjectWorkspaceMediaModule,
   ObjectWorkspaceMenusModule,
+  ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
   ObjectWorkspaceRoomsModule,
   ObjectWorkspaceTaxonomyModule,
@@ -74,6 +76,7 @@ type SaveWorkspaceModuleInput =
   | { moduleId: 'activity'; value: ObjectWorkspaceActivityModule }
   | { moduleId: 'event'; value: ObjectWorkspaceEventModule }
   | { moduleId: 'itinerary'; value: ObjectWorkspaceItineraryModule }
+  | { moduleId: 'openings'; value: ObjectWorkspaceOpeningsModule }
   | { moduleId: 'memberships'; value: ObjectWorkspaceMembershipModule }
   | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule };
 
@@ -283,6 +286,10 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
 
       if (input.moduleId === 'itinerary') {
         return saveObjectWorkspaceItinerary(objectId, input.value);
+      }
+
+      if (input.moduleId === 'openings') {
+        return saveObjectWorkspaceOpenings(objectId, input.value);
       }
 
       if (input.moduleId === 'memberships') {

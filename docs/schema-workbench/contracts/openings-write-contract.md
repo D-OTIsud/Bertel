@@ -8,7 +8,15 @@ The openings module covers opening periods, schedules, weekdays, time periods, a
 
 `api.save_object_openings(p_object_id text, p_payload jsonb)` is defined in `Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql`.
 
-The RPC uses DB column names and covers `periods`, nested `schedules`, `time_periods`, `weekdays`, and `time_frames`. It replaces the submitted opening tree for the object in one transaction. The drawer module remains read-only until this SQL is applied to the target DB, tested under RLS, and the edit panel is upgraded to submit the DB-first payload.
+The RPC uses DB column names and covers `periods`, nested `schedules`, `time_periods`, `weekdays`, and `time_frames`. It replaces the submitted opening tree for the object in one transaction.
+
+After the SQL was reported applied successfully, the drawer module was unlocked for the core schedule surface:
+- opening periods.
+- date range and all-year flag.
+- weekday open/closed state.
+- one or more time frames per open weekday.
+
+Remaining UI gaps are tracked as contract-backed fields, not DB limitations.
 
 ## Editable Fields
 
@@ -22,7 +30,7 @@ The RPC uses DB column names and covers `periods`, nested `schedules`, `time_per
 
 - generated/import source metadata.
 - audit fields.
-- any exceptional closure model not represented by the current C6 tables.
+- `source_period_id`, i18n maps, schedule notes, `extra`, and recurrence editing until the UI exposes those controls.
 
 ## Tables
 
@@ -60,7 +68,7 @@ The current opening tables do not expose persisted ordering columns. Ordering sh
 
 ## Frontend Dirty / Save Behavior
 
-Keep `openings` in `READONLY_MODULES` until this RPC and tests land. The UI should keep disabled inputs and expose the reason through a tooltip, not an inline paragraph.
+`openings` is no longer in `READONLY_MODULES` for users allowed by the safe-write permission gate. Unsupported advanced fields should be explained through concise tooltips and tracked as UI gaps.
 
 ## Tests
 

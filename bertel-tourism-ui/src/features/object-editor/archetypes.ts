@@ -111,3 +111,8 @@ export function getArchetypeMeta(typeCode: string | null | undefined): Archetype
   }
   return TYPE_ARCHETYPES[typeCode.toUpperCase()] ?? null;
 }
+
+/** Like getArchetypeMeta but always resolves — an unknown code falls back to HEB. */
+export function resolveArchetypeMeta(typeCode: string | null | undefined): ArchetypeMeta {
+  return getArchetypeMeta(typeCode) ?? HEB_ARCHETYPE;
+}

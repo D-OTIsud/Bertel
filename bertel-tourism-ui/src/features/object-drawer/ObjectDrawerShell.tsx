@@ -1,4 +1,7 @@
+'use client';
+
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Pencil, Printer, Star, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
@@ -249,6 +252,7 @@ function resolveSaveAction(
 }
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
+  const router = useRouter();
   const [headerFavorite, setHeaderFavorite] = useState(false);
   const { data, isError, error } = useObjectWorkspaceQuery(objectId);
   const saveModuleMutation = useSaveObjectWorkspaceModuleMutation(objectId);
@@ -1176,6 +1180,15 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     setMode(nextMode);
   }
 
+  function openFullPageEditor() {
+    if (!objectId) {
+      return;
+    }
+    setMode('view');
+    onClose();
+    router.push(`/objects/${objectId}/edit`);
+  }
+
   async function handlePublicationToggle(publish: boolean) {
     if (!resolvedData) {
       return;
@@ -1260,7 +1273,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
             <span>Imprimer</span>
           </button>
           {mode === 'view' && canEdit && (
-            <button type="button" className="drawer-header__btn-primary" onClick={() => handleModeToggle('edit')}>
+            <button type="button" className="drawer-header__btn-primary" onClick={openFullPageEditor}>
               <Pencil className="h-4 w-4" strokeWidth={2} />
               Modifier
             </button>

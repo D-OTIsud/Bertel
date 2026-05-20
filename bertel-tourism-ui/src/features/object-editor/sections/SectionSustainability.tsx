@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Chip, ChipSet, Fs, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
@@ -6,32 +7,46 @@ import type {
   ObjectWorkspaceSustainabilityModule,
 } from '../../../services/object-workspace-parser';
 
+function initialExpandedByCategory(
+  categories: ObjectWorkspaceSustainabilityCategory[],
+): Record<string, boolean> {
+  return Object.fromEntries(
+    categories.map((category) => [
+      category.id,
+      category.actions.some((action) => action.selected),
+    ]),
+  );
+}
+
 /**
- * Plan 4 — Section 11 "Démarche durable".
- *
- * Mirrors `docs/Bertel_design_exemple/edit-extensions.jsx → SectionSustainability`.
- * The list of actions is read from `editor.draft.sustainability`. Toggling a
- * chip flips the `selected` flag; the save bar persists via the
- * `save_object_workspace_sustainability` RPC.
- *
- * Architectural note: the action ⇄ category structure is fully driven by the
- * V5 sustainability seeds (see `migration_sustainability_v5.sql`). No business
- * logic about labels lives here — equivalent-label hints stay read-only.
+ * Section 11 — Démarche durable.
+ * Categories and actions come from `ref_sustainability_action_*` (enriched in
+ * `getObjectWorkspaceSustainabilityModule`); labels/descriptions from API i18n.
  */
 export function SectionSustainability({ editor, folded }: SectionProps) {
   const module = editor.draft.sustainability;
-
-  const totalActions = module.categories.reduce((sum, cat) => sum + cat.actions.length, 0);
-  const selectedActions = module.categories.reduce(
-    (sum, cat) => sum + cat.actions.filter((a) => a.selected).length,
-    0,
+  const [expandedByCategory, setExpandedByCategory] = useState<Record<string, boolean>>(() =>
+    initialExpandedByCategory(module.categories),
   );
-  const categoriesWithSelection = module.categories.filter(
-    (cat) => cat.actions.some((a) => a.selected),
-  ).length;
-  // Stub score: 100 * selected / total — replace with the server-side score
-  // once `api.get_object_resource` exposes a sustainability_score field.
+
+  const totalActions = useMemo(
+    () => module.categories.reduce((sum, cat) => sum + cat.actions.length, 0),
+    [module.categories],
+  );
+  const selectedActions = useMemo(
+    () => module.categories.reduce((sum, cat) => sum + cat.actions.filter((a) => a.selected).length, 0),
+    [module.categories],
+  );
+  const categoriesWithSelection = useMemo(
+    () => module.categories.filter((cat) => cat.actions.some((a) => a.selected)).length,
+    [module.categories],
+  );
+  // Stub until api exposes a server-side sustainability_score.
   const bertelScore = totalActions > 0 ? Math.round((100 * selectedActions) / totalActions) : 0;
+
+  function toggleCategory(categoryId: string) {
+    setExpandedByCategory((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  }
 
   function toggleAction(
     category: ObjectWorkspaceSustainabilityCategory,
@@ -61,43 +76,68 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
       folded={folded}
       pill={{ tone: selectedActions > 0 ? 'ok' : 'warn', label: `${selectedActions} action(s)` }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+      <div className="sust-kpi">
         <StatCard label="Actions déclarées" value={String(selectedActions)} suffix={`/ ${totalActions || '—'}`} />
-        <StatCard label="Catégories couvertes" value={String(categoriesWithSelection)} suffix={`/ ${module.categories.length || '—'}`} />
+        <StatCard
+          label="Catégories couvertes"
+          value={String(categoriesWithSelection)}
+          suffix={`/ ${module.categories.length || '—'}`}
+        />
         <StatCard label="Score Bertel" value={String(bertelScore)} suffix="/ 100" />
       </div>
 
       {module.categories.length === 0 && (
-        <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-          Aucune action durable disponible dans le référentiel pour ce profil. Charger les seeds V5
-          (<code>migration_sustainability_v5.sql</code>) pour activer la sélection d'actions.
+        <p className="sust-empty">
+          Aucune action durable disponible dans le référentiel. Vérifier les seeds (
+          <code>migration_sustainability_v5.sql</code>).
         </p>
       )}
 
       {module.categories.map((category, index) => {
         const localSelected = category.actions.filter((a) => a.selected).length;
+        const isOpen = expandedByCategory[category.id] ?? false;
+        const panelId = `sust-cat-${category.id}`;
+
         return (
-          <div key={category.id} style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span className="fs__num" style={{ width: 22, height: 22, fontSize: 9 }}>
-                {(index + 1).toString().padStart(2, '0')}
+          <div key={category.id} className={`sust-cat${isOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="sust-cat__head"
+              onClick={() => toggleCategory(category.id)}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              title={category.description || undefined}
+            >
+              <span className="fs__num sust-cat__num">{(index + 1).toString().padStart(2, '0')}</span>
+              <span className="sust-cat__title">
+                <strong>{category.label}</strong>
+                {category.description ? <small>{category.description}</small> : null}
               </span>
-              <strong style={{ fontFamily: 'var(--font-display)', fontSize: 13 }}>{category.label}</strong>
-              <span className="pill-mini" style={{ marginLeft: 'auto' }}>
+              <span className="pill-mini sust-cat__count">
                 {localSelected} / {category.actions.length}
               </span>
-            </div>
-            <ChipSet>
-              {category.actions.map((action) => (
-                <Chip
-                  key={action.id}
-                  label={action.label}
-                  on={action.selected}
-                  onClick={() => toggleAction(category, action)}
-                  sm
-                />
-              ))}
-            </ChipSet>
+              <span className="sust-cat__chev" aria-hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </span>
+            </button>
+            {isOpen ? (
+              <div id={panelId} className="sust-cat__body">
+                <ChipSet>
+                  {category.actions.map((action) => (
+                    <Chip
+                      key={action.id}
+                      label={action.label}
+                      title={action.description || undefined}
+                      on={action.selected}
+                      onClick={() => toggleAction(category, action)}
+                      sm
+                    />
+                  ))}
+                </ChipSet>
+              </div>
+            ) : null}
           </div>
         );
       })}
@@ -107,7 +147,7 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
           <div className="chip-group__label" style={{ marginTop: 14 }}>
             Équivalence labels (search expansion)
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-3)', margin: '0 0 8px' }}>
+          <p className="sust-equiv-hint">
             Les actions déclarées ci-dessus rendent automatiquement la fiche visible dans les recherches portant sur :
           </p>
           <ChipSet>

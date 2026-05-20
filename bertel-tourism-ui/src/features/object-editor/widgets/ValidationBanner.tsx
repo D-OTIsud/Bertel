@@ -1,11 +1,8 @@
-import type { EditorMode } from '../shell/EditorTopbar';
 import type { Issue } from '../editor-validation';
 
 interface ValidationBannerProps {
   blockers: Issue[];
   warnings: Issue[];
-  typeCode: string;
-  mode: EditorMode;
   onGoToSection: (num: string) => void;
 }
 
@@ -21,7 +18,7 @@ function issueRow(issue: Issue, action: string, onGoToSection: (num: string) => 
   );
 }
 
-export function ValidationBanner({ blockers, warnings, typeCode, mode, onGoToSection }: ValidationBannerProps) {
+export function ValidationBanner({ blockers, warnings, onGoToSection }: ValidationBannerProps) {
   return (
     <div className="val-banner">
       <div className="val-banner__col val-banner__col--block">
@@ -52,21 +49,6 @@ export function ValidationBanner({ blockers, warnings, typeCode, mode, onGoToSec
             )}
           </>
         )}
-      </div>
-      <div className="val-banner__col val-banner__col--gate">
-        <div className="val-banner__gate">
-          <div className="val-banner__gate-num">{blockers.length === 0 ? 'OK' : blockers.length}</div>
-          <div>
-            <strong>
-              {blockers.length === 0
-                ? 'Publication possible'
-                : `${blockers.length} blocage${blockers.length > 1 ? 's' : ''} restant${blockers.length > 1 ? 's' : ''}`}
-            </strong>
-            <small>
-              Mode {mode} · type {typeCode || '—'} · publication via le bouton en haut à droite
-            </small>
-          </div>
-        </div>
       </div>
     </div>
   );

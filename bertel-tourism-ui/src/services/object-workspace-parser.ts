@@ -823,6 +823,7 @@ export interface ObjectWorkspaceSustainabilityAction {
   id: string;
   code: string;
   label: string;
+  description: string;
   selected: boolean;
   note: string;
   documentId: string;
@@ -832,6 +833,7 @@ export interface ObjectWorkspaceSustainabilityCategory {
   id: string;
   code: string;
   label: string;
+  description: string;
   actions: ObjectWorkspaceSustainabilityAction[];
 }
 
@@ -2670,6 +2672,7 @@ function parseWorkspaceSustainabilityModule(raw: Record<string, unknown>): Objec
         id: categoryId,
         code: categoryCode,
         label: readString(categoryRecord.name, categoryCode),
+        description: readString(categoryRecord.description),
         actions: [],
       });
     }
@@ -2678,6 +2681,7 @@ function parseWorkspaceSustainabilityModule(raw: Record<string, unknown>): Objec
       id: actionId,
       code: actionCode,
       label: readString(actionRecord.label, actionCode),
+      description: readString(actionRecord.description),
       selected: true,
       note: readString(row.note),
       documentId: readString(row.document_id),

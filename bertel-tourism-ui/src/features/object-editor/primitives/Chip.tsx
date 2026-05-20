@@ -4,15 +4,18 @@ interface ChipProps {
   label: string;
   on?: boolean;
   sm?: boolean;
+  /** Native tooltip — used for ref action descriptions from the database. */
+  title?: string;
   onClick?: () => void;
 }
 
 /** A chip is a toggle when `onClick` is given, otherwise a static display tag. */
-export function Chip({ label, on, sm, onClick }: ChipProps) {
+export function Chip({ label, on, sm, title, onClick }: ChipProps) {
   return (
     <button
       type="button"
       className={`chip${on ? ' is-on' : ''}${sm ? ' size-sm' : ''}`}
+      title={title}
       onClick={onClick}
       disabled={!onClick}
     >

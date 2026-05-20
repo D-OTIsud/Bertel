@@ -1,18 +1,8 @@
 import { ChevronLeft, Pencil } from 'lucide-react';
 import type { EditorMode } from './EditorTopbar.types';
+import { buildEditTopSaveLabel } from './format-last-object-update';
 
 export type { EditorMode } from './EditorTopbar.types';
-
-function formatLastBaseSync(iso: string | null | undefined): string {
-  if (!iso) return 'Synchronisé avec la base';
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return 'Synchronisé avec la base';
-  const diffSec = Math.floor((Date.now() - then) / 1000);
-  if (diffSec < 60) return 'Base à jour · à l\'instant';
-  if (diffSec < 3600) return `Base à jour · il y a ${Math.floor(diffSec / 60)} min`;
-  if (diffSec < 86400) return `Base à jour · il y a ${Math.floor(diffSec / 3600)} h`;
-  return `Dernière sync base · ${new Date(iso).toLocaleDateString('fr-FR')}`;
-}
 
 interface EditorTopbarProps {
   objectName: string;
@@ -22,6 +12,7 @@ interface EditorTopbarProps {
   mode: EditorMode;
   dirtyCount: number;
   lastSavedAt?: string | null;
+  lastUpdatedSource?: string | null;
   blockerCount?: number;
   warningCount?: number;
   publishing?: boolean;
@@ -42,6 +33,7 @@ export function EditorTopbar({
   mode,
   dirtyCount,
   lastSavedAt,
+  lastUpdatedSource,
   blockerCount = 0,
   warningCount = 0,
   publishing = false,
@@ -53,6 +45,14 @@ export function EditorTopbar({
   onCancel,
   onPublish,
 }: EditorTopbarProps) {
+  const saveLabel = buildEditTopSaveLabel({ statusMessage, dirtyCount, lastSavedAt });
+  const saveTitle =
+    lastSavedAt && lastUpdatedSource
+      ? `Dernière mise à jour enregistrée (${lastUpdatedSource})`
+      : lastSavedAt
+        ? 'Dernière mise à jour enregistrée en base'
+        : undefined;
+
   return (
     <div className="edit-top">
       <div className="edit-top__left">
@@ -92,13 +92,12 @@ export function EditorTopbar({
             Complet
           </button>
         </div>
-        <span className={`edit-top__save${dirtyCount > 0 ? ' is-dirty' : ''}`}>
+        <span
+          className={`edit-top__save${dirtyCount > 0 ? ' is-dirty' : ''}`}
+          title={saveTitle}
+        >
           {dirtyCount === 0 && !statusMessage && <span className="pulse" aria-hidden />}
-          {statusMessage
-            ? statusMessage
-            : dirtyCount > 0
-              ? `${dirtyCount} modif. locale${dirtyCount > 1 ? 's' : ''} · Publier pour enregistrer`
-              : formatLastBaseSync(lastSavedAt)}
+          {saveLabel}
         </span>
         <span className={`edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`}>
           {blockerCount > 0

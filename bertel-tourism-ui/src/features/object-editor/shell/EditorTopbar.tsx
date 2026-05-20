@@ -57,7 +57,6 @@ export function EditorTopbar({
         </button>
         <div>
           <div className="edit-top__crumbs">
-            Explorer <span className="sep">›</span>
             <strong>{archetypeCodeName}</strong> <span className="sep">›</span>
             {objectName} <span className="sep">›</span>
             <strong style={{ color: 'var(--accent-deep)' }}>Modifier</strong>

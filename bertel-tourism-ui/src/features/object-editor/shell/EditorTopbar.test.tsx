@@ -15,9 +15,13 @@ const baseProps = {
 };
 
 describe('EditorTopbar', () => {
-  it('renders the object name and type code', () => {
+  it('renders breadcrumbs without Explorer and shows type code', () => {
     render(<EditorTopbar {...baseProps} />);
-    expect(screen.getByText('Domaine du Bel Air')).toBeInTheDocument();
+    const crumbs = document.querySelector('.edit-top__crumbs');
+    expect(crumbs?.textContent).toMatch(/Hotel/);
+    expect(crumbs?.textContent).toMatch(/Domaine du Bel Air/);
+    expect(crumbs?.textContent).toMatch(/Modifier/);
+    expect(crumbs?.textContent).not.toMatch(/Explorer/);
     expect(screen.getByText('HOT')).toBeInTheDocument();
   });
 

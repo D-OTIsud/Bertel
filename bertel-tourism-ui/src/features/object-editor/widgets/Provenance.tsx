@@ -5,6 +5,10 @@ interface ProvenanceProps {
   who?: string;
   when?: string;
   locked?: string;
+  /** Pending field review: who submitted the change + validate action. */
+  pendingReview?: boolean;
+  onApprove?: () => void;
+  approving?: boolean;
 }
 
 const SOURCE_META: Record<ProvenanceSource, { initial: string; color: string }> = {
@@ -18,24 +22,38 @@ const SOURCE_META: Record<ProvenanceSource, { initial: string; color: string }> 
   Importé: { initial: 'I', color: 'var(--ink-3)' },
 };
 
-export function Provenance({ source, who, when, locked }: ProvenanceProps) {
+export function Provenance({ source, who, when, locked, pendingReview, onApprove, approving }: ProvenanceProps) {
   const meta = SOURCE_META[source];
 
   return (
-    <div className="prov">
+    <div className={`prov${pendingReview ? ' prov--pending-review' : ''}`}>
       <span className="prov__src" style={{ background: meta.color }}>
         {meta.initial}
       </span>
       <span className="prov__lbl">
-        <strong>{source}</strong>
-        {who && <> · {who}</>}
-        {when && <> · <span className="prov__when">{when}</span></>}
+        {pendingReview ? (
+          <>
+            <strong>À valider</strong>
+            {who && <> · {who}</>}
+          </>
+        ) : (
+          <>
+            <strong>{source}</strong>
+            {who && <> · {who}</>}
+            {when && <> · <span className="prov__when">{when}</span></>}
+          </>
+        )}
       </span>
-      {locked && (
+      {locked && !pendingReview && (
         <span className="prov__lock" title={`Champ verrouillé par ${locked}`}>
           Verrouillé par {locked}
         </span>
       )}
+      {pendingReview && onApprove ? (
+        <button type="button" className="prov__approve btn sm" onClick={onApprove} disabled={approving}>
+          {approving ? 'Validation…' : 'Valider'}
+        </button>
+      ) : null}
     </div>
   );
 }

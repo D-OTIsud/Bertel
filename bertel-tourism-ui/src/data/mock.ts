@@ -341,6 +341,16 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
 
 export const mockPendingChanges: PendingChangeItem[] = [
   {
+    id: 'chg-demo-lieudit',
+    objectId: 'HOTRUN0000000001',
+    objectName: 'Hotel Basalte & Lagon',
+    author: 'Jean Martin · Prestataire',
+    field: 'lieu_dit',
+    before: 'Bras-Long',
+    after: 'Bras Long',
+    submittedAt: '2026-03-12 14:30',
+  },
+  {
     id: 'chg-1',
     objectName: 'Hotel Basalte & Lagon',
     author: 'Jean Martin',

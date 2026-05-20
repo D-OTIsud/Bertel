@@ -29,25 +29,42 @@ export function scheduleRowsFromPeriod(period: ObjectWorkspaceOpeningPeriod | un
   });
 }
 
-export function applyRowsToFirstPeriod(openings: ObjectWorkspaceOpeningsModule, rows: ScheduleRow[]): ObjectWorkspaceOpeningsModule {
-  const first = openings.periods[0] ?? {
+function emptyPeriod(index: number): ObjectWorkspaceOpeningPeriod {
+  return {
     recordId: null,
-    order: '1',
+    order: String(index + 1),
     bucket: 'current',
-    label: 'Période standard',
+    label: '',
     startDate: '',
     endDate: '',
     allYears: true,
     closedDays: [],
     weekdays: [],
   };
-  const nextFirst: ObjectWorkspaceOpeningPeriod = {
-    ...first,
+}
+
+function applyRowsToPeriod(period: ObjectWorkspaceOpeningPeriod, rows: ScheduleRow[]): ObjectWorkspaceOpeningPeriod {
+  return {
+    ...period,
     weekdays: rows.map((row) => ({
       code: row.code,
       label: row.label,
       slots: row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot)),
     })),
   };
-  return { ...openings, periods: [nextFirst, ...openings.periods.slice(1)] };
+}
+
+export function applyRowsToPeriodAt(
+  openings: ObjectWorkspaceOpeningsModule,
+  periodIndex: number,
+  rows: ScheduleRow[],
+): ObjectWorkspaceOpeningsModule {
+  const periods = [...openings.periods];
+  const base = periods[periodIndex] ?? emptyPeriod(periodIndex);
+  periods[periodIndex] = applyRowsToPeriod(base, rows);
+  return { ...openings, periods };
+}
+
+export function applyRowsToFirstPeriod(openings: ObjectWorkspaceOpeningsModule, rows: ScheduleRow[]): ObjectWorkspaceOpeningsModule {
+  return applyRowsToPeriodAt(openings, 0, rows);
 }

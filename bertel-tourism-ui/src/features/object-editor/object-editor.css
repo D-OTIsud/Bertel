@@ -8,24 +8,32 @@
    global styles.css; only the tokens missing there are declared here.
    ============================================================ */
 
+/* ---------- Edit card shell (embedded in workspace) ---------- */
+.edit-flat.object-editor {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: var(--shadow-m);
+  border: 1px solid var(--line-soft);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
 .object-editor {
   /* Tokens absent from the global stylesheet. */
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
-  --green-soft: rgba(44, 163, 111, 0.14);
   --font-display: 'Sora', 'Manrope', system-ui, sans-serif;
   --font-sans: 'Manrope', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
-
-  position: relative;
-  width: 100%;
-  min-height: 100%;
-  background: var(--bg-tint, #f4f1ea);
-  display: flex;
-  flex-direction: column;
-  color: var(--ink);
-  font-family: var(--font-sans);
 }
 
 /* ---------- Sticky top action bar ---------- */
@@ -53,6 +61,15 @@
   font-weight: 700; font-size: 22px;
   letter-spacing: -0.01em; color: var(--ink);
 }
+.object-editor .edit-top__title .pen {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: 6px; color: var(--ink-4);
+}
+.object-editor .edit-top__title .pen:hover:not(:disabled) {
+  background: var(--surface-2); color: var(--ink-2);
+}
+.object-editor .edit-top__title .pen:disabled { opacity: 0.45; cursor: not-allowed; }
 .object-editor .edit-top__code {
   font-family: var(--font-mono);
   font-size: 10.5px; font-weight: 700;
@@ -60,13 +77,30 @@
   padding: 2px 8px; border-radius: 6px;
   background: var(--accent-tint); color: var(--accent-deep);
 }
+.object-editor .edit-top__ref {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  letter-spacing: 0.04em;
+}
 .object-editor .edit-top__right { display: flex; align-items: center; gap: 8px; }
 .object-editor .edit-top__save {
   display: inline-flex; align-items: center; gap: 6px;
   height: 28px; padding: 0 10px;
   border-radius: 999px;
-  background: var(--surface-2); color: var(--ink-3);
+  background: var(--green-soft);
+  color: #1a6b48;
   font-size: 11.5px; font-weight: 600;
+}
+.object-editor .edit-top__save.is-dirty {
+  background: rgba(214, 147, 58, 0.14);
+  color: #8a5c1d;
+}
+.object-editor .edit-top__save .pulse {
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  flex: none;
 }
 .object-editor .edit-top__validation {
   display: inline-flex; align-items: center; gap: 6px;
@@ -103,20 +137,34 @@
   color: var(--ink-3);
 }
 
-/* ---------- Body grid ---------- */
+/* ---------- Body grid (split-pane: each column scrolls independently) ---------- */
 .object-editor .edit-body {
-  flex: 1; min-height: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 222px 1fr 296px;
+  grid-template-columns: 222px minmax(0, 1fr) 296px;
   background: var(--bg-tint);
 }
 
 /* ---------- Left section nav ---------- */
 .object-editor .edit-nav {
+  min-height: 0;
   border-right: 1px solid var(--line-soft);
   background: var(--bg-tint);
   padding: 16px 14px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.object-editor .edit-nav__root-title {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ink-4);
+  padding: 0 6px 10px;
+  margin-bottom: 4px;
 }
 .object-editor .edit-nav__title {
   font-family: var(--font-display);
@@ -157,20 +205,32 @@
 .object-editor .edit-nav__dot.ok { background: var(--green); }
 .object-editor .edit-nav__dot.warn { background: var(--warn); }
 .object-editor .edit-nav__dot.req { background: var(--red); }
-.object-editor .edit-nav__pct {
+.object-editor .edit-nav__pct,
+.object-editor .edit-nav__stat {
   font-family: var(--font-mono);
   font-size: 9.5px;
+  font-weight: 700;
   color: var(--ink-4);
-  background: var(--surface-2);
-  border-radius: 5px;
-  padding: 2px 5px;
+  letter-spacing: 0.03em;
+}
+.object-editor .edit-nav__stat.warn { color: var(--warn); }
+.object-editor .edit-nav__stat.req { color: var(--red); }
+.object-editor .edit-nav__stat.ok { color: var(--green); }
+.object-editor .edit-nav__tools .edit-nav__item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.object-editor .edit-nav__tools .edit-nav__item--danger .label {
+  color: var(--red);
 }
 
 /* ---------- Main editor column ---------- */
 .object-editor .edit-main {
+  min-height: 0;
   overflow-y: auto;
   padding: 16px 24px 32px;
   background: var(--bg-tint);
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ---------- Section card ---------- */
@@ -221,6 +281,26 @@
 .object-editor .fs-pill.ok { background: var(--green-soft); color: #1a6b48; }
 .object-editor .fs-pill.warn { background: rgba(214, 147, 58, 0.16); color: #8a5c1d; }
 .object-editor .fs-pill.req { background: rgba(200, 92, 72, 0.14); color: #93392a; }
+
+/* Mode rapide — compact folded section headers */
+.object-editor .fs--rapide-folded {
+  background: var(--bg-tint);
+  cursor: pointer;
+}
+.object-editor .fs--rapide-folded .fs__head {
+  border-bottom: 0;
+  padding: 8px 18px;
+}
+.object-editor .fs--rapide-folded .fs__head h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.object-editor .fs--rapide-folded .fs__head h3 small {
+  display: none;
+}
+.object-editor .fs--rapide-folded:hover {
+  background: var(--surface-2);
+}
 
 /* ---------- Field primitives ---------- */
 .object-editor .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -439,11 +519,19 @@
 
 /* Right rail */
 .object-editor .edit-side {
+  min-height: 0;
   border-left: 1px solid var(--line-soft);
   background: var(--bg-tint);
   padding: 16px;
   overflow-y: auto;
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.object-editor .savebar,
+.object-editor .edit-footer {
+  flex: none;
 }
 .object-editor .edit-side .card {
   background: var(--surface);
@@ -483,6 +571,18 @@
   font-family: var(--font-mono);
   font-size: 10.5px; padding: 1px 6px;
   background: var(--surface-2); border-radius: 5px; color: var(--ink-2);
+}
+.object-editor .edit-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .rep-row__handle {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--line-soft);
+  cursor: grab;
 }
 .object-editor .savebar {
   position: sticky; bottom: 0;
@@ -1390,6 +1490,288 @@
   margin-top: 1px;
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
+}
+
+/* ---------- Opening periods (sections 14) ---------- */
+.object-editor .op {
+  --op-open: var(--green);
+  --op-open-soft: var(--green-soft);
+  --op-closed: var(--red);
+  --op-closed-soft: rgba(200, 92, 72, 0.10);
+  --op-high: #176b6a;
+  --op-high-soft: #d6e7e6;
+  --op-low: #c08a3e;
+  --op-low-soft: #f5e8cf;
+  --op-shut: #a8a39a;
+  --op-shut-soft: #ece8df;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.object-editor .op__more {
+  font-size: 12px;
+  color: var(--teal);
+  font-weight: 600;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.object-editor .opB__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.object-editor .opB__status { display: flex; flex-direction: column; gap: 6px; }
+.object-editor .opB__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  background: var(--op-open-soft);
+  color: #1a6b48;
+  font-size: 12px;
+  font-weight: 700;
+}
+.object-editor .opB__pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--op-open);
+}
+.object-editor .opB__until { font-size: 13px; color: var(--ink-2); }
+.object-editor .opB__legend { display: flex; gap: 12px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
+.object-editor .opB__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.object-editor .opB__legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.object-editor .opB__ribbon {
+  position: relative;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--op-shut-soft);
+}
+.object-editor .opB__seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  border: 0;
+  border-right: 2px solid var(--surface);
+  cursor: pointer;
+  padding: 0;
+}
+.object-editor .opB__seg.high { background: var(--op-high); }
+.object-editor .opB__seg.low { background: var(--op-low); }
+.object-editor .opB__seg.shut { background: var(--op-shut); }
+.object-editor .opB__seg.standard { background: var(--op-low); }
+.object-editor .opB__seg.is-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  z-index: 2;
+}
+.object-editor .opB__now-mark {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--orange);
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+.object-editor .opB__scale {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.object-editor .opB__scale span { text-align: center; }
+.object-editor .opB__week-shut {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-style: italic;
+  padding: 8px 0;
+}
+.object-editor .opB__detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .opB__detail-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-4);
+}
+.object-editor .opB__detail-name {
+  margin: 4px 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .opB__detail-name i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.object-editor .opB__now-chip {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--teal);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.object-editor .opB__detail-meta { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.object-editor .opC__card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.object-editor .opC__card.is-now {
+  border-color: rgba(23, 107, 106, 0.35);
+  box-shadow: 0 0 0 3px rgba(23, 107, 106, 0.08);
+}
+.object-editor .opC__card-head {
+  display: grid;
+  grid-template-columns: 4px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px 14px 0;
+  cursor: pointer;
+}
+.object-editor .opC__card-stripe { align-self: stretch; background: var(--op-high); }
+.object-editor .opC__card.low .opC__card-stripe { background: var(--op-low); }
+.object-editor .opC__card.shut .opC__card-stripe { background: var(--op-shut); }
+.object-editor .opC__card-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .opC__card-now {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--teal);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.object-editor .opC__card-range { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.object-editor .opC__card-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.object-editor .opC__chev {
+  border: 0;
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+  padding: 4px;
+}
+.object-editor .opC__card.is-open .opC__chev { transform: rotate(180deg); }
+.object-editor .opC__card-body {
+  padding: 0 16px 16px 18px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .opC__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+.object-editor .opC__week-cell {
+  background: var(--bg-tint);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+}
+.object-editor .opC__week-cell.closed {
+  color: var(--ink-4);
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 4px, var(--bg-tint) 4px 8px);
+}
+.object-editor .opC__week-cell.is-today {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+  background: var(--surface);
+}
+.object-editor .opC__week-cell .d {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+.object-editor .opC__week-cell .h {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.object-editor .opC__excep-card {
+  background: var(--bg-tint);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.object-editor .opC__excep-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.object-editor .opC__excep-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+.object-editor .opC__excep-list { display: flex; flex-direction: column; gap: 6px; }
+.object-editor .opC__excep-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  font-size: 12.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .opC__excep-row:last-child { border-bottom: 0; }
+.object-editor .opC__excep-row .date { font-family: var(--font-mono); color: var(--ink-2); }
+.object-editor .opC__excep-row .status.closed {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--op-closed-soft);
+  color: var(--red);
 }
 
 @media (max-width: 1120px) {

@@ -10,7 +10,12 @@ import { useObjectEditorState } from './useObjectEditorState';
 import { useEditorSave } from './useEditorSave';
 import { makeSections, type SectionItem } from './section-config';
 import { MODULE_KEY_MAP } from './editor-state';
-import { computeOverallCompletion, computeSectionCompletions, type SectionCompletion } from './editor-completion';
+import {
+  computeNavHint,
+  computeOverallCompletion,
+  computeSectionCompletions,
+  type SectionCompletion,
+} from './editor-completion';
 import { validateForPublication, type Issue } from './editor-validation';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
@@ -44,22 +49,28 @@ function flattenSectionItems(groups: ReturnType<typeof makeSections>): SectionIt
 function sectionStateFrom(
   completions: SectionCompletion[],
   validation: { blockers: Issue[]; warnings: Issue[] },
+  draft: ObjectWorkspaceModules,
 ): Record<string, EditorNavSectionState> {
   const blockerSections = new Set(validation.blockers.map((issue) => issue.section));
   const warningSections = new Set(validation.warnings.map((issue) => issue.section));
 
   return Object.fromEntries(
-    completions.map((completion) => [
-      completion.num,
-      {
-        pct: completion.pct,
-        status: blockerSections.has(completion.num)
-          ? 'req'
-          : warningSections.has(completion.num)
-            ? 'warn'
-            : completion.stat,
-      },
-    ]),
+    completions.map((completion) => {
+      const status = blockerSections.has(completion.num)
+        ? 'req'
+        : warningSections.has(completion.num)
+          ? 'warn'
+          : completion.stat;
+      const hint = computeNavHint(completion.num, draft, completion.pct);
+      return [
+        completion.num,
+        {
+          pct: completion.pct,
+          status,
+          hint: hint || (status === 'ok' && completion.pct >= 100 ? '' : `${completion.pct}%`),
+        },
+      ];
+    }),
   );
 }
 
@@ -131,8 +142,8 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     [editor.draft, meta.archetype, resource.permissions],
   );
   const navSectionState = useMemo(
-    () => sectionStateFrom(sectionCompletions, validation),
-    [sectionCompletions, validation],
+    () => sectionStateFrom(sectionCompletions, validation, editor.draft),
+    [sectionCompletions, validation, editor.draft],
   );
   const validationIssues = useMemo(
     () => [...validation.blockers, ...validation.warnings],
@@ -211,14 +222,19 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     router.push('/explorer');
   }
 
+  const refId = objectId.length > 12 ? objectId.slice(0, 12) : objectId;
+  const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
+
   return (
-    <div className={`object-editor ${meta.accent}`}>
+    <div className={`edit-flat object-editor ${meta.accent}`}>
       <EditorTopbar
         objectName={resource.name}
         typeCode={resource.type ?? ''}
         archetypeCodeName={meta.codeName}
+        refId={refId}
         mode={mode}
         dirtyCount={dirtyCount}
+        lastSavedAt={lastSavedAt}
         blockerCount={validation.blockers.length}
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
@@ -267,7 +283,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         onSave={() => void handleSave()}
         statusMessage={statusMessage}
       />
-      <EditorFooter onPublish={() => void handlePublish()} />
+      <EditorFooter onPreview={exitToExplorer} onPublish={() => void handlePublish()} />
     </div>
   );
 }

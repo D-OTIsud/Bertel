@@ -114,7 +114,27 @@ export function SectionTags({ editor, folded }: SectionProps) {
               Aucun tag affiché. Sélectionner un tag dans la bibliothèque pour l'ajouter ici.
             </p>
           ) : (
-            <div className="repeater">
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '14px 1fr 150px 130px auto',
+                  gap: 6,
+                  padding: '6px 12px',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'var(--ink-4)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                <span />
+                <span>Libellé affiché</span>
+                <span>Variante couleur</span>
+                <span>Source</span>
+                <span />
+              </div>
+              <div className="repeater">
               {displayed.map((tag, index) => (
                 <div
                   key={`${tag.slug}-${index}`}
@@ -160,7 +180,8 @@ export function SectionTags({ editor, folded }: SectionProps) {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
 

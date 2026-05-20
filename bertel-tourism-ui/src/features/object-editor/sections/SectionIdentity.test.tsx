@@ -16,7 +16,7 @@ function modules(): ObjectWorkspaceModules {
 describe('SectionIdentity', () => {
   it('renders the object name into the controlled field', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules()));
-    render(<SectionIdentity editor={result.current} permissions={perms} />);
+    render(<SectionIdentity editor={result.current} permissions={perms} objectId="o1" />);
     expect(screen.getByDisplayValue('Domaine du Bel Air')).toBeInTheDocument();
   });
 });

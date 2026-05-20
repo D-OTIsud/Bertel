@@ -116,3 +116,13 @@ export function getArchetypeMeta(typeCode: string | null | undefined): Archetype
 export function resolveArchetypeMeta(typeCode: string | null | undefined): ArchetypeMeta {
   return getArchetypeMeta(typeCode) ?? HEB_ARCHETYPE;
 }
+
+/** Resolve ribbon/meta from archetype bucket (editor sections). */
+export const ARCHETYPE_META: Record<ArchetypeCode, ArchetypeMeta> = {
+  HEB: HEB_ARCHETYPE,
+  RES: RES_ARCHETYPE,
+  ASC: ASC_ARCHETYPE,
+  ITI: ITI_ARCHETYPE,
+  VIS: VIS_ARCHETYPE,
+  SRV: SRV_ARCHETYPE,
+};

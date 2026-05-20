@@ -2,8 +2,8 @@ import { Fs, Repeater, Input, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceContactItem } from '../../../services/object-workspace-parser';
 
-/** Section 04 — contact channels, wired to the contacts workspace module. */
-export function SectionContacts({ editor }: SectionProps) {
+/** Section 04 — contact channels (design: edit-primitives repeater rows). */
+export function SectionContacts({ editor, folded }: SectionProps) {
   const contacts = editor.draft.contacts;
 
   function updateItem(id: string, patch: Partial<ObjectWorkspaceContactItem>) {
@@ -44,15 +44,16 @@ export function SectionContacts({ editor }: SectionProps) {
   }
 
   return (
-    <Fs num="04" title="Contacts" sub="Téléphones, e-mail, web">
+    <Fs num="04" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
       <Repeater
         items={contacts.objectItems}
         getKey={(it) => it.id}
-        columns="140px 1fr auto"
+        columns="14px 120px 1fr auto auto"
         addLabel="Ajouter un canal de contact"
         onAdd={addItem}
         renderRow={(it) => (
           <>
+            <span className="rep-row__handle" aria-hidden />
             <Select
               value={it.kindCode}
               options={contacts.kindOptions.map((o) => ({ v: o.code, l: o.label }))}
@@ -65,9 +66,10 @@ export function SectionContacts({ editor }: SectionProps) {
                 });
               }}
             />
-            <Input value={it.value} onChange={(v) => updateItem(it.id, { value: v })} />
-            <button type="button" className="del" onClick={() => removeItem(it.id)}>
-              Supprimer
+            <Input value={it.value} onChange={(v) => updateItem(it.id, { value: v })} mono={it.kindCode.includes('phone')} />
+            <span className="pill-mini">{it.isPublic ? 'Public' : 'Interne'}</span>
+            <button type="button" className="del" onClick={() => removeItem(it.id)} aria-label="Supprimer">
+              ×
             </button>
           </>
         )}

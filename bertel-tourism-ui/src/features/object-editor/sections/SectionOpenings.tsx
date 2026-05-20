@@ -1,6 +1,7 @@
-import { Fs, Input, Repeater, Select, Toggle } from '../primitives';
+import { Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
+import { OpeningPeriodsEditor } from './OpeningPeriodsEditor';
 
 const WEEKDAYS = [
   ['monday', 'Lundi'],
@@ -26,11 +27,6 @@ function createPeriod(index: number): ObjectWorkspaceOpeningPeriod {
   };
 }
 
-function pattern(period: ObjectWorkspaceOpeningPeriod) {
-  const open = period.weekdays.filter((day) => day.slots.length > 0).map((day) => day.label.slice(0, 3));
-  return open.length ? open.join(', ') : 'Fermé / non renseigné';
-}
-
 export function SectionOpenings({ editor, folded }: SectionProps) {
   const openings = editor.draft.openings;
 
@@ -38,28 +34,18 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
     editor.replaceModule('openings', { ...openings, periods });
   }
 
-  function update(index: number, patch: Partial<ObjectWorkspaceOpeningPeriod>) {
-    replace(openings.periods.map((period, periodIndex) => periodIndex === index ? { ...period, ...patch } : period));
-  }
-
   return (
-    <Fs num="14" title="Périodes d'ouverture" sub="Saisons, dates de validité et jours fermés" folded={folded} pill={{ tone: 'ok', label: `${openings.periods.length} période(s)` }}>
-      <Repeater
-        items={openings.periods}
-        getKey={(period, index) => `${period.recordId ?? 'period'}-${index}`}
-        columns="1.2fr 126px 126px 120px 1fr auto"
-        addLabel="Ajouter une période"
-        onAdd={() => replace([...openings.periods, createPeriod(openings.periods.length)])}
-        renderRow={(period, index) => (
-          <>
-            <Input value={period.label} placeholder="Nom de période" onChange={(label) => update(index, { label })} />
-            <Input type="date" value={period.startDate} onChange={(startDate) => update(index, { startDate })} />
-            <Input type="date" value={period.endDate} onChange={(endDate) => update(index, { endDate })} />
-            <Select value={period.bucket} options={[{ v: 'current', l: 'Courante' }, { v: 'next-year', l: 'N+1' }, { v: 'undated', l: 'Sans date' }]} onChange={(bucket) => update(index, { bucket: bucket as ObjectWorkspaceOpeningPeriod['bucket'] })} />
-            <Input value={period.closedDays.join(', ')} placeholder={pattern(period)} onChange={(value) => update(index, { closedDays: value.split(',').map((entry) => entry.trim()).filter(Boolean) })} />
-            <Toggle label="Toute l’année" on={period.allYears} onChange={(allYears) => update(index, { allYears })} />
-          </>
-        )}
+    <Fs
+      num="14"
+      title="Périodes d'ouverture"
+      sub="object_opening — saisons, exceptions, jours fériés · horaires par jour"
+      folded={folded}
+      pill={{ tone: 'ok', label: `${openings.periods.length} période(s)` }}
+    >
+      <OpeningPeriodsEditor
+        periods={openings.periods}
+        onPeriodsChange={replace}
+        onAddPeriod={() => replace([...openings.periods, createPeriod(openings.periods.length)])}
       />
     </Fs>
   );

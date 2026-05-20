@@ -16,7 +16,7 @@ describe('section registry', () => {
     render(
       <>
         {getRegisteredSections('HEB').map(({ num, Component }) => (
-          <Component key={num} editor={result.current} permissions={allowAll} archetype="HEB" />
+          <Component key={num} editor={result.current} permissions={allowAll} archetype="HEB" objectId="o1" />
         ))}
       </>,
     );

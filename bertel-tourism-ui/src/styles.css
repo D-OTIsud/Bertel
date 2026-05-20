@@ -76,6 +76,11 @@
   --brand-green-soft: rgba(44, 163, 111, 0.14);
   --brand-red: #c85c48;
   --brand-warn: #d6933a;
+  /* Aliases used by object-editor.css (design prototype tokens) */
+  --green: var(--brand-green);
+  --green-soft: var(--brand-green-soft);
+  --warn: var(--brand-warn);
+  --red: var(--brand-red);
   --shadow-s: 0 1px 0 rgba(24, 49, 59, 0.04), 0 6px 16px -8px rgba(24, 49, 59, 0.10);
   --shadow-m: 0 1px 0 rgba(24, 49, 59, 0.04), 0 14px 30px -16px rgba(24, 49, 59, 0.18);
   --shadow-l: 0 24px 60px -20px rgba(24, 49, 59, 0.30);
@@ -2319,6 +2324,65 @@ a {
   --accent: #a45330;
   --accent-deep: #7a3b20;
   --accent-tint: rgba(164, 83, 48, 0.10);
+}
+
+/* ─── Full-page object editor accents (same palette as detail view) ─────── */
+
+.object-editor {
+  --accent: var(--theme-primary);
+  --accent-deep: #0d4f4e;
+  --accent-tint: var(--teal-tint);
+}
+
+.object-editor.acc-teal {
+  --accent: #176b6a;
+  --accent-deep: #0d4f4e;
+  --accent-tint: rgba(23, 107, 106, 0.08);
+}
+
+.object-editor.acc-orange {
+  --accent: #c96d3b;
+  --accent-deep: #93501f;
+  --accent-tint: rgba(201, 109, 59, 0.10);
+}
+
+.object-editor.acc-blue {
+  --accent: #1e7491;
+  --accent-deep: #0e5872;
+  --accent-tint: rgba(30, 116, 145, 0.10);
+}
+
+.object-editor.acc-green {
+  --accent: #2a7a45;
+  --accent-deep: #1a5a30;
+  --accent-tint: rgba(42, 122, 69, 0.10);
+}
+
+.object-editor.acc-plum {
+  --accent: #6c4f8a;
+  --accent-deep: #4d3866;
+  --accent-tint: rgba(108, 79, 138, 0.10);
+}
+
+.object-editor.acc-rust {
+  --accent: #a45330;
+  --accent-deep: #7a3b20;
+  --accent-tint: rgba(164, 83, 48, 0.10);
+}
+
+/* Object edit route — bounded height, no workspace-level scroll */
+.workspace.workspace--object-edit {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.workspace.workspace--object-edit > .edit-flat {
+  flex: 1;
+  min-height: 0;
 }
 
 .detail-type-ribbon {

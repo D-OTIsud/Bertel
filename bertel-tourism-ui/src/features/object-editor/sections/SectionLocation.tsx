@@ -1,4 +1,4 @@
-import { Fs, Field, Input } from '../primitives';
+import { Fs, Field, Input, Chip, ChipSet } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
 import { Provenance, type ProvenanceSource } from '../widgets/Provenance';
@@ -13,11 +13,7 @@ function resolveSource(sourceSystem: string): ProvenanceSource {
 }
 
 function importProvenance(sync?: SectionProps['editor']['draft']['syncIdentifiers']) {
-  if (!sync) {
-    return null;
-  }
-
-  const origin = sync.origins[0];
+  const origin = sync?.origins[0];
   if (origin) {
     return {
       source: resolveSource(origin.sourceSystem),
@@ -25,61 +21,90 @@ function importProvenance(sync?: SectionProps['editor']['draft']['syncIdentifier
       when: origin.updatedAt || origin.createdAt || origin.firstImportedAt,
     };
   }
-
-  const external = sync.externalIdentifiers[0];
-  if (external) {
-    return {
-      source: resolveSource(external.sourceSystem),
-      who: external.externalId,
-      when: external.lastSyncedAt || external.updatedAt || external.createdAt,
-    };
-  }
-
   return null;
 }
 
-/** Section 03 — postal address, commune, lieu-dit and GPS coordinates. */
+/** Section 03 — address, commune, GPS (design: edit-primitives + map-shell). */
 export function SectionLocation({ editor, folded }: SectionProps) {
   const location = editor.draft.location;
   const main = location.main;
   const provenance = importProvenance(editor.draft.syncIdentifiers);
+  const hasCoords = Boolean(main.latitude?.trim() && main.longitude?.trim());
 
   function patch(next: Partial<ObjectWorkspaceLocationForm>) {
     editor.replaceModule('location', { ...location, main: { ...main, ...next } });
   }
 
   return (
-    <Fs num="03" title="Localisation" sub="Adresse postale, commune, lieu-dit, coordonnées GPS" folded={folded}>
-      {provenance && <Provenance {...provenance} />}
-      <div className="grid-2">
+    <Fs
+      num="03"
+      title="Localisation"
+      sub="Adresse postale, commune, lieu-dit, zone touristique, coordonnées GPS"
+      folded={folded}
+      pill={{ tone: hasCoords ? 'ok' : 'warn', label: hasCoords ? 'Géocodé' : 'GPS manquant' }}
+    >
+      <div className="grid-2" style={{ marginBottom: 12 }}>
         <Field label="Adresse" required>
           <Input value={main.address1} onChange={(v) => patch({ address1: v })} />
         </Field>
-        <Field label="Complément d'adresse">
-          <Input value={main.address2} onChange={(v) => patch({ address2: v })} />
+        <Field label="Complément (lieu-dit interne)">
+          <Input value={main.address2} onChange={(v) => patch({ address2: v })} placeholder="Bras-Long" />
         </Field>
       </div>
-      <div className="grid-4">
-        <Field label="Code postal">
+
+      <div className="grid-4" style={{ marginBottom: 12 }}>
+        <Field label="Code postal" required>
           <Input value={main.postcode} onChange={(v) => patch({ postcode: v })} mono />
+        </Field>
+        <Field label="Bureau postal" hint="Ex : Le Tampon">
+          <Input value={main.address3} onChange={(v) => patch({ address3: v })} />
         </Field>
         <Field label="Commune">
           <Input value={main.city} onChange={(v) => patch({ city: v })} />
         </Field>
-        <Field label="Lieu-dit">
-          <Input value={main.lieuDit} onChange={(v) => patch({ lieuDit: v })} />
-        </Field>
-        <Field label="Zone touristique">
+        <Field label="Zone touristique" hint="Backfill via correspondance lieu_dit → zone">
           <Input value={main.zoneTouristique} onChange={(v) => patch({ zoneTouristique: v })} />
         </Field>
       </div>
-      <div className="grid-2">
-        <Field label="Latitude">
-          <Input value={main.latitude} onChange={(v) => patch({ latitude: v })} mono />
-        </Field>
-        <Field label="Longitude">
-          <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
-        </Field>
+
+      <Field label="Lieu-dit (Lieux-dits / formulaire)" hint="Valeur brute trimée — colonne source canonique">
+        <Input value={main.lieuDit} onChange={(v) => patch({ lieuDit: v })} placeholder="Bras-Long" />
+        {provenance && <Provenance {...provenance} />}
+      </Field>
+
+      <div style={{ marginTop: 12 }}>
+        <div className="field__label" style={{ marginBottom: 5, display: 'flex', alignItems: 'center' }}>
+          <span>
+            Coordonnées GPS <span className="req"> *</span>
+          </span>
+          <button type="button" className="pill-mini" style={{ marginLeft: 'auto' }} disabled title="Bientôt">
+            Géocoder l&apos;adresse
+          </button>
+        </div>
+        <div className="map-shell">
+          <div>
+            <div className="grid-2" style={{ marginBottom: 6 }}>
+              <Field label="Latitude">
+                <Input value={main.latitude} onChange={(v) => patch({ latitude: v })} mono />
+              </Field>
+              <Field label="Longitude">
+                <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
+              </Field>
+            </div>
+            <div className="chip-group__label">Localisations</div>
+            <ChipSet>
+              {location.zoneCodes.length > 0 ? (
+                location.zoneCodes.map((z) => <Chip key={z} label={z} on sm />)
+              ) : (
+                <Chip label="Aucune étiquette zone" sm />
+              )}
+            </ChipSet>
+          </div>
+          <div className="map-mini" aria-hidden>
+            <div className="crosshair" />
+            <div className="pin" />
+          </div>
+        </div>
       </div>
     </Fs>
   );

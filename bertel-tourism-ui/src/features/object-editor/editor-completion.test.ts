@@ -1,4 +1,9 @@
-import { computeOverallCompletion, computeSectionCompletion, computeSectionCompletions } from './editor-completion';
+import {
+  computeNavHint,
+  computeOverallCompletion,
+  computeSectionCompletion,
+  computeSectionCompletions,
+} from './editor-completion';
 import { fullModulesFixture } from './sections/section-fixture.test-utils';
 
 describe('editor completion scoring', () => {
@@ -22,5 +27,13 @@ describe('editor completion scoring', () => {
 
     expect(computeOverallCompletion(draft)).toBeGreaterThan(80);
     expect(rows).toEqual([{ num: '01', label: 'Identité', pct: 100, stat: 'ok' }]);
+  });
+
+  it('computeNavHint surfaces missing language codes for section 02', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo.values = { fr: 'Accroche' };
+    draft.descriptions.object.description.values = { fr: 'Desc' };
+
+    expect(computeNavHint('02', draft, 50)).toMatch(/EN/);
   });
 });

@@ -5,6 +5,7 @@ const baseProps = {
   objectName: 'Domaine du Bel Air',
   typeCode: 'HOT',
   archetypeCodeName: 'Hébergement marchand',
+  refId: 'HOTRUN000001',
   mode: 'complet' as const,
   dirtyCount: 0,
   onModeChange: jest.fn(),

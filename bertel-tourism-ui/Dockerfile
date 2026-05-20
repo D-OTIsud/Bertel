@@ -22,7 +22,15 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# --legacy-peer-deps mirrors npm 11.x behavior:
+# npm 10 (bundled with node:22-alpine) refuses installs that violate
+# peer-dep ranges even when peerDependenciesMeta marks them optional.
+# next@16.1.6 pins @swc/helpers to 0.5.15; @storybook/test-runner's
+# @swc/core declares an (optional) peer >=0.5.17. Both versions cannot
+# coexist, and bumping @swc/helpers breaks Next.js standalone runtime
+# (Next's compiled output expects 0.5.15's file layout). So we relax
+# the peer-dep check rather than alter the resolved tree.
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 RUN npm run build

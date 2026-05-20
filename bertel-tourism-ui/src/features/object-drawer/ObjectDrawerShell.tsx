@@ -25,7 +25,6 @@ import type {
   ObjectWorkspaceMembershipModule,
   ObjectWorkspaceMediaItem,
   ObjectWorkspaceMenusModule,
-  ObjectWorkspaceModules,
   ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
   ObjectWorkspaceRoomsModule,
@@ -61,16 +60,20 @@ import { ObjectWorkspaceRoomsPanel } from './ObjectWorkspaceRoomsPanel';
 import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
+import {
+  type EditorSnapshot,
+  MODULE_KEY_MAP,
+  READONLY_MODULES,
+  cloneModules,
+  isModuleDirty,
+  isGeneralInfoContentDirty,
+  isPublicationSettingsDirty,
+  getDirtySections,
+} from '../object-editor/editor-state';
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
   onClose: () => void;
-}
-
-interface EditorSnapshot {
-  objectId: string;
-  baseline: ObjectWorkspaceModules;
-  draft: ObjectWorkspaceModules;
 }
 
 type PendingNavigation =
@@ -102,37 +105,6 @@ const DRAWER_TYPE_LABELS: Record<string, string> = {
   VIL: 'Ville',
   COM: 'Commerce',
 };
-
-function cloneModules(value: ObjectWorkspaceModules): ObjectWorkspaceModules {
-  return JSON.parse(JSON.stringify(value)) as ObjectWorkspaceModules;
-}
-
-function serialize(value: unknown): string {
-  return JSON.stringify(value);
-}
-
-function stripGeneralInfoManagedOutsideObject(value: ObjectWorkspaceGeneralInfo) {
-  const {
-    commercialVisibility,
-    businessTimezone,
-    regionCode,
-    ...rest
-  } = value;
-  return rest;
-}
-
-function isModuleDirty(snapshot: EditorSnapshot, key: keyof ObjectWorkspaceModules): boolean {
-  return serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
-}
-
-function isGeneralInfoContentDirty(snapshot: EditorSnapshot): boolean {
-  return serialize(stripGeneralInfoManagedOutsideObject(snapshot.draft.generalInfo))
-    !== serialize(stripGeneralInfoManagedOutsideObject(snapshot.baseline.generalInfo));
-}
-
-function isPublicationSettingsDirty(snapshot: EditorSnapshot): boolean {
-  return snapshot.draft.generalInfo.commercialVisibility !== snapshot.baseline.generalInfo.commercialVisibility;
-}
 
 function updateTranslatableField(
   field: WorkspaceTranslatableField,
@@ -229,72 +201,6 @@ function DrawerEditSkeleton() {
       </section>
     </>
   );
-}
-
-const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = {
-  'general-info': 'generalInfo',
-  taxonomy: 'taxonomy',
-  publication: 'publication',
-  'sync-identifiers': 'syncIdentifiers',
-  location: 'location',
-  descriptions: 'descriptions',
-  media: 'media',
-  contacts: 'contacts',
-  characteristics: 'characteristics',
-  distinctions: 'distinctions',
-  'capacity-policies': 'capacityPolicies',
-  pricing: 'pricing',
-  rooms: 'rooms',
-  'meeting-rooms': 'meetingRooms',
-  menus: 'menus',
-  activity: 'activity',
-  event: 'event',
-  itinerary: 'itinerary',
-  openings: 'openings',
-  'provider-follow-up': 'providerFollowUp',
-  relationships: 'relationships',
-  memberships: 'memberships',
-  legal: 'legal',
-};
-
-const READONLY_MODULES = new Set<WorkspaceModuleId>([
-  'sync-identifiers',
-  'provider-follow-up',
-  'relationships',
-]);
-
-function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<WorkspaceModuleId, boolean>> {
-  if (!snapshot) {
-    return {};
-  }
-
-  const generalInfoDirty = isGeneralInfoContentDirty(snapshot);
-  const publicationDirty = isPublicationSettingsDirty(snapshot);
-  const taxonomyDirty = isModuleDirty(snapshot, 'taxonomy');
-  const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
-  for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
-    if (moduleId === 'general-info') {
-      dirty[moduleId] = generalInfoDirty || taxonomyDirty;
-      continue;
-    }
-
-    if (moduleId === 'publication') {
-      dirty[moduleId] = publicationDirty;
-      continue;
-    }
-
-    if (moduleId === 'taxonomy') {
-      dirty[moduleId] = false;
-      continue;
-    }
-
-    if (READONLY_MODULES.has(moduleId)) {
-      dirty[moduleId] = false;
-    } else {
-      dirty[moduleId] = isModuleDirty(snapshot, key);
-    }
-  }
-  return dirty;
 }
 
 function resolveCurrentSectionAccess(resource: ObjectWorkspaceResource, section: WorkspaceModuleId) {

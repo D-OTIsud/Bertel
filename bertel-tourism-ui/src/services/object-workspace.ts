@@ -2178,7 +2178,7 @@ async function getObjectWorkspaceRoomsModule(
       .order('position', { ascending: true }),
     client.from('ref_code_view_type').select('id, code, name, position').order('position', { ascending: true }),
     client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('media').select('id, title, name, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
   if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
@@ -2371,7 +2371,7 @@ async function getObjectWorkspaceMenusModule(
     client.from('ref_code_cuisine_type').select('id, code, name, position').order('position', { ascending: true }),
     client.from('ref_code_price_kind').select('id, code, name, position').order('position', { ascending: true }),
     client.from('ref_code_price_unit').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('media').select('id, title, name, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
   if (menusResult.status !== 'fulfilled' || menusResult.value.error) {
@@ -2656,7 +2656,7 @@ async function getObjectWorkspaceItineraryModule(
   const [itiResult, practiceRefsResult, practicesResult, stagesResult] = await Promise.allSettled([
     client
       .from('object_iti')
-      .select('distance_km, duration_min, difficulty_level, elevation_positive_m, elevation_negative_m, is_loop, open_status, status_note, geom')
+      .select('distance_km, duration_hours, difficulty_level, elevation_gain, is_loop, open_status, status_note, geom')
       .eq('object_id', objectId)
       .maybeSingle(),
     client.from('ref_code_iti_practice').select('id, code, name, position').order('position', { ascending: true }),
@@ -2690,13 +2690,22 @@ async function getObjectWorkspaceItineraryModule(
       }))
     : baseModule.stages;
 
+  // object_iti stores duration in hours; the editor's durationMin field is minutes
+  // (BlockITI divides by 60 to display hours). The table has a single elevation_gain
+  // column and no negative-elevation column — elevationNegativeM keeps whatever the
+  // detail payload supplied via baseModule.
+  const durationHours = Number(row.duration_hours);
+  const durationMinValue = row.duration_hours != null && Number.isFinite(durationHours)
+    ? String(Math.round(durationHours * 60))
+    : baseModule.durationMin;
+
   return {
     ...baseModule,
     distanceKm: readString(row.distance_km, baseModule.distanceKm),
-    durationMin: readString(row.duration_min, baseModule.durationMin),
+    durationMin: durationMinValue,
     difficultyLevel: readString(row.difficulty_level, baseModule.difficultyLevel),
-    elevationPositiveM: readString(row.elevation_positive_m, baseModule.elevationPositiveM),
-    elevationNegativeM: readString(row.elevation_negative_m, baseModule.elevationNegativeM),
+    elevationPositiveM: readString(row.elevation_gain, baseModule.elevationPositiveM),
+    elevationNegativeM: baseModule.elevationNegativeM,
     loop: row.is_loop == null ? baseModule.loop : readBoolean(row.is_loop),
     openStatus: readString(row.open_status, baseModule.openStatus || 'open'),
     statusNote: readString(row.status_note, baseModule.statusNote),

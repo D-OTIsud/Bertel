@@ -226,24 +226,6 @@ export function ObjectWorkspacePricingPanel({
           </div>
         </div>
 
-        <div className="drawer-grid">
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Tarifs</span>
-            <strong>{value.prices.length}</strong>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Remises</span>
-            <strong>{value.discounts.length}</strong>
-            {value.unavailableReason && <p className="text-sm text-muted-foreground">{value.unavailableReason}</p>}
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Promotions liees</span>
-            <strong>{value.promotions.length}</strong>
-            {value.promotionsUnavailableReason && <p className="text-sm text-muted-foreground">{value.promotionsUnavailableReason}</p>}
-          </article>
-        </div>
       </article>
 
       <section className="drawer-form-stack">

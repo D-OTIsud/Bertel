@@ -161,28 +161,6 @@ export function ObjectWorkspaceCharacteristicsPanel({
           </div>
         </div>
 
-        <div className="drawer-grid">
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Langues</span>
-            <strong>{value.selectedLanguages.length}</strong>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Paiements</span>
-            <strong>{value.selectedPaymentCodes.length}</strong>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Environnement</span>
-            <strong>{value.selectedEnvironmentCodes.length}</strong>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Equipements</span>
-            <strong>{value.selectedAmenityCodes.length}</strong>
-            {value.unavailableReason && <p className="text-sm text-muted-foreground">{value.unavailableReason}</p>}
-          </article>
-        </div>
       </article>
 
       <section className="drawer-form-stack">

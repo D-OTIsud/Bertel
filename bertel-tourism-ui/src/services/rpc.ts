@@ -40,6 +40,7 @@ export interface CreatedObjectPrivateNote {
     id: string;
     display_name: string;
     avatar_url: string | null;
+    email?: string | null;
   } | null;
 }
 
@@ -314,6 +315,7 @@ export async function createObjectPrivateNote(input: {
         id: session.userId ?? 'demo-user',
         display_name: session.userName || 'Equipe demo',
         avatar_url: null,
+        email: session.email || null,
       },
     };
   }
@@ -360,6 +362,7 @@ export async function createObjectPrivateNote(input: {
       id: session.userId,
       display_name: session.userName || session.email || 'Equipe',
       avatar_url: null,
+      email: session.email || null,
     },
   };
 }

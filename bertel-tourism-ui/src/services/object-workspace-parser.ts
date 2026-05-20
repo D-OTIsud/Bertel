@@ -5,7 +5,7 @@ interface GenericRecord {
   [key: string]: unknown;
 }
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
 
 export interface WorkspaceTranslatableField {
   baseValue: string;
@@ -372,6 +372,159 @@ export interface ObjectWorkspacePricingModule {
   unavailableReason: string | null;
 }
 
+export interface ObjectWorkspaceRoomTypeItem {
+  recordId: string | null;
+  code: string;
+  name: string;
+  nameTranslations: Record<string, string>;
+  description: string;
+  descriptionTranslations: Record<string, string>;
+  capacityAdults: string;
+  capacityChildren: string;
+  capacityTotal: string;
+  sizeSqm: string;
+  bedConfig: string;
+  bedConfigTranslations: Record<string, string>;
+  quantity: string;
+  floorLevel: string;
+  viewTypeId: string;
+  viewTypeCode: string;
+  viewTypeLabel: string;
+  basePrice: string;
+  currency: string;
+  accessible: boolean;
+  published: boolean;
+  position: string;
+  amenityCodes: string[];
+  mediaIds: string[];
+}
+
+export interface ObjectWorkspaceRoomsModule {
+  viewTypeOptions: WorkspaceReferenceOption[];
+  amenityOptions: WorkspaceReferenceOption[];
+  mediaOptions: WorkspaceReferenceOption[];
+  items: ObjectWorkspaceRoomTypeItem[];
+  unavailableReason: string | null;
+}
+
+export interface ObjectWorkspaceMeetingRoomItem {
+  recordId: string | null;
+  name: string;
+  nameTranslations: Record<string, string>;
+  areaM2: string;
+  capacityTheatre: string;
+  capacityU: string;
+  capacityClassroom: string;
+  capacityBoardroom: string;
+  equipmentCodes: string[];
+}
+
+export interface ObjectWorkspaceMeetingRoomsModule {
+  equipmentOptions: WorkspaceReferenceOption[];
+  items: ObjectWorkspaceMeetingRoomItem[];
+  unavailableReason: string | null;
+}
+
+export interface ObjectWorkspaceMenuItem {
+  recordId: string | null;
+  name: string;
+  description: string;
+  price: string;
+  currency: string;
+  kindId: string;
+  kindCode: string;
+  kindLabel: string;
+  unitId: string;
+  unitCode: string;
+  unitLabel: string;
+  mediaIds: string[];
+  available: boolean;
+  position: string;
+  dietaryTagCodes: string[];
+  allergenCodes: string[];
+  cuisineTypeCodes: string[];
+}
+
+export interface ObjectWorkspaceMenu {
+  recordId: string | null;
+  categoryId: string;
+  categoryCode: string;
+  categoryLabel: string;
+  name: string;
+  description: string;
+  active: boolean;
+  visibility: string;
+  position: string;
+  items: ObjectWorkspaceMenuItem[];
+}
+
+export interface ObjectWorkspaceMenusModule {
+  categoryOptions: WorkspaceReferenceOption[];
+  dietaryTagOptions: WorkspaceReferenceOption[];
+  allergenOptions: WorkspaceReferenceOption[];
+  cuisineTypeOptions: WorkspaceReferenceOption[];
+  priceKindOptions: WorkspaceReferenceOption[];
+  priceUnitOptions: WorkspaceReferenceOption[];
+  mediaOptions: WorkspaceReferenceOption[];
+  items: ObjectWorkspaceMenu[];
+  unavailableReason: string | null;
+}
+
+export interface ObjectWorkspaceActivityModule {
+  durationMin: string;
+  minParticipants: string;
+  maxParticipants: string;
+  difficultyLevel: string;
+  guideRequired: boolean;
+  minAge: string;
+  equipmentProvided: string;
+  unavailableReason: string | null;
+}
+
+export interface ObjectWorkspaceEventOccurrence {
+  recordId: string | null;
+  startAt: string;
+  endAt: string;
+  state: string;
+}
+
+export interface ObjectWorkspaceEventModule {
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  recurring: boolean;
+  recurrenceText: string;
+  occurrences: ObjectWorkspaceEventOccurrence[];
+  unavailableReason: string | null;
+}
+
+export interface ObjectWorkspaceItineraryStageSummary {
+  recordId: string | null;
+  name: string;
+  description: string;
+  position: string;
+}
+
+export interface ObjectWorkspaceItineraryModule {
+  distanceKm: string;
+  durationMin: string;
+  difficultyLevel: string;
+  elevationPositiveM: string;
+  elevationNegativeM: string;
+  loop: boolean;
+  openStatus: string;
+  statusNote: string;
+  practiceOptions: WorkspaceReferenceOption[];
+  practiceCodes: string[];
+  stages: ObjectWorkspaceItineraryStageSummary[];
+  sectionsCount: number;
+  profilesCount: number;
+  geometrySummary: string;
+  traceEditable: boolean;
+  unavailableReason: string | null;
+}
+
 export type ObjectWorkspaceOpeningBucket = 'current' | 'next-year' | 'undated';
 
 export interface ObjectWorkspaceOpeningSlot {
@@ -649,6 +802,12 @@ export interface ObjectWorkspaceModules {
   characteristics: ObjectWorkspaceCharacteristicsModule;
   capacityPolicies: ObjectWorkspaceCapacityPoliciesModule;
   pricing: ObjectWorkspacePricingModule;
+  rooms: ObjectWorkspaceRoomsModule;
+  meetingRooms: ObjectWorkspaceMeetingRoomsModule;
+  menus: ObjectWorkspaceMenusModule;
+  activity: ObjectWorkspaceActivityModule;
+  event: ObjectWorkspaceEventModule;
+  itinerary: ObjectWorkspaceItineraryModule;
   openings: ObjectWorkspaceOpeningsModule;
   providerFollowUp: ObjectWorkspaceProviderFollowUpModule;
   relationships: ObjectWorkspaceRelationshipsModule;
@@ -1322,6 +1481,279 @@ function parseWorkspacePricingModule(raw: Record<string, unknown>): ObjectWorksp
     discounts,
     promotions: [],
     promotionsUnavailableReason: null,
+    unavailableReason: null,
+  };
+}
+
+function readNamedReference(value: unknown, fallbackLabel = ''): WorkspaceReferenceOption {
+  const record = readRecord(value);
+  const code = readString(record.code, readString(value)).trim();
+  const label = readString(record.name, readString(record.label, fallbackLabel || code)).trim();
+
+  return {
+    id: readString(record.id, code),
+    code,
+    label,
+  };
+}
+
+function readReferenceCodes(value: unknown, nestedKey: string): string[] {
+  return readArray(value)
+    .map((record) => {
+      const nested = readRecord(record[nestedKey]);
+      return readString(record.code, readString(nested.code, readString(record.id, readString(nested.id)))).trim();
+    })
+    .filter(Boolean);
+}
+
+function readMediaIds(value: unknown): string[] {
+  return readArray(value)
+    .map((record) => {
+      const nested = readRecord(record.media);
+      return readString(record.media_id, readString(nested.id, readString(record.id))).trim();
+    })
+    .filter(Boolean);
+}
+
+function readMenuItemMediaIds(item: GenericRecord): string[] {
+  return Array.from(new Set([
+    readString(item.media_id),
+    readString(readRecord(item.media).id),
+    ...readMediaIds(item.media),
+    ...readMediaIds(item.medias),
+    ...readMediaIds(item.media_items),
+    ...readMediaIds(item.menu_item_media),
+    ...readMediaIds(item.menu_item_medias),
+    ...readMediaIds(item.object_menu_item_media),
+    ...readMediaIds(item.object_menu_item_medias),
+  ].filter(Boolean)));
+}
+
+function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspaceRoomsModule {
+  const roomRecords = readArray(raw.room_types ?? raw.object_room_types ?? raw.rooms);
+  const items = roomRecords.map<ObjectWorkspaceRoomTypeItem>((record, index) => {
+    const viewType = readNamedReference(record.view_type, readString(record.view_type_code));
+
+    return {
+      recordId: readString(record.id) || null,
+      code: readString(record.code, `room-${index + 1}`),
+      name: readString(record.name, `Unite ${index + 1}`),
+      nameTranslations: readTextMap(record.name_i18n),
+      description: readString(record.description),
+      descriptionTranslations: readTextMap(record.description_i18n),
+      capacityAdults: readString(record.capacity_adults, readString(record.max_capacity)),
+      capacityChildren: readString(record.capacity_children),
+      capacityTotal: readString(record.capacity_total, readString(record.capacity)),
+      sizeSqm: readString(record.size_sqm, readString(record.area_m2, readString(record.surface_m2))),
+      bedConfig: readString(record.bed_config, readString(record.beds, readString(record.bed_config_summary))),
+      bedConfigTranslations: readTextMap(record.bed_config_i18n),
+      quantity: readString(record.total_rooms, readString(record.quantity, readString(record.inventory_count))),
+      floorLevel: readString(record.floor_level),
+      viewTypeId: readString(record.view_type_id, viewType.id),
+      viewTypeCode: readString(record.view_type_code, viewType.code),
+      viewTypeLabel: readString(record.view_type_label, viewType.label),
+      basePrice: readString(record.base_price),
+      currency: readString(record.currency, 'EUR'),
+      accessible: readBoolean(record.is_accessible ?? record.accessible),
+      published: record.is_published == null ? true : readBoolean(record.is_published),
+      position: readString(record.position, String(index + 1)),
+      amenityCodes: readReferenceCodes(record.amenities ?? record.room_type_amenities, 'amenity'),
+      mediaIds: readArray(record.media ?? record.room_type_media).map((media) =>
+        readString(media.media_id, readString(readRecord(media.media).id, readString(media.id))),
+      ).filter(Boolean),
+    };
+  });
+
+  return {
+    viewTypeOptions: dedupeReferenceOptions(items.map((item) => ({
+      id: item.viewTypeId || item.viewTypeCode,
+      code: item.viewTypeCode,
+      label: item.viewTypeLabel || item.viewTypeCode,
+    }))),
+    amenityOptions: dedupeReferenceOptions(
+      roomRecords.flatMap((record) =>
+        readArray(record.amenities ?? record.room_type_amenities).map((amenity) => readNamedReference(amenity.amenity ?? amenity)),
+      ),
+    ),
+    mediaOptions: [],
+    items,
+    unavailableReason: null,
+  };
+}
+
+function parseWorkspaceMeetingRoomsModule(raw: Record<string, unknown>): ObjectWorkspaceMeetingRoomsModule {
+  const roomRecords = readArray(raw.meeting_rooms ?? raw.object_meeting_rooms);
+  const items = roomRecords.map<ObjectWorkspaceMeetingRoomItem>((record, index) => ({
+    recordId: readString(record.id) || null,
+    name: readString(record.name, `Salle ${index + 1}`),
+    nameTranslations: readTextMap(record.name_i18n),
+    areaM2: readString(record.area_m2, readString(record.area_m2, readString(record.surface_m2))),
+    capacityTheatre: readString(record.cap_theatre, readString(record.capacity_theatre, readString(record.capacity_seated))),
+    capacityU: readString(record.cap_u, readString(record.capacity_u, readString(record.capacity_u_shape))),
+    capacityClassroom: readString(record.cap_classroom, readString(record.capacity_classroom)),
+    capacityBoardroom: readString(record.cap_boardroom, readString(record.capacity_boardroom)),
+    equipmentCodes: readReferenceCodes(record.equipment ?? record.meeting_room_equipment, 'equipment'),
+  }));
+
+  return {
+    equipmentOptions: dedupeReferenceOptions(
+      roomRecords.flatMap((record) =>
+        readArray(record.equipment ?? record.meeting_room_equipment).map((item) => readNamedReference(item.equipment ?? item)),
+      ),
+    ),
+    items,
+    unavailableReason: null,
+  };
+}
+
+function parseWorkspaceMenusModule(raw: Record<string, unknown>): ObjectWorkspaceMenusModule {
+  const menuRecords = readArray(raw.menus ?? raw.object_menus);
+  const items = menuRecords.map<ObjectWorkspaceMenu>((record, index) => {
+    const category = readNamedReference(record.category, readString(record.category_code));
+
+    return {
+      recordId: readString(record.id) || null,
+      categoryId: readString(record.category_id, category.id),
+      categoryCode: readString(record.category_code, category.code),
+      categoryLabel: readString(record.category_label, category.label),
+      name: readString(record.name, `Menu ${index + 1}`),
+      description: readString(record.description),
+      active: record.is_active == null ? true : readBoolean(record.is_active),
+      visibility: readString(record.visibility, 'public'),
+      position: readString(record.position, String(index + 1)),
+      items: readArray(record.items ?? record.menu_items ?? record.object_menu_items).map<ObjectWorkspaceMenuItem>((item, itemIndex) => {
+        const kind = readNamedReference(item.kind, readString(item.kind_code));
+        const unit = readNamedReference(item.unit, readString(item.unit_code));
+
+        return {
+          recordId: readString(item.id) || null,
+          name: readString(item.name, `Ligne ${itemIndex + 1}`),
+          description: readString(item.description),
+          price: readString(item.price),
+          currency: readString(item.currency, 'EUR'),
+          kindId: readString(item.kind_id, kind.id),
+          kindCode: readString(item.kind_code, kind.code),
+          kindLabel: readString(item.kind_label, kind.label),
+          unitId: readString(item.unit_id, unit.id),
+          unitCode: readString(item.unit_code, unit.code),
+          unitLabel: readString(item.unit_label, unit.label),
+          mediaIds: readMenuItemMediaIds(item),
+          available: item.is_available == null ? true : readBoolean(item.is_available),
+          position: readString(item.position, String(itemIndex + 1)),
+          dietaryTagCodes: readReferenceCodes(item.dietary_tags ?? item.menu_item_dietary_tags, 'dietary_tag'),
+          allergenCodes: readReferenceCodes(item.allergens ?? item.menu_item_allergens, 'allergen'),
+          cuisineTypeCodes: readReferenceCodes(item.cuisine_types ?? item.menu_item_cuisine_types, 'cuisine_type'),
+        };
+      }),
+    };
+  });
+
+  return {
+    categoryOptions: dedupeReferenceOptions(items.map((item) => ({
+      id: item.categoryId || item.categoryCode,
+      code: item.categoryCode,
+      label: item.categoryLabel || item.categoryCode,
+    }))),
+    dietaryTagOptions: dedupeReferenceOptions(
+      menuRecords.flatMap((menu) =>
+        readArray(menu.items ?? menu.menu_items ?? menu.object_menu_items)
+          .flatMap((item) => readArray(item.dietary_tags ?? item.menu_item_dietary_tags))
+          .map((tag) => readNamedReference(tag.dietary_tag ?? tag)),
+      ),
+    ),
+    allergenOptions: dedupeReferenceOptions(
+      menuRecords.flatMap((menu) =>
+        readArray(menu.items ?? menu.menu_items ?? menu.object_menu_items)
+          .flatMap((item) => readArray(item.allergens ?? item.menu_item_allergens))
+          .map((allergen) => readNamedReference(allergen.allergen ?? allergen)),
+      ),
+    ),
+    cuisineTypeOptions: dedupeReferenceOptions(
+      menuRecords.flatMap((menu) =>
+        readArray(menu.items ?? menu.menu_items ?? menu.object_menu_items)
+          .flatMap((item) => readArray(item.cuisine_types ?? item.menu_item_cuisine_types))
+          .map((cuisine) => readNamedReference(cuisine.cuisine_type ?? cuisine)),
+      ),
+    ),
+    priceKindOptions: [],
+    priceUnitOptions: [],
+    mediaOptions: [],
+    items,
+    unavailableReason: null,
+  };
+}
+
+function parseWorkspaceActivityModule(raw: Record<string, unknown>): ObjectWorkspaceActivityModule {
+  const record = readRecord(raw.activity ?? raw.object_act ?? raw.act);
+
+  return {
+    durationMin: readString(record.duration_min, readString(raw.duration_min)),
+    minParticipants: readString(record.min_participants, readString(raw.min_participants)),
+    maxParticipants: readString(record.max_participants, readString(raw.max_participants)),
+    difficultyLevel: readString(record.difficulty_level, readString(raw.difficulty_level)),
+    guideRequired: readBoolean(record.guide_required ?? raw.guide_required),
+    minAge: readString(record.min_age, readString(raw.min_age)),
+    equipmentProvided: readString(record.equipment_provided, readString(raw.equipment_provided)),
+    unavailableReason: null,
+  };
+}
+
+function parseWorkspaceEventModule(raw: Record<string, unknown>): ObjectWorkspaceEventModule {
+  const record = readRecord(raw.fma ?? raw.event ?? raw.object_fma);
+
+  return {
+    startDate: readString(record.event_start_date, readString(record.start_date)),
+    endDate: readString(record.event_end_date, readString(record.end_date)),
+    startTime: readString(record.event_start_time, readString(record.start_time)),
+    endTime: readString(record.event_end_time, readString(record.end_time)),
+    recurring: readBoolean(record.is_recurring),
+    recurrenceText: readString(record.recurrence_pattern, readString(record.recurrence_text)),
+    occurrences: readArray(raw.fma_occurrences ?? record.occurrences).map((occurrence, index) => ({
+      recordId: readString(occurrence.id) || null,
+      startAt: readString(occurrence.start_at, readString(occurrence.start)),
+      endAt: readString(occurrence.end_at, readString(occurrence.end)),
+      state: readString(occurrence.state, index === 0 ? 'scheduled' : ''),
+    })),
+    unavailableReason: null,
+  };
+}
+
+function parseWorkspaceItineraryModule(raw: Record<string, unknown>): ObjectWorkspaceItineraryModule {
+  const itinerary = readRecord(raw.itinerary ?? raw.object_iti);
+  const details = readRecord(raw.itinerary_details);
+  const practiceRecords = [
+    ...readArray(raw.practices ?? raw.object_practices),
+    ...readArray(details.practices),
+  ];
+  const stages = readArray(details.stages ?? itinerary.stages ?? raw.stages).map((stage, index) => ({
+    recordId: readString(stage.id) || null,
+    name: readString(stage.name, `Etape ${index + 1}`),
+    description: readString(stage.description),
+    position: readString(stage.position, String(index + 1)),
+  }));
+
+  const geometrySummary = [
+    readString(itinerary.track_format, readString(details.track_format)),
+    readString(itinerary.track, readString(details.track)) ? 'trace presente' : '',
+    readString(itinerary.geom, readString(raw.geom)) ? 'geometrie presente' : '',
+  ].filter(Boolean).join(' · ');
+
+  return {
+    distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
+    durationMin: readString(itinerary.duration_min, readString(raw.duration_min, readString(raw.total_duration_min))),
+    difficultyLevel: readString(itinerary.difficulty_level, readString(raw.difficulty_level)),
+    elevationPositiveM: readString(itinerary.elevation_positive_m, readString(itinerary.elevation_gain, readString(raw.elevation_gain_m))),
+    elevationNegativeM: readString(itinerary.elevation_negative_m, readString(raw.elevation_negative_m)),
+    loop: readBoolean(itinerary.is_loop ?? raw.is_loop),
+    openStatus: readString(itinerary.open_status, 'open'),
+    statusNote: readString(itinerary.status_note),
+    practiceOptions: dedupeReferenceOptions(practiceRecords.map((practice) => readNamedReference(practice.practice ?? practice))),
+    practiceCodes: readReferenceCodes(practiceRecords, 'practice'),
+    stages,
+    sectionsCount: readArray(details.sections).length,
+    profilesCount: readArray(details.profiles).length,
+    geometrySummary,
+    traceEditable: false,
     unavailableReason: null,
   };
 }
@@ -2127,6 +2559,12 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     characteristics: parseWorkspaceCharacteristicsModule(raw),
     capacityPolicies: parseWorkspaceCapacityPoliciesModule(raw),
     pricing: parseWorkspacePricingModule(raw),
+    rooms: parseWorkspaceRoomsModule(raw),
+    meetingRooms: parseWorkspaceMeetingRoomsModule(raw),
+    menus: parseWorkspaceMenusModule(raw),
+    activity: parseWorkspaceActivityModule(raw),
+    event: parseWorkspaceEventModule(raw),
+    itinerary: parseWorkspaceItineraryModule(raw),
     openings: parseWorkspaceOpeningsModule(raw),
     providerFollowUp: parseWorkspaceProviderFollowUpModule(raw),
     relationships: parseWorkspaceRelationshipsModule(raw),

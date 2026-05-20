@@ -2340,13 +2340,15 @@ BEGIN
              'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
                'id',           up.id,
                'display_name', up.display_name,
-               'avatar_url',   up.avatar_url
+               'avatar_url',   up.avatar_url,
+               'email',        au.email
              ) ELSE NULL END
            )
       )
       FROM object_private_description pn
       LEFT JOIN ref_language rl ON rl.id = pn.language_id
       LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
+      LEFT JOIN auth.users au ON au.id = up.id
       WHERE pn.object_id = obj.id
         AND pn.audience = 'private'
         AND v_user_org IS NOT NULL
@@ -2368,7 +2370,8 @@ BEGIN
                'created_by', CASE WHEN up.id IS NOT NULL THEN jsonb_build_object(
                  'id',           up.id,
                  'display_name', up.display_name,
-                 'avatar_url',   up.avatar_url
+                 'avatar_url',   up.avatar_url,
+                 'email',        au.email
                ) ELSE NULL END
              )
           ORDER BY pn.is_archived ASC, pn.is_pinned DESC, pn.created_at DESC, pn.id DESC
@@ -2376,6 +2379,7 @@ BEGIN
         FROM object_private_description pn
         LEFT JOIN ref_language rl ON rl.id = pn.language_id
         LEFT JOIN app_user_profile up ON up.id = pn.created_by_user_id
+        LEFT JOIN auth.users au ON au.id = up.id
         WHERE pn.object_id = obj.id
           AND pn.audience = 'private'
           AND v_user_org IS NOT NULL

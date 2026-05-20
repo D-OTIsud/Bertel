@@ -52,6 +52,7 @@ describe('parseObjectDetail', () => {
           id: 'usr-1',
           display_name: 'Marie Equipe',
           avatar_url: null,
+          email: 'marie.equipe@oti.re',
         },
       },
       private_notes: [
@@ -367,6 +368,7 @@ describe('parseObjectDetail', () => {
       canEdit: true,
       canDelete: true,
       createdByName: 'Marie Equipe',
+      createdByEmail: 'marie.equipe@oti.re',
     });
     expect(parsed.text.privateNotes).toEqual(
       expect.arrayContaining([

@@ -249,8 +249,9 @@ describe('ObjectDetailView', () => {
     expect(screen.getAllByText('Client VIP a prevenir avant toute fermeture exceptionnelle.').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /actions de la note/i }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: /afficher la note complete/i }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Sophie Admin')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('Sophie A.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
@@ -491,6 +492,36 @@ describe('ObjectDetailView', () => {
     expect(screen.getAllByText('Deuxieme note').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Premiere note').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /voir moins/i })).toBeInTheDocument();
+  });
+
+  it('shows the note author short label in the team notes list', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-author-note',
+      name: 'Hotel Author Note',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Hotel avec auteur de note.' },
+        private_notes: [
+          {
+            id: 'note-author',
+            body: 'Rappeler le prestataire avant la saison.',
+            created_at: '2026-05-19T08:00:00.000Z',
+            audience: 'private',
+            category: 'general',
+            created_by: {
+              id: 'usr-2',
+              display_name: 'Sophie Admin',
+              avatar_url: null,
+              email: 'sophie.admin@oti.re',
+            },
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    expect(screen.getByText('Sophie A.')).toBeInTheDocument();
   });
 
   it('opens a dialog with the full note body when the user clicks a team note preview', async () => {

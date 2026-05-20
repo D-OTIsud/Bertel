@@ -6,6 +6,7 @@ import { getObjectResource } from './rpc';
 import {
   type ObjectWorkspaceCapacityItem,
   type ObjectWorkspaceCapacityPoliciesModule,
+  type ObjectWorkspaceActivityModule,
   type ObjectWorkspaceAccessibilityAmenityItem,
   type ObjectWorkspaceAmenityGroup,
   type ObjectWorkspaceCharacteristicsModule,
@@ -38,10 +39,16 @@ import {
   type ObjectWorkspaceLegalModule,
   type ObjectWorkspaceLegalRecord,
   type ObjectWorkspaceLegalTypeOption,
+  type ObjectWorkspaceMeetingRoomsModule,
+  type ObjectWorkspaceMenuItem,
+  type ObjectWorkspaceMenusModule,
+  type ObjectWorkspaceEventModule,
+  type ObjectWorkspaceItineraryModule,
   type ObjectWorkspacePriceItem,
   type ObjectWorkspacePricePeriod,
   type ObjectWorkspacePromotionSummary,
   type ObjectWorkspaceDiscountItem,
+  type ObjectWorkspaceRoomsModule,
   type ObjectWorkspaceTaxonomyAssignment,
   type ObjectWorkspaceTaxonomyDomain,
   type ObjectWorkspaceTaxonomyModule,
@@ -50,7 +57,7 @@ import {
   type WorkspaceReferenceOption,
 } from './object-workspace-parser';
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
 
 export interface ObjectWorkspaceModuleAccess {
   canDirectWrite: boolean;
@@ -79,6 +86,12 @@ export interface ObjectWorkspacePermissions {
   distinctions: ObjectWorkspaceModuleAccess;
   capacityPolicies: ObjectWorkspaceModuleAccess;
   pricing: ObjectWorkspaceModuleAccess;
+  rooms: ObjectWorkspaceModuleAccess;
+  meetingRooms: ObjectWorkspaceModuleAccess;
+  menus: ObjectWorkspaceModuleAccess;
+  activity: ObjectWorkspaceModuleAccess;
+  event: ObjectWorkspaceModuleAccess;
+  itinerary: ObjectWorkspaceModuleAccess;
   openings: ObjectWorkspaceModuleAccess;
   providerFollowUp: ObjectWorkspaceModuleAccess;
   relationships: ObjectWorkspaceModuleAccess;
@@ -141,6 +154,38 @@ function toNullableInteger(value: string): number | null {
 
   const parsed = Number.parseInt(normalized, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toRpcUuid(value: string | null | undefined): string | null {
+  return value && isUuid(value) ? value : null;
+}
+
+async function callObjectWorkspaceRpc(
+  functionName: string,
+  objectId: string,
+  payload: Record<string, unknown>,
+  fallback: string,
+): Promise<Record<string, unknown>> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error(fallback);
+  }
+
+  const { data, error } = await apiClient.schema('api').rpc(functionName, {
+    p_object_id: objectId,
+    p_payload: payload,
+  });
+
+  if (error) {
+    throw mapMutationError(error, fallback);
+  }
+
+  const result = readRecord(data);
+  if (result.success === false) {
+    throw new Error(fallback);
+  }
+
+  return result;
 }
 
 function readString(value: unknown, fallback = ''): string {
@@ -2019,6 +2064,574 @@ async function getObjectWorkspacePricingModule(
   };
 }
 
+function optionMapById(options: WorkspaceReferenceOption[]): Map<string, WorkspaceReferenceOption> {
+  return new Map(options.map((option) => [option.id, option]));
+}
+
+function normalizeMediaOption(row: Record<string, unknown>): WorkspaceReferenceOption {
+  const id = readString(row.id);
+  return {
+    id,
+    code: id,
+    label: readString(row.title, readString(row.name, readString(row.url, id))),
+  };
+}
+
+async function getObjectWorkspaceRoomsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceRoomsModule,
+): Promise<ObjectWorkspaceRoomsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule.items.length > 0
+      ? baseModule
+      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
+  }
+
+  const [roomsResult, viewRefsResult, amenityRefsResult, mediaResult] = await Promise.allSettled([
+    client
+      .from('object_room_type')
+      .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, base_price, currency, is_accessible, is_published, position')
+      .eq('object_id', objectId)
+      .order('position', { ascending: true }),
+    client.from('ref_code_view_type').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('media').select('id, title, name, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les chambres et unites pour ce profil.',
+    };
+  }
+
+  const rows = (roomsResult.value.data ?? []) as Record<string, unknown>[];
+  const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
+  const [amenityLinksResult, mediaLinksResult] = roomIds.length > 0
+    ? await Promise.allSettled([
+        client.from('object_room_type_amenity').select('room_type_id, amenity_id').in('room_type_id', roomIds),
+        client.from('object_room_type_media').select('room_type_id, media_id').in('room_type_id', roomIds),
+      ])
+    : [
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+      ];
+
+  const viewTypeOptions = viewRefsResult.status === 'fulfilled' && viewRefsResult.value.error == null
+    ? dedupeReferenceOptions((viewRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.viewTypeOptions;
+  const amenityOptions = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
+    ? dedupeReferenceOptions((amenityRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.amenityOptions;
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
+  const viewTypeById = optionMapById(viewTypeOptions);
+  const amenityById = optionMapById(amenityOptions);
+  const amenityCodesByRoom = new Map<string, string[]>();
+  const mediaIdsByRoom = new Map<string, string[]>();
+
+  if (amenityLinksResult.status === 'fulfilled' && amenityLinksResult.value.error == null) {
+    for (const row of (amenityLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const roomId = readString(row.room_type_id);
+      const option = amenityById.get(readString(row.amenity_id));
+      if (!roomId || !option) {
+        continue;
+      }
+      amenityCodesByRoom.set(roomId, [...(amenityCodesByRoom.get(roomId) ?? []), option.code]);
+    }
+  }
+
+  if (mediaLinksResult.status === 'fulfilled' && mediaLinksResult.value.error == null) {
+    for (const row of (mediaLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const roomId = readString(row.room_type_id);
+      const mediaId = readString(row.media_id);
+      if (!roomId || !mediaId) {
+        continue;
+      }
+      mediaIdsByRoom.set(roomId, [...(mediaIdsByRoom.get(roomId) ?? []), mediaId]);
+    }
+  }
+
+  return {
+    viewTypeOptions,
+    amenityOptions,
+    mediaOptions,
+    items: rows.map((row, index) => {
+      const viewType = viewTypeById.get(readString(row.view_type_id));
+      const roomId = readString(row.id);
+      return {
+        recordId: roomId || null,
+        code: readString(row.code, `room-${index + 1}`),
+        name: readString(row.name, `Unite ${index + 1}`),
+        nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
+        description: readString(row.description),
+        descriptionTranslations: readRecord(row.description_i18n) as Record<string, string>,
+        capacityAdults: readString(row.capacity_adults),
+        capacityChildren: readString(row.capacity_children),
+        capacityTotal: readString(row.capacity_total),
+        sizeSqm: readString(row.size_sqm),
+        bedConfig: readString(row.bed_config),
+        bedConfigTranslations: readRecord(row.bed_config_i18n) as Record<string, string>,
+        quantity: readString(row.total_rooms),
+        floorLevel: readString(row.floor_level),
+        viewTypeId: readString(row.view_type_id),
+        viewTypeCode: viewType?.code ?? '',
+        viewTypeLabel: viewType?.label ?? '',
+        basePrice: readString(row.base_price),
+        currency: readString(row.currency, 'EUR'),
+        accessible: readBoolean(row.is_accessible),
+        published: row.is_published == null ? true : readBoolean(row.is_published),
+        position: readString(row.position, String(index + 1)),
+        amenityCodes: amenityCodesByRoom.get(roomId) ?? [],
+        mediaIds: mediaIdsByRoom.get(roomId) ?? [],
+      };
+    }),
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceMeetingRoomsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceMeetingRoomsModule,
+): Promise<ObjectWorkspaceMeetingRoomsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule.items.length > 0
+      ? baseModule
+      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les salles MICE.' };
+  }
+
+  const [roomsResult, equipmentRefsResult] = await Promise.allSettled([
+    client
+      .from('object_meeting_room')
+      .select('id, name, name_i18n, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
+      .eq('object_id', objectId)
+      .order('name', { ascending: true }),
+    client.from('ref_code_meeting_equipment').select('id, code, name, position').order('position', { ascending: true }),
+  ]);
+
+  if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les salles MICE pour ce profil.',
+    };
+  }
+
+  const rows = (roomsResult.value.data ?? []) as Record<string, unknown>[];
+  const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
+  const linksResult = roomIds.length > 0
+    ? await client.from('meeting_room_equipment').select('room_id, equipment_id').in('room_id', roomIds)
+    : { data: [], error: null };
+  const equipmentOptions = equipmentRefsResult.status === 'fulfilled' && equipmentRefsResult.value.error == null
+    ? dedupeReferenceOptions((equipmentRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.equipmentOptions;
+  const equipmentById = optionMapById(equipmentOptions);
+  const equipmentCodesByRoom = new Map<string, string[]>();
+
+  if (linksResult.error == null) {
+    for (const row of (linksResult.data ?? []) as Record<string, unknown>[]) {
+      const roomId = readString(row.room_id);
+      const option = equipmentById.get(readString(row.equipment_id));
+      if (roomId && option) {
+        equipmentCodesByRoom.set(roomId, [...(equipmentCodesByRoom.get(roomId) ?? []), option.code]);
+      }
+    }
+  }
+
+  return {
+    equipmentOptions,
+    items: rows.map((row, index) => {
+      const roomId = readString(row.id);
+      return {
+        recordId: roomId || null,
+        name: readString(row.name, `Salle ${index + 1}`),
+        nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
+        areaM2: readString(row.area_m2),
+        capacityTheatre: readString(row.cap_theatre),
+        capacityU: readString(row.cap_u),
+        capacityClassroom: readString(row.cap_classroom),
+        capacityBoardroom: readString(row.cap_boardroom),
+        equipmentCodes: equipmentCodesByRoom.get(roomId) ?? [],
+      };
+    }),
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceMenusModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceMenusModule,
+): Promise<ObjectWorkspaceMenusModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule.items.length > 0
+      ? baseModule
+      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les menus.' };
+  }
+
+  const [menusResult, categoryRefsResult, dietaryRefsResult, allergenRefsResult, cuisineRefsResult, kindRefsResult, unitRefsResult, mediaResult] = await Promise.allSettled([
+    client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('ref_code_menu_category').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code_dietary_tag').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code_allergen').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code_cuisine_type').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code_price_kind').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code_price_unit').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('media').select('id, title, name, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (menusResult.status !== 'fulfilled' || menusResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les menus pour ce profil.',
+    };
+  }
+
+  const menus = (menusResult.value.data ?? []) as Record<string, unknown>[];
+  const menuIds = menus.map((row) => readString(row.id)).filter(Boolean);
+  const itemRowsResult = menuIds.length > 0
+    ? await client
+        .from('object_menu_item')
+        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position')
+        .in('menu_id', menuIds)
+        .order('position', { ascending: true })
+    : { data: [], error: null };
+  const itemRows = itemRowsResult.error == null
+    ? (itemRowsResult.data ?? []) as Record<string, unknown>[]
+    : [];
+  const itemIds = itemRows.map((row) => readString(row.id)).filter(Boolean);
+  const [mediaLinksResult, dietaryLinksResult, allergenLinksResult, cuisineLinksResult] = itemIds.length > 0
+    ? await Promise.allSettled([
+        client
+          .from('object_menu_item_media')
+          .select('menu_item_id, media_id, position')
+          .in('menu_item_id', itemIds)
+          .order('position', { ascending: true }),
+        client.from('object_menu_item_dietary_tag').select('menu_item_id, dietary_tag_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_allergen').select('menu_item_id, allergen_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_cuisine_type').select('menu_item_id, cuisine_type_id').in('menu_item_id', itemIds),
+      ])
+    : [
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+      ];
+  const categoryOptions = categoryRefsResult.status === 'fulfilled' && categoryRefsResult.value.error == null
+    ? dedupeReferenceOptions((categoryRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.categoryOptions;
+  const dietaryTagOptions = dietaryRefsResult.status === 'fulfilled' && dietaryRefsResult.value.error == null
+    ? dedupeReferenceOptions((dietaryRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.dietaryTagOptions;
+  const allergenOptions = allergenRefsResult.status === 'fulfilled' && allergenRefsResult.value.error == null
+    ? dedupeReferenceOptions((allergenRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.allergenOptions;
+  const cuisineTypeOptions = cuisineRefsResult.status === 'fulfilled' && cuisineRefsResult.value.error == null
+    ? dedupeReferenceOptions((cuisineRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.cuisineTypeOptions;
+  const priceKindOptions = kindRefsResult.status === 'fulfilled' && kindRefsResult.value.error == null
+    ? dedupeReferenceOptions((kindRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.priceKindOptions;
+  const priceUnitOptions = unitRefsResult.status === 'fulfilled' && unitRefsResult.value.error == null
+    ? dedupeReferenceOptions((unitRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.priceUnitOptions;
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
+  const categoryById = optionMapById(categoryOptions);
+  const kindById = optionMapById(priceKindOptions);
+  const unitById = optionMapById(priceUnitOptions);
+  const dietaryById = optionMapById(dietaryTagOptions);
+  const allergenById = optionMapById(allergenOptions);
+  const cuisineById = optionMapById(cuisineTypeOptions);
+  const mediaIdsByItem = new Map<string, string[]>();
+  const tagCodesByItem = new Map<string, string[]>();
+  const allergenCodesByItem = new Map<string, string[]>();
+  const cuisineCodesByItem = new Map<string, string[]>();
+
+  if (mediaLinksResult.status === 'fulfilled' && mediaLinksResult.value.error == null) {
+    for (const row of (mediaLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const mediaId = readString(row.media_id);
+      if (itemId && mediaId) {
+        mediaIdsByItem.set(itemId, [...(mediaIdsByItem.get(itemId) ?? []), mediaId]);
+      }
+    }
+  }
+  if (dietaryLinksResult.status === 'fulfilled' && dietaryLinksResult.value.error == null) {
+    for (const row of (dietaryLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = dietaryById.get(readString(row.dietary_tag_id));
+      if (itemId && option) {
+        tagCodesByItem.set(itemId, [...(tagCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+  if (allergenLinksResult.status === 'fulfilled' && allergenLinksResult.value.error == null) {
+    for (const row of (allergenLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = allergenById.get(readString(row.allergen_id));
+      if (itemId && option) {
+        allergenCodesByItem.set(itemId, [...(allergenCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+  if (cuisineLinksResult.status === 'fulfilled' && cuisineLinksResult.value.error == null) {
+    for (const row of (cuisineLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = cuisineById.get(readString(row.cuisine_type_id));
+      if (itemId && option) {
+        cuisineCodesByItem.set(itemId, [...(cuisineCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+
+  const itemsByMenuId = new Map<string, ObjectWorkspaceMenuItem[]>();
+  for (const row of itemRows) {
+    const itemId = readString(row.id);
+    const menuId = readString(row.menu_id);
+    const kind = kindById.get(readString(row.kind_id));
+    const unit = unitById.get(readString(row.unit_id));
+    const legacyMediaId = readString(row.media_id);
+    const item: ObjectWorkspaceMenuItem = {
+      recordId: itemId || null,
+      name: readString(row.name),
+      description: readString(row.description),
+      price: readString(row.price),
+      currency: readString(row.currency, 'EUR'),
+      kindId: readString(row.kind_id),
+      kindCode: kind?.code ?? '',
+      kindLabel: kind?.label ?? '',
+      unitId: readString(row.unit_id),
+      unitCode: unit?.code ?? '',
+      unitLabel: unit?.label ?? '',
+      mediaIds: Array.from(new Set([legacyMediaId, ...(mediaIdsByItem.get(itemId) ?? [])].filter(Boolean))),
+      available: row.is_available == null ? true : readBoolean(row.is_available),
+      position: readString(row.position),
+      dietaryTagCodes: tagCodesByItem.get(itemId) ?? [],
+      allergenCodes: allergenCodesByItem.get(itemId) ?? [],
+      cuisineTypeCodes: cuisineCodesByItem.get(itemId) ?? [],
+    };
+    itemsByMenuId.set(menuId, [...(itemsByMenuId.get(menuId) ?? []), item]);
+  }
+
+  return {
+    categoryOptions,
+    dietaryTagOptions,
+    allergenOptions,
+    cuisineTypeOptions,
+    priceKindOptions,
+    priceUnitOptions,
+    mediaOptions,
+    items: menus.map((row, index) => {
+      const menuId = readString(row.id);
+      const category = categoryById.get(readString(row.category_id));
+      return {
+        recordId: menuId || null,
+        categoryId: readString(row.category_id),
+        categoryCode: category?.code ?? '',
+        categoryLabel: category?.label ?? '',
+        name: readString(row.name, `Menu ${index + 1}`),
+        description: readString(row.description),
+        active: row.is_active == null ? true : readBoolean(row.is_active),
+        visibility: readString(row.visibility, 'public'),
+        position: readString(row.position, String(index + 1)),
+        items: itemsByMenuId.get(menuId) ?? [],
+      };
+    }),
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceActivityModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceActivityModule,
+): Promise<ObjectWorkspaceActivityModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger le detail activite.' };
+  }
+
+  const { data, error } = await client
+    .from('object_act')
+    .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided')
+    .eq('object_id', objectId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore le detail activite pour ce profil.',
+    };
+  }
+
+  if (!data) {
+    return baseModule;
+  }
+
+  const row = readRecord(data);
+  return {
+    durationMin: readString(row.duration_min),
+    minParticipants: readString(row.min_participants),
+    maxParticipants: readString(row.max_participants),
+    difficultyLevel: readString(row.difficulty_level),
+    guideRequired: readBoolean(row.guide_required),
+    minAge: readString(row.min_age),
+    equipmentProvided: readString(row.equipment_provided),
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceEventModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceEventModule,
+): Promise<ObjectWorkspaceEventModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger la programmation.' };
+  }
+
+  const [eventResult, occurrencesResult] = await Promise.allSettled([
+    client
+      .from('object_fma')
+      .select('event_start_date, event_end_date, event_start_time, event_end_time, is_recurring, recurrence_pattern')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+    client
+      .from('object_fma_occurrence')
+      .select('id, start_at, end_at, state')
+      .eq('object_id', objectId)
+      .order('start_at', { ascending: true }),
+  ]);
+
+  if (eventResult.status !== 'fulfilled' || eventResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore la programmation pour ce profil.',
+    };
+  }
+
+  const eventRow = readRecord(eventResult.value.data);
+  const occurrences = occurrencesResult.status === 'fulfilled' && occurrencesResult.value.error == null
+    ? ((occurrencesResult.value.data ?? []) as Record<string, unknown>[]).map((row) => ({
+        recordId: readString(row.id) || null,
+        startAt: readString(row.start_at),
+        endAt: readString(row.end_at),
+        state: readString(row.state, 'scheduled'),
+      }))
+    : baseModule.occurrences;
+
+  return {
+    startDate: readString(eventRow.event_start_date, baseModule.startDate),
+    endDate: readString(eventRow.event_end_date, baseModule.endDate),
+    startTime: readString(eventRow.event_start_time, baseModule.startTime),
+    endTime: readString(eventRow.event_end_time, baseModule.endTime),
+    recurring: eventRow.is_recurring == null ? baseModule.recurring : readBoolean(eventRow.is_recurring),
+    recurrenceText: readString(eventRow.recurrence_pattern, baseModule.recurrenceText),
+    occurrences,
+    unavailableReason: occurrencesResult.status === 'fulfilled' && occurrencesResult.value.error == null
+      ? null
+      : 'Les occurrences detaillees ne sont pas completement exposees pour ce profil.',
+  };
+}
+
+async function getObjectWorkspaceItineraryModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceItineraryModule,
+): Promise<ObjectWorkspaceItineraryModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger l itineraire.' };
+  }
+
+  const [itiResult, practiceRefsResult, practicesResult, stagesResult] = await Promise.allSettled([
+    client
+      .from('object_iti')
+      .select('distance_km, duration_min, difficulty_level, elevation_positive_m, elevation_negative_m, is_loop, open_status, status_note, geom')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+    client.from('ref_code_iti_practice').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
+    client.from('object_iti_stage').select('id, name, description, position, geom').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore le detail itineraire pour ce profil.',
+    };
+  }
+
+  const row = readRecord(itiResult.value.data);
+  const practiceOptions = practiceRefsResult.status === 'fulfilled' && practiceRefsResult.value.error == null
+    ? dedupeReferenceOptions((practiceRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+    : baseModule.practiceOptions;
+  const practiceById = optionMapById(practiceOptions);
+  const practiceCodes = practicesResult.status === 'fulfilled' && practicesResult.value.error == null
+    ? ((practicesResult.value.data ?? []) as Record<string, unknown>[])
+        .map((entry) => practiceById.get(readString(entry.practice_id))?.code ?? '')
+        .filter(Boolean)
+    : baseModule.practiceCodes;
+  const stages = stagesResult.status === 'fulfilled' && stagesResult.value.error == null
+    ? ((stagesResult.value.data ?? []) as Record<string, unknown>[]).map((stage, index) => ({
+        recordId: readString(stage.id) || null,
+        name: readString(stage.name, `Etape ${index + 1}`),
+        description: readString(stage.description),
+        position: readString(stage.position, String(index + 1)),
+      }))
+    : baseModule.stages;
+
+  return {
+    ...baseModule,
+    distanceKm: readString(row.distance_km, baseModule.distanceKm),
+    durationMin: readString(row.duration_min, baseModule.durationMin),
+    difficultyLevel: readString(row.difficulty_level, baseModule.difficultyLevel),
+    elevationPositiveM: readString(row.elevation_positive_m, baseModule.elevationPositiveM),
+    elevationNegativeM: readString(row.elevation_negative_m, baseModule.elevationNegativeM),
+    loop: row.is_loop == null ? baseModule.loop : readBoolean(row.is_loop),
+    openStatus: readString(row.open_status, baseModule.openStatus || 'open'),
+    statusNote: readString(row.status_note, baseModule.statusNote),
+    practiceOptions,
+    practiceCodes,
+    stages,
+    geometrySummary: row.geom ? 'geometrie presente' : baseModule.geometrySummary,
+    traceEditable: false,
+    unavailableReason: null,
+  };
+}
+
 async function getObjectWorkspaceOpeningsModule(
   objectId: string,
   baseModule: ObjectWorkspaceOpeningsModule,
@@ -2257,6 +2870,17 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canSubmitProposal: false,
       disabledReason: session.demoMode ? null : "Le live actuel n'expose pas encore une sauvegarde transactionnelle du module C5.",
     },
+    rooms: directOrBlocked(),
+    meetingRooms: directOrBlocked(),
+    menus: directOrBlocked(),
+    activity: directOrBlocked(),
+    event: directOrBlocked(),
+    itinerary: {
+      ...directOrBlocked(),
+      disabledReason: directWrite
+        ? 'Les champs descriptifs sont enregistrables. La trace et la geometrie restent en lecture seule sans contrat d ecriture stable.'
+        : proposalUnavailableReason,
+    },
     openings: {
       canDirectWrite: false,
       canPrepareProposal: false,
@@ -2297,7 +2921,28 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
   const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
-  const [taxonomyModule, distinctionsModule, publicationModule, syncIdentifiersModule, mediaModule, contactsModule, characteristicsModule, capacityPoliciesModule, pricingModule, openingsModule, relationshipsModule, membershipsModule, legalModule, permissions] = await Promise.all([
+  const [
+    taxonomyModule,
+    distinctionsModule,
+    publicationModule,
+    syncIdentifiersModule,
+    mediaModule,
+    contactsModule,
+    characteristicsModule,
+    capacityPoliciesModule,
+    pricingModule,
+    roomsModule,
+    meetingRoomsModule,
+    menusModule,
+    activityModule,
+    eventModule,
+    itineraryModule,
+    openingsModule,
+    relationshipsModule,
+    membershipsModule,
+    legalModule,
+    permissions,
+  ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
@@ -2307,6 +2952,12 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
+    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
+    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
+    getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
+    getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
+    getObjectWorkspaceEventModule(objectId, parsedModules.event),
+    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
     getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings),
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
@@ -2325,6 +2976,12 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     characteristics: characteristicsModule,
     capacityPolicies: capacityPoliciesModule,
     pricing: pricingModule,
+    rooms: roomsModule,
+    meetingRooms: meetingRoomsModule,
+    menus: menusModule,
+    activity: activityModule,
+    event: eventModule,
+    itinerary: itineraryModule,
     openings: openingsModule,
     relationships: relationshipsModule,
     memberships: membershipsModule,
@@ -2613,147 +3270,23 @@ export async function saveObjectWorkspaceCharacteristics(objectId: string, input
     return;
   }
 
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les caracteristiques.');
-  }
-
-  const [
-    languageRefsResult,
-    languageLevelsResult,
-    paymentRefsResult,
-    environmentRefsResult,
-    amenityRefsResult,
-  ] = await Promise.all([
-    client.from('ref_language').select('id, code'),
-    client.from('ref_code_language_level').select('id, code'),
-    client.from('ref_code_payment_method').select('id, code'),
-    client.from('ref_code_environment_tag').select('id, code'),
-    client.from('ref_amenity').select('id, code'),
-  ]);
-
-  if (languageRefsResult.error) {
-    throw mapMutationError(languageRefsResult.error, 'Impossible de charger les langues.');
-  }
-  if (languageLevelsResult.error) {
-    throw mapMutationError(languageLevelsResult.error, 'Impossible de charger les niveaux de langue.');
-  }
-  if (paymentRefsResult.error) {
-    throw mapMutationError(paymentRefsResult.error, 'Impossible de charger les moyens de paiement.');
-  }
-  if (environmentRefsResult.error) {
-    throw mapMutationError(environmentRefsResult.error, 'Impossible de charger les tags environnement.');
-  }
-  if (amenityRefsResult.error) {
-    throw mapMutationError(amenityRefsResult.error, 'Impossible de charger les equipements.');
-  }
-
-  const languageIdByCode = new Map(
-    (languageRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const levelIdByCode = new Map(
-    (languageLevelsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const paymentIdByCode = new Map(
-    (paymentRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const environmentIdByCode = new Map(
-    (environmentRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const amenityIdByCode = new Map(
-    (amenityRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-
-  const unknownLanguage = input.selectedLanguages.find((item) => !languageIdByCode.has(item.code.toLowerCase()));
-  if (unknownLanguage) {
-    throw new Error(`Langue inconnue: ${unknownLanguage.code || 'vide'}.`);
-  }
-
-  const unknownLevel = input.selectedLanguages.find((item) => item.levelCode && !levelIdByCode.has(item.levelCode.toLowerCase()));
-  if (unknownLevel) {
-    throw new Error(`Niveau de langue inconnu: ${unknownLevel.levelCode}.`);
-  }
-
-  const unknownPayment = input.selectedPaymentCodes.find((code) => !paymentIdByCode.has(code.toLowerCase()));
-  if (unknownPayment) {
-    throw new Error(`Moyen de paiement inconnu: ${unknownPayment}.`);
-  }
-
-  const unknownEnvironment = input.selectedEnvironmentCodes.find((code) => !environmentIdByCode.has(code.toLowerCase()));
-  if (unknownEnvironment) {
-    throw new Error(`Tag environnement inconnu: ${unknownEnvironment}.`);
-  }
-
-  const unknownAmenity = input.selectedAmenityCodes.find((code) => !amenityIdByCode.has(code.toLowerCase()));
-  if (unknownAmenity) {
-    throw new Error(`Equipement inconnu: ${unknownAmenity}.`);
-  }
-
-  const languageRows = input.selectedLanguages.map((item) => ({
-    object_id: objectId,
-    language_id: languageIdByCode.get(item.code.toLowerCase()) as string,
-    level_id: item.levelCode ? levelIdByCode.get(item.levelCode.toLowerCase()) ?? null : null,
-  }));
-  const paymentRows = Array.from(new Set(input.selectedPaymentCodes.map((code) => code.toLowerCase())))
-    .map((code) => ({
-      object_id: objectId,
-      payment_method_id: paymentIdByCode.get(code) as string,
-    }));
-  const environmentRows = Array.from(new Set(input.selectedEnvironmentCodes.map((code) => code.toLowerCase())))
-    .map((code) => ({
-      object_id: objectId,
-      environment_tag_id: environmentIdByCode.get(code) as string,
-    }));
-  const amenityRows = Array.from(new Set(input.selectedAmenityCodes.map((code) => code.toLowerCase())))
-    .map((code) => ({
-      object_id: objectId,
-      amenity_id: amenityIdByCode.get(code) as string,
-    }));
-
-  const [deleteLanguages, deletePayments, deleteEnvironments, deleteAmenities] = await Promise.all([
-    client.from('object_language').delete().eq('object_id', objectId),
-    client.from('object_payment_method').delete().eq('object_id', objectId),
-    client.from('object_environment_tag').delete().eq('object_id', objectId),
-    client.from('object_amenity').delete().eq('object_id', objectId),
-  ]);
-
-  if (deleteLanguages.error) {
-    throw mapMutationError(deleteLanguages.error, 'Impossible de reinitialiser les langues.');
-  }
-  if (deletePayments.error) {
-    throw mapMutationError(deletePayments.error, 'Impossible de reinitialiser les moyens de paiement.');
-  }
-  if (deleteEnvironments.error) {
-    throw mapMutationError(deleteEnvironments.error, 'Impossible de reinitialiser les tags environnement.');
-  }
-  if (deleteAmenities.error) {
-    throw mapMutationError(deleteAmenities.error, 'Impossible de reinitialiser les equipements.');
-  }
-
-  if (languageRows.length > 0) {
-    const { error } = await client.from('object_language').insert(languageRows);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder les langues.');
-    }
-  }
-  if (paymentRows.length > 0) {
-    const { error } = await client.from('object_payment_method').insert(paymentRows);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder les moyens de paiement.');
-    }
-  }
-  if (environmentRows.length > 0) {
-    const { error } = await client.from('object_environment_tag').insert(environmentRows);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder les tags environnement.');
-    }
-  }
-  if (amenityRows.length > 0) {
-    const { error } = await client.from('object_amenity').insert(amenityRows);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder les equipements.');
-    }
-  }
+  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+    languages: input.selectedLanguages.map((item) => ({
+      language_id: toRpcUuid(item.languageId),
+      language_code: item.code || null,
+      level_id: toRpcUuid(item.levelId),
+      level_code: item.levelCode || null,
+    })),
+    payment_methods: Array.from(new Set(input.selectedPaymentCodes)).map((code) => ({
+      payment_method_code: code,
+    })),
+    environment_tags: Array.from(new Set(input.selectedEnvironmentCodes)).map((code) => ({
+      environment_tag_code: code,
+    })),
+    amenities: Array.from(new Set(input.selectedAmenityCodes)).map((code) => ({
+      amenity_code: code,
+    })),
+  }, 'Impossible d enregistrer les caracteristiques.');
 }
 
 export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<void> {
@@ -2762,73 +3295,28 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
     return;
   }
 
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer capacites et politiques.');
-  }
-
-  const { data: metricRefs, error: metricRefsError } = await client.from('ref_capacity_metric').select('id, code');
-  if (metricRefsError) {
-    throw mapMutationError(metricRefsError, 'Impossible de charger les metriques de capacite.');
-  }
-
-  const metricIdByCode = new Map(
-    (metricRefs ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-
-  const unknownMetric = input.capacityItems.find((item) => !metricIdByCode.has(item.metricCode.toLowerCase()));
-  if (unknownMetric) {
-    throw new Error(`Metrique de capacite inconnue: ${unknownMetric.metricCode || 'vide'}.`);
-  }
-
-  const capacityRows = input.capacityItems.map((item) => ({
-    object_id: objectId,
-    metric_id: metricIdByCode.get(item.metricCode.toLowerCase()) as string,
-    value_integer: toNullableInteger(item.value),
-    effective_from: toNullableText(item.effectiveFrom),
-    effective_to: toNullableText(item.effectiveTo),
-  }));
-
-  const { error: deleteCapacitiesError } = await client.from('object_capacity').delete().eq('object_id', objectId);
-  if (deleteCapacitiesError) {
-    throw mapMutationError(deleteCapacitiesError, 'Impossible de reinitialiser les capacites.');
-  }
-
-  if (capacityRows.length > 0) {
-    const { error } = await client.from('object_capacity').insert(capacityRows);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder les capacites.');
-    }
-  }
-
-  const groupPolicyPayload = {
-    object_id: objectId,
-    min_size: toNullableInteger(input.groupPolicy.minSize),
-    max_size: toNullableInteger(input.groupPolicy.maxSize),
-    group_only: input.groupPolicy.groupOnly,
-    notes: toNullableText(input.groupPolicy.notes),
-  };
-  const { error: groupPolicyError } = await client.from('object_group_policy').upsert(groupPolicyPayload, { onConflict: 'object_id' });
-  if (groupPolicyError) {
-    throw mapMutationError(groupPolicyError, 'Impossible de sauvegarder la politique de groupe.');
-  }
-
-  if (input.petPolicy.hasPolicy) {
-    const petPolicyPayload = {
-      object_id: objectId,
-      accepted: input.petPolicy.accepted,
-      conditions: toNullableText(input.petPolicy.conditions),
-    };
-    const { error: petPolicyError } = await client.from('object_pet_policy').upsert(petPolicyPayload, { onConflict: 'object_id' });
-    if (petPolicyError) {
-      throw mapMutationError(petPolicyError, 'Impossible de sauvegarder la politique animaux.');
-    }
-  } else {
-    const { error: deletePetPolicyError } = await client.from('object_pet_policy').delete().eq('object_id', objectId);
-    if (deletePetPolicyError) {
-      throw mapMutationError(deletePetPolicyError, 'Impossible de supprimer la politique animaux.');
-    }
-  }
+  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+    capacities: input.capacityItems.map((item) => ({
+      id: toRpcUuid(item.recordId),
+      metric_id: toRpcUuid(item.metricId),
+      metric_code: item.metricCode || null,
+      value_integer: toNullableInteger(item.value),
+      effective_from: toNullableText(item.effectiveFrom),
+      effective_to: toNullableText(item.effectiveTo),
+    })),
+    group_policy: {
+      min_size: toNullableInteger(input.groupPolicy.minSize),
+      max_size: toNullableInteger(input.groupPolicy.maxSize),
+      group_only: input.groupPolicy.groupOnly,
+      notes: toNullableText(input.groupPolicy.notes),
+    },
+    pet_policy: input.petPolicy.hasPolicy
+      ? {
+          accepted: input.petPolicy.accepted,
+          conditions: toNullableText(input.petPolicy.conditions),
+        }
+      : null,
+  }, 'Impossible d enregistrer capacites et politiques.');
 }
 
 export async function saveObjectWorkspacePricing(objectId: string, input: ObjectWorkspacePricingModule): Promise<void> {
@@ -2837,53 +3325,9 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
     return;
   }
 
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les tarifs.');
-  }
-
-  const [priceKindRefsResult, priceUnitRefsResult] = await Promise.all([
-    client.from('ref_code_price_kind').select('id, code'),
-    client.from('ref_code_price_unit').select('id, code'),
-  ]);
-
-  if (priceKindRefsResult.error) {
-    throw mapMutationError(priceKindRefsResult.error, 'Impossible de charger les types de tarifs.');
-  }
-  if (priceUnitRefsResult.error) {
-    throw mapMutationError(priceUnitRefsResult.error, 'Impossible de charger les unites tarifaires.');
-  }
-
-  const priceKindIdByCode = new Map(
-    (priceKindRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const priceUnitIdByCode = new Map(
-    (priceUnitRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-
-  const unknownKind = input.prices.find((price) => !priceKindIdByCode.has(price.kindCode.toLowerCase()));
-  if (unknownKind) {
-    throw new Error(`Type de tarif inconnu: ${unknownKind.kindCode || 'vide'}.`);
-  }
-
-  const unknownUnit = input.prices.find((price) => price.unitCode && !priceUnitIdByCode.has(price.unitCode.toLowerCase()));
-  if (unknownUnit) {
-    throw new Error(`Unite tarifaire inconnue: ${unknownUnit.unitCode}.`);
-  }
-
-  const { error: deleteDiscountsError } = await client.from('object_discount').delete().eq('object_id', objectId);
-  if (deleteDiscountsError) {
-    throw mapMutationError(deleteDiscountsError, 'Impossible de reinitialiser les remises.');
-  }
-
-  const { error: deletePricesError } = await client.from('object_price').delete().eq('object_id', objectId);
-  if (deletePricesError) {
-    throw mapMutationError(deletePricesError, 'Impossible de reinitialiser les tarifs.');
-  }
-
-  for (const discount of input.discounts) {
-    const payload = {
-      object_id: objectId,
+  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+    discounts: input.discounts.map((discount) => ({
+      id: toRpcUuid(discount.recordId),
       conditions: toNullableText(discount.conditions),
       discount_percent: toNullableNumber(discount.discountPercent),
       discount_amount: toNullableNumber(discount.discountAmount),
@@ -2893,19 +3337,13 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
       valid_from: toNullableText(discount.validFrom),
       valid_to: toNullableText(discount.validTo),
       source: toNullableText(discount.source),
-    };
-
-    const { error } = await client.from('object_discount').insert(payload);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder une remise.');
-    }
-  }
-
-  for (const price of input.prices) {
-    const payload = {
-      object_id: objectId,
-      kind_id: priceKindIdByCode.get(price.kindCode.toLowerCase()) as string,
-      unit_id: price.unitCode ? priceUnitIdByCode.get(price.unitCode.toLowerCase()) ?? null : null,
+    })),
+    prices: input.prices.map((price) => ({
+      id: toRpcUuid(price.recordId),
+      kind_id: toRpcUuid(price.kindId),
+      kind_code: price.kindCode || null,
+      unit_id: toRpcUuid(price.unitId),
+      unit_code: price.unitCode || null,
       amount: toNullableNumber(price.amount),
       amount_max: toNullableNumber(price.amountMax),
       currency: toNullableText(price.currency) ?? 'EUR',
@@ -2919,30 +3357,512 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
       valid_to: toNullableText(price.validTo),
       conditions: toNullableText(price.conditions),
       source: toNullableText(price.source),
+      periods: price.periods.map((period) => ({
+        id: toRpcUuid(period.recordId),
+        start_date: toNullableText(period.startDate),
+        end_date: toNullableText(period.endDate),
+        start_time: toNullableText(period.startTime),
+        end_time: toNullableText(period.endTime),
+        note: toNullableText(period.note),
+      })),
+    })),
+  }, 'Impossible d enregistrer les tarifs.');
+}
+
+function buildCodeIdMap(rows: unknown[]): Map<string, string> {
+  return new Map(
+    rows.map((entry) => {
+      const row = readRecord(entry);
+      return [readString(row.code).toLowerCase(), readString(row.id)] as const;
+    }).filter(([code, id]) => Boolean(code && id)),
+  );
+}
+
+function ensureKnownCodes(codes: string[], idByCode: Map<string, string>, label: string): void {
+  const unknown = codes.find((code) => code && !idByCode.has(code.toLowerCase()));
+  if (unknown) {
+    throw new Error(`${label} inconnu: ${unknown}.`);
+  }
+}
+
+export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWorkspaceRoomsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les chambres et unites.');
+  }
+
+  const [viewRefsResult, amenityRefsResult, existingRoomsResult] = await Promise.all([
+    client.from('ref_code_view_type').select('id, code'),
+    client.from('ref_amenity').select('id, code'),
+    client.from('object_room_type').select('id').eq('object_id', objectId),
+  ]);
+
+  if (viewRefsResult.error) {
+    throw mapMutationError(viewRefsResult.error, 'Impossible de charger les types de vue.');
+  }
+  if (amenityRefsResult.error) {
+    throw mapMutationError(amenityRefsResult.error, 'Impossible de charger les equipements.');
+  }
+  if (existingRoomsResult.error) {
+    throw mapMutationError(existingRoomsResult.error, 'Impossible de charger les chambres existantes.');
+  }
+
+  const viewIdByCode = buildCodeIdMap(viewRefsResult.data ?? []);
+  const amenityIdByCode = buildCodeIdMap(amenityRefsResult.data ?? []);
+  const viewCodes = input.items.map((item) => item.viewTypeCode).filter(Boolean);
+  ensureKnownCodes(viewCodes, viewIdByCode, 'Type de vue');
+  ensureKnownCodes(input.items.flatMap((item) => item.amenityCodes), amenityIdByCode, 'Equipement');
+
+  const existingRoomIds = (existingRoomsResult.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).id))
+    .filter(Boolean);
+  if (existingRoomIds.length > 0) {
+    const [deleteAmenityLinks, deleteMediaLinks] = await Promise.all([
+      client.from('object_room_type_amenity').delete().in('room_type_id', existingRoomIds),
+      client.from('object_room_type_media').delete().in('room_type_id', existingRoomIds),
+    ]);
+    if (deleteAmenityLinks.error) {
+      throw mapMutationError(deleteAmenityLinks.error, 'Impossible de reinitialiser les equipements de chambre.');
+    }
+    if (deleteMediaLinks.error) {
+      throw mapMutationError(deleteMediaLinks.error, 'Impossible de reinitialiser les medias lies aux chambres.');
+    }
+  }
+
+  const { error: deleteRoomsError } = await client.from('object_room_type').delete().eq('object_id', objectId);
+  if (deleteRoomsError) {
+    throw mapMutationError(deleteRoomsError, 'Impossible de reinitialiser les chambres.');
+  }
+
+  for (const item of input.items) {
+    const payload = {
+      object_id: objectId,
+      code: toNullableText(item.code),
+      name: toNullableText(item.name) ?? 'Unite',
+      name_i18n: item.nameTranslations,
+      description: toNullableText(item.description),
+      description_i18n: item.descriptionTranslations,
+      capacity_adults: toNullableInteger(item.capacityAdults),
+      capacity_children: toNullableInteger(item.capacityChildren),
+      capacity_total: toNullableInteger(item.capacityTotal),
+      size_sqm: toNullableNumber(item.sizeSqm),
+      bed_config: toNullableText(item.bedConfig),
+      bed_config_i18n: item.bedConfigTranslations,
+      total_rooms: toNullableInteger(item.quantity),
+      floor_level: toNullableText(item.floorLevel),
+      view_type_id: item.viewTypeCode ? viewIdByCode.get(item.viewTypeCode.toLowerCase()) ?? null : null,
+      base_price: toNullableNumber(item.basePrice),
+      currency: toNullableText(item.currency) ?? 'EUR',
+      is_accessible: item.accessible,
+      is_published: item.published,
+      position: toNullableInteger(item.position),
     };
-
-    const { data, error } = await client.from('object_price').insert(payload).select('id').single();
+    const { data, error } = await client.from('object_room_type').insert(payload).select('id').single();
     if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder un tarif.');
+      throw mapMutationError(error, 'Impossible de sauvegarder une chambre ou unite.');
     }
-
-    const priceId = readString((data as Record<string, unknown>).id);
-    if (!priceId || price.periods.length === 0) {
-      continue;
+    const roomId = readString((data as Record<string, unknown>).id);
+    const amenityRows = Array.from(new Set(item.amenityCodes))
+      .map((code) => ({
+        room_type_id: roomId,
+        amenity_id: amenityIdByCode.get(code.toLowerCase()) as string,
+      }));
+    if (amenityRows.length > 0) {
+      const { error: amenityError } = await client.from('object_room_type_amenity').insert(amenityRows);
+      if (amenityError) {
+        throw mapMutationError(amenityError, 'Impossible de sauvegarder les equipements de chambre.');
+      }
     }
+    const mediaRows = Array.from(new Set(item.mediaIds))
+      .filter((mediaId) => isUuid(mediaId))
+      .map((mediaId) => ({ room_type_id: roomId, media_id: mediaId }));
+    if (mediaRows.length > 0) {
+      const { error: mediaError } = await client.from('object_room_type_media').insert(mediaRows);
+      if (mediaError) {
+        throw mapMutationError(mediaError, 'Impossible de sauvegarder les medias de chambre.');
+      }
+    }
+  }
+}
 
-    const periodPayloads = price.periods.map((period) => ({
-      price_id: priceId,
-      start_date: toNullableText(period.startDate),
-      end_date: toNullableText(period.endDate),
-      start_time: toNullableText(period.startTime),
-      end_time: toNullableText(period.endTime),
-      note: toNullableText(period.note),
+export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: ObjectWorkspaceMeetingRoomsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les salles MICE.');
+  }
+
+  const [equipmentRefsResult, existingRoomsResult] = await Promise.all([
+    client.from('ref_code_meeting_equipment').select('id, code'),
+    client.from('object_meeting_room').select('id').eq('object_id', objectId),
+  ]);
+
+  if (equipmentRefsResult.error) {
+    throw mapMutationError(equipmentRefsResult.error, 'Impossible de charger les equipements MICE.');
+  }
+  if (existingRoomsResult.error) {
+    throw mapMutationError(existingRoomsResult.error, 'Impossible de charger les salles MICE existantes.');
+  }
+
+  const equipmentIdByCode = buildCodeIdMap(equipmentRefsResult.data ?? []);
+  ensureKnownCodes(input.items.flatMap((item) => item.equipmentCodes), equipmentIdByCode, 'Equipement MICE');
+  const existingRoomIds = (existingRoomsResult.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).id))
+    .filter(Boolean);
+  if (existingRoomIds.length > 0) {
+    const { error } = await client.from('meeting_room_equipment').delete().in('room_id', existingRoomIds);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de reinitialiser les equipements MICE.');
+    }
+  }
+  const { error: deleteRoomsError } = await client.from('object_meeting_room').delete().eq('object_id', objectId);
+  if (deleteRoomsError) {
+    throw mapMutationError(deleteRoomsError, 'Impossible de reinitialiser les salles MICE.');
+  }
+
+  for (const item of input.items) {
+    const payload = {
+      object_id: objectId,
+      name: toNullableText(item.name) ?? 'Salle',
+      name_i18n: item.nameTranslations,
+      area_m2: toNullableNumber(item.areaM2),
+      cap_theatre: toNullableInteger(item.capacityTheatre),
+      cap_u: toNullableInteger(item.capacityU),
+      cap_classroom: toNullableInteger(item.capacityClassroom),
+      cap_boardroom: toNullableInteger(item.capacityBoardroom),
+    };
+    const { data, error } = await client.from('object_meeting_room').insert(payload).select('id').single();
+    if (error) {
+      throw mapMutationError(error, 'Impossible de sauvegarder une salle MICE.');
+    }
+    const roomId = readString((data as Record<string, unknown>).id);
+    const equipmentRows = Array.from(new Set(item.equipmentCodes))
+      .map((code) => ({
+        room_id: roomId,
+        equipment_id: equipmentIdByCode.get(code.toLowerCase()) as string,
+      }));
+    if (equipmentRows.length > 0) {
+      const { error: equipmentError } = await client.from('meeting_room_equipment').insert(equipmentRows);
+      if (equipmentError) {
+        throw mapMutationError(equipmentError, 'Impossible de sauvegarder les equipements MICE.');
+      }
+    }
+  }
+}
+
+export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les menus.');
+  }
+
+  const [
+    categoryRefsResult,
+    dietaryRefsResult,
+    allergenRefsResult,
+    cuisineRefsResult,
+    kindRefsResult,
+    unitRefsResult,
+    existingMenusResult,
+  ] = await Promise.all([
+    client.from('ref_code_menu_category').select('id, code'),
+    client.from('ref_code_dietary_tag').select('id, code'),
+    client.from('ref_code_allergen').select('id, code'),
+    client.from('ref_code_cuisine_type').select('id, code'),
+    client.from('ref_code_price_kind').select('id, code'),
+    client.from('ref_code_price_unit').select('id, code'),
+    client.from('object_menu').select('id').eq('object_id', objectId),
+  ]);
+
+  if (categoryRefsResult.error) {
+    throw mapMutationError(categoryRefsResult.error, 'Impossible de charger les categories de menu.');
+  }
+  if (dietaryRefsResult.error) {
+    throw mapMutationError(dietaryRefsResult.error, 'Impossible de charger les tags alimentaires.');
+  }
+  if (allergenRefsResult.error) {
+    throw mapMutationError(allergenRefsResult.error, 'Impossible de charger les allergenes.');
+  }
+  if (cuisineRefsResult.error) {
+    throw mapMutationError(cuisineRefsResult.error, 'Impossible de charger les cuisines.');
+  }
+  if (kindRefsResult.error) {
+    throw mapMutationError(kindRefsResult.error, 'Impossible de charger les types de prix.');
+  }
+  if (unitRefsResult.error) {
+    throw mapMutationError(unitRefsResult.error, 'Impossible de charger les unites de prix.');
+  }
+  if (existingMenusResult.error) {
+    throw mapMutationError(existingMenusResult.error, 'Impossible de charger les menus existants.');
+  }
+
+  const categoryIdByCode = buildCodeIdMap(categoryRefsResult.data ?? []);
+  const dietaryIdByCode = buildCodeIdMap(dietaryRefsResult.data ?? []);
+  const allergenIdByCode = buildCodeIdMap(allergenRefsResult.data ?? []);
+  const cuisineIdByCode = buildCodeIdMap(cuisineRefsResult.data ?? []);
+  const kindIdByCode = buildCodeIdMap(kindRefsResult.data ?? []);
+  const unitIdByCode = buildCodeIdMap(unitRefsResult.data ?? []);
+  ensureKnownCodes(input.items.map((menu) => menu.categoryCode).filter(Boolean), categoryIdByCode, 'Categorie de menu');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.kindCode).filter(Boolean)), kindIdByCode, 'Type de prix');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.unitCode).filter(Boolean)), unitIdByCode, 'Unite de prix');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.dietaryTagCodes)), dietaryIdByCode, 'Tag alimentaire');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.allergenCodes)), allergenIdByCode, 'Allergene');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.cuisineTypeCodes)), cuisineIdByCode, 'Cuisine');
+
+  const existingMenuIds = (existingMenusResult.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).id))
+    .filter(Boolean);
+  if (existingMenuIds.length > 0) {
+    const existingItems = await client.from('object_menu_item').select('id').in('menu_id', existingMenuIds);
+    if (existingItems.error) {
+      throw mapMutationError(existingItems.error, 'Impossible de charger les lignes de menu existantes.');
+    }
+    const existingItemIds = (existingItems.data ?? [])
+      .map((row) => readString((row as Record<string, unknown>).id))
+      .filter(Boolean);
+    if (existingItemIds.length > 0) {
+      const [deleteMedia, deleteDietary, deleteAllergens, deleteCuisine] = await Promise.all([
+        client.from('object_menu_item_media').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_dietary_tag').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_allergen').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_cuisine_type').delete().in('menu_item_id', existingItemIds),
+      ]);
+      if (deleteMedia.error) {
+        throw mapMutationError(deleteMedia.error, 'Impossible de reinitialiser les medias de menu.');
+      }
+      if (deleteDietary.error) {
+        throw mapMutationError(deleteDietary.error, 'Impossible de reinitialiser les tags alimentaires.');
+      }
+      if (deleteAllergens.error) {
+        throw mapMutationError(deleteAllergens.error, 'Impossible de reinitialiser les allergenes.');
+      }
+      if (deleteCuisine.error) {
+        throw mapMutationError(deleteCuisine.error, 'Impossible de reinitialiser les cuisines.');
+      }
+    }
+    const { error: deleteItemsError } = await client.from('object_menu_item').delete().in('menu_id', existingMenuIds);
+    if (deleteItemsError) {
+      throw mapMutationError(deleteItemsError, 'Impossible de reinitialiser les lignes de menu.');
+    }
+  }
+  const { error: deleteMenusError } = await client.from('object_menu').delete().eq('object_id', objectId);
+  if (deleteMenusError) {
+    throw mapMutationError(deleteMenusError, 'Impossible de reinitialiser les menus.');
+  }
+
+  for (const menu of input.items) {
+    const menuPayload = {
+      object_id: objectId,
+      category_id: menu.categoryCode ? categoryIdByCode.get(menu.categoryCode.toLowerCase()) ?? null : null,
+      name: toNullableText(menu.name) ?? 'Menu',
+      description: toNullableText(menu.description),
+      is_active: menu.active,
+      visibility: toNullableText(menu.visibility) ?? 'public',
+      position: toNullableInteger(menu.position),
+    };
+    const { data: menuData, error: menuError } = await client.from('object_menu').insert(menuPayload).select('id').single();
+    if (menuError) {
+      throw mapMutationError(menuError, 'Impossible de sauvegarder un menu.');
+    }
+    const menuId = readString((menuData as Record<string, unknown>).id);
+    for (const item of menu.items) {
+      const mediaIds = Array.from(new Set(item.mediaIds ?? [])).filter((mediaId) => isUuid(mediaId));
+      const itemPayload = {
+        menu_id: menuId,
+        name: toNullableText(item.name) ?? 'Ligne',
+        description: toNullableText(item.description),
+        price: toNullableNumber(item.price),
+        currency: toNullableText(item.currency) ?? 'EUR',
+        kind_id: item.kindCode ? kindIdByCode.get(item.kindCode.toLowerCase()) ?? null : null,
+        unit_id: item.unitCode ? unitIdByCode.get(item.unitCode.toLowerCase()) ?? null : null,
+        media_id: mediaIds[0] ?? null,
+        is_available: item.available,
+        position: toNullableInteger(item.position),
+      };
+      const { data: itemData, error: itemError } = await client.from('object_menu_item').insert(itemPayload).select('id').single();
+      if (itemError) {
+        throw mapMutationError(itemError, 'Impossible de sauvegarder une ligne de menu.');
+      }
+      const itemId = readString((itemData as Record<string, unknown>).id);
+      const dietaryRows = Array.from(new Set(item.dietaryTagCodes)).map((code) => ({
+        menu_item_id: itemId,
+        dietary_tag_id: dietaryIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const allergenRows = Array.from(new Set(item.allergenCodes)).map((code) => ({
+        menu_item_id: itemId,
+        allergen_id: allergenIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const cuisineRows = Array.from(new Set(item.cuisineTypeCodes)).map((code) => ({
+        menu_item_id: itemId,
+        cuisine_type_id: cuisineIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const mediaRows = mediaIds.map((mediaId, mediaIndex) => ({
+        menu_item_id: itemId,
+        media_id: mediaId,
+        position: mediaIndex + 1,
+      }));
+      if (mediaRows.length > 0) {
+        const { error } = await client.from('object_menu_item_media').insert(mediaRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les medias de menu.');
+        }
+      }
+      if (dietaryRows.length > 0) {
+        const { error } = await client.from('object_menu_item_dietary_tag').insert(dietaryRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les tags alimentaires.');
+        }
+      }
+      if (allergenRows.length > 0) {
+        const { error } = await client.from('object_menu_item_allergen').insert(allergenRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les allergenes.');
+        }
+      }
+      if (cuisineRows.length > 0) {
+        const { error } = await client.from('object_menu_item_cuisine_type').insert(cuisineRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les cuisines.');
+        }
+      }
+    }
+  }
+}
+
+export async function saveObjectWorkspaceActivity(objectId: string, input: ObjectWorkspaceActivityModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer le detail activite.');
+  }
+
+  const { error } = await client.from('object_act').upsert({
+    object_id: objectId,
+    duration_min: toNullableInteger(input.durationMin),
+    min_participants: toNullableInteger(input.minParticipants),
+    max_participants: toNullableInteger(input.maxParticipants),
+    difficulty_level: toNullableText(input.difficultyLevel),
+    guide_required: input.guideRequired,
+    min_age: toNullableInteger(input.minAge),
+    equipment_provided: toNullableText(input.equipmentProvided),
+  }, { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder le detail activite.');
+  }
+}
+
+export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWorkspaceEventModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la programmation.');
+  }
+
+  const { error } = await client.from('object_fma').upsert({
+    object_id: objectId,
+    event_start_date: toNullableText(input.startDate),
+    event_end_date: toNullableText(input.endDate),
+    event_start_time: toNullableText(input.startTime),
+    event_end_time: toNullableText(input.endTime),
+    is_recurring: input.recurring,
+    recurrence_pattern: toNullableText(input.recurrenceText),
+  }, { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder la programmation.');
+  }
+
+  const { error: deleteOccurrencesError } = await client.from('object_fma_occurrence').delete().eq('object_id', objectId);
+  if (deleteOccurrencesError) {
+    throw mapMutationError(deleteOccurrencesError, 'Impossible de reinitialiser les occurrences.');
+  }
+
+  const occurrenceRows = input.occurrences
+    .filter((occurrence) => occurrence.startAt || occurrence.endAt)
+    .map((occurrence) => ({
+      object_id: objectId,
+      start_at: toNullableText(occurrence.startAt),
+      end_at: toNullableText(occurrence.endAt),
+      state: toNullableText(occurrence.state) ?? 'scheduled',
     }));
+  if (occurrenceRows.length > 0) {
+    const { error: occurrencesError } = await client.from('object_fma_occurrence').insert(occurrenceRows);
+    if (occurrencesError) {
+      throw mapMutationError(occurrencesError, 'Impossible de sauvegarder les occurrences.');
+    }
+  }
+}
 
-    const { error: periodError } = await client.from('object_price_period').insert(periodPayloads);
-    if (periodError) {
-      throw mapMutationError(periodError, 'Impossible de sauvegarder les periodes tarifaires.');
+export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer l itineraire.');
+  }
+
+  const practiceRefsResult = await client.from('ref_code_iti_practice').select('id, code');
+  if (practiceRefsResult.error) {
+    throw mapMutationError(practiceRefsResult.error, 'Impossible de charger les pratiques itineraire.');
+  }
+  const practiceIdByCode = buildCodeIdMap(practiceRefsResult.data ?? []);
+  ensureKnownCodes(input.practiceCodes, practiceIdByCode, 'Pratique itineraire');
+
+  const { error } = await client.from('object_iti').upsert({
+    object_id: objectId,
+    distance_km: toNullableNumber(input.distanceKm),
+    duration_min: toNullableInteger(input.durationMin),
+    difficulty_level: toNullableText(input.difficultyLevel),
+    elevation_positive_m: toNullableInteger(input.elevationPositiveM),
+    elevation_negative_m: toNullableInteger(input.elevationNegativeM),
+    is_loop: input.loop,
+    open_status: toNullableText(input.openStatus) ?? 'open',
+    status_note: toNullableText(input.statusNote),
+  }, { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder l itineraire.');
+  }
+
+  const { error: deletePracticesError } = await client.from('object_iti_practice').delete().eq('object_id', objectId);
+  if (deletePracticesError) {
+    throw mapMutationError(deletePracticesError, 'Impossible de reinitialiser les pratiques itineraire.');
+  }
+
+  const practiceRows = Array.from(new Set(input.practiceCodes)).map((code) => ({
+    object_id: objectId,
+    practice_id: practiceIdByCode.get(code.toLowerCase()) as string,
+  }));
+  if (practiceRows.length > 0) {
+    const { error: practicesError } = await client.from('object_iti_practice').insert(practiceRows);
+    if (practicesError) {
+      throw mapMutationError(practicesError, 'Impossible de sauvegarder les pratiques itineraire.');
     }
   }
 }

@@ -637,4 +637,41 @@ describe('parseObjectWorkspace', () => {
       longitude: '55.517913',
     });
   });
+
+  it('preserves ordered restaurant menu item media from legacy and join payloads', () => {
+    const detail: ObjectDetail = {
+      id: 'RESRUN0000000001',
+      name: 'Table Corail',
+      type: 'RES',
+      raw: {
+        menus: [
+          {
+            id: 'menu-1',
+            category: { id: 'category-1', code: 'lunch', name: 'Dejeuner' },
+            name: 'Carte',
+            items: [
+              {
+                id: 'item-1',
+                name: 'Cari legumes',
+                media_id: 'media-primary',
+                object_menu_item_media: [
+                  { media_id: 'media-secondary' },
+                  { media: { id: 'media-tertiary' } },
+                  { media_id: 'media-primary' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.menus.items[0].items[0].mediaIds).toEqual([
+      'media-primary',
+      'media-secondary',
+      'media-tertiary',
+    ]);
+  });
 });

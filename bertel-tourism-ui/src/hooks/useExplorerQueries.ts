@@ -19,29 +19,41 @@ import {
   saveObjectWorkspaceDistinctions,
   getObjectWorkspaceResource,
   publishObjectWorkspace,
+  saveObjectWorkspaceActivity,
   saveObjectWorkspaceContacts,
   saveObjectWorkspaceDescriptions,
+  saveObjectWorkspaceEvent,
   saveObjectWorkspaceGeneralInfo,
+  saveObjectWorkspaceItinerary,
   saveObjectWorkspaceLocation,
   saveObjectWorkspaceLegal,
+  saveObjectWorkspaceMeetingRooms,
   saveObjectWorkspaceMemberships,
   saveObjectWorkspaceMedia,
+  saveObjectWorkspaceMenus,
   saveObjectWorkspacePricing,
+  saveObjectWorkspaceRooms,
   saveObjectWorkspaceTaxonomy,
 } from '../services/object-workspace';
 import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
+  ObjectWorkspaceActivityModule,
   ObjectWorkspaceCharacteristicsModule,
   ObjectWorkspaceContactsModule,
   ObjectWorkspaceDescriptionsModule,
   ObjectWorkspaceDistinctionsModule,
+  ObjectWorkspaceEventModule,
   ObjectWorkspaceGeneralInfo,
+  ObjectWorkspaceItineraryModule,
+  ObjectWorkspaceMeetingRoomsModule,
   ObjectWorkspaceMembershipModule,
   ObjectWorkspaceLocationModule,
   ObjectWorkspaceLegalModule,
   ObjectWorkspaceMediaModule,
+  ObjectWorkspaceMenusModule,
   ObjectWorkspacePricingModule,
+  ObjectWorkspaceRoomsModule,
   ObjectWorkspaceTaxonomyModule,
 } from '../services/object-workspace-parser';
 
@@ -56,6 +68,12 @@ type SaveWorkspaceModuleInput =
   | { moduleId: 'characteristics'; value: ObjectWorkspaceCharacteristicsModule }
   | { moduleId: 'capacity-policies'; value: ObjectWorkspaceCapacityPoliciesModule }
   | { moduleId: 'pricing'; value: ObjectWorkspacePricingModule }
+  | { moduleId: 'rooms'; value: ObjectWorkspaceRoomsModule }
+  | { moduleId: 'meeting-rooms'; value: ObjectWorkspaceMeetingRoomsModule }
+  | { moduleId: 'menus'; value: ObjectWorkspaceMenusModule }
+  | { moduleId: 'activity'; value: ObjectWorkspaceActivityModule }
+  | { moduleId: 'event'; value: ObjectWorkspaceEventModule }
+  | { moduleId: 'itinerary'; value: ObjectWorkspaceItineraryModule }
   | { moduleId: 'memberships'; value: ObjectWorkspaceMembershipModule }
   | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule };
 
@@ -241,6 +259,30 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
 
       if (input.moduleId === 'pricing') {
         return saveObjectWorkspacePricing(objectId, input.value);
+      }
+
+      if (input.moduleId === 'rooms') {
+        return saveObjectWorkspaceRooms(objectId, input.value);
+      }
+
+      if (input.moduleId === 'meeting-rooms') {
+        return saveObjectWorkspaceMeetingRooms(objectId, input.value);
+      }
+
+      if (input.moduleId === 'menus') {
+        return saveObjectWorkspaceMenus(objectId, input.value);
+      }
+
+      if (input.moduleId === 'activity') {
+        return saveObjectWorkspaceActivity(objectId, input.value);
+      }
+
+      if (input.moduleId === 'event') {
+        return saveObjectWorkspaceEvent(objectId, input.value);
+      }
+
+      if (input.moduleId === 'itinerary') {
+        return saveObjectWorkspaceItinerary(objectId, input.value);
       }
 
       if (input.moduleId === 'memberships') {

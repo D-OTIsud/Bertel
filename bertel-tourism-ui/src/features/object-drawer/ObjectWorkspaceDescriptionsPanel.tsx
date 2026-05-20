@@ -5,6 +5,7 @@ import type {
 } from '../../services/object-workspace-parser';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { WorkspaceTooltip } from './workspace-ui';
 
 interface SaveActionState {
   label: string;
@@ -217,8 +218,7 @@ export function ObjectWorkspaceDescriptionsPanel({
 
         {!canEditPlaceDescriptions && value.places.length > 0 && (
           <article className="panel-card panel-card--nested">
-            <span className="facet-title">Moderation</span>
-            <p>Les descriptions de sous-lieu sont en lecture seule dans ce contexte.</p>
+            <span className="facet-title">Sous-lieux <WorkspaceTooltip content="Les descriptions de sous-lieu sont en lecture seule avec vos droits actuels." /></span>
           </article>
         )}
       </section>

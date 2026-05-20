@@ -3,6 +3,7 @@ import type { ObjectWorkspaceGeneralInfo, ObjectWorkspaceTaxonomyModule } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ObjectWorkspaceTaxonomyFields } from './ObjectWorkspaceTaxonomyPanel';
+import { WorkspaceTooltip } from './workspace-ui';
 
 interface SaveActionState {
   label: string;
@@ -46,7 +47,6 @@ export function ObjectWorkspaceGeneralPanel({
           <div>
             <span className="eyebrow">Informations generales</span>
             <h2>Informations generales</h2>
-            <p>Renseignez ici l identite de la fiche. La taxonomie structurante se modifie dans la section ci-dessous.</p>
           </div>
         </div>
 
@@ -67,10 +67,8 @@ export function ObjectWorkspaceGeneralPanel({
                 {shouldShowObjectTypeCode ? (
                   <span className="status-pill status-pill--neutral">Code: {normalizedObjectType}</span>
                 ) : null}
+                <WorkspaceTooltip content="Le type pilote la taxonomie visible et les modules specifiques proposes dans ce panneau." />
               </div>
-              <small className="drawer-reference-field__hint">
-                Ce type est affiche a titre informatif dans cette section et pilote la taxonomie visible ci-dessous.
-              </small>
             </div>
           </div>
         </div>
@@ -81,7 +79,6 @@ export function ObjectWorkspaceGeneralPanel({
           <div>
             <span className="eyebrow">Taxonomie</span>
             <h3>Taxonomie structurante</h3>
-            <p>Choisissez le noeud metier le plus precis pour qualifier la fiche.</p>
           </div>
         </div>
       </article>

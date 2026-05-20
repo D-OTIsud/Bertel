@@ -60,6 +60,8 @@ function buildSaveArg(
       };
     case 'general-info':
       return { moduleId: 'general-info', value: draft.generalInfo };
+    case 'publication':
+      return { moduleId: 'general-info', value: draft.generalInfo };
     default:
       return { moduleId: module, value: draft[MODULE_KEY_MAP[module]] } as unknown as SaveWorkspaceModuleInput;
   }

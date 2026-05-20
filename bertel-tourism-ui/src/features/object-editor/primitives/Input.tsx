@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 interface InputProps {
   value: string;
   onChange: (next: string) => void;
+  type?: 'text' | 'date' | 'time' | 'number';
   placeholder?: string;
   prefix?: ReactNode;
   suffix?: ReactNode;
@@ -11,10 +12,11 @@ interface InputProps {
   readOnly?: boolean;
 }
 
-export function Input({ value, onChange, placeholder, prefix, suffix, mono, lg, readOnly }: InputProps) {
+export function Input({ value, onChange, type = 'text', placeholder, prefix, suffix, mono, lg, readOnly }: InputProps) {
   const cls = `input${mono ? ' mono' : ''}${lg ? ' lg' : ''}${prefix ? ' has-prefix' : ''}${suffix ? ' has-suffix' : ''}`;
   const field = (
     <input
+      type={type}
       className={cls}
       value={value}
       placeholder={placeholder}

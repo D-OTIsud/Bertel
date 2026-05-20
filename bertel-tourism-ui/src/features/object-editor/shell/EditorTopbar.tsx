@@ -6,6 +6,10 @@ interface EditorTopbarProps {
   archetypeCodeName: string;
   mode: EditorMode;
   dirtyCount: number;
+  blockerCount?: number;
+  warningCount?: number;
+  publishing?: boolean;
+  publishDisabled?: boolean;
   onModeChange: (mode: EditorMode) => void;
   onPreview: () => void;
   onCancel: () => void;
@@ -18,6 +22,10 @@ export function EditorTopbar({
   archetypeCodeName,
   mode,
   dirtyCount,
+  blockerCount = 0,
+  warningCount = 0,
+  publishing = false,
+  publishDisabled = false,
   onModeChange,
   onPreview,
   onCancel,
@@ -61,14 +69,19 @@ export function EditorTopbar({
             ? `${dirtyCount} modification${dirtyCount > 1 ? 's' : ''} non enregistrée${dirtyCount > 1 ? 's' : ''}`
             : 'À jour'}
         </span>
+        <span className={`edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`}>
+          {blockerCount > 0
+            ? `${blockerCount} blocage${blockerCount > 1 ? 's' : ''}`
+            : `${warningCount} alerte${warningCount > 1 ? 's' : ''}`}
+        </span>
         <button type="button" className="btn sm" onClick={onPreview}>
           Aperçu fiche
         </button>
         <button type="button" className="btn" onClick={onCancel}>
           Annuler
         </button>
-        <button type="button" className="btn primary" onClick={onPublish}>
-          Publier les modifs
+        <button type="button" className="btn primary" disabled={publishDisabled || publishing} onClick={onPublish}>
+          {publishing ? 'Publication…' : 'Publier les modifs'}
         </button>
       </div>
     </div>

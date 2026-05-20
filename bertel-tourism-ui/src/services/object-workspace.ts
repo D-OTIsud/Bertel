@@ -114,6 +114,8 @@ export interface ObjectWorkspaceResource {
   permissions: ObjectWorkspacePermissions;
 }
 
+const ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT = false;
+
 function readErrorMessage(error: unknown, fallback: string): Error {
   if (error instanceof Error) {
     return error;
@@ -556,11 +558,11 @@ async function getObjectWorkspaceCharacteristicsModule(
     objectAmenitiesResult,
   ] = await Promise.all([
     client.from('ref_language').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_language_level').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'language_level').order('position', { ascending: true }),
     client.from('object_language').select('language_id, level_id').eq('object_id', objectId),
-    client.from('ref_code_payment_method').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'payment_method').order('position', { ascending: true }),
     client.from('object_payment_method').select('payment_method_id').eq('object_id', objectId),
-    client.from('ref_code_environment_tag').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'environment_tag').order('position', { ascending: true }),
     client.from('object_environment_tag').select('environment_tag_id').eq('object_id', objectId),
     client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name)').in('scope', ['object', 'both']).order('position', { ascending: true }),
     client.from('object_amenity').select('amenity_id').eq('object_id', objectId),
@@ -1386,8 +1388,8 @@ async function getObjectWorkspaceMediaModule(
           .in('place_id', placeIds)
           .order('position', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-    client.from('ref_code_media_type').select('id, code, name').order('position', { ascending: true }),
-    client.from('ref_code_media_tag').select('id, code, name').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name').eq('domain', 'media_type').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name').eq('domain', 'media_tag').order('position', { ascending: true }),
   ]);
 
   const typeOptions =
@@ -1510,7 +1512,7 @@ async function getObjectWorkspaceContactsModule(
 
   const [contactsResult, kindRefsResult, roleRefsResult] = await Promise.all([
     client.from('contact_channel').select('id, kind_id, value, role_id, is_public, is_primary, position').eq('object_id', objectId).order('is_primary', { ascending: false }).order('position', { ascending: true }),
-    client.from('ref_code_contact_kind').select('id, code, name').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name').eq('domain', 'contact_kind').order('position', { ascending: true }),
     client.from('ref_contact_role').select('id, code, name').order('position', { ascending: true }),
   ]);
 
@@ -1769,8 +1771,8 @@ async function getObjectWorkspaceMembershipModule(
   ]));
 
   const [campaignRefsResult, tierRefsResult, directMembershipsResult, orgMembershipsResult] = await Promise.all([
-    client.from('ref_code_membership_campaign').select('id, code, name').order('name', { ascending: true }),
-    client.from('ref_code_membership_tier').select('id, code, name').order('name', { ascending: true }),
+    client.from('ref_code').select('id, code, name').eq('domain', 'membership_campaign').order('name', { ascending: true }),
+    client.from('ref_code').select('id, code, name').eq('domain', 'membership_tier').order('name', { ascending: true }),
     client
       .from('object_membership')
       .select('id, org_object_id, object_id, campaign_id, tier_id, status, starts_at, ends_at, payment_date, metadata')
@@ -2049,8 +2051,8 @@ async function getObjectWorkspacePricingModule(
   }
 
   const [kindRefsResult, unitRefsResult, pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
-    client.from('ref_code_price_kind').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_price_unit').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_kind').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_unit').order('position', { ascending: true }),
     client
       .from('object_price')
       .select('id, kind_id, unit_id, amount, amount_max, currency, season_code, indication_code, age_min_enfant, age_max_enfant, age_min_junior, age_max_junior, valid_from, valid_to, conditions, source')
@@ -2176,7 +2178,7 @@ async function getObjectWorkspaceRoomsModule(
       .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, base_price, currency, is_accessible, is_published, position')
       .eq('object_id', objectId)
       .order('position', { ascending: true }),
-    client.from('ref_code_view_type').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'view_type').order('position', { ascending: true }),
     client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
@@ -2296,7 +2298,7 @@ async function getObjectWorkspaceMeetingRoomsModule(
       .select('id, name, name_i18n, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
       .eq('object_id', objectId)
       .order('name', { ascending: true }),
-    client.from('ref_code_meeting_equipment').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'meeting_equipment').order('position', { ascending: true }),
   ]);
 
   if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
@@ -2365,12 +2367,12 @@ async function getObjectWorkspaceMenusModule(
 
   const [menusResult, categoryRefsResult, dietaryRefsResult, allergenRefsResult, cuisineRefsResult, kindRefsResult, unitRefsResult, mediaResult] = await Promise.allSettled([
     client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
-    client.from('ref_code_menu_category').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_dietary_tag').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_allergen').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_cuisine_type').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_price_kind').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code_price_unit').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'menu_category').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'dietary_tag').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'allergen').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'cuisine_type').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_kind').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_unit').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
@@ -2659,7 +2661,7 @@ async function getObjectWorkspaceItineraryModule(
       .select('distance_km, duration_hours, difficulty_level, elevation_gain, is_loop, open_status, status_note, geom')
       .eq('object_id', objectId)
       .maybeSingle(),
-    client.from('ref_code_iti_practice').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_practice').order('position', { ascending: true }),
     client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
     client.from('object_iti_stage').select('id, name, description, position, geom').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
@@ -3148,26 +3150,17 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
 export async function getObjectWorkspaceResource(objectId: string, langPrefs: string[]): Promise<ObjectWorkspaceResource> {
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
-  const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
+
+  // The API workspace payload already carries the editable snapshot. Avoid probing
+  // optional/type-specific REST tables on page load because many live schemas do
+  // not expose those partitions through PostgREST.
   const [
     taxonomyModule,
     distinctionsModule,
     publicationModule,
     syncIdentifiersModule,
-    mediaModule,
-    contactsModule,
-    characteristicsModule,
-    capacityPoliciesModule,
-    pricingModule,
-    roomsModule,
-    meetingRoomsModule,
-    menusModule,
-    activityModule,
-    eventModule,
-    itineraryModule,
     openingsModule,
     relationshipsModule,
-    membershipsModule,
     legalModule,
     sustainabilityModule,
     tagsModule,
@@ -3177,20 +3170,8 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
-    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
-    getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
-    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
-    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
-    getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
-    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
-    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
-    getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
-    getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
-    getObjectWorkspaceEventModule(objectId, parsedModules.event),
-    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
     getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings),
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
-    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
     getObjectWorkspaceTagsModule(parsedModules.tags),
@@ -3203,26 +3184,60 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     distinctions: distinctionsModule,
     publication: publicationModule,
     syncIdentifiers: syncIdentifiersModule,
-    media: mediaModule,
-    contacts: contactsModule,
-    characteristics: characteristicsModule,
-    capacityPolicies: capacityPoliciesModule,
-    pricing: pricingModule,
-    rooms: roomsModule,
-    meetingRooms: meetingRoomsModule,
-    menus: menusModule,
-    activity: activityModule,
-    event: eventModule,
-    itinerary: itineraryModule,
     openings: openingsModule,
     relationships: relationshipsModule,
-    memberships: membershipsModule,
     legal: legalModule,
     sustainability: sustainabilityModule,
     tags: tagsModule,
     distribution: parsedModules.distribution,
     provider: parsedModules.provider,
   };
+
+  if (ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT) {
+    const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
+    const [
+      mediaModule,
+      contactsModule,
+      characteristicsModule,
+      capacityPoliciesModule,
+      pricingModule,
+      roomsModule,
+      meetingRoomsModule,
+      menusModule,
+      activityModule,
+      eventModule,
+      itineraryModule,
+      membershipsModule,
+    ] = await Promise.all([
+      getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
+      getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
+      getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
+      getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
+      getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
+      getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
+      getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
+      getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
+      getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
+      getObjectWorkspaceEventModule(objectId, parsedModules.event),
+      getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
+      getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
+    ]);
+
+    Object.assign(modules, {
+      media: mediaModule,
+      contacts: contactsModule,
+      characteristics: characteristicsModule,
+      capacityPolicies: capacityPoliciesModule,
+      pricing: pricingModule,
+      rooms: roomsModule,
+      meetingRooms: meetingRoomsModule,
+      menus: menusModule,
+      activity: activityModule,
+      event: eventModule,
+      itinerary: itineraryModule,
+      memberships: membershipsModule,
+    });
+  }
 
   return {
     id: detail.id,
@@ -3731,7 +3746,7 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
   }
 
   const [viewRefsResult, amenityRefsResult, existingRoomsResult] = await Promise.all([
-    client.from('ref_code_view_type').select('id, code'),
+    client.from('ref_code').select('id, code').eq('domain', 'view_type'),
     client.from('ref_amenity').select('id, code'),
     client.from('object_room_type').select('id').eq('object_id', objectId),
   ]);
@@ -3836,7 +3851,7 @@ export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: O
   }
 
   const [equipmentRefsResult, existingRoomsResult] = await Promise.all([
-    client.from('ref_code_meeting_equipment').select('id, code'),
+    client.from('ref_code').select('id, code').eq('domain', 'meeting_equipment'),
     client.from('object_meeting_room').select('id').eq('object_id', objectId),
   ]);
 
@@ -3913,12 +3928,12 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
     unitRefsResult,
     existingMenusResult,
   ] = await Promise.all([
-    client.from('ref_code_menu_category').select('id, code'),
-    client.from('ref_code_dietary_tag').select('id, code'),
-    client.from('ref_code_allergen').select('id, code'),
-    client.from('ref_code_cuisine_type').select('id, code'),
-    client.from('ref_code_price_kind').select('id, code'),
-    client.from('ref_code_price_unit').select('id, code'),
+    client.from('ref_code').select('id, code').eq('domain', 'menu_category'),
+    client.from('ref_code').select('id, code').eq('domain', 'dietary_tag'),
+    client.from('ref_code').select('id, code').eq('domain', 'allergen'),
+    client.from('ref_code').select('id, code').eq('domain', 'cuisine_type'),
+    client.from('ref_code').select('id, code').eq('domain', 'price_kind'),
+    client.from('ref_code').select('id, code').eq('domain', 'price_unit'),
     client.from('object_menu').select('id').eq('object_id', objectId),
   ]);
 
@@ -4161,7 +4176,7 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
     throw new Error('Connexion backend indisponible pour enregistrer l itineraire.');
   }
 
-  const practiceRefsResult = await client.from('ref_code_iti_practice').select('id, code');
+  const practiceRefsResult = await client.from('ref_code').select('id, code').eq('domain', 'iti_practice');
   if (practiceRefsResult.error) {
     throw mapMutationError(practiceRefsResult.error, 'Impossible de charger les pratiques itineraire.');
   }
@@ -4346,8 +4361,8 @@ export async function saveObjectWorkspaceMemberships(objectId: string, input: Ob
   ] = await Promise.all([
     client.from('object').select('id, object_type').eq('id', objectId).maybeSingle(),
     client.from('object_org_link').select('org_object_id').eq('object_id', objectId),
-    client.from('ref_code_membership_campaign').select('id, code'),
-    client.from('ref_code_membership_tier').select('id, code'),
+    client.from('ref_code').select('id, code').eq('domain', 'membership_campaign'),
+    client.from('ref_code').select('id, code').eq('domain', 'membership_tier'),
     client.from('object_membership').select('id').eq('object_id', objectId),
   ]);
 
@@ -4554,8 +4569,8 @@ export async function saveObjectWorkspaceMedia(
   }));
 
   const [typeRefsResult, tagRefsResult, existingMediaResult] = await Promise.all([
-    client.from('ref_code_media_type').select('id, code, name'),
-    client.from('ref_code_media_tag').select('id, code, name'),
+    client.from('ref_code').select('id, code, name').eq('domain', 'media_type'),
+    client.from('ref_code').select('id, code, name').eq('domain', 'media_tag'),
     client.from('media').select('id').eq('object_id', objectId),
   ]);
 
@@ -4677,7 +4692,7 @@ export async function saveObjectWorkspaceContacts(objectId: string, input: Objec
   }
 
   const [kindRefsResult, roleRefsResult, existingContactsResult] = await Promise.all([
-    client.from('ref_code_contact_kind').select('id, code'),
+    client.from('ref_code').select('id, code').eq('domain', 'contact_kind'),
     client.from('ref_contact_role').select('id, code'),
     client.from('contact_channel').select('id').eq('object_id', objectId),
   ]);

@@ -7,6 +7,7 @@ import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { resolveArchetypeMeta, TYPE_LABEL } from './archetypes';
 import { useObjectEditorState } from './useObjectEditorState';
+import { useUnsavedDraftGuard } from './useUnsavedDraftGuard';
 import { useEditorSave } from './useEditorSave';
 import { makeSections, type SectionItem } from './section-config';
 import { MODULE_KEY_MAP } from './editor-state';
@@ -119,6 +120,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
 function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource; objectId: string }) {
   const router = useRouter();
   const editor = useObjectEditorState(objectId, resource.modules);
+  const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
   const [mode, setMode] = useState<EditorMode>('complet');
@@ -233,11 +235,15 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   }
 
   function exitToExplorer() {
+    if (!confirmLeave()) {
+      return;
+    }
     router.push('/explorer');
   }
 
   const refId = objectId.length > 12 ? objectId.slice(0, 12) : objectId;
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
+  const lastUpdatedSource = editor.draft.syncIdentifiers.objectUpdatedAtSource;
   const typeCode = resource.type ?? '';
   const typeLabel = TYPE_LABEL[typeCode.toUpperCase()] ?? typeCode;
 
@@ -251,6 +257,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         mode={mode}
         dirtyCount={dirtyCount}
         lastSavedAt={lastSavedAt}
+        lastUpdatedSource={lastUpdatedSource}
         blockerCount={validation.blockers.length}
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
@@ -268,8 +275,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           <ValidationBanner
             blockers={validation.blockers}
             warnings={validation.warnings}
-            typeCode={resource.type ?? ''}
-            mode={mode}
             onGoToSection={scrollToSection}
           />
           {sections.map(({ num, Component }) => (

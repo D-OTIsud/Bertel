@@ -2870,11 +2870,11 @@ async function getObjectWorkspaceSustainabilityModule(
   const [categoriesResult, actionsResult] = await Promise.all([
     client
       .from('ref_sustainability_action_category')
-      .select('id, code, name, position')
+      .select('id, code, name, description, position')
       .order('position', { ascending: true }),
     client
       .from('ref_sustainability_action')
-      .select('id, code, label, category_id, position')
+      .select('id, code, label, description, category_id, position')
       .order('position', { ascending: true }),
   ]);
 
@@ -2902,6 +2902,7 @@ async function getObjectWorkspaceSustainabilityModule(
           id: actionId,
           code: readString(action.code),
           label: readString(action.label, readString(action.code)),
+          description: readString(action.description),
           selected: Boolean(selected),
           note: selected?.note ?? '',
           documentId: selected?.documentId ?? '',
@@ -2912,6 +2913,7 @@ async function getObjectWorkspaceSustainabilityModule(
       id: categoryId,
       code: readString(row.code),
       label: readString(row.name, readString(row.code)),
+      description: readString(row.description),
       actions: categoryActions,
     };
   }).filter((category) => category.actions.length > 0);

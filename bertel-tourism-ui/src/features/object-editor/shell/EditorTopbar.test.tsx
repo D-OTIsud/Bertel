@@ -31,4 +31,12 @@ describe('EditorTopbar', () => {
     fireEvent.click(screen.getByRole('button', { name: /Rapide/ }));
     expect(onModeChange).toHaveBeenCalledWith('rapide');
   });
+
+  it('shows last update in edit-top__save when clean', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-20T12:00:00Z'));
+    render(<EditorTopbar {...baseProps} lastSavedAt="2026-05-20T11:45:00Z" lastUpdatedSource="manual" />);
+    expect(screen.getByText(/Dernière mise à jour · il y a 15 min/)).toBeInTheDocument();
+    jest.useRealTimers();
+  });
 });

@@ -59,7 +59,7 @@ import type {
   ObjectWorkspaceTaxonomyModule,
 } from '../services/object-workspace-parser';
 
-type SaveWorkspaceModuleInput =
+export type SaveWorkspaceModuleInput =
   | { moduleId: 'general-info'; value?: ObjectWorkspaceGeneralInfo; taxonomyValue?: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'distinctions'; value: ObjectWorkspaceDistinctionsModule }

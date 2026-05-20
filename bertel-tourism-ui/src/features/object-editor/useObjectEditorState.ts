@@ -19,6 +19,15 @@ export interface ObjectEditorState {
   commitModules: (keys: (keyof ObjectWorkspaceModules)[]) => void;
 }
 
+/** Copies one module slice between snapshots; the generic key keeps it type-safe. */
+function copyModule<K extends keyof ObjectWorkspaceModules>(
+  target: ObjectWorkspaceModules,
+  source: ObjectWorkspaceModules,
+  key: K,
+): void {
+  target[key] = source[key];
+}
+
 export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceModules): ObjectEditorState {
   const [snapshot, setSnapshot] = useState<EditorSnapshot>(() => ({
     objectId,
@@ -43,7 +52,7 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
       const baseline = { ...prev.baseline };
       const draftClone = cloneModules(prev.draft);
       for (const key of keys) {
-        baseline[key] = draftClone[key];
+        copyModule(baseline, draftClone, key);
       }
       return { ...prev, baseline };
     });

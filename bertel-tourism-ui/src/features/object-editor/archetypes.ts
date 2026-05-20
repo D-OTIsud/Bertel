@@ -41,7 +41,7 @@ export const TYPE_LABEL: Record<string, string> = {
 const HEB_ARCHETYPE: ArchetypeMeta = {
   archetype: 'HEB',
   accent: 'acc-teal',
-  codeName: 'Hébergement marchand',
+  codeName: 'Hébergement',
   family: 'Hôtel · Hébergement loisir · Camping · Résidence',
   covers: 'HOT · HPA · HLO · CAMP · RVA',
 };

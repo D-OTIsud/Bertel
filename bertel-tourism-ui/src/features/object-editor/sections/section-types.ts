@@ -7,6 +7,8 @@ export interface SectionProps {
   editor: ObjectEditorState;
   permissions: ObjectWorkspacePermissions;
   objectId?: string;
+  /** Canonical type code (HOT, RES, …) for labels in identity / type-specific UI. */
+  typeCode?: string;
   archetype?: ArchetypeCode;
   folded?: boolean;
 }

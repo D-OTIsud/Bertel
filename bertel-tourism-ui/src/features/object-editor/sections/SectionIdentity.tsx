@@ -1,7 +1,7 @@
 import { Fs, Field, Input, Select, Chip, ChipSet } from '../primitives';
 import type { SectionProps } from './section-types';
 import { Provenance, type ProvenanceSource } from '../widgets/Provenance';
-import { ARCHETYPE_META } from '../archetypes';
+import { ARCHETYPE_META, TYPE_LABEL } from '../archetypes';
 
 const STATUS_OPTIONS = [
   { v: 'published', l: '🟢 Publié — en ligne' },
@@ -40,13 +40,15 @@ function importProvenance(sync?: SectionProps['editor']['draft']['syncIdentifier
 }
 
 /** Section 01 — commercial name, publication status, and taxonomy (design: edit-primitives). */
-export function SectionIdentity({ editor, objectId, archetype, folded }: SectionProps) {
+export function SectionIdentity({ editor, objectId, typeCode, archetype, folded }: SectionProps) {
   const info = editor.draft.generalInfo;
   const taxonomy = editor.draft.taxonomy;
   const provider = editor.draft.provider;
   const provenance = importProvenance(editor.draft.syncIdentifiers);
   const meta = archetype ? ARCHETYPE_META[archetype] : null;
-  const typeLabel = meta ? `${archetype} — ${meta.codeName}` : archetype ?? '';
+  const canonicalType = typeCode?.toUpperCase() ?? '';
+  const typeFamilyLabel = TYPE_LABEL[canonicalType] ?? meta?.codeName ?? canonicalType;
+  const typeDisplay = canonicalType ? `${canonicalType} — ${typeFamilyLabel}` : meta?.codeName ?? '';
   const legalName = provider?.companyName || '';
   const id = objectId ?? '';
   const refShort = id.length > 12 ? id.slice(0, 12) : id;
@@ -92,7 +94,7 @@ export function SectionIdentity({ editor, objectId, archetype, folded }: Section
         <Field label="Type d'objet (famille)" required hint="Famille canonique — détermine les sections obligatoires">
           <div className="input-wrap">
             <span className="prefix">●</span>
-            <Input value={typeLabel} mono readOnly prefix="●" onChange={() => undefined} />
+            <Input value={typeDisplay} mono readOnly prefix="●" onChange={() => undefined} />
           </div>
         </Field>
         <Field label="Sous-catégorie métier (taxonomy)" hint="object_taxonomy hiérarchique">

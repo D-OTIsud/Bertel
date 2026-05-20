@@ -8,7 +8,9 @@ This contract covers characteristics, capacity/policies, and pricing. These modu
 
 `api.save_object_commercial(p_object_id text, p_payload jsonb)` is defined in `Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql`.
 
-The frontend save functions for characteristics, capacity/policies, and pricing now call this RPC with DB column names. Live drawer permissions remain locked until the SQL is applied to the target DB and RLS/rollback tests pass.
+The frontend save functions for characteristics, capacity/policies, and pricing now call this RPC with DB column names. After the SQL was reported applied successfully, the drawer permission gate was moved from demo-only to `api.is_object_owner` plus platform direct-write roles.
+
+Live smoke evidence is still required before this is considered fully rolled out.
 
 ## Editable Fields
 
@@ -61,7 +63,7 @@ Prices and periods use explicit positions when available. If a table lacks order
 
 ## Frontend Dirty / Save Behavior
 
-Keep live write disabled until tests prove the contract. Disabled modules should show tooltip-backed reasons. After unlock, dirty state and savebar should behave exactly like general info and localization.
+Commercial live write is enabled only when the caller passes the same ownership shape that the RPC enforces. Disabled modules should show tooltip-backed reasons. Dirty state and savebar should behave exactly like general info and localization.
 
 ## Tests
 

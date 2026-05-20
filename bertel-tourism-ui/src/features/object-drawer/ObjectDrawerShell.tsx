@@ -26,6 +26,7 @@ import type {
   ObjectWorkspaceMediaItem,
   ObjectWorkspaceMenusModule,
   ObjectWorkspaceModules,
+  ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
   ObjectWorkspaceRoomsModule,
   ObjectWorkspaceTaxonomyModule,
@@ -258,7 +259,6 @@ const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = 
 
 const READONLY_MODULES = new Set<WorkspaceModuleId>([
   'sync-identifiers',
-  'openings',
   'provider-follow-up',
   'relationships',
 ]);
@@ -748,6 +748,17 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       },
     }) : previous);
     setSaveStateBySection((state) => ({ ...state, itinerary: { saving: false, message: null } }));
+  }
+
+  function replaceOpenings(nextValue: ObjectWorkspaceOpeningsModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        openings: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, openings: { saving: false, message: null } }));
   }
 
   function replaceMemberships(nextValue: ObjectWorkspaceMembershipModule) {
@@ -1596,9 +1607,14 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
               )}
               {resolvedSection === 'openings' && (
                 <ObjectWorkspaceOpeningsPanel
-                  value={resolvedData.modules.openings}
+                  value={editorSnapshot.draft.openings}
+                  dirty={dirtySections.openings === true}
+                  saving={saveStateBySection.openings.saving}
+                  saveAction={buildSaveAction(resolvedData.permissions.openings)}
                   access={resolvedData.permissions.openings}
                   statusMessage={saveStateBySection.openings.message}
+                  onChange={replaceOpenings}
+                  onSave={() => void handleSaveSection('openings')}
                 />
               )}
               {resolvedSection === 'provider-follow-up' && (

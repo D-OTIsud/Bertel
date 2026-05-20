@@ -15,3 +15,7 @@ export { SectionAttachments } from './SectionAttachments';
 export { SectionCrm } from './SectionCrm';
 export { SectionPublication } from './SectionPublication';
 export { SectionSync } from './SectionSync';
+export { SectionTags } from './SectionTags';
+export { SectionSustainability } from './SectionSustainability';
+export { SectionProvider } from './SectionProvider';
+export { SectionDistribution } from './SectionDistribution';

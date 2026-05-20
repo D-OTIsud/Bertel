@@ -73,12 +73,18 @@ export const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModu
   relationships: 'relationships',
   memberships: 'memberships',
   legal: 'legal',
+  tags: 'tags',
+  sustainability: 'sustainability',
+  distribution: 'distribution',
+  provider: 'provider',
 };
 
 export const READONLY_MODULES = new Set<WorkspaceModuleId>([
   'sync-identifiers',
   'provider-follow-up',
   'relationships',
+  'distribution',
+  'provider',
 ]);
 
 export function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<WorkspaceModuleId, boolean>> {

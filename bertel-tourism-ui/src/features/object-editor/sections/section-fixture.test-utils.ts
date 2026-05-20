@@ -270,5 +270,56 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       externalIdentifiersVisibilityNote: null,
       originsVisibilityNote: null,
     },
+    tags: {
+      displayed: [
+        { tagId: 't1', slug: 'hotel-4', label: 'Hôtel 4★', colorVariant: 'teal', source: 'classification' },
+        { tagId: 't2', slug: 'cuisine', label: 'Cuisine', colorVariant: 'orange', source: 'thematic' },
+      ],
+      derived: [],
+      library: [],
+    },
+    sustainability: {
+      categories: [
+        {
+          id: 'cat-energy',
+          code: 'CAT_ENERGY',
+          label: 'Énergie',
+          actions: [
+            { id: 'sa-led', code: 'SA_LED', label: 'LED généralisée', selected: true, note: '', documentId: '' },
+            { id: 'sa-audit', code: 'SA_AUDIT', label: 'Audit énergétique', selected: false, note: '', documentId: '' },
+          ],
+        },
+      ],
+      equivalentLabels: [],
+    },
+    distribution: {
+      channels: [
+        {
+          id: 'ch-booking',
+          code: 'BK',
+          name: 'Booking',
+          url: 'booking.com/le-bel-air',
+          syncStatus: 'Sync OK · il y a 12 min',
+          syncTone: 'ok',
+          group: 'booking',
+        },
+      ],
+      readonlyReason: "Les canaux sont projetés depuis l'acteur opérateur — le contrat d'écriture actor_channel est différé.",
+    },
+    provider: {
+      siret: '44851998300012',
+      companyName: 'SARL Domaine du Bel Air',
+      sireneVerified: true,
+      legalForm: 'SARL',
+      nafCode: '55.10Z',
+      consularChamber: 'CCI',
+      cfeOrganization: 'CCI Réunion',
+      directorFullName: 'Mr Franck Versluys',
+      directorEmail: 'contact@domaine-bel-air.fr',
+      directorPhone: '+262 000',
+      address: '1 rue du Test, Saint-Pierre',
+      incorporationDate: '12/03/2010',
+      readonlyReason: 'Compléments éditables via les modules Légal et Acteurs — branchement direct différé.',
+    },
   };
 }

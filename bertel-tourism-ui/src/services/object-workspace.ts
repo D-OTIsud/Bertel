@@ -42,6 +42,8 @@ import {
   type ObjectWorkspaceMeetingRoomsModule,
   type ObjectWorkspaceMenuItem,
   type ObjectWorkspaceMenusModule,
+  type ObjectWorkspaceSustainabilityModule,
+  type ObjectWorkspaceTagsModule,
   type ObjectWorkspaceEventModule,
   type ObjectWorkspaceItineraryModule,
   type ObjectWorkspacePriceItem,
@@ -57,7 +59,7 @@ import {
   type WorkspaceReferenceOption,
 } from './object-workspace-parser';
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
 
 export interface ObjectWorkspaceModuleAccess {
   canDirectWrite: boolean;
@@ -97,6 +99,10 @@ export interface ObjectWorkspacePermissions {
   relationships: ObjectWorkspaceModuleAccess;
   memberships: ObjectWorkspaceModuleAccess;
   legal: ObjectWorkspaceModuleAccess;
+  tags: ObjectWorkspaceModuleAccess;
+  sustainability: ObjectWorkspaceModuleAccess;
+  distribution: ObjectWorkspaceModuleAccess;
+  provider: ObjectWorkspaceModuleAccess;
 }
 
 export interface ObjectWorkspaceResource {
@@ -2812,6 +2818,115 @@ async function getObjectWorkspacePublicationModule(
   };
 }
 
+async function getObjectWorkspaceSustainabilityModule(
+  baseModule: ObjectWorkspaceSustainabilityModule,
+): Promise<ObjectWorkspaceSustainabilityModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule;
+  }
+
+  const [categoriesResult, actionsResult] = await Promise.all([
+    client
+      .from('ref_sustainability_action_category')
+      .select('id, code, name, position')
+      .order('position', { ascending: true }),
+    client
+      .from('ref_sustainability_action')
+      .select('id, code, label, category_id, position')
+      .order('position', { ascending: true }),
+  ]);
+
+  if (categoriesResult.error || actionsResult.error) {
+    return baseModule;
+  }
+
+  const selectedById = new Map<string, { note: string; documentId: string }>();
+  for (const category of baseModule.categories) {
+    for (const action of category.actions) {
+      if (action.selected) {
+        selectedById.set(action.id, { note: action.note, documentId: action.documentId });
+      }
+    }
+  }
+
+  const categories = ((categoriesResult.data ?? []) as Record<string, unknown>[]).map((row) => {
+    const categoryId = readString(row.id);
+    const categoryActions = ((actionsResult.data ?? []) as Record<string, unknown>[])
+      .filter((action) => readString(action.category_id) === categoryId)
+      .map((action) => {
+        const actionId = readString(action.id);
+        const selected = selectedById.get(actionId);
+        return {
+          id: actionId,
+          code: readString(action.code),
+          label: readString(action.label, readString(action.code)),
+          selected: Boolean(selected),
+          note: selected?.note ?? '',
+          documentId: selected?.documentId ?? '',
+        };
+      });
+
+    return {
+      id: categoryId,
+      code: readString(row.code),
+      label: readString(row.name, readString(row.code)),
+      actions: categoryActions,
+    };
+  }).filter((category) => category.actions.length > 0);
+
+  return {
+    categories: categories.length > 0 ? categories : baseModule.categories,
+    equivalentLabels: baseModule.equivalentLabels,
+  };
+}
+
+async function getObjectWorkspaceTagsModule(
+  baseModule: ObjectWorkspaceTagsModule,
+): Promise<ObjectWorkspaceTagsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule;
+  }
+
+  const tagsResult = await client
+    .from('ref_tag')
+    .select('id, slug, name, color, position')
+    .order('position', { ascending: true });
+
+  if (tagsResult.error) {
+    return baseModule;
+  }
+
+  const displayedSlugs = new Set(baseModule.displayed.map((tag) => tag.slug.toLowerCase()));
+  const library = ((tagsResult.data ?? []) as Record<string, unknown>[])
+    .map((row) => ({
+      tagId: readString(row.id),
+      slug: readString(row.slug),
+      label: readString(row.name, readString(row.slug)),
+      colorVariant: (['teal', 'orange', 'neutral', 'outline', 'green'].includes(readString(row.color).toLowerCase())
+        ? readString(row.color).toLowerCase()
+        : 'teal') as ObjectWorkspaceTagsModule['displayed'][number]['colorVariant'],
+      source: 'thematic' as const,
+    }))
+    .filter((tag) => tag.slug && !displayedSlugs.has(tag.slug.toLowerCase()));
+
+  return {
+    ...baseModule,
+    library,
+  };
+}
+
 async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
   const session = useSessionStore.getState();
   const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
@@ -2956,6 +3071,30 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canSubmitProposal: false,
       disabledReason: directWrite ? null : "Vos droits actuels ne permettent pas de gerer la conformite juridique de cette fiche.",
     },
+    tags: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'enregistrer les tags de cette fiche.",
+    },
+    sustainability: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'enregistrer la demarche durable.",
+    },
+    distribution: {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: "Les canaux de distribution restent en lecture seule tant que le contrat d'ecriture actor_channel n'est pas verrouille.",
+    },
+    provider: {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: "Le fournisseur reste en lecture seule — les complements passent par les modules Legal et Acteurs.",
+    },
   };
 }
 
@@ -2983,6 +3122,8 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     relationshipsModule,
     membershipsModule,
     legalModule,
+    sustainabilityModule,
+    tagsModule,
     permissions,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
@@ -3004,6 +3145,8 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
+    getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
+    getObjectWorkspaceTagsModule(parsedModules.tags),
     getObjectWorkspacePermissions(objectId),
   ]);
 
@@ -3028,6 +3171,10 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     relationships: relationshipsModule,
     memberships: membershipsModule,
     legal: legalModule,
+    sustainability: sustainabilityModule,
+    tags: tagsModule,
+    distribution: parsedModules.distribution,
+    provider: parsedModules.provider,
   };
 
   return {
@@ -3464,6 +3611,49 @@ export async function saveObjectWorkspaceOpenings(objectId: string, input: Objec
       };
     }),
   }, 'Impossible d enregistrer les horaires.');
+}
+
+export async function saveObjectWorkspaceSustainability(
+  objectId: string,
+  input: ObjectWorkspaceSustainabilityModule,
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc('save_object_workspace_sustainability', objectId, {
+    actions: input.categories.flatMap((category) =>
+      category.actions
+        .filter((action) => action.selected)
+        .map((action) => ({
+          action_id: toRpcUuid(action.id),
+          action_code: action.code,
+          category_code: category.code,
+          note: toNullableText(action.note),
+          document_id: toRpcUuid(action.documentId),
+        })),
+    ),
+  }, 'Impossible d enregistrer la demarche durable.');
+}
+
+export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWorkspaceTagsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc('save_object_workspace_tags', objectId, {
+    tags: input.displayed.map((tag) => ({
+      tag_id: toRpcUuid(tag.tagId),
+      slug: tag.slug,
+      extra: {
+        color_variant: tag.colorVariant,
+        source: tag.source,
+        label: tag.label,
+      },
+    })),
+  }, 'Impossible d enregistrer les tags.');
 }
 
 function buildCodeIdMap(rows: unknown[]): Map<string, string> {

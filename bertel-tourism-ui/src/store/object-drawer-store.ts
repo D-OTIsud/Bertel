@@ -1,26 +1,15 @@
 import { create } from 'zustand';
 
-export type ObjectDrawerSection = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal';
-export type DrawerMode = 'view' | 'edit';
-
+/** Legacy dirty-state map — kept for TopBar until editor-only dirty tracking replaces it. */
 interface ObjectDrawerState {
-  activeSection: ObjectDrawerSection;
-  mode: DrawerMode;
   dirtyObjects: Record<string, boolean>;
-  setActiveSection: (section: ObjectDrawerSection) => void;
-  setMode: (mode: DrawerMode) => void;
-  resetSection: () => void;
   setObjectDirty: (objectId: string, dirty: boolean) => void;
   clearObjectState: (objectId: string) => void;
+  resetSection: () => void;
 }
 
 export const useObjectDrawerStore = create<ObjectDrawerState>((set) => ({
-  activeSection: 'general-info',
-  mode: 'view',
   dirtyObjects: {},
-  setActiveSection: (section) => set({ activeSection: section }),
-  setMode: (mode) => set({ mode }),
-  resetSection: () => set({ activeSection: 'general-info', mode: 'view' }),
   setObjectDirty: (objectId, dirty) =>
     set((state) => ({
       dirtyObjects: {
@@ -36,4 +25,5 @@ export const useObjectDrawerStore = create<ObjectDrawerState>((set) => ({
         dirtyObjects: nextDirtyObjects,
       };
     }),
+  resetSection: () => undefined,
 }));

@@ -7,6 +7,22 @@ export interface SectionDef {
   isVisible: (resource: ObjectWorkspaceResource) => boolean;
 }
 
+const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP']);
+
+function objectType(resource: ObjectWorkspaceResource): string {
+  return String(resource.type ?? '').trim().toUpperCase();
+}
+
+function hasAccommodationSurface(resource: ObjectWorkspaceResource): boolean {
+  const type = objectType(resource);
+  return ACCOMMODATION_TYPES.has(type) || (type === 'RVA' && resource.modules.rooms.items.length > 0);
+}
+
+function hasMeetingRoomSurface(resource: ObjectWorkspaceResource): boolean {
+  const type = objectType(resource);
+  return resource.modules.meetingRooms.items.length > 0 || ACCOMMODATION_TYPES.has(type) || type === 'RVA';
+}
+
 const WORKSPACE_SECTION_DEFS: SectionDef[] = [
   {
     id: 'general-info',
@@ -61,6 +77,42 @@ const WORKSPACE_SECTION_DEFS: SectionDef[] = [
     label: 'Tarifs',
     group: 'Caractéristiques',
     isVisible: (resource) => resource.type !== 'ITI',
+  },
+  {
+    id: 'rooms',
+    label: 'Chambres / unités',
+    group: 'Spécifique',
+    isVisible: hasAccommodationSurface,
+  },
+  {
+    id: 'meeting-rooms',
+    label: 'Salles MICE',
+    group: 'Spécifique',
+    isVisible: hasMeetingRoomSurface,
+  },
+  {
+    id: 'menus',
+    label: 'Menus',
+    group: 'Spécifique',
+    isVisible: (resource) => objectType(resource) === 'RES',
+  },
+  {
+    id: 'activity',
+    label: 'Activité',
+    group: 'Spécifique',
+    isVisible: (resource) => ['ACT', 'ASC'].includes(objectType(resource)),
+  },
+  {
+    id: 'event',
+    label: 'Programmation',
+    group: 'Spécifique',
+    isVisible: (resource) => objectType(resource) === 'FMA',
+  },
+  {
+    id: 'itinerary',
+    label: 'Itinéraire',
+    group: 'Spécifique',
+    isVisible: (resource) => objectType(resource) === 'ITI',
   },
   {
     id: 'openings',

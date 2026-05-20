@@ -4360,6 +4360,198 @@ a {
   grid-template-columns: minmax(84px, 104px) minmax(0, 1fr);
 }
 
+.workspace-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.workspace-section__header,
+.workspace-repeated-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.workspace-section__header h2,
+.workspace-repeated-card__header h3 {
+  margin: 0;
+}
+
+.workspace-section__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workspace-field-label-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.drawer-inline-field .workspace-field-label-row > span {
+  padding-top: 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+}
+
+.workspace-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workspace-tooltip__trigger {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.workspace-tooltip__trigger:hover,
+.workspace-tooltip__trigger:focus-visible {
+  background: rgba(24, 49, 59, 0.08);
+  color: var(--text-main);
+  outline: none;
+}
+
+.workspace-tooltip__bubble {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 50;
+  width: min(17rem, 70vw);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(24, 49, 59, 0.12);
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 12px 28px rgb(15 23 42 / 16%);
+  color: var(--text-main);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.25rem);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.workspace-tooltip:hover .workspace-tooltip__bubble,
+.workspace-tooltip:focus-within .workspace-tooltip__bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.workspace-repeated-card,
+.workspace-subcard,
+.workspace-nested-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.workspace-empty-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed rgba(24, 49, 59, 0.16);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.workspace-empty-state strong,
+.workspace-empty-state span {
+  display: block;
+}
+
+.workspace-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.45rem;
+}
+
+.workspace-choice,
+.workspace-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(24, 49, 59, 0.12);
+  border-radius: 0.5rem;
+  background: #fff;
+  font-size: 0.85rem;
+}
+
+.workspace-choice input,
+.workspace-toggle input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.workspace-input,
+.workspace-textarea {
+  width: 100%;
+  border: 1px solid rgba(24, 49, 59, 0.18);
+  border-radius: 0.6rem;
+  background: #fff;
+  color: var(--text-main);
+  font-size: 0.875rem;
+}
+
+.workspace-input {
+  height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.workspace-textarea {
+  min-height: 5.5rem;
+  padding: 0.65rem 0.75rem;
+  resize: vertical;
+}
+
+.workspace-readonly-line,
+.workspace-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+}
+
+.workspace-readonly-line {
+  justify-content: space-between;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(24, 49, 59, 0.12);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+}
+
+.workspace-summary-row span {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(24, 49, 59, 0.12);
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
+.workspace-muted-copy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
 .drawer-location-preview-inline {
   grid-column: 1 / -1;
   display: grid;
@@ -4979,6 +5171,16 @@ a {
   font-weight: 700;
 }
 
+.detail-team-note__author {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: help;
+  text-decoration: underline dotted rgba(24, 49, 59, 0.28);
+  text-underline-offset: 0.14em;
+}
+
 .detail-team-note__pin {
   display: inline-flex;
   align-items: center;
@@ -5303,6 +5505,8 @@ a {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text);
+  text-decoration: none;
+  cursor: default;
 }
 
 .detail-team-note-dialog__tags,

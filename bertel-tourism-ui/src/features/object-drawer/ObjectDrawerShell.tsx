@@ -11,17 +11,23 @@ import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { parseObjectDetail } from '../../services/object-detail-parser';
 import type { ObjectWorkspaceModuleAccess, ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type {
+  ObjectWorkspaceActivityModule,
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
   ObjectWorkspaceContactItem,
   ObjectWorkspaceDistinctionsModule,
+  ObjectWorkspaceEventModule,
   ObjectWorkspaceGeneralInfo,
+  ObjectWorkspaceItineraryModule,
   ObjectWorkspaceLegalRecord,
   ObjectWorkspaceLocationModule,
+  ObjectWorkspaceMeetingRoomsModule,
   ObjectWorkspaceMembershipModule,
   ObjectWorkspaceMediaItem,
+  ObjectWorkspaceMenusModule,
   ObjectWorkspaceModules,
   ObjectWorkspacePricingModule,
+  ObjectWorkspaceRoomsModule,
   ObjectWorkspaceTaxonomyModule,
   WorkspaceTranslatableField,
 } from '../../services/object-workspace-parser';
@@ -32,19 +38,25 @@ import { ObjectDetailView } from './ObjectDetailView';
 import { ObjectDrawerNav } from './ObjectDrawerNav';
 import { ObjectWorkspaceDescriptionsPanel } from './ObjectWorkspaceDescriptionsPanel';
 import { ObjectWorkspaceDistinctionsPanel } from './ObjectWorkspaceDistinctionsPanel';
+import { ObjectWorkspaceActivityPanel } from './ObjectWorkspaceActivityPanel';
+import { ObjectWorkspaceEventPanel } from './ObjectWorkspaceEventPanel';
 import { ObjectWorkspaceGeneralPanel } from './ObjectWorkspaceGeneralPanel';
 import { ObjectWorkspaceCapacityPoliciesPanel } from './ObjectWorkspaceCapacityPoliciesPanel';
 import { ObjectWorkspaceContactsPanel } from './ObjectWorkspaceContactsPanel';
 import { ObjectWorkspaceCharacteristicsPanel } from './ObjectWorkspaceCharacteristicsPanel';
+import { ObjectWorkspaceItineraryPanel } from './ObjectWorkspaceItineraryPanel';
 import { ObjectWorkspaceLocationPanel } from './ObjectWorkspaceLocationPanel';
 import { ObjectWorkspaceLegalPanel } from './ObjectWorkspaceLegalPanel';
+import { ObjectWorkspaceMeetingRoomsPanel } from './ObjectWorkspaceMeetingRoomsPanel';
 import { ObjectWorkspaceMediaPanel } from './ObjectWorkspaceMediaPanel';
 import { ObjectWorkspaceMembershipsPanel } from './ObjectWorkspaceMembershipsPanel';
+import { ObjectWorkspaceMenusPanel } from './ObjectWorkspaceMenusPanel';
 import { ObjectWorkspaceOpeningsPanel } from './ObjectWorkspaceOpeningsPanel';
 import { ObjectWorkspaceProviderFollowUpPanel } from './ObjectWorkspaceProviderFollowUpPanel';
 import { ObjectWorkspacePublicationPanel } from './ObjectWorkspacePublicationPanel';
 import { ObjectWorkspacePricingPanel } from './ObjectWorkspacePricingPanel';
 import { ObjectWorkspaceRelationshipsPanel } from './ObjectWorkspaceRelationshipsPanel';
+import { ObjectWorkspaceRoomsPanel } from './ObjectWorkspaceRoomsPanel';
 import { ObjectWorkspaceSyncIdentifiersPanel } from './ObjectWorkspaceSyncIdentifiersPanel';
 import { ObjectWorkspaceUnsavedDialog } from './ObjectWorkspaceUnsavedDialog';
 import { DEFAULT_SECTION, getSectionsForResource } from './object-drawer-sections';
@@ -231,6 +243,12 @@ const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModules> = 
   distinctions: 'distinctions',
   'capacity-policies': 'capacityPolicies',
   pricing: 'pricing',
+  rooms: 'rooms',
+  'meeting-rooms': 'meetingRooms',
+  menus: 'menus',
+  activity: 'activity',
+  event: 'event',
+  itinerary: 'itinerary',
   openings: 'openings',
   'provider-follow-up': 'providerFollowUp',
   relationships: 'relationships',
@@ -357,6 +375,12 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     distinctions: { saving: false, message: null },
     'capacity-policies': { saving: false, message: null },
     pricing: { saving: false, message: null },
+    rooms: { saving: false, message: null },
+    'meeting-rooms': { saving: false, message: null },
+    menus: { saving: false, message: null },
+    activity: { saving: false, message: null },
+    event: { saving: false, message: null },
+    itinerary: { saving: false, message: null },
     openings: { saving: false, message: null },
     'provider-follow-up': { saving: false, message: null },
     relationships: { saving: false, message: null },
@@ -655,6 +679,75 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
       },
     }) : previous);
     setSaveStateBySection((state) => ({ ...state, pricing: { saving: false, message: null } }));
+  }
+
+  function replaceRooms(nextValue: ObjectWorkspaceRoomsModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        rooms: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, rooms: { saving: false, message: null } }));
+  }
+
+  function replaceMeetingRooms(nextValue: ObjectWorkspaceMeetingRoomsModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        meetingRooms: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, 'meeting-rooms': { saving: false, message: null } }));
+  }
+
+  function replaceMenus(nextValue: ObjectWorkspaceMenusModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        menus: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, menus: { saving: false, message: null } }));
+  }
+
+  function patchActivity(patch: Partial<ObjectWorkspaceActivityModule>) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        activity: {
+          ...previous.draft.activity,
+          ...patch,
+        },
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, activity: { saving: false, message: null } }));
+  }
+
+  function replaceEvent(nextValue: ObjectWorkspaceEventModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        event: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, event: { saving: false, message: null } }));
+  }
+
+  function replaceItinerary(nextValue: ObjectWorkspaceItineraryModule) {
+    setEditorSnapshot((previous) => previous ? ({
+      ...previous,
+      draft: {
+        ...previous.draft,
+        itinerary: nextValue,
+      },
+    }) : previous);
+    setSaveStateBySection((state) => ({ ...state, itinerary: { saving: false, message: null } }));
   }
 
   function replaceMemberships(nextValue: ObjectWorkspaceMembershipModule) {
@@ -1427,6 +1520,78 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
                   access={resolvedData.permissions.pricing}
                   onChange={replacePricing}
                   onSave={() => void handleSaveSection('pricing')}
+                />
+              )}
+              {resolvedSection === 'rooms' && (
+                <ObjectWorkspaceRoomsPanel
+                  value={editorSnapshot.draft.rooms}
+                  dirty={dirtySections.rooms === true}
+                  saving={saveStateBySection.rooms.saving}
+                  statusMessage={saveStateBySection.rooms.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.rooms)}
+                  access={resolvedData.permissions.rooms}
+                  onChange={replaceRooms}
+                  onSave={() => void handleSaveSection('rooms')}
+                />
+              )}
+              {resolvedSection === 'meeting-rooms' && (
+                <ObjectWorkspaceMeetingRoomsPanel
+                  value={editorSnapshot.draft.meetingRooms}
+                  dirty={dirtySections['meeting-rooms'] === true}
+                  saving={saveStateBySection['meeting-rooms'].saving}
+                  statusMessage={saveStateBySection['meeting-rooms'].message}
+                  saveAction={buildSaveAction(resolvedData.permissions.meetingRooms)}
+                  access={resolvedData.permissions.meetingRooms}
+                  onChange={replaceMeetingRooms}
+                  onSave={() => void handleSaveSection('meeting-rooms')}
+                />
+              )}
+              {resolvedSection === 'menus' && (
+                <ObjectWorkspaceMenusPanel
+                  value={editorSnapshot.draft.menus}
+                  dirty={dirtySections.menus === true}
+                  saving={saveStateBySection.menus.saving}
+                  statusMessage={saveStateBySection.menus.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.menus)}
+                  access={resolvedData.permissions.menus}
+                  onChange={replaceMenus}
+                  onSave={() => void handleSaveSection('menus')}
+                />
+              )}
+              {resolvedSection === 'activity' && (
+                <ObjectWorkspaceActivityPanel
+                  value={editorSnapshot.draft.activity}
+                  dirty={dirtySections.activity === true}
+                  saving={saveStateBySection.activity.saving}
+                  statusMessage={saveStateBySection.activity.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.activity)}
+                  access={resolvedData.permissions.activity}
+                  onChange={patchActivity}
+                  onSave={() => void handleSaveSection('activity')}
+                />
+              )}
+              {resolvedSection === 'event' && (
+                <ObjectWorkspaceEventPanel
+                  value={editorSnapshot.draft.event}
+                  dirty={dirtySections.event === true}
+                  saving={saveStateBySection.event.saving}
+                  statusMessage={saveStateBySection.event.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.event)}
+                  access={resolvedData.permissions.event}
+                  onChange={replaceEvent}
+                  onSave={() => void handleSaveSection('event')}
+                />
+              )}
+              {resolvedSection === 'itinerary' && (
+                <ObjectWorkspaceItineraryPanel
+                  value={editorSnapshot.draft.itinerary}
+                  dirty={dirtySections.itinerary === true}
+                  saving={saveStateBySection.itinerary.saving}
+                  statusMessage={saveStateBySection.itinerary.message}
+                  saveAction={buildSaveAction(resolvedData.permissions.itinerary)}
+                  access={resolvedData.permissions.itinerary}
+                  onChange={replaceItinerary}
+                  onSave={() => void handleSaveSection('itinerary')}
                 />
               )}
               {resolvedSection === 'openings' && (

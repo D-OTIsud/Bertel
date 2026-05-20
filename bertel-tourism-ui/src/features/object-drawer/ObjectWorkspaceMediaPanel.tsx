@@ -155,20 +155,6 @@ export function ObjectWorkspaceMediaPanel({
           </div>
         </div>
 
-        <div className="drawer-grid">
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Portee objet</span>
-            <strong>{value.objectItems.length} media(s)</strong>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Portee sous-lieu</span>
-            <strong>{value.placeItems.length} media(s)</strong>
-            {!access.canEditPlaceMedia && (value.placeScopeUnavailableReason || null) && (
-              <p className="text-sm text-muted-foreground">{value.placeScopeUnavailableReason}</p>
-            )}
-          </article>
-        </div>
       </article>
 
       <section className="drawer-form-stack">

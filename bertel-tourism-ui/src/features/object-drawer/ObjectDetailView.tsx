@@ -52,6 +52,12 @@ import {
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
 import {
+  getNoteAuthorDisplayName,
+  getNoteAuthorEmail,
+  getNoteAuthorFullName,
+  getNoteAuthorShortLabel,
+} from './note-author-display';
+import {
   type ActorItem,
   type CapacityItem,
   type ContactItem,
@@ -716,14 +722,30 @@ function formatNoteDateTime(value: string): string {
   }).format(new Date(timestamp));
 }
 
-function getNoteAuthorName(note: PrivateNoteEntry): string {
-  const fallback = note.createdByName || 'Equipe';
-  if (!fallback.includes('@')) {
-    return fallback;
-  }
+function TeamNoteAuthorByline({
+  note,
+  className,
+}: {
+  note: PrivateNoteEntry;
+  className?: string;
+}) {
+  const shortLabel = getNoteAuthorShortLabel(note);
+  const fullName = getNoteAuthorFullName(note);
+  const email = getNoteAuthorEmail(note);
+  const tooltipTitle = fullName || shortLabel;
+  const tooltipContent =
+    tooltipTitle || email ? (
+      <span className="detail-tooltip__stack">
+        {tooltipTitle ? <strong>{tooltipTitle}</strong> : null}
+        {email ? <span>{email}</span> : null}
+      </span>
+    ) : undefined;
 
-  const [localPart] = fallback.split('@');
-  return localPart || fallback;
+  return (
+    <DetailTooltip content={tooltipContent}>
+      <span className={cn('detail-team-note__author', className)}>{shortLabel}</span>
+    </DetailTooltip>
+  );
 }
 
 function getNoteExcerpt(note: PrivateNoteEntry): string {
@@ -775,7 +797,7 @@ function TeamNoteDetailDialog({
               <NoteIcon size={14} />
             </span>
             <div className="detail-team-note-dialog__meta">
-              <p className="detail-team-note-dialog__author">{getNoteAuthorName(note)}</p>
+              <TeamNoteAuthorByline note={note} className="detail-team-note-dialog__author" />
               {metaParts.length > 0 && (
                 <p className="detail-team-note-dialog__tags">{metaParts.join(' · ')}</p>
               )}
@@ -819,7 +841,7 @@ function buildNotesCsv(notes: PrivateNoteEntry[]): string {
     ['date', 'author', 'category', 'pinned', 'archived', 'note'],
     ...notes.map((note) => [
       note.createdAt,
-      getNoteAuthorName(note),
+      getNoteAuthorDisplayName(note),
       NOTE_CATEGORY_META[note.category].label,
       note.isPinned ? 'yes' : 'no',
       note.isArchived ? 'yes' : 'no',
@@ -1305,6 +1327,7 @@ function TeamNotesSection({
   const writeAccessQuery = useObjectPrivateNoteWriteAccessQuery(objectId);
   const sessionUserName = useSessionStore((state) => state.userName);
   const sessionUserId = useSessionStore((state) => state.userId);
+  const sessionEmail = useSessionStore((state) => state.email);
   const sessionRole = useSessionStore((state) => state.role);
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -1438,6 +1461,7 @@ function TeamNotesSection({
             updatedAt: createdNote.updated_at,
             createdById: createdNote.created_by?.id ?? sessionUserId ?? '',
             createdByName: createdNote.created_by?.display_name ?? sessionUserName ?? '',
+            createdByEmail: createdNote.created_by?.email ?? sessionEmail ?? '',
             createdByAvatarUrl: createdNote.created_by?.avatar_url ?? '',
           },
           ...current,
@@ -1612,6 +1636,8 @@ function TeamNotesSection({
                           {formatNoteDate(note.createdAt)}
                         </time>
                       )}
+                      <span className="detail-team-note__separator" aria-hidden="true">-</span>
+                      <TeamNoteAuthorByline note={note} />
                       <span className="detail-team-note__separator" aria-hidden="true">-</span>
                       <span className="detail-team-note__excerpt">{getNoteExcerpt(note)}</span>
                       {isNoteExcerptTruncated(note) && (

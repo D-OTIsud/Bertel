@@ -84,6 +84,7 @@ export interface PrivateNoteEntry {
   updatedAt: string;
   createdById: string;
   createdByName: string;
+  createdByEmail: string;
   createdByAvatarUrl: string;
 }
 
@@ -614,7 +615,8 @@ function parsePrivateNoteEntry(value: unknown, prefix: string, index: number): P
     createdAt: readString(record.created_at),
     updatedAt: readString(record.updated_at),
     createdById: readString(createdByRecord.id),
-    createdByName: pickFirstText(createdByRecord.display_name, createdByRecord.name, createdByRecord.email),
+    createdByName: pickFirstText(createdByRecord.display_name, createdByRecord.name),
+    createdByEmail: readString(createdByRecord.email),
     createdByAvatarUrl: readString(createdByRecord.avatar_url),
   };
 }

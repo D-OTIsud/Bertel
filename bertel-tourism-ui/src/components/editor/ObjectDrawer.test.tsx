@@ -419,6 +419,139 @@ function buildWorkspaceResource(params: {
         promotionsUnavailableReason: null,
         unavailableReason: null,
       },
+      rooms: {
+        viewTypeOptions: [{ id: 'view-sea', code: 'SEA', label: 'Vue mer' }],
+        amenityOptions: [{ id: 'amenity-wifi', code: 'wifi', label: 'Wi-Fi' }],
+        mediaOptions: [],
+        items: [
+          {
+            recordId: 'room-1',
+            code: 'DBL',
+            name: 'Chambre double',
+            nameTranslations: {},
+            description: 'Chambre avec balcon',
+            descriptionTranslations: {},
+            capacityAdults: '2',
+            capacityChildren: '',
+            capacityTotal: '2',
+            sizeSqm: '24',
+            bedConfig: '1 lit double',
+            bedConfigTranslations: {},
+            quantity: '12',
+            floorLevel: '',
+            viewTypeId: 'view-sea',
+            viewTypeCode: 'SEA',
+            viewTypeLabel: 'Vue mer',
+            basePrice: '120',
+            currency: 'EUR',
+            accessible: false,
+            published: true,
+            position: '1',
+            amenityCodes: ['wifi'],
+            mediaIds: [],
+          },
+        ],
+        unavailableReason: null,
+      },
+      meetingRooms: {
+        equipmentOptions: [{ id: 'eq-video', code: 'video', label: 'Videoprojecteur' }],
+        items: [
+          {
+            recordId: 'meeting-1',
+            name: 'Salle Bourbon',
+            nameTranslations: {},
+            areaM2: '80',
+            capacityTheatre: '80',
+            capacityU: '30',
+            capacityClassroom: '40',
+            capacityBoardroom: '24',
+            equipmentCodes: ['video'],
+          },
+        ],
+        unavailableReason: null,
+      },
+      menus: {
+        categoryOptions: [{ id: 'cat-main', code: 'main', label: 'Carte' }],
+        dietaryTagOptions: [{ id: 'diet-veggie', code: 'veggie', label: 'Vegetarien' }],
+        allergenOptions: [{ id: 'all-gluten', code: 'gluten', label: 'Gluten' }],
+        cuisineTypeOptions: [{ id: 'cuisine-creole', code: 'creole', label: 'Creole' }],
+        priceKindOptions: [{ id: 'kind-dish', code: 'dish', label: 'Plat' }],
+        priceUnitOptions: [{ id: 'unit-item', code: 'item', label: 'Piece' }],
+        mediaOptions: [],
+        items: [
+          {
+            recordId: 'menu-1',
+            categoryId: 'cat-main',
+            categoryCode: 'main',
+            categoryLabel: 'Carte',
+            name: 'Carte du midi',
+            description: '',
+            active: true,
+            visibility: 'public',
+            position: '1',
+            items: [
+              {
+                recordId: 'menu-item-1',
+                name: 'Cari poisson',
+                description: '',
+                price: '18',
+                currency: 'EUR',
+                kindId: 'kind-dish',
+                kindCode: 'dish',
+                kindLabel: 'Plat',
+                unitId: 'unit-item',
+                unitCode: 'item',
+                unitLabel: 'Piece',
+                mediaId: '',
+                available: true,
+                position: '1',
+                dietaryTagCodes: [],
+                allergenCodes: ['gluten'],
+                cuisineTypeCodes: ['creole'],
+              },
+            ],
+          },
+        ],
+        unavailableReason: null,
+      },
+      activity: {
+        durationMin: '90',
+        minParticipants: '2',
+        maxParticipants: '12',
+        difficultyLevel: 'easy',
+        guideRequired: true,
+        minAge: '8',
+        equipmentProvided: 'Casques fournis',
+        unavailableReason: null,
+      },
+      event: {
+        startDate: '2026-07-01',
+        endDate: '2026-07-02',
+        startTime: '18:00',
+        endTime: '22:00',
+        recurring: false,
+        recurrenceText: '',
+        occurrences: [{ recordId: 'occ-1', startAt: '2026-07-01T18:00:00', endAt: '2026-07-01T22:00:00', state: 'scheduled' }],
+        unavailableReason: null,
+      },
+      itinerary: {
+        distanceKm: '8.5',
+        durationMin: '180',
+        difficultyLevel: 'medium',
+        elevationPositiveM: '420',
+        elevationNegativeM: '420',
+        loop: true,
+        openStatus: 'open',
+        statusNote: '',
+        practiceOptions: [{ id: 'practice-hike', code: 'hike', label: 'Randonnee' }],
+        practiceCodes: ['hike'],
+        stages: [{ recordId: 'stage-1', name: 'Depart', description: 'Parking principal', position: '1' }],
+        sectionsCount: 1,
+        profilesCount: 1,
+        geometrySummary: 'trace presente',
+        traceEditable: false,
+        unavailableReason: null,
+      },
       openings: {
         periods: [
           {
@@ -714,6 +847,42 @@ function buildWorkspaceResource(params: {
         disabledReason: null,
       },
       pricing: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      rooms: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      meetingRooms: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      menus: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      activity: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      event: {
+        canDirectWrite: true,
+        canPrepareProposal: true,
+        canSubmitProposal: false,
+        disabledReason: null,
+      },
+      itinerary: {
         canDirectWrite: true,
         canPrepareProposal: true,
         canSubmitProposal: false,
@@ -1223,7 +1392,112 @@ describe('ObjectDrawer workspace drafts', () => {
 
     expect(screen.getByRole('heading', { name: /^horaires$/i })).toBeInTheDocument();
     expect(screen.getByText(/periode courante/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/09:30 -> 17:00/i)).toHaveLength(2);
+    expect(screen.getAllByText(/09:30–17:00/i)).toHaveLength(2);
+  });
+
+  it('shows accommodation-specific rooms and meeting rooms for HOT objects', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Hotel A',
+        type: 'HOT',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /chambres \/ unités/i }));
+    expect(screen.getByRole('heading', { name: /chambres et unites/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/chambre double/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /salles mice/i }));
+    expect(screen.getByRole('heading', { name: /salles et capacites/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/salle bourbon/i)).toBeInTheDocument();
+  });
+
+  it('shows restaurant menus only on RES objects', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-1',
+        name: 'Restaurant A',
+        type: 'RES',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="obj-1" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+
+    expect(screen.queryByRole('button', { name: /chambres \/ unités/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /menus/i }));
+    expect(screen.getByRole('heading', { name: /^menus$/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/cari poisson/i)).toBeInTheDocument();
+  });
+
+  it('shows activity, event, and itinerary faces by object type', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-act',
+        name: 'Activite A',
+        type: 'ACT',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    const { rerender } = render(<ObjectDrawer objectId="obj-act" />);
+    act(() => {
+      useObjectDrawerStore.setState({ mode: 'edit' });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^activité$/i }));
+    expect(screen.getByRole('heading', { name: /detail activite/i })).toBeInTheDocument();
+
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-fma',
+        name: 'Evenement A',
+        type: 'FMA',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    rerender(<ObjectDrawer objectId="obj-fma" />);
+    act(() => {
+      useObjectDrawerStore.setState({ activeSection: 'general-info', mode: 'edit' });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /programmation/i }));
+    expect(screen.getByRole('heading', { name: /programmation/i })).toBeInTheDocument();
+
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({
+        id: 'obj-iti',
+        name: 'Sentier A',
+        type: 'ITI',
+      }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    rerender(<ObjectDrawer objectId="obj-iti" />);
+    act(() => {
+      useObjectDrawerStore.setState({ activeSection: 'general-info', mode: 'edit' });
+    });
+    expect(screen.queryByRole('button', { name: /contacts/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /tarifs/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /itinéraire/i }));
+    expect(screen.getByRole('heading', { name: /trace et parcours/i })).toBeInTheDocument();
   });
 
   it('keeps coordinates editable in the map card and syncs them back to the pin', () => {

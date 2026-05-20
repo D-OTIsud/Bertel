@@ -96,7 +96,6 @@ export function ObjectWorkspaceCapacityPoliciesPanel({
           <div>
             <span className="eyebrow">Capacites</span>
             <h2>Capacites et politiques</h2>
-            <p>Rassemblez ici les capacites, l accueil des groupes et la politique d accueil des animaux.</p>
           </div>
           <div className="stack-list text-right">
             <div className="inline-actions">
@@ -105,26 +104,6 @@ export function ObjectWorkspaceCapacityPoliciesPanel({
               </Button>
             </div>
           </div>
-        </div>
-
-        <div className="drawer-grid">
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Capacites</span>
-            <strong>{value.capacityItems.length}</strong>
-            <p>Les volumes et jauges metier restent des enregistrements structurants, distincts des politiques.</p>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Groupes</span>
-            <strong>{value.groupPolicy.groupOnly ? 'Groupe uniquement' : 'Mixte'}</strong>
-            <p>Minimum, maximum et notes d accueil groupes.</p>
-          </article>
-
-          <article className="panel-card panel-card--nested">
-            <span className="facet-title">Animaux</span>
-            <strong>{value.petPolicy.hasPolicy ? (value.petPolicy.accepted ? 'Acceptes' : 'Refuses') : 'Non renseigne'}</strong>
-            <p>{value.unavailableReason ?? 'Precisez ici si les animaux sont acceptes et sous quelles conditions.'}</p>
-          </article>
         </div>
       </article>
 

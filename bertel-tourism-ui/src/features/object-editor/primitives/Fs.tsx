@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 interface FsProps {
   num: string;
@@ -15,6 +15,10 @@ interface FsProps {
  */
 export function Fs({ num, title, sub, pill, folded = false, children }: FsProps) {
   const [open, setOpen] = useState(!folded);
+  useEffect(() => {
+    setOpen(!folded);
+  }, [folded]);
+
   return (
     <section className="fs" id={`section-${num}`} data-section={num}>
       <div className="fs__head">

@@ -19,7 +19,6 @@ import {
 import { validateForPublication, type Issue } from './editor-validation';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
-import { TypeRibbon } from './shell/TypeRibbon';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
 import { EditorFooter } from './shell/EditorFooter';
@@ -226,13 +225,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
   const typeCode = resource.type ?? '';
   const typeLabel = TYPE_LABEL[typeCode.toUpperCase()] ?? typeCode;
-  const taxoPath =
-    editor.draft.taxonomy.domains
-      .map((d) => d.assignment?.path.map((n) => n.label).join(' ▸ '))
-      .find(Boolean) ?? '';
-  const locationHint = [editor.draft.location.main.city, editor.draft.location.main.zoneTouristique]
-    .filter(Boolean)
-    .join(' · ');
 
   return (
     <div className={`edit-flat object-editor ${meta.accent}`}>
@@ -252,14 +244,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         onPreview={exitToExplorer}
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
-      />
-      <TypeRibbon
-        meta={meta}
-        typeCode={typeCode}
-        typeLabel={typeLabel}
-        taxoPath={taxoPath}
-        status={editor.draft.generalInfo.status}
-        locationHint={locationHint}
       />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />

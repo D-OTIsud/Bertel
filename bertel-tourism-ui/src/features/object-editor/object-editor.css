@@ -115,32 +115,6 @@
   color: #93392a;
 }
 
-/* ---------- Type ribbon (accent band) ---------- */
-.object-editor .type-ribbon {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 22px;
-  background: var(--accent-tint);
-  color: var(--accent-deep);
-  font-size: 12px; font-weight: 600;
-  border-bottom: 1px solid var(--line-soft);
-  flex: none;
-}
-.object-editor .type-ribbon .blob {
-  width: 10px; height: 10px; border-radius: 999px;
-  background: var(--accent); flex: none;
-}
-.object-editor .type-ribbon strong { font-weight: 700; }
-.object-editor .type-ribbon .meta {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 10.5px; letter-spacing: 0.04em;
-  color: var(--ink-3);
-}
-.object-editor .type-ribbon__taxo {
-  font-weight: 500;
-  color: var(--ink-3);
-}
-
 /* ---------- Body grid (split-pane: each column scrolls independently) ---------- */
 .object-editor .edit-body {
   flex: 1;

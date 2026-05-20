@@ -21,7 +21,7 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
         className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
       >
         <SheetTitle className="sr-only">Fiche objet</SheetTitle>
-        <SheetDescription className="sr-only">Panneau lateral de detail d un objet touristique. Le bouton Modifier permet d acceder au mode edition.</SheetDescription>
+        <SheetDescription className="sr-only">Panneau lateral de detail d un objet touristique. Le bouton Modifier ouvre la page d edition pleine ecran.</SheetDescription>
         {objectId ? <ObjectDrawerShell objectId={objectId} onClose={closeDrawer} /> : null}
       </SheetContent>
     </Sheet>

@@ -22,7 +22,6 @@ import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
 import { EditorFooter } from './shell/EditorFooter';
-import { SaveBar } from './shell/SaveBar';
 import { ValidationBanner } from './widgets/ValidationBanner';
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import './object-editor.css';
@@ -176,22 +175,32 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     return () => observer.disconnect();
   }, [sections]);
 
-  async function handleSave() {
+  /** Persist local draft modules to the database (called only from publish, not a separate save action). */
+  async function persistDirtyModules(): Promise<boolean> {
     const dirty = (Object.keys(editor.dirtySections) as WorkspaceModuleId[]).filter(
       (m) => editor.dirtySections[m],
     );
     if (dirty.length === 0) {
-      return;
+      return true;
     }
+
     const result = await save(dirty, resource.permissions, editor.draft);
-    editor.commitModules(result.saved.flatMap((m) => (m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]])));
+    editor.commitModules(
+      result.saved.flatMap((m) => (m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]])),
+    );
+
     if (result.failed.length > 0) {
-      setStatusMessage(`${result.failed.length} section(s) en échec — voir les détails.`);
-    } else if (result.blocked.length > 0) {
-      setStatusMessage(`${result.saved.length} enregistrée(s), ${result.blocked.length} bloquée(s) par les droits.`);
-    } else {
-      setStatusMessage('Modifications enregistrées.');
+      setStatusMessage(`${result.failed.length} section(s) en échec — publication annulée.`);
+      return false;
     }
+    if (result.blocked.length > 0) {
+      setStatusMessage(
+        `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s) — publication annulée.`,
+      );
+      return false;
+    }
+
+    return true;
   }
 
   async function handlePublish() {
@@ -204,9 +213,15 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
       return;
     }
 
+    setStatusMessage(null);
+    const persisted = await persistDirtyModules();
+    if (!persisted) {
+      return;
+    }
+
     try {
       await publishObject.mutateAsync(true);
-      setStatusMessage('Publication demandée.');
+      setStatusMessage('Fiche enregistrée et publiée.');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Publication impossible.');
     }
@@ -239,7 +254,9 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         blockerCount={validation.blockers.length}
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
+        saving={saving}
         publishDisabled={validation.blockers.length > 0}
+        statusMessage={statusMessage}
         onModeChange={setMode}
         onPreview={exitToExplorer}
         onCancel={exitToExplorer}
@@ -253,9 +270,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
             warnings={validation.warnings}
             typeCode={resource.type ?? ''}
             mode={mode}
-            publishing={publishObject.isPending}
             onGoToSection={scrollToSection}
-            onPublish={() => void handlePublish()}
           />
           {sections.map(({ num, Component }) => (
             <Component
@@ -278,13 +293,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           onGoToSection={scrollToSection}
         />
       </div>
-      <SaveBar
-        dirtyCount={dirtyCount}
-        saving={saving}
-        onSave={() => void handleSave()}
-        statusMessage={statusMessage}
-      />
-      <EditorFooter onPreview={exitToExplorer} onPublish={() => void handlePublish()} />
+      <EditorFooter onPreview={exitToExplorer} />
     </div>
   );
 }

@@ -1,26 +1,16 @@
-/** Page footer: keyboard-shortcut hints + draft / preview / publish actions. */
-export function EditorFooter({
-  onPreview,
-  onPublish,
-}: {
-  onPreview: () => void;
-  onPublish: () => void;
-}) {
+/** Page footer: preview shortcut hints (publish lives in the top bar only). */
+export function EditorFooter({ onPreview }: { onPreview: () => void }) {
   return (
     <div className="edit-footer">
       <div className="edit-footer__hint">
-        <span>Raccourcis :</span>
-        <code>⌘+S</code> enregistrer <code>⌘+⇧+P</code> publier <code>Esc</code> quitter
+        Les changements restent locaux tant que vous n&apos;avez pas cliqué sur <span>Publier</span> (en haut à droite).
       </div>
       <div className="edit-footer__actions">
         <button type="button" className="btn" disabled title="Bientôt disponible">
           Brouillon
         </button>
         <button type="button" className="btn" onClick={onPreview}>
-          Aperçu
-        </button>
-        <button type="button" className="btn primary" onClick={onPublish}>
-          Publier les modifs
+          Aperçu fiche
         </button>
       </div>
     </div>

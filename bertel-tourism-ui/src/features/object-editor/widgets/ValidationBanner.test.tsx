@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { ValidationBanner } from './ValidationBanner';
 
 describe('ValidationBanner', () => {
-  it('disables publishing while blockers exist and navigates to issue sections', () => {
+  it('lists blockers and navigates to issue sections without a publish button', () => {
     const onGoToSection = jest.fn();
     render(
       <ValidationBanner
@@ -11,11 +11,11 @@ describe('ValidationBanner', () => {
         typeCode="HOT"
         mode="complet"
         onGoToSection={onGoToSection}
-        onPublish={jest.fn()}
       />,
     );
 
-    expect(screen.getByRole('button', { name: /Publier maintenant/ })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Publier/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/1 blocage/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Corriger/ }));
     expect(onGoToSection).toHaveBeenCalledWith('01');
   });

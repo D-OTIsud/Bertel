@@ -6,9 +6,7 @@ interface ValidationBannerProps {
   warnings: Issue[];
   typeCode: string;
   mode: EditorMode;
-  publishing?: boolean;
   onGoToSection: (num: string) => void;
-  onPublish: () => void;
 }
 
 function issueRow(issue: Issue, action: string, onGoToSection: (num: string) => void) {
@@ -23,15 +21,7 @@ function issueRow(issue: Issue, action: string, onGoToSection: (num: string) => 
   );
 }
 
-export function ValidationBanner({
-  blockers,
-  warnings,
-  typeCode,
-  mode,
-  publishing = false,
-  onGoToSection,
-  onPublish,
-}: ValidationBannerProps) {
+export function ValidationBanner({ blockers, warnings, typeCode, mode, onGoToSection }: ValidationBannerProps) {
   return (
     <div className="val-banner">
       <div className="val-banner__col val-banner__col--block">
@@ -73,13 +63,10 @@ export function ValidationBanner({
                 : `${blockers.length} blocage${blockers.length > 1 ? 's' : ''} restant${blockers.length > 1 ? 's' : ''}`}
             </strong>
             <small>
-              Mode {mode} · type {typeCode || '—'}
+              Mode {mode} · type {typeCode || '—'} · publication via le bouton en haut à droite
             </small>
           </div>
         </div>
-        <button type="button" className="btn primary" disabled={blockers.length > 0 || publishing} onClick={onPublish}>
-          {publishing ? 'Publication…' : 'Publier maintenant'}
-        </button>
       </div>
     </div>
   );

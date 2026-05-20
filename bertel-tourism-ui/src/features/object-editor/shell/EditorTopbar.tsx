@@ -3,15 +3,15 @@ import type { EditorMode } from './EditorTopbar.types';
 
 export type { EditorMode } from './EditorTopbar.types';
 
-function formatRelativeSave(iso: string | null | undefined): string {
-  if (!iso) return 'À jour';
+function formatLastBaseSync(iso: string | null | undefined): string {
+  if (!iso) return 'Synchronisé avec la base';
   const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return 'À jour';
+  if (Number.isNaN(then)) return 'Synchronisé avec la base';
   const diffSec = Math.floor((Date.now() - then) / 1000);
-  if (diffSec < 60) return 'Auto-sauvegardé · à l\'instant';
-  if (diffSec < 3600) return `Auto-sauvegardé · il y a ${Math.floor(diffSec / 60)} min`;
-  if (diffSec < 86400) return `Auto-sauvegardé · il y a ${Math.floor(diffSec / 3600)} h`;
-  return `Dernière maj · ${new Date(iso).toLocaleDateString('fr-FR')}`;
+  if (diffSec < 60) return 'Base à jour · à l\'instant';
+  if (diffSec < 3600) return `Base à jour · il y a ${Math.floor(diffSec / 60)} min`;
+  if (diffSec < 86400) return `Base à jour · il y a ${Math.floor(diffSec / 3600)} h`;
+  return `Dernière sync base · ${new Date(iso).toLocaleDateString('fr-FR')}`;
 }
 
 interface EditorTopbarProps {
@@ -25,7 +25,9 @@ interface EditorTopbarProps {
   blockerCount?: number;
   warningCount?: number;
   publishing?: boolean;
+  saving?: boolean;
   publishDisabled?: boolean;
+  statusMessage?: string | null;
   onModeChange: (mode: EditorMode) => void;
   onPreview: () => void;
   onCancel: () => void;
@@ -43,7 +45,9 @@ export function EditorTopbar({
   blockerCount = 0,
   warningCount = 0,
   publishing = false,
+  saving = false,
   publishDisabled = false,
+  statusMessage = null,
   onModeChange,
   onPreview,
   onCancel,
@@ -89,10 +93,12 @@ export function EditorTopbar({
           </button>
         </div>
         <span className={`edit-top__save${dirtyCount > 0 ? ' is-dirty' : ''}`}>
-          {dirtyCount === 0 && <span className="pulse" aria-hidden />}
-          {dirtyCount > 0
-            ? `${dirtyCount} modification${dirtyCount > 1 ? 's' : ''} non enregistrée${dirtyCount > 1 ? 's' : ''}`
-            : formatRelativeSave(lastSavedAt)}
+          {dirtyCount === 0 && !statusMessage && <span className="pulse" aria-hidden />}
+          {statusMessage
+            ? statusMessage
+            : dirtyCount > 0
+              ? `${dirtyCount} modif. locale${dirtyCount > 1 ? 's' : ''} · Publier pour enregistrer`
+              : formatLastBaseSync(lastSavedAt)}
         </span>
         <span className={`edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`}>
           {blockerCount > 0
@@ -105,8 +111,13 @@ export function EditorTopbar({
         <button type="button" className="btn" onClick={onCancel}>
           Annuler
         </button>
-        <button type="button" className="btn primary" disabled={publishDisabled || publishing} onClick={onPublish}>
-          {publishing ? 'Publication…' : 'Publier les modifs'}
+        <button
+          type="button"
+          className="btn primary"
+          disabled={publishDisabled || publishing || saving}
+          onClick={onPublish}
+        >
+          {publishing || saving ? 'Enregistrement…' : 'Publier'}
         </button>
       </div>
     </div>

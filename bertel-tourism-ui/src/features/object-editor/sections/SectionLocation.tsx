@@ -1,38 +1,34 @@
+import { useState } from 'react';
 import { Fs, Field, Input, Chip, ChipSet } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
-import { Provenance, type ProvenanceSource } from '../widgets/Provenance';
-
-function resolveSource(sourceSystem: string): ProvenanceSource {
-  const normalized = sourceSystem.toLowerCase();
-  if (normalized.includes('apidae')) return 'Apidae';
-  if (normalized.includes('datatourisme')) return 'DataTourisme';
-  if (normalized.includes('insee') || normalized.includes('sirene')) return 'INSEE';
-  if (normalized.includes('oti')) return 'OTI';
-  return 'Importé';
-}
-
-function importProvenance(sync?: SectionProps['editor']['draft']['syncIdentifiers']) {
-  const origin = sync?.origins[0];
-  if (origin) {
-    return {
-      source: resolveSource(origin.sourceSystem),
-      who: origin.sourceObjectId || origin.importBatchId,
-      when: origin.updatedAt || origin.createdAt || origin.firstImportedAt,
-    };
-  }
-  return null;
-}
+import { LocationPinMap } from '../widgets/LocationPinMap';
+import { PendingFieldControl } from '../widgets/PendingFieldControl';
+import { dismissPendingFieldChange, findPendingFieldChange } from '../widgets/pending-field-change';
 
 /** Section 03 — address, commune, GPS (design: edit-primitives + map-shell). */
-export function SectionLocation({ editor, folded }: SectionProps) {
+export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   const location = editor.draft.location;
   const main = location.main;
-  const provenance = importProvenance(editor.draft.syncIdentifiers);
+  const [approvingLieuDit, setApprovingLieuDit] = useState(false);
+  const pendingLieuDit = findPendingFieldChange(editor.draft.publication.moderation.items, 'lieuDit');
   const hasCoords = Boolean(main.latitude?.trim() && main.longitude?.trim());
 
   function patch(next: Partial<ObjectWorkspaceLocationForm>) {
     editor.replaceModule('location', { ...location, main: { ...main, ...next } });
+  }
+
+  function approveLieuDit() {
+    if (!pendingLieuDit) {
+      return;
+    }
+    setApprovingLieuDit(true);
+    try {
+      patch({ lieuDit: pendingLieuDit.afterValue || main.lieuDit });
+      dismissPendingFieldChange(editor, pendingLieuDit);
+    } finally {
+      setApprovingLieuDit(false);
+    }
   }
 
   return (
@@ -68,8 +64,14 @@ export function SectionLocation({ editor, folded }: SectionProps) {
       </div>
 
       <Field label="Lieu-dit (Lieux-dits / formulaire)" hint="Valeur brute trimée — colonne source canonique">
-        <Input value={main.lieuDit} onChange={(v) => patch({ lieuDit: v })} placeholder="Bras-Long" />
-        {provenance && <Provenance {...provenance} />}
+        <PendingFieldControl
+          value={main.lieuDit}
+          onChange={(v) => patch({ lieuDit: v })}
+          pending={pendingLieuDit}
+          onApprove={approveLieuDit}
+          approving={approvingLieuDit}
+          placeholder="Bras-Long"
+        />
       </Field>
 
       <div style={{ marginTop: 12 }}>
@@ -100,10 +102,12 @@ export function SectionLocation({ editor, folded }: SectionProps) {
               )}
             </ChipSet>
           </div>
-          <div className="map-mini" aria-hidden>
-            <div className="crosshair" />
-            <div className="pin" />
-          </div>
+          <LocationPinMap
+            latitude={main.latitude}
+            longitude={main.longitude}
+            typeCode={typeCode}
+            onCoordsChange={(nextLat, nextLng) => patch({ latitude: nextLat, longitude: nextLng })}
+          />
         </div>
       </div>
     </Fs>

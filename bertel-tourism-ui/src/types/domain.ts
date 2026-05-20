@@ -261,6 +261,8 @@ export interface CrmTask {
 export interface PendingChangeItem {
   id: string;
   objectName: string;
+  /** When set, matches workspace object id in demo mode. */
+  objectId?: string;
   author: string;
   field: string;
   before: string;

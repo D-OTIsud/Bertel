@@ -132,6 +132,12 @@ export interface ObjectWorkspaceModerationItem {
   appliedAt: string;
   reviewNote: string;
   summary: string;
+  /** Canonical field key from pending_change payload/metadata (e.g. lieu_dit). */
+  field: string;
+  beforeValue: string;
+  afterValue: string;
+  /** Human label for who submitted the change (prestataire, import, …). */
+  submittedByLabel: string;
 }
 
 export interface ObjectWorkspacePublicationSelectionItem {

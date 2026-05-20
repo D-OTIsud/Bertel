@@ -19,8 +19,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <Sidebar onOpenProfile={() => setProfileOpen(true)} />
-      <div className="app-shell__viewport">
-        <TopBar />
+      <div className={`app-shell__viewport${isObjectEdit ? ' app-shell__viewport--object-edit' : ''}`}>
+        {!isObjectEdit ? <TopBar /> : null}
         <main className={`workspace${isObjectEdit ? ' workspace--object-edit' : ''}`}>{children}</main>
       </div>
       <ProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />

@@ -267,23 +267,46 @@ function readStringList(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function readPendingChangeFieldValues(payload: unknown, metadata: unknown) {
+  const metadataRecord = readRecord(metadata);
+  const payloadRecord = readRecord(payload);
+  const field = readString(metadataRecord.field, readString(payloadRecord.field));
+  const beforeValue = readString(
+    metadataRecord.before,
+    readString(payloadRecord.before, readString(payloadRecord.old_value, readString(payloadRecord.old))),
+  );
+  const afterValue = readString(
+    metadataRecord.after,
+    readString(payloadRecord.after, readString(payloadRecord.new_value, readString(payloadRecord.new))),
+  );
+  const submittedByLabel = readString(
+    metadataRecord.author,
+    readString(metadataRecord.who, readString(payloadRecord.author, readString(payloadRecord.submitted_by_label))),
+  );
+  return { field, beforeValue, afterValue, submittedByLabel };
+}
+
 function normalizePendingChangeSummary(input: {
   targetTable: string;
   action: string;
   payload: unknown;
   metadata: unknown;
+  field: string;
+  beforeValue: string;
+  afterValue: string;
 }): string {
-  const metadata = readRecord(input.metadata);
-  const payload = readRecord(input.payload);
-  const field = readString(metadata.field, readString(payload.field));
-  const label = readString(metadata.label, readString(payload.label));
+  const label = readString(readRecord(input.metadata).label, readString(readRecord(input.payload).label));
 
   if (label) {
     return label;
   }
 
-  if (field) {
-    return `${input.action} · ${field}`;
+  if (input.field && (input.beforeValue || input.afterValue)) {
+    return `${input.field} · ${input.beforeValue} -> ${input.afterValue}`;
+  }
+
+  if (input.field) {
+    return `${input.action} · ${input.field}`;
   }
 
   return `${input.action} · ${input.targetTable}`;
@@ -292,6 +315,7 @@ function normalizePendingChangeSummary(input: {
 function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspaceModerationItem {
   const targetTable = readString(row.target_table);
   const action = readString(row.action);
+  const { field, beforeValue, afterValue, submittedByLabel } = readPendingChangeFieldValues(row.payload, row.metadata);
 
   return {
     id: readString(row.id),
@@ -302,11 +326,18 @@ function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspa
     reviewedAt: readString(row.reviewed_at),
     appliedAt: readString(row.applied_at),
     reviewNote: readString(row.review_note),
+    field,
+    beforeValue,
+    afterValue,
+    submittedByLabel,
     summary: normalizePendingChangeSummary({
       targetTable,
       action,
       payload: row.payload,
       metadata: row.metadata,
+      field,
+      beforeValue,
+      afterValue,
     }),
   };
 }
@@ -349,18 +380,22 @@ function normalizePublicationSelectionItem(row: Record<string, unknown>): Object
   };
 }
 
-function buildDemoModerationItems(objectName: string): ObjectWorkspaceModerationItem[] {
+function buildDemoModerationItems(objectName: string, objectId: string): ObjectWorkspaceModerationItem[] {
   return mockPendingChanges
-    .filter((item) => item.objectName === objectName)
+    .filter((item) => item.objectName === objectName || item.objectId === objectId)
     .map((item) => ({
       id: item.id,
-      targetTable: 'object',
+      targetTable: 'object_location',
       action: 'update',
       status: 'pending',
       submittedAt: item.submittedAt,
       reviewedAt: '',
       appliedAt: '',
       reviewNote: '',
+      field: item.field,
+      beforeValue: item.before,
+      afterValue: item.after,
+      submittedByLabel: item.author,
       summary: `${item.field} · ${item.before} -> ${item.after}`,
     }));
 }
@@ -2726,7 +2761,7 @@ async function getObjectWorkspacePublicationModule(
   const session = useSessionStore.getState();
 
   if (session.demoMode) {
-    const moderationItems = buildDemoModerationItems(detail.name);
+    const moderationItems = buildDemoModerationItems(detail.name, objectId);
     const publicationItems = buildDemoPublicationItems();
 
     return {
@@ -2770,6 +2805,7 @@ async function getObjectWorkspacePublicationModule(
       .from('pending_change')
       .select('id, target_table, target_pk, action, status, submitted_at, reviewed_at, review_note, applied_at, payload, metadata')
       .eq('object_id', objectId)
+      .eq('status', 'pending')
       .order('submitted_at', { ascending: false })
       .limit(10),
     client

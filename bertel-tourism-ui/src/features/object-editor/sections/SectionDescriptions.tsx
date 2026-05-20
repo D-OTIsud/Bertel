@@ -1,8 +1,6 @@
 import { Fs, Field, Textarea, LangTabs } from '../primitives';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
-import { Provenance } from '../widgets/Provenance';
-
 const LANG_LABELS: Record<string, string> = {
   fr: 'Français',
   en: 'English',
@@ -91,7 +89,6 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
           count
           max={2000}
         />
-        <Provenance source="Importé" when="—" />
       </Field>
 
       <div className="grid-2" style={{ marginTop: 12 }}>

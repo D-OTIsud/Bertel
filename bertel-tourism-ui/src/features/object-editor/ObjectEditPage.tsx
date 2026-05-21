@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUiStore } from '../../store/ui-store';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -118,6 +119,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
 
 function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource; objectId: string }) {
   const router = useRouter();
+  const openDrawer = useUiStore((state) => state.openDrawer);
   const editor = useObjectEditorState(objectId, resource.modules);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
@@ -240,6 +242,11 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     router.push('/explorer');
   }
 
+  /** Same drawer as Explorer — stay on the edit route while previewing. */
+  function openPreviewDrawer() {
+    openDrawer(objectId);
+  }
+
   const refId = objectId.length > 12 ? objectId.slice(0, 12) : objectId;
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
   const lastUpdatedSource = editor.draft.syncIdentifiers.objectUpdatedAtSource;
@@ -264,7 +271,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         publishDisabled={validation.blockers.length > 0}
         statusMessage={statusMessage}
         onModeChange={setMode}
-        onPreview={exitToExplorer}
+        onPreview={openPreviewDrawer}
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
       />
@@ -292,7 +299,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           onGoToSection={scrollToSection}
         />
       </div>
-      <EditorFooter onPreview={exitToExplorer} />
+      <EditorFooter onPreview={openPreviewDrawer} />
     </div>
   );
 }

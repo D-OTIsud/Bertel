@@ -1,0 +1,73 @@
+import { useState } from 'react';
+import { EditorModal, ReferenceSelect, Field, Input, Textarea, Toggle, Select, LangTabs } from '../primitives';
+import type { ObjectWorkspaceMediaItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
+
+interface Props {
+  open: boolean;
+  media: ObjectWorkspaceMediaItem;
+  typeOptions: WorkspaceReferenceOption[];
+  languages: string[];
+  onClose: () => void;
+  onSave: (media: ObjectWorkspaceMediaItem) => void;
+}
+
+const VISIBILITY = [
+  { v: 'public', l: 'Public' },
+  { v: 'private', l: 'Privé' },
+  { v: 'partners', l: 'Partenaires' },
+];
+const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
+
+/** Focused add/edit form for one media item, with per-language title/description. */
+export function MediaEditModal({ open, media, typeOptions, languages, onClose, onSave }: Props) {
+  const [draft, setDraft] = useState(media);
+  const primary = languages[0] ?? 'fr';
+  const [lang, setLang] = useState(primary);
+  const set = (patch: Partial<ObjectWorkspaceMediaItem>) => setDraft((d) => ({ ...d, ...patch }));
+
+  const isPrimary = lang === primary;
+  const titleValue = isPrimary ? draft.title : (draft.titleTranslations[lang] ?? '');
+  const descValue = isPrimary ? draft.description : (draft.descriptionTranslations[lang] ?? '');
+  const setTitle = (v: string) =>
+    isPrimary ? set({ title: v }) : set({ titleTranslations: { ...draft.titleTranslations, [lang]: v } });
+  const setDesc = (v: string) =>
+    isPrimary ? set({ description: v }) : set({ descriptionTranslations: { ...draft.descriptionTranslations, [lang]: v } });
+
+  return (
+    <EditorModal open={open} title={draft.title || 'Média'} onClose={onClose} onSave={() => onSave(draft)}>
+      {draft.url && <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />}
+      <Field label="Type de média">
+        <ReferenceSelect
+          value={draft.typeCode}
+          options={typeOptions}
+          aria-label="Type de média"
+          onChange={(code, opt) => set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })}
+        />
+      </Field>
+      <Field label="URL du fichier"><Input value={draft.url} aria-label="URL du fichier" onChange={(url) => set({ url })} /></Field>
+      {languages.length > 1 && (
+        <LangTabs
+          tabs={languages.map((code) => ({
+            code,
+            label: LANG_LABELS[code] ?? code.toUpperCase(),
+            filled: code === primary
+              ? Boolean(draft.title.trim())
+              : Boolean((draft.titleTranslations[code] ?? '').trim()),
+          }))}
+          active={lang}
+          onSelect={setLang}
+        />
+      )}
+      <Field label="Titre"><Input value={titleValue} aria-label="Titre" onChange={setTitle} /></Field>
+      <Field label="Description (texte alternatif)">
+        <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
+      </Field>
+      <Field label="Crédit / auteur"><Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} /></Field>
+      <Field label="Visibilité">
+        <Select value={draft.visibility} options={VISIBILITY} onChange={(visibility) => set({ visibility })} />
+      </Field>
+      <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
+      <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
+    </EditorModal>
+  );
+}

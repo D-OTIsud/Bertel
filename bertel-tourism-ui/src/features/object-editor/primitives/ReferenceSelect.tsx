@@ -7,6 +7,8 @@ interface ReferenceSelectProps {
   allowEmpty?: boolean;
   emptyLabel?: string;
   placeholder?: string;
+  /** Accessible label when no visible `<label>` is associated via htmlFor. */
+  'aria-label'?: string;
 }
 
 /**
@@ -21,12 +23,14 @@ export function ReferenceSelect({
   allowEmpty = false,
   emptyLabel = '—',
   placeholder,
+  'aria-label': ariaLabel,
 }: ReferenceSelectProps) {
   const known = options.some((o) => o.code === value);
   return (
     <select
       className="ed-select"
       value={value}
+      aria-label={ariaLabel}
       onChange={(e) => {
         const next = e.target.value;
         onChange(next, options.find((o) => o.code === next) ?? null);

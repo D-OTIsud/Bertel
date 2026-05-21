@@ -206,10 +206,16 @@ export interface WorkspaceReferenceOption {
   label: string;
 }
 
+export interface ObjectWorkspaceAmenityOption extends WorkspaceReferenceOption {
+  /** Disability types covered by this amenity (e.g. 'motor', 'hearing', 'visual', 'cognitive').
+   *  Empty array for non-accessibility families. */
+  disabilityTypes: string[];
+}
+
 export interface ObjectWorkspaceAmenityGroup {
   familyCode: string;
   familyLabel: string;
-  options: WorkspaceReferenceOption[];
+  options: ObjectWorkspaceAmenityOption[];
 }
 
 export interface ObjectWorkspaceLanguageItem {
@@ -1436,10 +1442,12 @@ function parseWorkspaceCharacteristicsModule(raw: Record<string, unknown>): Obje
     const familyRecord = readRecord(record.family);
     const familyCode = readString(familyRecord.code, 'misc');
     const familyLabel = readString(familyRecord.name, 'Autres equipements');
-    const option: WorkspaceReferenceOption = {
+    const extra = readRecord(record.extra);
+    const option: ObjectWorkspaceAmenityOption = {
       id: readString(record.id, readString(record.code)),
       code: readString(record.code),
       label: readString(record.name, readString(record.code)),
+      disabilityTypes: readStringList((extra as Record<string, unknown>)?.disability_types),
     };
 
     if (!option.code || !option.label) {

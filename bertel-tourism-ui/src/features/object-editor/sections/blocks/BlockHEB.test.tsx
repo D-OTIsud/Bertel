@@ -26,3 +26,17 @@ describe('BlockHEB pet policy', () => {
     expect(screen.queryByText(/Politique animaux renseignée/i)).not.toBeInTheDocument();
   });
 });
+
+describe('BlockHEB room edit modal', () => {
+  it('opens the room edit modal and persists per-room amenity changes', () => {
+    const modules = fullModulesFixture();
+    modules.rooms.amenityOptions = [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }, { id: 'ac', code: 'ac', label: 'Clim' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.rooms.items[0].amenityCodes).toContain('ac');
+  });
+});

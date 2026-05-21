@@ -1,4 +1,6 @@
-import { Chip, ChipSet, Field, Fs, Input, Repeater, Textarea, Toggle } from '../../primitives';
+import { useState } from 'react';
+import { Field, Fs, Input, Repeater, Textarea, Toggle } from '../../primitives';
+import { RoomEditModal } from '../../widgets/RoomEditModal';
 import type { SectionProps } from '../section-types';
 import type {
   ObjectWorkspaceMeetingRoomItem,
@@ -86,6 +88,9 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       ? `${rooms.items.length} type(s) · ${totalUnits} unité(s)`
       : `${rooms.items.length} type(s)`;
 
+  // Index of the room currently open in the per-room edit modal (null = closed)
+  const [editingRoom, setEditingRoom] = useState<number | null>(null);
+
   function updateRoom(index: number, patch: Partial<ObjectWorkspaceRoomTypeItem>) {
     editor.replaceModule('rooms', {
       ...rooms,
@@ -100,44 +105,6 @@ export function BlockHEB({ editor, folded }: SectionProps) {
     });
   }
 
-  const amenitySlice = rooms.amenityOptions;
-  const comfortOptions = amenitySlice.slice(0, Math.ceil(amenitySlice.length / 3));
-  const serviceOptions = amenitySlice.slice(comfortOptions.length, comfortOptions.length * 2);
-  const accessOptions = amenitySlice.slice(comfortOptions.length * 2);
-
-  function renderAmenityGroup(
-    title: string,
-    options: typeof amenitySlice,
-    roomIndex: number,
-  ) {
-    if (options.length === 0 || !rooms.items[roomIndex]) return null;
-    const item = rooms.items[roomIndex];
-    return (
-      <>
-        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)', margin: '14px 0 4px' }}>{title}</div>
-        <ChipSet>
-          {options.map((option) => {
-            const selected = item.amenityCodes.includes(option.code);
-            return (
-              <Chip
-                key={option.code}
-                label={option.label}
-                on={selected}
-                onClick={() =>
-                  updateRoom(roomIndex, {
-                    amenityCodes: selected
-                      ? item.amenityCodes.filter((code) => code !== option.code)
-                      : [...item.amenityCodes, option.code],
-                  })
-                }
-              />
-            );
-          })}
-        </ChipSet>
-      </>
-    );
-  }
-
   return (
     <Fs
       num="05"
@@ -149,7 +116,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Chambres / unités locatives
       </div>
-      {repHeader(ROOM_COLS, ['', 'Type · vue · équipements', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
+      {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
       <Repeater
         items={rooms.items}
         getKey={(item, index) => item.recordId ?? item.code ?? `room-${index}`}
@@ -164,27 +131,29 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         renderRow={(item, index) => (
           <>
             <span className="rep-row__handle" aria-hidden />
+            {/* Compact summary — full editing is done inside RoomEditModal */}
             <div>
-              <Input value={item.name} placeholder="Type de chambre" onChange={(name) => updateRoom(index, { name })} />
-              <div style={{ marginTop: 4 }}>
-                <Input
-                  value={item.description || item.bedConfig}
-                  placeholder="vue · équipements clés"
-                  onChange={(description) => updateRoom(index, { description })}
-                />
-              </div>
+              <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
+              {item.viewTypeLabel && (
+                <span style={{ color: 'var(--ink-4)', marginLeft: 6, fontSize: 12 }}>{item.viewTypeLabel}</span>
+              )}
             </div>
-            <Input
-              value={item.capacityTotal || item.capacityAdults}
-              mono
-              placeholder="2"
-              onChange={(capacityTotal) => updateRoom(index, { capacityTotal })}
-            />
-            <Input value={item.sizeSqm} mono suffix="m²" onChange={(sizeSqm) => updateRoom(index, { sizeSqm })} />
-            <Input value={item.quantity} mono onChange={(quantity) => updateRoom(index, { quantity })} />
-            <Input value={item.basePrice} mono suffix="€" onChange={(basePrice) => updateRoom(index, { basePrice })} />
+            <span>{item.capacityTotal || item.capacityAdults || '—'}</span>
+            <span>{item.sizeSqm ? `${item.sizeSqm} m²` : '—'}</span>
+            <span>{item.quantity || '—'}</span>
+            <span>{item.basePrice ? `${item.basePrice} €` : '—'}</span>
             <div className="rep-row__act">
-              <Toggle label="PMR" on={item.accessible} onChange={(accessible) => updateRoom(index, { accessible })} />
+              {item.accessible && (
+                <span style={{ fontSize: 11, color: 'var(--ink-3)' }} title="Chambre PMR">PMR</span>
+              )}
+              <button
+                type="button"
+                aria-label={`Modifier la chambre ${item.name || index + 1}`}
+                onClick={() => setEditingRoom(index)}
+                style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
+              >
+                Modifier
+              </button>
               <button
                 type="button"
                 className="del"
@@ -202,15 +171,19 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         )}
       />
 
-      {rooms.amenityOptions.length > 0 && rooms.items[0] && (
-        <>
-          <div className="chip-group__label" style={{ marginTop: 20 }}>
-            Équipements & services sur place (catégorisés)
-          </div>
-          {renderAmenityGroup('Confort chambre', comfortOptions, 0)}
-          {renderAmenityGroup('Services & loisirs', serviceOptions, 0)}
-          {renderAmenityGroup('Accessibilité', accessOptions, 0)}
-        </>
+      {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
+          not in the compact row, so every room (not just rooms.items[0]) can have its own amenities. */}
+      {editingRoom !== null && rooms.items[editingRoom] && (
+        <RoomEditModal
+          open
+          room={rooms.items[editingRoom]}
+          module={rooms}
+          onClose={() => setEditingRoom(null)}
+          onSave={(updated) => {
+            updateRoom(editingRoom, updated);
+            setEditingRoom(null);
+          }}
+        />
       )}
 
       <div className="chip-group__label" style={{ marginTop: 20 }}>

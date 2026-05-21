@@ -19,8 +19,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   const typeFamilyLabel = TYPE_LABEL[canonicalType] ?? meta?.codeName ?? canonicalType;
   const typeDisplay = canonicalType ? `${canonicalType} — ${typeFamilyLabel}` : meta?.codeName ?? '';
   const legalName = provider?.companyName || '';
-  const id = objectId ?? '';
-  const refShort = id.length > 12 ? id.slice(0, 12) : id;
+  const canonicalId = objectId ?? '';
   const taxoPath = taxonomy.domains[0]?.assignment?.path.map((n) => n.label).join(' ▸ ') ?? '';
 
   return (
@@ -45,16 +44,19 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       </div>
 
       <div className="grid-2" style={{ marginBottom: 12 }}>
-        <Field label="Raison sociale" hint="Personne morale propriétaire">
+        <Field
+          label="Raison sociale"
+          hint="object_legal · type raison_sociale (vide si non renseigné — pas le nom de l'acteur opérateur)"
+        >
           <Input
             value={legalName}
             placeholder="SARL …"
-            readOnly={!provider?.companyName}
+            readOnly
             onChange={() => undefined}
           />
         </Field>
         <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">
-          <Input value={refShort} mono readOnly onChange={() => undefined} />
+          <Input value={canonicalId} mono readOnly onChange={() => undefined} />
         </Field>
       </div>
 

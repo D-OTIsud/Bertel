@@ -5347,8 +5347,9 @@ CREATE TABLE IF NOT EXISTS ref_legal_type (
 -- Insert common legal types
 INSERT INTO ref_legal_type (code, name, description, category, is_required, is_public, review_interval_days) VALUES
   -- Business legal types
-  ('siret', 'SIRET', 'Système d''identification du répertoire des établissements', 'business', true, true, NULL),
-  ('siren', 'SIREN', 'Système d''identification du répertoire des entreprises', 'business', true, true, NULL),
+  ('siret', 'SIRET', 'Identifiant établissement (14 chiffres = SIREN 9 + NIC 5). Une seule ligne object_legal par fiche.', 'business', true, true, NULL),
+  ('siren', 'SIREN', 'Identifiant entreprise (9 chiffres). Optionnel si SIRET renseigné (dérivable des 9 premiers chiffres). Ne pas dupliquer une ligne SIRET.', 'business', false, true, NULL),
+  ('raison_sociale', 'Raison sociale', 'Dénomination ou raison sociale de la personne morale exploitante', 'business', false, false, NULL),
   ('vat_number', 'Numéro TVA', 'Numéro de TVA intracommunautaire', 'business', false, false, NULL),
   ('business_license', 'Licence commerciale', 'Licence d''exploitation commerciale', 'business', false, true, 365),
   

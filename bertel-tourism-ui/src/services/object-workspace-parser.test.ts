@@ -692,4 +692,104 @@ describe('parseObjectWorkspace', () => {
       'media-tertiary',
     ]);
   });
+
+  it('sets provider.companyName from object_legal raison_sociale only', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-rs',
+            type: { code: 'raison_sociale', name: 'Raison sociale' },
+            value: 'SARL Domaine du Bel Air',
+            status: 'active',
+          },
+        ],
+        actors: [
+          {
+            display_name: 'Mme Florence GIRARD',
+            role: { code: 'operator' },
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.companyName).toBe('SARL Domaine du Bel Air');
+    expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
+  });
+
+  it('uses object_legal siret row for provider.siret (not separate siren row)', () => {
+    const detail: ObjectDetail = {
+      id: 'RES0000000000001',
+      name: 'Restaurant test',
+      type: 'RES',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-siren',
+            type: { code: 'siren', name: 'SIREN' },
+            value: { siren: '123456789' },
+            status: 'active',
+          },
+          {
+            id: 'lr-siret',
+            type: { code: 'siret', name: 'SIRET' },
+            value: { siret: '12345678900012' },
+            status: 'active',
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.siret).toBe('12345678900012');
+  });
+
+  it('does not treat nine-digit siren row as establishment siret', () => {
+    const detail: ObjectDetail = {
+      id: 'RES0000000000002',
+      name: 'Restaurant incomplet',
+      type: 'RES',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-siren-only',
+            type: { code: 'siren', name: 'SIREN' },
+            value: { siren: '123456789' },
+            status: 'active',
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.siret).toBe('');
+  });
+
+  it('does not use actor display_name as provider.companyName', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        actors: [
+          {
+            display_name: 'Mme Florence GIRARD',
+            role: { code: 'operator' },
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.companyName).toBe('');
+    expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
+  });
 });

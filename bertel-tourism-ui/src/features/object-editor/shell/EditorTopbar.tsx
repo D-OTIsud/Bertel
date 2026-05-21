@@ -1,4 +1,4 @@
-import { ChevronLeft, Pencil } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import type { EditorMode } from './EditorTopbar.types';
 import { buildEditTopSaveLabel } from './format-last-object-update';
 
@@ -6,9 +6,7 @@ export type { EditorMode } from './EditorTopbar.types';
 
 interface EditorTopbarProps {
   objectName: string;
-  typeCode: string;
   archetypeCodeName: string;
-  refId: string;
   mode: EditorMode;
   dirtyCount: number;
   lastSavedAt?: string | null;
@@ -27,9 +25,7 @@ interface EditorTopbarProps {
 
 export function EditorTopbar({
   objectName,
-  typeCode,
   archetypeCodeName,
-  refId,
   mode,
   dirtyCount,
   lastSavedAt,
@@ -65,14 +61,7 @@ export function EditorTopbar({
             {objectName} <span className="sep">›</span>
             <strong style={{ color: 'var(--accent-deep)' }}>Modifier</strong>
           </div>
-          <div className="edit-top__title">
-            {objectName}
-            <button type="button" className="pen" title="Renommer (bientôt)" disabled aria-label="Renommer">
-              <Pencil width={12} height={12} />
-            </button>
-            <span className="edit-top__code">{typeCode}</span>
-            <span className="edit-top__ref">#{refId}</span>
-          </div>
+          <div className="edit-top__title">{objectName}</div>
         </div>
       </div>
       <div className="edit-top__right">

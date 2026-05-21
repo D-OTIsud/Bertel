@@ -84,8 +84,8 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
           </button>
         </div>
         <div className="map-shell">
-          <div>
-            <div className="grid-2" style={{ marginBottom: 6 }}>
+          <div className="map-shell__side">
+            <div className="map-shell__coords">
               <Field label="Latitude">
                 <Input value={main.latitude} onChange={(v) => patch({ latitude: v })} mono />
               </Field>

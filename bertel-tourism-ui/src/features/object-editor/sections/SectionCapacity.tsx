@@ -152,85 +152,53 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         ))}
       </ChipSet>
 
-      <div className="grid-2" style={{ marginTop: 16 }}>
-        <Field label="Groupes">
-          <div className="grid-2">
-            <Input
-              value={capacity.groupPolicy.minSize}
-              placeholder="Min"
-              mono
-              onChange={(minSize) =>
-                editor.replaceModule('capacityPolicies', {
-                  ...capacity,
-                  groupPolicy: { ...capacity.groupPolicy, minSize },
-                })
-              }
-            />
-            <Input
-              value={capacity.groupPolicy.maxSize}
-              placeholder="Max"
-              mono
-              onChange={(maxSize) =>
-                editor.replaceModule('capacityPolicies', {
-                  ...capacity,
-                  groupPolicy: { ...capacity.groupPolicy, maxSize },
-                })
-              }
-            />
-          </div>
-          <Toggle
-            label="Groupes uniquement"
-            on={capacity.groupPolicy.groupOnly}
-            onChange={(groupOnly) =>
+      <div style={{ marginTop: 16 }}>
+      <Field label="Groupes">
+        <div className="grid-2">
+          <Input
+            value={capacity.groupPolicy.minSize}
+            placeholder="Min"
+            mono
+            onChange={(minSize) =>
               editor.replaceModule('capacityPolicies', {
                 ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, groupOnly },
+                groupPolicy: { ...capacity.groupPolicy, minSize },
               })
             }
           />
-          <Textarea
-            value={capacity.groupPolicy.notes}
-            rows={3}
-            onChange={(notes) =>
+          <Input
+            value={capacity.groupPolicy.maxSize}
+            placeholder="Max"
+            mono
+            onChange={(maxSize) =>
               editor.replaceModule('capacityPolicies', {
                 ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, notes },
+                groupPolicy: { ...capacity.groupPolicy, maxSize },
               })
             }
           />
-        </Field>
-        <Field label="Animaux">
-          <Toggle
-            label="Politique renseignée"
-            on={capacity.petPolicy.hasPolicy}
-            onChange={(hasPolicy) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                petPolicy: { ...capacity.petPolicy, hasPolicy },
-              })
-            }
-          />
-          <Toggle
-            label="Animaux acceptés"
-            on={capacity.petPolicy.accepted}
-            onChange={(accepted) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                petPolicy: { ...capacity.petPolicy, accepted },
-              })
-            }
-          />
-          <Textarea
-            value={capacity.petPolicy.conditions}
-            rows={3}
-            onChange={(conditions) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                petPolicy: { ...capacity.petPolicy, conditions },
-              })
-            }
-          />
-        </Field>
+        </div>
+        <Toggle
+          label="Groupes uniquement"
+          on={capacity.groupPolicy.groupOnly}
+          onChange={(groupOnly) =>
+            editor.replaceModule('capacityPolicies', {
+              ...capacity,
+              groupPolicy: { ...capacity.groupPolicy, groupOnly },
+            })
+          }
+        />
+        <Textarea
+          value={capacity.groupPolicy.notes}
+          rows={3}
+          onChange={(notes) =>
+            editor.replaceModule('capacityPolicies', {
+              ...capacity,
+              groupPolicy: { ...capacity.groupPolicy, notes },
+            })
+          }
+        />
+      </Field>
       </div>
     </Fs>
   );

@@ -117,6 +117,7 @@ DECLARE
   v_warnings text[] := ARRAY[]::text[];
   v_skipped text[] := ARRAY[]::text[];
   v_row jsonb;
+  v_ordinality bigint;
   v_tag_id uuid;
   v_slug text;
   v_count integer;
@@ -129,17 +130,21 @@ BEGIN
     RAISE EXCEPTION 'Payload is missing required key "tags"' USING ERRCODE = '22023';
   END IF;
 
-  -- Tags for an object are stored in tag_link with target_table='object' and
-  -- target_pk=object_id. The presentation order is the order in the payload
-  -- array; ref_tag.position drives global ordering in the library picker, not
-  -- the per-object surface.
+  -- Delete-then-insert: each save fully rewrites this object's tag_link rows, so
+  -- `position` and `extra` are always written fresh. After this DELETE there are no
+  -- pre-existing rows for the object, so ON CONFLICT DO NOTHING below only dedups a
+  -- tag listed twice in one payload (the earliest/leftmost position wins).
   DELETE FROM public.tag_link
    WHERE target_table = 'object'
      AND target_pk = p_object_id;
   GET DIAGNOSTICS v_count = ROW_COUNT;
   v_counts := v_counts || jsonb_build_object('tag_link_deleted', v_count);
 
-  FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'tags')) AS t(value) LOOP
+  FOR v_row, v_ordinality IN
+    SELECT value, ordinality
+    FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'tags'))
+      WITH ORDINALITY AS t(value, ordinality)
+  LOOP
     v_tag_id := internal.workspace_uuid(v_row->>'tag_id');
     v_slug := NULLIF(v_row->>'slug', '');
 
@@ -154,11 +159,12 @@ BEGIN
       RAISE EXCEPTION 'Unknown tag reference (tag_id="%", slug="%")', v_row->>'tag_id', v_slug USING ERRCODE = '23503';
     END IF;
 
-    INSERT INTO public.tag_link (tag_id, target_table, target_pk, extra)
+    INSERT INTO public.tag_link (tag_id, target_table, target_pk, position, extra)
     VALUES (
       v_tag_id,
       'object',
       p_object_id,
+      (v_ordinality - 1)::integer,
       internal.workspace_jsonb_object(v_row->'extra')
     )
     ON CONFLICT (tag_id, target_table, target_pk) DO NOTHING;

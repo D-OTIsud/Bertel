@@ -2580,14 +2580,29 @@ function dedupeReferenceOptions(options: WorkspaceReferenceOption[]): WorkspaceR
 
 const TAG_COLOR_VARIANTS = new Set<ObjectWorkspaceTagColorVariant>(['teal', 'orange', 'neutral', 'outline', 'green']);
 
-function normalizeTagColorVariant(value: string): ObjectWorkspaceTagColorVariant {
+export function normalizeTagColorVariant(value: string): ObjectWorkspaceTagColorVariant {
   const normalized = value.trim().toLowerCase();
   return TAG_COLOR_VARIANTS.has(normalized as ObjectWorkspaceTagColorVariant)
     ? normalized as ObjectWorkspaceTagColorVariant
     : 'teal';
 }
 
-function normalizeTagSource(value: string): ObjectWorkspaceTagSource {
+/**
+ * Resolve the display color for a tag, with per-object override winning over the global ref_tag color.
+ * tag_link.extra.color_variant (linkExtra) takes precedence; ref_tag.color (refTag) is the fallback;
+ * 'neutral' is the ultimate default when neither is set.
+ * Exported so object-workspace.ts can re-export it for tests and callers.
+ */
+export function resolveTagColor(
+  refTag: { color?: unknown },
+  linkExtra: { color_variant?: unknown },
+): ObjectWorkspaceTagColorVariant {
+  return normalizeTagColorVariant(
+    readString(linkExtra?.color_variant, readString(refTag?.color, 'neutral')),
+  );
+}
+
+export function normalizeTagSource(value: string): ObjectWorkspaceTagSource {
   const normalized = value.trim().toLowerCase();
   if (normalized === 'audience' || normalized === 'ambience' || normalized === 'badges' || normalized === 'classification' || normalized === 'taxo') {
     return normalized;
@@ -2732,7 +2747,7 @@ function parseWorkspaceTagsModule(raw: Record<string, unknown>): ObjectWorkspace
       tagId: readString(record.id, readString(record.tag_id)),
       slug,
       label,
-      colorVariant: normalizeTagColorVariant(readString(record.color, readString(extra.color_variant, 'teal'))),
+      colorVariant: resolveTagColor(record, extra),
       source: normalizeTagSource(readString(extra.source, 'thematic')),
     };
   }).filter((item) => item.slug || item.label);

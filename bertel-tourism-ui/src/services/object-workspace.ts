@@ -57,7 +57,13 @@ import {
   type ObjectWorkspaceTaxonomyNodeOption,
   type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
+  normalizeTagSource,
+  resolveTagColor,
 } from './object-workspace-parser';
+
+// Re-export resolveTagColor so callers and tests that import from this entry point can reach it
+// without importing from object-workspace-parser directly.
+export { resolveTagColor } from './object-workspace-parser';
 
 export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
 
@@ -2946,6 +2952,7 @@ async function getObjectWorkspaceSustainabilityModule(
 }
 
 async function getObjectWorkspaceTagsModule(
+  objectId: string,
   baseModule: ObjectWorkspaceTagsModule,
 ): Promise<ObjectWorkspaceTagsModule> {
   const session = useSessionStore.getState();
@@ -2958,30 +2965,68 @@ async function getObjectWorkspaceTagsModule(
     return baseModule;
   }
 
-  const tagsResult = await client
-    .from('ref_tag')
-    .select('id, slug, name, color, position')
-    .order('position', { ascending: true });
+  // Fetch all ref_tag rows for the library picker (tags not yet displayed on this object).
+  // Also fetch tag_link rows for this object ordered by position so the displayed list
+  // reflects the drag-and-drop order saved by save_object_workspace_tags, and so the
+  // per-object color override (tag_link.extra.color_variant) takes precedence over ref_tag.color.
+  const [tagsResult, tagLinkResult] = await Promise.all([
+    client
+      .from('ref_tag')
+      .select('id, slug, name, color, position')
+      .order('position', { ascending: true }),
+    client
+      .from('tag_link')
+      .select('tag_id, extra, position')
+      .eq('target_table', 'object')
+      .eq('target_pk', objectId)
+      .order('position', { ascending: true }),
+  ]);
 
   if (tagsResult.error) {
     return baseModule;
   }
 
-  const displayedSlugs = new Set(baseModule.displayed.map((tag) => tag.slug.toLowerCase()));
+  const refTagById = new Map(
+    ((tagsResult.data ?? []) as Record<string, unknown>[]).map((row) => [readString(row.id), row]),
+  );
+
+  // Rebuild displayed list from tag_link (authoritative position + extra), joined with ref_tag for
+  // slug/name/color. Fall back to baseModule.displayed if tag_link fetch fails (e.g. RLS).
+  let displayed: ObjectWorkspaceTagsModule['displayed'];
+  if (!tagLinkResult.error) {
+    displayed = ((tagLinkResult.data ?? []) as Record<string, unknown>[])
+      .map((link) => {
+        const refTag = refTagById.get(readString(link.tag_id)) ?? {};
+        const extra = readRecord(link.extra);
+        const slug = readString((refTag as Record<string, unknown>).slug);
+        const label = readString((refTag as Record<string, unknown>).name, slug);
+        return {
+          tagId: readString(link.tag_id),
+          slug,
+          label,
+          colorVariant: resolveTagColor(refTag as { color?: unknown }, extra as { color_variant?: unknown }),
+          source: normalizeTagSource(readString(extra.source, 'thematic')),
+        };
+      })
+      .filter((item) => item.slug || item.label);
+  } else {
+    displayed = baseModule.displayed;
+  }
+
+  const displayedTagIds = new Set(displayed.map((tag) => tag.tagId));
   const library = ((tagsResult.data ?? []) as Record<string, unknown>[])
     .map((row) => ({
       tagId: readString(row.id),
       slug: readString(row.slug),
       label: readString(row.name, readString(row.slug)),
-      colorVariant: (['teal', 'orange', 'neutral', 'outline', 'green'].includes(readString(row.color).toLowerCase())
-        ? readString(row.color).toLowerCase()
-        : 'teal') as ObjectWorkspaceTagsModule['displayed'][number]['colorVariant'],
+      colorVariant: resolveTagColor(row, {}),
       source: 'thematic' as const,
     }))
-    .filter((tag) => tag.slug && !displayedSlugs.has(tag.slug.toLowerCase()));
+    .filter((tag) => tag.slug && !displayedTagIds.has(tag.tagId));
 
   return {
     ...baseModule,
+    displayed,
     library,
   };
 }
@@ -3184,7 +3229,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
-    getObjectWorkspaceTagsModule(parsedModules.tags),
+    getObjectWorkspaceTagsModule(objectId, parsedModules.tags),
     getObjectWorkspacePermissions(objectId),
   ]);
 
@@ -3719,10 +3764,11 @@ export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWor
     tags: input.displayed.map((tag) => ({
       tag_id: toRpcUuid(tag.tagId),
       slug: tag.slug,
+      // Only color_variant and source go into tag_link.extra; label is read from ref_tag at load time
+      // and must not be persisted per-object (it would diverge from ref_tag.name on renames).
       extra: {
         color_variant: tag.colorVariant,
         source: tag.source,
-        label: tag.label,
       },
     })),
   }, 'Impossible d enregistrer les tags.');

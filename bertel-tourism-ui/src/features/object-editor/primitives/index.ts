@@ -12,3 +12,4 @@ export { ScheduleEditor, type ScheduleRow, type ScheduleSlot } from './ScheduleE
 export { SeasonPicker, type SeasonState } from './SeasonPicker';
 export { TriState, type TriStateValue } from './TriState';
 export { ReferenceSelect } from './ReferenceSelect';
+export { ChipMultiSelect } from './ChipMultiSelect';

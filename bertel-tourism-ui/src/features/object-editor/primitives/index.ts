@@ -13,3 +13,4 @@ export { SeasonPicker, type SeasonState } from './SeasonPicker';
 export { TriState, type TriStateValue } from './TriState';
 export { ReferenceSelect } from './ReferenceSelect';
 export { ChipMultiSelect } from './ChipMultiSelect';
+export { SortableList } from './SortableList';

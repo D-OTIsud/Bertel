@@ -259,7 +259,6 @@ export interface ObjectWorkspaceGroupPolicyForm {
 }
 
 export interface ObjectWorkspacePetPolicyForm {
-  hasPolicy: boolean;
   accepted: boolean;
   conditions: string;
 }
@@ -1521,7 +1520,6 @@ function parseWorkspaceCapacityPoliciesModule(raw: Record<string, unknown>): Obj
       notes: readString(groupPolicyRecord.notes),
     },
     petPolicy: {
-      hasPolicy: Object.keys(petPolicyRecord).length > 0,
       accepted: petPolicyRecord.accepted == null ? false : readBoolean(petPolicyRecord.accepted),
       conditions: readString(petPolicyRecord.conditions),
     },

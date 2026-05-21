@@ -7,7 +7,7 @@ interface ToggleProps {
 
 export function Toggle({ label, sub, on, onChange }: ToggleProps) {
   return (
-    <button type="button" className={`tog${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
+    <button type="button" aria-label={label} className={`tog${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
       <div>
         {label}
         {sub && <small>{sub}</small>}

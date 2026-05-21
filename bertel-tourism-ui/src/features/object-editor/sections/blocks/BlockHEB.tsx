@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Field, Fs, Input, Repeater, Toggle } from '../../primitives';
+import { Chip, ChipSet, Field, Fs, Input, Repeater, Textarea, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type {
   ObjectWorkspaceMeetingRoomItem,
@@ -256,17 +256,33 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         </Field>
       </div>
       <div className="grid-3">
-        <Toggle
-          label="Animaux acceptés"
-          sub={capacity.petPolicy.conditions || 'Politique animaux'}
-          on={capacity.petPolicy.accepted}
-          onChange={(accepted) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              petPolicy: { ...capacity.petPolicy, accepted, hasPolicy: true },
-            })
-          }
-        />
+        <div>
+          <Toggle
+            label="Animaux acceptés"
+            on={capacity.petPolicy.accepted}
+            onChange={(accepted) =>
+              editor.replaceModule('capacityPolicies', {
+                ...capacity,
+                petPolicy: { ...capacity.petPolicy, accepted },
+              })
+            }
+          />
+          {capacity.petPolicy.accepted && (
+            <Field label="Conditions d'accueil des animaux">
+              <Textarea
+                aria-label="Conditions d'accueil des animaux"
+                value={capacity.petPolicy.conditions}
+                rows={3}
+                onChange={(conditions) =>
+                  editor.replaceModule('capacityPolicies', {
+                    ...capacity,
+                    petPolicy: { ...capacity.petPolicy, conditions },
+                  })
+                }
+              />
+            </Field>
+          )}
+        </div>
         <Toggle
           label="Groupes uniquement"
           sub="Réservation groupe obligatoire"
@@ -275,16 +291,6 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             editor.replaceModule('capacityPolicies', {
               ...capacity,
               groupPolicy: { ...capacity.groupPolicy, groupOnly },
-            })
-          }
-        />
-        <Toggle
-          label="Politique animaux renseignée"
-          on={capacity.petPolicy.hasPolicy}
-          onChange={(hasPolicy) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              petPolicy: { ...capacity.petPolicy, hasPolicy },
             })
           }
         />

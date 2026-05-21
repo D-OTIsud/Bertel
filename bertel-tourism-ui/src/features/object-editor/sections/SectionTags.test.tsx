@@ -37,4 +37,13 @@ describe('SectionTags', () => {
     view.rerender(<SectionTags editor={result.current} permissions={allowAll} />);
     expect(result.current.draft.tags.displayed.some((t) => t.slug === 'famille')).toBe(true);
   });
+
+  it('reorders displayed tags and marks the module dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionTags editor={result.current} permissions={allowAll} />);
+    // Arrow buttons are replaced by drag handles.
+    expect(screen.queryByRole('button', { name: 'Monter' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Descendre' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Déplacer/i }).length).toBeGreaterThan(0);
+  });
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fs, Input, Select } from '../primitives';
+import { Fs, Input, Select, SortableList } from '../primitives';
 import type { SelectOption } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
@@ -91,15 +91,6 @@ export function SectionTags({ editor, folded }: SectionProps) {
     });
   }
 
-  function move(index: number, direction: -1 | 1) {
-    const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= displayed.length) return;
-    const next = displayed.slice();
-    const [moved] = next.splice(index, 1);
-    next.splice(swapIndex, 0, moved);
-    editor.replaceModule('tags', { ...module, displayed: next });
-  }
-
   function removeTag(index: number) {
     editor.replaceModule('tags', {
       ...module,
@@ -149,53 +140,40 @@ export function SectionTags({ editor, folded }: SectionProps) {
                 <span>Source</span>
                 <span />
               </div>
-              <div className="repeater">
-              {displayed.map((tag, index) => (
-                <div
-                  key={`${tag.slug}-${index}`}
-                  className="rep-row"
-                  style={{ gridTemplateColumns: '14px 1fr 150px 130px auto', alignItems: 'center' }}
-                >
-                  <span className="rep-row__handle" />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`tag ${tag.colorVariant}`} style={{ flex: 'none' }}>
-                      {tag.label}
-                    </span>
-                    <Input value={tag.label} onChange={(label) => updateTag(index, { label })} />
-                  </div>
-                  <Select
-                    value={tag.colorVariant}
-                    options={COLOR_VARIANTS}
-                    onChange={(value) =>
-                      updateTag(index, { colorVariant: value as ObjectWorkspaceTagColorVariant })
-                    }
-                  />
-                  <Select
-                    value={tag.source}
-                    options={SOURCE_OPTIONS}
-                    onChange={(value) =>
-                      updateTag(index, { source: value as ObjectWorkspaceTagItem['source'] })
-                    }
-                  />
-                  <div className="rep-row__act">
-                    <button type="button" title="Monter" onClick={() => move(index, -1)} disabled={index === 0}>
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      title="Descendre"
-                      onClick={() => move(index, 1)}
-                      disabled={index === displayed.length - 1}
-                    >
-                      ▼
-                    </button>
-                    <button type="button" className="del" onClick={() => removeTag(index)}>
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
-              </div>
+              <SortableList
+                items={displayed}
+                getId={(t) => t.tagId || t.slug}
+                onReorder={(next) => editor.replaceModule('tags', { ...module, displayed: next })}
+                renderItem={(tag, index) => (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className={`tag ${tag.colorVariant}`} style={{ flex: 'none' }}>
+                        {tag.label}
+                      </span>
+                      <Input value={tag.label} onChange={(label) => updateTag(index, { label })} />
+                    </div>
+                    <Select
+                      value={tag.colorVariant}
+                      options={COLOR_VARIANTS}
+                      onChange={(value) =>
+                        updateTag(index, { colorVariant: value as ObjectWorkspaceTagColorVariant })
+                      }
+                    />
+                    <Select
+                      value={tag.source}
+                      options={SOURCE_OPTIONS}
+                      onChange={(value) =>
+                        updateTag(index, { source: value as ObjectWorkspaceTagItem['source'] })
+                      }
+                    />
+                    <div className="rep-row__act">
+                      <button type="button" className="del" onClick={() => removeTag(index)}>
+                        ✕
+                      </button>
+                    </div>
+                  </>
+                )}
+              />
             </>
           )}
         </div>

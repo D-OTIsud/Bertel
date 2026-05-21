@@ -3,9 +3,7 @@ import { EditorTopbar } from './EditorTopbar';
 
 const baseProps = {
   objectName: 'Domaine du Bel Air',
-  typeCode: 'HOT',
   archetypeCodeName: 'Hotel',
-  refId: 'HOTRUN000001',
   mode: 'complet' as const,
   dirtyCount: 0,
   onModeChange: jest.fn(),
@@ -22,7 +20,6 @@ describe('EditorTopbar', () => {
     expect(crumbs?.textContent).toMatch(/Domaine du Bel Air/);
     expect(crumbs?.textContent).toMatch(/Modifier/);
     expect(crumbs?.textContent).not.toMatch(/Explorer/);
-    expect(screen.getByText('HOT')).toBeInTheDocument();
   });
 
   it('fires onModeChange when the other mode is clicked', () => {

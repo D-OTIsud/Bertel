@@ -1,6 +1,10 @@
 import { Chip, ChipSet, Fs, Input, Repeater, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLegalRecord, ObjectWorkspaceMembershipItem } from '../../../services/object-workspace-parser';
+import {
+  findEstablishmentSiretFromLegalRecords,
+  findRaisonSocialeFromLegalRecords,
+} from '../../../services/object-workspace-parser';
 import { SiretCard, type SiretCardProps } from '../widgets/SiretCard';
 
 const STATUSES = ['prospect', 'invoiced', 'paid', 'canceled', 'lapsed'];
@@ -36,14 +40,14 @@ function findLegalValue(records: ObjectWorkspaceLegalRecord[], patterns: string[
 }
 
 function buildSiretCard(records: ObjectWorkspaceLegalRecord[], fallbackCompany: string): SiretCardProps | null {
-  const siret = findLegalValue(records, ['siret', 'siren']);
+  const siret = findEstablishmentSiretFromLegalRecords(records);
   if (!siret) {
     return null;
   }
 
   return {
     siret,
-    company: findLegalValue(records, ['raison', 'sociale', 'company', 'entreprise']) || fallbackCompany,
+    company: findRaisonSocialeFromLegalRecords(records) || fallbackCompany,
     naf: findLegalValue(records, ['naf', 'ape']),
     legalForm: findLegalValue(records, ['forme', 'juridique', 'legal form']),
     capital: findLegalValue(records, ['capital']),

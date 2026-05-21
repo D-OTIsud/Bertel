@@ -2583,6 +2583,11 @@ function normalizeTagSource(value: string): ObjectWorkspaceTagSource {
   return 'thematic';
 }
 
+/** Strip non-digits from INSEE identifiers. */
+export function normalizeInseeDigits(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
 function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string {
   const raw = record.valueJson.trim();
   if (!raw) {
@@ -2596,7 +2601,12 @@ function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string 
     }
     if (parsed && typeof parsed === 'object') {
       const map = parsed as Record<string, unknown>;
-      return readString(map.value ?? map.label ?? map.name).trim();
+      const typeCode = record.typeCode?.toLowerCase() ?? '';
+      const typedKey =
+        typeCode && map[typeCode] != null ? readString(map[typeCode]) : '';
+      return readString(
+        typedKey || map.siret || map.siren || map.value || map.label || map.name,
+      ).trim();
     }
   } catch {
     return raw;
@@ -2605,12 +2615,57 @@ function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string 
   return raw;
 }
 
+/**
+ * Establishment SIRET (14 digits) from object_legal type `siret` only.
+ * Legacy `siren` rows: use only when they hold a full 14-digit value (mis-typed SIRET).
+ * Nine-digit SIREN alone does not populate the SIRET UI field.
+ */
+export function findEstablishmentSiretFromLegalRecords(
+  records: ObjectWorkspaceLegalRecord[],
+): string {
+  const siretRow = records.find((item) => item.typeCode === 'siret');
+  if (siretRow) {
+    const digits = normalizeInseeDigits(readLegalRecordScalarValue(siretRow));
+    if (digits.length === 14) {
+      return digits;
+    }
+  }
+
+  const sirenRow = records.find((item) => item.typeCode === 'siren');
+  if (sirenRow) {
+    const digits = normalizeInseeDigits(readLegalRecordScalarValue(sirenRow));
+    if (digits.length === 14) {
+      return digits;
+    }
+  }
+
+  return '';
+}
+
 function findLegalRecordValue(records: ObjectWorkspaceLegalRecord[], patterns: string[]): string {
   const record = records.find((item) => {
     const haystack = `${item.typeCode} ${item.typeLabel}`.toLowerCase();
     return patterns.some((pattern) => haystack.includes(pattern));
   });
   return record ? readLegalRecordScalarValue(record) : '';
+}
+
+/**
+ * Raison sociale from object_legal / ref_legal_type only (canonical type code `raison_sociale`).
+ * Must not fall back to ACTOR.display_name — that is a person, not the legal entity name.
+ */
+export function findRaisonSocialeFromLegalRecords(records: ObjectWorkspaceLegalRecord[]): string {
+  const typed = records.find((item) => item.typeCode === 'raison_sociale');
+  if (typed) {
+    return readLegalRecordScalarValue(typed);
+  }
+  return findLegalRecordValue(records, [
+    'raison sociale',
+    'raison_sociale',
+    'denomination',
+    'company name',
+    'company_name',
+  ]);
 }
 
 function pickOperatorActorRecord(raw: Record<string, unknown>): GenericRecord | null {
@@ -2772,10 +2827,8 @@ function parseWorkspaceProviderModule(
 ): ObjectWorkspaceProviderModule {
   const operator = pickOperatorActorRecord(raw);
   const records = legal.records;
-  const siret = findLegalRecordValue(records, ['siret', 'siren']);
-  const companyName =
-    findLegalRecordValue(records, ['raison', 'sociale', 'company', 'entreprise'])
-    || readString(operator?.display_name);
+  const siret = findEstablishmentSiretFromLegalRecords(records);
+  const companyName = findRaisonSocialeFromLegalRecords(records);
 
   const emailContact = operator
     ? readArray(operator.contacts).find((contact) => readString(readRecord(contact.kind).code).includes('email'))

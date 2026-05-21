@@ -19,4 +19,11 @@ describe('SectionIdentity', () => {
     render(<SectionIdentity editor={result.current} permissions={perms} objectId="o1" />);
     expect(screen.getByDisplayValue('Domaine du Bel Air')).toBeInTheDocument();
   });
+
+  it('shows the full canonical object id in ID OTI (no truncation)', () => {
+    const fullId = 'HLORUN00000000TV';
+    const { result } = renderHook(() => useObjectEditorState(fullId, modules()));
+    render(<SectionIdentity editor={result.current} permissions={perms} objectId={fullId} />);
+    expect(screen.getByDisplayValue(fullId)).toBeInTheDocument();
+  });
 });

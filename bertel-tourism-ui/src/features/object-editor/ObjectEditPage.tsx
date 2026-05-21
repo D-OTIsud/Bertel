@@ -247,7 +247,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     openDrawer(objectId);
   }
 
-  const refId = objectId.length > 12 ? objectId.slice(0, 12) : objectId;
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
   const lastUpdatedSource = editor.draft.syncIdentifiers.objectUpdatedAtSource;
   const typeCode = resource.type ?? '';
@@ -257,9 +256,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     <div className={`edit-flat object-editor ${meta.accent}`}>
       <EditorTopbar
         objectName={resource.name}
-        typeCode={typeCode}
         archetypeCodeName={typeLabel}
-        refId={refId}
         mode={mode}
         dirtyCount={dirtyCount}
         lastSavedAt={lastSavedAt}

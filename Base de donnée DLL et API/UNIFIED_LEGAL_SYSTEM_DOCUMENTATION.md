@@ -214,8 +214,8 @@ View of legal records expiring in the next 30 days.
 
 ### From `legal` Table
 The `migrate_legal_table_data()` function migrates:
-- SIRET numbers → `siret` type with `forever` validity
-- SIREN numbers → `siren` type with `forever` validity
+- SIRET (14 digits, establishment) → single `siret` `object_legal` row, `forever` validity, JSONB `{"siret":"..."}` (optional `siren` / `nic` keys)
+- SIREN alone → optional `siren` type only when no SIRET yet; not required for compliance; do not duplicate a `siret` row
 - VAT numbers → `vat_number` type with `forever` validity
 
 ### From `accommodation_legal` Table

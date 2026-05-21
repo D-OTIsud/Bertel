@@ -767,7 +767,7 @@ Key locked codes (V5 canonical, 2026-03-21):
 
 **Business Purpose:** Enables the Office de Tourisme to track compliance status for each object, receive alerts for expiring documents, and produce compliance reports. Visibility is restricted by type: some legal data is public (SIRET, tourist tax authorization), other data is internal only.
 
-**`ref_legal_type` table:** Legal requirement catalog used to define which document or identifier is being tracked. Key governance fields are `code`, `name`, `category`, `is_required`, `is_public`, and `review_interval_days`, which together drive compliance dashboards, expiry monitoring cadence, and what may surface publicly.
+**`ref_legal_type` table:** Legal requirement catalog used to define which document or identifier is being tracked. Key governance fields are `code`, `name`, `category`, `is_required`, `is_public`, and `review_interval_days`, which together drive compliance dashboards, expiry monitoring cadence, and what may surface publicly. **Establishment identity:** only `siret` is required per object; `siren` is optional (derivable from the first 9 digits of SIRET) — do not store both as separate active rows.
 
 **`object_legal` table:**
 

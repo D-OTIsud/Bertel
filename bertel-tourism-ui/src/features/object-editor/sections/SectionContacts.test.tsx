@@ -54,4 +54,17 @@ describe('SectionContacts', () => {
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
     expect(result.current.dirtySections.contacts).toBe(true);
   });
+
+  it('lets the user pick a contact role from reference data', () => {
+    const modules = modulesWithOneContact();
+    modules.contacts.roleOptions = [{ id: 'r1', code: 'reservation', label: 'Réservation' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+    const selects = screen.getAllByRole('combobox');
+    // [0] = kind, [1] = role
+    act(() => { fireEvent.change(selects[1], { target: { value: 'reservation' } }); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.contacts.objectItems[0].roleCode).toBe('reservation');
+    expect(result.current.dirtySections.contacts).toBe(true);
+  });
 });

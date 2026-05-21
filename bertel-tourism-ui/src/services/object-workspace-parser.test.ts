@@ -638,6 +638,24 @@ describe('parseObjectWorkspace', () => {
     });
   });
 
+  it('uses flat resource description fields as the editable object description', () => {
+    const detail: ObjectDetail = {
+      id: 'HLO0001',
+      name: 'Case du lagon',
+      type: 'HLO',
+      raw: {
+        description: 'Maison de charme a deux pas du lagon.',
+        description_chapo: 'Une case creole intime.',
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.descriptions.object.description.baseValue).toBe('Maison de charme a deux pas du lagon.');
+    expect(parsed.descriptions.object.chapo.baseValue).toBe('Une case creole intime.');
+    expect(parsed.descriptions.availableLanguages).toEqual(['fr']);
+  });
+
   it('preserves ordered restaurant menu item media from legacy and join payloads', () => {
     const detail: ObjectDetail = {
       id: 'RESRUN0000000001',

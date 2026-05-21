@@ -23,7 +23,11 @@ export function updateTranslatableField(
   };
 }
 
-/** Reads a translatable field for a language, empty string when absent. */
-export function readTranslatableField(field: WorkspaceTranslatableField, language: string): string {
-  return field.values[language] ?? '';
+/** Reads a translated value, falling back to the canonical text for the local language. */
+export function readTranslatableField(
+  field: WorkspaceTranslatableField,
+  language: string,
+  localLanguage: string,
+): string {
+  return field.values[language] ?? (language === localLanguage ? field.baseValue : '');
 }

@@ -26,4 +26,15 @@ describe('SectionTags', () => {
     expect(result.current.dirtySections.tags).toBe(true);
     expect(result.current.draft.tags.displayed[1].label).toBe('Cuisine créole');
   });
+
+  it('adds a tag from the library via the Ajouter un tag button', () => {
+    const modules = fullModulesFixture();
+    modules.tags.library = [{ tagId: 't9', slug: 'famille', label: 'Famille', colorVariant: 'neutral', source: 'audience' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionTags editor={result.current} permissions={allowAll} />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un tag/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Famille' })); });
+    view.rerender(<SectionTags editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.tags.displayed.some((t) => t.slug === 'famille')).toBe(true);
+  });
 });

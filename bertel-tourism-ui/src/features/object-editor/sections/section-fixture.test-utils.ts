@@ -149,8 +149,8 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       environmentOptions: [{ id: 'garden', code: 'garden', label: 'Jardin' }],
       selectedEnvironmentCodes: [],
       amenityGroups: [
-        { familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'pmr', code: 'pmr_access', label: 'Accès PMR' }] },
-        { familyCode: 'services', familyLabel: 'Services', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }] },
+        { familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'pmr', code: 'pmr_access', label: 'Accès PMR', disabilityTypes: ['motor'] }] },
+        { familyCode: 'services', familyLabel: 'Services', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] },
       ],
       selectedAmenityCodes: ['wifi'],
       unavailableReason: null,

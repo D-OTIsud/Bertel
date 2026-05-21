@@ -9,6 +9,7 @@ import {
   type ObjectWorkspaceActivityModule,
   type ObjectWorkspaceAccessibilityAmenityItem,
   type ObjectWorkspaceAmenityGroup,
+  type ObjectWorkspaceAmenityOption,
   type ObjectWorkspaceCharacteristicsModule,
   parseObjectWorkspace,
   type ObjectWorkspaceContactItem,
@@ -511,11 +512,13 @@ function buildAmenityGroups(amenities: AmenityRef[], selectedCodes: Set<string>)
       options: [],
     };
 
-    current.options.push({
+    const option: ObjectWorkspaceAmenityOption = {
       id: amenity.id,
       code: amenity.code,
       label: amenity.label,
-    });
+      disabilityTypes: amenity.disabilityTypes,
+    };
+    current.options.push(option);
 
     groups.set(amenity.familyCode, current);
   }
@@ -523,7 +526,7 @@ function buildAmenityGroups(amenities: AmenityRef[], selectedCodes: Set<string>)
   return Array.from(groups.values())
     .map((group) => ({
       ...group,
-      options: sortReferenceOptions(group.options),
+      options: [...group.options].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
     }))
     .sort((left, right) => {
       const leftSelected = left.options.some((option) => selectedCodes.has(option.code));

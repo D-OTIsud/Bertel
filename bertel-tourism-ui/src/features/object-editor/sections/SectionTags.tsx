@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Fs, Input, Select } from '../primitives';
 import type { SelectOption } from '../primitives';
 import type { SectionProps } from './section-types';
@@ -68,6 +69,20 @@ function TagPreviewCard({ tags, resourceName }: TagPreviewCardProps) {
 export function SectionTags({ editor, folded }: SectionProps) {
   const module = editor.draft.tags;
   const displayed = module.displayed;
+  const [picking, setPicking] = useState(false);
+
+  /** Tags from the library that are not yet in the displayed list (matched by tagId falling back to slug). */
+  const availableLibraryTags = module.library.filter(
+    (libTag) =>
+      !displayed.some(
+        (d) => (d.tagId && libTag.tagId ? d.tagId === libTag.tagId : d.slug === libTag.slug),
+      ),
+  );
+
+  function addFromLibrary(tag: ObjectWorkspaceTagItem) {
+    editor.replaceModule('tags', { ...module, displayed: [...displayed, tag] });
+    setPicking(false);
+  }
 
   function updateTag(index: number, patch: Partial<ObjectWorkspaceTagItem>) {
     editor.replaceModule('tags', {
@@ -186,6 +201,41 @@ export function SectionTags({ editor, folded }: SectionProps) {
         </div>
 
         <TagPreviewCard tags={displayed} resourceName="" />
+      </div>
+
+      {/* Library picker — lets the user append an existing ref_tag to the displayed list. */}
+      <div style={{ marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={() => setPicking((prev) => !prev)}
+          style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {picking ? 'Fermer la bibliothèque' : 'Ajouter un tag'}
+        </button>
+
+        {picking && (
+          <div style={{ marginTop: 8 }}>
+            {availableLibraryTags.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+                Aucun tag disponible dans la bibliothèque.
+              </p>
+            ) : (
+              <div className="chip-set" style={{ marginTop: 4 }}>
+                {availableLibraryTags.map((tag) => (
+                  <button
+                    key={tag.tagId ?? tag.slug}
+                    type="button"
+                    className={`tag ${tag.colorVariant}`}
+                    onClick={() => addFromLibrary(tag)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {tag.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {module.derived.length > 0 && (

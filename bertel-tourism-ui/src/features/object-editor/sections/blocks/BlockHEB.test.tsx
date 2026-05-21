@@ -40,3 +40,17 @@ describe('BlockHEB room edit modal', () => {
     expect(result.current.draft.rooms.items[0].amenityCodes).toContain('ac');
   });
 });
+
+describe('BlockHEB meeting-room edit modal', () => {
+  it('opens the meeting-room edit modal and persists equipment changes', () => {
+    const modules = fullModulesFixture();
+    modules.meetingRooms.equipmentOptions = [{ id: 'e1', code: 'projector', label: 'Vidéoprojecteur' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la salle/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Vidéoprojecteur' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.meetingRooms.items[0].equipmentCodes).toContain('projector');
+  });
+});

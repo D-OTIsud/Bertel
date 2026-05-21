@@ -396,6 +396,9 @@ export interface ObjectWorkspaceRoomTypeItem {
   viewTypeId: string;
   viewTypeCode: string;
   viewTypeLabel: string;
+  roomTypeId: string;
+  roomTypeCode: string;
+  roomTypeLabel: string;
   basePrice: string;
   currency: string;
   accessible: boolean;
@@ -407,6 +410,7 @@ export interface ObjectWorkspaceRoomTypeItem {
 
 export interface ObjectWorkspaceRoomsModule {
   viewTypeOptions: WorkspaceReferenceOption[];
+  roomTypeOptions: WorkspaceReferenceOption[];
   amenityOptions: WorkspaceReferenceOption[];
   mediaOptions: WorkspaceReferenceOption[];
   items: ObjectWorkspaceRoomTypeItem[];
@@ -1667,6 +1671,9 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       viewTypeId: readString(record.view_type_id, viewType.id),
       viewTypeCode: readString(record.view_type_code, viewType.code),
       viewTypeLabel: readString(record.view_type_label, viewType.label),
+      roomTypeId: readString(record.room_type_id),
+      roomTypeCode: readString(record.room_type_code),
+      roomTypeLabel: readString(record.room_type_label),
       basePrice: readString(record.base_price),
       currency: readString(record.currency, 'EUR'),
       accessible: readBoolean(record.is_accessible ?? record.accessible),
@@ -1684,6 +1691,11 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       id: item.viewTypeId || item.viewTypeCode,
       code: item.viewTypeCode,
       label: item.viewTypeLabel || item.viewTypeCode,
+    }))),
+    roomTypeOptions: dedupeReferenceOptions(items.map((item) => ({
+      id: item.roomTypeId || item.roomTypeCode,
+      code: item.roomTypeCode,
+      label: item.roomTypeLabel || item.roomTypeCode,
     }))),
     amenityOptions: dedupeReferenceOptions(
       roomRecords.flatMap((record) =>

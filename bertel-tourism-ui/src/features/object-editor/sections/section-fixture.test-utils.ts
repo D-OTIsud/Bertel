@@ -186,9 +186,10 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
     },
     rooms: {
       viewTypeOptions: [],
+      roomTypeOptions: [{ id: 'rt1', code: 'double', label: 'Chambre double' }],
       amenityOptions: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }],
       mediaOptions: [],
-      items: [{ recordId: 'r1', code: 'std', name: 'Chambre standard', nameTranslations: {}, description: '', descriptionTranslations: {}, capacityAdults: '2', capacityChildren: '0', capacityTotal: '2', sizeSqm: '22', bedConfig: 'Double', bedConfigTranslations: {}, quantity: '12', floorLevel: '', viewTypeId: '', viewTypeCode: '', viewTypeLabel: '', basePrice: '165', currency: 'EUR', accessible: false, published: true, position: '1', amenityCodes: ['wifi'], mediaIds: [] }],
+      items: [{ recordId: 'r1', code: 'std', name: 'Chambre standard', nameTranslations: {}, description: '', descriptionTranslations: {}, capacityAdults: '2', capacityChildren: '0', capacityTotal: '2', sizeSqm: '22', bedConfig: 'Double', bedConfigTranslations: {}, quantity: '12', floorLevel: '', viewTypeId: '', viewTypeCode: '', viewTypeLabel: '', roomTypeId: 'rt1', roomTypeCode: 'double', roomTypeLabel: 'Chambre double', basePrice: '165', currency: 'EUR', accessible: false, published: true, position: '1', amenityCodes: ['wifi'], mediaIds: [] }],
       unavailableReason: null,
     },
     meetingRooms: {

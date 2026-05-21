@@ -2172,13 +2172,14 @@ async function getObjectWorkspaceRoomsModule(
       : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
   }
 
-  const [roomsResult, viewRefsResult, amenityRefsResult, mediaResult] = await Promise.allSettled([
+  const [roomsResult, viewRefsResult, roomTypeRefsResult, amenityRefsResult, mediaResult] = await Promise.allSettled([
     client
       .from('object_room_type')
-      .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, base_price, currency, is_accessible, is_published, position')
+      .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
       .eq('object_id', objectId)
       .order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'view_type').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'room_type').order('position', { ascending: true }),
     client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
@@ -2205,6 +2206,9 @@ async function getObjectWorkspaceRoomsModule(
   const viewTypeOptions = viewRefsResult.status === 'fulfilled' && viewRefsResult.value.error == null
     ? dedupeReferenceOptions((viewRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
     : baseModule.viewTypeOptions;
+  const roomTypeOptions = roomTypeRefsResult.status === 'fulfilled' && roomTypeRefsResult.value.error == null
+    ? dedupeReferenceOptions((roomTypeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.roomTypeOptions;
   const amenityOptions = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
     ? dedupeReferenceOptions((amenityRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
     : baseModule.amenityOptions;
@@ -2212,6 +2216,7 @@ async function getObjectWorkspaceRoomsModule(
     ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
     : baseModule.mediaOptions;
   const viewTypeById = optionMapById(viewTypeOptions);
+  const roomTypeById = optionMapById(roomTypeOptions);
   const amenityById = optionMapById(amenityOptions);
   const amenityCodesByRoom = new Map<string, string[]>();
   const mediaIdsByRoom = new Map<string, string[]>();
@@ -2240,10 +2245,12 @@ async function getObjectWorkspaceRoomsModule(
 
   return {
     viewTypeOptions,
+    roomTypeOptions,
     amenityOptions,
     mediaOptions,
     items: rows.map((row, index) => {
       const viewType = viewTypeById.get(readString(row.view_type_id));
+      const roomType = roomTypeById.get(readString(row.room_type_id));
       const roomId = readString(row.id);
       return {
         recordId: roomId || null,
@@ -2263,6 +2270,9 @@ async function getObjectWorkspaceRoomsModule(
         viewTypeId: readString(row.view_type_id),
         viewTypeCode: viewType?.code ?? '',
         viewTypeLabel: viewType?.label ?? '',
+        roomTypeId: readString(row.room_type_id),
+        roomTypeCode: roomType?.code ?? '',
+        roomTypeLabel: roomType?.label ?? '',
         basePrice: readString(row.base_price),
         currency: readString(row.currency, 'EUR'),
         accessible: readBoolean(row.is_accessible),
@@ -3805,6 +3815,7 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
       total_rooms: toNullableInteger(item.quantity),
       floor_level: toNullableText(item.floorLevel),
       view_type_id: item.viewTypeCode ? viewIdByCode.get(item.viewTypeCode.toLowerCase()) ?? null : null,
+      room_type_id: item.roomTypeId || null,
       base_price: toNullableNumber(item.basePrice),
       currency: toNullableText(item.currency) ?? 'EUR',
       is_accessible: item.accessible,

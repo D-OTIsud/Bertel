@@ -1,4 +1,4 @@
-import { Fs, Repeater, Input, Select } from '../primitives';
+import { Fs, Repeater, Input, Select, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceContactItem } from '../../../services/object-workspace-parser';
 
@@ -48,7 +48,7 @@ export function SectionContacts({ editor, folded }: SectionProps) {
       <Repeater
         items={contacts.objectItems}
         getKey={(it) => it.id}
-        columns="14px 120px 1fr auto auto"
+        columns="14px 120px 130px 1fr auto auto"
         addLabel="Ajouter un canal de contact"
         onAdd={addItem}
         renderRow={(it) => (
@@ -65,6 +65,15 @@ export function SectionContacts({ editor, folded }: SectionProps) {
                   kindLabel: opt?.label ?? it.kindLabel,
                 });
               }}
+            />
+            <ReferenceSelect
+              value={it.roleCode}
+              options={contacts.roleOptions}
+              allowEmpty
+              emptyLabel="— Aucun rôle —"
+              onChange={(code, opt) =>
+                updateItem(it.id, { roleCode: code, roleId: opt?.id ?? '', roleLabel: opt?.label ?? '' })
+              }
             />
             <Input value={it.value} onChange={(v) => updateItem(it.id, { value: v })} mono={it.kindCode.includes('phone')} />
             <span className="pill-mini">{it.isPublic ? 'Public' : 'Interne'}</span>

@@ -147,7 +147,6 @@ export function BlockVIS({ editor, folded }: SectionProps) {
       <TriState label="Scolaires" sub="sur réservation" value="yes" onChange={() => undefined} />
       <TriState label="Personnes à mobilité réduire" sub="rampe, comptoir abaissé" value="conditional" onChange={() => undefined} />
       <TriState label="Malentendants" value="yes" onChange={() => undefined} />
-      <TriState label="Animaux" value="no" onChange={() => undefined} />
     </Fs>
   );
 }

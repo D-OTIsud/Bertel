@@ -23,7 +23,6 @@ import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
 import { EditorFooter } from './shell/EditorFooter';
-import { ValidationBanner } from './widgets/ValidationBanner';
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import './object-editor.css';
 
@@ -272,11 +271,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
         <main className="edit-main">
-          <ValidationBanner
-            blockers={validation.blockers}
-            warnings={validation.warnings}
-            onGoToSection={scrollToSection}
-          />
           {sections.map(({ num, Component }) => (
             <Component
               key={num}

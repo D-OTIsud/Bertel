@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Field, Fs, Input, Repeater, Textarea, Toggle } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
+import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
 import type {
   ObjectWorkspaceMeetingRoomItem,
@@ -90,6 +91,9 @@ export function BlockHEB({ editor, folded }: SectionProps) {
 
   // Index of the room currently open in the per-room edit modal (null = closed)
   const [editingRoom, setEditingRoom] = useState<number | null>(null);
+
+  // Index of the meeting room currently open in the per-meeting-room edit modal (null = closed)
+  const [editingMeeting, setEditingMeeting] = useState<number | null>(null);
 
   function updateRoom(index: number, patch: Partial<ObjectWorkspaceRoomTypeItem>) {
     editor.replaceModule('rooms', {
@@ -287,24 +291,21 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         renderRow={(item, index) => (
           <>
             <span className="rep-row__handle" aria-hidden />
-            <Input value={item.name} placeholder="Salle" onChange={(name) => updateMeetingRoom(index, { name })} />
-            <Input value={item.areaM2} mono suffix="m²" onChange={(areaM2) => updateMeetingRoom(index, { areaM2 })} />
-            <Input
-              value={item.capacityTheatre}
-              mono
-              onChange={(capacityTheatre) => updateMeetingRoom(index, { capacityTheatre })}
-            />
-            <Input
-              value={item.capacityClassroom}
-              mono
-              onChange={(capacityClassroom) => updateMeetingRoom(index, { capacityClassroom })}
-            />
-            <Input
-              value={item.capacityBoardroom}
-              mono
-              onChange={(capacityBoardroom) => updateMeetingRoom(index, { capacityBoardroom })}
-            />
+            {/* Compact summary — full editing is done inside MeetingRoomEditModal */}
+            <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
+            <span>{item.areaM2 ? `${item.areaM2} m²` : '—'}</span>
+            <span>{item.capacityTheatre || '—'}</span>
+            <span>{item.capacityClassroom || '—'}</span>
+            <span>{item.capacityBoardroom || '—'}</span>
             <div className="rep-row__act">
+              <button
+                type="button"
+                aria-label={`Modifier la salle ${item.name || index + 1}`}
+                onClick={() => setEditingMeeting(index)}
+                style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
+              >
+                Modifier
+              </button>
               <button
                 type="button"
                 className="del"
@@ -321,6 +322,21 @@ export function BlockHEB({ editor, folded }: SectionProps) {
           </>
         )}
       />
+
+      {/* Per-meeting-room edit modal — opens when editingMeeting is set. Equipment is edited here,
+          not in the compact row, so every meeting room can have its own equipment set. */}
+      {editingMeeting !== null && meetingRooms.items[editingMeeting] && (
+        <MeetingRoomEditModal
+          open
+          room={meetingRooms.items[editingMeeting]}
+          equipmentOptions={meetingRooms.equipmentOptions}
+          onClose={() => setEditingMeeting(null)}
+          onSave={(updated) => {
+            updateMeetingRoom(editingMeeting, updated);
+            setEditingMeeting(null);
+          }}
+        />
+      )}
     </Fs>
   );
 }

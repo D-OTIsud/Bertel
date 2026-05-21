@@ -624,76 +624,16 @@
 }
 .object-editor button.pill-mini:disabled { opacity: 0.62; cursor: not-allowed; }
 
-/* ---------- Cross-cutting editor widgets ---------- */
-.object-editor .val-banner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.object-editor .val-banner__col {
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  padding: 12px;
-  min-width: 0;
-}
-.object-editor .val-banner__col--block { border-color: rgba(200,92,72,0.24); }
-.object-editor .val-banner__col--warn { border-color: rgba(214,147,58,0.24); }
-.object-editor .val-banner__head {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 800; color: var(--ink);
-  margin-bottom: 8px;
-}
-.object-editor .val-banner__dot,
+/* ---------- Cross-cutting editor widgets (rail issues) ---------- */
 .object-editor .issue__dot {
   width: 8px; height: 8px; border-radius: 999px; flex: none;
 }
-.object-editor .val-banner__dot.req,
 .object-editor .issue__dot.req { background: var(--red); }
-.object-editor .val-banner__dot.warn,
 .object-editor .issue__dot.warn { background: var(--warn); }
-.object-editor .val-banner__count {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-3);
-}
-.object-editor .val-banner__row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 0;
-  border-top: 1px solid var(--line-soft);
-}
-.object-editor .val-banner__sec {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-4);
-}
-.object-editor .val-banner__txt {
-  min-width: 0;
-  font-size: 11.5px;
-  color: var(--ink-2);
-}
-.object-editor .val-banner__go {
-  background: transparent;
-  color: var(--accent-deep);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-.object-editor .val-banner__empty,
 .object-editor .rail-empty,
 .object-editor .rpick__empty {
   margin: 0;
   font-size: 11.5px;
-  color: var(--ink-4);
-}
-.object-editor .val-banner__more {
-  margin-top: 6px;
-  font-size: 11px;
   color: var(--ink-4);
 }
 

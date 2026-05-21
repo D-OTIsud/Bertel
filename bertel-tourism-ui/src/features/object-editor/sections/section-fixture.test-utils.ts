@@ -159,7 +159,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       metricOptions: [{ id: 'cap', code: 'capacity_total', label: 'Capacité totale' }],
       capacityItems: [{ recordId: 'cap1', metricId: 'cap', metricCode: 'capacity_total', metricLabel: 'Capacité totale', unit: 'pers.', value: '48', effectiveFrom: '', effectiveTo: '' }],
       groupPolicy: { minSize: '8', maxSize: '40', groupOnly: false, notes: 'Sur réservation' },
-      petPolicy: { hasPolicy: true, accepted: false, conditions: 'Petits animaux' },
+      petPolicy: { accepted: false, conditions: 'Petits animaux' },
       unavailableReason: null,
     },
     distinctions: {

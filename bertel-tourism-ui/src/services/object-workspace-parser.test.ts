@@ -601,7 +601,6 @@ describe('parseObjectWorkspace', () => {
       notes: 'Sur reservation',
     });
     expect(parsed.capacityPolicies.petPolicy).toMatchObject({
-      hasPolicy: true,
       accepted: true,
       conditions: 'Supplement menage',
     });

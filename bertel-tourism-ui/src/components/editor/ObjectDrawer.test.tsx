@@ -166,7 +166,7 @@ function buildWorkspaceResource(params: { id: string; name: string; type?: strin
         metricOptions: [],
         capacityItems: [],
         groupPolicy: { minSize: '', maxSize: '', groupOnly: false, notes: '' },
-        petPolicy: { hasPolicy: false, accepted: false, conditions: '' },
+        petPolicy: { accepted: false, conditions: '' },
         unavailableReason: null,
       },
       pricing: {

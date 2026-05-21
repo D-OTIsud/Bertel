@@ -729,7 +729,6 @@ async function getObjectWorkspaceCapacityPoliciesModule(
       notes: readString(groupPolicy.notes),
     },
     petPolicy: {
-      hasPolicy: Object.keys(petPolicy).length > 0,
       accepted: petPolicy.accepted == null ? false : readBoolean(petPolicy.accepted),
       conditions: readString(petPolicy.conditions),
     },
@@ -3619,12 +3618,10 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
       group_only: input.groupPolicy.groupOnly,
       notes: toNullableText(input.groupPolicy.notes),
     },
-    pet_policy: input.petPolicy.hasPolicy
-      ? {
-          accepted: input.petPolicy.accepted,
-          conditions: toNullableText(input.petPolicy.conditions),
-        }
-      : null,
+    pet_policy: {
+      accepted: input.petPolicy.accepted,
+      conditions: toNullableText(input.petPolicy.conditions),
+    },
   }, 'Impossible d enregistrer capacites et politiques.');
 }
 

@@ -107,13 +107,16 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
           <>
             <span className="rep-row__handle" style={{ marginTop: 6 }} aria-hidden />
             <Select
-              value={readTranslatableField(place.chapo, descriptions.localLanguage) || placeKindFromIndex(index, descriptions.places.length)}
+              value={
+                readTranslatableField(place.chapo, descriptions.localLanguage, descriptions.localLanguage)
+                || placeKindFromIndex(index, descriptions.places.length)
+              }
               options={PLACE_KIND_OPTIONS}
               onChange={(kind) => updatePlace(index, { kind })}
             />
             <Input value={place.label} placeholder="Nom du sous-lieu" onChange={(label) => updatePlace(index, { label })} />
             <Textarea
-              value={readTranslatableField(place.description, descriptions.activeLanguage)}
+              value={readTranslatableField(place.description, descriptions.activeLanguage, descriptions.localLanguage)}
               rows={2}
               onChange={(value) => updatePlace(index, { description: value })}
             />

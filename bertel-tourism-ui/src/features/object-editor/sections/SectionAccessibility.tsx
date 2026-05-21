@@ -47,7 +47,7 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
   const langTabs = descriptions.availableLanguages.map((code) => ({
     code,
     label: LANG_LABELS[code] ?? code.toUpperCase(),
-    filled: Boolean(readTranslatableField(objectScope.adaptedDescription, code).trim()),
+    filled: Boolean(readTranslatableField(objectScope.adaptedDescription, code, descriptions.localLanguage).trim()),
   }));
 
   return (
@@ -76,7 +76,7 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
           />
         )}
         <Textarea
-          value={readTranslatableField(objectScope.adaptedDescription, active)}
+          value={readTranslatableField(objectScope.adaptedDescription, active, descriptions.localLanguage)}
           rows={5}
           onChange={(value) => {
             const updated = updateTranslatableField(

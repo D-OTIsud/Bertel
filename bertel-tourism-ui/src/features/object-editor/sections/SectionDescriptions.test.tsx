@@ -37,4 +37,12 @@ describe('SectionDescriptions', () => {
     render(<SectionDescriptions editor={result.current} permissions={perms} />);
     expect(screen.getByDisplayValue('Un descriptif')).toBeInTheDocument();
   });
+
+  it('renders canonical text when the local i18n map is empty', () => {
+    const fixture = modules();
+    fixture.descriptions.object.description = { baseValue: 'Descriptif canonique', values: {} };
+    const { result } = renderHook(() => useObjectEditorState('o1', fixture));
+    render(<SectionDescriptions editor={result.current} permissions={perms} />);
+    expect(screen.getByDisplayValue('Descriptif canonique')).toBeInTheDocument();
+  });
 });

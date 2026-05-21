@@ -20,8 +20,14 @@ describe('updateTranslatableField', () => {
 });
 
 describe('readTranslatableField', () => {
-  it('reads the value for a language, empty string when absent', () => {
-    expect(readTranslatableField({ baseValue: '', values: { fr: 'Salut' } }, 'fr')).toBe('Salut');
-    expect(readTranslatableField({ baseValue: '', values: {} }, 'en')).toBe('');
+  it('reads the value for a language', () => {
+    expect(readTranslatableField({ baseValue: '', values: { fr: 'Salut' } }, 'fr', 'fr')).toBe('Salut');
+    expect(readTranslatableField({ baseValue: '', values: {} }, 'en', 'fr')).toBe('');
+  });
+
+  it('falls back to baseValue only for the local language', () => {
+    const field = { baseValue: 'Bonjour', values: {} };
+    expect(readTranslatableField(field, 'fr', 'fr')).toBe('Bonjour');
+    expect(readTranslatableField(field, 'en', 'fr')).toBe('');
   });
 });

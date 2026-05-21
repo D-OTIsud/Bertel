@@ -998,6 +998,27 @@ function toTranslatableField(baseValue: unknown, translatedValue: unknown): Work
   };
 }
 
+function readTopLevelDescriptionSource(raw: Record<string, unknown>): GenericRecord {
+  const source = {
+    id: raw.description_id,
+    visibility: raw.description_visibility ?? raw.visibility,
+    description: raw.description,
+    description_i18n: raw.description_i18n,
+    description_chapo: raw.description_chapo,
+    description_chapo_i18n: raw.description_chapo_i18n,
+    description_adapted: raw.description_adapted,
+    description_adapted_i18n: raw.description_adapted_i18n,
+    description_mobile: raw.description_mobile,
+    description_mobile_i18n: raw.description_mobile_i18n,
+    description_edition: raw.description_edition,
+    description_edition_i18n: raw.description_edition_i18n,
+  };
+
+  return Object.values(source).some((value) => readString(value).trim() || Object.keys(readRecord(value)).length > 0)
+    ? source
+    : {};
+}
+
 function pickDescriptionSource(raw: Record<string, unknown>): GenericRecord {
   const candidates = [
     readRecord(raw.object_description),
@@ -1005,6 +1026,7 @@ function pickDescriptionSource(raw: Record<string, unknown>): GenericRecord {
     readRecord(raw.descriptions),
     ...readArray(raw.descriptions),
     ...readArray(raw.descriptions_list),
+    readTopLevelDescriptionSource(raw),
   ];
 
   return candidates.find((candidate) => Object.keys(candidate).length > 0) ?? {};

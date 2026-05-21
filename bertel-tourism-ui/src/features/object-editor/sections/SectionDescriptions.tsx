@@ -15,7 +15,9 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
   const active = descriptions.activeLanguage;
   const objectScope = descriptions.object;
   const missingLangs = descriptions.availableLanguages.filter(
-    (code) => !objectScope.chapo.values[code] && !objectScope.description.values[code],
+    (code) =>
+      !readTranslatableField(objectScope.chapo, code, descriptions.localLanguage).trim()
+      && !readTranslatableField(objectScope.description, code, descriptions.localLanguage).trim(),
   );
 
   function setLanguage(code: string) {
@@ -47,11 +49,14 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
   const tabs = descriptions.availableLanguages.map((code) => ({
     code,
     label: LANG_LABELS[code] ?? code,
-    filled: Boolean(objectScope.description.values[code] || objectScope.chapo.values[code]),
+    filled: Boolean(
+      readTranslatableField(objectScope.description, code, descriptions.localLanguage).trim()
+      || readTranslatableField(objectScope.chapo, code, descriptions.localLanguage).trim(),
+    ),
   }));
 
-  const otiChapo = readTranslatableField(objectScope.editorialDescription, active);
-  const accessText = readTranslatableField(objectScope.adaptedDescription, active);
+  const otiChapo = readTranslatableField(objectScope.editorialDescription, active, descriptions.localLanguage);
+  const accessText = readTranslatableField(objectScope.adaptedDescription, active, descriptions.localLanguage);
 
   return (
     <Fs
@@ -69,7 +74,7 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
       <div className="grid-2" style={{ marginBottom: 12 }}>
         <Field label="Accroche" hint="≤ 160 caractères — apparaît sous le titre dans l'Explorer">
           <Textarea
-            value={readTranslatableField(objectScope.chapo, active)}
+            value={readTranslatableField(objectScope.chapo, active, descriptions.localLanguage)}
             onChange={(v) => patchField('chapo', v)}
             count
             max={160}
@@ -83,7 +88,7 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
 
       <Field label="Descriptif" required hint="Texte principal de la fiche détail">
         <Textarea
-          value={readTranslatableField(objectScope.description, active)}
+          value={readTranslatableField(objectScope.description, active, descriptions.localLanguage)}
           onChange={(v) => patchField('description', v)}
           rich
           count

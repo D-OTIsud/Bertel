@@ -1,7 +1,18 @@
-import { Chip, ChipSet, Field, Fs, Input, LangTabs, Select, Textarea } from '../primitives';
+import { Chip, ChipMultiSelect, ChipSet, Field, Fs, LangTabs, Select, Textarea, Toggle } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
+
+/**
+ * Canonical disability-type set for LBL_TOURISME_HANDICAP / `object_classification` sub-values.
+ * Codes are the English metadata.disability_type values stored in the DB; labels are display-only.
+ */
+const DISABILITY_TYPES = [
+  { code: 'motor', label: 'Moteur' },
+  { code: 'hearing', label: 'Auditif' },
+  { code: 'visual', label: 'Visuel' },
+  { code: 'cognitive', label: 'Mental' },
+];
 
 function toggleCode(values: string[], code: string) {
   return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
@@ -93,35 +104,74 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
         />
       </Field>
 
+      {/* ── Tourisme & Handicap label block ───────────────────────────────────── */}
+      {/* The scheme is LBL_TOURISME_HANDICAP (selection='single'); the main value is
+          `granted`; sub-values carry metadata.disability_type (motor/hearing/visual/cognitive).
+          We never expose a free-text valueLabel input — the label name is fixed by the scheme. */}
       <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Labels accessibilité
+        Label Tourisme &amp; Handicap
       </div>
-      <div className="repeater">
-        {distinctions.accessibilityLabels.map((item) => (
-          <div
-            key={`${item.schemeCode}-${item.valueCode}`}
-            className="rep-row"
-            style={{ gridTemplateColumns: '14px 1fr 1fr 120px auto', alignItems: 'center' }}
-          >
-            <span className="rep-row__handle" aria-hidden />
-            <Input value={item.valueLabel} onChange={(valueLabel) => updateLabel(item, { valueLabel })} />
-            <Input
-              value={item.disabilityTypesCovered.join(', ')}
-              placeholder="Types couverts"
-              onChange={(value) =>
+
+      {distinctions.accessibilityLabels.length === 0 ? (
+        /* No label held yet — offer a toggle to opt in. */
+        <Toggle
+          label="Établissement labellisé Tourisme & Handicap"
+          on={false}
+          onChange={() => {
+            const scheme = distinctions.schemeOptions.find((s) => s.isAccessibility);
+            if (!scheme) return;
+            editor.replaceModule('distinctions', {
+              ...distinctions,
+              accessibilityLabels: [
+                ...distinctions.accessibilityLabels,
+                {
+                  recordId: null,
+                  schemeId: scheme.id,
+                  schemeCode: scheme.code,
+                  schemeLabel: scheme.label,
+                  valueId: 'granted',
+                  valueCode: 'granted',
+                  valueLabel: 'granted',
+                  status: 'active',
+                  awardedAt: '',
+                  validUntil: '',
+                  disabilityTypesCovered: [],
+                },
+              ],
+            });
+          }}
+        />
+      ) : (
+        /* Label is held — show structured editor per label item. */
+        distinctions.accessibilityLabels.map((item) => (
+          <div key={`${item.schemeCode}-${item.valueCode}`} style={{ marginBottom: 12 }}>
+            {/* Disability-type multiselect: chips over the 4 canonical types */}
+            <div className="chip-group__label" style={{ marginTop: 6, marginBottom: 4, fontSize: '0.78rem', color: 'var(--text-2, #666)' }}>
+              Types de handicap couverts
+            </div>
+            <ChipMultiSelect
+              options={DISABILITY_TYPES}
+              selected={item.disabilityTypesCovered}
+              onToggle={(code) =>
                 updateLabel(item, {
-                  disabilityTypesCovered: value.split(',').map((entry) => entry.trim()).filter(Boolean),
+                  disabilityTypesCovered: item.disabilityTypesCovered.includes(code)
+                    ? item.disabilityTypesCovered.filter((c) => c !== code)
+                    : [...item.disabilityTypesCovered, code],
                 })
               }
             />
-            <Select
-              value={item.status || 'active'}
-              options={['active', 'pending', 'expired']}
-              onChange={(status) => updateLabel(item, { status })}
-            />
+
+            {/* Status, award date, expiry */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Select
+                value={item.status || 'active'}
+                options={['active', 'pending', 'expired']}
+                onChange={(status) => updateLabel(item, { status })}
+              />
+            </div>
           </div>
-        ))}
-      </div>
+        ))
+      )}
 
       {families.map((family) => (
         <div key={family.familyCode}>

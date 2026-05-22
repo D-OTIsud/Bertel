@@ -12,13 +12,13 @@ describe('editor completion scoring', () => {
     draft.descriptions.object.chapo = { baseValue: '', values: {} };
     draft.descriptions.object.description = { baseValue: '', values: {} };
 
-    expect(computeSectionCompletion('02', draft)).toBe(0);
+    expect(computeSectionCompletion('04', draft)).toBe(0);
   });
 
   it('scores a fully filled descriptions module at 100', () => {
     const draft = fullModulesFixture();
 
-    expect(computeSectionCompletion('02', draft)).toBe(100);
+    expect(computeSectionCompletion('04', draft)).toBe(100);
   });
 
   it('averages known completion sections and returns nav-ready rows', () => {
@@ -29,11 +29,11 @@ describe('editor completion scoring', () => {
     expect(rows).toEqual([{ num: '01', label: 'Identité', pct: 100, stat: 'ok' }]);
   });
 
-  it('computeNavHint surfaces missing language codes for section 02', () => {
+  it('computeNavHint surfaces missing language codes for section 04', () => {
     const draft = fullModulesFixture();
     draft.descriptions.object.chapo.values = { fr: 'Accroche' };
     draft.descriptions.object.description.values = { fr: 'Desc' };
 
-    expect(computeNavHint('02', draft, 50)).toMatch(/EN/);
+    expect(computeNavHint('04', draft, 50)).toMatch(/EN/);
   });
 });

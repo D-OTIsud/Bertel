@@ -23,4 +23,18 @@ describe('makeSections', () => {
     expect(heb?.label).toBe('Chambres & séminaire');
     expect(res?.label).toBe('Cuisine & service');
   });
+
+  it('orders identity, location, contacts, then descriptions under characteristics', () => {
+    const groups = makeSections('HEB');
+    expect(groups[0]).toMatchObject({
+      group: 'Identité',
+      items: [
+        { num: '01', label: 'Identité & taxonomie' },
+        { num: '02', label: 'Localisation' },
+        { num: '03', label: 'Contacts' },
+      ],
+    });
+    expect(groups[1].group).toBe('Caractéristiques');
+    expect(groups[1].items[0]).toEqual({ num: '04', label: 'Descriptions' });
+  });
 });

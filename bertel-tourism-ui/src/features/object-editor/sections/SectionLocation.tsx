@@ -6,7 +6,7 @@ import { LocationPinMap } from '../widgets/LocationPinMap';
 import { PendingFieldControl } from '../widgets/PendingFieldControl';
 import { dismissPendingFieldChange, findPendingFieldChange } from '../widgets/pending-field-change';
 
-/** Section 03 — address, commune, GPS (design: edit-primitives + map-shell). */
+/** Section 02 — address, commune, GPS (design: edit-primitives + map-shell). */
 export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   const location = editor.draft.location;
   const main = location.main;
@@ -33,7 +33,7 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
 
   return (
     <Fs
-      num="03"
+      num="02"
       title="Localisation"
       sub="Adresse postale, commune, lieu-dit, zone touristique, coordonnées GPS"
       folded={folded}

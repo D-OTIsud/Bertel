@@ -32,14 +32,14 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
       group: 'Identité',
       items: [
         { num: '01', label: 'Identité & taxonomie' },
-        { num: '02', label: 'Descriptions' },
-        { num: '03', label: 'Localisation' },
-        { num: '04', label: 'Contacts' },
+        { num: '02', label: 'Localisation' },
+        { num: '03', label: 'Contacts' },
       ],
     },
     {
       group: 'Caractéristiques',
       items: [
+        { num: '04', label: 'Descriptions' },
         { num: '05', label: TYPE_BLOCK_LABEL[archetype] },
         { num: '06', label: 'Médias' },
         { num: '07', label: 'Capacité & cadre' },

@@ -3221,6 +3221,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     legalModule,
     sustainabilityModule,
     tagsModule,
+    contactsModule,
     permissions,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
@@ -3232,6 +3233,11 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
     getObjectWorkspaceTagsModule(objectId, parsedModules.tags),
+    // Contacts kind/role reference data lives in ref_code (domain contact_kind) and
+    // ref_contact_role — basic, all-object-type reference tables that the save path
+    // (saveObjectWorkspaceContacts) already queries. Enriched unconditionally so the
+    // editor's contact type/role dropdowns are populated, not behind the optional gate.
+    getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
     getObjectWorkspacePermissions(objectId),
   ]);
 
@@ -3246,6 +3252,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     legal: legalModule,
     sustainability: sustainabilityModule,
     tags: tagsModule,
+    contacts: contactsModule,
     distribution: parsedModules.distribution,
     provider: parsedModules.provider,
   };
@@ -3254,7 +3261,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
     const [
       mediaModule,
-      contactsModule,
       characteristicsModule,
       capacityPoliciesModule,
       pricingModule,
@@ -3267,7 +3273,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
       membershipsModule,
     ] = await Promise.all([
       getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
-      getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
       getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
       getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
       getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
@@ -3282,7 +3287,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
 
     Object.assign(modules, {
       media: mediaModule,
-      contacts: contactsModule,
       characteristics: characteristicsModule,
       capacityPolicies: capacityPoliciesModule,
       pricing: pricingModule,

@@ -1,10 +1,12 @@
-import { Fs, Repeater, Input, Select, ReferenceSelect } from '../primitives';
+import { Trash2 } from 'lucide-react';
+import { Fs, Repeater, Input, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceContactItem } from '../../../services/object-workspace-parser';
 
 /** Section 03 — contact channels (design: edit-primitives repeater rows). */
 export function SectionContacts({ editor, folded }: SectionProps) {
   const contacts = editor.draft.contacts;
+  const kindOptionsAvailable = contacts.kindOptions.length > 0;
 
   function updateItem(id: string, patch: Partial<ObjectWorkspaceContactItem>) {
     editor.replaceModule('contacts', {
@@ -45,40 +47,52 @@ export function SectionContacts({ editor, folded }: SectionProps) {
 
   return (
     <Fs num="03" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
+      {!kindOptionsAvailable && (
+        <p className="contacts-notice" role="status">
+          Les types de contact ne sont pas disponibles : le référentiel des types de contact n'a pas
+          pu être chargé. Les canaux existants restent modifiables ; rechargez la page pour réessayer.
+        </p>
+      )}
       <Repeater
         items={contacts.objectItems}
         getKey={(it) => it.id}
-        columns="14px 120px 130px 1fr auto auto"
+        columns="14px 130px 150px 1fr auto auto"
         addLabel="Ajouter un canal de contact"
         onAdd={addItem}
         renderRow={(it) => (
           <>
             <span className="rep-row__handle" aria-hidden />
-            <Select
+            <ReferenceSelect
               value={it.kindCode}
-              options={contacts.kindOptions.map((o) => ({ v: o.code, l: o.label }))}
-              onChange={(code) => {
-                const opt = contacts.kindOptions.find((o) => o.code === code);
+              options={contacts.kindOptions}
+              aria-label="Type de contact"
+              onChange={(code, opt) =>
                 updateItem(it.id, {
                   kindCode: code,
                   kindId: opt?.id ?? it.kindId,
                   kindLabel: opt?.label ?? it.kindLabel,
-                });
-              }}
+                })
+              }
             />
             <ReferenceSelect
               value={it.roleCode}
               options={contacts.roleOptions}
               allowEmpty
               emptyLabel="— Aucun rôle —"
+              aria-label="Rôle du contact"
               onChange={(code, opt) =>
                 updateItem(it.id, { roleCode: code, roleId: opt?.id ?? '', roleLabel: opt?.label ?? '' })
               }
             />
-            <Input value={it.value} onChange={(v) => updateItem(it.id, { value: v })} mono={it.kindCode.includes('phone')} />
+            <Input
+              value={it.value}
+              aria-label="Valeur du contact"
+              mono={it.kindCode.includes('phone')}
+              onChange={(v) => updateItem(it.id, { value: v })}
+            />
             <span className="pill-mini">{it.isPublic ? 'Public' : 'Interne'}</span>
             <button type="button" className="del" onClick={() => removeItem(it.id)} aria-label="Supprimer">
-              ×
+              <Trash2 size={15} aria-hidden />
             </button>
           </>
         )}

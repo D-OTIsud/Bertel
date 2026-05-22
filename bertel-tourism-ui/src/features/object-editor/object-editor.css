@@ -466,11 +466,41 @@
 }
 .object-editor .rep-add:hover { background: var(--accent-tint); border-style: solid; }
 .object-editor .rep-row .del {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   color: var(--ink-3);
   background: transparent;
-  font-size: 11px;
+  font-size: 16px; line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.object-editor .rep-row .del:hover { color: var(--red); }
+.object-editor .rep-row .del:hover {
+  color: var(--red);
+  background: rgba(200, 92, 72, 0.10);
+}
+.object-editor .rep-row .del:focus-visible {
+  outline: 0;
+  color: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(200, 92, 72, 0.12);
+}
+.object-editor .rep-row .del:disabled {
+  color: var(--ink-4);
+  background: transparent;
+  cursor: default;
+}
+
+/* Section 03 — Contacts: clear state when contact-type reference data is missing. */
+.object-editor .contacts-notice {
+  margin: 0 0 8px;
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
 
 /* Right rail */
 .object-editor .edit-side {

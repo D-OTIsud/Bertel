@@ -28,7 +28,7 @@ export function ReferenceSelect({
   const known = options.some((o) => o.code === value);
   return (
     <select
-      className="ed-select"
+      className="select"
       value={value}
       aria-label={ariaLabel}
       onChange={(e) => {

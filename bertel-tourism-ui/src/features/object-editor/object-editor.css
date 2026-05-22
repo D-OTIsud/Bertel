@@ -1970,61 +1970,58 @@
   background: var(--accent-tint); color: var(--ink);
 }
 .object-editor .identity-taxo__none { color: var(--ink-4); font-size: 12px; }
-.object-editor .identity-taxo__list {
-  list-style: none; margin: 0; padding: 0;
-  max-height: 240px; overflow-y: auto;
+/* Cascade selector — live selection preview + drill-down columns. */
+.object-editor .identity-taxo__preview { display: flex; flex-direction: column; gap: 4px; }
+.object-editor .identity-taxo__cascade {
+  display: flex; gap: 6px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
+  padding: 6px;
+  overflow-x: auto;
 }
-.object-editor .identity-taxo__node {
-  border-bottom: 1px solid var(--line-soft);
+.object-editor .identity-taxo__col {
+  list-style: none; margin: 0; padding: 0;
+  flex: 1 0 150px; min-width: 150px;
+  max-height: 248px; overflow-y: auto;
+  border-right: 1px solid var(--line-soft);
 }
-.object-editor .identity-taxo__node:last-child { border-bottom: 0; }
-.object-editor .identity-taxo__node-button {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+.object-editor .identity-taxo__col:last-child { border-right: 0; }
+.object-editor .identity-taxo__cell {
+  display: flex; align-items: center; gap: 6px;
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 7px 10px;
+  padding: 7px 8px;
   font: inherit;
   font-size: 12.5px; color: var(--ink-2);
   text-align: left;
+  border-radius: 6px;
   cursor: pointer;
 }
-.object-editor .identity-taxo__node-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.object-editor .identity-taxo__node-button:hover,
-.object-editor .identity-taxo__node-button:focus-visible {
+.object-editor .identity-taxo__cell:hover,
+.object-editor .identity-taxo__cell:focus-visible {
   outline: 0;
   background: var(--surface-2);
   color: var(--ink);
 }
-.object-editor .identity-taxo__node-button--group {
-  cursor: default;
-  color: var(--ink);
+.object-editor .identity-taxo__cell.is-group { font-weight: 600; color: var(--ink); }
+.object-editor .identity-taxo__cell.is-active {
   background: var(--surface-2);
-  font-weight: 700;
-}
-.object-editor .identity-taxo__node-button--group:hover {
-  background: var(--surface-2);
-}
-.object-editor .identity-taxo__node.is-group + .identity-taxo__node.is-option .identity-taxo__node-button {
-  border-top: 1px solid color-mix(in srgb, var(--line-soft) 68%, transparent);
-}
-.object-editor .identity-taxo__node.is-current .identity-taxo__node-button {
-  background: var(--accent-tint); color: var(--ink); font-weight: 600;
-}
-.object-editor .identity-taxo__node.is-selected .identity-taxo__node-button {
-  box-shadow: inset 3px 0 0 var(--accent);
   color: var(--ink);
 }
-.object-editor .identity-taxo__node-tag {
+.object-editor .identity-taxo__cell.is-selected {
+  background: var(--accent-tint);
+  color: var(--ink);
+  font-weight: 600;
+}
+.object-editor .identity-taxo__cell-label {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .identity-taxo__cell-caret { flex: none; color: var(--ink-4); font-size: 13px; }
+.object-editor .identity-taxo__cell-tag {
   flex: none;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--accent);
 }
 .object-editor .identity-taxo__notice {

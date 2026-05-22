@@ -32,6 +32,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       status: 'published',
       publishedAt: '2026-01-02',
       isEditing: true,
+      secondaryTypes: [],
     },
     taxonomy: { domains: [], unavailableReason: null },
     descriptions: {

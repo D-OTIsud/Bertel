@@ -65,6 +65,7 @@ claude_brief/
 *.mdc
 GEMINI.md
 AGENTS.md
+graphify-out/
 
 # Local-only operational SQL kept out of the open-source repo
 Base de donnée DLL et API/lot1_pilot_inserts.sql

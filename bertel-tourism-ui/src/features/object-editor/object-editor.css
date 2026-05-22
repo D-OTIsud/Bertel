@@ -1790,3 +1790,113 @@
   .object-editor .sched__head:nth-child(4) { display: none; }
   .object-editor .season-picker { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
+
+/* ============================================================
+   Section 01 — Identité & taxonomie
+   Flat publication-status indicator, taxonomy trigger + modal,
+   secondary-families block. All scoped under .object-editor.
+   ============================================================ */
+
+/* Flat publication-status indicator — a plain CSS dot, no emoji, no 3D. */
+.object-editor .identity-status { display: flex; align-items: center; gap: 8px; }
+.object-editor .identity-status .select { flex: 1; min-width: 0; }
+.object-editor .identity-status__dot {
+  flex: none;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #c2c0b8;
+}
+.object-editor .identity-status__dot--published { background: #3a9d6b; }
+.object-editor .identity-status__dot--draft { background: #c79234; }
+.object-editor .identity-status__dot--hidden { background: #c65a45; }
+.object-editor .identity-status__dot--archived { background: #9b9b94; }
+
+/* Inline help text under a field — muted, never decorative. */
+.object-editor .identity-help {
+  margin: 0;
+  font-size: 10.5px; line-height: 1.45;
+  color: var(--ink-4);
+}
+
+/* Taxonomy field — a clickable trigger styled like an input. */
+.object-editor .identity-taxo-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; height: 36px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 13px; color: var(--ink);
+  font-family: var(--font-sans);
+  text-align: left; cursor: pointer;
+}
+.object-editor .identity-taxo-trigger:hover { border-color: var(--accent); }
+.object-editor .identity-taxo-trigger:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .identity-taxo-trigger__value {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .identity-taxo-trigger__value.is-empty { color: var(--ink-4); }
+.object-editor .identity-taxo-trigger__caret { flex: none; color: var(--ink-4); font-size: 11px; }
+
+/* Taxonomy modal body. */
+.object-editor .identity-taxo { display: flex; flex-direction: column; gap: 12px; }
+.object-editor .identity-taxo__domain,
+.object-editor .identity-taxo__path { display: flex; flex-direction: column; gap: 4px; }
+.object-editor .identity-taxo__field-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.object-editor .identity-taxo__domain strong { font-size: 13.5px; color: var(--ink); }
+.object-editor .identity-taxo__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.object-editor .identity-taxo__crumb { display: inline-flex; align-items: center; gap: 4px; }
+.object-editor .identity-taxo__sep { color: var(--ink-4); font-size: 11px; }
+.object-editor .identity-taxo__crumb-label {
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  background: var(--surface-2);
+  border-radius: 6px; padding: 2px 8px;
+}
+.object-editor .identity-taxo__crumb:last-child .identity-taxo__crumb-label {
+  background: var(--accent-tint); color: var(--ink);
+}
+.object-editor .identity-taxo__none { color: var(--ink-4); font-size: 12px; }
+.object-editor .identity-taxo__list {
+  list-style: none; margin: 0; padding: 0;
+  max-height: 240px; overflow-y: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+}
+.object-editor .identity-taxo__node {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px; color: var(--ink-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .identity-taxo__node:last-child { border-bottom: 0; }
+.object-editor .identity-taxo__node.is-current {
+  background: var(--accent-tint); color: var(--ink); font-weight: 600;
+}
+.object-editor .identity-taxo__node-tag {
+  flex: none;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--accent);
+}
+.object-editor .identity-taxo__notice {
+  margin: 0;
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+/* Secondary-families block. */
+.object-editor .identity-secondary__empty {
+  margin: 0; font-size: 12px; font-style: italic; color: var(--ink-4);
+}
+.object-editor .identity-secondary__add {
+  display: flex; flex-direction: column; gap: 4px;
+}

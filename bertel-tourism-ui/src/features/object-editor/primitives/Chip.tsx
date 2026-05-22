@@ -15,7 +15,7 @@ export function Chip({ label, on, sm, title, onClick }: ChipProps) {
     <button
       type="button"
       className={`chip${on ? ' is-on' : ''}${sm ? ' size-sm' : ''}`}
-      aria-pressed={Boolean(on)}
+      aria-pressed={onClick ? Boolean(on) : undefined}
       title={title}
       onClick={onClick}
       disabled={!onClick}

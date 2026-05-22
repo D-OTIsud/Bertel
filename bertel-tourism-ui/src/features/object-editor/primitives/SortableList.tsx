@@ -9,15 +9,22 @@ interface SortableListProps<T> {
   getId: (item: T) => string;
   onReorder: (next: T[]) => void;
   renderItem: (item: T, index: number) => ReactNode;
+  /** CSS grid-template-columns for each row — must match the column header template above the list. */
+  columns?: string;
 }
 
-function SortableRow({ id, children }: { id: string; children: ReactNode }) {
+function SortableRow({ id, children, columns }: { id: string; children: ReactNode; columns?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div
       ref={setNodeRef}
       className="rep-row"
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        ...(columns ? { gridTemplateColumns: columns } : {}),
+      }}
     >
       <button type="button" className="rep-row__handle" aria-label="Déplacer" {...attributes} {...listeners} />
       {children}
@@ -26,7 +33,7 @@ function SortableRow({ id, children }: { id: string; children: ReactNode }) {
 }
 
 /** Vertical drag-and-drop list. Keyboard accessible (dnd-kit KeyboardSensor). */
-export function SortableList<T>({ items, getId, onReorder, renderItem }: SortableListProps<T>) {
+export function SortableList<T>({ items, getId, onReorder, renderItem, columns }: SortableListProps<T>) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -44,7 +51,7 @@ export function SortableList<T>({ items, getId, onReorder, renderItem }: Sortabl
       <SortableContext items={items.map(getId)} strategy={verticalListSortingStrategy}>
         <div className="repeater">
           {items.map((item, index) => (
-            <SortableRow key={getId(item)} id={getId(item)}>
+            <SortableRow key={getId(item)} id={getId(item)} columns={columns}>
               {renderItem(item, index)}
             </SortableRow>
           ))}

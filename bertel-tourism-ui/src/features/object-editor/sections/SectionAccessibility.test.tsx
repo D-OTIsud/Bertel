@@ -32,4 +32,11 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
     view.rerender(<SectionAccessibility editor={result.current} permissions={allowAll} />);
     expect(result.current.draft.characteristics.selectedAmenityCodes).toContain('pmr_access');
   });
+
+  it('shows a §11-style stat header and keeps the adapted multilingual description', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText(/Label T&H/i)).toBeInTheDocument();
+    expect(screen.getByText(/Description adapt/i)).toBeInTheDocument();
+  });
 });

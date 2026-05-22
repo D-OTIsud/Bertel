@@ -86,6 +86,7 @@ function buildWorkspaceResource(params: { id: string; name: string; type?: strin
         status: 'published',
         publishedAt: '',
         isEditing: false,
+        secondaryTypes: [],
       },
       taxonomy: { domains: [], unavailableReason: null },
       publication: {

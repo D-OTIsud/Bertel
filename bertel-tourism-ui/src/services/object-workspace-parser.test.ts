@@ -791,4 +791,32 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.provider.companyName).toBe('');
     expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
   });
+
+  it('parses object.secondary_types into generalInfo.secondaryTypes', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Table d hotes test',
+      type: 'HLO',
+      raw: {
+        secondary_types: ['RES'],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.generalInfo.secondaryTypes).toEqual(['RES']);
+  });
+
+  it('defaults generalInfo.secondaryTypes to an empty array when object.secondary_types is absent', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gite sans famille secondaire',
+      type: 'HLO',
+      raw: {},
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.generalInfo.secondaryTypes).toEqual([]);
+  });
 });

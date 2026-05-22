@@ -21,6 +21,11 @@ export interface ObjectWorkspaceGeneralInfo {
   status: string;
   publishedAt: string;
   isEditing: boolean;
+  /**
+   * object.secondary_types — transitory, non-canonical, opt-in multi-family flag.
+   * Never replaces object.object_type and is not an API filter; read-only here.
+   */
+  secondaryTypes: string[];
 }
 
 export interface ObjectWorkspaceTaxonomyPathNode {
@@ -2947,6 +2952,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       status: readString(raw.status, 'draft'),
       publishedAt: readString(raw.published_at),
       isEditing: readBoolean(raw.is_editing),
+      secondaryTypes: readStringList(raw.secondary_types),
     },
     taxonomy: parseWorkspaceTaxonomyModule(raw),
     distinctions: parseWorkspaceDistinctionsModule(),

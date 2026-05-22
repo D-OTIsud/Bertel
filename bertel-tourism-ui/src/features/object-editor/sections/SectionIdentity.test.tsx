@@ -7,8 +7,7 @@ import type {
   ObjectWorkspaceTaxonomyDomain,
 } from '../../../services/object-workspace-parser';
 
-/** A taxonomy domain with an assignment + hierarchical path; `nodes` defaults to empty
- *  (the live state — taxonomy node enrichment is gated off). */
+/** A taxonomy domain with an assignment + hierarchical path; `nodes` defaults to empty. */
 function taxonomyDomainFixture(
   nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [],
 ): ObjectWorkspaceTaxonomyDomain {
@@ -35,11 +34,47 @@ function taxonomyDomainFixture(
   };
 }
 
-function modulesWithTaxonomy(): ObjectWorkspaceModules {
+function modulesWithTaxonomy(nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = []): ObjectWorkspaceModules {
   const modules = fullModulesFixture();
-  modules.taxonomy = { domains: [taxonomyDomainFixture()], unavailableReason: null };
+  modules.taxonomy = { domains: [taxonomyDomainFixture(nodes)], unavailableReason: null };
   return modules;
 }
+
+const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
+  {
+    id: 'n-hotel',
+    code: 'hotel',
+    label: 'Hôtel',
+    description: '',
+    parentId: null,
+    parentCode: null,
+    depth: 0,
+    isAssignable: false,
+    position: 1,
+  },
+  {
+    id: 'n-hotel-familial',
+    code: 'family_hotel',
+    label: 'Hôtel familial',
+    description: '',
+    parentId: 'n-hotel',
+    parentCode: 'hotel',
+    depth: 1,
+    isAssignable: true,
+    position: 2,
+  },
+  {
+    id: 'n-gite-rural',
+    code: 'rural_gite',
+    label: 'Gîte rural',
+    description: '',
+    parentId: 'n-hotel',
+    parentCode: 'hotel',
+    depth: 1,
+    isAssignable: true,
+    position: 3,
+  },
+];
 
 describe('SectionIdentity', () => {
   it('renders the commercial name, ID OTI, object type and raison sociale', () => {
@@ -97,14 +132,33 @@ describe('SectionIdentity', () => {
     expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
   });
 
-  it('shows an unavailability message and a disabled validate button when taxonomy options are not exposed', () => {
+  it('shows an unavailable message and a disabled validate button when taxonomy options are not exposed', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/pas encore disponible/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/nœuds assignables ne sont pas exposés/i)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();
+  });
+
+  it('lets an assignable taxonomy node update the draft assignment', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /Gîte rural/i }));
+    expect(within(dialog).getByRole('button', { name: 'Valider' })).not.toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Valider' }));
+
+    expect(result.current.dirtySections.taxonomy).toBe(true);
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
   });
 
   it('shows "Aucune famille secondaire" when secondary_types is empty', () => {

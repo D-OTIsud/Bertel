@@ -94,21 +94,15 @@ export function getDirtySections(snapshot: EditorSnapshot | null): Partial<Recor
 
   const generalInfoDirty = isGeneralInfoContentDirty(snapshot);
   const publicationDirty = isPublicationSettingsDirty(snapshot);
-  const taxonomyDirty = isModuleDirty(snapshot, 'taxonomy');
   const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
   for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
     if (moduleId === 'general-info') {
-      dirty[moduleId] = generalInfoDirty || taxonomyDirty;
+      dirty[moduleId] = generalInfoDirty;
       continue;
     }
 
     if (moduleId === 'publication') {
       dirty[moduleId] = publicationDirty;
-      continue;
-    }
-
-    if (moduleId === 'taxonomy') {
-      dirty[moduleId] = false;
       continue;
     }
 

@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Fs, Field, Input, Select, Chip, ChipSet, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
-import type { ObjectWorkspaceTaxonomyDomain } from '../../../services/object-workspace-parser';
+import type {
+  ObjectWorkspaceTaxonomyAssignment,
+  ObjectWorkspaceTaxonomyDomain,
+  ObjectWorkspaceTaxonomyNodeOption,
+  ObjectWorkspaceTaxonomyPathNode,
+} from '../../../services/object-workspace-parser';
 import { ARCHETYPE_META, TYPE_LABEL } from '../archetypes';
 
 const STATUS_OPTIONS = [
@@ -18,40 +23,104 @@ function secondaryFamilyLabel(code: string): string {
   return label ? `${upper} — ${label}` : upper;
 }
 
-/**
- * Read-only structured viewer for object_taxonomy.
- *
- * The "Valider" action is permanently disabled: taxonomy node options are not
- * exposed by the workspace payload (REST enrichment is gated off) and
- * useEditorSave.buildSaveArg() carries no object_taxonomy write — a taxonomy
- * edit would never persist. The modal therefore shows the current assignment
- * (domain + hierarchical path) and never offers a fake save.
- */
+function toTaxonomyPathNode(
+  node: ObjectWorkspaceTaxonomyNodeOption,
+  depth: number,
+): ObjectWorkspaceTaxonomyPathNode {
+  return {
+    id: node.id,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    depth,
+  };
+}
+
+function buildTaxonomyPath(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+  selectedNode: ObjectWorkspaceTaxonomyNodeOption,
+): ObjectWorkspaceTaxonomyPathNode[] {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const reversed: ObjectWorkspaceTaxonomyNodeOption[] = [];
+  const visited = new Set<string>();
+  let current: ObjectWorkspaceTaxonomyNodeOption | null = selectedNode;
+
+  while (current && !visited.has(current.id)) {
+    reversed.push(current);
+    visited.add(current.id);
+    current = current.parentId ? (nodeById.get(current.parentId) ?? null) : null;
+  }
+
+  return reversed.reverse().map((node, index) => toTaxonomyPathNode(node, index));
+}
+
+function buildTaxonomyAssignment(
+  domain: ObjectWorkspaceTaxonomyDomain,
+  selectedNode: ObjectWorkspaceTaxonomyNodeOption,
+): ObjectWorkspaceTaxonomyAssignment {
+  const path = buildTaxonomyPath(domain.nodes, selectedNode);
+  return {
+    recordId: domain.assignment?.recordId ?? null,
+    nodeId: selectedNode.id,
+    code: selectedNode.code,
+    label: selectedNode.label,
+    description: selectedNode.description,
+    depth: Math.max(0, path.length - 1),
+    path,
+    updatedAt: domain.assignment?.updatedAt ?? '',
+    source: 'workspace_taxonomy',
+  };
+}
+
+/** Editable structured selector for object_taxonomy. */
 function TaxonomyModal({
   open,
   domain,
   onClose,
+  onApply,
 }: {
   open: boolean;
   domain: ObjectWorkspaceTaxonomyDomain | null;
   onClose: () => void;
+  onApply: (assignment: ObjectWorkspaceTaxonomyAssignment) => void;
 }) {
   const [search, setSearch] = useState('');
+  const [selectedNodeId, setSelectedNodeId] = useState('');
   const assignment = domain?.assignment ?? null;
   const assignableNodes = (domain?.nodes ?? []).filter((node) => node.isAssignable);
+  const selectedNode = assignableNodes.find((node) => node.id === selectedNodeId) ?? null;
+  const hasSelectionChanged = Boolean(selectedNode && selectedNode.id !== assignment?.nodeId);
   const query = search.trim().toLowerCase();
   const filteredNodes = query
     ? assignableNodes.filter((node) => `${node.code} ${node.label}`.toLowerCase().includes(query))
     : assignableNodes;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setSearch('');
+    setSelectedNodeId(domain?.assignment?.nodeId ?? '');
+  }, [domain?.assignment?.nodeId, domain?.domain, open]);
+
+  function handleSave() {
+    if (!domain || !selectedNode || !hasSelectionChanged) {
+      return;
+    }
+
+    onApply(buildTaxonomyAssignment(domain, selectedNode));
+    onClose();
+  }
 
   return (
     <EditorModal
       open={open}
       title="Sous-catégorie métier"
       onClose={onClose}
-      onSave={onClose}
+      onSave={handleSave}
       saveLabel="Valider"
-      saveDisabled
+      saveDisabled={!hasSelectionChanged}
     >
       <div className="object-editor identity-taxo">
         {!domain ? (
@@ -93,28 +162,47 @@ function TaxonomyModal({
                   aria-label="Rechercher dans la taxonomie"
                   onChange={(event) => setSearch(event.target.value)}
                 />
-                <ul className="identity-taxo__list">
-                  {filteredNodes.map((node) => (
-                    <li
-                      key={node.id}
-                      className={`identity-taxo__node${node.id === assignment?.nodeId ? ' is-current' : ''}`}
-                      style={{ paddingLeft: 10 + node.depth * 16 }}
-                    >
-                      {node.label}
-                      {node.id === assignment?.nodeId && (
-                        <span className="identity-taxo__node-tag">Actuel</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                {filteredNodes.length > 0 ? (
+                  <ul className="identity-taxo__list">
+                    {filteredNodes.map((node) => (
+                      <li
+                        key={node.id}
+                        className={[
+                          'identity-taxo__node',
+                          node.id === assignment?.nodeId ? 'is-current' : '',
+                          node.id === selectedNodeId ? 'is-selected' : '',
+                        ].filter(Boolean).join(' ')}
+                      >
+                        <button
+                          type="button"
+                          className="identity-taxo__node-button"
+                          style={{ paddingLeft: 10 + node.depth * 16 }}
+                          aria-pressed={node.id === selectedNodeId}
+                          onClick={() => setSelectedNodeId(node.id)}
+                        >
+                          <span>{node.label}</span>
+                          {node.id === assignment?.nodeId && (
+                            <span className="identity-taxo__node-tag">Actuel</span>
+                          )}
+                          {node.id === selectedNodeId && node.id !== assignment?.nodeId && (
+                            <span className="identity-taxo__node-tag">Sélectionné</span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="identity-taxo__notice">Aucun nœud assignable ne correspond à cette recherche.</p>
+                )}
               </>
             )}
 
-            <p className="identity-taxo__notice">
-              L'édition de la sous-catégorie métier n'est pas encore disponible : l'API
-              n'expose pas les nœuds assignables et aucun chemin de sauvegarde object_taxonomy
-              n'est branché. La valeur ci-dessus est affichée en lecture seule.
-            </p>
+            {assignableNodes.length === 0 && (
+              <p className="identity-taxo__notice">
+                Les nœuds assignables ne sont pas exposés pour ce domaine. La valeur actuelle
+                reste affichée en lecture seule.
+              </p>
+            )}
           </>
         )}
       </div>
@@ -139,6 +227,18 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   const taxonomyPath = taxonomyDomain?.assignment?.path.map((node) => node.label).join(' ▸ ') ?? '';
   // object.secondary_types — transitory opt-in multi-family flag, not the taxonomy.
   const secondaryTypes = info.secondaryTypes ?? [];
+  function applyTaxonomyAssignment(assignment: ObjectWorkspaceTaxonomyAssignment) {
+    if (!taxonomyDomain) {
+      return;
+    }
+
+    editor.replaceModule('taxonomy', {
+      ...taxonomy,
+      domains: taxonomy.domains.map((domain) => (
+        domain.domain === taxonomyDomain.domain ? { ...domain, assignment } : domain
+      )),
+    });
+  }
 
   return (
     <Fs
@@ -237,6 +337,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         open={taxonomyOpen}
         domain={taxonomyDomain}
         onClose={() => setTaxonomyOpen(false)}
+        onApply={applyTaxonomyAssignment}
       />
     </Fs>
   );

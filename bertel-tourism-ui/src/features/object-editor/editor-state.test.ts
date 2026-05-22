@@ -37,4 +37,13 @@ describe('editor-state helpers', () => {
     expect(dirty.contacts).toBe(true);
     expect(dirty.location).toBe(false);
   });
+
+  it('tracks taxonomy as its own writable module', () => {
+    const baseline = fixtureModules();
+    const draft = cloneModules(baseline);
+    draft.taxonomy = { assignments: [{ nodeId: 'n1' }] } as never;
+    const dirty = getDirtySections({ objectId: 'o1', baseline, draft });
+    expect(dirty.taxonomy).toBe(true);
+    expect(dirty['general-info']).toBe(false);
+  });
 });

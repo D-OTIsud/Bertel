@@ -36,9 +36,9 @@ function TypeBlockSection(props: SectionProps) {
 
 export const SECTION_COMPONENTS: Record<string, ComponentType<SectionProps>> = {
   '01': SectionIdentity,
-  '02': SectionDescriptions,
-  '03': SectionLocation,
-  '04': SectionContacts,
+  '02': SectionLocation,
+  '03': SectionContacts,
+  '04': SectionDescriptions,
   '05': TypeBlockSection,
   '06': SectionMedia,
   '07': SectionCapacity,

@@ -2,7 +2,7 @@ import { Fs, Repeater, Input, Select, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceContactItem } from '../../../services/object-workspace-parser';
 
-/** Section 04 — contact channels (design: edit-primitives repeater rows). */
+/** Section 03 — contact channels (design: edit-primitives repeater rows). */
 export function SectionContacts({ editor, folded }: SectionProps) {
   const contacts = editor.draft.contacts;
 
@@ -44,7 +44,7 @@ export function SectionContacts({ editor, folded }: SectionProps) {
   }
 
   return (
-    <Fs num="04" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
+    <Fs num="03" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
       <Repeater
         items={contacts.objectItems}
         getKey={(it) => it.id}

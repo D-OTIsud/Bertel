@@ -47,7 +47,7 @@ const VALIDATION_RULES: ValidationRule[] = [
   ({ draft }) =>
     hasLongDescription(draft)
       ? null
-      : { section: '02', message: 'Le descriptif est court; ajoutez un texte éditorial plus complet.', tone: 'warn' },
+      : { section: '04', message: 'Le descriptif est court; ajoutez un texte éditorial plus complet.', tone: 'warn' },
   ({ draft }) =>
     draft.media.objectItems.length > 0
       ? null
@@ -55,7 +55,7 @@ const VALIDATION_RULES: ValidationRule[] = [
   ({ draft }) =>
     draft.contacts.objectItems.some((item) => hasText(item.value))
       ? null
-      : { section: '04', message: 'Ajoutez un contact public ou opérationnel.', tone: 'warn' },
+      : { section: '03', message: 'Ajoutez un contact public ou opérationnel.', tone: 'warn' },
   ({ draft }) =>
     draft.openings.periods.length > 0
       ? null

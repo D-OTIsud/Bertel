@@ -9,7 +9,7 @@ const LANG_LABELS: Record<string, string> = {
   es: 'Español',
 };
 
-/** Section 02 — multilingual descriptions (design: edit-primitives). */
+/** Section 04 — multilingual descriptions (design: edit-primitives). */
 export function SectionDescriptions({ editor, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
   const active = descriptions.activeLanguage;
@@ -60,7 +60,7 @@ export function SectionDescriptions({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="02"
+      num="04"
       title="Descriptions"
       sub="Accroche, descriptif, descriptifs OTI, plan d'accès — multilingue"
       folded={folded}

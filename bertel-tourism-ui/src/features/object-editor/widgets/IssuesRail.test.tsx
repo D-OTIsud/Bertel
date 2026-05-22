@@ -6,12 +6,12 @@ describe('IssuesRail', () => {
     const onGoToSection = jest.fn();
     render(
       <IssuesRail
-        items={[{ section: '02', message: 'Descriptif court', tone: 'warn' }]}
+        items={[{ section: '04', message: 'Descriptif court', tone: 'warn' }]}
         onGoToSection={onGoToSection}
       />,
     );
 
     fireEvent.click(screen.getByText('Descriptif court'));
-    expect(onGoToSection).toHaveBeenCalledWith('02');
+    expect(onGoToSection).toHaveBeenCalledWith('04');
   });
 });

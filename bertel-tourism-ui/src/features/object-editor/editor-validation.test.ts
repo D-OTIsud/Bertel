@@ -22,7 +22,7 @@ describe('editor publication validation', () => {
     const result = validateForPublication(draft, allowAll, 'HEB');
 
     expect(result.warnings).toContainEqual({
-      section: '02',
+      section: '04',
       message: expect.stringContaining('descriptif'),
       tone: 'warn',
     });

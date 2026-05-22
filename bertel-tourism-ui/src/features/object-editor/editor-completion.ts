@@ -58,21 +58,21 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
   },
   '02': {
     fields: [
-      (draft) => hasTranslatableText(draft.descriptions.object.chapo),
-      (draft) => hasTranslatableText(draft.descriptions.object.description),
-    ],
-  },
-  '03': {
-    fields: [
       (draft) => draft.location.main.address1,
       (draft) => draft.location.main.postcode,
       (draft) => draft.location.main.city,
       (draft) => hasText(draft.location.main.latitude) && hasText(draft.location.main.longitude),
     ],
   },
-  '04': {
+  '03': {
     fields: [
       (draft) => draft.contacts.objectItems.some((item) => hasText(item.value)),
+    ],
+  },
+  '04': {
+    fields: [
+      (draft) => hasTranslatableText(draft.descriptions.object.chapo),
+      (draft) => hasTranslatableText(draft.descriptions.object.description),
     ],
   },
   '06': {
@@ -206,7 +206,7 @@ export function computeSectionCompletions(
 
 /** Short nav hint (design ref: EN/CRE, 4/6) — falls back to percent. */
 export function computeNavHint(num: string, draft: ObjectWorkspaceModules, pct: number): string {
-  if (num === '02') {
+  if (num === '04') {
     const langs = draft.descriptions.availableLanguages;
     const object = draft.descriptions.object;
     const missing = langs.filter(

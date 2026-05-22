@@ -10,11 +10,24 @@ interface InputProps {
   mono?: boolean;
   lg?: boolean;
   readOnly?: boolean;
+  onBlur?: () => void;
   /** Accessible label for the input when no visible `<label>` is associated via htmlFor. */
   'aria-label'?: string;
 }
 
-export function Input({ value, onChange, type = 'text', placeholder, prefix, suffix, mono, lg, readOnly, 'aria-label': ariaLabel }: InputProps) {
+export function Input({
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  prefix,
+  suffix,
+  mono,
+  lg,
+  readOnly,
+  onBlur,
+  'aria-label': ariaLabel,
+}: InputProps) {
   const cls = `input${mono ? ' mono' : ''}${lg ? ' lg' : ''}${prefix ? ' has-prefix' : ''}${suffix ? ' has-suffix' : ''}`;
   const field = (
     <input
@@ -25,6 +38,7 @@ export function Input({ value, onChange, type = 'text', placeholder, prefix, suf
       readOnly={readOnly}
       aria-label={ariaLabel}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
     />
   );
   if (!prefix && !suffix) {

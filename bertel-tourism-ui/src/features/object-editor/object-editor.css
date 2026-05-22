@@ -1119,9 +1119,44 @@
   font-weight: 600;
   gap: 4px;
 }
+.object-editor .location-combobox {
+  position: relative;
+}
+.object-editor .location-combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 12;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(26, 22, 18, 0.12);
+}
+.object-editor .location-combobox__item {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.object-editor .location-combobox__item:hover,
+.object-editor .location-combobox__item--active {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.object-editor .location-combobox__item--create {
+  font-weight: 600;
+  color: var(--teal, #0d6e6e);
+}
 .object-editor .map-shell {
   display: grid;
-  grid-template-columns: minmax(132px, 168px) minmax(0, 1fr);
+  /* Side column ~10% wider than map (coords + communes INSEE). */
+  grid-template-columns: minmax(180px, 1.15fr) minmax(0, 0.85fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -1163,20 +1198,42 @@
   height: 100%;
   min-height: 200px;
 }
-.object-editor .map-mini__hint {
+.object-editor .map-mini__confirm {
   position: absolute;
   left: 8px;
   right: 8px;
   bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: rgba(255, 253, 248, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(26, 22, 18, 0.1);
+  z-index: 3;
+}
+.object-editor .map-mini__confirm-text {
   margin: 0;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(255, 253, 248, 0.92);
-  border: 1px solid var(--line-soft);
+  flex: 1 1 160px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.object-editor .map-mini__confirm-coords {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 10px;
+  font-weight: 500;
   color: var(--ink-3);
-  pointer-events: none;
-  z-index: 2;
+}
+.object-editor .map-mini__confirm-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .object-editor .editor-map-pin {
   width: 34px;

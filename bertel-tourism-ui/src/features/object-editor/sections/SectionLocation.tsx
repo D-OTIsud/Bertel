@@ -1,17 +1,22 @@
 import { useState } from 'react';
-import { Fs, Field, Input, Chip, ChipSet } from '../primitives';
+import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQueries';
+import { Fs, Field, Input } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
+import { LocationFormattedInput } from '../widgets/LocationFormattedInput';
 import { LocationPinMap } from '../widgets/LocationPinMap';
+import { LocationReferenceCombobox } from '../widgets/LocationReferenceCombobox';
 import { PendingFieldControl } from '../widgets/PendingFieldControl';
 import { dismissPendingFieldChange, findPendingFieldChange } from '../widgets/pending-field-change';
 
-/** Section 02 — address, commune, GPS (design: edit-primitives + map-shell). */
+/** Section 02 — address, commune, GPS. object_zone (multi-commune) is edited on itinerary sections, not here. */
 export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   const location = editor.draft.location;
   const main = location.main;
   const [approvingLieuDit, setApprovingLieuDit] = useState(false);
   const pendingLieuDit = findPendingFieldChange(editor.draft.publication.moderation.items, 'lieuDit');
+  const { data: locationReferences } = useLocationReferenceOptionsQuery();
+  const lieuDitOptions = locationReferences?.lieuDits ?? [];
   const hasCoords = Boolean(main.latitude?.trim() && main.longitude?.trim());
 
   function patch(next: Partial<ObjectWorkspaceLocationForm>) {
@@ -41,10 +46,14 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
     >
       <div className="grid-2" style={{ marginBottom: 12 }}>
         <Field label="Adresse" required>
-          <Input value={main.address1} onChange={(v) => patch({ address1: v })} />
+          <LocationFormattedInput value={main.address1} onChange={(v) => patch({ address1: v })} />
         </Field>
         <Field label="Complément d'adresse">
-          <Input value={main.address2} onChange={(v) => patch({ address2: v })} placeholder="Bras-Long" />
+          <LocationFormattedInput
+            value={main.address2}
+            onChange={(v) => patch({ address2: v })}
+            placeholder="Bras-Long"
+          />
         </Field>
       </div>
 
@@ -63,15 +72,28 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         </Field>
       </div>
 
-      <Field label="Lieu-dit" hint="Nom local utilisé pour situer la fiche">
-        <PendingFieldControl
-          value={main.lieuDit}
-          onChange={(v) => patch({ lieuDit: v })}
-          pending={pendingLieuDit}
-          onApprove={approveLieuDit}
-          approving={approvingLieuDit}
-          placeholder="Bras-Long"
-        />
+      <Field
+        label="Lieu-dit"
+        hint="Choisissez un lieu-dit du corpus ou saisissez-en un nouveau (majuscule en tête de mot)."
+      >
+        {pendingLieuDit?.status === 'pending' ? (
+          <PendingFieldControl
+            value={main.lieuDit}
+            onChange={(v) => patch({ lieuDit: v })}
+            pending={pendingLieuDit}
+            onApprove={approveLieuDit}
+            approving={approvingLieuDit}
+            placeholder="Bras-Long"
+          />
+        ) : (
+          <LocationReferenceCombobox
+            value={main.lieuDit}
+            options={lieuDitOptions}
+            onChange={(v) => patch({ lieuDit: v })}
+            placeholder="Bras-Long"
+            aria-label="Lieu-dit"
+          />
+        )}
       </Field>
 
       <div style={{ marginTop: 12 }}>
@@ -93,14 +115,6 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
                 <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
               </Field>
             </div>
-            <div className="chip-group__label">Localisations</div>
-            <ChipSet>
-              {location.zoneCodes.length > 0 ? (
-                location.zoneCodes.map((z) => <Chip key={z} label={z} on sm />)
-              ) : (
-                <Chip label="Aucune étiquette zone" sm />
-              )}
-            </ChipSet>
           </div>
           <LocationPinMap
             latitude={main.latitude}

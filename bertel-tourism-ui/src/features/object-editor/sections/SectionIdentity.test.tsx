@@ -84,64 +84,6 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
   },
 ];
 
-const hloTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
-  {
-    id: 'n-location-saisonniere',
-    code: 'location_saisonniere',
-    label: 'Location saisonnière',
-    description: '',
-    parentId: null,
-    parentCode: null,
-    depth: 0,
-    isAssignable: false,
-    position: 1,
-  },
-  {
-    id: 'n-appartement',
-    code: 'appartement',
-    label: 'Appartement',
-    description: '',
-    parentId: 'n-location-saisonniere',
-    parentCode: 'location_saisonniere',
-    depth: 1,
-    isAssignable: true,
-    position: 2,
-  },
-  {
-    id: 'n-bungalow',
-    code: 'bungalow_chalet',
-    label: 'Bungalow & Chalet',
-    description: '',
-    parentId: 'n-location-saisonniere',
-    parentCode: 'location_saisonniere',
-    depth: 1,
-    isAssignable: true,
-    position: 3,
-  },
-  {
-    id: 'n-chambre-hotes',
-    code: 'chambre_d_hotes',
-    label: "Chambre d'hôtes",
-    description: '',
-    parentId: null,
-    parentCode: null,
-    depth: 0,
-    isAssignable: false,
-    position: 4,
-  },
-  {
-    id: 'n-chambre-hote',
-    code: 'chambre_d_hote',
-    label: "Chambre d'hôte",
-    description: '',
-    parentId: 'n-chambre-hotes',
-    parentCode: 'chambre_d_hotes',
-    depth: 1,
-    isAssignable: true,
-    position: 5,
-  },
-];
-
 describe('SectionIdentity', () => {
   it('renders the commercial name, ID OTI, object type and raison sociale', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
@@ -225,34 +167,5 @@ describe('SectionIdentity', () => {
     expect(result.current.dirtySections.taxonomy).toBe(true);
     rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
-  });
-
-  it('shows taxonomy parent nodes as groups with selectable children', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(hloTaxonomyNodes, null)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
-    const dialog = screen.getByRole('dialog');
-
-    expect(within(dialog).getByText('Location saisonnière')).toBeInTheDocument();
-    expect(within(dialog).queryByRole('button', { name: /^Location saisonnière$/i })).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Appartement/i })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /Bungalow & Chalet/i })).toBeInTheDocument();
-  });
-
-  it('collapses near-identical parent and child taxonomy labels into one selectable choice', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(hloTaxonomyNodes, null)));
-    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
-    const dialog = screen.getByRole('dialog');
-
-    expect(within(dialog).getAllByText(/Chambre d'hôtes?/i)).toHaveLength(1);
-    fireEvent.click(within(dialog).getByRole('button', { name: /Chambre d'hôtes/i }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Valider' }));
-
-    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
-    expect(screen.getByText("Chambre d'hôtes")).toBeInTheDocument();
-    expect(screen.queryByText(/Chambre d'hôtes ▸ Chambre d'hôte/i)).not.toBeInTheDocument();
   });
 });

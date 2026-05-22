@@ -61,11 +61,11 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         <Field label="Code postal" required>
           <Input value={main.postcode} onChange={(v) => patch({ postcode: v })} mono />
         </Field>
-        <Field label="Bureau postal" hint="Ex : Le Tampon">
-          <Input value={main.address3} onChange={(v) => patch({ address3: v })} />
-        </Field>
         <Field label="Commune">
           <Input value={main.city} onChange={(v) => patch({ city: v })} />
+        </Field>
+        <Field label="Bureau postal" hint="Ex : Le Tampon">
+          <Input value={main.address3} onChange={(v) => patch({ address3: v })} />
         </Field>
         <Field label="Zone touristique" hint="Secteur touristique associé">
           <Input value={main.zoneTouristique} onChange={(v) => patch({ zoneTouristique: v })} />

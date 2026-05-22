@@ -52,7 +52,7 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
           <LocationFormattedInput
             value={main.address2}
             onChange={(v) => patch({ address2: v })}
-            placeholder="Bras-Long"
+            placeholder="Appartement n° 3…"
           />
         </Field>
       </div>

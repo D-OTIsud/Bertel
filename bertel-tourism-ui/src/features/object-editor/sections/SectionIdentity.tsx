@@ -65,6 +65,123 @@ function buildTaxonomyAssignment(
   };
 }
 
+function normalizeTaxonomyLabel(label: string): string {
+  return label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/['’]/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.length > 3 ? part.replace(/s$/, '') : part)
+    .join(' ');
+}
+
+function hasSameTaxonomyMeaning(left: string, right: string): boolean {
+  const normalizedLeft = normalizeTaxonomyLabel(left);
+  const normalizedRight = normalizeTaxonomyLabel(right);
+  return Boolean(normalizedLeft && normalizedLeft === normalizedRight);
+}
+
+function collapseTaxonomyPath(path: ObjectWorkspaceTaxonomyPathNode[]): ObjectWorkspaceTaxonomyPathNode[] {
+  return path.filter((node, index) => (
+    index === 0 || !hasSameTaxonomyMeaning(path[index - 1].label, node.label)
+  ));
+}
+
+function formatTaxonomyPath(assignment: ObjectWorkspaceTaxonomyAssignment | null | undefined): string {
+  if (!assignment) {
+    return '';
+  }
+
+  return collapseTaxonomyPath(assignment.path).map((node) => node.label).join(' ▸ ');
+}
+
+interface TaxonomyDisplayRow {
+  id: string;
+  node: ObjectWorkspaceTaxonomyNodeOption;
+  targetNodeId: string;
+  depth: number;
+  selectable: boolean;
+  searchText: string;
+}
+
+function sortTaxonomyNodes(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+): ObjectWorkspaceTaxonomyNodeOption[] {
+  return [...nodes].sort((left, right) => (
+    left.position - right.position
+    || left.label.localeCompare(right.label, 'fr')
+    || left.code.localeCompare(right.code, 'fr')
+  ));
+}
+
+function buildTaxonomyDisplayRows(nodes: ObjectWorkspaceTaxonomyNodeOption[]): TaxonomyDisplayRow[] {
+  const childrenByParentId = new Map<string | null, ObjectWorkspaceTaxonomyNodeOption[]>();
+  for (const node of nodes) {
+    const siblings = childrenByParentId.get(node.parentId) ?? [];
+    siblings.push(node);
+    childrenByParentId.set(node.parentId, siblings);
+  }
+
+  for (const [parentId, children] of childrenByParentId) {
+    childrenByParentId.set(parentId, sortTaxonomyNodes(children));
+  }
+
+  const rows: TaxonomyDisplayRow[] = [];
+  const visited = new Set<string>();
+
+  function appendNode(node: ObjectWorkspaceTaxonomyNodeOption, displayDepth: number) {
+    if (visited.has(node.id)) {
+      return;
+    }
+    visited.add(node.id);
+
+    const children = childrenByParentId.get(node.id) ?? [];
+    const collapsedChild = !node.isAssignable && children.length === 1 && children[0].isAssignable
+      && hasSameTaxonomyMeaning(node.label, children[0].label)
+      ? children[0]
+      : null;
+
+    if (collapsedChild) {
+      rows.push({
+        id: `collapsed-${node.id}-${collapsedChild.id}`,
+        node,
+        targetNodeId: collapsedChild.id,
+        depth: displayDepth,
+        selectable: true,
+        searchText: `${node.code} ${node.label} ${collapsedChild.code} ${collapsedChild.label}`.toLowerCase(),
+      });
+      visited.add(collapsedChild.id);
+      return;
+    }
+
+    rows.push({
+      id: node.id,
+      node,
+      targetNodeId: node.id,
+      depth: displayDepth,
+      selectable: node.isAssignable,
+      searchText: `${node.code} ${node.label}`.toLowerCase(),
+    });
+
+    for (const child of children) {
+      appendNode(child, displayDepth + 1);
+    }
+  }
+
+  for (const root of childrenByParentId.get(null) ?? []) {
+    appendNode(root, 0);
+  }
+
+  for (const node of sortTaxonomyNodes(nodes)) {
+    appendNode(node, Math.max(0, node.depth));
+  }
+
+  return rows;
+}
+
 /** Editable taxonomy selector. */
 function TaxonomyModal({
   open,
@@ -80,13 +197,16 @@ function TaxonomyModal({
   const [search, setSearch] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('');
   const assignment = domain?.assignment ?? null;
-  const assignableNodes = (domain?.nodes ?? []).filter((node) => node.isAssignable);
-  const selectedNode = assignableNodes.find((node) => node.id === selectedNodeId) ?? null;
+  const nodes = domain?.nodes ?? [];
+  const rows = buildTaxonomyDisplayRows(nodes);
+  const hasSelectableRows = rows.some((row) => row.selectable);
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId && node.isAssignable) ?? null;
   const hasSelectionChanged = Boolean(selectedNode && selectedNode.id !== assignment?.nodeId);
   const query = search.trim().toLowerCase();
-  const filteredNodes = query
-    ? assignableNodes.filter((node) => `${node.code} ${node.label}`.toLowerCase().includes(query))
-    : assignableNodes;
+  const filteredRows = query
+    ? rows.filter((row) => row.searchText.includes(query))
+    : rows;
+  const currentPath = collapseTaxonomyPath(assignment?.path ?? []);
 
   useEffect(() => {
     if (!open) {
@@ -131,7 +251,7 @@ function TaxonomyModal({
               <span className="identity-taxo__field-label">Sous-catégorie actuelle</span>
               {assignment ? (
                 <span className="identity-taxo__crumbs">
-                  {assignment.path.map((node, index) => (
+                  {currentPath.map((node, index) => (
                     <span key={node.id} className="identity-taxo__crumb">
                       {index > 0 && (
                         <span className="identity-taxo__sep" aria-hidden="true">▸</span>
@@ -145,7 +265,7 @@ function TaxonomyModal({
               )}
             </div>
 
-            {assignableNodes.length > 0 && (
+            {hasSelectableRows && (
               <>
                 <input
                   type="search"
@@ -155,32 +275,43 @@ function TaxonomyModal({
                   aria-label="Rechercher dans la taxonomie"
                   onChange={(event) => setSearch(event.target.value)}
                 />
-                {filteredNodes.length > 0 ? (
+                {filteredRows.length > 0 ? (
                   <ul className="identity-taxo__list">
-                    {filteredNodes.map((node) => (
+                    {filteredRows.map((row) => (
                       <li
-                        key={node.id}
+                        key={row.id}
                         className={[
                           'identity-taxo__node',
-                          node.id === assignment?.nodeId ? 'is-current' : '',
-                          node.id === selectedNodeId ? 'is-selected' : '',
+                          row.selectable ? 'is-option' : 'is-group',
+                          row.targetNodeId === assignment?.nodeId ? 'is-current' : '',
+                          row.targetNodeId === selectedNodeId ? 'is-selected' : '',
                         ].filter(Boolean).join(' ')}
                       >
-                        <button
-                          type="button"
-                          className="identity-taxo__node-button"
-                          style={{ paddingLeft: 10 + node.depth * 16 }}
-                          aria-pressed={node.id === selectedNodeId}
-                          onClick={() => setSelectedNodeId(node.id)}
-                        >
-                          <span>{node.label}</span>
-                          {node.id === assignment?.nodeId && (
-                            <span className="identity-taxo__node-tag">Actuel</span>
-                          )}
-                          {node.id === selectedNodeId && node.id !== assignment?.nodeId && (
-                            <span className="identity-taxo__node-tag">Sélectionné</span>
-                          )}
-                        </button>
+                        {row.selectable ? (
+                          <button
+                            type="button"
+                            className="identity-taxo__node-button"
+                            style={{ paddingLeft: 10 + row.depth * 16 }}
+                            aria-pressed={row.targetNodeId === selectedNodeId}
+                            onClick={() => setSelectedNodeId(row.targetNodeId)}
+                          >
+                            <span className="identity-taxo__node-label">{row.node.label}</span>
+                            {row.targetNodeId === assignment?.nodeId && (
+                              <span className="identity-taxo__node-tag">Actuel</span>
+                            )}
+                            {row.targetNodeId === selectedNodeId && row.targetNodeId !== assignment?.nodeId && (
+                              <span className="identity-taxo__node-tag">Sélectionné</span>
+                            )}
+                          </button>
+                        ) : (
+                          <div
+                            className="identity-taxo__node-button identity-taxo__node-button--group"
+                            style={{ paddingLeft: 10 + row.depth * 16 }}
+                          >
+                            <span className="identity-taxo__node-label">{row.node.label}</span>
+                            <span className="identity-taxo__node-tag">Famille</span>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -190,7 +321,7 @@ function TaxonomyModal({
               </>
             )}
 
-            {assignableNodes.length === 0 && (
+            {!hasSelectableRows && (
               <p className="identity-taxo__notice">
                 Les options de sous-catégorie ne sont pas disponibles pour ce type de fiche.
                 La valeur actuelle reste affichée en lecture seule.
@@ -215,7 +346,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   const legalName = editor.draft.provider?.companyName || '';
   const canonicalId = objectId ?? '';
   const taxonomyDomain = taxonomy.domains[0] ?? null;
-  const taxonomyPath = taxonomyDomain?.assignment?.path.map((node) => node.label).join(' ▸ ') ?? '';
+  const taxonomyPath = formatTaxonomyPath(taxonomyDomain?.assignment);
   function applyTaxonomyAssignment(assignment: ObjectWorkspaceTaxonomyAssignment) {
     if (!taxonomyDomain) {
       return;

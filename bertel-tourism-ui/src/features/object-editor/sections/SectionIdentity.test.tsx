@@ -4,12 +4,27 @@ import { SectionIdentity } from './SectionIdentity';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import type {
   ObjectWorkspaceModules,
+  ObjectWorkspaceTaxonomyAssignment,
   ObjectWorkspaceTaxonomyDomain,
 } from '../../../services/object-workspace-parser';
 
 /** A taxonomy domain with an assignment + hierarchical path; `nodes` defaults to empty. */
 function taxonomyDomainFixture(
   nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [],
+  assignment: ObjectWorkspaceTaxonomyAssignment | null = {
+    recordId: 'tx1',
+    nodeId: 'n-hotel-familial',
+    code: 'family_hotel',
+    label: 'Hôtel familial',
+    description: '',
+    depth: 1,
+    path: [
+      { id: 'n-hotel', code: 'hotel', label: 'Hôtel', description: '', depth: 0 },
+      { id: 'n-hotel-familial', code: 'family_hotel', label: 'Hôtel familial', description: '', depth: 1 },
+    ],
+    updatedAt: '',
+    source: '',
+  },
 ): ObjectWorkspaceTaxonomyDomain {
   return {
     domain: 'hosting_kind',
@@ -17,26 +32,19 @@ function taxonomyDomainFixture(
     description: '',
     objectType: 'HOT',
     nodes,
-    assignment: {
-      recordId: 'tx1',
-      nodeId: 'n-hotel-familial',
-      code: 'family_hotel',
-      label: 'Hôtel familial',
-      description: '',
-      depth: 1,
-      path: [
-        { id: 'n-hotel', code: 'hotel', label: 'Hôtel', description: '', depth: 0 },
-        { id: 'n-hotel-familial', code: 'family_hotel', label: 'Hôtel familial', description: '', depth: 1 },
-      ],
-      updatedAt: '',
-      source: '',
-    },
+    assignment,
   };
 }
 
-function modulesWithTaxonomy(nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = []): ObjectWorkspaceModules {
+function modulesWithTaxonomy(
+  nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [],
+  assignment?: ObjectWorkspaceTaxonomyAssignment | null,
+): ObjectWorkspaceModules {
   const modules = fullModulesFixture();
-  modules.taxonomy = { domains: [taxonomyDomainFixture(nodes)], unavailableReason: null };
+  modules.taxonomy = {
+    domains: [assignment === undefined ? taxonomyDomainFixture(nodes) : taxonomyDomainFixture(nodes, assignment)],
+    unavailableReason: null,
+  };
   return modules;
 }
 
@@ -73,6 +81,64 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
     depth: 1,
     isAssignable: true,
     position: 3,
+  },
+];
+
+const hloTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
+  {
+    id: 'n-location-saisonniere',
+    code: 'location_saisonniere',
+    label: 'Location saisonnière',
+    description: '',
+    parentId: null,
+    parentCode: null,
+    depth: 0,
+    isAssignable: false,
+    position: 1,
+  },
+  {
+    id: 'n-appartement',
+    code: 'appartement',
+    label: 'Appartement',
+    description: '',
+    parentId: 'n-location-saisonniere',
+    parentCode: 'location_saisonniere',
+    depth: 1,
+    isAssignable: true,
+    position: 2,
+  },
+  {
+    id: 'n-bungalow',
+    code: 'bungalow_chalet',
+    label: 'Bungalow & Chalet',
+    description: '',
+    parentId: 'n-location-saisonniere',
+    parentCode: 'location_saisonniere',
+    depth: 1,
+    isAssignable: true,
+    position: 3,
+  },
+  {
+    id: 'n-chambre-hotes',
+    code: 'chambre_d_hotes',
+    label: "Chambre d'hôtes",
+    description: '',
+    parentId: null,
+    parentCode: null,
+    depth: 0,
+    isAssignable: false,
+    position: 4,
+  },
+  {
+    id: 'n-chambre-hote',
+    code: 'chambre_d_hote',
+    label: "Chambre d'hôte",
+    description: '',
+    parentId: 'n-chambre-hotes',
+    parentCode: 'chambre_d_hotes',
+    depth: 1,
+    isAssignable: true,
+    position: 5,
   },
 ];
 
@@ -128,7 +194,7 @@ describe('SectionIdentity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Hôtel')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Hôtel').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
   });
 
@@ -159,5 +225,34 @@ describe('SectionIdentity', () => {
     expect(result.current.dirtySections.taxonomy).toBe(true);
     rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
+  });
+
+  it('shows taxonomy parent nodes as groups with selectable children', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(hloTaxonomyNodes, null)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getByText('Location saisonnière')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /^Location saisonnière$/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Appartement/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Bungalow & Chalet/i })).toBeInTheDocument();
+  });
+
+  it('collapses near-identical parent and child taxonomy labels into one selectable choice', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(hloTaxonomyNodes, null)));
+    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getAllByText(/Chambre d'hôtes?/i)).toHaveLength(1);
+    fireEvent.click(within(dialog).getByRole('button', { name: /Chambre d'hôtes/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Valider' }));
+
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText("Chambre d'hôtes")).toBeInTheDocument();
+    expect(screen.queryByText(/Chambre d'hôtes ▸ Chambre d'hôte/i)).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { Fs, Input, Select } from '../primitives';
+import { Fs, Input, ReferenceSelect, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 
@@ -11,7 +11,7 @@ const STATUS_OPTIONS = [
   { v: 'revoked', l: 'Retirée' },
 ];
 
-const CLASS_COLS = '14px 1.4fr 1.2fr 110px 95px 95px 1fr auto';
+const CLASS_COLS = '14px 1.4fr 1.2fr 110px 95px 95px auto';
 
 function statusBucket(item: ObjectWorkspaceDistinctionItem) {
   const status = item.status || 'active';
@@ -96,7 +96,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
         </div>
       </div>
 
-      {repHeader(CLASS_COLS, ['', 'Référentiel (scheme)', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au", 'Handicap'])}
+      {repHeader(CLASS_COLS, ['', 'Référentiel (scheme)', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au"])}
       <div className="repeater">
         {rows.map(({ group, item }) => (
           <div
@@ -109,7 +109,16 @@ export function SectionClassification({ editor, folded }: SectionProps) {
               <div className="class-row__scheme">{group.schemeLabel}</div>
               <small>{item.schemeCode}</small>
             </div>
-            <Input value={item.valueLabel} onChange={(valueLabel) => update(group.schemeCode, item, { valueLabel })} />
+            <ReferenceSelect
+              aria-label="Valeur attribuée"
+              value={item.valueCode}
+              options={distinctions.schemeOptions.find((s) => s.code === group.schemeCode)?.valueOptions ?? []}
+              onChange={(_code, option) => {
+                if (option) {
+                  update(group.schemeCode, item, { valueId: option.id, valueCode: option.code, valueLabel: option.label });
+                }
+              }}
+            />
             <Select
               value={item.status || 'active'}
               options={STATUS_OPTIONS}
@@ -117,15 +126,6 @@ export function SectionClassification({ editor, folded }: SectionProps) {
             />
             <Input type="date" value={item.awardedAt} onChange={(awardedAt) => update(group.schemeCode, item, { awardedAt })} />
             <Input type="date" value={item.validUntil} onChange={(validUntil) => update(group.schemeCode, item, { validUntil })} />
-            <Input
-              value={item.disabilityTypesCovered.join(', ')}
-              placeholder="Types couverts"
-              onChange={(value) =>
-                update(group.schemeCode, item, {
-                  disabilityTypesCovered: value.split(',').map((entry) => entry.trim()).filter(Boolean),
-                })
-              }
-            />
           </div>
         ))}
       </div>

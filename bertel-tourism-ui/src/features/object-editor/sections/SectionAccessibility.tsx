@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChipMultiSelect, Field, Fs, LangTabs, Select, Textarea, Toggle } from '../primitives';
+import { ChipMultiSelect, Field, Fs, LangTabs, Select, StatCard, Textarea, Toggle } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -60,6 +60,24 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
     });
   }
 
+  // ── Stat header values (mirroring §11 SectionSustainability KPI row) ─────────
+  // "Label T&H": whether at least one accessibility label is held.
+  const hasAccessibilityLabel = distinctions.accessibilityLabels.length > 0;
+  // "Équipements accessibles": count of accessibility-family amenity codes currently selected.
+  const accessibleEquipmentCount = accessibilityOptions.filter((o) =>
+    characteristics.selectedAmenityCodes.includes(o.code),
+  ).length;
+  // "Couverture": union of disability types covered across all held accessibility labels.
+  const coveredDisabilityTypes = Array.from(
+    new Set(distinctions.accessibilityLabels.flatMap((item) => item.disabilityTypesCovered)),
+  );
+  const coverageLabel =
+    coveredDisabilityTypes.length > 0
+      ? coveredDisabilityTypes
+          .map((code) => DISABILITY_TYPES.find((dt) => dt.code === code)?.label ?? code)
+          .join(', ')
+      : '—';
+
   const langTabs = descriptions.availableLanguages.map((code) => ({
     code,
     label: LANG_LABELS[code] ?? code.toUpperCase(),
@@ -70,7 +88,7 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
     <Fs
       num="10"
       title="Accessibilité"
-      sub="Description adaptée multilingue, équipements (ref_amenity famille accessibility), chambres / lieux accessibles"
+      sub="Équipements PMR (ref_amenity famille accessibility), label Tourisme & Handicap, texte adapté multilingue"
       folded={folded}
       pill={{
         tone: selectedAccessibilityCount > 0 ? 'ok' : 'warn',
@@ -80,6 +98,13 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
             : 'Équipements PMR',
       }}
     >
+      {/* ── KPI stat row — mirrors §11 SectionSustainability pattern ─────────────── */}
+      <div className="sust-kpi">
+        <StatCard label="Label T&H" value={hasAccessibilityLabel ? '✓' : '✗'} />
+        <StatCard label="Équipements accessibles" value={String(accessibleEquipmentCount)} suffix={`/ ${accessibilityOptions.length}`} />
+        <StatCard label="Couverture" value={coverageLabel} />
+      </div>
+
       <Field
         label="Description adaptée (description_adapted)"
         hint="Texte alternatif détaillé — utilisé par Acceslibre et lecteurs d'écran. Multilingue."

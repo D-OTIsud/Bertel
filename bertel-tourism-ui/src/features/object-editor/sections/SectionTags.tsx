@@ -144,6 +144,7 @@ export function SectionTags({ editor, folded }: SectionProps) {
                 items={displayed}
                 getId={(t) => t.tagId || t.slug}
                 onReorder={(next) => editor.replaceModule('tags', { ...module, displayed: next })}
+                columns="14px 1fr 150px 130px auto"
                 renderItem={(tag, index) => (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

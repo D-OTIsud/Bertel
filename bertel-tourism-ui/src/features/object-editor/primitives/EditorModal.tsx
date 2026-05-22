@@ -16,14 +16,14 @@ interface EditorModalProps {
 export function EditorModal({ open, title, onClose, onSave, saveLabel = 'Enregistrer', saveDisabled = false, children }: EditorModalProps) {
   return (
     <Dialog open={open} onOpenChange={(next: boolean) => { if (!next) onClose(); }}>
-      <DialogContent>
+      <DialogContent className="object-editor">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="ed-modal__body">{children}</div>
         <DialogFooter>
-          <button type="button" className="btn btn--ghost" onClick={onClose}>Annuler</button>
-          <button type="button" className="btn btn--primary" onClick={onSave} disabled={saveDisabled}>{saveLabel}</button>
+          <button type="button" className="btn" onClick={onClose}>Annuler</button>
+          <button type="button" className="btn primary" onClick={onSave} disabled={saveDisabled}>{saveLabel}</button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

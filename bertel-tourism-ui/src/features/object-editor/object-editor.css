@@ -1974,13 +1974,24 @@
 
 /* Taxonomy modal body. */
 .object-editor .identity-taxo { display: flex; flex-direction: column; gap: 12px; }
-.object-editor .identity-taxo__domain,
-.object-editor .identity-taxo__path { display: flex; flex-direction: column; gap: 4px; }
+.object-editor .identity-taxo__domain {
+  margin: 0;
+  font-size: 11px; color: var(--ink-4);
+}
+.object-editor .identity-taxo__domain strong { color: var(--ink-2); font-weight: 600; }
 .object-editor .identity-taxo__field-label {
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-4);
 }
-.object-editor .identity-taxo__domain strong { font-size: 13.5px; color: var(--ink); }
+.object-editor .identity-taxo__summary {
+  display: flex; flex-direction: column; gap: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.object-editor .identity-taxo__summary-row { display: flex; flex-direction: column; gap: 4px; }
+.object-editor .identity-taxo__summary-row--live .identity-taxo__field-label { color: var(--accent); }
 .object-editor .identity-taxo__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .object-editor .identity-taxo__crumb { display: inline-flex; align-items: center; gap: 4px; }
 .object-editor .identity-taxo__sep { color: var(--ink-4); font-size: 11px; }
@@ -1993,8 +2004,7 @@
   background: var(--accent-tint); color: var(--ink);
 }
 .object-editor .identity-taxo__none { color: var(--ink-4); font-size: 12px; }
-/* Cascade selector — live selection preview + drill-down columns. */
-.object-editor .identity-taxo__preview { display: flex; flex-direction: column; gap: 4px; }
+/* Cascade selector — drill-down columns. */
 .object-editor .identity-taxo__cascade {
   display: flex; gap: 6px;
   border: 1px solid var(--line-soft);
@@ -2014,7 +2024,7 @@
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 7px 8px;
+  padding: 8px 10px;
   font: inherit;
   font-size: 12.5px; color: var(--ink-2);
   text-align: left;
@@ -2036,6 +2046,7 @@
   background: var(--accent-tint);
   color: var(--ink);
   font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .object-editor .identity-taxo__cell-label {
   flex: 1; min-width: 0;

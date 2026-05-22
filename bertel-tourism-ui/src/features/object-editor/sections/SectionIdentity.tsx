@@ -230,23 +230,21 @@ function TaxonomyModal({
           </p>
         ) : (
           <>
-            <div className="identity-taxo__domain">
-              <span className="identity-taxo__field-label">Domaine</span>
-              <strong>{domain.label}</strong>
-            </div>
+            <p className="identity-taxo__domain">
+              Domaine — <strong>{domain.label}</strong>
+            </p>
 
-            <div className="identity-taxo__path">
-              <span className="identity-taxo__field-label">Sous-catégorie actuelle</span>
-              {assignment ? (
-                <TaxonomyCrumbs path={currentPath} />
-              ) : (
-                <em className="identity-taxo__none">Aucune sous-catégorie assignée</em>
-              )}
-            </div>
-
-            {hasSelectableNodes ? (
-              <>
-                <div className="identity-taxo__preview">
+            <div className="identity-taxo__summary">
+              <div className="identity-taxo__summary-row">
+                <span className="identity-taxo__field-label">Sous-catégorie actuelle</span>
+                {assignment ? (
+                  <TaxonomyCrumbs path={currentPath} />
+                ) : (
+                  <em className="identity-taxo__none">Aucune sous-catégorie assignée</em>
+                )}
+              </div>
+              {hasSelectableNodes && (
+                <div className="identity-taxo__summary-row identity-taxo__summary-row--live">
                   <span className="identity-taxo__field-label">Sélection en cours</span>
                   {previewPath.length > 0 ? (
                     <TaxonomyCrumbs path={previewPath} />
@@ -256,41 +254,43 @@ function TaxonomyModal({
                     </em>
                   )}
                 </div>
+              )}
+            </div>
 
-                <div className="identity-taxo__cascade">
-                  {columns.map((column, columnIndex) => (
-                    <ul key={columnIndex} className="identity-taxo__col">
-                      {column.map((node) => {
-                        const onActivePath = activePath.includes(node.id);
-                        const isSelected = node.id === selectedId;
-                        const isCurrent = node.id === assignment?.nodeId;
-                        const hasChildren = (childrenByParentId.get(node.id)?.length ?? 0) > 0;
-                        return (
-                          <li key={node.id}>
-                            <button
-                              type="button"
-                              className={[
-                                'identity-taxo__cell',
-                                node.isAssignable ? 'is-option' : 'is-group',
-                                onActivePath ? 'is-active' : '',
-                                isSelected ? 'is-selected' : '',
-                              ].filter(Boolean).join(' ')}
-                              aria-pressed={onActivePath}
-                              onClick={() => handleSelect(node)}
-                            >
-                              <span className="identity-taxo__cell-label">{node.label}</span>
-                              {isCurrent && <span className="identity-taxo__cell-tag">Actuel</span>}
-                              {hasChildren && (
-                                <span className="identity-taxo__cell-caret" aria-hidden="true">›</span>
-                              )}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ))}
-                </div>
-              </>
+            {hasSelectableNodes ? (
+              <div className="identity-taxo__cascade">
+                {columns.map((column, columnIndex) => (
+                  <ul key={columnIndex} className="identity-taxo__col">
+                    {column.map((node) => {
+                      const onActivePath = activePath.includes(node.id);
+                      const isSelected = node.id === selectedId;
+                      const isCurrent = node.id === assignment?.nodeId;
+                      const hasChildren = (childrenByParentId.get(node.id)?.length ?? 0) > 0;
+                      return (
+                        <li key={node.id}>
+                          <button
+                            type="button"
+                            className={[
+                              'identity-taxo__cell',
+                              node.isAssignable ? 'is-option' : 'is-group',
+                              onActivePath ? 'is-active' : '',
+                              isSelected ? 'is-selected' : '',
+                            ].filter(Boolean).join(' ')}
+                            aria-pressed={onActivePath}
+                            onClick={() => handleSelect(node)}
+                          >
+                            <span className="identity-taxo__cell-label">{node.label}</span>
+                            {isCurrent && <span className="identity-taxo__cell-tag">Actuel</span>}
+                            {hasChildren && (
+                              <span className="identity-taxo__cell-caret" aria-hidden="true">›</span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ))}
+              </div>
             ) : (
               <p className="identity-taxo__notice">
                 Les options de sous-catégorie ne sont pas disponibles pour ce type de fiche.

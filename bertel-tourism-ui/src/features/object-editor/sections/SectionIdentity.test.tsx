@@ -138,7 +138,7 @@ describe('SectionIdentity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/nœuds assignables ne sont pas exposés/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/options de sous-catégorie ne sont pas disponibles/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();
   });
@@ -159,31 +159,5 @@ describe('SectionIdentity', () => {
     expect(result.current.dirtySections.taxonomy).toBe(true);
     rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
-  });
-
-  it('shows "Aucune famille secondaire" when secondary_types is empty', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} archetype="HEB" />);
-
-    expect(screen.getByText('Aucune famille secondaire')).toBeInTheDocument();
-    expect(screen.queryByText('Principal')).not.toBeInTheDocument();
-  });
-
-  it('renders real secondary families and never the archetype as a secondary family', () => {
-    const modules = fullModulesFixture();
-    modules.generalInfo.secondaryTypes = ['RES'];
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    render(
-      <SectionIdentity
-        editor={result.current}
-        permissions={allowAll}
-        archetype="HEB"
-        typeCode="HOT"
-      />,
-    );
-
-    expect(screen.getByText('RES — Restaurant')).toBeInTheDocument();
-    expect(screen.queryByText('Aucune famille secondaire')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'HEB' })).not.toBeInTheDocument();
   });
 });

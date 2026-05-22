@@ -50,13 +50,9 @@ export function BlockASC({ editor, folded }: SectionProps) {
     >
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Caractéristiques métier
-        <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-          {' '}
-          · object_act
-        </span>
       </div>
       <div className="grid-4" style={{ marginBottom: 10 }}>
-        <Field label="Durée minimale" hint="object_act.duration_min">
+        <Field label="Durée minimale" hint="Durée minimale de la séance">
           <Input value={activity.durationMin} mono suffix="min" onChange={(durationMin) => patch({ durationMin })} />
         </Field>
         <Field label="Participants min.">
@@ -72,13 +68,13 @@ export function BlockASC({ editor, folded }: SectionProps) {
       <div className="grid-2" style={{ marginBottom: 14 }}>
         <Toggle
           label="Encadrement obligatoire"
-          sub="object_act.guide_required"
+          sub="Guide ou encadrant requis"
           on={activity.guideRequired}
           onChange={(guideRequired) => patch({ guideRequired })}
         />
         <Toggle
           label="Équipement fourni"
-          sub={activity.equipmentProvided || 'object_act.equipment_provided'}
+          sub={activity.equipmentProvided || 'Matériel disponible sur place'}
           on={Boolean(activity.equipmentProvided)}
           onChange={() => patch({ equipmentProvided: activity.equipmentProvided ? '' : 'Fourni sur place' })}
         />
@@ -88,10 +84,6 @@ export function BlockASC({ editor, folded }: SectionProps) {
         <>
           <div className="chip-group__label" style={{ marginTop: 14 }}>
             Opérateur & encadrants
-            <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-              {' '}
-              · actor_object_role
-            </span>
           </div>
           <div className="repeater" style={{ marginBottom: 8 }}>
             {relationships.actors.map((actor) => (

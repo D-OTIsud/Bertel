@@ -1910,11 +1910,3 @@
   border-radius: 8px;
   padding: 9px 11px;
 }
-
-/* Secondary-families block. */
-.object-editor .identity-secondary__empty {
-  margin: 0; font-size: 12px; font-style: italic; color: var(--ink-4);
-}
-.object-editor .identity-secondary__add {
-  display: flex; flex-direction: column; gap: 4px;
-}

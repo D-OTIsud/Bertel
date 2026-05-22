@@ -32,7 +32,7 @@ export function SiretCard({
           type="button"
           className="pill-mini"
           disabled
-          title="La re-vérification INSEE live est hors périmètre de ce plan."
+          title="La re-vérification sera disponible prochainement."
         >
           Re-vérifier
         </button>
@@ -74,7 +74,7 @@ export function SiretCard({
         )}
       </div>
       <div className="siret-card__foot">
-        <Provenance source="INSEE" who="API SIRENE" when={lastCheckedAt} />
+        <Provenance source="INSEE" who="SIRENE" when={lastCheckedAt} />
       </div>
     </div>
   );

@@ -72,7 +72,7 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
     <Fs
       num="11"
       title="Démarche durable"
-      sub="object_sustainability_action — actions concrètes déclarées par l'établissement, distinctes des labels officiels (§ Labels)"
+      sub="Actions concrètes déclarées par l'établissement, distinctes des labels officiels"
       folded={folded}
       pill={{ tone: selectedActions > 0 ? 'ok' : 'warn', label: `${selectedActions} action(s)` }}
     >
@@ -88,8 +88,7 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
 
       {module.categories.length === 0 && (
         <p className="sust-empty">
-          Aucune action durable disponible dans le référentiel. Vérifier les seeds (
-          <code>migration_sustainability_v5.sql</code>).
+          Aucune action durable n'est disponible pour le moment.
         </p>
       )}
 

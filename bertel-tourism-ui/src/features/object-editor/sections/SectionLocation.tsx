@@ -43,7 +43,7 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         <Field label="Adresse" required>
           <Input value={main.address1} onChange={(v) => patch({ address1: v })} />
         </Field>
-        <Field label="Complément (lieu-dit interne)">
+        <Field label="Complément d'adresse">
           <Input value={main.address2} onChange={(v) => patch({ address2: v })} placeholder="Bras-Long" />
         </Field>
       </div>
@@ -58,12 +58,12 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         <Field label="Commune">
           <Input value={main.city} onChange={(v) => patch({ city: v })} />
         </Field>
-        <Field label="Zone touristique" hint="Backfill via correspondance lieu_dit → zone">
+        <Field label="Zone touristique" hint="Secteur touristique associé">
           <Input value={main.zoneTouristique} onChange={(v) => patch({ zoneTouristique: v })} />
         </Field>
       </div>
 
-      <Field label="Lieu-dit (Lieux-dits / formulaire)" hint="Valeur brute trimée — colonne source canonique">
+      <Field label="Lieu-dit" hint="Nom local utilisé pour situer la fiche">
         <PendingFieldControl
           value={main.lieuDit}
           onChange={(v) => patch({ lieuDit: v })}

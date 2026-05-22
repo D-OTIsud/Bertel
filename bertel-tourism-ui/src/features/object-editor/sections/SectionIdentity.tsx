@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Fs, Field, Input, Select, Chip, ChipSet, EditorModal } from '../primitives';
+import { Fs, Field, Input, Select, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
   ObjectWorkspaceTaxonomyAssignment,
@@ -15,13 +15,6 @@ const STATUS_OPTIONS = [
   { v: 'hidden', l: 'Hors ligne' },
   { v: 'archived', l: 'Archivé' },
 ];
-
-/** "RES" -> "RES — Restaurant"; an unknown code falls back to the bare uppercase code. */
-function secondaryFamilyLabel(code: string): string {
-  const upper = code.trim().toUpperCase();
-  const label = TYPE_LABEL[upper];
-  return label ? `${upper} — ${label}` : upper;
-}
 
 function toTaxonomyPathNode(
   node: ObjectWorkspaceTaxonomyNodeOption,
@@ -72,7 +65,7 @@ function buildTaxonomyAssignment(
   };
 }
 
-/** Editable structured selector for object_taxonomy. */
+/** Editable taxonomy selector. */
 function TaxonomyModal({
   open,
   domain,
@@ -125,7 +118,7 @@ function TaxonomyModal({
       <div className="object-editor identity-taxo">
         {!domain ? (
           <p className="identity-taxo__notice">
-            Aucun domaine de taxonomie n'est défini pour ce type d'objet.
+            Aucune sous-catégorie n'est définie pour ce type de fiche.
           </p>
         ) : (
           <>
@@ -157,7 +150,7 @@ function TaxonomyModal({
                 <input
                   type="search"
                   className="input"
-                  placeholder="Rechercher un nœud…"
+                  placeholder="Rechercher une sous-catégorie…"
                   value={search}
                   aria-label="Rechercher dans la taxonomie"
                   onChange={(event) => setSearch(event.target.value)}
@@ -192,15 +185,15 @@ function TaxonomyModal({
                     ))}
                   </ul>
                 ) : (
-                  <p className="identity-taxo__notice">Aucun nœud assignable ne correspond à cette recherche.</p>
+                  <p className="identity-taxo__notice">Aucune sous-catégorie ne correspond à cette recherche.</p>
                 )}
               </>
             )}
 
             {assignableNodes.length === 0 && (
               <p className="identity-taxo__notice">
-                Les nœuds assignables ne sont pas exposés pour ce domaine. La valeur actuelle
-                reste affichée en lecture seule.
+                Les options de sous-catégorie ne sont pas disponibles pour ce type de fiche.
+                La valeur actuelle reste affichée en lecture seule.
               </p>
             )}
           </>
@@ -219,14 +212,10 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   const canonicalType = typeCode?.toUpperCase() ?? '';
   const typeFamilyLabel = TYPE_LABEL[canonicalType] ?? meta?.codeName ?? canonicalType;
   const typeDisplay = canonicalType ? `${canonicalType} — ${typeFamilyLabel}` : meta?.codeName ?? '';
-  // Raison sociale comes from object_legal (type raison_sociale) via the parser —
-  // never from actor.display_name. Read-only here; edited through the Légal module.
   const legalName = editor.draft.provider?.companyName || '';
   const canonicalId = objectId ?? '';
   const taxonomyDomain = taxonomy.domains[0] ?? null;
   const taxonomyPath = taxonomyDomain?.assignment?.path.map((node) => node.label).join(' ▸ ') ?? '';
-  // object.secondary_types — transitory opt-in multi-family flag, not the taxonomy.
-  const secondaryTypes = info.secondaryTypes ?? [];
   function applyTaxonomyAssignment(assignment: ObjectWorkspaceTaxonomyAssignment) {
     if (!taxonomyDomain) {
       return;
@@ -270,12 +259,9 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       <div className="grid-2" style={{ marginBottom: 12 }}>
         <Field
           label="Raison sociale"
-          hint="Entité juridique — jamais le nom de l'acteur opérateur."
+          hint="Nom légal associé à la fiche"
         >
           <Input value={legalName} placeholder="Non renseignée" readOnly onChange={() => undefined} />
-          <p className="identity-help">
-            Stockée dans object_legal (type raison_sociale). Modification via le module Légal.
-          </p>
         </Field>
         <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">
           <Input value={canonicalId} mono readOnly onChange={() => undefined} />
@@ -289,7 +275,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
             <Input value={typeDisplay} mono readOnly prefix="●" onChange={() => undefined} />
           </div>
         </Field>
-        <Field label="Sous-catégorie métier" hint="object_taxonomy hiérarchique — un seul nœud par domaine">
+        <Field label="Sous-catégorie métier" hint="Positionnement précis dans la famille métier">
           <button
             type="button"
             className="identity-taxo-trigger"
@@ -307,31 +293,6 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
           </button>
         </Field>
       </div>
-
-      <Field
-        label="Familles secondaires, multi-appartenance rare"
-        hint="N'est pas la sous-catégorie métier — réservé à une réelle seconde grande famille."
-      >
-        <p className="identity-help">
-          À utiliser seulement si l'objet appartient réellement à une autre grande famille
-          métier. Ne remplace pas la sous-catégorie métier.
-        </p>
-        {secondaryTypes.length === 0 ? (
-          <p className="identity-secondary__empty">Aucune famille secondaire</p>
-        ) : (
-          <ChipSet>
-            {secondaryTypes.map((code) => (
-              <Chip key={code} label={secondaryFamilyLabel(code)} />
-            ))}
-          </ChipSet>
-        )}
-        <div className="identity-secondary__add">
-          <Chip label="+ Ajouter une seconde famille" />
-          <span className="identity-help">
-            Ajout différé — le contrat de sauvegarde de object.secondary_types n'est pas encore branché.
-          </span>
-        </div>
-      </Field>
 
       <TaxonomyModal
         open={taxonomyOpen}

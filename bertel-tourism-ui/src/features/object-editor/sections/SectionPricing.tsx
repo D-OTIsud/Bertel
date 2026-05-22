@@ -23,7 +23,7 @@ export function SectionPricing({ editor, folded }: SectionProps) {
     <Fs
       num="13"
       title="Tarifs & extras"
-      sub="object_price — modèle tarifaire structuré · saison · audience · option"
+      sub="Tarifs, options, saisons, publics et conditions"
       folded={folded}
       pill={{ tone: 'ok', label: `${pricing.prices.length} ligne(s)` }}
     >

@@ -93,7 +93,7 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
     <Fs
       num="16"
       title={archetype === 'ITI' ? 'Lieux & étapes' : 'Sous-lieux & description'}
-      sub="object_place_description — chaque sous-lieu porte sa propre description et son flag accessibilité"
+      sub="Descriptions, étapes et accessibilité des sous-lieux"
       folded={folded}
       pill={{ tone: 'ok', label: `${descriptions.places.length + itinerary.stages.length} lieu(x)` }}
     >

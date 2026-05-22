@@ -6,16 +6,16 @@ import type { ObjectSearchResult } from '../useObjectSearch';
 import type { ObjectWorkspaceRelatedObjectItem } from '../../../services/object-workspace-parser';
 
 const RELATION_TYPE_OPTIONS = [
-  { v: 'based_at_site', l: 'based_at_site' },
-  { v: 'uses_itinerary', l: 'uses_itinerary' },
-  { v: 'part_of', l: 'part_of' },
-  { v: 'part_of_park', l: 'part_of_park' },
-  { v: 'inside_zone', l: 'inside_zone' },
-  { v: 'recommended_by', l: 'recommended_by' },
-  { v: 'mentioned_in', l: 'mentioned_in' },
-  { v: 'operated_by', l: 'operated_by' },
-  { v: 'near', l: 'near' },
-  { v: 'related', l: 'related' },
+  { v: 'based_at_site', l: 'Situé sur le site' },
+  { v: 'uses_itinerary', l: 'Utilise un itinéraire' },
+  { v: 'part_of', l: 'Fait partie de' },
+  { v: 'part_of_park', l: "Fait partie d'un parc" },
+  { v: 'inside_zone', l: 'Dans une zone' },
+  { v: 'recommended_by', l: 'Recommandé par' },
+  { v: 'mentioned_in', l: 'Mentionné dans' },
+  { v: 'operated_by', l: 'Exploité par' },
+  { v: 'near', l: 'À proximité' },
+  { v: 'related', l: 'Lié' },
 ];
 
 export function SectionRelations({ editor, folded, objectId = '' }: SectionProps) {
@@ -64,7 +64,7 @@ export function SectionRelations({ editor, folded, objectId = '' }: SectionProps
     <Fs
       num="15"
       title="Liens vers d'autres fiches"
-      sub="object_relation — supports (uses_itinerary, based_at_site), appartenance (part_of), distribution (operated_by)"
+      sub="Fiches liées, rattachements, lieux supports et recommandations"
       folded={folded}
       pill={{ tone: outgoing.length > 0 ? 'ok' : 'warn', label: pillLabel }}
     >

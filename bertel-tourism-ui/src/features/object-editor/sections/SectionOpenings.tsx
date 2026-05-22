@@ -38,7 +38,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
     <Fs
       num="14"
       title="Périodes d'ouverture"
-      sub="object_opening — saisons, exceptions, jours fériés · horaires par jour"
+      sub="Saisons, exceptions, jours fériés et horaires par jour"
       folded={folded}
       pill={{ tone: 'ok', label: `${openings.periods.length} période(s)` }}
     >

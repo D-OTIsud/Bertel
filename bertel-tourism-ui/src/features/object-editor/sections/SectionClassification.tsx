@@ -68,7 +68,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
     <Fs
       num="08"
       title="Classifications & distinctions"
-      sub="object_classification — étoiles, labels, marques. Chaque ligne a son scheme, sa value, son statut, et ses dates de validité."
+      sub="Étoiles, labels, marques, statuts et dates de validité."
       folded={folded}
       pill={{
         tone: granted > 0 ? 'ok' : 'warn',
@@ -96,7 +96,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
         </div>
       </div>
 
-      {repHeader(CLASS_COLS, ['', 'Référentiel (scheme)', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au"])}
+      {repHeader(CLASS_COLS, ['', 'Référentiel', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au"])}
       <div className="repeater">
         {rows.map(({ group, item }) => (
           <div
@@ -107,7 +107,6 @@ export function SectionClassification({ editor, folded }: SectionProps) {
             <span className="rep-row__handle" aria-hidden />
             <div className="class-row__sch">
               <div className="class-row__scheme">{group.schemeLabel}</div>
-              <small>{item.schemeCode}</small>
             </div>
             <ReferenceSelect
               aria-label="Valeur attribuée"

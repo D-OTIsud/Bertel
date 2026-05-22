@@ -19,7 +19,7 @@ export function SectionProvider({ editor, folded }: SectionProps) {
     <Fs
       num="18"
       title="Fournisseur / Prestataire"
-      sub="Entité juridique exploitant l'objet — données KBis vérifiées contre l'API SIRENE de l'INSEE"
+      sub="Entité juridique exploitant la fiche et informations de vérification"
       folded={folded}
       pill={{
         tone: module.sireneVerified ? 'ok' : 'warn',
@@ -33,7 +33,7 @@ export function SectionProvider({ editor, folded }: SectionProps) {
           naf={module.nafCode}
           legalForm={module.legalForm}
           registeredAt={module.incorporationDate}
-          lastCheckedAt={module.sireneVerified ? 'API SIRENE' : undefined}
+          lastCheckedAt={module.sireneVerified ? 'SIRENE' : undefined}
         />
       ) : (
         <p style={{ fontSize: 12, color: 'var(--ink-4)', marginBottom: 12 }}>SIRET non renseigné sur l'acteur opérateur.</p>
@@ -51,7 +51,7 @@ export function SectionProvider({ editor, folded }: SectionProps) {
             border: '1px solid var(--line-soft)',
           }}
         >
-          <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong> {module.readonlyReason}
+          <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong> Ces informations sont gérées par l'équipe d'administration.
         </p>
       )}
 
@@ -93,7 +93,7 @@ export function SectionProvider({ editor, folded }: SectionProps) {
           <Input value={module.incorporationDate} placeholder="JJ/MM/AAAA" mono readOnly onChange={NOOP} />
         </Field>
       </div>
-      <Provenance source="INSEE" who="API SIRENE" when="—" locked="OTI" />
+      <Provenance source="INSEE" who="SIRENE" when="—" locked="OTI" />
     </Fs>
   );
 }

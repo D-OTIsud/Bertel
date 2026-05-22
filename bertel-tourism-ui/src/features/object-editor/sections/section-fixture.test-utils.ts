@@ -101,8 +101,14 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
           position: '0',
         },
       ],
-      kindOptions: [{ id: 'k1', code: 'phone', label: 'Téléphone' }],
-      roleOptions: [],
+      kindOptions: [
+        { id: 'k1', code: 'phone', label: 'Téléphone' },
+        { id: 'k2', code: 'email', label: 'E-mail' },
+      ],
+      roleOptions: [
+        { id: 'r1', code: 'accueil', label: 'Accueil' },
+        { id: 'r2', code: 'reservation', label: 'Réservation' },
+      ],
       relatedActorContactsCount: 0,
       relatedOrganizationContactsCount: 0,
     },

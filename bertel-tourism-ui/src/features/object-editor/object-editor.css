@@ -1155,8 +1155,8 @@
 }
 .object-editor .map-shell {
   display: grid;
-  /* Side column ~10% wider than map (coords + communes INSEE). */
-  grid-template-columns: minmax(180px, 1.15fr) minmax(0, 0.85fr);
+  /* Left: GPS + lieu-dit (~30%). Right: map (~70%). */
+  grid-template-columns: minmax(200px, 30%) minmax(0, 70%);
   gap: 12px;
   align-items: stretch;
 }
@@ -1165,6 +1165,9 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+}
+.object-editor .map-shell__side > .field {
+  margin-bottom: 0;
 }
 .object-editor .map-shell__coords {
   display: flex;
@@ -1175,11 +1178,14 @@
   margin-bottom: 0;
 }
 .object-editor .map-shell .map-mini--interactive {
-  min-height: 220px;
+  min-height: 280px;
+  height: 100%;
+  align-self: stretch;
 }
 .object-editor .map-shell .map-mini--interactive .maplibregl-map,
 .object-editor .map-shell .map-mini--interactive .mapboxgl-map {
-  min-height: 220px;
+  min-height: 280px;
+  height: 100%;
 }
 .object-editor .map-mini {
   border-radius: var(--r-md);

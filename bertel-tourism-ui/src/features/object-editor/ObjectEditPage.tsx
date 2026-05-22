@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation } from '../../hooks/useExplorerQueries';
@@ -25,6 +25,7 @@ import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
 import { EditorFooter } from './shell/EditorFooter';
 import type { HistoryRailItem } from './widgets/HistoryRail';
+import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
 
 /** Full-page object editor. Fetches the workspace resource, then hands off to
@@ -125,13 +126,14 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   const { save, saving } = useEditorSave(objectId);
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
   const [mode, setMode] = useState<EditorMode>('complet');
-  const [activeNum, setActiveNum] = useState('01');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const meta = resolveArchetypeMeta(resource.type);
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
   const navItems = useMemo(() => flattenSectionItems(groups), [groups]);
   const sections = useMemo(() => getRegisteredSections(meta.archetype), [meta.archetype]);
+  const sectionNums = useMemo(() => sections.map((section) => section.num), [sections]);
+  const { mainRef, activeNum, scrollToSection } = useEditorScrollSpy(sectionNums);
   const dirtyCount = Object.values(editor.dirtySections).filter(Boolean).length;
   const sectionCompletions = useMemo(
     () => computeSectionCompletions(editor.draft, navItems),
@@ -151,32 +153,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     [validation.blockers, validation.warnings],
   );
   const historyItems = useMemo(() => buildHistoryItems(editor.draft), [editor.draft]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      return undefined;
-    }
-    const nodes = sections
-      .map((section) => document.getElementById(`section-${section.num}`))
-      .filter((node): node is HTMLElement => Boolean(node));
-    if (nodes.length === 0) {
-      return undefined;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-        const num = visible?.target.getAttribute('data-section');
-        if (num) {
-          setActiveNum(num);
-        }
-      },
-      { root: document.querySelector('.edit-main'), threshold: [0.25, 0.5, 0.75] },
-    );
-    nodes.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
-  }, [sections]);
 
   /** Persist local draft modules to the database (called only from publish, not a separate save action). */
   async function persistDirtyModules(): Promise<boolean> {
@@ -230,11 +206,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     }
   }
 
-  function scrollToSection(num: string) {
-    setActiveNum(num);
-    document.getElementById(`section-${num}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
   function exitToExplorer() {
     if (!confirmLeave()) {
       return;
@@ -274,7 +245,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
       />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
-        <main className="edit-main">
+        <main ref={mainRef} className="edit-main">
           {sections.map(({ num, Component }) => (
             <Component
               key={num}

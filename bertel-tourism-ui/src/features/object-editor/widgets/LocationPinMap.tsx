@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Map, Marker, NavigationControl, type MapMouseEvent, type MapRef } from 'react-map-gl/maplibre';
 import { getMarkerImageId } from '../../../config/map-markers';
 import { DEFAULT_APP_MAP_STYLE } from '../../../lib/map-style';
@@ -19,38 +19,66 @@ export interface LocationPinMapProps {
   typeCode?: string;
 }
 
+type PendingCoords = { lat: number; lng: number };
+
 /**
- * Interactive map for section 03 — same MapLibre stack as Explorer / fiche détail.
+ * Interactive map for section 02 — same MapLibre stack as Explorer / fiche détail.
  * Click to place the pin; drag the pin to adjust coordinates.
+ * Coordinates commit only after the user confirms the move.
  */
 export function LocationPinMap({ latitude, longitude, onCoordsChange, typeCode }: LocationPinMapProps) {
   const mapRef = useRef<MapRef>(null);
-  const lat = parseCoordString(latitude);
-  const lng = parseCoordString(longitude);
-  const hasPin = lat != null && lng != null;
+  const committedLat = parseCoordString(latitude);
+  const committedLng = parseCoordString(longitude);
+  const [pending, setPending] = useState<PendingCoords | null>(null);
+
+  const displayLat = pending?.lat ?? committedLat;
+  const displayLng = pending?.lng ?? committedLng;
+  const hasPin = displayLat != null && displayLng != null;
   const markerSrc = `/markers/${getMarkerImageId(typeCode ?? 'HOT')}.png`;
 
-  const applyCoords = useCallback(
-    (nextLat: number, nextLng: number) => {
-      onCoordsChange(formatCoordString(nextLat), formatCoordString(nextLng));
-    },
-    [onCoordsChange],
-  );
-
   useEffect(() => {
+    if (pending) {
+      return;
+    }
     const map = mapRef.current?.getMap();
-    if (!map || lat == null || lng == null) {
+    if (!map || committedLat == null || committedLng == null) {
       return;
     }
     map.flyTo({
-      center: [lng, lat],
+      center: [committedLng, committedLat],
       zoom: Math.max(map.getZoom(), LOCATION_MAP_PIN_ZOOM),
       duration: 450,
     });
-  }, [lat, lng]);
+  }, [committedLat, committedLng, pending]);
+
+  const queueCoordsChange = useCallback((nextLat: number, nextLng: number) => {
+    const sameAsCommitted =
+      committedLat != null
+      && committedLng != null
+      && formatCoordString(nextLat) === formatCoordString(committedLat)
+      && formatCoordString(nextLng) === formatCoordString(committedLng);
+    if (sameAsCommitted) {
+      setPending(null);
+      return;
+    }
+    setPending({ lat: nextLat, lng: nextLng });
+  }, [committedLat, committedLng]);
+
+  function confirmPending() {
+    if (!pending) {
+      return;
+    }
+    onCoordsChange(formatCoordString(pending.lat), formatCoordString(pending.lng));
+    setPending(null);
+  }
+
+  function cancelPending() {
+    setPending(null);
+  }
 
   function handleMapClick(event: MapMouseEvent) {
-    applyCoords(event.lngLat.lat, event.lngLat.lng);
+    queueCoordsChange(event.lngLat.lat, event.lngLat.lng);
   }
 
   return (
@@ -60,8 +88,8 @@ export function LocationPinMap({ latitude, longitude, onCoordsChange, typeCode }
         reuseMaps
         mapStyle={DEFAULT_APP_MAP_STYLE}
         initialViewState={{
-          longitude: lng ?? REUNION_MAP_CENTER.longitude,
-          latitude: lat ?? REUNION_MAP_CENTER.latitude,
+          longitude: displayLng ?? REUNION_MAP_CENTER.longitude,
+          latitude: displayLat ?? REUNION_MAP_CENTER.latitude,
           zoom: hasPin ? LOCATION_MAP_PIN_ZOOM : LOCATION_MAP_DEFAULT_ZOOM,
         }}
         attributionControl={false}
@@ -76,11 +104,11 @@ export function LocationPinMap({ latitude, longitude, onCoordsChange, typeCode }
       >
         {hasPin ? (
           <Marker
-            longitude={lng}
-            latitude={lat}
+            longitude={displayLng}
+            latitude={displayLat}
             anchor="bottom"
             draggable
-            onDragEnd={(event) => applyCoords(event.lngLat.lat, event.lngLat.lng)}
+            onDragEnd={(event) => queueCoordsChange(event.lngLat.lat, event.lngLat.lng)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="editor-map-pin" src={markerSrc} alt="" draggable={false} />
@@ -88,9 +116,24 @@ export function LocationPinMap({ latitude, longitude, onCoordsChange, typeCode }
         ) : null}
         <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
       </Map>
-      <p className="map-mini__hint">
-        {hasPin ? 'Déplacez le repère ou cliquez ailleurs sur la carte' : 'Cliquez sur la carte pour placer le repère'}
-      </p>
+      {pending ? (
+        <div className="map-mini__confirm" role="group" aria-label="Confirmer le déplacement du repère GPS">
+          <p className="map-mini__confirm-text">
+            Confirmer le nouveau repère GPS&nbsp;?
+            <span className="map-mini__confirm-coords">
+              {formatCoordString(pending.lat)}, {formatCoordString(pending.lng)}
+            </span>
+          </p>
+          <div className="map-mini__confirm-actions">
+            <button type="button" className="btn sm" onClick={cancelPending}>
+              Non
+            </button>
+            <button type="button" className="btn sm primary" onClick={confirmPending}>
+              Oui
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

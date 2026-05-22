@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, renderHook } from '@testing-library/react';
 
+jest.mock('../../../hooks/useExplorerQueries', () => ({
+  useLocationReferenceOptionsQuery: () => ({
+    data: { lieuDits: ['Bras-Long', 'Centre Ville', 'La Plaine des Cafres'] },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children, onClick }: { children?: ReactNode; onClick?: (e: { lngLat: { lat: number; lng: number } }) => void }) => (
     <button type="button" data-testid="location-pin-map" onClick={() => onClick?.({ lngLat: { lat: -21.2, lng: 55.5 } })}>
@@ -85,13 +93,66 @@ describe('SectionLocation', () => {
     expect(screen.getByRole('button', { name: 'Valider' })).toBeInTheDocument();
   });
 
-  it('renders interactive map and updates coordinates on map click', () => {
+  it('asks for confirmation before committing coordinates from the map', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules()));
     render(<SectionLocation editor={result.current} permissions={perms} />);
     act(() => {
       fireEvent.click(screen.getByTestId('location-pin-map'));
     });
+    expect(result.current.draft.location.main.latitude).toBe('');
+    expect(screen.getByRole('group', { name: 'Confirmer le déplacement du repère GPS' })).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Oui' }));
+    });
     expect(result.current.draft.location.main.latitude).toBe('-21.200000');
     expect(result.current.draft.location.main.longitude).toBe('55.500000');
+  });
+
+  it('reverts a pending map move when the user declines', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    act(() => {
+      fireEvent.click(screen.getByTestId('location-pin-map'));
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Non' }));
+    });
+    expect(result.current.draft.location.main.latitude).toBe('');
+    expect(screen.queryByRole('group', { name: 'Confirmer le déplacement du repère GPS' })).not.toBeInTheDocument();
+  });
+
+  it('formats address on blur', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    const address = screen.getByDisplayValue('38 Chemin du Bel Air');
+    fireEvent.change(address, { target: { value: '12 rue de la gare' } });
+    fireEvent.blur(address);
+    expect(result.current.draft.location.main.address1).toBe('12 Rue de la Gare');
+  });
+
+  it('uses a combobox for lieu-dit with corpus suggestions', () => {
+    const base = modules();
+    base.publication.moderation = {
+      availability: 'available',
+      pendingCount: 0,
+      unavailableReason: null,
+      items: [],
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    const lieuDit = screen.getByRole('combobox', { name: 'Lieu-dit' });
+    fireEvent.change(lieuDit, { target: { value: 'centre' } });
+    fireEvent.click(screen.getByRole('option', { name: 'Centre Ville' }));
+    expect(result.current.draft.location.main.lieuDit).toBe('Centre Ville');
+  });
+
+  it('does not surface object_zone commune codes (itinerary-only concern)', () => {
+    const base = modules();
+    base.location.zoneCodes = ['97416'];
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    expect(screen.queryByText('Communes associées')).not.toBeInTheDocument();
+    expect(screen.queryByText('97416')).not.toBeInTheDocument();
   });
 });

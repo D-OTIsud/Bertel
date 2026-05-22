@@ -1884,11 +1884,29 @@
   text-align: left;
   cursor: pointer;
 }
+.object-editor .identity-taxo__node-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .object-editor .identity-taxo__node-button:hover,
 .object-editor .identity-taxo__node-button:focus-visible {
   outline: 0;
   background: var(--surface-2);
   color: var(--ink);
+}
+.object-editor .identity-taxo__node-button--group {
+  cursor: default;
+  color: var(--ink);
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.object-editor .identity-taxo__node-button--group:hover {
+  background: var(--surface-2);
+}
+.object-editor .identity-taxo__node.is-group + .identity-taxo__node.is-option .identity-taxo__node-button {
+  border-top: 1px solid color-mix(in srgb, var(--line-soft) 68%, transparent);
 }
 .object-editor .identity-taxo__node.is-current .identity-taxo__node-button {
   background: var(--accent-tint); color: var(--ink); font-weight: 600;

@@ -1153,21 +1153,36 @@
   font-weight: 600;
   color: var(--teal, #0d6e6e);
 }
+.object-editor .map-shell-block {
+  margin-top: 12px;
+}
 .object-editor .map-shell {
   display: grid;
-  /* Left: GPS + lieu-dit (~30%). Right: map (~70%). */
+  /* Left: lieu-dit + GPS (~30%). Right: map (~70%). */
   grid-template-columns: minmax(200px, 30%) minmax(0, 70%);
   gap: 12px;
-  align-items: stretch;
+  align-items: start;
 }
 .object-editor .map-shell__side {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   min-width: 0;
 }
 .object-editor .map-shell__side > .field {
   margin-bottom: 0;
+}
+.object-editor .map-shell__gps {
+  margin-top: 14px;
+}
+.object-editor .map-shell__gps-head {
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .map-shell__gps-head .pill-mini {
+  margin-left: auto;
 }
 .object-editor .map-shell__coords {
   display: flex;
@@ -1178,14 +1193,13 @@
   margin-bottom: 0;
 }
 .object-editor .map-shell .map-mini--interactive {
-  min-height: 280px;
-  height: 100%;
-  align-self: stretch;
+  min-height: 240px;
+  height: 240px;
 }
 .object-editor .map-shell .map-mini--interactive .maplibregl-map,
 .object-editor .map-shell .map-mini--interactive .mapboxgl-map {
-  min-height: 280px;
-  height: 100%;
+  min-height: 240px;
+  height: 240px;
 }
 .object-editor .map-mini {
   border-radius: var(--r-md);

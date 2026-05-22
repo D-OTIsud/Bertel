@@ -72,25 +72,9 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         </Field>
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <div className="field__label" style={{ marginBottom: 5, display: 'flex', alignItems: 'center' }}>
-          <span>
-            Coordonnées GPS <span className="req"> *</span>
-          </span>
-          <button type="button" className="pill-mini" style={{ marginLeft: 'auto' }} disabled title="Bientôt">
-            Géocoder l&apos;adresse
-          </button>
-        </div>
+      <div className="map-shell-block">
         <div className="map-shell">
           <div className="map-shell__side">
-            <div className="map-shell__coords">
-              <Field label="Latitude">
-                <Input value={main.latitude} onChange={(v) => patch({ latitude: v })} mono />
-              </Field>
-              <Field label="Longitude">
-                <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
-              </Field>
-            </div>
             <Field
               label="Lieu-dit"
               hint="Corpus ou nouveau (majuscule en tête de mot)."
@@ -114,6 +98,24 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
                 />
               )}
             </Field>
+            <div className="map-shell__gps">
+              <div className="field__label map-shell__gps-head">
+                <span>
+                  Coordonnées GPS <span className="req"> *</span>
+                </span>
+                <button type="button" className="pill-mini" disabled title="Bientôt">
+                  Géocoder l&apos;adresse
+                </button>
+              </div>
+              <div className="map-shell__coords">
+                <Field label="Latitude">
+                  <Input value={main.latitude} onChange={(v) => patch({ latitude: v })} mono />
+                </Field>
+                <Field label="Longitude">
+                  <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
+                </Field>
+              </div>
+            </div>
           </div>
           <LocationPinMap
             latitude={main.latitude}

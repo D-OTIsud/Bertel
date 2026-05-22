@@ -21,4 +21,15 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
     expect(result.current.dirtySections.distinctions).toBe(true);
     expect(result.current.draft.distinctions.accessibilityLabels[0].disabilityTypesCovered).toContain('hearing');
   });
+
+  it('groups accessible amenities into disability-type panels and toggles selection', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    // Expand the moteur equipment panel — its header name is deliberately distinct from the
+    // T&H label block's bare "Moteur" chip (built in Task 5.2), to avoid a getByRole collision.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Équipements moteur/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Accès PMR' })); });
+    view.rerender(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.characteristics.selectedAmenityCodes).toContain('pmr_access');
+  });
 });

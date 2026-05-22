@@ -1,4 +1,5 @@
-import { Chip, ChipMultiSelect, ChipSet, Field, Fs, LangTabs, Select, Textarea, Toggle } from '../primitives';
+import { useState } from 'react';
+import { ChipMultiSelect, Field, Fs, LangTabs, Select, Textarea, Toggle } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -6,6 +7,7 @@ import { readTranslatableField, updateTranslatableField } from './descriptions-f
 /**
  * Canonical disability-type set for LBL_TOURISME_HANDICAP / `object_classification` sub-values.
  * Codes are the English metadata.disability_type values stored in the DB; labels are display-only.
+ * Also used to drive the 4 collapsible equipment panels below.
  */
 const DISABILITY_TYPES = [
   { code: 'motor', label: 'Moteur' },
@@ -13,17 +15,6 @@ const DISABILITY_TYPES = [
   { code: 'visual', label: 'Visuel' },
   { code: 'cognitive', label: 'Mental' },
 ];
-
-function toggleCode(values: string[], code: string) {
-  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
-
-function isAccessibilityFamily(familyCode: string, familyLabel: string) {
-  const text = `${familyCode} ${familyLabel}`.toLowerCase();
-  return ['access', 'handicap', 'pmr', 'mobilite', 'visuel', 'auditif', 'mental', 'cognitif'].some((token) =>
-    text.includes(token),
-  );
-}
 
 const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
 
@@ -33,18 +24,32 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
   const active = descriptions.activeLanguage;
   const objectScope = descriptions.object;
-  const families = characteristics.amenityGroups.filter((group) =>
-    isAccessibilityFamily(group.familyCode, group.familyLabel),
-  );
-  const selectedAmenities = families.reduce(
-    (sum, family) =>
-      sum + family.options.filter((option) => characteristics.selectedAmenityCodes.includes(option.code)).length,
-    0,
-  );
-  const totalAmenities = families.reduce((sum, family) => sum + family.options.length, 0);
-  const familiesWithSelection = families.filter((family) =>
-    family.options.some((option) => characteristics.selectedAmenityCodes.includes(option.code)),
+
+  // Accessibility amenity family — identified by its familyCode (set in seeds / ref_amenity_family).
+  // Each option carries a `disabilityTypes` array so we can group by panel.
+  const accessibilityFamily = characteristics.amenityGroups.find((g) => g.familyCode === 'accessibility');
+  const accessibilityOptions = accessibilityFamily?.options ?? [];
+
+  // Counts for the summary pill
+  const selectedAccessibilityCount = accessibilityOptions.filter((o) =>
+    characteristics.selectedAmenityCodes.includes(o.code),
   ).length;
+
+  // Track which disability-type panels are expanded (default: expand those with a selection)
+  const [expandedPanels, setExpandedPanels] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      DISABILITY_TYPES.map(({ code }) => [
+        code,
+        accessibilityOptions.some(
+          (o) => o.disabilityTypes.includes(code) && characteristics.selectedAmenityCodes.includes(o.code),
+        ),
+      ]),
+    ),
+  );
+
+  function togglePanel(code: string) {
+    setExpandedPanels((prev) => ({ ...prev, [code]: !prev[code] }));
+  }
 
   function updateLabel(item: ObjectWorkspaceDistinctionItem, patch: Partial<ObjectWorkspaceDistinctionItem>) {
     editor.replaceModule('distinctions', {
@@ -68,11 +73,11 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
       sub="Description adaptée multilingue, équipements (ref_amenity famille accessibility), chambres / lieux accessibles"
       folded={folded}
       pill={{
-        tone: familiesWithSelection > 0 ? 'ok' : 'warn',
+        tone: selectedAccessibilityCount > 0 ? 'ok' : 'warn',
         label:
-          totalAmenities > 0
-            ? `${familiesWithSelection} / ${families.length} famille(s) · ${selectedAmenities} équip.`
-            : `${families.length} famille(s)`,
+          accessibilityOptions.length > 0
+            ? `${selectedAccessibilityCount} / ${accessibilityOptions.length} équip.`
+            : 'Équipements PMR',
       }}
     >
       <Field
@@ -173,45 +178,61 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
         ))
       )}
 
-      {families.map((family) => (
-        <div key={family.familyCode}>
-          <div className="chip-group__label" style={{ marginTop: 14 }}>
-            {family.familyLabel}
-          </div>
-          <ChipSet>
-            {family.options.map((option) => (
-              <Chip
-                key={option.code}
-                label={option.label}
-                on={characteristics.selectedAmenityCodes.includes(option.code)}
-                onClick={() =>
-                  editor.replaceModule('characteristics', {
-                    ...characteristics,
-                    selectedAmenityCodes: toggleCode(characteristics.selectedAmenityCodes, option.code),
-                  })
-                }
-              />
-            ))}
-          </ChipSet>
-        </div>
-      ))}
+      {/* ── Accessible equipment panels — one collapsible panel per disability type ── */}
+      {/* Each panel contains a ChipMultiSelect over the accessibility-family amenities
+          that declare the matching disabilityTypes code. Selecting writes to
+          characteristics.selectedAmenityCodes (→ object_amenity).
+          Panel header names ("Équipements moteur" etc.) are distinct from the bare
+          disability-type chip names in the T&H label block above, avoiding getByRole collisions. */}
+      {DISABILITY_TYPES.map((dt, index) => {
+        const panelOptions = accessibilityOptions.filter((o) => o.disabilityTypes.includes(dt.code));
+        const panelSelected = panelOptions.filter((o) =>
+          characteristics.selectedAmenityCodes.includes(o.code),
+        ).length;
+        const isOpen = expandedPanels[dt.code] ?? false;
+        const panelId = `acc-panel-${dt.code}`;
 
-      {distinctions.accessibilityAmenityCoverage.length > 0 && (
-        <>
-          <div className="chip-group__label" style={{ marginTop: 18 }}>
-            Couverture détectée
+        return (
+          <div key={dt.code} className={`sust-cat${isOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="sust-cat__head"
+              onClick={() => togglePanel(dt.code)}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+            >
+              <span className="fs__num sust-cat__num">{(index + 1).toString().padStart(2, '0')}</span>
+              <span className="sust-cat__title">
+                <strong>Équipements {dt.label.toLowerCase()}</strong>
+              </span>
+              <span className="pill-mini sust-cat__count">
+                {panelSelected} / {panelOptions.length}
+              </span>
+              <span className="sust-cat__chev" aria-hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </span>
+            </button>
+            {isOpen ? (
+              <div id={panelId} className="sust-cat__body">
+                <ChipMultiSelect
+                  options={panelOptions}
+                  selected={characteristics.selectedAmenityCodes}
+                  onToggle={(code) =>
+                    editor.replaceModule('characteristics', {
+                      ...characteristics,
+                      selectedAmenityCodes: characteristics.selectedAmenityCodes.includes(code)
+                        ? characteristics.selectedAmenityCodes.filter((c) => c !== code)
+                        : [...characteristics.selectedAmenityCodes, code],
+                    })
+                  }
+                />
+              </div>
+            ) : null}
           </div>
-          <ChipSet>
-            {distinctions.accessibilityAmenityCoverage.map((item) => (
-              <Chip
-                key={item.code}
-                label={`${item.label}${item.disabilityTypes.length ? ` · ${item.disabilityTypes.join(', ')}` : ''}`}
-                on
-              />
-            ))}
-          </ChipSet>
-        </>
-      )}
+        );
+      })}
     </Fs>
   );
 }

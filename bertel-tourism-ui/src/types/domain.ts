@@ -65,6 +65,29 @@ export interface CapacityFilter {
   max?: number;
 }
 
+export type AccessibilityDisabilityTypeCode = 'motor' | 'hearing' | 'visual' | 'cognitive';
+
+export interface AccessibilityAmenityRef {
+  code: string;
+  name: string;
+  description?: string | null;
+  disabilityTypes: AccessibilityDisabilityTypeCode[];
+}
+
+export interface SustainabilityActionRef {
+  code: string;
+  name: string;
+  description?: string | null;
+  categoryCode: string;
+}
+
+export interface SustainabilityCategoryRef {
+  code: string;
+  name: string;
+  description?: string | null;
+  actions: SustainabilityActionRef[];
+}
+
 export interface ClassificationRef {
   schemeCode: string;
   valueCode: string;
@@ -98,6 +121,11 @@ export interface ExplorerCommonFilters {
   cities: string[];
   lieuDit: string;
   pmr: boolean;
+  accessibilityDisabilityTypesAny: AccessibilityDisabilityTypeCode[];
+  accessibilityAmenityCodesAny: string[];
+  sustainable: boolean;
+  sustainabilityCategoryCodesAny: string[];
+  sustainabilityActionCodesAny: string[];
   petsAccepted: boolean;
   openNow: boolean;
   labelsAny: string[];
@@ -203,6 +231,9 @@ export interface ExplorerTaxonomyDomain {
 }
 
 export interface ExplorerReferences {
+  accessibilityDisabilityTypes: ExplorerReferenceOption[];
+  accessibilityAmenities: AccessibilityAmenityRef[];
+  sustainabilityCategories: SustainabilityCategoryRef[];
   hotTaxonomy: ExplorerTaxonomyDomain[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];

@@ -48,6 +48,13 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       : undefined;
 
   const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const accessibilityDisabilityTypesAny =
+    searchParams.get('accessibilityTypes')?.split(',').map((item) => item.trim()).filter(Boolean) as
+      | ExplorerFilters['common']['accessibilityDisabilityTypesAny']
+      | undefined;
+  const accessibilityAmenityCodesAny = searchParams.get('accessibilityAmenities')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const sustainabilityCategoryCodesAny = searchParams.get('sustainabilityCategories')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const sustainabilityActionCodesAny = searchParams.get('sustainabilityActions')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const statuses =
     searchParams
       .get('status')
@@ -74,7 +81,22 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       cities: [searchParams.get('city') ?? ''].filter(Boolean),
     }),
     ...(searchParams.get('lieuDit') != null && { lieuDit: searchParams.get('lieuDit') ?? '' }),
-    ...(searchParams.get('pmr') != null && { pmr: searchParams.get('pmr') === 'true' }),
+    ...((searchParams.get('pmr') != null || accessibilityDisabilityTypesAny !== undefined || accessibilityAmenityCodesAny !== undefined) && {
+      pmr:
+        searchParams.get('pmr') === 'true' ||
+        Boolean(accessibilityDisabilityTypesAny?.length) ||
+        Boolean(accessibilityAmenityCodesAny?.length),
+    }),
+    ...(accessibilityDisabilityTypesAny !== undefined && { accessibilityDisabilityTypesAny }),
+    ...(accessibilityAmenityCodesAny !== undefined && { accessibilityAmenityCodesAny }),
+    ...((searchParams.get('sustainable') != null || sustainabilityCategoryCodesAny !== undefined || sustainabilityActionCodesAny !== undefined) && {
+      sustainable:
+        searchParams.get('sustainable') === 'true' ||
+        Boolean(sustainabilityCategoryCodesAny?.length) ||
+        Boolean(sustainabilityActionCodesAny?.length),
+    }),
+    ...(sustainabilityCategoryCodesAny !== undefined && { sustainabilityCategoryCodesAny }),
+    ...(sustainabilityActionCodesAny !== undefined && { sustainabilityActionCodesAny }),
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
     ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
     ...(labelsAny !== undefined && { labelsAny }),
@@ -168,6 +190,21 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (filters.common.pmr) {
     p.set('pmr', 'true');
+  }
+  if (filters.common.accessibilityDisabilityTypesAny.length > 0) {
+    p.set('accessibilityTypes', filters.common.accessibilityDisabilityTypesAny.join(','));
+  }
+  if (filters.common.accessibilityAmenityCodesAny.length > 0) {
+    p.set('accessibilityAmenities', filters.common.accessibilityAmenityCodesAny.join(','));
+  }
+  if (filters.common.sustainable) {
+    p.set('sustainable', 'true');
+  }
+  if (filters.common.sustainabilityCategoryCodesAny.length > 0) {
+    p.set('sustainabilityCategories', filters.common.sustainabilityCategoryCodesAny.join(','));
+  }
+  if (filters.common.sustainabilityActionCodesAny.length > 0) {
+    p.set('sustainabilityActions', filters.common.sustainabilityActionCodesAny.join(','));
   }
   if (filters.common.petsAccepted) {
     p.set('pets', 'true');

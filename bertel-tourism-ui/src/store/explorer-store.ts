@@ -201,21 +201,21 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     set((state) => {
       const needle = String(label).trim();
       if (!needle) return state;
-      const exists = state.common.labelsAny.includes(needle);
+      const labelsAny = state.common.labelsAny ?? [];
+      const exists = labelsAny.includes(needle);
       return {
         common: {
           ...state.common,
-          labelsAny: exists ? state.common.labelsAny.filter((item) => item !== needle) : [...state.common.labelsAny, needle],
+          labelsAny: exists ? labelsAny.filter((item) => item !== needle) : [...labelsAny, needle],
         },
       };
     }),
   clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
   toggleStatus: (status) =>
     set((state) => {
-      const exists = state.common.statuses.includes(status);
-      const next = exists
-        ? state.common.statuses.filter((entry) => entry !== status)
-        : [...state.common.statuses, status];
+      const statuses = state.common.statuses ?? [];
+      const exists = statuses.includes(status);
+      const next = exists ? statuses.filter((entry) => entry !== status) : [...statuses, status];
       return { common: { ...state.common, statuses: next } };
     }),
   setStatuses: (statuses) =>
@@ -254,9 +254,10 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
 
   toggleHotSubtype: (type) =>
     set((state) => {
-      const nextSubtypes = state.hot.subtypes.includes(type)
-        ? state.hot.subtypes.filter((item) => item !== type)
-        : [...state.hot.subtypes, type];
+      const subtypes = state.hot.subtypes ?? [...DEFAULT_HOT_SUBTYPES];
+      const nextSubtypes = subtypes.includes(type)
+        ? subtypes.filter((item) => item !== type)
+        : [...subtypes, type];
 
       return {
         hot: {
@@ -267,13 +268,14 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     }),
   toggleHotTaxonomy: (domain, code) =>
     set((state) => {
-      const exists = state.hot.taxonomy.some((item) => item.domain === domain && item.code === code);
+      const taxonomy = state.hot.taxonomy ?? [];
+      const exists = taxonomy.some((item) => item.domain === domain && item.code === code);
       return {
         hot: {
           ...state.hot,
           taxonomy: exists
-            ? state.hot.taxonomy.filter((item) => !(item.domain === domain && item.code === code))
-            : [...state.hot.taxonomy, { domain, code }],
+            ? taxonomy.filter((item) => !(item.domain === domain && item.code === code))
+            : [...taxonomy, { domain, code }],
         },
       };
     }),
@@ -281,14 +283,14 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     set((state) => ({
       hot: {
         ...state.hot,
-        capacityFilters: upsertCapacityFilter(state.hot.capacityFilters, code, min, max),
+        capacityFilters: upsertCapacityFilter(state.hot.capacityFilters ?? [], code, min, max),
       },
     })),
   setResCapacityFilter: (code, min, max) =>
     set((state) => ({
       res: {
         ...state.res,
-        capacityFilters: upsertCapacityFilter(state.res.capacityFilters, code, min, max),
+        capacityFilters: upsertCapacityFilter(state.res.capacityFilters ?? [], code, min, max),
       },
     })),
   setHotMeetingRoom: (patch) =>
@@ -296,7 +298,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       hot: {
         ...state.hot,
         meetingRoom: {
-          ...state.hot.meetingRoom,
+          ...(state.hot.meetingRoom ?? {}),
           ...patch,
         },
       },
@@ -306,14 +308,17 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setItiDistance: (min, max) => set((state) => ({ iti: { ...state.iti, distanceMinKm: min, distanceMaxKm: max } })),
   setItiDuration: (min, max) => set((state) => ({ iti: { ...state.iti, durationMinH: min, durationMaxH: max } })),
   toggleItiPractice: (code) =>
-    set((state) => ({
-      iti: {
-        ...state.iti,
-        practicesAny: state.iti.practicesAny.includes(code)
-          ? state.iti.practicesAny.filter((item) => item !== code)
-          : [...state.iti.practicesAny, code],
-      },
-    })),
+    set((state) => {
+      const practicesAny = state.iti.practicesAny ?? [];
+      return {
+        iti: {
+          ...state.iti,
+          practicesAny: practicesAny.includes(code)
+            ? practicesAny.filter((item) => item !== code)
+            : [...practicesAny, code],
+        },
+      };
+    }),
   setPolygon: (polygon, bbox = null) => set((state) => ({ common: { ...state.common, polygon, bbox } })),
   resetSpatialFilter: () => set((state) => ({ common: { ...state.common, polygon: null, bbox: null } })),
   resetAll: () => set(DEFAULT_EXPLORER_FILTERS),

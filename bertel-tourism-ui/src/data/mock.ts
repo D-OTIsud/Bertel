@@ -10,7 +10,7 @@ import type {
   PublicationCard,
   CrmTask,
 } from '../types/domain';
-import { applyFrontendOnlyExplorerFilters, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
+import { applyFrontendOnlyExplorerFilters, getBackendTypesForBucket, getEffectiveSelectedBuckets, normalizeExplorerFilters, sortExplorerCards } from '../utils/facets';
 
 export const mockCards: ObjectCard[] = [
   {
@@ -404,11 +404,12 @@ function matchesBucket(card: ObjectCard, bucket: ExplorerBucketKey): boolean {
 }
 
 export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucketKey): ObjectCard[] {
-  const buckets = bucket ? [bucket] : getEffectiveSelectedBuckets(filters.selectedBuckets);
-  const search = filters.common.search.trim().toLowerCase();
-  const cities = filters.common.cities.map((c) => c.trim().toLowerCase()).filter(Boolean);
-  const lieuDit = filters.common.lieuDit.trim().toLowerCase();
-  const labelsAny = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
+  const normalizedFilters = normalizeExplorerFilters(filters);
+  const buckets = bucket ? [bucket] : getEffectiveSelectedBuckets(normalizedFilters.selectedBuckets);
+  const search = normalizedFilters.common.search.trim().toLowerCase();
+  const cities = normalizedFilters.common.cities.map((c) => c.trim().toLowerCase()).filter(Boolean);
+  const lieuDit = normalizedFilters.common.lieuDit.trim().toLowerCase();
+  const labelsAny = normalizedFilters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
   const accessibilityByObject: Record<string, { types: ExplorerFilters['common']['accessibilityDisabilityTypesAny']; amenities: string[] }> = {
     HOTRUN0000000001: { types: ['motor', 'hearing'], amenities: ['acc_pmr_parking', 'acc_step_removal', 'acc_magnetic_loop'] },
     RESRUN0000000002: { types: ['motor', 'cognitive'], amenities: ['acc_step_removal', 'acc_falc_docs'] },
@@ -437,32 +438,32 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
       (card.location?.city ?? '').toLowerCase().includes(search);
     const cityMatches = cities.length === 0 || cities.includes((card.location?.city ?? '').toLowerCase());
     const lieuDitMatches = lieuDit.length === 0 || (card.location?.lieu_dit ?? '').toLowerCase().includes(lieuDit);
-    const openMatches = !filters.common.openNow || card.open_now === true;
-    const petsMatches = !filters.common.petsAccepted || card.id === 'HOTRUN0000000001';
+    const openMatches = !normalizedFilters.common.openNow || card.open_now === true;
+    const petsMatches = !normalizedFilters.common.petsAccepted || card.id === 'HOTRUN0000000001';
     const accessibility = accessibilityByObject[card.id] ?? { types: [], amenities: [] };
     const hasAccessibilityFilter =
-      filters.common.pmr ||
-      filters.common.accessibilityDisabilityTypesAny.length > 0 ||
-      filters.common.accessibilityAmenityCodesAny.length > 0;
+      normalizedFilters.common.pmr ||
+      normalizedFilters.common.accessibilityDisabilityTypesAny.length > 0 ||
+      normalizedFilters.common.accessibilityAmenityCodesAny.length > 0;
     const pmrMatches =
       !hasAccessibilityFilter ||
       (accessibility.amenities.length > 0 &&
-        (filters.common.accessibilityDisabilityTypesAny.length === 0 ||
-          accessibility.types.some((type) => filters.common.accessibilityDisabilityTypesAny.includes(type))) &&
-        (filters.common.accessibilityAmenityCodesAny.length === 0 ||
-          accessibility.amenities.some((code) => filters.common.accessibilityAmenityCodesAny.includes(code))));
+        (normalizedFilters.common.accessibilityDisabilityTypesAny.length === 0 ||
+          accessibility.types.some((type) => normalizedFilters.common.accessibilityDisabilityTypesAny.includes(type))) &&
+        (normalizedFilters.common.accessibilityAmenityCodesAny.length === 0 ||
+          accessibility.amenities.some((code) => normalizedFilters.common.accessibilityAmenityCodesAny.includes(code))));
     const sustainability = sustainabilityByObject[card.id] ?? { categories: [], actions: [] };
     const hasSustainabilityFilter =
-      filters.common.sustainable ||
-      filters.common.sustainabilityCategoryCodesAny.length > 0 ||
-      filters.common.sustainabilityActionCodesAny.length > 0;
+      normalizedFilters.common.sustainable ||
+      normalizedFilters.common.sustainabilityCategoryCodesAny.length > 0 ||
+      normalizedFilters.common.sustainabilityActionCodesAny.length > 0;
     const sustainabilityMatches =
       !hasSustainabilityFilter ||
       (sustainability.actions.length > 0 &&
-        (filters.common.sustainabilityCategoryCodesAny.length === 0 ||
-          sustainability.categories.some((code) => filters.common.sustainabilityCategoryCodesAny.includes(code))) &&
-        (filters.common.sustainabilityActionCodesAny.length === 0 ||
-          sustainability.actions.some((code) => filters.common.sustainabilityActionCodesAny.includes(code))));
+        (normalizedFilters.common.sustainabilityCategoryCodesAny.length === 0 ||
+          sustainability.categories.some((code) => normalizedFilters.common.sustainabilityCategoryCodesAny.includes(code))) &&
+        (normalizedFilters.common.sustainabilityActionCodesAny.length === 0 ||
+          sustainability.actions.some((code) => normalizedFilters.common.sustainabilityActionCodesAny.includes(code))));
     const labelsMatches =
       labelsAny.length === 0 ||
       (Array.isArray(card.labels) && card.labels.some((label) => labelsAny.includes(String(label).toLowerCase())));
@@ -487,25 +488,25 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
       const difficulty = card.id === 'ITIRUN000000003' ? 3 : null;
       const isLoop = card.id === 'ITIRUN000000003';
 
-      if (filters.iti.isLoop != null && filters.iti.isLoop !== isLoop) {
+      if (normalizedFilters.iti.isLoop != null && normalizedFilters.iti.isLoop !== isLoop) {
         return false;
       }
-      if (filters.iti.difficultyMin != null && (difficulty == null || difficulty < filters.iti.difficultyMin)) {
+      if (normalizedFilters.iti.difficultyMin != null && (difficulty == null || difficulty < normalizedFilters.iti.difficultyMin)) {
         return false;
       }
-      if (filters.iti.difficultyMax != null && (difficulty == null || difficulty > filters.iti.difficultyMax)) {
+      if (normalizedFilters.iti.difficultyMax != null && (difficulty == null || difficulty > normalizedFilters.iti.difficultyMax)) {
         return false;
       }
-      if (filters.iti.distanceMinKm != null && (distance == null || distance < filters.iti.distanceMinKm)) {
+      if (normalizedFilters.iti.distanceMinKm != null && (distance == null || distance < normalizedFilters.iti.distanceMinKm)) {
         return false;
       }
-      if (filters.iti.distanceMaxKm != null && (distance == null || distance > filters.iti.distanceMaxKm)) {
+      if (normalizedFilters.iti.distanceMaxKm != null && (distance == null || distance > normalizedFilters.iti.distanceMaxKm)) {
         return false;
       }
-      if (filters.iti.durationMinH != null && (duration == null || duration < filters.iti.durationMinH)) {
+      if (normalizedFilters.iti.durationMinH != null && (duration == null || duration < normalizedFilters.iti.durationMinH)) {
         return false;
       }
-      if (filters.iti.durationMaxH != null && (duration == null || duration > filters.iti.durationMaxH)) {
+      if (normalizedFilters.iti.durationMaxH != null && (duration == null || duration > normalizedFilters.iti.durationMaxH)) {
         return false;
       }
     }
@@ -513,5 +514,5 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
     return true;
   });
 
-  return sortExplorerCards(applyFrontendOnlyExplorerFilters(filtered, filters));
+  return sortExplorerCards(applyFrontendOnlyExplorerFilters(filtered, normalizedFilters));
 }

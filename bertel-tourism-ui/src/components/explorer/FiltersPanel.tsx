@@ -152,8 +152,13 @@ function FiltersSubsection({ title, children }: FiltersSubsectionProps) {
 export function FiltersPanel({ compact = false, headerActions, references, variant = 'panel' }: FiltersPanelProps) {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
   const common = useExplorerStore((state) => state.common);
+  const cities = common.cities ?? [];
+  const labelsAny = common.labelsAny ?? [];
+  const statuses = common.statuses ?? [];
+  const pmr = common.pmr === true;
   const accessibilityDisabilityTypesAny = common.accessibilityDisabilityTypesAny ?? [];
   const accessibilityAmenityCodesAny = common.accessibilityAmenityCodesAny ?? [];
+  const sustainable = common.sustainable === true;
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
   const sustainabilityActionCodesAny = common.sustainabilityActionCodesAny ?? [];
   const hot = useExplorerStore((state) => state.hot);
@@ -188,13 +193,13 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
   const showIti = isBucketSelected(selectedBuckets, 'ITI');
-  const effectiveStatuses = resolveExplorerStatuses(common.statuses, canEditObjects);
+  const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
 
   const activeFilterCount = useExplorerStore((s) => {
     let n = 0;
     if (s.selectedBuckets.length) n += 1;
     if (s.common.search.trim()) n += 1;
-    if (s.common.cities.length) n += 1;
+    if ((s.common.cities ?? []).length) n += 1;
     if (s.common.lieuDit.trim()) n += 1;
     if (s.common.pmr) n += 1;
     if ((s.common.accessibilityDisabilityTypesAny ?? []).length) n += 1;
@@ -204,8 +209,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if ((s.common.sustainabilityActionCodesAny ?? []).length) n += 1;
     if (s.common.petsAccepted) n += 1;
     if (s.common.openNow) n += 1;
-    if (s.common.labelsAny.length) n += 1;
-    if (s.common.statuses.length > 0) n += 1;
+    if ((s.common.labelsAny ?? []).length) n += 1;
+    if ((s.common.statuses ?? []).length > 0) n += 1;
     if (s.common.polygon) n += 1;
     if (s.common.bbox) n += 1;
     const subDefault =
@@ -224,7 +229,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
   const isColumn = variant === 'column';
   const accessibilityDisabilityTypes: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> =
-    references?.accessibilityDisabilityTypes.length
+    references?.accessibilityDisabilityTypes?.length
       ? references.accessibilityDisabilityTypes.map((option) => ({
           code: option.code as AccessibilityDisabilityTypeCode,
           label: option.name,
@@ -454,7 +459,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   placeholder="Toutes les communes"
                   allLabel="Toutes les communes"
                   options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
-                  selected={common.cities}
+                  selected={cities}
                   onChange={(vals) => setCities(vals)}
                 />
               </div>
@@ -471,11 +476,11 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
             </div>
           </FilterColumnGroup>
 
-          <FilterColumnGroup label="Labels & certifications" count={common.labelsAny.length > 0 ? common.labelsAny.length : undefined}>
-            {common.labelsAny.length > 0 ? (
+          <FilterColumnGroup label="Labels & certifications" count={labelsAny.length > 0 ? labelsAny.length : undefined}>
+            {labelsAny.length > 0 ? (
               <div className="space-y-2">
                 <ul className="grid gap-2">
-                  {common.labelsAny.map((label) => (
+                  {labelsAny.map((label) => (
                     <li key={label}>
                       <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
                         <input type="checkbox" className="accent-teal" checked onChange={() => toggleLabel(label)} />
@@ -500,14 +505,14 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
             <div className="flex flex-col gap-2">
               <label className="switch-row">
                 <span>PMR</span>
-                <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
+                <input type="checkbox" checked={pmr} onChange={(event) => setPmr(event.target.checked)} />
               </label>
-              {common.pmr ? renderAccessibilityDetails() : null}
+              {pmr ? renderAccessibilityDetails() : null}
               <label className="switch-row">
                 <span>Demarche durable</span>
-                <input type="checkbox" checked={common.sustainable} onChange={(event) => setSustainable(event.target.checked)} />
+                <input type="checkbox" checked={sustainable} onChange={(event) => setSustainable(event.target.checked)} />
               </label>
-              {common.sustainable ? renderSustainabilityDetails() : null}
+              {sustainable ? renderSustainabilityDetails() : null}
               <label className="switch-row">
                 <span>Animaux acceptes</span>
                 <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
@@ -813,7 +818,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   placeholder="Toutes les communes"
                   allLabel="Toutes les communes"
                   options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
-                  selected={common.cities}
+                  selected={cities}
                   onChange={(vals) => setCities(vals)}
                 />
               </div>
@@ -833,15 +838,15 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               <div className="filters-panel__toggle-group">
                 <label className="switch-row">
                   <span>PMR</span>
-                  <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
+                  <input type="checkbox" checked={pmr} onChange={(event) => setPmr(event.target.checked)} />
                 </label>
-                {common.pmr ? renderAccessibilityDetails() : null}
+                {pmr ? renderAccessibilityDetails() : null}
 
                 <label className="switch-row">
                   <span>Demarche durable</span>
-                  <input type="checkbox" checked={common.sustainable} onChange={(event) => setSustainable(event.target.checked)} />
+                  <input type="checkbox" checked={sustainable} onChange={(event) => setSustainable(event.target.checked)} />
                 </label>
-                {common.sustainable ? renderSustainabilityDetails() : null}
+                {sustainable ? renderSustainabilityDetails() : null}
 
                 <label className="switch-row">
                   <span>Animaux acceptes</span>
@@ -886,10 +891,10 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               </FiltersSubsection>
             ) : null}
 
-            {common.labelsAny.length > 0 ? (
+            {labelsAny.length > 0 ? (
               <FiltersSubsection title="Labels">
                 <div className="chip-grid">
-                  {common.labelsAny.map((label) => (
+                  {labelsAny.map((label) => (
                     <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
                       {label}
                     </button>

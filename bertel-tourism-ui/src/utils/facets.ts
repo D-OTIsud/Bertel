@@ -201,7 +201,7 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
  * view with API ids once the filtered query returns.
  */
 export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
-  const { common, hot, res, iti, act } = filters;
+  const { common, hot, res, iti, act } = normalizeExplorerFilters(filters);
   const hasAccessibilityFilter =
     common.pmr ||
     common.accessibilityDisabilityTypesAny.length > 0 ||
@@ -288,7 +288,8 @@ export function normalizeExplorerObjectType(type: string): ObjectTypeCode {
 
 export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: ExplorerBucketKey): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
-  const { common } = filters;
+  const normalizedFilters = normalizeExplorerFilters(filters);
+  const { common } = normalizedFilters;
 
   if (common.openNow) {
     payload.open_now = true;
@@ -344,11 +345,11 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   }
 
   if (bucket === 'HOT') {
-    const taxonomy = filters.hot.taxonomy.map((item) => ({
+    const taxonomy = normalizedFilters.hot.taxonomy.map((item) => ({
       domain: item.domain,
       code: item.code,
     }));
-    const capacityFilters = normalizeCapacityFilters(filters.hot.capacityFilters);
+    const capacityFilters = normalizeCapacityFilters(normalizedFilters.hot.capacityFilters);
 
     if (taxonomy.length > 0) {
       payload.taxonomy_any = taxonomy;
@@ -358,18 +359,18 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
       payload.capacity_filters = capacityFilters;
     }
 
-    if (hasMeetingRoomFilter(filters.hot.meetingRoom)) {
+    if (hasMeetingRoomFilter(normalizedFilters.hot.meetingRoom)) {
       payload.meeting_room = {
-        ...(filters.hot.meetingRoom.minCount != null && { min_count: filters.hot.meetingRoom.minCount }),
-        ...(filters.hot.meetingRoom.minAreaM2 != null && { min_area_m2: filters.hot.meetingRoom.minAreaM2 }),
-        ...(filters.hot.meetingRoom.minCapTheatre != null && { min_cap_theatre: filters.hot.meetingRoom.minCapTheatre }),
-        ...(filters.hot.meetingRoom.minCapClassroom != null && { min_cap_classroom: filters.hot.meetingRoom.minCapClassroom }),
+        ...(normalizedFilters.hot.meetingRoom.minCount != null && { min_count: normalizedFilters.hot.meetingRoom.minCount }),
+        ...(normalizedFilters.hot.meetingRoom.minAreaM2 != null && { min_area_m2: normalizedFilters.hot.meetingRoom.minAreaM2 }),
+        ...(normalizedFilters.hot.meetingRoom.minCapTheatre != null && { min_cap_theatre: normalizedFilters.hot.meetingRoom.minCapTheatre }),
+        ...(normalizedFilters.hot.meetingRoom.minCapClassroom != null && { min_cap_classroom: normalizedFilters.hot.meetingRoom.minCapClassroom }),
       };
     }
   }
 
   if (bucket === 'RES') {
-    const capacityFilters = normalizeCapacityFilters(filters.res.capacityFilters);
+    const capacityFilters = normalizeCapacityFilters(normalizedFilters.res.capacityFilters);
     if (capacityFilters.length > 0) {
       payload.capacity_filters = capacityFilters;
     }
@@ -377,14 +378,14 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 
   if (bucket === 'ITI') {
     const itinerary = {
-      ...(filters.iti.isLoop != null && { is_loop: filters.iti.isLoop }),
-      ...(filters.iti.difficultyMin != null && { difficulty_min: filters.iti.difficultyMin }),
-      ...(filters.iti.difficultyMax != null && { difficulty_max: filters.iti.difficultyMax }),
-      ...(filters.iti.distanceMinKm != null && { distance_min_km: filters.iti.distanceMinKm }),
-      ...(filters.iti.distanceMaxKm != null && { distance_max_km: filters.iti.distanceMaxKm }),
-      ...(filters.iti.durationMinH != null && { duration_min_h: filters.iti.durationMinH }),
-      ...(filters.iti.durationMaxH != null && { duration_max_h: filters.iti.durationMaxH }),
-      ...(filters.iti.practicesAny.length > 0 && { practices_any: filters.iti.practicesAny }),
+      ...(normalizedFilters.iti.isLoop != null && { is_loop: normalizedFilters.iti.isLoop }),
+      ...(normalizedFilters.iti.difficultyMin != null && { difficulty_min: normalizedFilters.iti.difficultyMin }),
+      ...(normalizedFilters.iti.difficultyMax != null && { difficulty_max: normalizedFilters.iti.difficultyMax }),
+      ...(normalizedFilters.iti.distanceMinKm != null && { distance_min_km: normalizedFilters.iti.distanceMinKm }),
+      ...(normalizedFilters.iti.distanceMaxKm != null && { distance_max_km: normalizedFilters.iti.distanceMaxKm }),
+      ...(normalizedFilters.iti.durationMinH != null && { duration_min_h: normalizedFilters.iti.durationMinH }),
+      ...(normalizedFilters.iti.durationMaxH != null && { duration_max_h: normalizedFilters.iti.durationMaxH }),
+      ...(normalizedFilters.iti.practicesAny.length > 0 && { practices_any: normalizedFilters.iti.practicesAny }),
     };
 
     if (Object.keys(itinerary).length > 0) {
@@ -392,22 +393,23 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     }
   }
 
-  if (bucket === 'ACT' && filters.act.environmentTagsAny.length > 0) {
-    payload.environment_tags_any = filters.act.environmentTagsAny;
+  if (bucket === 'ACT' && normalizedFilters.act.environmentTagsAny.length > 0) {
+    payload.environment_tags_any = normalizedFilters.act.environmentTagsAny;
   }
 
   return payload;
 }
 
 export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
-  const effectiveHotSubtypes = filters.hot.subtypes.length > 0 ? filters.hot.subtypes : DEFAULT_HOT_SUBTYPES;
+  const normalizedFilters = normalizeExplorerFilters(filters);
+  const effectiveHotSubtypes = normalizedFilters.hot.subtypes.length > 0 ? normalizedFilters.hot.subtypes : DEFAULT_HOT_SUBTYPES;
   const allowedHotSubtypes = new Set(effectiveHotSubtypes);
-  const labelNeedles = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
+  const labelNeedles = normalizedFilters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
   const requireLabelMatch = labelNeedles.length > 0;
   // When the caller resolves statuses (cf. resolveExplorerStatuses) the array
   // is non-empty and we apply it here too. Empty array = "no client-side
   // filter": we defer to whatever the backend already filtered.
-  const statuses = filters.common.statuses;
+  const statuses = normalizedFilters.common.statuses;
   const allowedStatuses = statuses.length > 0 ? new Set<string>(statuses) : null;
   return cards.filter((card) => {
     if (allowedStatuses && card.status && !allowedStatuses.has(card.status)) {
@@ -428,11 +430,12 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
 }
 
 export function applyClientPreviewFilters(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
-  const selectedBuckets = new Set(getEffectiveSelectedBuckets(filters.selectedBuckets));
-  const allowedCities = new Set(filters.common.cities.map((city) => normalizeNeedle(city)).filter(Boolean));
-  const lieuDitNeedle = normalizeNeedle(filters.common.lieuDit);
-  const searchNeedle = normalizeNeedle(filters.common.search);
-  const polygonCoordinates = filters.common.polygon?.coordinates?.[0] ?? null;
+  const normalizedFilters = normalizeExplorerFilters(filters);
+  const selectedBuckets = new Set(getEffectiveSelectedBuckets(normalizedFilters.selectedBuckets));
+  const allowedCities = new Set(normalizedFilters.common.cities.map((city) => normalizeNeedle(city)).filter(Boolean));
+  const lieuDitNeedle = normalizeNeedle(normalizedFilters.common.lieuDit);
+  const searchNeedle = normalizeNeedle(normalizedFilters.common.search);
+  const polygonCoordinates = normalizedFilters.common.polygon?.coordinates?.[0] ?? null;
 
   const narrowed = cards.filter((card) => {
     if (!selectedBuckets.has(normalizeExplorerObjectType(card.type))) {
@@ -453,7 +456,7 @@ export function applyClientPreviewFilters(cards: ObjectCard[], filters: Explorer
       }
     }
 
-    if (filters.common.openNow && card.open_now !== true) {
+    if (normalizedFilters.common.openNow && card.open_now !== true) {
       return false;
     }
 
@@ -471,7 +474,7 @@ export function applyClientPreviewFilters(cards: ObjectCard[], filters: Explorer
       }
     }
 
-    if (filters.common.bbox && !isWithinBbox(card, filters.common.bbox)) {
+    if (normalizedFilters.common.bbox && !isWithinBbox(card, normalizedFilters.common.bbox)) {
       return false;
     }
 
@@ -482,7 +485,7 @@ export function applyClientPreviewFilters(cards: ObjectCard[], filters: Explorer
     return true;
   });
 
-  return applyFrontendOnlyExplorerFilters(narrowed, filters);
+  return applyFrontendOnlyExplorerFilters(narrowed, normalizedFilters);
 }
 
 export function dedupeExplorerCards(cards: ObjectCard[]): ObjectCard[] {

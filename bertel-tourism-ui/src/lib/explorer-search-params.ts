@@ -1,5 +1,5 @@
 import type { ExplorerBucketKey, ExplorerFilters, ExplorerStatusFilter } from '@/types/domain';
-import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS } from '@/utils/facets';
+import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS, normalizeExplorerFilters } from '@/utils/facets';
 
 const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
 const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = ['published', 'draft'];
@@ -172,90 +172,91 @@ function parseOptionalNumber(s: string | null): number | undefined {
 }
 
 export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
+  const normalizedFilters = normalizeExplorerFilters(filters);
   const p = new URLSearchParams();
-  if (filters.selectedBuckets.length > 0) {
-    p.set('buckets', filters.selectedBuckets.join(','));
+  if (normalizedFilters.selectedBuckets.length > 0) {
+    p.set('buckets', normalizedFilters.selectedBuckets.join(','));
   }
-  if (filters.common.labelsAny.length > 0) {
-    p.set('labels', filters.common.labelsAny.join(','));
+  if (normalizedFilters.common.labelsAny.length > 0) {
+    p.set('labels', normalizedFilters.common.labelsAny.join(','));
   }
-  if (filters.common.search) {
-    p.set('search', filters.common.search);
+  if (normalizedFilters.common.search) {
+    p.set('search', normalizedFilters.common.search);
   }
-  if (filters.common.cities.length > 0) {
-    p.set('cities', filters.common.cities.join(','));
+  if (normalizedFilters.common.cities.length > 0) {
+    p.set('cities', normalizedFilters.common.cities.join(','));
   }
-  if (filters.common.lieuDit) {
-    p.set('lieuDit', filters.common.lieuDit);
+  if (normalizedFilters.common.lieuDit) {
+    p.set('lieuDit', normalizedFilters.common.lieuDit);
   }
-  if (filters.common.pmr) {
+  if (normalizedFilters.common.pmr) {
     p.set('pmr', 'true');
   }
-  if (filters.common.accessibilityDisabilityTypesAny.length > 0) {
-    p.set('accessibilityTypes', filters.common.accessibilityDisabilityTypesAny.join(','));
+  if (normalizedFilters.common.accessibilityDisabilityTypesAny.length > 0) {
+    p.set('accessibilityTypes', normalizedFilters.common.accessibilityDisabilityTypesAny.join(','));
   }
-  if (filters.common.accessibilityAmenityCodesAny.length > 0) {
-    p.set('accessibilityAmenities', filters.common.accessibilityAmenityCodesAny.join(','));
+  if (normalizedFilters.common.accessibilityAmenityCodesAny.length > 0) {
+    p.set('accessibilityAmenities', normalizedFilters.common.accessibilityAmenityCodesAny.join(','));
   }
-  if (filters.common.sustainable) {
+  if (normalizedFilters.common.sustainable) {
     p.set('sustainable', 'true');
   }
-  if (filters.common.sustainabilityCategoryCodesAny.length > 0) {
-    p.set('sustainabilityCategories', filters.common.sustainabilityCategoryCodesAny.join(','));
+  if (normalizedFilters.common.sustainabilityCategoryCodesAny.length > 0) {
+    p.set('sustainabilityCategories', normalizedFilters.common.sustainabilityCategoryCodesAny.join(','));
   }
-  if (filters.common.sustainabilityActionCodesAny.length > 0) {
-    p.set('sustainabilityActions', filters.common.sustainabilityActionCodesAny.join(','));
+  if (normalizedFilters.common.sustainabilityActionCodesAny.length > 0) {
+    p.set('sustainabilityActions', normalizedFilters.common.sustainabilityActionCodesAny.join(','));
   }
-  if (filters.common.petsAccepted) {
+  if (normalizedFilters.common.petsAccepted) {
     p.set('pets', 'true');
   }
-  if (filters.common.openNow) {
+  if (normalizedFilters.common.openNow) {
     p.set('openNow', 'true');
   }
-  if (filters.common.statuses.length > 0) {
+  if (normalizedFilters.common.statuses.length > 0) {
     // Persist explicit status picks only. Empty array means "use the
     // session-aware default" (cf. resolveExplorerStatuses) and does NOT
     // belong in the URL — keeps shareable links shorter and survives a
     // role change between sessions.
-    p.set('status', filters.common.statuses.join(','));
+    p.set('status', normalizedFilters.common.statuses.join(','));
   }
-  if (filters.hot.subtypes.length > 0) {
-    p.set('hotSubtypes', filters.hot.subtypes.join(','));
+  if (normalizedFilters.hot.subtypes.length > 0) {
+    p.set('hotSubtypes', normalizedFilters.hot.subtypes.join(','));
   }
-  if (filters.hot.taxonomy.length > 0) {
-    p.set('hotTaxonomy', filters.hot.taxonomy.map((item) => `${item.domain}:${item.code}`).join(','));
+  if (normalizedFilters.hot.taxonomy.length > 0) {
+    p.set('hotTaxonomy', normalizedFilters.hot.taxonomy.map((item) => `${item.domain}:${item.code}`).join(','));
   }
-  const hotCapacity = serializeCapacityFilters(filters.hot.capacityFilters);
+  const hotCapacity = serializeCapacityFilters(normalizedFilters.hot.capacityFilters);
   if (hotCapacity) {
     p.set('hotCapacity', hotCapacity);
   }
-  const resCapacity = serializeCapacityFilters(filters.res.capacityFilters);
+  const resCapacity = serializeCapacityFilters(normalizedFilters.res.capacityFilters);
   if (resCapacity) {
     p.set('resCapacity', resCapacity);
   }
-  if (filters.iti.isLoop != null) {
-    p.set('itiIsLoop', String(filters.iti.isLoop));
+  if (normalizedFilters.iti.isLoop != null) {
+    p.set('itiIsLoop', String(normalizedFilters.iti.isLoop));
   }
-  if (filters.iti.difficultyMin != null) {
-    p.set('itiDifficultyMin', String(filters.iti.difficultyMin));
+  if (normalizedFilters.iti.difficultyMin != null) {
+    p.set('itiDifficultyMin', String(normalizedFilters.iti.difficultyMin));
   }
-  if (filters.iti.difficultyMax != null) {
-    p.set('itiDifficultyMax', String(filters.iti.difficultyMax));
+  if (normalizedFilters.iti.difficultyMax != null) {
+    p.set('itiDifficultyMax', String(normalizedFilters.iti.difficultyMax));
   }
-  if (filters.iti.distanceMinKm != null) {
-    p.set('itiDistanceMinKm', String(filters.iti.distanceMinKm));
+  if (normalizedFilters.iti.distanceMinKm != null) {
+    p.set('itiDistanceMinKm', String(normalizedFilters.iti.distanceMinKm));
   }
-  if (filters.iti.distanceMaxKm != null) {
-    p.set('itiDistanceMaxKm', String(filters.iti.distanceMaxKm));
+  if (normalizedFilters.iti.distanceMaxKm != null) {
+    p.set('itiDistanceMaxKm', String(normalizedFilters.iti.distanceMaxKm));
   }
-  if (filters.iti.durationMinH != null) {
-    p.set('itiDurationMinH', String(filters.iti.durationMinH));
+  if (normalizedFilters.iti.durationMinH != null) {
+    p.set('itiDurationMinH', String(normalizedFilters.iti.durationMinH));
   }
-  if (filters.iti.durationMaxH != null) {
-    p.set('itiDurationMaxH', String(filters.iti.durationMaxH));
+  if (normalizedFilters.iti.durationMaxH != null) {
+    p.set('itiDurationMaxH', String(normalizedFilters.iti.durationMaxH));
   }
-  if (filters.iti.practicesAny.length > 0) {
-    p.set('itiPractices', filters.iti.practicesAny.join(','));
+  if (normalizedFilters.iti.practicesAny.length > 0) {
+    p.set('itiPractices', normalizedFilters.iti.practicesAny.join(','));
   }
   return p;
 }

@@ -84,17 +84,20 @@ function hasOverlap(left: readonly string[], right: readonly string[]): boolean 
 
 function filterAccessibilityAmenities(
   amenities: AccessibilityAmenityRef[],
-  selectedTypes: string[],
-  selectedAmenityCodes: string[],
+  selectedTypes: string[] | undefined,
+  selectedAmenityCodes: string[] | undefined,
 ): AccessibilityAmenityRef[] {
-  if (selectedTypes.length === 0) {
-    return amenities.filter((amenity) => selectedAmenityCodes.includes(amenity.code));
+  const types = selectedTypes ?? [];
+  const codes = selectedAmenityCodes ?? [];
+
+  if (types.length === 0) {
+    return amenities.filter((amenity) => codes.includes(amenity.code));
   }
 
   return amenities.filter(
     (amenity) =>
-      selectedAmenityCodes.includes(amenity.code) ||
-      hasOverlap(amenity.disabilityTypes, selectedTypes),
+      codes.includes(amenity.code) ||
+      hasOverlap(amenity.disabilityTypes ?? [], types),
   );
 }
 
@@ -104,18 +107,20 @@ function flattenSustainabilityActions(references?: ExplorerReferences): Sustaina
 
 function filterSustainabilityActions(
   references: ExplorerReferences | undefined,
-  selectedCategoryCodes: string[],
-  selectedActionCodes: string[],
+  selectedCategoryCodes: string[] | undefined,
+  selectedActionCodes: string[] | undefined,
 ): SustainabilityActionRef[] {
+  const categoryCodes = selectedCategoryCodes ?? [];
+  const actionCodes = selectedActionCodes ?? [];
   const actions = flattenSustainabilityActions(references);
-  if (selectedCategoryCodes.length === 0 && selectedActionCodes.length === 0) {
+  if (categoryCodes.length === 0 && actionCodes.length === 0) {
     return [];
   }
 
   return actions.filter(
     (action) =>
-      selectedActionCodes.includes(action.code) ||
-      selectedCategoryCodes.includes(action.categoryCode),
+      actionCodes.includes(action.code) ||
+      categoryCodes.includes(action.categoryCode),
   );
 }
 
@@ -147,6 +152,10 @@ function FiltersSubsection({ title, children }: FiltersSubsectionProps) {
 export function FiltersPanel({ compact = false, headerActions, references, variant = 'panel' }: FiltersPanelProps) {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
   const common = useExplorerStore((state) => state.common);
+  const accessibilityDisabilityTypesAny = common.accessibilityDisabilityTypesAny ?? [];
+  const accessibilityAmenityCodesAny = common.accessibilityAmenityCodesAny ?? [];
+  const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
+  const sustainabilityActionCodesAny = common.sustainabilityActionCodesAny ?? [];
   const hot = useExplorerStore((state) => state.hot);
   const res = useExplorerStore((state) => state.res);
   const iti = useExplorerStore((state) => state.iti);
@@ -188,11 +197,11 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if (s.common.cities.length) n += 1;
     if (s.common.lieuDit.trim()) n += 1;
     if (s.common.pmr) n += 1;
-    if (s.common.accessibilityDisabilityTypesAny.length) n += 1;
-    if (s.common.accessibilityAmenityCodesAny.length) n += 1;
+    if ((s.common.accessibilityDisabilityTypesAny ?? []).length) n += 1;
+    if ((s.common.accessibilityAmenityCodesAny ?? []).length) n += 1;
     if (s.common.sustainable) n += 1;
-    if (s.common.sustainabilityCategoryCodesAny.length) n += 1;
-    if (s.common.sustainabilityActionCodesAny.length) n += 1;
+    if ((s.common.sustainabilityCategoryCodesAny ?? []).length) n += 1;
+    if ((s.common.sustainabilityActionCodesAny ?? []).length) n += 1;
     if (s.common.petsAccepted) n += 1;
     if (s.common.openNow) n += 1;
     if (s.common.labelsAny.length) n += 1;
@@ -224,17 +233,17 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const accessibilityAmenities = references?.accessibilityAmenities ?? [];
   const visibleAccessibilityAmenities = filterAccessibilityAmenities(
     accessibilityAmenities,
-    common.accessibilityDisabilityTypesAny,
-    common.accessibilityAmenityCodesAny,
+    accessibilityDisabilityTypesAny,
+    accessibilityAmenityCodesAny,
   );
   const sustainabilityCategories = references?.sustainabilityCategories ?? [];
   const visibleSustainabilityActions = filterSustainabilityActions(
     references,
-    common.sustainabilityCategoryCodesAny,
-    common.sustainabilityActionCodesAny,
+    sustainabilityCategoryCodesAny,
+    sustainabilityActionCodesAny,
   );
-  const accessibilityDetailCount = common.accessibilityDisabilityTypesAny.length + common.accessibilityAmenityCodesAny.length;
-  const sustainabilityDetailCount = common.sustainabilityCategoryCodesAny.length + common.sustainabilityActionCodesAny.length;
+  const accessibilityDetailCount = accessibilityDisabilityTypesAny.length + accessibilityAmenityCodesAny.length;
+  const sustainabilityDetailCount = sustainabilityCategoryCodesAny.length + sustainabilityActionCodesAny.length;
 
   const bucketChipClass = (active: boolean) =>
     cn(
@@ -250,7 +259,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
         <span className="mb-2 block text-[12px] font-semibold text-ink-2">Types de handicap</span>
         <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
           {accessibilityDisabilityTypes.map((option) => {
-            const active = common.accessibilityDisabilityTypesAny.includes(option.code);
+            const active = accessibilityDisabilityTypesAny.includes(option.code);
             return (
               <button
                 key={option.code}
@@ -271,7 +280,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           <span className="mb-2 block text-[12px] font-semibold text-ink-2">Amenagements precis</span>
           <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
             {visibleAccessibilityAmenities.map((amenity) => {
-              const active = common.accessibilityAmenityCodesAny.includes(amenity.code);
+              const active = accessibilityAmenityCodesAny.includes(amenity.code);
               return (
                 <button
                   key={amenity.code}
@@ -290,7 +299,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
       ) : (
         <p className="text-[12px] leading-snug text-ink-3">
           {accessibilityAmenities.length > 0
-            ? common.accessibilityDisabilityTypesAny.length > 0
+            ? accessibilityDisabilityTypesAny.length > 0
               ? 'Aucun amenagement du referentiel ne correspond a ce type.'
               : 'Choisissez un type pour afficher les amenagements associes.'
             : 'Les amenagements seront proposes des que le referentiel sera charge.'}
@@ -306,7 +315,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           <span className="mb-2 block text-[12px] font-semibold text-ink-2">Axes durables</span>
           <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
             {sustainabilityCategories.map((category) => {
-              const active = common.sustainabilityCategoryCodesAny.includes(category.code);
+              const active = sustainabilityCategoryCodesAny.includes(category.code);
               return (
                 <button
                   key={category.code}
@@ -331,7 +340,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           <span className="mb-2 block text-[12px] font-semibold text-ink-2">Actions precises</span>
           <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
             {visibleSustainabilityActions.map((action) => {
-              const active = common.sustainabilityActionCodesAny.includes(action.code);
+              const active = sustainabilityActionCodesAny.includes(action.code);
               return (
                 <button
                   key={action.code}

@@ -10,7 +10,7 @@ import type {
   MeetingRoomFilter,
 } from '../types/domain';
 import { mergeSelectedObjectIds } from '../utils/explorer-selection';
-import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES } from '../utils/facets';
+import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES, normalizeExplorerFilters } from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
@@ -84,7 +84,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
   const fallback = DEFAULT_EXPLORER_FILTERS;
   const currentBase = replace ? fallback : current;
 
-  return {
+  return normalizeExplorerFilters({
     selectedBuckets: partial.selectedBuckets ?? currentBase.selectedBuckets,
     common: {
       ...currentBase.common,
@@ -119,7 +119,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
     },
     vis: currentBase.vis,
     srv: currentBase.srv,
-  };
+  });
 }
 
 export const useExplorerStore = create<ExplorerState>((set) => ({
@@ -155,7 +155,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       common: {
         ...state.common,
         pmr: true,
-        accessibilityDisabilityTypesAny: toggleListValue(state.common.accessibilityDisabilityTypesAny, type),
+        accessibilityDisabilityTypesAny: toggleListValue(state.common.accessibilityDisabilityTypesAny ?? [], type),
       },
     })),
   toggleAccessibilityAmenity: (code) =>
@@ -163,7 +163,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       common: {
         ...state.common,
         pmr: true,
-        accessibilityAmenityCodesAny: toggleListValue(state.common.accessibilityAmenityCodesAny, code),
+        accessibilityAmenityCodesAny: toggleListValue(state.common.accessibilityAmenityCodesAny ?? [], code),
       },
     })),
   setSustainable: (value) =>
@@ -184,7 +184,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       common: {
         ...state.common,
         sustainable: true,
-        sustainabilityCategoryCodesAny: toggleListValue(state.common.sustainabilityCategoryCodesAny, code),
+        sustainabilityCategoryCodesAny: toggleListValue(state.common.sustainabilityCategoryCodesAny ?? [], code),
       },
     })),
   toggleSustainabilityAction: (code) =>
@@ -192,7 +192,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       common: {
         ...state.common,
         sustainable: true,
-        sustainabilityActionCodesAny: toggleListValue(state.common.sustainabilityActionCodesAny, code),
+        sustainabilityActionCodesAny: toggleListValue(state.common.sustainabilityActionCodesAny ?? [], code),
       },
     })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),

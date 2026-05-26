@@ -94,6 +94,56 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
   srv: {},
 };
 
+/**
+ * Ensures every filter array exists — needed after schema upgrades, partial URL
+ * hydration, or hot-reload keeping an older Zustand snapshot in memory.
+ */
+export function normalizeExplorerFilters(
+  filters: Partial<ExplorerFilters> | ExplorerFilters,
+): ExplorerFilters {
+  const base = DEFAULT_EXPLORER_FILTERS;
+  const common = { ...base.common, ...filters.common };
+  const hot = { ...base.hot, ...filters.hot };
+  const res = { ...base.res, ...filters.res };
+  const iti = { ...base.iti, ...filters.iti };
+  const act = { ...base.act, ...filters.act };
+
+  return {
+    selectedBuckets: filters.selectedBuckets ?? base.selectedBuckets,
+    common: {
+      ...common,
+      cities: common.cities ?? [],
+      accessibilityDisabilityTypesAny: common.accessibilityDisabilityTypesAny ?? [],
+      accessibilityAmenityCodesAny: common.accessibilityAmenityCodesAny ?? [],
+      sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
+      sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
+      labelsAny: common.labelsAny ?? [],
+      statuses: common.statuses ?? [],
+    },
+    hot: {
+      ...hot,
+      subtypes: hot.subtypes ?? [...DEFAULT_HOT_SUBTYPES],
+      taxonomy: hot.taxonomy ?? [],
+      capacityFilters: hot.capacityFilters ?? [],
+      meetingRoom: hot.meetingRoom ?? {},
+    },
+    res: {
+      ...res,
+      capacityFilters: res.capacityFilters ?? [],
+    },
+    iti: {
+      ...iti,
+      practicesAny: iti.practicesAny ?? [],
+    },
+    act: {
+      ...act,
+      environmentTagsAny: act.environmentTagsAny ?? [],
+    },
+    vis: { ...base.vis, ...filters.vis },
+    srv: { ...base.srv, ...filters.srv },
+  };
+}
+
 function cleanString(value: string | null | undefined): string {
   return String(value ?? '').trim();
 }

@@ -1053,6 +1053,18 @@ AS $$
           ARRAY[]::text[]
         )
       END AS label_disability_types_any,
+      CASE WHEN n.filters ? 'sustainability_categories_any'
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'sustainability_categories_any')),
+          ARRAY[]::text[]
+        )
+      END AS sustainability_categories_any,
+      CASE WHEN n.filters ? 'sustainability_actions_any'
+        THEN NULLIF(
+          ARRAY(SELECT jsonb_array_elements_text(n.filters->'sustainability_actions_any')),
+          ARRAY[]::text[]
+        )
+      END AS sustainability_actions_any,
       -- use_mv: TRUE → read from internal.mv_filtered_objects (hot path).
       -- The MV is built `WHERE o.status = 'published'` so any p_status that
       -- includes a non-public value (draft / archived / …) MUST bypass the MV
@@ -1075,6 +1087,9 @@ AS $$
         OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
         OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)
         OR n.filters ? 'label_disability_types_any' -- requires live join on object_classification.subvalue_ids
+        OR n.filters ? 'sustainability_any'
+        OR n.filters ? 'sustainability_categories_any'
+        OR n.filters ? 'sustainability_actions_any'
       ))
       AND (
         p_status IS NULL
@@ -1209,6 +1224,36 @@ AS $$
         AND cs.code = 'LBL_TOURISME_HANDICAP'
         AND oc.status = 'granted'
         AND cv.metadata->>'disability_type' = ANY(params.label_disability_types_any)
+    ))
+    AND (NOT COALESCE((params.filters->>'sustainability_any')::boolean, FALSE) OR (
+      EXISTS (
+        SELECT 1
+        FROM object_sustainability_action osa
+        WHERE osa.object_id = src.object_id
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM object_classification oc
+        JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
+        WHERE oc.object_id = src.object_id
+          AND oc.status = 'granted'
+          AND sc.display_group = 'sustainability_labels'
+      )
+    ))
+    AND (params.sustainability_categories_any IS NULL OR cardinality(params.sustainability_categories_any) = 0 OR EXISTS (
+      SELECT 1
+      FROM object_sustainability_action osa
+      JOIN ref_sustainability_action rsa ON rsa.id = osa.action_id
+      JOIN ref_sustainability_action_category rac ON rac.id = rsa.category_id
+      WHERE osa.object_id = src.object_id
+        AND rac.code = ANY(params.sustainability_categories_any)
+    ))
+    AND (params.sustainability_actions_any IS NULL OR cardinality(params.sustainability_actions_any) = 0 OR EXISTS (
+      SELECT 1
+      FROM object_sustainability_action osa
+      JOIN ref_sustainability_action rsa ON rsa.id = osa.action_id
+      WHERE osa.object_id = src.object_id
+        AND rsa.code = ANY(params.sustainability_actions_any)
     ))
     AND (NOT (params.filters ? 'pet_accepted') OR EXISTS (
       SELECT 1 FROM object_pet_policy opp

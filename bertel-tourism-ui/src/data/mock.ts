@@ -409,6 +409,24 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
   const cities = filters.common.cities.map((c) => c.trim().toLowerCase()).filter(Boolean);
   const lieuDit = filters.common.lieuDit.trim().toLowerCase();
   const labelsAny = filters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
+  const accessibilityByObject: Record<string, { types: ExplorerFilters['common']['accessibilityDisabilityTypesAny']; amenities: string[] }> = {
+    HOTRUN0000000001: { types: ['motor', 'hearing'], amenities: ['acc_pmr_parking', 'acc_step_removal', 'acc_magnetic_loop'] },
+    RESRUN0000000002: { types: ['motor', 'cognitive'], amenities: ['acc_step_removal', 'acc_falc_docs'] },
+  };
+  const sustainabilityByObject: Record<string, { categories: string[]; actions: string[] }> = {
+    HOTRUN0000000001: {
+      categories: ['CAT_ENERGY', 'CAT_WASTE'],
+      actions: ['MA_LOW_ENERGY_LIGHTING', 'MA_DURABLE_GOODS_REUSE'],
+    },
+    RESRUN0000000002: {
+      categories: ['CAT_PROC', 'CAT_WASTE'],
+      actions: ['MA_LOCAL_ORGANIC_FAIRTRADE_FOOD', 'MA_SORTING_BINS'],
+    },
+    ACTRUN000000004: {
+      categories: ['CAT_MOBILITY'],
+      actions: ['MA_BIKE_PARKING'],
+    },
+  };
 
   const filtered = mockCards.filter((card) => {
     const bucketMatches = buckets.some((candidate) => matchesBucket(card, candidate));
@@ -421,12 +439,45 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
     const lieuDitMatches = lieuDit.length === 0 || (card.location?.lieu_dit ?? '').toLowerCase().includes(lieuDit);
     const openMatches = !filters.common.openNow || card.open_now === true;
     const petsMatches = !filters.common.petsAccepted || card.id === 'HOTRUN0000000001';
-    const pmrMatches = !filters.common.pmr || ['HOTRUN0000000001', 'RESRUN0000000002'].includes(card.id);
+    const accessibility = accessibilityByObject[card.id] ?? { types: [], amenities: [] };
+    const hasAccessibilityFilter =
+      filters.common.pmr ||
+      filters.common.accessibilityDisabilityTypesAny.length > 0 ||
+      filters.common.accessibilityAmenityCodesAny.length > 0;
+    const pmrMatches =
+      !hasAccessibilityFilter ||
+      (accessibility.amenities.length > 0 &&
+        (filters.common.accessibilityDisabilityTypesAny.length === 0 ||
+          accessibility.types.some((type) => filters.common.accessibilityDisabilityTypesAny.includes(type))) &&
+        (filters.common.accessibilityAmenityCodesAny.length === 0 ||
+          accessibility.amenities.some((code) => filters.common.accessibilityAmenityCodesAny.includes(code))));
+    const sustainability = sustainabilityByObject[card.id] ?? { categories: [], actions: [] };
+    const hasSustainabilityFilter =
+      filters.common.sustainable ||
+      filters.common.sustainabilityCategoryCodesAny.length > 0 ||
+      filters.common.sustainabilityActionCodesAny.length > 0;
+    const sustainabilityMatches =
+      !hasSustainabilityFilter ||
+      (sustainability.actions.length > 0 &&
+        (filters.common.sustainabilityCategoryCodesAny.length === 0 ||
+          sustainability.categories.some((code) => filters.common.sustainabilityCategoryCodesAny.includes(code))) &&
+        (filters.common.sustainabilityActionCodesAny.length === 0 ||
+          sustainability.actions.some((code) => filters.common.sustainabilityActionCodesAny.includes(code))));
     const labelsMatches =
       labelsAny.length === 0 ||
       (Array.isArray(card.labels) && card.labels.some((label) => labelsAny.includes(String(label).toLowerCase())));
 
-    if (!bucketMatches || !searchMatches || !cityMatches || !lieuDitMatches || !openMatches || !petsMatches || !pmrMatches || !labelsMatches) {
+    if (
+      !bucketMatches ||
+      !searchMatches ||
+      !cityMatches ||
+      !lieuDitMatches ||
+      !openMatches ||
+      !petsMatches ||
+      !pmrMatches ||
+      !sustainabilityMatches ||
+      !labelsMatches
+    ) {
       return false;
     }
 

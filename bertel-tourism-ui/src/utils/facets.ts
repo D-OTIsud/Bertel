@@ -1,4 +1,5 @@
 import type {
+  AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   CapacityFilter,
   ExplorerBucketKey,
@@ -33,6 +34,13 @@ export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTy
 export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];
 export const DEFAULT_HOT_SUBTYPES: BackendObjectTypeCode[] = [...HOT_BUCKET_TYPES];
 
+export const ACCESSIBILITY_DISABILITY_TYPE_OPTIONS: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> = [
+  { code: 'motor', label: 'Moteur' },
+  { code: 'hearing', label: 'Auditif' },
+  { code: 'visual', label: 'Visuel' },
+  { code: 'cognitive', label: 'Mental / cognitif' },
+];
+
 export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTypeCode[]> = {
   HOT: [...EXPLORER_TYPE_CODE_FAMILIES.HOT],
   RES: [...EXPLORER_TYPE_CODE_FAMILIES.RES],
@@ -48,6 +56,11 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   cities: [],
   lieuDit: '',
   pmr: false,
+  accessibilityDisabilityTypesAny: [],
+  accessibilityAmenityCodesAny: [],
+  sustainable: false,
+  sustainabilityCategoryCodesAny: [],
+  sustainabilityActionCodesAny: [],
   petsAccepted: false,
   openNow: false,
   labelsAny: [],
@@ -139,7 +152,15 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
  */
 export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   const { common, hot, res, iti, act } = filters;
-  if (common.pmr || common.petsAccepted) {
+  const hasAccessibilityFilter =
+    common.pmr ||
+    common.accessibilityDisabilityTypesAny.length > 0 ||
+    common.accessibilityAmenityCodesAny.length > 0;
+  const hasSustainabilityFilter =
+    common.sustainable ||
+    common.sustainabilityCategoryCodesAny.length > 0 ||
+    common.sustainabilityActionCodesAny.length > 0;
+  if (hasAccessibilityFilter || hasSustainabilityFilter || common.petsAccepted) {
     return true;
   }
   if (hot.taxonomy.length > 0) {
@@ -227,8 +248,36 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     payload.pet_accepted = true;
   }
 
-  if (common.pmr) {
-    payload.amenities_any = ['wheelchair_access'];
+  const accessibilityAmenityCodes = common.accessibilityAmenityCodesAny.map(cleanString).filter(Boolean);
+  const accessibilityDisabilityTypes = common.accessibilityDisabilityTypesAny.map(cleanString).filter(Boolean);
+  const hasAccessibilityFilter = common.pmr || accessibilityAmenityCodes.length > 0 || accessibilityDisabilityTypes.length > 0;
+
+  if (hasAccessibilityFilter) {
+    if (accessibilityAmenityCodes.length > 0) {
+      payload.amenities_any = accessibilityAmenityCodes;
+    } else if (accessibilityDisabilityTypes.length === 0) {
+      payload.amenity_families_any = ['accessibility'];
+    }
+
+    if (accessibilityDisabilityTypes.length > 0) {
+      payload.disability_types_any = accessibilityDisabilityTypes;
+    }
+  }
+
+  const sustainabilityCategoryCodes = common.sustainabilityCategoryCodesAny.map(cleanString).filter(Boolean);
+  const sustainabilityActionCodes = common.sustainabilityActionCodesAny.map(cleanString).filter(Boolean);
+  const hasSustainabilityFilter = common.sustainable || sustainabilityCategoryCodes.length > 0 || sustainabilityActionCodes.length > 0;
+
+  if (hasSustainabilityFilter) {
+    if (sustainabilityCategoryCodes.length > 0) {
+      payload.sustainability_categories_any = sustainabilityCategoryCodes;
+    }
+    if (sustainabilityActionCodes.length > 0) {
+      payload.sustainability_actions_any = sustainabilityActionCodes;
+    }
+    if (sustainabilityCategoryCodes.length === 0 && sustainabilityActionCodes.length === 0) {
+      payload.sustainability_any = true;
+    }
   }
 
   if (common.bbox) {

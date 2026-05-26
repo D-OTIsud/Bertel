@@ -2,12 +2,21 @@ import type { ReactNode } from 'react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import type {
+  AccessibilityAmenityRef,
+  AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   ExplorerBucketKey,
   ExplorerReferences,
   ExplorerStatusFilter,
+  SustainabilityActionRef,
 } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS, DEFAULT_HOT_SUBTYPES, HOT_BUCKET_TYPES, resolveExplorerStatuses } from '../../utils/facets';
+import {
+  ACCESSIBILITY_DISABILITY_TYPE_OPTIONS,
+  EXPLORER_BUCKET_OPTIONS,
+  DEFAULT_HOT_SUBTYPES,
+  HOT_BUCKET_TYPES,
+  resolveExplorerStatuses,
+} from '../../utils/facets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
@@ -69,6 +78,47 @@ function isBucketSelected(selectedBuckets: ExplorerBucketKey[], bucket: Explorer
   return selectedBuckets.includes(bucket);
 }
 
+function hasOverlap(left: readonly string[], right: readonly string[]): boolean {
+  return left.some((item) => right.includes(item));
+}
+
+function filterAccessibilityAmenities(
+  amenities: AccessibilityAmenityRef[],
+  selectedTypes: string[],
+  selectedAmenityCodes: string[],
+): AccessibilityAmenityRef[] {
+  if (selectedTypes.length === 0) {
+    return amenities.filter((amenity) => selectedAmenityCodes.includes(amenity.code));
+  }
+
+  return amenities.filter(
+    (amenity) =>
+      selectedAmenityCodes.includes(amenity.code) ||
+      hasOverlap(amenity.disabilityTypes, selectedTypes),
+  );
+}
+
+function flattenSustainabilityActions(references?: ExplorerReferences): SustainabilityActionRef[] {
+  return (references?.sustainabilityCategories ?? []).flatMap((category) => category.actions);
+}
+
+function filterSustainabilityActions(
+  references: ExplorerReferences | undefined,
+  selectedCategoryCodes: string[],
+  selectedActionCodes: string[],
+): SustainabilityActionRef[] {
+  const actions = flattenSustainabilityActions(references);
+  if (selectedCategoryCodes.length === 0 && selectedActionCodes.length === 0) {
+    return [];
+  }
+
+  return actions.filter(
+    (action) =>
+      selectedActionCodes.includes(action.code) ||
+      selectedCategoryCodes.includes(action.categoryCode),
+  );
+}
+
 function FiltersSection({ eyebrow, title, children }: FiltersSectionProps) {
   return (
     <section className="filters-panel__section">
@@ -104,6 +154,11 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const setCities = useExplorerStore((state) => state.setCities);
   const setLieuDit = useExplorerStore((state) => state.setLieuDit);
   const setPmr = useExplorerStore((state) => state.setPmr);
+  const toggleAccessibilityDisabilityType = useExplorerStore((state) => state.toggleAccessibilityDisabilityType);
+  const toggleAccessibilityAmenity = useExplorerStore((state) => state.toggleAccessibilityAmenity);
+  const setSustainable = useExplorerStore((state) => state.setSustainable);
+  const toggleSustainabilityCategory = useExplorerStore((state) => state.toggleSustainabilityCategory);
+  const toggleSustainabilityAction = useExplorerStore((state) => state.toggleSustainabilityAction);
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
@@ -133,6 +188,11 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if (s.common.cities.length) n += 1;
     if (s.common.lieuDit.trim()) n += 1;
     if (s.common.pmr) n += 1;
+    if (s.common.accessibilityDisabilityTypesAny.length) n += 1;
+    if (s.common.accessibilityAmenityCodesAny.length) n += 1;
+    if (s.common.sustainable) n += 1;
+    if (s.common.sustainabilityCategoryCodesAny.length) n += 1;
+    if (s.common.sustainabilityActionCodesAny.length) n += 1;
     if (s.common.petsAccepted) n += 1;
     if (s.common.openNow) n += 1;
     if (s.common.labelsAny.length) n += 1;
@@ -154,12 +214,144 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   });
 
   const isColumn = variant === 'column';
+  const accessibilityDisabilityTypes: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> =
+    references?.accessibilityDisabilityTypes.length
+      ? references.accessibilityDisabilityTypes.map((option) => ({
+          code: option.code as AccessibilityDisabilityTypeCode,
+          label: option.name,
+        }))
+      : ACCESSIBILITY_DISABILITY_TYPE_OPTIONS;
+  const accessibilityAmenities = references?.accessibilityAmenities ?? [];
+  const visibleAccessibilityAmenities = filterAccessibilityAmenities(
+    accessibilityAmenities,
+    common.accessibilityDisabilityTypesAny,
+    common.accessibilityAmenityCodesAny,
+  );
+  const sustainabilityCategories = references?.sustainabilityCategories ?? [];
+  const visibleSustainabilityActions = filterSustainabilityActions(
+    references,
+    common.sustainabilityCategoryCodesAny,
+    common.sustainabilityActionCodesAny,
+  );
+  const accessibilityDetailCount = common.accessibilityDisabilityTypesAny.length + common.accessibilityAmenityCodesAny.length;
+  const sustainabilityDetailCount = common.sustainabilityCategoryCodesAny.length + common.sustainabilityActionCodesAny.length;
 
   const bucketChipClass = (active: boolean) =>
     cn(
       'inline-flex min-h-[28px] items-center rounded-[8px] border px-2.5 py-1 text-[12px] font-semibold transition',
       active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink hover:border-lineStrong hover:bg-surface2',
     );
+
+  const filterChipClass = (active: boolean) => (isColumn ? bucketChipClass(active) : active ? 'chip chip--active' : 'chip');
+
+  const renderAccessibilityDetails = () => (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      <div>
+        <span className="mb-2 block text-[12px] font-semibold text-ink-2">Types de handicap</span>
+        <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
+          {accessibilityDisabilityTypes.map((option) => {
+            const active = common.accessibilityDisabilityTypesAny.includes(option.code);
+            return (
+              <button
+                key={option.code}
+                type="button"
+                className={filterChipClass(active)}
+                onClick={() => toggleAccessibilityDisabilityType(option.code)}
+                aria-pressed={active}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {visibleAccessibilityAmenities.length > 0 ? (
+        <div>
+          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Amenagements precis</span>
+          <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
+            {visibleAccessibilityAmenities.map((amenity) => {
+              const active = common.accessibilityAmenityCodesAny.includes(amenity.code);
+              return (
+                <button
+                  key={amenity.code}
+                  type="button"
+                  className={filterChipClass(active)}
+                  onClick={() => toggleAccessibilityAmenity(amenity.code)}
+                  aria-pressed={active}
+                  title={amenity.description || undefined}
+                >
+                  {amenity.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="text-[12px] leading-snug text-ink-3">
+          {accessibilityAmenities.length > 0
+            ? common.accessibilityDisabilityTypesAny.length > 0
+              ? 'Aucun amenagement du referentiel ne correspond a ce type.'
+              : 'Choisissez un type pour afficher les amenagements associes.'
+            : 'Les amenagements seront proposes des que le referentiel sera charge.'}
+        </p>
+      )}
+    </div>
+  );
+
+  const renderSustainabilityDetails = () => (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      {sustainabilityCategories.length > 0 ? (
+        <div>
+          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Axes durables</span>
+          <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
+            {sustainabilityCategories.map((category) => {
+              const active = common.sustainabilityCategoryCodesAny.includes(category.code);
+              return (
+                <button
+                  key={category.code}
+                  type="button"
+                  className={filterChipClass(active)}
+                  onClick={() => toggleSustainabilityCategory(category.code)}
+                  aria-pressed={active}
+                  title={category.description || undefined}
+                >
+                  {category.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="text-[12px] leading-snug text-ink-3">Les axes durables seront proposes des que le referentiel sera charge.</p>
+      )}
+
+      {visibleSustainabilityActions.length > 0 ? (
+        <div>
+          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Actions precises</span>
+          <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
+            {visibleSustainabilityActions.map((action) => {
+              const active = common.sustainabilityActionCodesAny.includes(action.code);
+              return (
+                <button
+                  key={action.code}
+                  type="button"
+                  className={filterChipClass(active)}
+                  onClick={() => toggleSustainabilityAction(action.code)}
+                  aria-pressed={active}
+                  title={action.description || undefined}
+                >
+                  {action.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : sustainabilityCategories.length > 0 ? (
+        <p className="text-[12px] leading-snug text-ink-3">Choisissez un axe pour afficher les actions associees.</p>
+      ) : null}
+    </div>
+  );
 
   return (
     <div
@@ -292,12 +484,21 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
             )}
           </FilterColumnGroup>
 
-          <FilterColumnGroup label="Accessibilite et services">
+          <FilterColumnGroup
+            label="Accessibilite et services"
+            count={accessibilityDetailCount + sustainabilityDetailCount > 0 ? accessibilityDetailCount + sustainabilityDetailCount : undefined}
+          >
             <div className="flex flex-col gap-2">
               <label className="switch-row">
                 <span>PMR</span>
                 <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
               </label>
+              {common.pmr ? renderAccessibilityDetails() : null}
+              <label className="switch-row">
+                <span>Demarche durable</span>
+                <input type="checkbox" checked={common.sustainable} onChange={(event) => setSustainable(event.target.checked)} />
+              </label>
+              {common.sustainable ? renderSustainabilityDetails() : null}
               <label className="switch-row">
                 <span>Animaux acceptes</span>
                 <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
@@ -625,6 +826,13 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   <span>PMR</span>
                   <input type="checkbox" checked={common.pmr} onChange={(event) => setPmr(event.target.checked)} />
                 </label>
+                {common.pmr ? renderAccessibilityDetails() : null}
+
+                <label className="switch-row">
+                  <span>Demarche durable</span>
+                  <input type="checkbox" checked={common.sustainable} onChange={(event) => setSustainable(event.target.checked)} />
+                </label>
+                {common.sustainable ? renderSustainabilityDetails() : null}
 
                 <label className="switch-row">
                   <span>Animaux acceptes</span>

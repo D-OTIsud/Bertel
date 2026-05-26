@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   CapacityFilter,
   ExplorerFilters,
@@ -21,6 +22,11 @@ interface ExplorerState extends ExplorerFilters {
   setCities: (cities: string[]) => void;
   setLieuDit: (lieuDit: string) => void;
   setPmr: (value: boolean) => void;
+  toggleAccessibilityDisabilityType: (type: AccessibilityDisabilityTypeCode) => void;
+  toggleAccessibilityAmenity: (code: string) => void;
+  setSustainable: (value: boolean) => void;
+  toggleSustainabilityCategory: (code: string) => void;
+  toggleSustainabilityAction: (code: string) => void;
   setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
   toggleLabel: (label: string) => void;
@@ -64,6 +70,14 @@ function upsertCapacityFilter(filters: CapacityFilter[], code: string, min?: num
     return next;
   }
   return [...next, { code, min, max }];
+}
+
+function toggleListValue<T extends string>(values: T[], value: T): T[] {
+  const needle = String(value).trim() as T;
+  if (!needle) {
+    return values;
+  }
+  return values.includes(needle) ? values.filter((item) => item !== needle) : [...values, needle];
 }
 
 function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters>, replace = false): ExplorerFilters {
@@ -123,7 +137,64 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
   setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
-  setPmr: (value) => set((state) => ({ common: { ...state.common, pmr: value } })),
+  setPmr: (value) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: value,
+        ...(!value
+          ? {
+              accessibilityDisabilityTypesAny: [],
+              accessibilityAmenityCodesAny: [],
+            }
+          : {}),
+      },
+    })),
+  toggleAccessibilityDisabilityType: (type) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: true,
+        accessibilityDisabilityTypesAny: toggleListValue(state.common.accessibilityDisabilityTypesAny, type),
+      },
+    })),
+  toggleAccessibilityAmenity: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: true,
+        accessibilityAmenityCodesAny: toggleListValue(state.common.accessibilityAmenityCodesAny, code),
+      },
+    })),
+  setSustainable: (value) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: value,
+        ...(!value
+          ? {
+              sustainabilityCategoryCodesAny: [],
+              sustainabilityActionCodesAny: [],
+            }
+          : {}),
+      },
+    })),
+  toggleSustainabilityCategory: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: true,
+        sustainabilityCategoryCodesAny: toggleListValue(state.common.sustainabilityCategoryCodesAny, code),
+      },
+    })),
+  toggleSustainabilityAction: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: true,
+        sustainabilityActionCodesAny: toggleListValue(state.common.sustainabilityActionCodesAny, code),
+      },
+    })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
   setOpenNow: (value) => set((state) => ({ common: { ...state.common, openNow: value } })),
   toggleLabel: (label) =>

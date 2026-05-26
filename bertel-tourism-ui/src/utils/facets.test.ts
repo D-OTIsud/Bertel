@@ -1,6 +1,7 @@
 import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import {
   applyClientPreviewFilters,
+  buildBucketRpcFilters,
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   EXPLORER_TYPE_CODE_FAMILIES,
@@ -177,6 +178,39 @@ describe('hasServerOnlyFilters', () => {
     );
   });
 
+  it('detects accessibility detail and sustainability filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            accessibilityDisabilityTypesAny: ['motor'],
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainable: true,
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainabilityActionCodesAny: ['MA_SORTING_BINS'],
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it('detects HOT taxonomy, capacity, and meeting room', () => {
     expect(
       hasServerOnlyFilters(
@@ -238,5 +272,62 @@ describe('hasServerOnlyFilters', () => {
         }),
       ),
     ).toBe(true);
+  });
+});
+
+describe('buildBucketRpcFilters', () => {
+  it('uses the canonical accessibility family for broad PMR filtering', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      amenity_families_any: ['accessibility'],
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('amenities_any', ['wheelchair_access']);
+  });
+
+  it('adds disability types and precise amenities when selected', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        accessibilityDisabilityTypesAny: ['motor', 'hearing'],
+        accessibilityAmenityCodesAny: ['acc_step_removal'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      disability_types_any: ['motor', 'hearing'],
+      amenities_any: ['acc_step_removal'],
+    });
+  });
+
+  it('adds broad and detailed sustainability filters', () => {
+    expect(
+      buildBucketRpcFilters(
+        buildFilters({
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, sustainable: true },
+        }),
+        'ACT',
+      ),
+    ).toMatchObject({ sustainability_any: true });
+
+    expect(
+      buildBucketRpcFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainable: true,
+            sustainabilityCategoryCodesAny: ['CAT_WASTE'],
+            sustainabilityActionCodesAny: ['MA_SORTING_BINS'],
+          },
+        }),
+        'ACT',
+      ),
+    ).toMatchObject({
+      sustainability_categories_any: ['CAT_WASTE'],
+      sustainability_actions_any: ['MA_SORTING_BINS'],
+    });
   });
 });

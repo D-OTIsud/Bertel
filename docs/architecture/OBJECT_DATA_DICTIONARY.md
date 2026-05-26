@@ -1714,6 +1714,9 @@ The Object Workspace UI is organized into modules. Each `WorkspaceModuleId` (typ
 | `label_scheme_ranked` | `TEXT` | Requested classification scheme code for ranked admission. Exact granted classification is rank 0; equivalent evidence can be admitted as rank 1. |
 | `disability_types_any` | `TEXT[]` | Amenity-derived accessibility match using canonical disability types such as `motor`, `hearing`, `visual`, `cognitive`. |
 | `label_disability_types_any` | `TEXT[]` | Label-derived accessibility match using `LBL_TOURISME_HANDICAP` `subvalue_ids`. |
+| `sustainability_any` | `BOOLEAN` | Requires at least one declared sustainability action or granted sustainability label. |
+| `sustainability_categories_any` | `TEXT[]` | Any-match against `ref_sustainability_action_category.code` through declared object sustainability actions. |
+| `sustainability_actions_any` | `TEXT[]` | Any-match against `ref_sustainability_action.code` through declared object sustainability actions. |
 | `meeting_room` | `OBJECT` | Nested contract: `equipment_any[]`, `equipment_all[]`, `min_count`, `min_area_m2`, `min_cap_theatre`, `min_cap_u`, `min_cap_classroom`, `min_cap_boardroom`. |
 | `capacity_filters` | `[{ code, min?, max? }]` | Capacity thresholds resolved via `ref_capacity_metric.code` and matched against `object_capacity`. |
 | `itinerary` | `OBJECT` | Nested contract: `practices_any[]`, `is_loop`, `difficulty_min`, `difficulty_max`, `distance_min_km`, `distance_max_km`, `duration_min_h`, `duration_max_h`. |

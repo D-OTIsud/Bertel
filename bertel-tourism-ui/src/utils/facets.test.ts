@@ -7,7 +7,24 @@ import {
   EXPLORER_TYPE_CODE_FAMILIES,
   hasServerOnlyFilters,
   normalizeExplorerObjectType,
+  normalizeExplorerFilters,
 } from './facets';
+
+describe('normalizeExplorerFilters', () => {
+  it('fills missing accessibility and sustainability arrays from legacy snapshots', () => {
+    const normalized = normalizeExplorerFilters({
+      common: {
+        search: 'hotel',
+        cities: ['Saint-Pierre'],
+      } as ExplorerFilters['common'],
+    });
+
+    expect(normalized.common.accessibilityDisabilityTypesAny).toEqual([]);
+    expect(normalized.common.accessibilityAmenityCodesAny).toEqual([]);
+    expect(normalized.common.sustainabilityCategoryCodesAny).toEqual([]);
+    expect(normalized.common.sustainabilityActionCodesAny).toEqual([]);
+  });
+});
 
 describe('explorer type families', () => {
   it('keeps backend-to-family correspondence explicit', () => {

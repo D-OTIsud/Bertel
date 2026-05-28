@@ -631,8 +631,11 @@ export async function processImage({ buffer, mimeType }: ProcessImageInput): Pro
     const finalPipeline = needsResize
       ? pipeline.resize({ width: MAX_DIMENSION_PX, height: MAX_DIMENSION_PX, fit: 'inside', withoutEnlargement: true })
       : pipeline;
+    // NOTE: sharp ≥0.33 strips EXIF/IPTC/XMP by default on re-encode.
+    // Do NOT add .withMetadata() / .keepMetadata() here — both OPT INTO
+    // preserving metadata in sharp 0.34 (see node_modules/sharp/lib/output.js).
+    // Strip behaviour is verified by the EXIF assertion test in process-image.test.ts.
     const out = await finalPipeline
-      .withMetadata({})
       .jpeg({ quality: 85 })
       .toBuffer({ resolveWithObject: true });
     return { buffer: out.data, width: out.info.width, height: out.info.height, mimeType: 'image/jpeg' };
@@ -1518,7 +1521,7 @@ EOF
 
 ## Self-review notes (kept after writing the plan)
 
-- **Spec coverage:** (a) upload UI → Tasks 11-12; (b) max 2000 px → Tasks 5 + 7; (c) EXIF strip → Task 6 with explicit `withMetadata({})`; (d) "avant publication via API publique" → guaranteed by the bucket RLS that blocks non-service-role writes (Task 1) combined with the route handler being the only writer (Task 9). DPIA documentation updated in Task 13.
+- **Spec coverage:** (a) upload UI → Tasks 11-12; (b) max 2000 px → Tasks 5 + 7; (c) EXIF strip → relies on sharp ≥0.33 default-strip behaviour, documented by a load-bearing block comment in `process-image.ts` and verified by the EXIF assertion test in Task 6 (sharp's `.withMetadata({})` opts INTO keeping metadata in 0.34 — verified empirically and via `node_modules/sharp/lib/output.js`); (d) "avant publication via API publique" → guaranteed by the bucket RLS that blocks non-service-role writes (Task 1) combined with the route handler being the only writer (Task 9). DPIA documentation updated in Task 13.
 - **Type consistency:** `UploadedMedia` is used in `media-upload.ts`, `MediaUploadField.tsx`, and informally in `MediaEditModal.tsx`. The `StorageUploader` interface is shared between `handle-upload.ts` (definition) and `route.ts` (implementation). `MediaProcessingError.code` discriminator (`'mime' | 'size' | 'decode'`) is referenced both in `process-image.test.ts` (assertions) and `route.ts` (status mapping).
 - **No placeholders:** every step contains either runnable commands or complete code blocks. The one "verify by reading editor state" step in Task 12 includes a grep command to do the verification.
 - **Open follow-ups (not in scope of this plan):**

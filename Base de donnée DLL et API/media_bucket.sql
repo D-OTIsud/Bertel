@@ -27,6 +27,8 @@ CREATE POLICY "media_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'media');
 
+-- Note: in Supabase, service_role bypasses RLS entirely. This policy is
+-- intent documentation rather than the actual enforcement mechanism.
 DROP POLICY IF EXISTS "media_service_role_write" ON storage.objects;
 CREATE POLICY "media_service_role_write"
   ON storage.objects FOR ALL
@@ -34,11 +36,14 @@ CREATE POLICY "media_service_role_write"
   USING (bucket_id = 'media')
   WITH CHECK (bucket_id = 'media');
 
--- Explicitly deny anon/authenticated direct writes (defense in depth).
+-- Defense in depth: a RESTRICTIVE policy is ANDed with permissive policies,
+-- so this guarantees anon/authenticated can never write into the media bucket
+-- regardless of what other permissive policies exist on storage.objects.
 DROP POLICY IF EXISTS "media_no_anon_write" ON storage.objects;
 CREATE POLICY "media_no_anon_write"
-  ON storage.objects FOR INSERT
+  ON storage.objects AS RESTRICTIVE FOR ALL
   TO anon, authenticated
+  USING (bucket_id <> 'media')
   WITH CHECK (bucket_id <> 'media');
 
 COMMIT;

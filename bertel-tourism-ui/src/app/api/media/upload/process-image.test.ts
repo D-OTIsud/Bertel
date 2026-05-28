@@ -76,3 +76,23 @@ describe('processImage — metadata stripping', () => {
     expect(outMeta.xmp).toBeUndefined();
   });
 });
+
+describe('processImage — validation', () => {
+  it('rejects an unsupported MIME type', async () => {
+    const fakeSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>', 'utf8');
+    await expect(processImage({ buffer: fakeSvg, mimeType: 'image/svg+xml' }))
+      .rejects.toMatchObject({ code: 'mime' });
+  });
+
+  it('rejects a buffer larger than MAX_INPUT_BYTES', async () => {
+    const oversized = Buffer.alloc(20 * 1024 * 1024 + 1, 0);
+    await expect(processImage({ buffer: oversized, mimeType: 'image/jpeg' }))
+      .rejects.toMatchObject({ code: 'size' });
+  });
+
+  it('rejects a buffer that is not a decodable image', async () => {
+    const junk = Buffer.from('not an image', 'utf8');
+    await expect(processImage({ buffer: junk, mimeType: 'image/jpeg' }))
+      .rejects.toMatchObject({ code: 'decode' });
+  });
+});

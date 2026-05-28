@@ -1,17 +1,22 @@
 import '@testing-library/jest-dom';
 
-(window as unknown as { __APP_CONFIG__?: Record<string, string> }).__APP_CONFIG__ = {
-  NEXT_PUBLIC_ENABLE_DEMO_MODE: 'true',
-};
+// Guard browser-only setup so tests with `/** @jest-environment node */` (e.g. server-only
+// modules under src/lib) can load this setup file without ReferenceError. The DOM stubs
+// below are only meaningful in jsdom; in a node environment there is nothing to patch.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __APP_CONFIG__?: Record<string, string> }).__APP_CONFIG__ = {
+    NEXT_PUBLIC_ENABLE_DEMO_MODE: 'true',
+  };
 
-// jsdom does not implement IntersectionObserver (used by the drawer detail tabs scroll-spy).
-class IntersectionObserverStub {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
-  takeRecords(): [] {
-    return [];
+  // jsdom does not implement IntersectionObserver (used by the drawer detail tabs scroll-spy).
+  class IntersectionObserverStub {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): [] {
+      return [];
+    }
   }
+  (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;
+  (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;
 }
-(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;
-(window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;

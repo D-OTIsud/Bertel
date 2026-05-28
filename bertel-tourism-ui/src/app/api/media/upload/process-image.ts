@@ -25,13 +25,15 @@ export class MediaProcessingError extends Error {
 }
 
 /**
- * Validate, resize-down to fit MAX_DIMENSION_PX on both axes, and strip all
- * metadata (EXIF, IPTC, XMP). Aspect ratio is preserved (sharp's default
- * `inside` fit). Pass-through for images already small enough.
+ * Resize-down to fit MAX_DIMENSION_PX on both axes, apply EXIF rotation, and
+ * strip all metadata (EXIF, IPTC, XMP) before re-encoding as JPEG q85.
+ * MIME and size validation are added in Task 7. Aspect ratio preserved.
+ * Pass-through for images already small enough — the `inside` fit with
+ * `withoutEnlargement: true` guarantees no upscaling.
  */
 export async function processImage({ buffer, mimeType }: ProcessImageInput): Promise<ProcessImageResult> {
-  // (resize-only first pass; MIME + size + strip added in next tasks)
-  void mimeType; // declared for the public contract; consumed by validation tasks 6 & 7
+  // (resize + metadata strip; MIME + size validation added in Task 7)
+  void mimeType; // declared for the public contract; consumed by validation in task 7
   const pipeline = sharp(buffer).rotate(); // apply EXIF orientation before stripping
 
   const meta = await pipeline.metadata();
@@ -44,6 +46,14 @@ export async function processImage({ buffer, mimeType }: ProcessImageInput): Pro
     ? pipeline.resize({ width: MAX_DIMENSION_PX, height: MAX_DIMENSION_PX, fit: 'inside', withoutEnlargement: true })
     : pipeline;
 
+  // METADATA STRIPPING — defense in depth.
+  // sharp >= 0.33 strips all metadata (EXIF, IPTC, XMP) by default on re-encode.
+  // We intentionally DO NOT call `.withMetadata()` or `.keepMetadata()` here
+  // because both opt INTO keeping metadata (verified against sharp 0.34.5
+  // `lib/output.js`: `withMetadata` calls `keepMetadata()` internally).
+  // The strip test (`processImage — metadata stripping`) is the regression guard:
+  // if a future change ever adds `.withMetadata()` or upgrades sharp to a version
+  // whose default keeps metadata, that test will fail loudly. See process-image.test.ts.
   const out = await finalPipeline.jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
   return {
     buffer: out.data,

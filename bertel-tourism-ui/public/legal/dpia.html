@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DPIA — Analyse d'Impact Bertel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --teal: #76B097;
+    --teal-2: #0d4f4e;
+    --teal-soft: #e8f3ee;
+    --teal-tint: #f5faf7;
+    --orange: #E08855;
+    --orange-soft: #fbeee4;
+    --violet: #7c6ad6;
+    --violet-soft: #efedfa;
+    --ink: #14201c;
+    --ink-2: #43544f;
+    --ink-3: #6b7c77;
+    --ink-4: #97a5a1;
+    --bg: #ffffff;
+    --bg-tint: #fafbf9;
+    --line: #e3e8e6;
+    --line-soft: #eef1ef;
+    --warn-bg: #fef6e8;
+    --warn-border: #f0c884;
+    --info-bg: #eaf3ee;
+    --info-border: #c6e0d0;
+    --risk-low: #d8ecde;
+    --risk-low-2: #1f6f43;
+    --risk-mid: #fbe7c5;
+    --risk-mid-2: #8a5418;
+    --risk-high: #f7d4cc;
+    --risk-high-2: #9a3322;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 48px 80px;
+  }
+  header.doc-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--violet);
+    background: var(--violet-soft);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  h1 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 36px;
+    line-height: 1.15;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--ink-2);
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px;
+  }
+  .meta {
+    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .meta-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .pill {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .pill.version { background: var(--teal-soft); color: var(--teal-2); }
+  .pill.status { background: var(--risk-low); color: var(--risk-low-2); }
+  h2 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 44px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--teal-soft);
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 28px 0 10px;
+  }
+  h4 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin: 18px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  p { margin: 0 0 12px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--ink); font-weight: 600; }
+  a { color: var(--teal-2); text-decoration: none; border-bottom: 1px solid var(--teal-soft); }
+  a:hover { border-bottom-color: var(--teal); }
+  code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; background: var(--teal-tint); padding: 1px 6px; border-radius: 4px; color: var(--teal-2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 18px;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    background: var(--teal-tint);
+    color: var(--ink);
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--teal-soft);
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .card {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--teal);
+    background: var(--info-bg);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--teal-2); }
+  .callout.warn { background: var(--warn-bg); border-left-color: var(--orange); }
+  .callout.warn strong { color: #8a5418; }
+  .callout.preamble { background: var(--violet-soft); border-left-color: var(--violet); }
+  .callout.preamble strong { color: var(--violet); }
+
+  .toc {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin: 24px 0 32px;
+  }
+  .toc h4 {
+    margin: 0 0 10px;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { border-bottom: none; color: var(--ink-2); }
+  .toc a:hover { color: var(--teal-2); }
+
+  .risk-block {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+    background: var(--bg);
+  }
+  .risk-block h3 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .risk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .risk-metric {
+    background: var(--bg-tint);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .risk-metric .label {
+    color: var(--ink-3);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-weight: 600;
+  }
+  .risk-metric .value { color: var(--ink); font-weight: 600; }
+  .risk-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 12px;
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+  .risk-tag.low { background: var(--risk-low); color: var(--risk-low-2); }
+  .risk-tag.mid { background: var(--risk-mid); color: var(--risk-mid-2); }
+  .risk-tag.high { background: var(--risk-high); color: var(--risk-high-2); }
+
+  .signature-table td { padding: 12px; }
+  .signature-table tbody td { border-bottom: 1px solid var(--line-soft); }
+
+  footer.doc-footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-3);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  @media print {
+    .page { padding: 32px 28px; max-width: none; }
+    h2 { page-break-after: avoid; }
+    table, .card, .callout, .risk-block { page-break-inside: avoid; }
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-header">
+    <span class="eyebrow">🔍 Analyse d'impact · Bertel 3.0</span>
+    <h1>DPIA — Analyse d'Impact relative à la Protection des Données</h1>
+    <p class="subtitle">Plateforme Bertel 3.0 — Système d'Information Touristique (SIT) &amp; CRM</p>
+    <p class="meta">Dernière mise à jour : 27 mai 2026</p>
+    <div class="meta-pills">
+      <span class="pill version">Version 1.0</span>
+      <span class="pill status">Validé par le responsable de traitement</span>
+    </div>
+  </header>
+
+  <div class="callout preamble">
+    <strong>Préambule — caractère préventif.</strong> À l'analyse, le traitement Bertel ne figure pas formellement dans la liste des traitements pour lesquels une DPIA est obligatoire au sens du référentiel CNIL (pas de traitement à grande échelle de données sensibles, pas de profilage systématique, pas de surveillance de personnes vulnérables). Cette DPIA est néanmoins conduite à titre préventif au regard de la nature multi-ORG de la plateforme et du volume de données opérateurs et CRM traitées.
+  </div>
+
+  <nav class="toc">
+    <h4>Sommaire</h4>
+    <ol>
+      <li><a href="#s1">Description du traitement</a></li>
+      <li><a href="#s2">Finalités et bases légales</a></li>
+      <li><a href="#s3">Données traitées</a></li>
+      <li><a href="#s4">Nécessité et proportionnalité</a></li>
+      <li><a href="#s5">Mesures techniques et organisationnelles</a></li>
+      <li><a href="#s6">Analyse des risques</a></li>
+      <li><a href="#s7">Synthèse et plan d'action</a></li>
+      <li><a href="#s8">Consultation des parties prenantes</a></li>
+      <li><a href="#s9">Validation</a></li>
+      <li><a href="#s10">Suivi et révision</a></li>
+    </ol>
+  </nav>
+
+  <section id="s1">
+    <h2>1. Description du traitement</h2>
+
+    <h3>1.1 Présentation générale</h3>
+    <p><strong>Nom du traitement :</strong> Bertel 3.0 — plateforme CRM et SIT mutualisée<br />
+    <strong>Nature :</strong> application web (Next.js + Supabase) accessible aux agents d'Offices de Tourisme et structures SIT pour produire, qualifier et diffuser des informations touristiques.</p>
+
+    <h3>1.2 Périmètre fonctionnel</h3>
+    <ul>
+      <li>Référencement des établissements touristiques (hébergement, restauration, activités, itinéraires, événements).</li>
+      <li>Gestion des comptes éditeurs et appartenance multi-ORG.</li>
+      <li>CRM de la relation prestataires (demandes, comptes-rendus, animation réseau).</li>
+      <li>Workflow éditorial : modération, historisation, publication.</li>
+      <li>API publique pour diffusion des contenus auprès de sites partenaires.</li>
+    </ul>
+
+    <h3>1.3 Acteurs et rôles</h3>
+    <table>
+      <thead>
+        <tr><th>Rôle</th><th>Acteur</th><th>Nature</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Responsable du traitement principal</td><td>SPL OTI DU SUD</td><td>Éditeur et opérateur Bertel</td></tr>
+        <tr><td>Co-responsables / responsables conjoints</td><td>ORG partenaires (autres OTI / SIT)</td><td>Responsables de leur scope de publication</td></tr>
+        <tr><td>Sous-traitant hébergement BDD / Auth</td><td>Supabase Inc. (région primaire UE à documenter parmi <code>eu-west-1</code>, <code>eu-west-3</code>, <code>eu-central-1</code>, <code>eu-central-2</code>, <code>eu-north-1</code>)</td><td>DPA disponible, à signer via PandaDoc depuis le dashboard ; certifié ISO/IEC 27001 ; chiffrement AES-256 au repos et TLS en transit</td></tr>
+        <tr><td>Sous-traitant hébergement front</td><td>OVHcloud (France)</td><td>DPA OVHcloud en place ; engagements RGPD publics ; pas de traitement hors UE / US lorsqu'une zone UE est sélectionnée ; certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 (périmètre non-US)</td></tr>
+        <tr><td>Référent RGPD interne</td><td>David Philippe — Manager SI</td><td>d.philippe@otisud.com — SPL OTI DU SUD n'a pas désigné de DPO au sens de l'Art. 37 RGPD</td></tr>
+      </tbody>
+    </table>
+
+    <h3>1.4 Volumes (ordre de grandeur)</h3>
+    <ul>
+      <li>Comptes éditeurs : quelques dizaines (10–100 selon ORG actives).</li>
+      <li>Objets touristiques référencés : ~1 000 à 10 000 entrées selon le périmètre.</li>
+      <li>Contacts CRM : ~500 à 2 000 par ORG.</li>
+      <li>Trafic API publique : variable, plusieurs milliers de requêtes / jour.</li>
+    </ul>
+  </section>
+
+  <section id="s2">
+    <h2>2. Finalités et bases légales</h2>
+    <table>
+      <thead>
+        <tr><th>Finalité</th><th>Base légale</th><th>Justification</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Production et diffusion d'information touristique</td><td>Mission d'intérêt public (Art. 6.1.e)</td><td>Mission de service public d'OTI — Code du tourisme L.133-3</td></tr>
+        <tr><td>Gestion des comptes éditeurs</td><td>Intérêt légitime (Art. 6.1.f)</td><td>Sécurité de la plateforme, traçabilité éditoriale</td></tr>
+        <tr><td>Animation du réseau prestataires (CRM)</td><td>Contrat (6.1.b) / Intérêt légitime (6.1.f)</td><td>Conventions de partenariat, mission OTI</td></tr>
+        <tr><td>Modération, historisation et traçabilité éditoriale</td><td>Mission d'intérêt public (6.1.e) / Intérêt légitime (6.1.f)</td><td>Qualité de l'information touristique publique ; responsabilité éditoriale et sécurité juridique selon le périmètre</td></tr>
+        <tr><td>Sécurité et logs</td><td>Intérêt légitime (Art. 6.1.f)</td><td>Protection des biens et des données</td></tr>
+        <tr><td>Conservation comptable et obligations sectorielles</td><td>Obligation légale (Art. 6.1.c)</td><td>Lorsqu'une obligation légale spécifique s'applique (ex. pièces comptables liées aux partenariats)</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>Conformité :</strong> les finalités sont déterminées, explicites et légitimes (Art. 5.1.b). Pas de traitement secondaire incompatible.
+    </div>
+  </section>
+
+  <section id="s3">
+    <h2>3. Données traitées</h2>
+    <table>
+      <thead>
+        <tr><th>Catégorie</th><th>Données</th><th>Personnes concernées</th><th>Sensible</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Identité éditeur</td><td>Nom affiché, email, avatar</td><td>Agents OTI / ORG</td><td>Non</td></tr>
+        <tr><td>Authentification</td><td>Hash password, JWT, IP, user-agent, date</td><td>Agents OTI / ORG</td><td>Non — sécurité critique</td></tr>
+        <tr><td>Préférences UI</td><td>Langue, fuseau, prefs JSON</td><td>Agents OTI / ORG</td><td>Non</td></tr>
+        <tr><td>Rôle et permissions</td><td>Rôle plateforme, ORG, permissions</td><td>Agents OTI / ORG</td><td>Non</td></tr>
+        <tr><td>Audit trail</td><td>UUID éditeur par action</td><td>Agents OTI / ORG</td><td>Non</td></tr>
+        <tr><td>Contact opérateur</td><td>Nom commercial, email, tél, adresse</td><td>Prestataires (PM ou PP)</td><td>Variable — pro principalement</td></tr>
+        <tr><td>Contact CRM</td><td>Nom, prénom, email, tél, organisation</td><td>Réseau de l'OTI</td><td>Non</td></tr>
+        <tr><td>Historique CRM</td><td>Demandes, commentaires, comptes-rendus</td><td>Réseau de l'OTI</td><td>Appréciation possible</td></tr>
+        <tr><td>Médias publiés</td><td>Photos, vidéos, EXIF</td><td>Variable</td><td>EXIF à neutraliser</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>Pas de données sensibles</strong> (Art. 9 RGPD) en collecte structurée. Pas de données pénales (Art. 10 RGPD). Pas de mineurs identifiés. Pas de profilage automatisé.
+    </div>
+    <div class="callout warn">
+      <strong>⚠️ Risque champs libres CRM.</strong> Les zones de texte libre (commentaires, comptes-rendus, notes de suivi) peuvent involontairement contenir des données sensibles (santé, situation familiale, difficultés financières, conflit, appréciation subjective) saisies par un éditeur non sensibilisé. Ce risque est traité par une mesure organisationnelle explicite (voir §5.2) et une action prioritaire (voir §7.1).
+    </div>
+  </section>
+
+  <section id="s4">
+    <h2>4. Nécessité et proportionnalité</h2>
+
+    <h3>4.1 Principe de minimisation (Art. 5.1.c)</h3>
+    <ul>
+      <li><strong>Données éditeurs</strong> : seules les données indispensables à l'authentification et à la collaboration multi-ORG sont collectées. Pas de date de naissance, pas d'adresse personnelle, pas de numéro de téléphone privé.</li>
+      <li><strong>Données opérateurs</strong> : seules les coordonnées de contact professionnel sont publiées. Lorsque l'opérateur est une personne physique (auto-entrepreneur), seules les coordonnées qu'il a explicitement déclarées à des fins de publication sont utilisées.</li>
+      <li><strong>Logs</strong> : durée de conservation des logs Supabase Auth limitée selon la politique du sous-traitant ; logs applicatifs purgés au-delà de 90 jours.</li>
+    </ul>
+
+    <h3>4.2 Exactitude (Art. 5.1.d)</h3>
+    <ul>
+      <li>Chaque éditeur peut modifier ses propres données de profil (nom, langue, préférences).</li>
+      <li>Workflow de modération permet la correction collective des contenus.</li>
+      <li>Les opérateurs peuvent demander la rectification de leur fiche via le canal CRM.</li>
+    </ul>
+
+    <h3>4.3 Limitation de la conservation (Art. 5.1.e)</h3>
+    <ul>
+      <li>Durées détaillées dans le <a href="rgpd.html">Règlement RGPD</a> (§5).</li>
+      <li>Anonymisation des comptes inactifs &gt; 24 mois.</li>
+      <li>Archivage des sauvegardes : 30 jours glissants (Supabase Cloud).</li>
+    </ul>
+
+    <h3>4.4 Information des personnes (Art. 13)</h3>
+    <ul>
+      <li>Page <a href="rgpd.html">RGPD publique</a> accessible depuis l'application.</li>
+      <li>Information au moment de la création de compte (banner ou page dédiée).</li>
+      <li>Mention dans les conventions de partenariat ORG / opérateurs.</li>
+    </ul>
+  </section>
+
+  <section id="s5">
+    <h2>5. Mesures techniques et organisationnelles</h2>
+
+    <h3>5.1 Mesures techniques</h3>
+    <table>
+      <thead>
+        <tr><th>Mesure</th><th>Description</th><th>Niveau</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Chiffrement en transit</td><td>TLS de bout en bout (HTTPS, HSTS)</td><td>✅ En place (TLS Supabase et OVHcloud)</td></tr>
+        <tr><td>Chiffrement au repos</td><td><strong>AES-256</strong> des données client (Supabase) + sauvegardes chiffrées</td><td>✅ En place (documenté par Supabase)</td></tr>
+        <tr><td>Authentification forte</td><td>Supabase Auth (password + option OAuth), JWT signés</td><td>✅ En place ; MFA pour rôles privilégiés à activer</td></tr>
+        <tr><td>Contrôle d'accès</td><td>RBAC plateforme + RLS PostgreSQL par ORG et permission</td><td>✅ En place</td></tr>
+        <tr><td>Cloisonnement multi-ORG</td><td>Politiques RLS strictes, vérifications API (<code>api.current_user_*</code>)</td><td>✅ En place ; audit annuel à programmer</td></tr>
+        <tr><td>Journalisation</td><td>Logs Supabase Auth + audit trail (<code>object_version</code>, <code>pending_change</code>)</td><td>✅ En place</td></tr>
+        <tr><td>Gestion des sessions</td><td>JWT à durée limitée, refresh token, déconnexion explicite</td><td>✅ En place</td></tr>
+        <tr><td>Sauvegarde / restauration</td><td>Sauvegardes Supabase intégrées ; <strong>PITR</strong> disponible en option (plans Pro / Team / Enterprise — souscription à vérifier pour Bertel) ; tests de restauration trimestriels</td><td>🟡 Plan souscrit + tests à documenter</td></tr>
+        <tr><td>Mise à jour de sécurité</td><td>Application des CVE critiques sous 30j (Next.js, dépendances)</td><td>✅ Pratique en place — procédure à formaliser</td></tr>
+        <tr><td>Headers de sécurité</td><td>CSP, X-Frame-Options, Referrer-Policy</td><td>🟡 À auditer et documenter</td></tr>
+        <tr><td>Protection injection</td><td>Requêtes paramétrées (Supabase JS), validation serveur</td><td>✅ En place</td></tr>
+        <tr><td>Métadonnées EXIF des médias</td><td>Neutralisation automatique des EXIF (GPS, appareil, date) avant publication via API publique</td><td>🔴 Non systématisé — action prioritaire</td></tr>
+        <tr><td>Hébergement Supabase (UE)</td><td>Région primaire UE parmi <code>eu-west-1</code> Ireland, <code>eu-west-3</code> Paris, <code>eu-central-1</code> Frankfurt, <code>eu-central-2</code> Zurich, <code>eu-north-1</code> Stockholm</td><td>🟡 Région retenue pour Bertel à documenter</td></tr>
+        <tr><td>Certification Supabase</td><td><strong>ISO/IEC 27001</strong> (certificat accessible depuis le dashboard Supabase pour les plans Team / Enterprise)</td><td>✅ Documenté par Supabase — copie à archiver</td></tr>
+        <tr><td>Hébergement OVHcloud (UE)</td><td>Zone de stockage UE : OVHcloud s'engage à ne pas traiter hors UE ni aux États-Unis</td><td>✅ Engagement public OVHcloud — sélection de zone à documenter</td></tr>
+        <tr><td>Certifications OVHcloud</td><td><strong>ISO/IEC 27001:2022</strong>, <strong>27017:2015</strong>, <strong>27018:2019</strong>, <strong>27701:2019</strong> (périmètre non-US, couvrant VPS, Public Cloud Instances, Managed Relational Database, Object Storage, Managed Web Hosting)</td><td>✅ Documenté par OVHcloud — preuves à archiver</td></tr>
+        <tr><td>DPA sous-traitants</td><td>DPA Supabase (à signer via la procédure PandaDoc depuis le dashboard) ; DPA OVHcloud (en place pour le rôle de sous-traitant)</td><td>🟡 Signature Supabase et archivage des deux DPA — action prioritaire</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Mesures organisationnelles</h3>
+    <ul>
+      <li><strong>Politique d'accès</strong> : rôles attribués selon le principe du moindre privilège (<code>tourism_agent</code> &lt; <code>super_admin</code> &lt; <code>owner</code>).</li>
+      <li><strong>Procédure d'arrivée / départ</strong> : création / désactivation des comptes éditeurs par l'admin ORG.</li>
+      <li><strong>Sensibilisation</strong> : information des agents OTI sur les bonnes pratiques RGPD (mots de passe, partage de données).</li>
+      <li><strong>Registre des activités de traitement (Art. 30 RGPD)</strong> : tenu par le référent RGPD interne — formalisation à finaliser (voir §7.1).</li>
+      <li><strong>Procédure de notification des violations de données (Art. 33-34 RGPD)</strong> : analyse de l'incident, qualification du risque pour les droits et libertés des personnes concernées, notification à la CNIL <strong>dans les 72 h après constatation</strong> lorsque la violation présente un risque, information des personnes concernées lorsque le risque est élevé. Documentation interne systématique de toute violation, qu'elle soit notifiée ou non.</li>
+      <li><strong>Règle « champs libres CRM »</strong> : interdiction de saisir dans les zones de texte libre (commentaires, comptes-rendus, notes) des données sensibles (santé, opinions politiques / religieuses / syndicales, origine, orientation sexuelle, données biométriques / génétiques), des données pénales, ou des appréciations subjectives excessives. Une mention d'aide à la saisie est affichée dans l'UI et reprise dans la formation des éditeurs.</li>
+      <li><strong>Convention de responsabilité conjointe (Art. 26 RGPD)</strong> : à formaliser entre SPL OTI DU SUD et chaque ORG partenaire (voir §7.1, action prioritaire).</li>
+      <li><strong>Revue annuelle</strong> : la présente DPIA est revue chaque année et à chaque évolution majeure.</li>
+    </ul>
+  </section>
+
+  <section id="s6">
+    <h2>6. Analyse des risques pour les personnes concernées</h2>
+    <p>Trois familles de risques sont analysées selon la méthode CNIL :</p>
+
+    <div class="risk-block">
+      <h3>6.1 Accès illégitime aux données</h3>
+      <h4>Sources de risque</h4>
+      <ul>
+        <li>Compromission d'un compte éditeur (mot de passe faible, hameçonnage).</li>
+        <li>Faille technique côté Supabase ou Next.js.</li>
+        <li>Erreur de configuration RLS exposant des données d'une ORG à une autre.</li>
+        <li>Sous-traitant compromis.</li>
+      </ul>
+      <h4>Impacts potentiels sur les personnes</h4>
+      <ul>
+        <li>Divulgation de contacts CRM (atteinte à la vie privée des contacts du réseau).</li>
+        <li>Divulgation de coordonnées personnelles d'opérateurs auto-entrepreneurs.</li>
+        <li>Atteinte à la réputation de l'OTI / d'un partenaire ORG.</li>
+      </ul>
+      <div class="risk-grid">
+        <div class="risk-metric"><div class="label">Vraisemblance</div><div class="value">Moyenne</div></div>
+        <div class="risk-metric"><div class="label">Gravité</div><div class="value">Moyenne</div></div>
+        <div class="risk-metric"><div class="label">Risque brut</div><div class="value"><span class="risk-tag mid">Modéré</span></div></div>
+      </div>
+      <h4>Mesures de mitigation</h4>
+      <ul>
+        <li>Authentification Supabase Auth avec politique de mot de passe ; MFA recommandée pour les rôles <code>owner</code> / <code>super_admin</code> (à déployer).</li>
+        <li>RLS PostgreSQL avec tests automatisés de non-régression.</li>
+        <li>Audit régulier des permissions et des politiques RLS.</li>
+        <li>Veille CVE et application rapide des correctifs.</li>
+        <li>Contrat de sous-traitance (DPA) signé avec Supabase et OVH.</li>
+      </ul>
+      <p style="margin-top: 12px;"><strong>Niveau de risque résiduel :</strong> <span class="risk-tag low">Faible</span></p>
+    </div>
+
+    <div class="risk-block">
+      <h3>6.2 Modification non désirée des données</h3>
+      <h4>Sources de risque</h4>
+      <ul>
+        <li>Erreur humaine d'un éditeur (suppression, modification erronée).</li>
+        <li>Action malveillante interne (rare mais possible).</li>
+        <li>Bug applicatif (régression, mauvaise validation).</li>
+      </ul>
+      <h4>Impacts potentiels sur les personnes</h4>
+      <ul>
+        <li>Diffusion d'informations erronées sur un opérateur (préjudice professionnel).</li>
+        <li>Perte d'historique relationnel CRM (préjudice de gestion).</li>
+        <li>Confusion d'identité (mauvais rattachement ORG).</li>
+      </ul>
+      <div class="risk-grid">
+        <div class="risk-metric"><div class="label">Vraisemblance</div><div class="value">Moyenne</div></div>
+        <div class="risk-metric"><div class="label">Gravité</div><div class="value">Faible-Moyenne</div></div>
+        <div class="risk-metric"><div class="label">Risque brut</div><div class="value"><span class="risk-tag mid">Modéré</span></div></div>
+      </div>
+      <h4>Mesures de mitigation</h4>
+      <ul>
+        <li><strong>Audit trail systématique</strong> : chaque modification est tracée dans <code>object_version</code> et <code>pending_change</code> avec horodatage et identifiant de l'auteur.</li>
+        <li><strong>Workflow de modération</strong> : les modifications sensibles passent par un état <code>pending_change</code> revu avant publication.</li>
+        <li><strong>Historisation des versions</strong> : permet de revenir à un état antérieur (rollback).</li>
+        <li><strong>Tests automatisés</strong> : suite EXPLAIN ANALYZE et tests d'intégration sur les fonctions API.</li>
+        <li><strong>Validation côté serveur</strong> : contraintes PostgreSQL + RLS + vérifications applicatives.</li>
+      </ul>
+      <p style="margin-top: 12px;"><strong>Niveau de risque résiduel :</strong> <span class="risk-tag low">Faible</span></p>
+    </div>
+
+    <div class="risk-block">
+      <h3>6.3 Disparition des données</h3>
+      <h4>Sources de risque</h4>
+      <ul>
+        <li>Sinistre Supabase Cloud (incident majeur infrastructure).</li>
+        <li>Sinistre OVH Cloud (incendie, indisponibilité prolongée — cf. SBG 2021).</li>
+        <li>Suppression accidentelle par un administrateur.</li>
+        <li>Action malveillante (ransomware côté éditeur).</li>
+      </ul>
+      <h4>Impacts potentiels sur les personnes</h4>
+      <ul>
+        <li>Perte de l'historique CRM (préjudice de continuité de service).</li>
+        <li>Perte de l'audit trail (préjudice de traçabilité, possible non-conformité éditoriale).</li>
+        <li>Indisponibilité de la plateforme (préjudice opérationnel pour les ORG et les opérateurs).</li>
+      </ul>
+      <div class="risk-grid">
+        <div class="risk-metric"><div class="label">Vraisemblance</div><div class="value">Faible</div></div>
+        <div class="risk-metric"><div class="label">Gravité</div><div class="value">Moyenne-Élevée</div></div>
+        <div class="risk-metric"><div class="label">Risque brut</div><div class="value"><span class="risk-tag mid">Modéré</span></div></div>
+      </div>
+      <h4>Mesures de mitigation</h4>
+      <ul>
+        <li><strong>Sauvegardes Supabase</strong> automatiques, rétention 30 jours, Point-in-Time Recovery selon plan.</li>
+        <li><strong>Export régulier</strong> : possibilité d'export SQL périodique stocké hors Supabase (à industrialiser).</li>
+        <li><strong>Redondance multi-zone</strong> Supabase Cloud UE.</li>
+        <li><strong>Procédure de restauration documentée</strong> : runbook SQL (<code>docs/SQL_ROLLOUT_RUNBOOK.md</code>).</li>
+        <li><strong>Information sur les sauvegardes</strong> auprès des ORG partenaires.</li>
+      </ul>
+      <p style="margin-top: 12px;"><strong>Niveau de risque résiduel :</strong> <span class="risk-tag mid">Faible à modéré</span> <span style="color: var(--ink-3); font-size: 13px;">(dépend du niveau d'industrialisation des exports externes — point d'amélioration identifié)</span></p>
+    </div>
+  </section>
+
+  <section id="s7">
+    <h2>7. Synthèse des risques et plan d'action</h2>
+    <table>
+      <thead>
+        <tr><th>Risque</th><th>Vraisemblance</th><th>Gravité</th><th>Niveau résiduel</th><th>Actions de suivi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Accès illégitime</td><td>Moyenne</td><td>Moyenne</td><td><span class="risk-tag low">Faible</span></td><td>Déployer MFA pour owner/super_admin ; audit RLS annuel</td></tr>
+        <tr><td>Modification non désirée</td><td>Moyenne</td><td>Faible-Moyenne</td><td><span class="risk-tag low">Faible</span></td><td>Continuer la couverture de tests sur les fonctions API</td></tr>
+        <tr><td>Disparition des données</td><td>Faible</td><td>Moyenne-Élevée</td><td><span class="risk-tag mid">Faible-Modéré</span></td><td>Industrialiser un export externe régulier ; documenter le PCA</td></tr>
+      </tbody>
+    </table>
+
+    <h3>7.1 Actions correctives priorisées</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Action</th><th>Échéance</th><th>Responsable</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Neutraliser automatiquement les métadonnées EXIF</strong> des médias publiés via API publique (GPS, appareil, date), sauf exceptions explicitement nécessaires et documentées</td><td>T2 2026</td><td>Équipe SI</td></tr>
+        <tr><td>2</td><td><strong>Formaliser une convention de responsabilité conjointe</strong> (Art. 26 RGPD) avec chaque ORG partenaire : information des personnes, exercice des droits, sécurité, gestion des incidents / violations, durées de conservation, responsabilités éditoriales, pilotage des sous-traitants</td><td>T3 2026</td><td>Référent RGPD + Direction</td></tr>
+        <tr><td>3</td><td><strong>Déployer la règle « pas de données sensibles dans les champs libres CRM »</strong> : mention d'aide à la saisie dans l'UI, formation des éditeurs, contrôle a posteriori</td><td>T2 2026</td><td>Référent RGPD + équipe produit</td></tr>
+        <tr><td>4</td><td><strong>Signer et archiver les preuves sous-traitants</strong> : signature du DPA Supabase via la procédure PandaDoc accessible depuis le dashboard ; archivage du DPA OVHcloud, du certificat ISO/IEC 27001 Supabase (dashboard plans Team / Enterprise) et des certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 OVHcloud ; documentation de la région primaire Supabase et de la zone OVH retenues pour Bertel ; revérification annuelle des sous-traitants ultérieurs</td><td>T2 2026</td><td>Référent RGPD</td></tr>
+        <tr><td>5</td><td>Activer la MFA Supabase pour les rôles <code>owner</code> et <code>super_admin</code></td><td>T3 2026</td><td>Référent RGPD + équipe SI</td></tr>
+        <tr><td>6</td><td>Mettre en place un export SQL externe hebdomadaire vers stockage chiffré tiers</td><td>T3 2026</td><td>Équipe SI</td></tr>
+        <tr><td>7</td><td>Auditer et documenter les headers de sécurité (CSP, HSTS, X-Frame-Options, Referrer-Policy)</td><td>T2 2026</td><td>Équipe SI</td></tr>
+        <tr><td>8</td><td>Industrialiser et documenter les tests de restauration trimestriels</td><td>T4 2026</td><td>Équipe SI</td></tr>
+        <tr><td>9</td><td>Formaliser le registre des activités de traitement (Art. 30 RGPD)</td><td>T2 2026</td><td>Référent RGPD</td></tr>
+        <tr><td>10</td><td>Information / formation RGPD des éditeurs ORG partenaires</td><td>T3 2026</td><td>Référent RGPD</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="s8">
+    <h2>8. Consultation des parties prenantes</h2>
+    <ul>
+      <li><strong>Personnes concernées</strong> : information par la page <a href="rgpd.html">RGPD publique</a>. Les éditeurs sont informés à la création de compte. Les opérateurs et contacts CRM sont informés lors du premier contact.</li>
+      <li><strong>Référent RGPD interne</strong> : la présente DPIA est rédigée et validée par le référent RGPD interne (David Philippe).</li>
+      <li><strong>Sous-traitants</strong> : les DPA Supabase et OVH ont été examinés.</li>
+      <li><strong>CSE</strong> : aucun CSE n'est encore en place chez SPL OTI DU SUD. L'organisation s'engage à présenter Bertel et la présente DPIA dès l'installation de l'instance.</li>
+      <li><strong>Autorité de contrôle (CNIL)</strong> : la consultation préalable (Art. 36 RGPD) n'est pas requise dans la mesure où les risques résiduels sont évalués comme faibles à modérés et maîtrisés.</li>
+    </ul>
+  </section>
+
+  <section id="s9">
+    <h2>9. Validation</h2>
+    <div class="callout">
+      <strong>Avis du responsable de traitement :</strong> au regard des éléments documentés à ce stade, le traitement Bertel présente un <strong>niveau de risque résiduel maîtrisé, sous réserve de la mise en œuvre effective des actions correctives identifiées au §7.1</strong>. La présente analyse ne dispense pas :
+      <ul style="margin-top: 10px;">
+        <li>de la <strong>tenue du registre des activités de traitement</strong> (Art. 30 RGPD) ;</li>
+        <li>de la <strong>formalisation des relations avec les ORG partenaires</strong> par une convention de responsabilité conjointe (Art. 26 RGPD) ;</li>
+        <li>de la <strong>vérification documentaire continue des sous-traitants</strong> (Art. 28 RGPD — DPA, certifications, sous-traitants ultérieurs, régions d'hébergement).</li>
+      </ul>
+      Aucune consultation préalable de la CNIL (Art. 36 RGPD) n'est requise à ce stade.
+    </div>
+    <table class="signature-table">
+      <thead>
+        <tr><th>Rôle</th><th>Nom</th><th>Date</th><th>Validation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Référent RGPD interne</td><td>David Philippe</td><td>2026-05-27</td><td>✅ Validé</td></tr>
+        <tr><td>Responsable du traitement</td><td>SPL OTI DU SUD (représentée par la direction)</td><td>2026-05-27</td><td>✅ Validé</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="s10">
+    <h2>10. Suivi et révision</h2>
+    <p>La présente DPIA fait l'objet d'une <strong>révision annuelle</strong> et est <strong>réévaluée systématiquement</strong> dans les cas suivants :</p>
+    <ul>
+      <li>Évolution significative du périmètre fonctionnel (nouveau module, nouveau type de données).</li>
+      <li>Ajout d'un sous-traitant majeur.</li>
+      <li>Changement de finalité ou de base légale.</li>
+      <li>Incident de sécurité significatif.</li>
+      <li>Modification du cadre réglementaire applicable.</li>
+    </ul>
+    <div class="callout">
+      <strong>Prochaine révision prévue :</strong> mai 2027.
+    </div>
+  </section>
+
+  <section>
+    <h2>Annexe A — Documents de référence</h2>
+    <ul>
+      <li><a href="rgpd.html">Règlement RGPD Bertel</a> (information des personnes concernées)</li>
+      <li><code>CLAUDE.md</code> — Invariants architecturaux et règles métier</li>
+      <li><code>docs/SQL_ROLLOUT_RUNBOOK.md</code> — Runbook de déploiement SQL et restauration</li>
+      <li><code>Base de donnée DLL et API/schema_unified.sql</code> — Schéma de référence (RLS, contraintes, audit)</li>
+      <li><code>Base de donnée DLL et API/api_views_functions.sql</code> — Vues et fonctions API (authentification, permissions)</li>
+    </ul>
+  </section>
+
+  <footer class="doc-footer">
+    Document interne — version 1.0 · Dernière mise à jour : 27 mai 2026 · SPL OTI du SUD · Bertel 3.0
+  </footer>
+</div>
+</body>
+</html>

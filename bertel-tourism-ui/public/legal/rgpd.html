@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Règlement RGPD — Bertel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --teal: #76B097;
+    --teal-2: #0d4f4e;
+    --teal-soft: #e8f3ee;
+    --teal-tint: #f5faf7;
+    --orange: #E08855;
+    --orange-soft: #fbeee4;
+    --ink: #14201c;
+    --ink-2: #43544f;
+    --ink-3: #6b7c77;
+    --ink-4: #97a5a1;
+    --bg: #ffffff;
+    --bg-tint: #fafbf9;
+    --line: #e3e8e6;
+    --line-soft: #eef1ef;
+    --warn-bg: #fef6e8;
+    --warn-border: #f0c884;
+    --info-bg: #eaf3ee;
+    --info-border: #c6e0d0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 48px 80px;
+  }
+  header.doc-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--teal-2);
+    background: var(--teal-soft);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  h1 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 36px;
+    line-height: 1.15;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--ink-2);
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px;
+  }
+  .meta {
+    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  h2 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 44px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--teal-soft);
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 28px 0 10px;
+  }
+  p { margin: 0 0 12px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--ink); font-weight: 600; }
+  a { color: var(--teal-2); text-decoration: none; border-bottom: 1px solid var(--teal-soft); }
+  a:hover { border-bottom-color: var(--teal); }
+  code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; background: var(--teal-tint); padding: 1px 6px; border-radius: 4px; color: var(--teal-2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 18px;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    background: var(--teal-tint);
+    color: var(--ink);
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--teal-soft);
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .card {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .card.contact {
+    background: var(--teal-tint);
+    border-color: var(--teal-soft);
+  }
+
+  .callout {
+    border-left: 4px solid var(--teal);
+    background: var(--info-bg);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--teal-2); }
+  .callout.warn {
+    background: var(--warn-bg);
+    border-left-color: var(--orange);
+  }
+  .callout.warn strong { color: #8a5418; }
+
+  .toc {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin: 24px 0 32px;
+  }
+  .toc h4 {
+    margin: 0 0 10px;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { border-bottom: none; color: var(--ink-2); }
+  .toc a:hover { color: var(--teal-2); }
+
+  footer.doc-footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-3);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  @media print {
+    .page { padding: 32px 28px; max-width: none; }
+    h2 { page-break-after: avoid; }
+    table, .card, .callout { page-break-inside: avoid; }
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-header">
+    <span class="eyebrow">📜 Document légal · Bertel 3.0</span>
+    <h1>Règlement RGPD — Bertel</h1>
+    <p class="subtitle">Plateforme Bertel 3.0 — Système d'Information Touristique (SIT) &amp; CRM</p>
+    <p class="meta">Dernière mise à jour : 27 mai 2026</p>
+  </header>
+
+  <nav class="toc">
+    <h4>Sommaire</h4>
+    <ol>
+      <li><a href="#s1">Responsable du traitement</a></li>
+      <li><a href="#s2">Finalités du traitement</a></li>
+      <li><a href="#s3">Bases légales</a></li>
+      <li><a href="#s4">Données collectées</a></li>
+      <li><a href="#s5">Durées de conservation</a></li>
+      <li><a href="#s6">Destinataires des données</a></li>
+      <li><a href="#s7">Vos droits</a></li>
+      <li><a href="#s8">Sécurité des données</a></li>
+      <li><a href="#s9">Cookies et traceurs</a></li>
+      <li><a href="#s10">Réclamation</a></li>
+      <li><a href="#s11">Contact et conformité</a></li>
+    </ol>
+  </nav>
+
+  <section id="s1">
+    <h2>1. Responsable du traitement</h2>
+    <div class="card contact">
+      <p><strong>SPL OTI DU SUD</strong><br />
+      Office de Tourisme Intercommunal du Sud de La Réunion — éditeur et opérateur de la plateforme Bertel.</p>
+      <p style="margin: 6px 0;">
+        <strong>Adresse :</strong> 379 Rue Hubert Delisle, 97430 Le Tampon<br />
+        <strong>SIREN :</strong> 882 699 556
+      </p>
+      <p style="margin: 12px 0 0;"><strong>Référent RGPD interne</strong><br />
+      David Philippe — Manager SI<br />
+      Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a><br />
+      Téléphone : 06 93 41 92 91</p>
+    </div>
+    <div class="callout">
+      <strong>Précision (Art. 37 RGPD) :</strong> SPL OTI DU SUD n'a pas désigné de Délégué à la Protection des Données (DPO) au sens de l'Art. 37 du RGPD. M. Philippe assure la fonction de <strong>référent RGPD interne</strong>, point de contact privilégié pour les personnes concernées et l'autorité de contrôle.
+    </div>
+    <div class="callout">
+      <strong>Responsabilité conjointe (Art. 26 RGPD).</strong> Bertel est une plateforme mutualisée. Chaque ORG partenaire (autres OTI, structures SIT) qui publie ses propres contenus touristiques via Bertel reste responsable du traitement pour les données dont elle est éditrice (contenu publié, données opérateurs qu'elle saisit, son CRM). SPL OTI DU SUD demeure responsable des données techniques de la plateforme (comptes éditeurs, logs, infrastructure) et fournit le cadre RGPD commun décrit dans le présent document.
+    </div>
+    <div class="callout warn">
+      <strong>⚠️ Convention à formaliser.</strong> Une convention écrite (Art. 26 §1) détaillant la répartition précise des obligations entre SPL OTI DU SUD et chaque ORG partenaire (information des personnes concernées, exercice des droits RGPD, gestion des violations, pilotage des sous-traitants, durées de conservation, responsabilités éditoriales) est en cours de rédaction. À défaut, le présent document fait office de cadre commun provisoire et chaque ORG demeure responsable pour son périmètre éditorial.
+    </div>
+  </section>
+
+  <section id="s2">
+    <h2>2. Finalités du traitement</h2>
+    <p>Bertel est utilisée pour :</p>
+    <ul>
+      <li><strong>Production et diffusion d'informations touristiques</strong> : référencement, qualification et publication des établissements, activités, itinéraires, événements et restaurants sur le territoire (mission d'intérêt public des Offices de Tourisme).</li>
+      <li><strong>Gestion des comptes éditeurs</strong> : authentification, autorisations (RBAC), appartenance à une ORG, suivi des actions (audit trail).</li>
+      <li><strong>CRM tourisme</strong> : suivi de la relation avec les opérateurs commerciaux (prestataires), demandes entrantes, comptes-rendus de visite, animation du réseau.</li>
+      <li><strong>Modération et workflow de publication</strong> : revue des modifications proposées, historisation des versions, traçabilité éditoriale.</li>
+      <li><strong>Conformité et sécurité</strong> : journalisation des accès administratifs, contrôle d'intégrité, sauvegardes, supervision technique.</li>
+    </ul>
+    <div class="callout">
+      <strong>Important :</strong> Bertel ne fait pas de profilage commercial des utilisateurs finaux. Les contenus publiés sont des informations professionnelles et touristiques destinées à la diffusion publique.
+    </div>
+  </section>
+
+  <section id="s3">
+    <h2>3. Bases légales du traitement</h2>
+    <p>Le traitement de vos données personnelles est fondé sur :</p>
+    <ul>
+      <li><strong>Article 6.1.e du RGPD (Mission d'intérêt public)</strong> : exercice de la mission de service public d'un Office de Tourisme — référencement et promotion du territoire (Code du tourisme, articles L.133-3 et suivants).</li>
+      <li><strong>Article 6.1.f du RGPD (Intérêt légitime)</strong> : gestion des comptes éditeurs, animation du réseau de prestataires, sécurisation de la plateforme.</li>
+      <li><strong>Article 6.1.b du RGPD (Exécution d'un contrat)</strong> : exécution des conventions de partenariat / d'adhésion avec les prestataires touristiques et les ORG partenaires.</li>
+      <li><strong>Article 6.1.c du RGPD (Obligation légale)</strong> : conservation comptable, traçabilité des publications, archivage des décisions de modération.</li>
+      <li><strong>Article 6.1.a du RGPD (Consentement)</strong> : envoi de communications non sollicitées, captation de contacts via formulaires publics opt-in (le cas échéant).</li>
+    </ul>
+  </section>
+
+  <section id="s4">
+    <h2>4. Données collectées</h2>
+    <p>Bertel traite des catégories de données différenciées selon la qualité de la personne concernée.</p>
+
+    <h3>4.1 Comptes éditeurs (agents OTI, partenaires ORG)</h3>
+    <ul>
+      <li><strong>Identité</strong> : nom affiché (<code>display_name</code>), avatar (<code>avatar_url</code>), email (via <code>auth.users</code>).</li>
+      <li><strong>Préférences applicatives</strong> : langue (<code>locale</code>), fuseau horaire (<code>timezone</code>), langues d'édition préférées (<code>lang_prefs</code>), préférences UI (<code>preferences</code>, JSON).</li>
+      <li><strong>Rôle et appartenance</strong> : rôle plateforme (<code>owner</code>, <code>super_admin</code>, <code>tourism_agent</code>), appartenance à une ou plusieurs ORG, permissions effectives.</li>
+      <li><strong>Authentification</strong> : hash de mot de passe (jamais le mot de passe en clair — géré par Supabase Auth), tokens de session JWT, date de dernière connexion, date de création du compte.</li>
+      <li><strong>Audit trail</strong> : identifiant utilisateur attaché à chaque création / modification / suppression d'objet (<code>created_by</code>, <code>updated_by</code>, <code>submitted_by</code>, <code>reviewed_by</code>, <code>auditor_id</code>).</li>
+    </ul>
+
+    <h3>4.2 Opérateurs commerciaux (prestataires — ACTOR)</h3>
+    <p>Données professionnelles et, le cas échéant, personnelles lorsque l'opérateur est une personne physique (auto-entrepreneur, indépendant) :</p>
+    <ul>
+      <li><strong>Identité commerciale</strong> : raison sociale ou nom commercial, SIREN, statut juridique.</li>
+      <li><strong>Contact pro</strong> : email professionnel, téléphone fixe / mobile, site web, comptes réseaux sociaux.</li>
+      <li><strong>Coordonnées d'exploitation</strong> : adresse de l'établissement, point de rendez-vous, zone d'intervention.</li>
+      <li><strong>Liens institutionnels</strong> : ORG de rattachement (publication), rôles opérationnels (<code>actor_object_role</code>).</li>
+    </ul>
+
+    <h3>4.3 Contacts CRM (clients, prospects, contacts du réseau)</h3>
+    <ul>
+      <li><strong>Identité</strong> : nom, prénom, fonction.</li>
+      <li><strong>Contact</strong> : email, téléphone, organisation.</li>
+      <li><strong>Historique relationnel</strong> : demandes reçues, commentaires de suivi, comptes-rendus de visite, sujets traités (<code>crm_demand_topic_oti</code>), canal d'origine.</li>
+    </ul>
+    <div class="callout warn">
+      <strong>⚠️ Champs libres CRM — interdiction stricte.</strong> Les zones de texte libre (commentaires, comptes-rendus, notes de suivi) <strong>ne doivent en aucun cas contenir</strong> : données de santé, opinions politiques / philosophiques / religieuses, appartenance syndicale, origine, orientation sexuelle, données biométriques ou génétiques, condamnations pénales, ni appréciations subjectives excessives (jugements de valeur sur la personne). Une mention d'aide à la saisie est affichée dans l'interface d'édition CRM et reprise lors de la formation des éditeurs. Tout manquement constaté donne lieu à correction immédiate par le référent RGPD.
+    </div>
+
+    <h3>4.4 Contenus publiés et médias</h3>
+    <ul>
+      <li><strong>Établissements touristiques</strong> : descriptifs, accroches, photos, vidéos, classements, labels.</li>
+      <li><strong>Métadonnées EXIF des médias</strong> : peuvent contenir géolocalisation et date — l'OTI s'engage à les nettoyer avant publication lorsqu'elles concernent des contenus privés.</li>
+    </ul>
+
+    <h3>4.5 Journalisation technique</h3>
+    <ul>
+      <li><strong>Logs Supabase Auth</strong> : adresse IP de connexion, user-agent, date / heure, type d'événement (connexion, échec, déconnexion). Conservés selon la politique Supabase.</li>
+      <li><strong>Logs applicatifs</strong> : appels aux fonctions API (<code>api.*</code>), erreurs, opérations sensibles.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Pas de donnée sensible (Art. 9 RGPD)</strong> : Bertel ne collecte ni données de santé, ni opinions, ni origines, ni données biométriques. Aucune géolocalisation des utilisateurs en temps réel.
+    </div>
+  </section>
+
+  <section id="s5">
+    <h2>5. Durées de conservation</h2>
+    <table>
+      <thead>
+        <tr><th>Type de données</th><th>Durée de conservation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Comptes éditeurs (actifs)</td><td>Pendant la durée du mandat ou contrat éditeur</td></tr>
+        <tr><td>Comptes éditeurs (inactifs)</td><td>Anonymisation 24 mois après dernière connexion</td></tr>
+        <tr><td>Logs d'authentification Supabase</td><td>Selon politique Supabase Auth (≈ 30 à 90 jours)</td></tr>
+        <tr><td>Audit trail (<code>object_version</code>, <code>pending_change</code>)</td><td>5 ans pour la traçabilité éditoriale</td></tr>
+        <tr><td>Contacts CRM (prospects)</td><td>3 ans après dernier contact</td></tr>
+        <tr><td>Contacts CRM (partenaires actifs)</td><td>Durée de la relation + 3 ans</td></tr>
+        <tr><td>Données opérateurs publiés</td><td>Tant que l'opérateur est référencé + archivage 3 ans</td></tr>
+        <tr><td>Médias archivés</td><td>Durée de vie de l'objet touristique associé</td></tr>
+        <tr><td>Sauvegardes (backups Supabase)</td><td>30 jours glissants (rétention par défaut Supabase Cloud)</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <strong>⚠️ Purge :</strong> les anonymisations et suppressions sont effectuées sur demande, ou à échéance des durées ci-dessus. Les sauvegardes sont automatiquement supprimées au-delà de la fenêtre de rétention.
+    </div>
+  </section>
+
+  <section id="s6">
+    <h2>6. Destinataires des données</h2>
+    <p>Les données peuvent être communiquées à :</p>
+    <ul>
+      <li><strong>Agents OTI / ORG</strong> : selon leur rôle et leur ORG d'appartenance, dans la limite des permissions RLS (Row Level Security PostgreSQL).</li>
+      <li><strong>Modérateurs et administrateurs plateforme</strong> : pour la qualité des contenus et la sécurité.</li>
+      <li><strong>API publique Bertel</strong> : diffusion des contenus touristiques publiés vers les sites partenaires et applications grand public (uniquement les données professionnelles destinées à publication, jamais les données de comptes ou de CRM).</li>
+      <li><strong>Sous-traitants techniques</strong> : voir tableau ci-dessous.</li>
+    </ul>
+
+    <h3>6.1 Sous-traitants (Art. 28 RGPD)</h3>
+    <table>
+      <thead>
+        <tr><th>Sous-traitant</th><th>Rôle</th><th>Localisation</th><th>Conformité documentée</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Supabase Inc.</td>
+          <td>Hébergement BDD, Auth, Storage</td>
+          <td>Région primaire UE à documenter pour le projet Bertel — régions disponibles : <code>eu-west-1</code> Ireland, <code>eu-west-3</code> Paris, <code>eu-central-1</code> Frankfurt, <code>eu-central-2</code> Zurich, <code>eu-north-1</code> Stockholm (chaque projet est déployé dans une région primaire)</td>
+          <td>Certifié <strong>ISO/IEC 27001</strong> (certificat accessible depuis le dashboard Supabase pour les plans Team et Enterprise) · <strong>Chiffrement AES-256 au repos</strong> et <strong>TLS en transit</strong> · <strong>DPA disponible</strong> devant être rendu juridiquement opposable via la procédure PandaDoc accessible depuis le dashboard Supabase · <strong>Sauvegarde et restauration</strong> intégrées, <strong>PITR</strong> disponible en option (plans Pro / Team / Enterprise)</td>
+        </tr>
+        <tr>
+          <td>OVHcloud</td>
+          <td>Hébergement front + reverse proxy (Coolify)</td>
+          <td>France</td>
+          <td><strong>DPA OVHcloud</strong> encadrant le rôle de sous-traitant · <strong>Engagements publics RGPD</strong> : traitement selon les instructions du client, absence de réutilisation commerciale, notification en cas de violation, documentation, transparence · Lorsque le client sélectionne une zone de stockage située dans l'UE, OVHcloud s'engage à ne pas traiter les données hors UE ni aux États-Unis · Certifications <strong>ISO/IEC 27001:2022</strong>, <strong>ISO/IEC 27017:2015</strong>, <strong>ISO/IEC 27018:2019</strong> et <strong>ISO/IEC 27701:2019</strong> sur le périmètre non-US, couvrant notamment VPS, Public Cloud Instances, Managed Relational Database, Object Storage et Managed Web Hosting</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>✓ Pas de transfert hors UE</strong> pour les données personnelles éditeurs et CRM, sous réserve du maintien d'une région Supabase UE pour Bertel et de la sélection d'une zone OVH UE pour l'hébergement front. En cas de transfert hors UE, les garanties appropriées (Art. 46 — clauses contractuelles types) doivent être documentées.
+    </div>
+  </section>
+
+  <section id="s7">
+    <h2>7. Vos droits</h2>
+    <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+    <ul>
+      <li><strong>Droit d'accès</strong> : obtenir confirmation que vos données sont traitées et en demander une copie.</li>
+      <li><strong>Droit de rectification</strong> : faire corriger des données inexactes ou incomplètes.</li>
+      <li><strong>Droit à l'effacement</strong> : demander la suppression de vos données dans les limites légales (les obligations de traçabilité métier peuvent prévaloir pour l'audit trail).</li>
+      <li><strong>Droit à la limitation</strong> : demander la suspension temporaire d'un traitement contesté.</li>
+      <li><strong>Droit d'opposition</strong> : vous opposer au traitement fondé sur l'intérêt légitime, pour des motifs tenant à votre situation particulière.</li>
+      <li><strong>Droit à la portabilité</strong> : récupérer vos données dans un format structuré et lisible par machine.</li>
+      <li><strong>Droit de retrait du consentement</strong> : à tout moment, sans effet rétroactif, lorsque le traitement est fondé sur le consentement.</li>
+    </ul>
+    <div class="card contact">
+      <p style="margin: 0 0 8px;"><strong>Pour exercer vos droits</strong>, contactez le référent RGPD :</p>
+      <p style="margin: 0;">Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a> · Téléphone : 06 93 41 92 91<br />
+      Précisez votre demande, votre qualité (éditeur Bertel, opérateur référencé, contact CRM) et joignez une copie de votre pièce d'identité.</p>
+      <p style="margin: 10px 0 0; font-size: 13px; color: var(--ink-3);">Délai de réponse : <strong>1 mois</strong> maximum (extensible à 3 mois pour les demandes complexes).</p>
+    </div>
+  </section>
+
+  <section id="s8">
+    <h2>8. Sécurité des données</h2>
+    <p>SPL OTI DU SUD met en œuvre des mesures techniques et organisationnelles appropriées :</p>
+    <ul>
+      <li><strong>Authentification nominative</strong> : Supabase Auth (mot de passe ou OAuth), JWT signés.</li>
+      <li><strong>Chiffrement</strong> : <strong>AES-256</strong> des données client au repos (Supabase) ; <strong>TLS</strong> de bout en bout en transit (HTTPS, HSTS).</li>
+      <li><strong>Contrôle d'accès</strong> : RBAC (rôles plateforme) + RLS PostgreSQL (isolation par ORG et par permission).</li>
+      <li><strong>Cloisonnement multi-ORG</strong> : chaque ORG accède uniquement à ses données et aux contenus publiés du réseau.</li>
+      <li><strong>Audit trail</strong> : journalisation systématique des créations, modifications et suppressions d'objets (<code>object_version</code>, <code>pending_change</code>).</li>
+      <li><strong>Workflow de modération</strong> : revue préalable des publications sensibles.</li>
+      <li><strong>Sauvegardes</strong> : backups automatiques Supabase (rétention 30j) ; tests de restauration <strong>à industrialiser</strong> sur un rythme trimestriel (action planifiée).</li>
+      <li><strong>Mises à jour de sécurité</strong> : application régulière des correctifs sur la stack Supabase, Next.js, dépendances.</li>
+      <li><strong>Gestion des secrets</strong> : aucune clé sensible dans le dépôt source ; variables d'environnement injectées au runtime.</li>
+      <li><strong>Hébergement souverain</strong> : Supabase Cloud UE + OVH Cloud France, conformes RGPD.</li>
+    </ul>
+  </section>
+
+  <section id="s9">
+    <h2>9. Cookies et traceurs</h2>
+    <p>Bertel utilise uniquement des cookies strictement nécessaires :</p>
+    <ul>
+      <li><strong>Cookies de session Supabase Auth</strong> : maintien de l'authentification (durée : session ou refresh token).</li>
+      <li><strong>Cookies de préférences UI</strong> : thème (clair / sombre), langue, état des panneaux.</li>
+    </ul>
+    <div class="callout warn">
+      <strong>⚠️ Aucun cookie publicitaire, aucun traceur tiers, aucun outil d'analyse comportementale</strong> (pas de Google Analytics, pas de Meta Pixel).
+    </div>
+  </section>
+
+  <section id="s10">
+    <h2>10. Réclamation</h2>
+    <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de la Commission Nationale de l'Informatique et des Libertés (CNIL) :</p>
+    <div class="card">
+      <p style="margin: 0;"><strong>CNIL</strong><br />
+      3 Place de Fontenoy — TSA 80715<br />
+      75334 PARIS CEDEX 07<br />
+      Téléphone : 01 53 73 22 22<br />
+      Site web : <a href="https://www.cnil.fr">www.cnil.fr</a></p>
+    </div>
+  </section>
+
+  <section id="s11">
+    <h2>11. Contact et conformité</h2>
+    <p>Pour toute question relative au traitement de vos données personnelles :</p>
+    <div class="card contact">
+      <p style="margin: 0;"><strong>Référent RGPD interne — SPL OTI du SUD</strong><br />
+      David Philippe — Manager SI<br />
+      Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a><br />
+      Téléphone : 06 93 41 92 91</p>
+    </div>
+    <div class="callout">
+      <strong>✓ Analyse d'impact documentée :</strong> une analyse d'impact relative à la protection des données (DPIA) a été conduite à titre préventif pour Bertel ; un plan d'action est en cours de mise en œuvre. Voir le document <a href="dpia.html">DPIA — Analyse d'Impact Bertel</a>.
+    </div>
+    <div class="callout">
+      <strong>✓ Information CSE :</strong> à ce jour, aucun Comité Social et Économique n'est en place au sein de SPL OTI DU SUD. L'organisation s'engage à informer cette instance dès son installation, conformément à l'article L.2312-38 du Code du travail, étant entendu que Bertel n'est pas un outil de surveillance de l'activité des salariés (cf. §2 — pas de profilage, pas de suivi de productivité).
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    Dernière mise à jour : 27 mai 2026 · SPL OTI du SUD · Bertel 3.0
+  </footer>
+</div>
+</body>
+</html>

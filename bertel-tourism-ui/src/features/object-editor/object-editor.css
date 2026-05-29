@@ -427,6 +427,86 @@
 .object-editor .tog.is-on .tog__sw { background: var(--accent); }
 .object-editor .tog.is-on .tog__sw::after { left: 18px; }
 
+/* ---------- Edit modal — internal rhythm ----------
+   The base EditorModal primitive renders children inside .ed-modal__body
+   with no layout rules of its own. These selectors give consecutive Fields,
+   Toggles and embedded widgets (MediaUploadField, etc.) consistent vertical
+   breathing room and let MediaEditModal cluster publication settings into a
+   tidy two-column row via .ed-modal__group. Tokens only — no hard-coded hues. */
+.object-editor .ed-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+/* Compact 2-column grouping for the trailing visibility/cover cluster */
+.object-editor .ed-modal__group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.object-editor .ed-modal__group > * {
+  min-width: 0;
+}
+@media (max-width: 520px) {
+  .object-editor .ed-modal__group {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Preview image inside the modal */
+.object-editor .ed-modal__preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+}
+
+/* Media upload field — a distinct affordance card inside the modal */
+.object-editor .media-upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+}
+.object-editor .media-upload-field__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+.object-editor .media-upload-field__label input[type="file"] {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.object-editor .media-upload-field__hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.object-editor .media-upload-field__error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--red);
+}
+.object-editor .media-upload-field [role="status"] {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
 /* Stat card */
 .object-editor .stat-card {
   display: flex; flex-direction: column;

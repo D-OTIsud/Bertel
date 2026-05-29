@@ -92,10 +92,15 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
         <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
       </Field>
       <Field label="Crédit / auteur"><Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} /></Field>
-      <Field label="Visibilité">
-        <Select value={draft.visibility} options={VISIBILITY} onChange={(visibility) => set({ visibility })} />
-      </Field>
-      <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
+      {/* Publication settings cluster — Visibilité + Photo de couverture share
+          a 2-column grid (.ed-modal__group), Publié sits below as a full-width
+          final toggle. Styling lives in object-editor.css under .ed-modal__group. */}
+      <div className="ed-modal__group">
+        <Field label="Visibilité">
+          <Select value={draft.visibility} options={VISIBILITY} onChange={(visibility) => set({ visibility })} />
+        </Field>
+        <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
+      </div>
       <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
     </EditorModal>
   );

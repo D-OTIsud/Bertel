@@ -130,7 +130,7 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 | Mise à jour de sécurité | Application des CVE critiques sous 30j (Next.js, dépendances) | ✅ Pratique en place — procédure à formaliser |
 | Headers de sécurité | CSP, X-Frame-Options, Referrer-Policy | 🟡 À auditer et documenter |
 | Protection contre l'injection | Requêtes paramétrées (Supabase JS), validation côté serveur | ✅ En place |
-| Métadonnées EXIF des médias | Neutralisation automatique des EXIF (GPS, appareil, date) avant publication via API publique | 🔴 Non systématisé — à industrialiser (action prioritaire) |
+| Métadonnées EXIF des médias | Neutralisation automatique des EXIF (GPS, appareil, date) avant publication via API publique — pipeline `/api/media/upload` (resize ≤ 2000 px + strip métadonnées via sharp) | ✅ En place pour les nouveaux uploads ; backfill des médias antérieurs à planifier |
 | Hébergement Supabase (UE) | Région primaire UE parmi `eu-west-1` Ireland, `eu-west-3` Paris, `eu-central-1` Frankfurt, `eu-central-2` Zurich, `eu-north-1` Stockholm | 🟡 Région retenue pour Bertel à documenter |
 | Certification Supabase | **ISO/IEC 27001** (certificat accessible depuis le dashboard Supabase pour les plans Team / Enterprise) | ✅ Documenté par Supabase — copie du certificat à archiver |
 | Hébergement OVHcloud (UE) | Zone de stockage UE : OVHcloud s'engage à ne pas traiter hors UE ni aux États-Unis | ✅ Engagement public OVHcloud — sélection de zone à documenter |
@@ -252,7 +252,7 @@ Trois familles de risques sont analysées selon la méthode CNIL :
 
 | # | Action | Échéance | Responsable |
 |---|---|---|---|
-| 1 | **Neutraliser automatiquement les métadonnées EXIF** des médias publiés via API publique (GPS, appareil, date), sauf exceptions explicitement nécessaires et documentées | T2 2026 | Équipe SI |
+| 1 | ✅ **Livré — Neutralisation automatique des métadonnées EXIF** des nouveaux uploads via `/api/media/upload` (sharp, strip EXIF/IPTC/XMP + resize ≤ 2000 px). Reste à planifier : backfill des médias antérieurs. | Livré T2 2026 · Backfill : T4 2026 | Équipe SI |
 | 2 | **Formaliser une convention de responsabilité conjointe** (Art. 26 RGPD) avec chaque ORG partenaire : information des personnes, exercice des droits, sécurité, gestion des incidents / violations, durées de conservation, responsabilités éditoriales, pilotage des sous-traitants | T3 2026 | Référent RGPD + Direction |
 | 3 | **Définir et déployer la règle « pas de données sensibles dans les champs libres CRM »** : mention d'aide à la saisie dans l'UI, formation des éditeurs, contrôle a posteriori | T2 2026 | Référent RGPD + équipe produit |
 | 4 | **Signer et archiver les preuves sous-traitants** : signature du DPA Supabase via la procédure PandaDoc accessible depuis le dashboard ; archivage du DPA OVHcloud, du certificat ISO/IEC 27001 Supabase (dashboard plans Team / Enterprise) et des certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 OVHcloud ; documentation de la région primaire Supabase et de la zone OVH retenues pour Bertel ; revérification annuelle de la liste des sous-traitants ultérieurs | T2 2026 | Référent RGPD |

@@ -62,6 +62,9 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
           objectId={objectId}
           accessToken={accessToken}
           onUploaded={(uploaded) => {
+            // `uploaded.mimeType` is intentionally not persisted: the `media` table has no
+            // mime_type column today, and processImage always normalises to image/jpeg
+            // (which the bucket path's .jpg suffix already reflects).
             set({
               url: uploaded.url,
               width: String(uploaded.width),

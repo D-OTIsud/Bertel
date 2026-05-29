@@ -3,7 +3,7 @@ import { Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceMediaItem } from '../../../services/object-workspace-parser';
 import {
-  addObjectMediaItem,
+  createObjectMediaItem,
   patchObjectMediaItem,
   removeObjectMediaItem,
 } from './media-items';
@@ -31,6 +31,11 @@ function titleFallback(item: ObjectWorkspaceMediaItem) {
 export function SectionMedia({ editor, permissions: _permissions, objectId, folded }: SectionProps) {
   const media = editor.draft.media;
   const [editing, setEditing] = useState<string | null>(null);
+  // In-memory draft for the "+ Ajouter un média" flow. The new item lives here
+  // until the user saves, so a Cancel leaves the editor's media module
+  // untouched (no phantom tile in the grid). Existing-item edits still go
+  // through patchObjectMediaItem against the live module.
+  const [draftNewItem, setDraftNewItem] = useState<ObjectWorkspaceMediaItem | null>(null);
 
   const photos = media.objectItems.filter(isVisualMedia);
   const recommended = 4;
@@ -38,17 +43,21 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
   const pillLabel = photos.length >= recommended ? `${photos.length} photo(s)` : `${photos.length} / ${recommended}`;
 
   function handleAdd() {
-    const nextMedia = addObjectMediaItem(media);
-    editor.replaceModule('media', nextMedia);
-    const newItem = nextMedia.objectItems[nextMedia.objectItems.length - 1];
-    setEditing(newItem.id);
+    const item = createObjectMediaItem(media);
+    setDraftNewItem(item);
+    setEditing(item.id);
   }
 
   function handleDelete(id: string) {
     editor.replaceModule('media', removeObjectMediaItem(media, id));
   }
 
-  const editingItem = editing ? media.objectItems.find((m) => m.id === editing) ?? null : null;
+  // Resolve the item the modal is editing: an existing saved item, or — if the
+  // user just clicked "+ Ajouter un média" — the in-memory draft that has not
+  // yet been appended to the module.
+  const editingItem = editing
+    ? media.objectItems.find((m) => m.id === editing) ?? draftNewItem
+    : null;
 
   return (
     <Fs
@@ -102,10 +111,23 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
           typeOptions={media.typeOptions}
           languages={editor.draft.descriptions.availableLanguages}
           objectId={objectId}
-          onClose={() => setEditing(null)}
-          onSave={(updated) => {
-            editor.replaceModule('media', patchObjectMediaItem(media, updated.id, updated));
+          onClose={() => {
             setEditing(null);
+            setDraftNewItem(null);
+          }}
+          onSave={(updated) => {
+            if (draftNewItem && draftNewItem.id === updated.id) {
+              // First save for a freshly created draft: append it now.
+              editor.replaceModule('media', {
+                ...media,
+                objectItems: [...media.objectItems, updated],
+              });
+            } else {
+              // Editing an existing saved item: patch in place.
+              editor.replaceModule('media', patchObjectMediaItem(media, updated.id, updated));
+            }
+            setEditing(null);
+            setDraftNewItem(null);
           }}
         />
       )}

@@ -28,7 +28,7 @@ function titleFallback(item: ObjectWorkspaceMediaItem) {
   return 'sans titre';
 }
 
-export function SectionMedia({ editor, permissions: _permissions, folded }: SectionProps) {
+export function SectionMedia({ editor, permissions: _permissions, objectId, folded }: SectionProps) {
   const media = editor.draft.media;
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -95,12 +95,13 @@ export function SectionMedia({ editor, permissions: _permissions, folded }: Sect
         + Ajouter un média
       </button>
 
-      {editing && editingItem && (
+      {editing && editingItem && objectId && (
         <MediaEditModal
           open
           media={editingItem}
           typeOptions={media.typeOptions}
           languages={editor.draft.descriptions.availableLanguages}
+          objectId={objectId}
           onClose={() => setEditing(null)}
           onSave={(updated) => {
             editor.replaceModule('media', patchObjectMediaItem(media, updated.id, updated));

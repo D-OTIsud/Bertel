@@ -26,12 +26,12 @@ describe('section registry', () => {
 
   it('marks media and pricing modules dirty when edited', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionMedia editor={result.current} permissions={allowAll} />);
+    const view = render(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
     // Open the edit modal for the existing media item, change a field, and save.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier le média/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Crédit / auteur'), { target: { value: 'OTI' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
-    view.rerender(<SectionMedia editor={result.current} permissions={allowAll} />);
+    view.rerender(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(result.current.dirtySections.media).toBe(true);
 
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);

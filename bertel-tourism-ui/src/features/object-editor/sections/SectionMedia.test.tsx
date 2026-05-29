@@ -6,11 +6,11 @@ import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 describe('SectionMedia', () => {
   it('opens the edit modal for an existing media and saves metadata changes', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionMedia editor={result.current} permissions={allowAll} />);
+    const view = render(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier le média/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Crédit / auteur'), { target: { value: 'OTI' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
-    view.rerender(<SectionMedia editor={result.current} permissions={allowAll} />);
+    view.rerender(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(result.current.draft.media.objectItems[0].credit).toBe('OTI');
   });
 });

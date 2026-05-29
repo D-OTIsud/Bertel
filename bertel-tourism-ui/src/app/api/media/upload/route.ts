@@ -4,6 +4,7 @@ import { handleMediaUpload, type StorageUploader } from './handle-upload';
 import { MediaProcessingError } from './process-image';
 
 const BUCKET = 'media';
+const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/; // mirrors chk_object_id_shape in schema_unified.sql
 
 export const runtime = 'nodejs'; // sharp requires Node, not Edge
 
@@ -26,6 +27,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (userErr || !userData?.user) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   }
+  // TODO(security): also verify the authenticated user can edit `object_id` before allowing the upload.
+  // Currently any logged-in user can write to any object's storage path because the service-role key
+  // bypasses RLS at upload time. Once the canonical permission RPC stabilises (api.current_user_can_edit_objects
+  // or similar), call it here and return 403 if forbidden.
 
   let form: FormData;
   try {
@@ -37,6 +42,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const objectId = form.get('object_id');
   if (!(file instanceof File) || typeof objectId !== 'string' || objectId.length === 0) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
+  }
+  if (!OBJECT_ID_SHAPE.test(objectId)) {
+    return NextResponse.json({ error: 'invalid_object_id', detail: 'object_id does not match the canonical shape' }, { status: 400 });
   }
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());

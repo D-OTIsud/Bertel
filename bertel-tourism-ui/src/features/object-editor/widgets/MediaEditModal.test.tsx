@@ -2,6 +2,20 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MediaEditModal } from './MediaEditModal';
 import type { ObjectWorkspaceMediaItem } from '../../../services/object-workspace-parser';
 
+jest.mock('../../../lib/supabase', () => ({
+  getSupabaseClient: () => ({
+    auth: { getSession: async () => ({ data: { session: { access_token: 'fake-jwt' } } }) },
+  }),
+}));
+
+jest.mock('./MediaUploadField', () => ({
+  MediaUploadField: ({ onUploaded }: { onUploaded: (m: { url: string; width: number; height: number; mimeType: string }) => void }) => (
+    <button type="button" onClick={() => onUploaded({ url: 'https://cdn.test/x.jpg', width: 800, height: 600, mimeType: 'image/jpeg' })}>
+      mock-upload
+    </button>
+  ),
+}));
+
 const media: ObjectWorkspaceMediaItem = {
   id: 'm1', scope: 'object', placeId: null, scopeLabel: 'Objet',
   typeId: 'mt1', typeCode: 'image', typeLabel: 'Image',
@@ -17,6 +31,7 @@ describe('MediaEditModal', () => {
       <MediaEditModal
         open media={media} languages={['fr', 'en', 'cre']}
         typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }, { id: 'mt2', code: 'pdf', label: 'PDF' }]}
+        objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
     );
@@ -34,6 +49,7 @@ describe('MediaEditModal', () => {
       <MediaEditModal
         open media={media} languages={['fr', 'en', 'cre']}
         typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
     );
@@ -43,5 +59,27 @@ describe('MediaEditModal', () => {
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.title).toBe('Façade');                  // base FR untouched
     expect(saved.titleTranslations.en).toBe('Front view');
+  });
+
+  it('captures upload result (url, width, height) into the saved draft', async () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open
+        media={media}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="obj-edit-1"
+        onClose={() => {}}
+        onSave={onSave}
+      />,
+    );
+    const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
+    fireEvent.click(uploadBtn);
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.url).toBe('https://cdn.test/x.jpg');
+    expect(saved.width).toBe('800');
+    expect(saved.height).toBe('600');
   });
 });

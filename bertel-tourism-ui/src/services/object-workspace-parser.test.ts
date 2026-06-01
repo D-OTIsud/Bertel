@@ -820,3 +820,33 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.generalInfo.secondaryTypes).toEqual([]);
   });
 });
+
+describe('descriptions org overlay', () => {
+  it('parses canonical_description (with i18n) and org_description into two scopes', () => {
+    const detail = { id: 'o1', name: 'O', raw: {
+      canonical_description: {
+        id: 'c1', org_object_id: null,
+        description_chapo: 'Chapo canon FR', description_chapo_i18n: { fr: 'Chapo canon FR', en: 'Canon hook EN' },
+        description: 'Desc canon', description_adapted: 'Accès canon',
+      },
+      org_description: {
+        id: 'g1', org_object_id: 'ORG-OTI',
+        description_chapo: 'Chapo OTI FR', description_chapo_i18n: { fr: 'Chapo OTI FR' },
+        description: 'Desc OTI',
+      },
+    } } as unknown as import('../types/domain').ObjectDetail;
+
+    const parsed = parseObjectWorkspace(detail, ['fr', 'en']);
+    expect(parsed.descriptions.object.chapo.values.en).toBe('Canon hook EN');
+    expect(parsed.descriptions.orgOverlay).not.toBeNull();
+    expect(parsed.descriptions.orgOverlay?.chapo.baseValue).toBe('Chapo OTI FR');
+    expect(parsed.descriptions.orgOverlay?.description.baseValue).toBe('Desc OTI');
+  });
+
+  it('leaves orgOverlay null when org_description is absent', () => {
+    const detail = { id: 'o2', name: 'O', raw: {
+      canonical_description: { id: 'c2', org_object_id: null, description: 'Only canon' },
+    } } as unknown as import('../types/domain').ObjectDetail;
+    expect(parseObjectWorkspace(detail, ['fr']).descriptions.orgOverlay).toBeNull();
+  });
+});

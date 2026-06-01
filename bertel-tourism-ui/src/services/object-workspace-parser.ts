@@ -122,6 +122,8 @@ export interface ObjectWorkspaceDescriptionsModule {
   activeLanguage: string;
   availableLanguages: string[];
   object: ObjectWorkspaceDescriptionScope;
+  /** Current user's organisation overlay (null when none / not enrichable). */
+  orgOverlay: ObjectWorkspaceDescriptionScope | null;
   places: ObjectWorkspaceDescriptionScope[];
 }
 
@@ -1175,6 +1177,7 @@ function collectLanguages(params: {
   langPrefs: string[];
   nameTranslations: Record<string, string>;
   objectScope: ObjectWorkspaceDescriptionScope;
+  orgScope: ObjectWorkspaceDescriptionScope | null;
   placeScopes: ObjectWorkspaceDescriptionScope[];
 }): string[] {
   const candidateSets = [
@@ -1185,6 +1188,11 @@ function collectLanguages(params: {
     Object.keys(params.objectScope.adaptedDescription.values),
     Object.keys(params.objectScope.mobileDescription.values),
     Object.keys(params.objectScope.editorialDescription.values),
+    ...(params.orgScope ? [
+      Object.keys(params.orgScope.description.values),
+      Object.keys(params.orgScope.chapo.values),
+      Object.keys(params.orgScope.adaptedDescription.values),
+    ] : []),
     ...params.placeScopes.flatMap((scope) => [
       Object.keys(scope.description.values),
       Object.keys(scope.chapo.values),
@@ -2901,11 +2909,16 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
   const nameTranslations = readTextMap(raw.name_i18n);
   const mainLocation = parseMainLocation(raw);
   const places = readArray(raw.places).map(parsePlaceSummary);
+  const canonicalRecord = readRecord(raw.canonical_description);
   const objectDescription = parseDescriptionScope({
-    record: pickDescriptionSource(raw),
+    record: Object.keys(canonicalRecord).length > 0 ? canonicalRecord : pickDescriptionSource(raw),
     scope: 'object',
     label: 'Objet principal',
   });
+  const orgRecord = readRecord(raw.org_description);
+  const orgOverlay = Object.keys(orgRecord).length > 0
+    ? parseDescriptionScope({ record: orgRecord, scope: 'object', label: 'Mon organisation' })
+    : null;
   const placeDescriptions = readArray(raw.places).map((place, index) => {
     const descriptions = readArray(place.descriptions);
     const source = descriptions[0] ?? readRecord(place.object_place_description);
@@ -2938,6 +2951,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     langPrefs,
     nameTranslations,
     objectScope: objectDescription,
+    orgScope: orgOverlay,
     placeScopes: placeDescriptions,
   });
   const localLanguage = langPrefs[0] ?? availableLanguages[0] ?? 'fr';
@@ -2987,6 +3001,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       activeLanguage: localLanguage,
       availableLanguages,
       object: objectDescription,
+      orgOverlay,
       places: placeDescriptions,
     },
     media: {

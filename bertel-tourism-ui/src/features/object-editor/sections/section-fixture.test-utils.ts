@@ -51,6 +51,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         mobileDescription: tf('Mobile'),
         editorialDescription: tf('Editoriale'),
       },
+      orgOverlay: null,
       places: [
         {
           recordId: 'pd1',

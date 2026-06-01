@@ -2613,6 +2613,30 @@ BEGIN
   END IF;
 
 
+  -- Editor-only raw description layers (full i18n maps) so the workspace can edit
+  -- canonical and the current user's org overlay per language. Additive keys: no
+  -- existing consumer reads them. Spec 2026-06-01-org-description-enrichment.
+  IF v_fields IS NULL OR 'canonical_description' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'canonical_description',
+      (SELECT to_jsonb(d) FROM object_description d
+        WHERE d.object_id = obj.id AND d.org_object_id IS NULL
+        ORDER BY d.created_at DESC, d.id
+        LIMIT 1)
+    );
+  END IF;
+  IF v_fields IS NULL OR 'org_description' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'org_description',
+      CASE WHEN v_user_org IS NULL THEN NULL ELSE (
+        SELECT to_jsonb(d) FROM object_description d
+          WHERE d.object_id = obj.id AND d.org_object_id = v_user_org
+          ORDER BY d.created_at DESC, d.id
+          LIMIT 1
+      ) END
+    );
+  END IF;
+
   -- External IDs
   IF v_fields IS NULL OR 'external_ids' = ANY(v_fields) THEN
     js := js || jsonb_build_object(
@@ -6000,6 +6024,81 @@ $$;
 -- =====================================================
 -- Drop old 2-parameter overload (TEXT, TEXT[]) if present; replaced by 3-param version with p_options.
 DROP FUNCTION IF EXISTS api.get_object_with_deep_data(TEXT, TEXT[]);
+-- Écrit/supprime la SURCOUCHE de description propre à l'ORG active de l'utilisateur.
+-- Seul écrivain des lignes object_description scopées org_object_id (invariant CLAUDE.md).
+-- Le serveur fixe org_object_id = current_user_org_id() : le client ne choisit pas l'ORG.
+-- Payload tout-vide => suppression de la ligne (fallback canonique au rendu).
+CREATE OR REPLACE FUNCTION api.rpc_write_org_description(
+  p_object_id text,
+  p_payload   jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_org         text;
+  v_has_content boolean;
+  v_row_id      uuid;
+BEGIN
+  IF NOT api.user_can_write_enrichment(p_object_id) THEN
+    RAISE EXCEPTION 'forbidden: edit_org_enrichment required for object %', p_object_id
+      USING ERRCODE = '42501';
+  END IF;
+
+  v_org := api.current_user_org_id();
+  IF v_org IS NULL THEN
+    RAISE EXCEPTION 'no active organisation for current user' USING ERRCODE = '42501';
+  END IF;
+
+  v_has_content :=
+       COALESCE(NULLIF(p_payload->>'description',''), '') <> ''
+    OR COALESCE(NULLIF(p_payload->>'description_chapo',''), '') <> ''
+    OR COALESCE(NULLIF(p_payload->>'description_adapted',''), '') <> ''
+    OR jsonb_typeof(p_payload->'description_i18n') = 'object'
+    OR jsonb_typeof(p_payload->'description_chapo_i18n') = 'object'
+    OR jsonb_typeof(p_payload->'description_adapted_i18n') = 'object';
+
+  IF NOT v_has_content THEN
+    DELETE FROM object_description
+    WHERE object_id = p_object_id AND org_object_id = v_org;
+    RETURN jsonb_build_object('deleted', true);
+  END IF;
+
+  INSERT INTO object_description (
+    object_id, org_object_id, visibility,
+    description,         description_i18n,
+    description_chapo,   description_chapo_i18n,
+    description_adapted, description_adapted_i18n
+  ) VALUES (
+    p_object_id, v_org, 'public',
+    NULLIF(p_payload->>'description',''),
+    CASE WHEN jsonb_typeof(p_payload->'description_i18n')='object'         THEN p_payload->'description_i18n'         ELSE NULL END,
+    NULLIF(p_payload->>'description_chapo',''),
+    CASE WHEN jsonb_typeof(p_payload->'description_chapo_i18n')='object'   THEN p_payload->'description_chapo_i18n'   ELSE NULL END,
+    NULLIF(p_payload->>'description_adapted',''),
+    CASE WHEN jsonb_typeof(p_payload->'description_adapted_i18n')='object' THEN p_payload->'description_adapted_i18n' ELSE NULL END
+  )
+  ON CONFLICT (object_id, org_object_id) WHERE org_object_id IS NOT NULL
+  DO UPDATE SET
+    description              = EXCLUDED.description,
+    description_i18n         = EXCLUDED.description_i18n,
+    description_chapo        = EXCLUDED.description_chapo,
+    description_chapo_i18n   = EXCLUDED.description_chapo_i18n,
+    description_adapted      = EXCLUDED.description_adapted,
+    description_adapted_i18n = EXCLUDED.description_adapted_i18n,
+    updated_at               = NOW()
+  RETURNING id INTO v_row_id;
+
+  RETURN jsonb_build_object('id', v_row_id, 'org_object_id', v_org);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_write_org_description(text, jsonb) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.rpc_write_org_description(text, jsonb) TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION api.get_object_with_deep_data(
   p_object_id TEXT,
   p_languages TEXT[] DEFAULT ARRAY['fr'],

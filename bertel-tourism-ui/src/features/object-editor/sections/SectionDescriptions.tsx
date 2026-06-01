@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Fs, Field, Textarea, LangTabs, ScopeTabs } from '../primitives';
 import type { SectionProps } from './section-types';
-import { useSessionStore } from '../../../store/session-store';
 import type { ObjectWorkspaceDescriptionScope } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
 
@@ -11,21 +10,20 @@ const LANG_LABELS: Record<string, string> = {
 
 const EMPTY_FIELD = { baseValue: '', values: {} as Record<string, string> };
 const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
-  recordId: null, scope: 'object', placeId: null, label: 'Mon organisation', visibility: 'public',
+  recordId: null, scope: 'object', placeId: null, label: 'Personnalisée', visibility: 'public',
   description: { ...EMPTY_FIELD }, chapo: { ...EMPTY_FIELD }, adaptedDescription: { ...EMPTY_FIELD },
   mobileDescription: { ...EMPTY_FIELD }, editorialDescription: { ...EMPTY_FIELD },
 });
 
-/** Section 04 — multilingual descriptions, canonical + per-organisation overlay. */
+/** Section 04 — multilingual descriptions: default (shared) layer + per-organisation personalised overlay. */
 export function SectionDescriptions({ editor, permissions, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
   const active = descriptions.activeLanguage;
   const canEditOrg = permissions.descriptions?.canEditOrgEnrichment ?? false;
   const canEditCanonical = permissions.descriptions?.canEditCanonical ?? false;
-  const orgName = useSessionStore((s) => s.orgName);
 
   // Scope is local UI navigation (must not mark the module dirty). Default to the
-  // org layer for contributors who cannot edit canonical.
+  // personalised layer for contributors who cannot edit the default text.
   const [scope, setScope] = useState<'canonical' | 'org'>(
     canEditOrg && !canEditCanonical ? 'org' : 'canonical',
   );
@@ -55,35 +53,45 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
     ),
   }));
 
+  // Two independent axes: the scope (Par défaut / Personnalisée) on the left,
+  // the language tabs on the right — opposite ends so they aren't confused.
   const scopeTabs = [
-    { code: 'canonical', label: 'Canonique' },
-    ...(canEditOrg ? [{ code: 'org', label: `Mon organisation${orgName ? ` · ${orgName}` : ''}` }] : []),
+    { code: 'canonical', label: 'Par défaut' },
+    ...(canEditOrg ? [{ code: 'org', label: 'Personnalisée' }] : []),
   ];
 
-  // In org scope, show the canonical value as a greyed fallback hint when the overlay field is empty.
+  // In the personalised scope, show the default value as a greyed fallback hint when the overlay field is empty.
   const fallback = (field: 'chapo' | 'description' | 'adaptedDescription') =>
     onOrg ? readTranslatableField(descriptions.object[field], active, descriptions.localLanguage) : '';
   const hint = (base: string, field: 'chapo' | 'description' | 'adaptedDescription') => {
     const fb = fallback(field);
     const current = readTranslatableField(activeScopeData[field], active, descriptions.localLanguage).trim();
-    // Only surface the "inherited from canonical" hint while the overlay field is
+    // Only surface the "inherited from default" hint while the overlay field is
     // still empty — once the user types their own version, show the normal hint.
-    return onOrg && fb && current === '' ? `Hérité du canonique : « ${fb.slice(0, 80)} » — saisir pour personnaliser` : base;
+    return onOrg && fb && current === ''
+      ? `Hérité du texte par défaut : « ${fb.slice(0, 80)} » — saisir pour personnaliser`
+      : base;
   };
 
   const readOnly = onOrg ? !canEditOrg : !canEditCanonical;
-  const missingScope = onOrg ? 'overlay ORG' : 'canonique';
+  const missingScope = onOrg ? 'personnalisée' : 'par défaut';
 
   return (
     <Fs
       num="04"
       title="Descriptions"
-      sub="Accroche, descriptif, plan d'accès — par langue et par organisation"
+      sub="Accroche, descriptif, plan d'accès — par langue, version par défaut ou personnalisée"
       folded={folded}
-      pill={{ tone: 'ok', label: onOrg ? 'Mon organisation' : 'Canonique' }}
+      pill={{ tone: 'ok', label: onOrg ? 'Personnalisée' : 'Par défaut' }}
     >
-      {scopeTabs.length > 1 && <ScopeTabs tabs={scopeTabs} active={scope} onSelect={(c) => setScope(c as 'canonical' | 'org')} />}
-      {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
+      <div className="desc-selectors">
+        {scopeTabs.length > 1 ? (
+          <ScopeTabs tabs={scopeTabs} active={scope} onSelect={(c) => setScope(c as 'canonical' | 'org')} />
+        ) : (
+          <span />
+        )}
+        {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
+      </div>
 
       <Field label="Accroche" hint={hint("≤ 160 caractères — apparaît sous le titre dans l'Explorer", 'chapo')}>
         <Textarea
@@ -118,7 +126,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
 
       {readOnly && (
         <p className="muted" style={{ marginTop: 8 }}>
-          Lecture seule : vos droits ne permettent pas d'éditer la couche {missingScope}.
+          Lecture seule : vos droits ne permettent pas d'éditer la version {missingScope}.
         </p>
       )}
     </Fs>

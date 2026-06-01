@@ -25,6 +25,14 @@ interface SessionState {
    * which non-published rows are actually returned.
    */
   canEditObjects: boolean;
+  /**
+   * The current user's active organisation id and display name, resolved at
+   * session bootstrap via `api.current_user_active_org()`. Used for UI labels
+   * (e.g. scope switch "Mon organisation · <orgName>"). Degrades to null when
+   * the user has no active org or the helper is unavailable.
+   */
+  orgId: string | null;
+  orgName: string | null;
   setDemoRole: (role: UserRole) => void;
   setLangPrefs: (langPrefs: string[]) => void;
   hydrateFromAuth: (payload: {
@@ -35,6 +43,8 @@ interface SessionState {
     avatar: string;
     langPrefs: string[];
     canEditObjects: boolean;
+    orgId: string | null;
+    orgName: string | null;
   }) => void;
   setBooting: () => void;
   setGuest: (message?: string | null) => void;
@@ -55,6 +65,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   // Real auth: must wait for the SQL capability check to resolve before
   // broadening the Explorer.
   canEditObjects: env.demoMode,
+  orgId: env.demoMode ? 'ORG-DEMO' : null,
+  orgName: env.demoMode ? 'OTI du Sud' : null,
   setDemoRole: (role) => {
     const state = useSessionStore.getState();
     if (!state.demoMode) {
@@ -69,7 +81,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     });
   },
   setLangPrefs: (langPrefs) => set({ langPrefs }),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, orgId, orgName }) =>
     set({
       status: 'ready',
       role,
@@ -79,6 +91,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       avatar,
       langPrefs,
       canEditObjects,
+      orgId,
+      orgName,
       errorMessage: null,
     }),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
@@ -93,6 +107,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
+      orgId: null,
+      orgName: null,
     });
   },
   setSessionError: (message) => {
@@ -106,6 +122,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
+      orgId: null,
+      orgName: null,
     });
   },
 }));

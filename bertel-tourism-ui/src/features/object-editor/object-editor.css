@@ -365,7 +365,7 @@
 .object-editor .lang-tabs button .ok { color: var(--green); }
 .object-editor .lang-tabs button .miss { color: var(--warn); }
 
-/* Scope tabs — segmented control for Canonique / Mon organisation */
+/* Scope tabs — segmented control for Par défaut / Personnalisée */
 .object-editor .scope-tabs {
   display: inline-flex;
   background: var(--surface-2);
@@ -380,6 +380,20 @@
 }
 .object-editor .scope-tabs button.is-on {
   background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);
+}
+
+/* Description selectors row — scope (Par défaut / Personnalisée) on the left,
+   language tabs on the right: opposite ends so the two axes aren't confused. */
+.object-editor .desc-selectors {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.object-editor .desc-selectors .scope-tabs,
+.object-editor .desc-selectors .lang-tabs {
+  margin-bottom: 0;
 }
 
 /* Char counter */

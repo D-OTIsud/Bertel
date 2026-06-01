@@ -42,6 +42,8 @@ node_modules/
 .playwright-browsers/
 .next/
 storybook-static/
+bertel-tourism-ui/next-env.d.ts
+bertel-tourism-ui/tsconfig.tsbuildinfo
 
 # Test artifacts
 test_results.txt

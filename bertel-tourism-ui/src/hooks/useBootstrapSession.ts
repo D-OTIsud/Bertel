@@ -27,6 +27,27 @@ async function fetchCanEditObjects(): Promise<boolean> {
   }
 }
 
+// Resolves the current user's active organisation (id + name) for UI labels.
+// Returns nulls when unavailable — the label degrades to a generic string.
+async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string | null }> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    return { orgId: null, orgName: null };
+  }
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_active_org');
+    if (error) {
+      console.warn('current_user_active_org unavailable.', error);
+      return { orgId: null, orgName: null };
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return { orgId: row?.org_id ?? null, orgName: row?.org_name ?? null };
+  } catch (err) {
+    console.warn('current_user_active_org threw.', err);
+    return { orgId: null, orgName: null };
+  }
+}
+
 function normalizeRole(value: unknown): UserRole | null {
   return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
 }
@@ -119,6 +140,11 @@ export function useBootstrapSession() {
         return;
       }
 
+      const activeOrg = await fetchActiveOrg();
+      if (cancelled) {
+        return;
+      }
+
       hydrateFromAuth({
         role,
         userId: user.id,
@@ -127,6 +153,8 @@ export function useBootstrapSession() {
         avatar: initialsFromName(userName),
         langPrefs,
         canEditObjects,
+        orgId: activeOrg.orgId,
+        orgName: activeOrg.orgName,
       });
     }
 

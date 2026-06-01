@@ -8,6 +8,7 @@ export { StatCard } from './StatCard';
 export { Fs } from './Fs';
 export { Repeater } from './Repeater';
 export { LangTabs, type LangTabDef } from './LangTabs';
+export { ScopeTabs, type ScopeTabDef } from './ScopeTabs';
 export { ScheduleEditor, type ScheduleRow, type ScheduleSlot } from './ScheduleEditor';
 export { SeasonPicker, type SeasonState } from './SeasonPicker';
 export { TriState, type TriStateValue } from './TriState';

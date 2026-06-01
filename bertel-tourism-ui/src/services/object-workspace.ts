@@ -14,6 +14,7 @@ import {
   parseObjectWorkspace,
   type ObjectWorkspaceContactItem,
   type ObjectWorkspaceContactsModule,
+  type ObjectWorkspaceDescriptionScope,
   type ObjectWorkspaceDescriptionsModule,
   type ObjectWorkspaceDistinctionGroup,
   type ObjectWorkspaceDistinctionItem,
@@ -4863,6 +4864,24 @@ function buildDescriptionPayload(scope: ObjectWorkspaceDescriptionsModule['objec
   };
 }
 
+/** Pure: TRUE if an org overlay scope carries any text or translation worth persisting. */
+export function orgOverlayHasContent(scope: ObjectWorkspaceDescriptionScope): boolean {
+  const fields = [scope.chapo, scope.description, scope.adaptedDescription];
+  return fields.some((f) => f.baseValue.trim() !== '' || Object.keys(f.values).length > 0);
+}
+
+/** Pure: the org-overlay write payload — the three enrichable fields only. */
+export function buildOrgDescriptionPayload(scope: ObjectWorkspaceDescriptionScope) {
+  return {
+    description: toNullableText(scope.description.baseValue),
+    description_i18n: Object.keys(scope.description.values).length > 0 ? scope.description.values : null,
+    description_chapo: toNullableText(scope.chapo.baseValue),
+    description_chapo_i18n: Object.keys(scope.chapo.values).length > 0 ? scope.chapo.values : null,
+    description_adapted: toNullableText(scope.adaptedDescription.baseValue),
+    description_adapted_i18n: Object.keys(scope.adaptedDescription.values).length > 0 ? scope.adaptedDescription.values : null,
+  };
+}
+
 async function upsertObjectDescription(
   objectId: string,
   scope: ObjectWorkspaceDescriptionsModule['object'],
@@ -4952,17 +4971,39 @@ async function upsertPlaceDescription(scope: ObjectWorkspaceDescriptionsModule['
   }
 }
 
+async function writeOrgDescription(objectId: string, overlay: ObjectWorkspaceDescriptionScope | null): Promise<void> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour enregistrer la description ORG.');
+  }
+  // Empty overlay → send {} so the RPC deletes any existing row (fallback to canonical).
+  const payload = overlay && orgOverlayHasContent(overlay) ? buildOrgDescriptionPayload(overlay) : {};
+  const { error } = await apiClient.schema('api').rpc('rpc_write_org_description', {
+    p_object_id: objectId,
+    p_payload: payload,
+  });
+  if (error) {
+    throw mapMutationError(error, "Impossible d'enregistrer la description propre à votre organisation.");
+  }
+}
+
 export async function saveObjectWorkspaceDescriptions(
   objectId: string,
   input: ObjectWorkspaceDescriptionsModule,
-  options: { canEditPlaceDescriptions: boolean },
+  options: { canEditCanonical: boolean; canEditOrgEnrichment: boolean; canEditPlaceDescriptions: boolean },
 ): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
   }
 
-  await upsertObjectDescription(objectId, input.object);
+  if (options.canEditCanonical) {
+    await upsertObjectDescription(objectId, input.object);
+  }
+
+  if (options.canEditOrgEnrichment) {
+    await writeOrgDescription(objectId, input.orgOverlay);
+  }
 
   if (!options.canEditPlaceDescriptions) {
     return;

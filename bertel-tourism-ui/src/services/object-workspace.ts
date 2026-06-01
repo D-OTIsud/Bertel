@@ -86,6 +86,8 @@ export interface ObjectWorkspacePermissions {
   };
   descriptions: ObjectWorkspaceModuleAccess & {
     canEditPlaceDescriptions: boolean;
+    canEditCanonical: boolean;
+    canEditOrgEnrichment: boolean;
   };
   media: ObjectWorkspaceModuleAccess & {
     canEditPlaceMedia: boolean;
@@ -3033,6 +3035,18 @@ async function getObjectWorkspaceTagsModule(
   };
 }
 
+/** Pure: derive per-layer description edit rights from the resolved capability flags. */
+export function describeDescriptionsAccess(flags: {
+  directWrite: boolean;
+  canonical: boolean;
+  enrichment: boolean;
+}): { canEditCanonical: boolean; canEditOrgEnrichment: boolean } {
+  return {
+    canEditCanonical: flags.directWrite || flags.canonical,
+    canEditOrgEnrichment: flags.directWrite || flags.enrichment,
+  };
+}
+
 async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
   const session = useSessionStore.getState();
   const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
@@ -3042,6 +3056,8 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let canWriteSafeWorkspaceRpc = directWrite;
   let canPublishObject = directWrite || session.demoMode;
   let canWriteProviderFollowUp = session.demoMode;
+  let canonical = false;
+  let enrichment = false;
   if (!session.demoMode && apiClient) {
     try {
       const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult] = await Promise.allSettled([
@@ -3052,9 +3068,9 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         apiClient.schema('api').rpc('is_object_owner', { p_object_id: objectId }),
       ]);
 
-      const canonical =
+      canonical =
         canonicalResult.status === 'fulfilled' && canonicalResult.value.error == null && canonicalResult.value.data === true;
-      const enrichment =
+      enrichment =
         enrichmentResult.status === 'fulfilled' && enrichmentResult.value.error == null && enrichmentResult.value.data === true;
       const objectOwner =
         ownerResult.status === 'fulfilled' && ownerResult.value.error == null && ownerResult.value.data === true;
@@ -3108,6 +3124,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     descriptions: {
       ...directOrBlocked(),
       canEditPlaceDescriptions: session.demoMode || session.role === 'super_admin',
+      ...describeDescriptionsAccess({ directWrite, canonical, enrichment }),
     },
     media: {
       ...directOrBlocked(),

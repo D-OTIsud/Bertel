@@ -68,7 +68,7 @@ export type SaveWorkspaceModuleInput =
   | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'distinctions'; value: ObjectWorkspaceDistinctionsModule }
   | { moduleId: 'location'; value: ObjectWorkspaceLocationModule }
-  | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditPlaceDescriptions: boolean }
+  | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditCanonical: boolean; canEditOrgEnrichment: boolean; canEditPlaceDescriptions: boolean }
   | { moduleId: 'media'; value: ObjectWorkspaceMediaModule; canEditPlaceMedia: boolean }
   | { moduleId: 'contacts'; value: ObjectWorkspaceContactsModule }
   | { moduleId: 'characteristics'; value: ObjectWorkspaceCharacteristicsModule }
@@ -315,6 +315,8 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
       }
 
       return saveObjectWorkspaceDescriptions(objectId, input.value, {
+        canEditCanonical: input.canEditCanonical,
+        canEditOrgEnrichment: input.canEditOrgEnrichment,
         canEditPlaceDescriptions: input.canEditPlaceDescriptions,
       });
     },

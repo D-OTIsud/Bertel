@@ -50,6 +50,8 @@ function buildSaveArg(
       return {
         moduleId: 'descriptions',
         value: draft.descriptions,
+        canEditCanonical: permissions.descriptions.canEditCanonical,
+        canEditOrgEnrichment: permissions.descriptions.canEditOrgEnrichment,
         canEditPlaceDescriptions: permissions.descriptions.canEditPlaceDescriptions,
       };
     case 'media':

@@ -365,6 +365,23 @@
 .object-editor .lang-tabs button .ok { color: var(--green); }
 .object-editor .lang-tabs button .miss { color: var(--warn); }
 
+/* Scope tabs — segmented control for Canonique / Mon organisation */
+.object-editor .scope-tabs {
+  display: inline-flex;
+  background: var(--surface-2);
+  padding: 3px; border-radius: 999px; margin-bottom: 10px; gap: 2px;
+}
+.object-editor .scope-tabs button {
+  height: 26px; padding: 0 14px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-3); letter-spacing: 0.01em;
+  background: transparent; border: 0; cursor: pointer;
+}
+.object-editor .scope-tabs button.is-on {
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);
+}
+
 /* Char counter */
 .object-editor .char-count {
   display: flex; justify-content: flex-end;

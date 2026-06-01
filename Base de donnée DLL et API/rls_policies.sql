@@ -245,6 +245,25 @@ AS $$
   LIMIT 1;
 $$;
 
+-- Retourne l'ORG active de l'utilisateur courant (id + nom), pour le libellé
+-- côté éditeur du sélecteur de périmètre des descriptions. Le serveur reste
+-- autoritaire ; le client n'utilise ce nom que pour l'affichage.
+CREATE OR REPLACE FUNCTION api.current_user_active_org()
+RETURNS TABLE (org_id text, org_name text)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT o.id, o.name
+  FROM user_org_membership uom
+  JOIN object o ON o.id = uom.org_object_id
+  WHERE uom.user_id = auth.uid()
+    AND uom.is_active = TRUE
+  LIMIT 1;
+$$;
+
+REVOKE EXECUTE ON FUNCTION api.current_user_active_org() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION api.current_user_active_org() TO authenticated, service_role;
+
 -- Retourne TRUE si l'utilisateur courant peut consulter les notes privées
 -- depuis le périmètre de son organisation active.
 CREATE OR REPLACE FUNCTION api.can_read_object_private_notes(p_object_id text)

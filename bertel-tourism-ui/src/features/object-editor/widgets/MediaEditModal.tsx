@@ -73,7 +73,6 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
           }}
         />
       )}
-      <Field label="URL du fichier"><Input value={draft.url} aria-label="URL du fichier" onChange={(url) => set({ url })} /></Field>
       {languages.length > 1 && (
         <LangTabs
           tabs={languages.map((code) => ({

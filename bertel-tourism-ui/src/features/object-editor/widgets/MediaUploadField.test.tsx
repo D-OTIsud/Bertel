@@ -23,7 +23,7 @@ describe('MediaUploadField', () => {
     render(<MediaUploadField objectId="obj-1" accessToken="t" onUploaded={onUploaded} />);
 
     const file = new File([new Uint8Array([1, 2, 3])], 'photo.jpg', { type: 'image/jpeg' });
-    const input = screen.getByLabelText(/Téléverser un média/i) as HTMLInputElement;
+    const input = screen.getByLabelText(/Choisir un fichier/i) as HTMLInputElement;
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
@@ -41,7 +41,7 @@ describe('MediaUploadField', () => {
     (uploadMedia as jest.Mock).mockRejectedValueOnce(new Error('Unsupported MIME type: image/svg+xml'));
 
     render(<MediaUploadField objectId="obj-1" accessToken="t" onUploaded={jest.fn()} />);
-    const input = screen.getByLabelText(/Téléverser un média/i) as HTMLInputElement;
+    const input = screen.getByLabelText(/Choisir un fichier/i) as HTMLInputElement;
     fireEvent.change(input, {
       target: { files: [new File([new Uint8Array([1])], 'bad.svg', { type: 'image/svg+xml' })] },
     });

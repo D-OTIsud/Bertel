@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Field } from '../primitives';
 import { uploadMedia, type UploadedMedia } from '../../../services/media-upload';
 
 interface Props {
@@ -6,6 +7,8 @@ interface Props {
   accessToken: string;
   onUploaded: (media: UploadedMedia) => void;
 }
+
+const UPLOAD_HINT = 'Les images sont automatiquement redimensionnées (max 2000 px) et leurs métadonnées EXIF supprimées avant publication.';
 
 /**
  * File picker that uploads to /api/media/upload. The server resizes any image
@@ -33,24 +36,20 @@ export function MediaUploadField({ objectId, accessToken, onUploaded }: Props) {
   }
 
   return (
-    <div className="media-upload-field">
-      <label className="media-upload-field__label">
-        Téléverser un média
+    <Field label="Fichier" hint={UPLOAD_HINT}>
+      <div className="media-upload-field">
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
           onChange={handleChange}
           disabled={status === 'uploading'}
-          aria-label="Téléverser un média"
+          aria-label="Choisir un fichier"
         />
-      </label>
-      {status === 'uploading' && <p role="status">Traitement en cours…</p>}
-      {status === 'error' && error && (
-        <p role="alert" className="media-upload-field__error">{error}</p>
-      )}
-      <p className="media-upload-field__hint">
-        Les images sont automatiquement redimensionnées à 2000 px maximum et leurs métadonnées (EXIF) supprimées avant publication.
-      </p>
-    </div>
+        {status === 'uploading' && <p role="status">Traitement en cours…</p>}
+        {status === 'error' && error && (
+          <p role="alert" className="media-upload-field__error">{error}</p>
+        )}
+      </div>
+    </Field>
   );
 }

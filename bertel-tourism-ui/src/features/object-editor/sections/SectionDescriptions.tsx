@@ -65,7 +65,10 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
     onOrg ? readTranslatableField(descriptions.object[field], active, descriptions.localLanguage) : '';
   const hint = (base: string, field: 'chapo' | 'description' | 'adaptedDescription') => {
     const fb = fallback(field);
-    return onOrg && fb ? `Hérité du canonique : « ${fb.slice(0, 80)} » — saisir pour personnaliser` : base;
+    const current = readTranslatableField(activeScopeData[field], active, descriptions.localLanguage).trim();
+    // Only surface the "inherited from canonical" hint while the overlay field is
+    // still empty — once the user types their own version, show the normal hint.
+    return onOrg && fb && current === '' ? `Hérité du canonique : « ${fb.slice(0, 80)} » — saisir pour personnaliser` : base;
   };
 
   const readOnly = onOrg ? !canEditOrg : !canEditCanonical;

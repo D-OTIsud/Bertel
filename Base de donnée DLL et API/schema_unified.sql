@@ -1285,6 +1285,53 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_validate_media_dimensions ON media;
 CREATE TRIGGER trg_validate_media_dimensions BEFORE INSERT OR UPDATE ON media FOR EACH ROW EXECUTE FUNCTION validate_media_dimensions();
 
+-- Auto-demote the previous main media when a row is inserted/updated with is_main=true.
+-- Scope mirrors the partial unique indexes uq_media_one_main_per_type /
+-- uq_media_one_main_per_type_place: (object_id, media_type_id) for object-attached
+-- media, (place_id, media_type_id) for place-attached media. The XOR constraint
+-- chk_media_target_present guarantees exactly one of the two foreign keys is set.
+-- Without this trigger, setting is_main=true on a new row would fail the partial
+-- unique index check while another row in the same scope still has is_main=true.
+CREATE OR REPLACE FUNCTION enforce_single_main_media()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  -- Defensive guard: the trigger's WHEN clause already restricts firing to
+  -- NEW.is_main IS TRUE, but re-check here so the function stays safe if
+  -- invoked through a future path (e.g. INSTEAD OF on a view).
+  IF NEW.is_main IS NOT TRUE THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.object_id IS NOT NULL THEN
+    UPDATE media
+       SET is_main = FALSE
+     WHERE object_id = NEW.object_id
+       AND media_type_id = NEW.media_type_id
+       AND is_main IS TRUE
+       AND id <> NEW.id;
+  ELSIF NEW.place_id IS NOT NULL THEN
+    UPDATE media
+       SET is_main = FALSE
+     WHERE place_id = NEW.place_id
+       AND media_type_id = NEW.media_type_id
+       AND is_main IS TRUE
+       AND id <> NEW.id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_single_main_media ON media;
+CREATE TRIGGER trg_enforce_single_main_media
+  BEFORE INSERT OR UPDATE OF is_main, object_id, place_id, media_type_id ON media
+  FOR EACH ROW
+  WHEN (NEW.is_main IS TRUE)
+  EXECUTE FUNCTION enforce_single_main_media();
+
 -- Descriptions
 CREATE TABLE IF NOT EXISTS object_description (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

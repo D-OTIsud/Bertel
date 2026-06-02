@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bertel - Infographie institutionnelle</title>
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+
+    :root {
+      --green: #087a4f;
+      --green-soft: #dff3eb;
+      --blue: #1268d8;
+      --blue-dark: #063f76;
+      --navy: #061a39;
+      --red: #f2362f;
+      --orange: #ff8500;
+      --purple: #6f3ed4;
+      --ink: #071832;
+      --muted: #41536d;
+      --line: #d9e5ea;
+      --panel: #ffffff;
+      /* Pile sans-serif soignée pour les sous-titres (repli large pour l'impression) */
+      --sans: "Helvetica Neue", Helvetica, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #dde6ea;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      display: grid;
+      place-items: start center;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      overflow: hidden;
+      position: relative;
+      background: #fff;
+      box-shadow: 0 18px 48px rgba(10, 28, 42, .18);
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; }
+    }
+
+    .hero {
+      height: 71mm;
+      position: relative;
+      overflow: hidden;
+      background:
+        /* dégradé blanc étendu (~62%) pour garder le bandeau de titres + la phrase lisibles sur le paysage */
+        linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.90) 28%, rgba(255,255,255,.60) 46%, rgba(255,255,255,.15) 55%, rgba(255,255,255,0) 62%),
+        url('media/info_bg.png') center bottom / cover no-repeat;
+    }
+
+    .landscape {
+      display: none;
+    }
+
+    .hero-shade {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.78) 26%, rgba(255,255,255,.45) 45%, rgba(255,255,255,.10) 55%, rgba(255,255,255,0) 62%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 58mm 1fr;
+      gap: 11mm;
+      padding: 7mm 10mm 0 10mm;
+      align-items: start;
+    }
+
+    .brand-zone {
+      display: grid;
+      grid-template-columns: 23mm 1px 23mm;
+      gap: 5mm;
+      align-items: start;
+    }
+
+    .divider {
+      width: 1px;
+      height: 18mm;            /* caler la hauteur sur les logos (badge OTI ~18mm) au lieu de 33mm */
+      background: #8893a2;
+      align-self: center;      /* centrer le trait verticalement dans la bande des logos */
+      margin-top: 0;
+    }
+
+    .bertel-mark {
+      width: 23mm;
+      text-align: center;
+      color: var(--ink);
+      letter-spacing: .32em;
+      font-size: 7.2pt;
+    }
+
+    .bertel-mark svg {
+      display: none;
+    }
+
+    .bertel-logo-img {
+      display: block;
+      width: 23mm;
+      height: auto;
+      margin: 0 auto;
+      transform: scale(1.34);
+      transform-origin: 50% 43%;
+    }
+
+    .oti-logo {
+      width: 18mm;
+      height: auto;
+      display: block;
+      margin: 0 auto 1mm;
+    }
+
+    .oti-caption {
+      display: none;
+      text-align: center;
+      font-size: 6.7pt;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .headline h1 {
+      margin: 0 0 1.2mm;
+      color: var(--green);
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 21pt;
+      line-height: .9;
+      letter-spacing: .004em;
+    }
+
+    /* Sous-titre / accroche : pile sans-serif (--sans), en gras, bleu-marine
+       (légèrement réduit vs original 16.7pt). */
+    .headline h2 {
+      margin: 0 0 1.2mm;
+      max-width: 120mm;
+      color: var(--navy);
+      font-family: var(--sans);
+      font-size: 11pt;
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    /* Second sous-titre : ligne discrète (gris, poids normal) sur une seule ligne ;
+       les initiales B-E-R-T-É-L (mots de l'acronyme Bertel) sont en vert gras. */
+    .headline p {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 8.5pt;
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: .002em;
+      white-space: nowrap;
+    }
+
+    .headline p .ac {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .section-title {
+      margin: 4mm 0 3.6mm;
+      text-align: center;
+      color: var(--blue);
+      font-size: 10.3pt;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .market {
+      height: 34mm;
+      padding: 0 12mm;
+      position: relative;
+    }
+
+    .market::after {
+      content: "";
+      position: absolute;
+      left: 13mm;
+      right: 13mm;
+      bottom: 1.7mm;
+      height: .28mm;
+      background: linear-gradient(90deg, transparent 0%, rgba(8, 122, 79, .28) 14%, rgba(18, 104, 216, .22) 50%, rgba(8, 122, 79, .28) 86%, transparent 100%);
+    }
+
+    .market .section-title {
+      margin: 3.1mm 0 2.6mm;
+      font-size: 9.6pt;
+      letter-spacing: .13em;
+      color: var(--muted);     /* gris ardoise (au lieu du bleu) — titre marché plus sobre */
+    }
+
+    .market-row {
+      display: grid;
+      grid-template-columns: 1fr 8mm 1fr 8mm 1fr 8mm 1fr;
+      align-items: center;
+      gap: 1.6mm;
+    }
+
+    .market-card {
+      min-height: 22mm;
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: .9mm;
+      padding: 2.1mm 3mm;
+      border-radius: 2.4mm;
+      background: #fff;
+      box-shadow: 0 4px 14px rgba(24, 52, 70, .075);
+      border: 1px solid #edf2f5;
+      text-align: center;
+    }
+
+    .market-card svg {
+      display: none;
+    }
+
+    .sprite {
+      display: block;
+      width: 13.4mm;
+      height: 10mm;
+      background: var(--icon) center / contain no-repeat;
+      filter: drop-shadow(0 2px 3px rgba(20, 35, 45, .08));
+    }
+
+    .icon-sit { --icon: url('media/icons/sit.png'); }
+    .icon-open { --icon: url('media/icons/open.png'); }
+    .icon-crm { --icon: url('media/icons/crm.png'); }
+    .icon-agg { --icon: url('media/icons/agg.png'); }
+    .icon-bed { --icon: url('media/icons/bed.png'); }
+    .icon-shield { --icon: url('media/icons/shield.png'); }
+    .icon-lock { --icon: url('media/icons/lock.png'); }
+    .icon-access { --icon: url('media/icons/access.png'); }
+    .icon-leaf { --icon: url('media/icons/leaf.png'); }
+    .icon-globe { --icon: url('media/icons/globe.png'); }
+    .icon-chat { --icon: url('media/icons/chat.png'); }
+    .icon-pin { --icon: url('media/icons/pin.png'); }
+    .icon-tag { --icon: url('media/icons/tag.png'); }
+    .icon-db { --icon: url('media/icons/db.png'); }
+    .icon-ai { --icon: url('media/icons/ai.png'); }
+    .icon-download { --icon: url('media/icons/download.png'); }
+    .icon-doc { --icon: url('media/icons/doc.png'); }
+    .icon-megaphone { --icon: url('media/icons/megaphone.png'); }
+    .icon-chart { --icon: url('media/icons/chart.png'); }
+    .icon-handshake { --icon: url('media/icons/handshake.png'); }
+    .icon-reunion { --icon: url('media/icons/reunion.png'); }
+
+    .market-card::before {
+      content: "";
+      display: block;
+      width: 9.2mm;
+      height: 9.2mm;
+      background: var(--icon) center / contain no-repeat;
+      filter: drop-shadow(0 2px 3px rgba(20, 35, 45, .08));
+    }
+
+    .market-row .market-card:nth-child(1) { --icon: url('media/icons/sit.png'); }
+    .market-row .market-card:nth-child(3) { --icon: url('media/icons/open.png'); }
+    .market-row .market-card:nth-child(5) { --icon: url('media/icons/crm.png'); }
+    .market-row .market-card:nth-child(7) { --icon: url('media/icons/agg.png'); }
+
+    .market-card strong {
+      font-size: 7.6pt;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    /* Descriptions des cartes marché : couleur/police alignées, mais taille gardée
+       sous le libellé (« SIT » 7.6pt) pour ne pas inverser la hiérarchie. */
+    .market-card span {
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 7pt;
+      line-height: 1.18;
+    }
+
+    .green { color: var(--green); }
+    .blue { color: var(--blue); }
+    .red { color: var(--red); }
+    .orange { color: var(--orange); }
+    .purple { color: var(--purple); }
+
+    .sep {
+      color: #8b96a4;
+      text-align: center;
+      font-size: 10.2pt;
+      letter-spacing: .12em;
+      white-space: nowrap;
+    }
+
+    .unify {
+      height: 96mm;
+      padding: 0 13mm;
+      position: relative;
+    }
+
+    /* « Bertel unifie » : badge rouge centré, texte blanc, pour le mettre en évidence
+       (titre de section le plus marquant ; > « marché » qui reste en texte bleu simple). */
+    .unify .section-title {
+      display: block;
+      width: fit-content;
+      margin: 1mm auto 1.8mm;
+      padding: 1.4mm 6.5mm;
+      color: #fff;
+      background: var(--green);
+      border-radius: 4mm;
+      font-size: 13pt;
+      box-shadow: 0 3px 9px rgba(20, 35, 45, .18);
+    }
+
+    .unify-stage {
+      height: 80mm;
+      position: relative;
+      display: grid;
+      grid-template-columns: 72mm 1fr 72mm;
+      align-items: center;
+      gap: 3mm;
+    }
+
+    .unify-stage::before {
+      content: "";
+      position: absolute;
+      left: 6mm;
+      right: 6mm;
+      top: 0;
+      height: 79mm;
+      z-index: 0;
+      pointer-events: none;
+      background: url('media/spider_connection.png') center 50% / auto 79mm no-repeat;
+      opacity: .92;
+    }
+
+    .connector-svg {
+      display: none;
+      position: absolute;
+      inset: 2mm 32mm 0 32mm;
+      width: calc(100% - 64mm);
+      height: 72mm;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hub {
+      width: 33mm;
+      height: 33mm;
+      border-radius: 50%;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 35% 28%, #fff 0%, #fbffff 42%, #eef7f4 100%);
+      box-shadow: 0 10px 32px rgba(17, 80, 76, .16);
+      position: relative;
+      z-index: 2;
+    }
+
+    .hub svg {
+      display: none;
+    }
+
+    .hub::before {
+      content: "";
+      width: 21mm;
+      height: 19mm;
+      display: block;
+      background: url('media/Logo_bertel.png') center 42% / 148% auto no-repeat;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 3mm;
+      position: relative;
+      z-index: 2;
+    }
+
+    .feature-list.right-list {
+      transform: translateX(3mm);
+    }
+
+    .feature {
+      display: grid;
+      grid-template-columns: 14mm 1fr;
+      gap: 3mm;
+      align-items: center;
+      min-height: 12mm;
+    }
+
+    .feature.right {
+      grid-template-columns: 1fr 14mm;
+      text-align: right;
+    }
+
+    .feature.right .circle-icon {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+    }
+
+    .feature.right > div:not(.circle-icon) {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .circle-icon {
+      width: 11.2mm;
+      height: 11.2mm;
+      display: grid;
+      place-items: center;
+      border: 1.1px solid currentColor;
+      border-radius: 50%;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .circle-icon svg {
+      display: none;
+    }
+
+    .circle-icon::before {
+      content: "";
+      display: block;
+      width: 9.4mm;
+      height: 9.4mm;
+      background: var(--icon) center / contain no-repeat;
+      filter: drop-shadow(0 1px 2px rgba(20, 35, 45, .08));
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: .7mm;
+      font-size: 8.7pt;
+      line-height: 1.12;
+    }
+
+    /* Sous-libellés : alignés sur le style du sous-titre p (gris --muted, --sans, 8.5pt) */
+    .feature span {
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 8.5pt;
+      line-height: 1.2;
+    }
+
+    .assistant-feature {
+      position: absolute;
+      left: 50%;
+      bottom: -1mm;
+      transform: translateX(-50%);
+      width: 45mm;
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      z-index: 3;
+    }
+
+    .assistant-feature .circle-icon {
+      color: var(--purple);
+      margin-bottom: 1.4mm;
+    }
+
+    .assistant-feature strong {
+      color: var(--purple);
+      font-size: 8.5pt;
+      line-height: 1.1;
+    }
+
+    .pillars {
+      height: 45mm;            /* agrandi (39->45) pour contenir les listes en 8.5pt sans déborder sur la promesse */
+      padding: 0 8.8mm;
+    }
+
+    .pillar-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2.4mm;
+      background: transparent;
+    }
+
+    .pillar {
+      min-height: 35.2mm;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid #d9e2df;
+      border-top: .75mm solid currentColor;
+      border-radius: 2.3mm;
+      background: #fff;
+      box-shadow: 0 5px 15px rgba(20, 45, 60, .06);
+    }
+
+    .pillar:nth-child(1) { color: var(--green); }
+    .pillar:nth-child(2) { color: var(--blue); }
+    .pillar:nth-child(3) { color: var(--red); }
+    .pillar:nth-child(4) { color: #b67800; }
+    .pillar:nth-child(5) { color: var(--green); }
+
+    .pillar-head {
+      display: flex;
+      align-items: center;
+      gap: 1.8mm;
+      min-height: 8.4mm;
+      padding: 1.8mm 2.7mm 1.5mm;
+      margin: 0;
+      font-size: 8.1pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .pillar:nth-child(1) .pillar-head { background: #eaf6f1; }
+    .pillar:nth-child(2) .pillar-head { background: #eaf3ff; }
+    .pillar:nth-child(3) .pillar-head { background: #fdebea; }
+    .pillar:nth-child(4) .pillar-head { background: #fff3da; }
+    .pillar:nth-child(5) .pillar-head { background: #eaf6f1; }
+
+    .pillar-head svg {
+      display: none;
+    }
+
+    .pillar-head::before {
+      content: "";
+      display: block;
+      width: 4.6mm;
+      height: 4.6mm;
+      flex: none;
+      background: var(--icon) center / contain no-repeat;
+      filter: drop-shadow(0 1px 2px rgba(20, 35, 45, .08));
+    }
+
+    .pillar:nth-child(1) .pillar-head { --icon: url('media/icons/download.png'); }
+    .pillar:nth-child(2) .pillar-head { --icon: url('media/icons/shield.png'); }
+    .pillar:nth-child(3) .pillar-head { --icon: url('media/icons/doc.png'); }
+    .pillar:nth-child(4) .pillar-head { --icon: url('media/icons/megaphone.png'); }
+    .pillar:nth-child(5) .pillar-head { --icon: url('media/icons/chart.png'); }
+
+    .pillar ul {
+      margin: 0;
+      padding: 2.4mm 3mm 2.6mm;
+      list-style: none;
+    }
+
+    .pillar li {
+      margin: 0 0 .9mm;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 8.5pt;
+      line-height: 1.2;
+    }
+
+    .promise {
+      height: 20mm;
+      display: grid;
+      grid-template-columns: 30mm 1fr;
+      align-items: center;
+      gap: 5mm;
+      padding: 0 21mm 0 29mm;
+      color: white;
+      background: linear-gradient(90deg, #0a8ca0 0%, #004b86 100%);
+    }
+
+    .handshake {
+      width: 14mm;
+      height: 14mm;
+      border: 1.3px solid rgba(255,255,255,.9);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .handshake svg {
+      display: none;
+    }
+
+    .handshake::before {
+      content: "";
+      display: block;
+      width: 8.5mm;
+      height: 8.5mm;
+      background: url('media/icons/handshake.png') center / contain no-repeat;
+      transform: scale(1.25);
+    }
+
+    .promise p {
+      margin: 0;
+      font-size: 11.2pt;
+      line-height: 1.18;
+    }
+
+    .footer {
+      height: 18mm;
+      display: grid;
+      grid-template-columns: 58mm 1fr 18mm;
+      align-items: center;
+      gap: 5mm;
+      padding: 2mm 11mm 1.5mm;
+      position: relative;
+    }
+
+    .footer-icons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2.4mm;
+      align-items: center;
+      text-align: center;
+      padding-right: 4mm;
+      border-right: 1px solid #aab4bf;
+    }
+
+    .footer-icons svg {
+      display: none;
+    }
+
+    .footer-icons > div::before {
+      content: "";
+      width: 7.6mm;
+      height: 7.6mm;
+      display: block;
+      margin: 0 auto .4mm;
+      background: var(--icon) center / contain no-repeat;
+    }
+
+    .footer-icons > div:nth-child(1) { --icon: url('media/icons/sit.png'); }
+    .footer-icons > div:nth-child(2) { --icon: url('media/icons/open.png'); }
+    .footer-icons > div:nth-child(3) { --icon: url('media/icons/crm.png'); }
+    .footer-icons > div:nth-child(4) { --icon: url('media/icons/agg.png'); }
+
+    .footer-icons span {
+      font-size: 6.4pt;
+      color: var(--ink);
+      line-height: 1;
+    }
+
+    .specs {
+      display: grid;
+      gap: .8mm;
+      align-content: center;
+      justify-content: center;
+      color: var(--ink);
+      text-align: center;
+    }
+
+    .spec-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.4mm;
+      font-size: 7.8pt;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .lock-icon {
+      content: "";
+      width: 4.2mm;
+      height: 4.2mm;
+      display: inline-block;
+      background: url('media/icons/lock.png') center / contain no-repeat;
+      transform: translateY(.2mm);
+    }
+
+    .spec-note {
+      margin: 0;
+      color: var(--blue);
+      font-size: 6pt;
+      line-height: 1.12;
+    }
+
+    .reunion {
+      width: 15mm;
+      height: 15mm;
+      margin-left: auto;
+      background: url('media/icons/reunion.png') center / contain no-repeat;
+    }
+
+    .reunion path { display: none; }
+
+    .fineprint {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="page" aria-label="Infographie Bertel">
+    <section class="hero" aria-label="En-tête Bertel">
+      <svg class="landscape" viewBox="0 0 1200 260" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#eef5f8"/>
+            <stop offset="1" stop-color="#cfe3e6"/>
+          </linearGradient>
+          <linearGradient id="hill1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#426f39"/>
+            <stop offset=".55" stop-color="#7fa950"/>
+            <stop offset="1" stop-color="#2f5a35"/>
+          </linearGradient>
+          <linearGradient id="hill2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#1d482e"/>
+            <stop offset=".5" stop-color="#688f3f"/>
+            <stop offset="1" stop-color="#223f2d"/>
+          </linearGradient>
+          <linearGradient id="rock" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#5d4b3d"/>
+            <stop offset=".62" stop-color="#1d1c1c"/>
+            <stop offset="1" stop-color="#090909"/>
+          </linearGradient>
+          <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="2"/>
+          </filter>
+        </defs>
+        <rect width="1200" height="260" fill="url(#sky)"/>
+        <path d="M0 118 C140 78 250 104 390 84 C540 62 675 91 810 72 C930 55 1035 70 1200 44 L1200 260 L0 260 Z" fill="#91a45f" opacity=".56"/>
+        <path d="M0 158 C90 124 150 141 230 108 C330 66 385 146 500 104 C610 64 690 126 800 96 C910 66 1025 94 1200 82 L1200 260 L0 260 Z" fill="url(#hill1)"/>
+        <path d="M0 198 C120 154 235 190 340 138 C455 80 565 178 690 130 C815 80 920 152 1200 114 L1200 260 L0 260 Z" fill="url(#hill2)"/>
+        <path d="M612 122 C631 95 646 80 662 62 C681 89 701 102 724 124 C689 116 652 117 612 122 Z" fill="#405e34" opacity=".86"/>
+        <g opacity=".42" stroke="#17351e" stroke-width="2" fill="none">
+          <path d="M60 198 C150 168 215 196 305 158"/>
+          <path d="M350 180 C425 145 505 172 590 130"/>
+          <path d="M690 174 C760 130 860 156 950 116"/>
+          <path d="M165 216 C260 190 360 220 460 176"/>
+        </g>
+        <g fill="#254825" opacity=".85">
+          <circle cx="50" cy="215" r="18"/><circle cx="79" cy="202" r="14"/><circle cx="105" cy="222" r="20"/>
+          <circle cx="166" cy="205" r="17"/><circle cx="210" cy="221" r="22"/><circle cx="265" cy="198" r="15"/>
+          <circle cx="420" cy="216" r="18"/><circle cx="462" cy="198" r="15"/><circle cx="502" cy="221" r="20"/>
+          <circle cx="788" cy="207" r="16"/><circle cx="826" cy="218" r="22"/><circle cx="870" cy="198" r="15"/>
+        </g>
+        <g transform="translate(974 42)">
+          <path d="M98 9 C117 25 119 51 109 76 C126 89 126 118 112 136 C132 150 141 178 126 210 L-10 210 C-17 171 -1 135 18 111 C12 80 26 54 52 44 C57 24 74 6 98 9 Z" fill="url(#rock)"/>
+          <path d="M65 42 C77 55 74 78 58 91 C84 94 95 116 81 138 C104 136 117 155 106 180" stroke="#78604b" stroke-width="5" fill="none" opacity=".55"/>
+          <path d="M37 96 C49 106 54 118 45 134 C61 135 72 147 66 166" stroke="#6b543f" stroke-width="4" fill="none" opacity=".5"/>
+        </g>
+        <rect y="228" width="1200" height="32" fill="#1f3f24" opacity=".28"/>
+      </svg>
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <div class="brand-zone">
+          <div class="bertel-mark">
+            <img class="bertel-logo-img" src="media/Logo_bertel.png" alt="Bertel">
+            <svg viewBox="0 0 100 112" aria-hidden="true">
+              <path d="M14 18h37c13 0 20 7 20 20v8" fill="none" stroke="#087a4f" stroke-width="7" stroke-linecap="round"/>
+              <path d="M14 50h40c10 0 17 6 17 16v7" fill="none" stroke="#ee4a2a" stroke-width="7" stroke-linecap="round"/>
+              <path d="M14 82h40c10 0 17-6 17-16v-2" fill="none" stroke="#1268d8" stroke-width="7" stroke-linecap="round"/>
+              <circle cx="14" cy="18" r="3.8" fill="#fff" stroke="#087a4f" stroke-width="4"/>
+              <circle cx="14" cy="50" r="3.8" fill="#fff" stroke="#ee4a2a" stroke-width="4"/>
+              <circle cx="14" cy="82" r="3.8" fill="#fff" stroke="#1268d8" stroke-width="4"/>
+              <path d="M75 49c8 0 14 6 14 14 0 12-14 28-14 28S61 75 61 63c0-8 6-14 14-14z" fill="#1268d8"/>
+              <circle cx="75" cy="63" r="4.2" fill="#fff"/>
+            </svg>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <img class="oti-logo" src="media/logo200X200.png" alt="OTI du Sud">
+            <div class="oti-caption">OTI du Sud</div>
+          </div>
+        </div>
+        <div class="headline">
+          <h1>Bertel</h1>
+          <h2>Passer d'une base de fiches<br>à un système de gouvernance touristique</h2>
+          <p><span class="ac">B</span>ase d'<span class="ac">E</span>nregistrement et de <span class="ac">R</span>éférentiel <span class="ac">T</span>ouristique des <span class="ac">É</span>tablissements et <span class="ac">L</span>ieux</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="market" aria-label="Le marché fragmenté aujourd'hui">
+      <div class="section-title">Le marché fragmenté d'aujourd'hui</div>
+      <div class="market-row">
+        <div class="market-card green">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><circle cx="12" cy="10" r="2"/><path d="M12 8v-1m0 6v1"/></svg>
+          <strong>SIT</strong>
+          <span>Systèmes d'information<br>Touristique</span>
+        </div>
+        <div class="sep">› × ‹</div>
+        <div class="market-card blue">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v10c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 10c0 1.7 3.6 3 8 3s8-1.3 8-3"/><rect x="15" y="12" width="7" height="7" rx="1.5"/></svg>
+          <strong>Open data</strong>
+          <span>Données ouvertes<br>(DATAtourisme)</span>
+        </div>
+        <div class="sep">› × ‹</div>
+        <div class="market-card red">
+          <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 20c.7-4 3-6 6-6s5.3 2 6 6"/><path d="M12 20c.5-2.8 2.4-4.5 5-4.5s4.6 1.7 5 4.5"/></svg>
+          <strong>CRM-GRC</strong>
+          <span>Gestion de la relation<br>client / usager</span>
+        </div>
+        <div class="sep">› × ‹</div>
+        <div class="market-card orange">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3.5 3.5M17 7l-3.5 3.5M7 17l3.5-3.5M17 17l-3.5-3.5"/></svg>
+          <strong>Agrégateurs</strong>
+          <span>Plateformes et réseaux<br>de diffusion</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="unify" aria-label="Ce que Bertel unifie">
+      <div class="section-title">Bertel unifie</div>
+      <div class="unify-stage">
+        <svg class="connector-svg" viewBox="0 0 120 80" preserveAspectRatio="none" aria-hidden="true">
+          <g fill="none" stroke="#95cab7" stroke-width=".7" opacity=".9">
+            <path d="M5 8 C35 8 40 24 60 38"/>
+            <path d="M5 22 C35 22 42 31 60 39"/>
+            <path d="M5 38 C38 38 42 38 60 40"/>
+            <path d="M5 56 C35 56 42 47 60 41"/>
+            <path d="M5 72 C35 72 40 56 60 42"/>
+            <path d="M115 8 C85 8 80 24 60 38"/>
+            <path d="M115 22 C85 22 78 31 60 39"/>
+            <path d="M115 38 C82 38 78 38 60 40"/>
+            <path d="M115 56 C85 56 78 47 60 41"/>
+            <path d="M115 72 C85 72 80 56 60 42"/>
+            <path d="M60 0 V80"/>
+          </g>
+          <g fill="#087a4f">
+            <circle cx="29" cy="13.1" r="1.1"/><circle cx="29.5" cy="24.9" r="1.1"/><circle cx="30.8" cy="38.1" r="1.1"/><circle cx="29.5" cy="53.2" r="1.1"/><circle cx="29" cy="66.9" r="1.1"/>
+            <circle cx="91" cy="13.1" r="1.1"/><circle cx="90.5" cy="24.9" r="1.1"/><circle cx="89.2" cy="38.1" r="1.1"/><circle cx="90.5" cy="53.2" r="1.1"/><circle cx="91" cy="66.9" r="1.1"/>
+            <circle cx="60" cy="16" r="1.1"/><circle cx="60" cy="64" r="1.1"/>
+          </g>
+        </svg>
+
+        <div class="feature-list">
+          <div class="feature green">
+            <div class="circle-icon icon-bed"><svg viewBox="0 0 24 24"><path d="M3 5v16M3 9h17a2 2 0 0 1 2 2v10M3 18h19M7 9v9"/></svg></div>
+            <div><strong>Objet touristique unifié</strong><span>un seul modèle</span></div>
+          </div>
+          <div class="feature green">
+            <div class="circle-icon icon-shield"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <div><strong>Gouvernance & modération</strong><span>rôles, droits, validation</span></div>
+          </div>
+          <div class="feature blue">
+            <div class="circle-icon icon-lock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <div><strong>RGPD by design</strong><span>consentement, métadonnées</span></div>
+          </div>
+          <div class="feature orange">
+            <div class="circle-icon icon-access"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M4 9l16-1-1 4-6 1v9h-2v-9l-6-1z"/><path d="M8 22v-5M16 22v-5"/></svg></div>
+            <div><strong>Accessibilité & FALC</strong><span>contenus adaptés</span></div>
+          </div>
+          <div class="feature red">
+            <div class="circle-icon icon-leaf"><svg viewBox="0 0 24 24"><path d="M20 4C12 4 6 9 5 18c8 1 14-5 15-14z"/><path d="M5 18c4-4 7-7 13-10"/></svg></div>
+            <div><strong>Tourisme durable</strong><span>actions de durabilité</span></div>
+          </div>
+        </div>
+
+        <div class="hub">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M17 27h34c12 0 18 6 18 18v8" fill="none" stroke="#087a4f" stroke-width="8" stroke-linecap="round"/>
+            <path d="M17 50h38c10 0 16 6 16 16v5" fill="none" stroke="#ee4a2a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M17 75h38c10 0 16-6 16-16v-4" fill="none" stroke="#1268d8" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="17" cy="27" r="4" fill="#fff" stroke="#087a4f" stroke-width="4"/>
+            <circle cx="17" cy="50" r="4" fill="#fff" stroke="#ee4a2a" stroke-width="4"/>
+            <circle cx="17" cy="75" r="4" fill="#fff" stroke="#1268d8" stroke-width="4"/>
+            <path d="M73 45c8 0 14 6 14 14 0 12-14 28-14 28S59 71 59 59c0-8 6-14 14-14z" fill="#1268d8"/>
+            <circle cx="73" cy="59" r="4" fill="#fff"/>
+          </svg>
+        </div>
+
+        <div class="feature-list right-list">
+          <div class="feature right green">
+            <div class="circle-icon icon-globe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div>
+            <div><strong>Multilingue & spécificités<br>par organisation</strong><span>contenus propres</span></div>
+          </div>
+          <div class="feature right red">
+            <div class="circle-icon icon-chat"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-4-.9L3 21l1.7-4.5a8.5 8.5 0 1 1 16.3-5z"/></svg></div>
+            <div><strong>Suivi relationnel métier</strong><span>historique des échanges</span></div>
+          </div>
+          <div class="feature right blue">
+            <div class="circle-icon icon-pin"><svg viewBox="0 0 24 24"><path d="M12 21s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg></div>
+            <div><strong>Carte, filtres & tags</strong><span>exploration et filtrage</span></div>
+          </div>
+          <div class="feature right orange">
+            <div class="circle-icon icon-tag"><svg viewBox="0 0 24 24"><path d="M20.6 13.6 13.7 20.5a2 2 0 0 1-2.8 0L3.5 13.1V4h9.1l8 8a2 2 0 0 1 0 2.6z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></div>
+            <div><strong>White-label</strong><span>marque par organisation</span></div>
+          </div>
+          <div class="feature right green">
+            <div class="circle-icon icon-db"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v10c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 10c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
+            <div><strong>Souveraineté</strong><span>open source, base portable</span></div>
+          </div>
+        </div>
+
+        <div class="assistant-feature">
+          <div class="circle-icon icon-ai"><svg viewBox="0 0 24 24"><rect x="6" y="7" width="12" height="11" rx="2"/><path d="M9 2v3M15 2v3M9 21v-3M15 21v-3M2 10h3M2 15h3M19 10h3M19 15h3"/><circle cx="10" cy="12" r="1"/><circle cx="14" cy="12" r="1"/><path d="M10 15h4"/></svg></div>
+          <strong>Assistant IA</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="pillars" aria-label="Bénéfices opérationnels">
+      <div class="pillar-grid">
+        <div class="pillar">
+          <div class="pillar-head green"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><strong>Collecter</strong></div>
+          <ul><li>Référentiel objet unifié</li><li>Ingestion multi-sources</li><li>Identifiants externes</li><li>Multilingue</li><li>Assistance IA à la complétion des fiches</li></ul>
+        </div>
+        <div class="pillar">
+          <div class="pillar-head blue"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><strong>Gouverner</strong></div>
+          <ul><li>Modération avec comparaison</li><li>Accès par rôles et droits fins</li><li>Brouillons par organisation</li><li>White-label</li></ul>
+        </div>
+        <div class="pillar">
+          <div class="pillar-head red"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h7M9 17h5"/></svg><strong>Prouver</strong></div>
+          <ul><li>Journal d'audit</li><li>Consentement RGPD</li><li>Nettoyage des métadonnées photos</li><li>Traçabilité des modifications</li></ul>
+        </div>
+        <div class="pillar">
+          <div class="pillar-head orange"><svg viewBox="0 0 24 24"><path d="M3 11v4h4l8 4V7L7 11H3z"/><path d="M19 9a5 5 0 0 1 0 7"/></svg><strong>Diffuser</strong></div>
+          <ul><li>Carte / filtres / tags</li><li>Descriptions par contexte et langue</li><li>Vue accessible (FALC)</li><li>Diffusion open data</li></ul>
+        </div>
+        <div class="pillar">
+          <div class="pillar-head green"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 16l5-5 4 4 6-8"/><path d="M17 7h4v4"/></svg><strong>Piloter</strong></div>
+          <ul><li>Suivi relationnel métier</li><li>Tâches et incidents</li><li>Enrichissement par organisation</li><li>Assistance IA à la traduction</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="promise" aria-label="Positionnement complémentaire">
+      <div class="handshake"><svg viewBox="0 0 24 24"><path d="M8.5 12.5 11 15a2 2 0 0 0 2.8 0l.7-.7"/><path d="m14 9 2.5 2.5a2 2 0 0 0 2.8 0l1.7-1.7"/><path d="M3 12l4-4 4 4"/><path d="m21 12-4-4-4 4"/></svg></div>
+      <p>Complémentaire à vos outils - Bertel ingère et diffuse l'open data (DATAtourisme) et coexiste avec votre SIT.</p>
+    </section>
+
+    <footer class="footer" aria-label="Sources et garanties">
+      <div class="footer-icons">
+        <div class="green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>SIT</span></div>
+        <div class="blue"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v10c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/></svg><span>Open data</span></div>
+        <div class="red"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 20c.7-4 3-6 6-6s5.3 2 6 6"/></svg><span>CRM-GRC</span></div>
+        <div class="orange"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg><span>Agrégateurs</span></div>
+      </div>
+      <div class="specs">
+        <div class="spec-row"><span class="lock-icon" aria-hidden="true"></span><span>Open source</span><span>Base de données standard</span><span>Licence MIT</span></div>
+        <p class="spec-note">Bertel s'inscrit dans un écosystème ouvert et complémentaire.<br>Les catégories citées ne sont pas exclusives ni exhaustives.</p>
+      </div>
+      <svg class="reunion" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M53 7 68 13 76 25 89 35 84 51 92 65 77 72 69 89 50 84 34 91 21 78 12 62 17 44 9 30 25 23 34 10Z" fill="none" stroke="#087a4f" stroke-width="3"/>
+      </svg>
+      <div class="fineprint">Bertel s'inscrit dans un écosystème ouvert et complémentaire.<br>Les catégories de marché citées ne sont pas exclusives ni exhaustives.</div>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionMedia } from './SectionMedia';
 import { SectionPricing } from './SectionPricing';
@@ -13,12 +14,17 @@ describe('section registry', () => {
 
   it('mounts the HEB registered sections with fixture data', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    // SectionLocation reads location reference options via react-query, so the full
+    // registry must render inside a QueryClientProvider (see ObjectDetailView.test.tsx).
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
     render(
-      <>
+      <QueryClientProvider client={queryClient}>
         {getRegisteredSections('HEB').map(({ num, Component }) => (
           <Component key={num} editor={result.current} permissions={allowAll} archetype="HEB" objectId="o1" />
         ))}
-      </>,
+      </QueryClientProvider>,
     );
     expect(screen.getByText('Chambres, équipements & séminaire')).toBeInTheDocument();
     expect(screen.getByText('Identifiants externes & synchronisation')).toBeInTheDocument();

@@ -680,4 +680,73 @@ describe('ObjectDetailView', () => {
       expect.stringContaining('google.com/maps/dir'),
     );
   });
+
+  it('renders a reservation-platform contact as its platform name with a favicon link', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-booking',
+      name: 'Le Lagon Bleu',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Hotel test.' },
+        contacts: [
+          {
+            id: 'oc-book',
+            kind_code: 'booking_engine',
+            value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+            is_public: true,
+            position: 1,
+          },
+        ],
+      },
+    };
+
+    const { container } = renderDetail(data);
+
+    // The platform name is shown instead of the raw URL.
+    expect(screen.getByText('Booking.com')).toBeInTheDocument();
+    expect(screen.queryByText(/booking\.com\/hotel\/re\/lagon/)).not.toBeInTheDocument();
+
+    // The link still points to the full URL.
+    const link = screen.getByRole('link', { name: /Booking\.com/i });
+    expect(link.getAttribute('href')).toContain('booking.com/hotel/re/lagon');
+
+    // The favicon is rendered.
+    expect(
+      container.querySelector('img[src="https://icons.duckduckgo.com/ip3/booking.com.ico"]'),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to a lucide icon when a contact favicon fails to load', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-fav-error',
+      name: 'Le Lagon Bleu',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Hotel test.' },
+        contacts: [
+          {
+            id: 'oc-book',
+            kind_code: 'booking_engine',
+            value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+            is_public: true,
+            position: 1,
+          },
+        ],
+      },
+    };
+
+    const { container } = renderDetail(data);
+    const favicon = container.querySelector(
+      'img[src="https://icons.duckduckgo.com/ip3/booking.com.ico"]',
+    ) as HTMLImageElement;
+    expect(favicon).toBeInTheDocument();
+
+    fireEvent.error(favicon);
+
+    // After the image errors, the favicon is gone and the platform name is still shown.
+    expect(
+      container.querySelector('img[src="https://icons.duckduckgo.com/ip3/booking.com.ico"]'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Booking.com')).toBeInTheDocument();
+  });
 });

@@ -327,6 +327,8 @@
 }
 .object-editor .input-wrap .prefix { left: 10px; }
 .object-editor .input-wrap .suffix { right: 10px; }
+/* Platform favicon shown in front of a URL-valued contact (see SectionContacts). */
+.object-editor .input-wrap .prefix .contact-favicon { display: block; width: 16px; height: 16px; border-radius: 3px; }
 .object-editor .input.is-error,
 .object-editor .textarea.is-error,
 .object-editor .select.is-error {

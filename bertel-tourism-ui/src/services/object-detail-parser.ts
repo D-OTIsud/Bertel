@@ -34,6 +34,7 @@ import {
   type RoomTypeItem,
   type TaxonomyGroup,
 } from '../features/object-drawer/utils';
+import { resolveWebPlatform } from '../lib/web-platform';
 
 interface GenericRecord {
   [key: string]: unknown;
@@ -847,14 +848,22 @@ function mapOwnerContacts(params: {
         return null;
       }
 
+      // URL-valued contacts resolve to a platform identity (name + favicon).
+      // Detection is value-driven — see lib/web-platform.
+      const platform = resolveWebPlatform(value);
+      const existingIconUrl = readString(contact.icon_url, readString(kindRecord.icon_url));
+
       return {
         id: readString(contact.id, `${params.source}-contact-${index}`),
         label: readString(contact.label, readNamedValue(contact.role, kindLabel || 'Contact')),
         kind: kindLabel || 'Contact',
         kindCode,
         value,
+        // Platform name for URLs, raw value otherwise. `value` stays the full URL (link/copy).
+        displayValue: platform ? platform.displayName : value,
         href: buildContactHref(kindCode, value),
-        iconUrl: readString(contact.icon_url, readString(kindRecord.icon_url)),
+        // Favicon wins when a web platform is detected; else any icon from the payload.
+        iconUrl: platform?.faviconUrl ?? existingIconUrl,
         isPrimary: readBoolean(contact.is_primary) === true,
         isPublic,
         position: readInteger(contact.position),

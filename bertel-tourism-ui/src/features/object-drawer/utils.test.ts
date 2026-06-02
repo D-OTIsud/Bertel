@@ -288,6 +288,44 @@ describe('object drawer utils', () => {
     });
   });
 
+  it('derives a platform display name and favicon for URL-valued contacts', () => {
+    const raw = {
+      name: 'Le Lagon Bleu',
+      contacts: [
+        {
+          id: 'c-book',
+          kind_code: 'booking_engine',
+          value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+          is_public: true,
+          position: 1,
+        },
+        {
+          id: 'c-tel',
+          kind_code: 'phone',
+          value: '+262 262 00 00 00',
+          is_public: true,
+          position: 2,
+        },
+      ],
+    } as Record<string, unknown>;
+
+    const contacts = parseContacts(raw);
+    const booking = contacts.find((contact) => contact.id === 'c-book');
+    const phone = contacts.find((contact) => contact.id === 'c-tel');
+
+    // URL contact: name is the platform, favicon derived, full URL kept for the link/copy.
+    expect(booking).toMatchObject({
+      displayValue: 'Booking.com',
+      iconUrl: 'https://icons.duckduckgo.com/ip3/booking.com.ico',
+      value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+    });
+    // Non-URL contact: unchanged — raw value shown, no favicon.
+    expect(phone).toMatchObject({
+      displayValue: '+262 262 00 00 00',
+      iconUrl: '',
+    });
+  });
+
   it('parses itinerary summaries and related objects from nested payloads', () => {
     const raw = {
       itinerary: {

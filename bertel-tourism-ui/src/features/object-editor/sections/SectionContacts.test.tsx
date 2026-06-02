@@ -129,4 +129,36 @@ describe('SectionContacts', () => {
 
     expect(result.current.dirtySections.contacts).toBe(true);
   });
+
+  it('shows the platform favicon in front of a URL-valued contact', () => {
+    const { result } = renderHook(() =>
+      useObjectEditorState(
+        'o1',
+        modulesWithContacts({
+          objectItems: [
+            contact({
+              id: 'cb',
+              kindCode: 'booking_engine',
+              kindLabel: 'Plateforme de réservation',
+              value: 'https://www.booking.com/hotel/re/lagon.html',
+            }),
+          ],
+        }),
+      ),
+    );
+    const { container } = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(
+      container.querySelector('img[src="https://icons.duckduckgo.com/ip3/booking.com.ico"]'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no favicon for a non-URL contact value', () => {
+    const { result } = renderHook(() =>
+      useObjectEditorState('o1', modulesWithContacts({ objectItems: [contact()] })),
+    );
+    const { container } = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(container.querySelector('img[src^="https://icons.duckduckgo.com"]')).not.toBeInTheDocument();
+  });
 });

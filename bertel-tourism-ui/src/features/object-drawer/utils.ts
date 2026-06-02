@@ -1,4 +1,5 @@
 import type { ObjectDetail } from '../../types/domain';
+import { resolveWebPlatform } from '../../lib/web-platform';
 
 interface GenericRecord {
   [key: string]: unknown;
@@ -12,6 +13,8 @@ export interface ContactItem {
   kind: string;
   kindCode: string;
   value: string;
+  /** Label shown to the user: platform name for URL contacts, raw `value` otherwise. */
+  displayValue: string;
   href: string;
   iconUrl: string;
   isPrimary: boolean;
@@ -1002,14 +1005,22 @@ export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
       return null;
     }
 
+    // URL-valued contacts (website, booking platform, social…) resolve to a platform
+    // identity: name + favicon. Detection is value-driven (see lib/web-platform).
+    const platform = resolveWebPlatform(value);
+    const existingIconUrl = readString(contact.icon_url, readString(kindRecord.icon_url));
+
     return {
       id: readString(contact.id, `contact-${index}`),
       label: readString(contact.label, readNamedValue(contact.role, 'Contact')),
       kind: kindLabel || 'Contact',
       kindCode,
       value,
+      // Platform name for URLs, raw value otherwise. `value` stays the full URL (link/copy).
+      displayValue: platform ? platform.displayName : value,
       href: buildContactHref(kindCode, value),
-      iconUrl: readString(contact.icon_url, readString(kindRecord.icon_url)),
+      // Favicon wins when a web platform is detected; else any icon from the payload.
+      iconUrl: platform?.faviconUrl ?? existingIconUrl,
       isPrimary: readBoolean(contact.is_primary) === true,
       isPublic,
       position: readInteger(contact.position),

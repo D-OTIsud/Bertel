@@ -54,6 +54,9 @@ docs/schema-workbench/schemaspy-output/
 # Git worktrees
 .worktrees/
 
+# Brainstorming visual companion scratch (not part of the app)
+.superpowers/
+
 # Repo-local tool installs and homes
 .tools/
 .supabase-home/

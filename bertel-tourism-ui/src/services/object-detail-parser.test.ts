@@ -1,6 +1,41 @@
 import { parseObjectDetail } from './object-detail-parser';
 
 describe('parseObjectDetail', () => {
+  it('derives a platform display name and favicon for object URL contacts', () => {
+    const parsed = parseObjectDetail({
+      id: 'obj-platform',
+      name: 'Le Lagon Bleu',
+      contacts: [
+        {
+          id: 'oc-book',
+          kind_code: 'booking_engine',
+          value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+          is_public: true,
+          position: 1,
+        },
+        {
+          id: 'oc-tel',
+          kind_code: 'phone',
+          value: '+262 262 00 00 00',
+          is_public: true,
+          position: 2,
+        },
+      ],
+    } as Record<string, unknown>);
+
+    const booking = parsed.contacts.object.find((contact) => contact.id === 'oc-book');
+    const phone = parsed.contacts.object.find((contact) => contact.id === 'oc-tel');
+
+    // URL contact: platform name shown, favicon derived, full URL kept for link/copy.
+    expect(booking).toMatchObject({
+      displayValue: 'Booking.com',
+      iconUrl: 'https://icons.duckduckgo.com/ip3/booking.com.ico',
+      value: 'https://www.booking.com/hotel/re/lagon.html?aid=1',
+    });
+    // Non-URL contact: unchanged.
+    expect(phone).toMatchObject({ displayValue: '+262 262 00 00 00', iconUrl: '' });
+  });
+
   it('normalizes the canonical backend surface into shared detail sections', () => {
     const raw = {
       id: 'LOIRUN000000000W',

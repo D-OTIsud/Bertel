@@ -2917,6 +2917,7 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
 
 function ContactCard({ contact }: { contact: ContactItem }) {
   const [copied, setCopied] = useState(false);
+  const [iconFailed, setIconFailed] = useState(false);
   const Icon = getContactIcon(contact.kindCode, contact.value);
 
   const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -2931,17 +2932,28 @@ function ContactCard({ contact }: { contact: ContactItem }) {
     }
   };
 
+  // Favicon when available (resolved web platform or payload icon); on load error fall
+  // back to the lucide icon so a broken image is never shown. Shared by both layouts.
+  const iconNode = (
+    <span className="detail-contact-card__icon" aria-hidden="true">
+      {contact.iconUrl && !iconFailed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={contact.iconUrl}
+          alt=""
+          className="detail-contact-card__icon-image"
+          onError={() => setIconFailed(true)}
+        />
+      ) : (
+        <Icon size={18} />
+      )}
+    </span>
+  );
+
   const body = (
     <span className="detail-contact-row__link-body">
-      <span className="detail-contact-card__icon" aria-hidden="true">
-        {contact.iconUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={contact.iconUrl} alt="" className="detail-contact-card__icon-image" />
-        ) : (
-          <Icon size={18} />
-        )}
-      </span>
-      <span className="detail-contact-card__value">{contact.value}</span>
+      {iconNode}
+      <span className="detail-contact-card__value">{contact.displayValue}</span>
     </span>
   );
 
@@ -2960,15 +2972,8 @@ function ContactCard({ contact }: { contact: ContactItem }) {
           target={contact.href.startsWith('http') ? '_blank' : undefined}
           rel={contact.href.startsWith('http') ? 'noreferrer' : undefined}
         >
-          <span className="detail-contact-card__icon" aria-hidden="true">
-            {contact.iconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={contact.iconUrl} alt="" className="detail-contact-card__icon-image" />
-            ) : (
-              <Icon size={18} />
-            )}
-          </span>
-          <span className="detail-contact-card__value">{contact.value}</span>
+          {iconNode}
+          <span className="detail-contact-card__value">{contact.displayValue}</span>
         </a>
         {copyButton}
       </div>

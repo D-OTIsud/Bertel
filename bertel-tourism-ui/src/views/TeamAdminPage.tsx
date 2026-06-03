@@ -7,6 +7,8 @@ import {
   listOrgMembers,
   listBusinessRoles,
   listAdminRoles,
+  listPermissionCatalog,
+  listOrgPermissions,
   setBusinessRole,
   setAdminRole,
   revokeAdminRole,
@@ -14,10 +16,12 @@ import {
   friendlyRbacError,
   type OrgMember,
   type RefRole,
+  type RefPermission,
 } from '@/services/rbac';
 import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
+import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
 
 export default function TeamAdminPage() {
   const role = useSessionStore((s) => s.role);
@@ -31,6 +35,10 @@ export default function TeamAdminPage() {
   const [loading, setLoading] = useState(true);
   const [bizRoles, setBizRoles] = useState<RefRole[]>([]);
   const [adminRoles, setAdminRoles] = useState<RefRole[]>([]);
+  const [catalog, setCatalog] = useState<RefPermission[]>([]);
+  const [orgPerms, setOrgPerms] = useState<string[]>([]);
+  // ID of the membership whose permissions drawer is open (null = closed).
+  const [managingId, setManagingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!orgId) { setLoading(false); return; }
@@ -38,19 +46,29 @@ export default function TeamAdminPage() {
     try { setMembers(await listOrgMembers(orgId)); setError(null); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
     finally { setLoading(false); }
+    // Refresh org-wide permission grants so the drawer reflects latest state.
+    listOrgPermissions(orgId).then(setOrgPerms).catch(() => {});
   }, [orgId]);
 
   useEffect(() => { if (allowed) void reload(); }, [allowed, reload]);
 
-  // Load role catalogs once when allowed.
+  // Load role catalogs + permission catalog once when allowed.
   useEffect(() => {
     if (!allowed) return;
     listBusinessRoles().then(setBizRoles).catch(() => {});
     listAdminRoles().then(setAdminRoles).catch(() => {});
-  }, [allowed]);
+    listPermissionCatalog().then(setCatalog).catch(() => {});
+    if (orgId) listOrgPermissions(orgId).then(setOrgPerms).catch(() => {});
+  }, [allowed, orgId]);
 
   // Caller's effective admin rank (superuser/owner → Infinity so all ranks are assignable).
   const callerRank = (role === 'owner' || role === 'super_admin') ? Infinity : (adminRank ?? 0);
+
+  // Derive the live member object from managingId so the drawer reflects freshly reloaded data.
+  const managing = members.find((m) => m.membershipId === managingId) ?? null;
+
+  // Org-defaults section visible only to org_admin rank >= 30, owner, or superuser.
+  const canManageOrgDefaults = role === 'owner' || role === 'super_admin' || (adminRank ?? 0) >= 30;
 
   async function changeBusinessRole(m: OrgMember, code: string) {
     try {
@@ -100,7 +118,7 @@ export default function TeamAdminPage() {
           <MembersTable
             members={members}
             currentUserId={userId}
-            onManagePermissions={() => { /* Task 10 */ }}
+            onManagePermissions={(m) => setManagingId(m.membershipId)}
             onDeactivate={handleDeactivate}
           >
             {(m, isSelf) => ({
@@ -126,6 +144,15 @@ export default function TeamAdminPage() {
             })}
           </MembersTable>
         )}
+      <MemberPermissionsDrawer
+        member={managing}
+        orgId={orgId ?? ''}
+        catalog={catalog}
+        orgPermissions={orgPerms}
+        canManageOrgDefaults={canManageOrgDefaults}
+        onClose={() => setManagingId(null)}
+        onChanged={reload}
+      />
     </section>
   );
 }

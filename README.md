@@ -134,6 +134,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write
 psql -d votre_database -f "Base de donnée DLL et API/migration_rls_read_gate_p03.sql"
 # 5e. SP-4 — RPC lecture roster api.rpc_list_org_members (identités membres pour la page admin équipe)
 psql -d votre_database -f "Base de donnée DLL et API/migration_sp4_list_org_members.sql"
+# 5f. RPC machine à états du statut objet api.rpc_set_object_status (+ rpc_publish_object devient un wrapper)
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_status_lifecycle.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

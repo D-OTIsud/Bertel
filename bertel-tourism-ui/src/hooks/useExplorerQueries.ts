@@ -19,6 +19,8 @@ import {
   saveObjectWorkspaceDistinctions,
   getObjectWorkspaceResource,
   publishObjectWorkspace,
+  setObjectStatus,
+  type ObjectLifecycleStatus,
   saveObjectWorkspaceActivity,
   saveObjectWorkspaceContacts,
   saveObjectWorkspaceDescriptions,
@@ -344,6 +346,30 @@ export function usePublishObjectWorkspaceMutation(objectId: string | null) {
       }
 
       return publishObjectWorkspace(objectId, publish);
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
+  });
+}
+
+export function useSetObjectStatusMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (status: ObjectLifecycleStatus) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour gerer le statut.");
+      }
+
+      return setObjectStatus(objectId, status);
     },
     onSuccess: async () => {
       if (!objectId) {

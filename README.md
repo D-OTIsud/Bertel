@@ -14,11 +14,28 @@ Bertel/
 │   ├── *.json                     # Collections Postman
 │   └── README.md                  # Guide documentation
 ├── Base de donnée DLL et API/     # Schéma de base de données unifié
-│   ├── schema_unified.sql         # Schéma complet avec système unifié
-│   ├── api_views_functions.sql    # Vues et fonctions API (RPC)
-│   ├── seeds_data.sql             # Données de test
-│   ├── rls_policies.sql           # Politiques de sécurité
-│   ├── ui_whitelabel_branding.sql # Branding UI et paramètres white-label
+│   ├── [Fresh install core]
+│   │   ├── schema_unified.sql
+│   │   ├── migration_sustainability_v5.sql
+│   │   ├── migration_room_type_ref.sql
+│   │   ├── migration_tag_link_position.sql
+│   │   ├── api_views_functions.sql
+│   │   ├── rls_policies.sql
+│   │   ├── object_workspace_safe_write_rpcs.sql
+│   │   ├── object_workspace_gap_rpcs.sql
+│   │   ├── ui_whitelabel_branding.sql
+│   │   ├── media_bucket.sql
+│   │   └── seeds_data.sql
+│   ├── [Post-seed / post-import fixups]
+│   │   ├── migration_legal_siret_canonical.sql
+│   │   └── migration_object_location_address1_dedupe.sql
+│   ├── [Maintenance and benchmarks]
+│   │   ├── maintenance.sql
+│   │   └── test_performance.sql
+│   ├── [Upgrade-only patch]
+│   │   └── branding_admin_profile_role_patch.sql
+│   ├── [Local / pilot-only inserts]
+│   │   └── lot1_pilot_inserts.sql
 │   ├── README.md                  # Documentation technique complète
 │   └── erd_diagram.md             # Diagramme ER en Mermaid
 ├── bertel-tourism-ui/             # Application Next.js (front-end)
@@ -88,22 +105,44 @@ psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"postgis\";"
 psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"unaccent\" WITH SCHEMA extensions;"
 psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
 psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 # Optionnel: psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS pg_cron;"
 
-# 1. Exécuter le schéma principal
+# 1. Schéma principal
 psql -d votre_database -f "Base de donnée DLL et API/schema_unified.sql"
 
-# 2. Exécuter les vues et fonctions API
+# 2. Migrations DDL — AVANT api/seeds (ajoutent des colonnes/tables requises)
+psql -d votre_database -f "Base de donnée DLL et API/migration_sustainability_v5.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_room_type_ref.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_tag_link_position.sql"
+
+# 3. Vues et fonctions API
 psql -d votre_database -f "Base de donnée DLL et API/api_views_functions.sql"
 
-# 3. Exécuter les politiques RLS
+# 4. Politiques RLS (définit api.is_object_owner)
 psql -d votre_database -f "Base de donnée DLL et API/rls_policies.sql"
 
-# 4. Installer le branding UI et les paramètres white-label
+# 5. RPC d'écriture éditeur (schéma internal + garde d'écriture, puis sections restantes)
+psql -d votre_database -f "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql"
+psql -d votre_database -f "Base de donnée DLL et API/object_workspace_gap_rpcs.sql"
+
+# 5b. SP-1 autorisation d'écriture canonique (après les RPC workspace, avant le branding)
+psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths.sql"
+
+# 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"
 
-# 5. Peupler avec les données de test
+# 7. Bucket de stockage media (+ RLS d'écriture restrictive)
+psql -d votre_database -f "Base de donnée DLL et API/media_bucket.sql"
+
+# 8. Peupler avec les données de seed (nécessite migration_sustainability_v5 ci-dessus)
 psql -d votre_database -f "Base de donnée DLL et API/seeds_data.sql"
+
+# 9. Correctifs de données APRÈS seeds (no-op sur une base neuve sans données importées)
+psql -d votre_database -f "Base de donnée DLL et API/migration_legal_siret_canonical.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_location_address1_dedupe.sql"
+
+# Ordre complet, refresh des vues matérialisées et rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```
 
 ### Test de l'API

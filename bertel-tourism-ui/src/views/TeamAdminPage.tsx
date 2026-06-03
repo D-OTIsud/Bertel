@@ -17,6 +17,7 @@ import {
 } from '@/services/rbac';
 import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
+import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
 
 export default function TeamAdminPage() {
   const role = useSessionStore((s) => s.role);
@@ -91,7 +92,7 @@ export default function TeamAdminPage() {
     <section className="p-6 space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Équipe</h1>
-        {/* InviteMemberDialog mounted in Task 9 */}
+        {orgId && <InviteMemberDialog orgId={orgId} onDone={reload} />}
       </header>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {loading ? <p className="text-sm text-muted-foreground">Chargement…</p>

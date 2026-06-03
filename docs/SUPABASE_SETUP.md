@@ -4,7 +4,7 @@ This project exposes read models and RPCs from the `api` schema through PostgRES
 
 ### 1) Required database extensions
 
-Run once on your database (already included in `schema_unified.sql`, but safe to re-run):
+Run once on your database (already included in `schema_unified.sql` and `migration_sustainability_v5.sql` where applicable, but safe to re-run):
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -12,7 +12,10 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE EXTENSION IF NOT EXISTS "unaccent";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
+
+Enable `pg_cron` only if you schedule SQL maintenance jobs from the database.
 
 If your platform installs extensions into the `extensions` schema (Supabase default), make sure the REST service search_path includes it (see step 2b).
 
@@ -67,11 +70,15 @@ If you use Supabase Cloud (hosted by Supabase), configure the REST API from Stud
 NOTIFY pgrst, 'reload schema';
 ```
 
-3) Ensure extensions exist (run once in SQL editor):
+3) Ensure extensions exist (run once in SQL editor, aligned with the SQL rollout runbook):
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE EXTENSION IF NOT EXISTS "unaccent";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
 
 4) Grant permissions (run once in SQL editor, least privilege):
@@ -127,17 +134,17 @@ Notes:
 SELECT cron.schedule(
   'refresh-mv-filtered-objects',
   '*/10 * * * *',
-  $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;$$
+  $$REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;$$
 );
 
 -- Run immediately after deploying schema/function changes
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects;
+REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;
 ```
 
 Recommended monitor checks:
 
 ```sql
-SELECT COUNT(*) AS mv_rows FROM mv_filtered_objects;
+SELECT COUNT(*) AS mv_rows FROM internal.mv_filtered_objects;
 SELECT COUNT(*) AS published_main_location_rows
 FROM object o
 JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location IS TRUE

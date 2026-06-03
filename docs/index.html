@@ -777,12 +777,12 @@
       <img class="logo" alt="OTI du Sud" src="https://supabertel.otisud.re/storage/v1/object/public/logo//logo200X200.png">
       <div class="title">
         <strong>OTI du SUD · API</strong>
-        <small>Documentation complète & bonnes pratiques</small>
+        <small>API, runbooks équipe & bonnes pratiques</small>
       </div>
       </div>
       <div class="header-right">
         <div class="searchbar">
-          <input id="globalSearch" type="search" placeholder="Rechercher dans la doc (endpoints, paramètres, champs…)">
+          <input id="globalSearch" type="search" placeholder="Rechercher dans la doc (endpoints, runbooks, paramètres…)">
         </div>
       <div class="actions">
         <span class="chip" title="Version de la page">v1</span>
@@ -805,6 +805,59 @@
       <section class="card" id="intro">
         <h1>Documentation de l’API</h1>
         <p class="lead">Une API structurée autour d'appels <code>/rpc/&lt;nom_fonction&gt;</code> via <b>POST</b>, avec pagination, filtres riches et extraction des tracés KML/GPX pour les itinéraires.</p>
+      </section>
+
+      <section class="card" id="team-ops">
+        <h2>0) Espace équipe & exploitation SQL</h2>
+        <p class="lead">Points d'entrée pour l'équipe projet avant une installation, une mise à jour SQL ou une session de test API.</p>
+
+        <table>
+          <thead>
+            <tr><th>Besoin</th><th>Document</th><th>Quand l'utiliser</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge">Déploiement SQL</span></td>
+              <td><a href="SQL_ROLLOUT_RUNBOOK.md">SQL_ROLLOUT_RUNBOOK.md</a></td>
+              <td>Ordre d'installation fraîche, mises à jour incrémentales, refresh des vues matérialisées et rollback.</td>
+            </tr>
+            <tr>
+              <td><span class="badge">Supabase</span></td>
+              <td><a href="SUPABASE_SETUP.md">SUPABASE_SETUP.md</a></td>
+              <td>Configuration PostgREST du schéma <code>api</code>, extensions PostgreSQL, permissions et cache schema.</td>
+            </tr>
+            <tr>
+              <td><span class="badge">Tests API</span></td>
+              <td><a href="README_Postman.md">README_Postman.md</a></td>
+              <td>Préparer l'environnement Postman et lancer les collections de validation.</td>
+            </tr>
+            <tr>
+              <td><span class="badge">Collection</span></td>
+              <td><a href="Bertel_API_v3.postman_collection.json">Collection</a> · <a href="Bertel_API_v3.postman_environment.json">Environnement</a></td>
+              <td>Importer ou mettre à jour les appels API partagés par l'équipe.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <details id="team-sql-order">
+          <summary>0.1 Résumé SQL opérationnel</summary>
+          <div class="content">
+            <ul>
+              <li>Pour une base neuve, suivre le manifeste complet du runbook SQL dans l'ordre exact.</li>
+              <li>Extensions attendues : <code>uuid-ossp</code>, <code>postgis</code>, <code>unaccent</code>, <code>pg_trgm</code>, <code>btree_gist</code>, <code>pgcrypto</code>; <code>pg_cron</code> uniquement si les tâches SQL planifiées sont activées.</li>
+              <li>Les refreshs doivent cibler <code>internal.mv_ref_data_json</code> et <code>internal.mv_filtered_objects</code>.</li>
+              <li><code>lot1_pilot_inserts.sql</code> reste local/pilote : ne pas l'appliquer dans une installation standard sans décision explicite.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details id="team-source-truth">
+          <summary>0.2 Sources de vérité</summary>
+          <div class="content">
+            <p>La documentation API ci-dessous décrit les contrats consommateur. Pour l'ordre SQL, les prérequis Supabase et les scripts opérationnels, le runbook SQL et le guide Supabase restent les documents de référence.</p>
+            <p class="inline-help">Dans le dépôt, la documentation technique détaillée du schéma reste dans <code>Base de donnée DLL et API/README.md</code>.</p>
+          </div>
+        </details>
       </section>
 
       <!-- 1) Auth & conventions -->

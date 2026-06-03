@@ -36,9 +36,9 @@ BEGIN
   RETURN QUERY
   SELECT
     m.id, m.user_id, u.email::text, p.display_name, m.is_active,
-    br.code, ar.code,
+    br.code::text, ar.code::text,
     COALESCE((
-      SELECT array_agg(rp.code ORDER BY rp.code)
+      SELECT array_agg(rp.code::text ORDER BY rp.code)
       FROM user_permission up JOIN ref_permission rp ON rp.id = up.permission_id
       WHERE up.user_id = m.user_id AND up.is_active = TRUE
     ), ARRAY[]::text[])

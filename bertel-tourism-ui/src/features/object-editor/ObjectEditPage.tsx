@@ -127,6 +127,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
   const [mode, setMode] = useState<EditorMode>('complet');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
 
   const meta = resolveArchetypeMeta(resource.type);
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
@@ -154,7 +155,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   );
   const historyItems = useMemo(() => buildHistoryItems(editor.draft), [editor.draft]);
 
-  /** Persist local draft modules to the database (called only from publish, not a separate save action). */
+  /** Persist local draft modules to the database (shared by publish and draft-save). */
   async function persistDirtyModules(): Promise<boolean> {
     const dirty = (Object.keys(editor.dirtySections) as WorkspaceModuleId[]).filter(
       (m) => editor.dirtySections[m],
@@ -169,17 +170,31 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     );
 
     if (result.failed.length > 0) {
-      setStatusMessage(`${result.failed.length} section(s) en échec — publication annulée.`);
+      setStatusMessage(`${result.failed.length} section(s) en échec.`);
       return false;
     }
     if (result.blocked.length > 0) {
       setStatusMessage(
-        `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s) — publication annulée.`,
+        `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s).`,
       );
       return false;
     }
 
     return true;
+  }
+
+  /** Persist work-in-progress without publishing and without the blocker gate. */
+  async function handleSaveDraft() {
+    setStatusMessage(null);
+    setSavingDraft(true);
+    try {
+      const ok = await persistDirtyModules();
+      if (ok) {
+        setStatusMessage('Brouillon enregistré.');
+      }
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   async function handlePublish() {
@@ -200,6 +215,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
 
     try {
       await publishObject.mutateAsync(true);
+      editor.setSavedStatus('published');
       setStatusMessage('Fiche enregistrée et publiée.');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Publication impossible.');
@@ -236,12 +252,14 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
         saving={saving}
+        savingDraft={savingDraft}
         publishDisabled={validation.blockers.length > 0}
         statusMessage={statusMessage}
         onModeChange={setMode}
         onPreview={openPreviewDrawer}
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
+        onSaveDraft={() => void handleSaveDraft()}
       />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
@@ -267,7 +285,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           onGoToSection={scrollToSection}
         />
       </div>
-      <EditorFooter onPreview={openPreviewDrawer} />
+      <EditorFooter onPreview={openPreviewDrawer} onSaveDraft={() => void handleSaveDraft()} savingDraft={savingDraft} />
     </div>
   );
 }

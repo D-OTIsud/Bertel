@@ -104,6 +104,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp4_list_org_members.sql"
 
+      - name: Object status lifecycle test (rpc_set_object_status + wrapper)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_status_lifecycle.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

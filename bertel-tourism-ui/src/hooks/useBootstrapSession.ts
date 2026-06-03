@@ -48,6 +48,30 @@ async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string
   }
 }
 
+// Resolves the current user's team-admin rank from `api.current_user_admin_rank()`.
+// Returns null when the user has no admin role or the helper is unavailable.
+async function fetchAdminRank(): Promise<number | null> {
+  const apiClient = getApiClient();
+  if (!apiClient) return null;
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_admin_rank');
+    if (error) { console.warn('current_user_admin_rank unavailable.', error); return null; }
+    return typeof data === 'number' ? data : null;
+  } catch (err) { console.warn('current_user_admin_rank threw.', err); return null; }
+}
+
+// Resolves the current user's team-admin role code from `api.current_user_admin_role_code()`.
+// Returns null when the user has no admin role or the helper is unavailable.
+async function fetchAdminRoleCode(): Promise<string | null> {
+  const apiClient = getApiClient();
+  if (!apiClient) return null;
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_admin_role_code');
+    if (error) { console.warn('current_user_admin_role_code unavailable.', error); return null; }
+    return typeof data === 'string' ? data : null;
+  } catch (err) { console.warn('current_user_admin_role_code threw.', err); return null; }
+}
+
 function normalizeRole(value: unknown): UserRole | null {
   return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
 }
@@ -145,6 +169,15 @@ export function useBootstrapSession() {
         return;
       }
 
+      const adminRank = await fetchAdminRank();
+      if (cancelled) {
+        return;
+      }
+      const adminRoleCode = await fetchAdminRoleCode();
+      if (cancelled) {
+        return;
+      }
+
       hydrateFromAuth({
         role,
         userId: user.id,
@@ -155,6 +188,8 @@ export function useBootstrapSession() {
         canEditObjects,
         orgId: activeOrg.orgId,
         orgName: activeOrg.orgName,
+        adminRank,
+        adminRoleCode,
       });
     }
 

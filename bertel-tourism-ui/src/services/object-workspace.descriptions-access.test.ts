@@ -1,4 +1,4 @@
-import { describeDescriptionsAccess } from './object-workspace';
+import { canWriteCanonicalDirect, describeDescriptionsAccess } from './object-workspace';
 
 describe('describeDescriptionsAccess', () => {
   it('publisher (canonical) can edit canonical and, if enrichment, the overlay', () => {
@@ -15,5 +15,20 @@ describe('describeDescriptionsAccess', () => {
     const a = describeDescriptionsAccess({ directWrite: true, canonical: false, enrichment: false });
     expect(a.canEditCanonical).toBe(true);
     expect(a.canEditOrgEnrichment).toBe(true);
+  });
+});
+
+describe('canWriteCanonicalDirect (SP-3)', () => {
+  it('publisher-ORG member with edit_canonical_when_publisher (canonical) can write directly', () => {
+    expect(canWriteCanonicalDirect({ directWrite: false, objectOwner: false, canonical: true })).toBe(true);
+  });
+  it('legacy actor-owner (objectOwner) can write directly', () => {
+    expect(canWriteCanonicalDirect({ directWrite: false, objectOwner: true, canonical: false })).toBe(true);
+  });
+  it('platform superuser / demo (directWrite) can write directly', () => {
+    expect(canWriteCanonicalDirect({ directWrite: true, objectOwner: false, canonical: false })).toBe(true);
+  });
+  it('a read-only member (none of the three) cannot write directly', () => {
+    expect(canWriteCanonicalDirect({ directWrite: false, objectOwner: false, canonical: false })).toBe(false);
   });
 });

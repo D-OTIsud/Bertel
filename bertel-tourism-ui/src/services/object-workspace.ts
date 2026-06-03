@@ -3048,6 +3048,21 @@ export function describeDescriptionsAccess(flags: {
   };
 }
 
+/**
+ * Pure (SP-3): can the user write canonical sections directly?
+ * Mirrors the backend authorization established by SP-1 + SP-1b
+ * (api.user_can_write_object_canonical = is_object_owner OR user_can_write_canonical):
+ * platform superuser / demo (directWrite), legacy actor-owner (objectOwner), or a
+ * publisher-ORG member holding edit_canonical_when_publisher (canonical).
+ */
+export function canWriteCanonicalDirect(flags: {
+  directWrite: boolean;
+  objectOwner: boolean;
+  canonical: boolean;
+}): boolean {
+  return flags.directWrite || flags.objectOwner || flags.canonical;
+}
+
 async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
   const session = useSessionStore.getState();
   const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
@@ -3059,6 +3074,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let canWriteProviderFollowUp = session.demoMode;
   let canonical = false;
   let enrichment = false;
+  let objectOwner = false;
   if (!session.demoMode && apiClient) {
     try {
       const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult] = await Promise.allSettled([
@@ -3073,7 +3089,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         canonicalResult.status === 'fulfilled' && canonicalResult.value.error == null && canonicalResult.value.data === true;
       enrichment =
         enrichmentResult.status === 'fulfilled' && enrichmentResult.value.error == null && enrichmentResult.value.data === true;
-      const objectOwner =
+      objectOwner =
         ownerResult.status === 'fulfilled' && ownerResult.value.error == null && ownerResult.value.data === true;
       canPublishObject =
         directWrite
@@ -3082,7 +3098,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
 
       canPrepareProposal = directWrite || canonical || enrichment;
-      canWriteSafeWorkspaceRpc = directWrite || objectOwner;
+      canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
     } catch {
       canPrepareProposal = directWrite;
       canWriteSafeWorkspaceRpc = directWrite;
@@ -3095,11 +3111,14 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     ? "Le flux de proposition moderee n'est pas encore branche pour ce module."
     : "Vos droits actuels ne permettent pas cette modification.";
 
+  // SP-3: canonical writers (publisher-ORG members with edit_canonical_when_publisher) and
+  // legacy actor-owners can edit canonical sections directly, matching the backend (SP-1 + SP-1b).
+  const canDirectCanonical = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
   const directOrBlocked = (canEditScope = true): ObjectWorkspaceModuleAccess => ({
-    canDirectWrite: directWrite,
+    canDirectWrite: canDirectCanonical,
     canPrepareProposal,
     canSubmitProposal: false,
-    disabledReason: directWrite && canEditScope ? null : proposalUnavailableReason,
+    disabledReason: canDirectCanonical && canEditScope ? null : proposalUnavailableReason,
   });
 
   return {

@@ -49,6 +49,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_permission_write_paths.sql
 \echo '== 8c     migration_permission_write_paths_b.sql  (SP-1b — complete canonical-write coverage) =='
 \ir migration_permission_write_paths_b.sql
+\echo '== 8d     migration_rls_read_gate_p03.sql  (P0.3 — gate object-child reads behind can_read_object) =='
+\ir migration_rls_read_gate_p03.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

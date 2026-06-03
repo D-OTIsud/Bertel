@@ -35,6 +35,7 @@ A fresh database MUST be built in this exact order; each step depends on the pre
 8. `object_workspace_gap_rpcs.sql` — depends on step 7 and on the columns from steps 2 & 4.
 8b. `migration_permission_write_paths.sql` — **SP-1 canonical-write authorization**: additive `api.user_can_write_object_canonical` substituted into the workspace gate + 23 write policies, plus the `object.status` guard trigger. After the workspace RPCs (depends on `rls_policies.sql` helpers + the gate); before branding.
 8c. `migration_permission_write_paths_b.sql` — **SP-1b**: additive companion `canonical_write_*` policies completing canonical coverage for ~25 more editor-write tables (incl. `object_taxonomy`/`object_classification`, which had no write policy at all). After 8b.
+8d. `migration_rls_read_gate_p03.sql` — **P0.3 RLS read gate**: replaces the `USING(true)` SELECT policy on 40 object-child tables with `api.can_read_object(...)` (= parent object `published` OR `api.can_read_extended`), closing the anon draft-read leak; adds 2 missing FK indexes (`object_price_period.price_id`, `object_place_description.place_id`). After 8c (only needs `api.can_read_extended` from `rls_policies.sql`).
 9. `ui_whitelabel_branding.sql` — defines `api.is_platform_admin` (a fresh install uses this full file, not the patch).
 10. `media_bucket.sql` — `media` storage bucket + RESTRICTIVE anon/authenticated write-deny.
 11. `seeds_data.sql` — depends on `ref_sustainability_action_group` from step 2.

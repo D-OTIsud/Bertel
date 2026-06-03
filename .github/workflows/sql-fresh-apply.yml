@@ -14,12 +14,12 @@ name: SQL fresh-apply gate
 on:
   push:
     paths:
-      - 'Base de donnée DLL et API/*.sql'
+      - 'Base de donnée DLL et API/**.sql'
       - 'supabase/config.toml'
       - '.github/workflows/sql-fresh-apply.yml'
   pull_request:
     paths:
-      - 'Base de donnée DLL et API/*.sql'
+      - 'Base de donnée DLL et API/**.sql'
       - '.github/workflows/sql-fresh-apply.yml'
   workflow_dispatch:
 

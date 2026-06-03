@@ -4,10 +4,11 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 
 function fixtureModules(): ObjectWorkspaceModules {
   return {
-    generalInfo: { name: 'A', commercialVisibility: 'full' },
+    generalInfo: { name: 'A', commercialVisibility: 'full', status: 'draft' },
     taxonomy: { assignments: [] },
     contacts: { objectItems: [] },
     location: { main: { addressLine1: 'x' } },
+    publication: { status: 'draft' },
   } as unknown as ObjectWorkspaceModules;
 }
 
@@ -40,5 +41,16 @@ describe('useObjectEditorState', () => {
     act(() => result.current.commitModules(['contacts']));
     expect(result.current.dirtySections.contacts).toBe(false);
     expect(result.current.draft.contacts).toEqual({ objectItems: [{ id: 'c1' }] });
+  });
+
+  it('setSavedStatus updates status in draft AND baseline without marking dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('HOTRUN1', fixtureModules()));
+
+    act(() => result.current.setSavedStatus('published'));
+
+    expect((result.current.draft.generalInfo as { status?: string }).status).toBe('published');
+    expect((result.current.draft.publication as { status?: string }).status).toBe('published');
+    // It is the new clean truth — not a pending edit:
+    expect(result.current.isDirty).toBe(false);
   });
 });

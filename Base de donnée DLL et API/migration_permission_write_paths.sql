@@ -221,4 +221,14 @@ CREATE TRIGGER trg_guard_object_status_change
   BEFORE UPDATE OF status ON object
   FOR EACH ROW EXECUTE FUNCTION api.guard_object_status_change();
 
+-- 9) Versioning trigger must run as OWNER so it can write the admin-only object_version
+--    history table on behalf of a permission-holding (non-superuser) editor. object_version
+--    RLS allows only service_role/admin; the trigger function save_object_version was
+--    SECURITY INVOKER, so ANY authenticated `UPDATE object` failed with
+--    "new row violates row-level security policy for table object_version" — which would
+--    block every multi-role canonical write this migration is meant to enable. The sibling
+--    audit trigger (log_row_changes) is already SECURITY DEFINER; save_object_version already
+--    pins SET search_path, so DEFINER is safe. (Found by the SP-2 behavioral test via the CI gate.)
+ALTER FUNCTION public.save_object_version() SECURITY DEFINER;
+
 COMMIT;

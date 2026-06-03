@@ -17,6 +17,10 @@ export interface ObjectEditorState {
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
   commitModules: (keys: (keyof ObjectWorkspaceModules)[]) => void;
+  /** Sets object.status in BOTH draft and baseline (the new saved truth) without
+   *  touching other fields — used after a successful status-lifecycle mutation so
+   *  the UI reflects the change without a refetch (the snapshot is init-once). */
+  setSavedStatus: (status: string) => void;
 }
 
 /** Copies one module slice between snapshots; the generic key keeps it type-safe. */
@@ -58,8 +62,24 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
     });
   }, []);
 
+  const setSavedStatus = useCallback((status: string) => {
+    setSnapshot((prev) => ({
+      ...prev,
+      baseline: {
+        ...prev.baseline,
+        generalInfo: { ...prev.baseline.generalInfo, status },
+        publication: { ...prev.baseline.publication, status },
+      },
+      draft: {
+        ...prev.draft,
+        generalInfo: { ...prev.draft.generalInfo, status },
+        publication: { ...prev.draft.publication, status },
+      },
+    }));
+  }, []);
+
   const dirtySections = useMemo(() => getDirtySections(snapshot), [snapshot]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { draft: snapshot.draft, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules };
+  return { draft: snapshot.draft, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
 }

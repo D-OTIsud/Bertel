@@ -107,6 +107,14 @@ USING (EXISTS (SELECT 1 FROM media m
 
 **Total: 40 tables** (24 + 1 + 13 + 1 + 1). List verified against the live catalog (permissive SELECT/ALL policy with `qual = true` AND `anon` has SELECT), excluding intentionally-public `ref_*`/`i18n_translation` vocabulary.
 
+### 3.3 FK index coverage (nested paths)
+Family C policies traverse a child→parent FK. The RLS `EXISTS` probes the **parent by its primary key** (`op.id = child.<fk>`), so the *read* path is index-covered regardless of the child FK. But the same FK columns are also exercised by (a) `ON DELETE CASCADE` — the editor saves prices/menus/openings by **delete-and-reinsert**, and (b) the editor's filter-by-FK reads — and Postgres does **not** auto-index FK columns (only the referenced PK). A live-catalog audit of every nested-path FK found all covered by a leading-column index **except two**, which this migration adds in the same transaction:
+```sql
+CREATE INDEX IF NOT EXISTS idx_object_price_period_price_id     ON object_price_period(price_id);
+CREATE INDEX IF NOT EXISTS idx_object_place_description_place_id ON object_place_description(place_id);
+```
+All other nested-path FKs already have a leading index (PK/unique constraint or explicit): `object_menu_item.menu_id`; the four `object_menu_item_*.menu_item_id`; `meeting_room_equipment.room_id`; `object_iti_stage_media.stage_id`; `opening_schedule.period_id`; `opening_time_period.schedule_id`; `opening_time_period_weekday.time_period_id`; `opening_time_frame.time_period_id`; `object_location.place_id`; `object_relation.source_object_id`; `object_iti_section.parent_object_id`. These tables are empty in CI and tiny on live, so a plain in-transaction `CREATE INDEX` is instant — no `CONCURRENTLY` needed at current volume (revisit before the full import backfills them, if either table grows large first). *(Credit: reviewer flagged FK-index/`EXISTS` seq-scan risk — `price_id` confirmed missing.)*
+
 ## 4. Edge cases
 - **Orphan child rows** (`object_id` NULL with no resolvable parent) become invisible to non-`service_role`. Acceptable: orphans shouldn't exist; migrations/`service_role` still see them. Cascade FKs (`ON DELETE CASCADE`) make true orphans unlikely.
 - **Per-row cost on direct reads.** `can_read_object` runs per row only for *direct PostgREST* reads (the app uses RPCs). The `published` EXISTS short-circuits the OR for published rows; for `anon` the `can_read_extended` branch collapses to empty CTE scans. `can_read_extended` is already used per-row in existing RLS (`object`, `media`, `contact_channel`) — same accepted pattern.
@@ -121,11 +129,12 @@ USING (EXISTS (SELECT 1 FROM media m
 - **Under-exposure inconsistency** — some already-gated children are *extended-only* (a published object's room-types aren't `anon`-readable directly), unlike the now-`published-OR-extended` set. That's missing access, not a leak; broadening is a **separate** future decision, not P0.3.
 - **Redundant `anon` grant block** (`rls_policies.sql:3251-3257`) — harmless duplication; optional cleanup later.
 - Archetype detail tables (`object_act`/`object_iti`/`object_heb`/`object_res`/`object_fma`) — not `USING(true)`, not leaking.
+- **Off-path FK-index gaps** (not used by the P0.3 RLS paths; logged as a separate FK-hygiene pass): `object_relation.target_object_id` (object FK with cascade — the most worthwhile), `object_menu_item.media_id`, and several small `ref_*` lookups (`object_capacity.metric_id`, `object_language.level_id`, `object_menu_item.kind_id`/`unit_id`, `object_iti_associated_object.role_id`, `object_relation.relation_type_id`, `opening_schedule.schedule_type_id`, `tag_link.created_by`). Found during the §3.3 audit; out of scope for the read-gate.
 
 ## 7. Verification (CI gate)
 Two SQL tests added to `ci_fresh_apply.sql`, mirroring `tests/test_sp1b_canonical_coverage.sql` + `tests/test_sp2_permission_behavior.sql`:
 
-1. **`tests/test_p03_read_gate_coverage.sql` (regression guard).** Assert that none of the 40 listed object-child tables still has a permissive SELECT/ALL policy with `qual = 'true'`, AND each has a SELECT policy whose qual references `can_read_object` (or, for `media_tag`, `can_read_extended`). Fails loudly if a future table reintroduces `USING(true)`.
+1. **`tests/test_p03_read_gate_coverage.sql` (regression guard).** Assert that none of the 40 listed object-child tables still has a permissive SELECT/ALL policy with `qual = 'true'`, AND each has a SELECT policy whose qual references `can_read_object` (or, for `media_tag`, `can_read_extended`). Fails loudly if a future table reintroduces `USING(true)`. **Also assert that every nested-path (Family C) FK column carries a leading-column index** (incl. the two added in §3.3) — guards against an index being dropped and silently restoring seq-scan risk under the `EXISTS`/cascade.
 2. **`tests/test_p03_read_gate_behavior.sql` (behavioral proof).** Seed one `published` + one `draft` object, each with an `object_location`, `object_price`, and a nested `object_price_period` / `opening_*` row. Then:
    - as `anon`: assert the published rows are visible and the draft rows are **not**;
    - as an other-ORG `authenticated` user (no `can_read_extended`): assert the draft rows are **not** visible;

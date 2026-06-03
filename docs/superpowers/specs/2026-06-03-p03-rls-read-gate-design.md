@@ -56,6 +56,8 @@ GRANT EXECUTE ON FUNCTION api.can_read_object(text) TO anon, authenticated, serv
   - `service_role` → bypasses RLS entirely.
 - Symmetric to SP‑1's `api.user_can_write_object_canonical`.
 
+**Required companion grant (discovered via the CI behavioral test).** These 40 tables also carry the SP‑1/SP‑1b `owner_*`/`canonical_write_*` **`FOR ALL`** write policies, which apply to SELECT too. The old `USING(true)` read policy constant-folded to `true` and short-circuited the permissive-policy OR, so anon SELECT never evaluated the write predicate. Once the gated read policy replaces it, anon SELECT on a *draft* row evaluates the write policy's `USING → api.user_can_write_object_canonical`, which SP‑1 `REVOKE`d from anon → `permission denied for function`. Fix: `GRANT EXECUTE ON FUNCTION api.user_can_write_object_canonical(text) TO anon;` — the function returns `false` for anon (no uid/actor/membership), so the OR safely collapses to `can_read_object` (no row exposed) and anon direct reads filter instead of erroring. (`api.is_object_owner` and `api.can_read_extended` are already anon-executable.) This is an invariant: **any future table that gates a `USING(true)` read while carrying a `FOR ALL` write policy must ensure the role can execute the write predicate.**
+
 ### 3.2 Per-table policies (replace, don't add)
 RLS permissive policies are OR'd, so a `USING(true)` policy must be **dropped and replaced** (unlike SP‑1b, which *added* companions to predicate-gated policies). For each of the 40 tables: `DROP POLICY IF EXISTS "<exact current policy name>"` then `CREATE POLICY "read_<table>" ... FOR SELECT USING (api.can_read_object(<path>))`.
 

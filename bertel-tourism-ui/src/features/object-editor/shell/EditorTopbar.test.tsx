@@ -10,6 +10,7 @@ const baseProps = {
   onPreview: jest.fn(),
   onCancel: jest.fn(),
   onPublish: jest.fn(),
+  onSaveDraft: () => {},
 };
 
 describe('EditorTopbar', () => {
@@ -35,5 +36,16 @@ describe('EditorTopbar', () => {
     render(<EditorTopbar {...baseProps} lastSavedAt="2026-05-20T11:45:00Z" lastUpdatedSource="manual" />);
     expect(screen.getByText(/Dernière mise à jour · il y a 15 min/)).toBeInTheDocument();
     jest.useRealTimers();
+  });
+
+  it('renders an Enregistrer button that calls onSaveDraft and is disabled when nothing is dirty', () => {
+    const onSaveDraft = jest.fn();
+    render(<EditorTopbar {...baseProps} dirtyCount={2} onSaveDraft={onSaveDraft} />);
+    const btn = screen.getByRole('button', { name: 'Enregistrer' });
+    fireEvent.click(btn);
+    expect(onSaveDraft).toHaveBeenCalledTimes(1);
+
+    render(<EditorTopbar {...baseProps} dirtyCount={0} onSaveDraft={onSaveDraft} />);
+    expect(screen.getAllByRole('button', { name: 'Enregistrer' }).at(-1)).toBeDisabled();
   });
 });

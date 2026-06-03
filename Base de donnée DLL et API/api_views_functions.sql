@@ -317,6 +317,13 @@ $$;
 -- =====================================================
 
 CREATE SCHEMA IF NOT EXISTS api;
+-- Expose the api schema to the PostgREST roles. Per-function EXECUTE grants/REVOKEs
+-- (see rls_policies.sql) still gate individual RPCs; but WITHOUT schema USAGE every
+-- `GRANT EXECUTE ON FUNCTION api.*` is inert and authenticated/anon get
+-- "permission denied for schema api" calling any api RPC on a fresh DB. This grant was
+-- PROD-only drift (live had it, the manifest didn't) — folded in for deploy integrity,
+-- surfaced by the SP-4 roster-RPC test (the first test to call an api RPC AS authenticated).
+GRANT USAGE ON SCHEMA api TO anon, authenticated, service_role;
 
 -- =====================================================
 -- 1) Helpers : Base64URL & Curseur JSON & Langue & Search & I18N

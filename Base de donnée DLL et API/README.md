@@ -8,13 +8,28 @@ Ce dossier contient le schema SQL principal, les fonctions RPC exposees dans le 
 
 ```text
 Base de donnee DLL et API/
-├── schema_unified.sql
-├── api_views_functions.sql
-├── rls_policies.sql
-├── ui_whitelabel_branding.sql
-├── seeds_data.sql
-├── test_performance.sql
-├── maintenance.sql
+├── Fresh install core
+│   ├── schema_unified.sql
+│   ├── migration_sustainability_v5.sql
+│   ├── migration_room_type_ref.sql
+│   ├── migration_tag_link_position.sql
+│   ├── api_views_functions.sql
+│   ├── rls_policies.sql
+│   ├── object_workspace_safe_write_rpcs.sql
+│   ├── object_workspace_gap_rpcs.sql
+│   ├── ui_whitelabel_branding.sql
+│   ├── media_bucket.sql
+│   └── seeds_data.sql
+├── Post-seed / post-import fixups
+│   ├── migration_legal_siret_canonical.sql
+│   └── migration_object_location_address1_dedupe.sql
+├── Maintenance and benchmarks
+│   ├── maintenance.sql
+│   └── test_performance.sql
+├── Upgrade-only patch
+│   └── branding_admin_profile_role_patch.sql
+├── Local / pilot-only inserts
+│   └── lot1_pilot_inserts.sql
 └── README.md
 ```
 
@@ -32,6 +47,7 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
 
 Optionnel (uniquement si vous planifiez des taches programmees SQL):
@@ -44,17 +60,38 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- 1) Schema
 \i schema_unified.sql
 
--- 2) Fonctions API
+-- 2) Migrations DDL (AVANT api/seeds ; ajoutent colonnes/tables requises)
+\i migration_sustainability_v5.sql
+\i migration_room_type_ref.sql
+\i migration_tag_link_position.sql
+
+-- 3) Fonctions API
 \i api_views_functions.sql
 
--- 3) Politiques RLS
+-- 4) Politiques RLS (definit api.is_object_owner)
 \i rls_policies.sql
 
--- 4) Branding UI et parametres white-label
+-- 5) RPC d'ecriture editeur (schema internal + sections restantes)
+\i object_workspace_safe_write_rpcs.sql
+\i object_workspace_gap_rpcs.sql
+
+-- 5b) SP-1 autorisation d'ecriture canonique (apres les RPC workspace, avant le branding)
+\i migration_permission_write_paths.sql
+
+-- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql
 
--- 5) Donnees de seed (optionnel)
+-- 7) Bucket de stockage media
+\i media_bucket.sql
+
+-- 8) Donnees de seed (necessite migration_sustainability_v5)
 \i seeds_data.sql
+
+-- 9) Correctifs de donnees APRES seeds (no-op sur base neuve)
+\i migration_legal_siret_canonical.sql
+\i migration_object_location_address1_dedupe.sql
+
+-- Ordre complet + refresh MV + rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```
 
 ## Fonctions API principales (existantes)
@@ -223,18 +260,18 @@ Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.
 \i maintenance.sql
 ```
 
-Recommandation de rafraichissement `mv_filtered_objects`:
+Recommandation de rafraichissement `internal.mv_filtered_objects`:
 
 ```sql
 -- Toutes les 5 minutes (SLA listing/filtrage)
 SELECT cron.schedule(
   'refresh-mv-filtered-objects',
   '*/5 * * * *',
-  $$REFRESH MATERIALIZED VIEW CONCURRENTLY mv_filtered_objects$$
+  $$REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects$$
 );
 ```
 
-Points de stale possibles pour `mv_filtered_objects`:
+Points de stale possibles pour `internal.mv_filtered_objects`:
 - changements de localisation principale (`object_location`)
 - transitions de statut editorial (`object.status`)
 - changements de nom / index de recherche (`object.name*`)

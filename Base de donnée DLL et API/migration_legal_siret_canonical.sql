@@ -27,16 +27,18 @@ SET
     ELSE E'\nAuto-revoked: redundant with active siret (canonical identity).'
   END,
   updated_at = NOW()
-FROM ref_legal_type rlt_siren
-JOIN object_legal ol_siret
-  ON ol_siret.object_id = ol_siren.object_id
- AND ol_siret.status = 'active'
-JOIN ref_legal_type rlt_siret
-  ON rlt_siret.id = ol_siret.type_id
- AND rlt_siret.code = 'siret'
+FROM ref_legal_type rlt_siren,
+     object_legal ol_siret
+     JOIN ref_legal_type rlt_siret
+       ON rlt_siret.id = ol_siret.type_id
+      AND rlt_siret.code = 'siret'
 WHERE ol_siren.type_id = rlt_siren.id
   AND rlt_siren.code = 'siren'
   AND ol_siren.status = 'active'
+  -- ol_siret correlation moved out of FROM: the UPDATE target (ol_siren) may not be
+  -- referenced inside a FROM-clause JOIN (Postgres). Same result, valid placement.
+  AND ol_siret.object_id = ol_siren.object_id
+  AND ol_siret.status = 'active'
   AND NULLIF(
     TRIM(
       COALESCE(

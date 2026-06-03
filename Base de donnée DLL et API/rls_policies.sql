@@ -191,6 +191,17 @@ AS $$
     OR EXISTS (SELECT 1 FROM external_published);
 $$;
 
+-- ── Forward declarations (fresh-apply ordering fix) ─────────────────────────
+-- is_object_owner (below) and current_user_can_edit_objects (further below) are
+-- SQL-language functions whose bodies are validated at CREATE time, and they call
+-- api.is_platform_superuser() and api.user_has_permission(), which this file otherwise
+-- defines much later (~L1765 and ~L2495). On a blank DB that ordering fails with
+-- "function does not exist". Declare minimal stubs here so the early functions compile;
+-- the canonical definitions later in THIS file replace them via CREATE OR REPLACE
+-- (same signatures), so runtime behaviour is unchanged. (Found by the SQL fresh-apply CI gate.)
+CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+
 -- Vérifie si l'utilisateur est propriétaire (owner) de l'objet
 -- via un rôle actor_object_role lié à son email dans actor_channel
 CREATE OR REPLACE FUNCTION api.is_object_owner(p_object_id text)

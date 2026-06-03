@@ -33,6 +33,8 @@ docker run -p 8080:80 bertel-api-docs
 ## 📁 Structure
 
 - `index.html` - Documentation principale
+- `SQL_ROLLOUT_RUNBOOK.md` - Runbook équipe pour installation, mise à jour SQL, refresh MV et rollback
+- `SUPABASE_SETUP.md` - Configuration Supabase/PostgREST du schéma `api`
 - `Bertel_API_v3.postman_collection.json` - Collection Postman
 - `Bertel_API_v3.postman_environment.json` - Environnement Postman
 - `README_Postman.md` - Guide d'utilisation Postman
@@ -44,6 +46,7 @@ docker run -p 8080:80 bertel-api-docs
 - **Mode sombre/clair** avec persistance
 - **Recherche globale** dans la documentation
 - **Collection Postman** intégrée
+- **Espace équipe** en haut de `index.html` pour accéder aux runbooks SQL/Supabase et aux artefacts Postman
 - **Bouton flottant** pour toggle des sections
 - **Responsive design** pour tous les écrans
 

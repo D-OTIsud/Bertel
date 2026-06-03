@@ -132,6 +132,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write
 psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths_b.sql"
 # 5d. P0.3 garde-lecture RLS (tables enfant lisibles seulement si objet publié ou can_read_extended)
 psql -d votre_database -f "Base de donnée DLL et API/migration_rls_read_gate_p03.sql"
+# 5e. SP-4 — RPC lecture roster api.rpc_list_org_members (identités membres pour la page admin équipe)
+psql -d votre_database -f "Base de donnée DLL et API/migration_sp4_list_org_members.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

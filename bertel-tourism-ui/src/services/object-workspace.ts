@@ -3370,6 +3370,39 @@ export async function publishObjectWorkspace(objectId: string, publish: boolean)
   }
 }
 
+export type ObjectLifecycleStatus = 'draft' | 'published' | 'hidden' | 'archived';
+
+/** Maps rpc_set_object_status error codes to French UI messages. */
+export function friendlyStatusError(error: { message?: string } | null | undefined): string {
+  const msg = error?.message ?? '';
+  if (msg.includes('FORBIDDEN')) return "Vos droits ne permettent pas de changer le statut de publication (permission publish_object requise).";
+  if (msg.includes('INVALID_TRANSITION')) return "Ce changement de statut n'est pas autorisé depuis l'état actuel.";
+  if (msg.includes('INVALID_STATUS')) return "Statut de publication inconnu.";
+  if (msg.includes('NOT_FOUND')) return "Fiche introuvable.";
+  if (msg.includes('NO_AUTH_CONTEXT')) return "Session expirée — reconnectez-vous.";
+  return msg || "Changement de statut impossible.";
+}
+
+/** Sets object.status through the lifecycle RPC. Returns the resolved status. */
+export async function setObjectStatus(objectId: string, status: ObjectLifecycleStatus): Promise<ObjectLifecycleStatus> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return status;
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour gerer le statut.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('rpc_set_object_status', {
+    p_object_id: objectId,
+    p_status: status,
+  });
+  if (error) {
+    throw new Error(friendlyStatusError(error));
+  }
+  return (data as ObjectLifecycleStatus) ?? status;
+}
+
 export async function saveObjectWorkspaceGeneralInfo(objectId: string, input: ObjectWorkspaceGeneralInfo): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {

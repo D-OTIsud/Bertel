@@ -155,7 +155,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   );
   const historyItems = useMemo(() => buildHistoryItems(editor.draft), [editor.draft]);
 
-  /** Persist local draft modules to the database (called only from publish, not a separate save action). */
+  /** Persist local draft modules to the database (shared by publish and draft-save). */
   async function persistDirtyModules(): Promise<boolean> {
     const dirty = (Object.keys(editor.dirtySections) as WorkspaceModuleId[]).filter(
       (m) => editor.dirtySections[m],
@@ -170,12 +170,12 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     );
 
     if (result.failed.length > 0) {
-      setStatusMessage(`${result.failed.length} section(s) en échec — publication annulée.`);
+      setStatusMessage(`${result.failed.length} section(s) en échec.`);
       return false;
     }
     if (result.blocked.length > 0) {
       setStatusMessage(
-        `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s) — publication annulée.`,
+        `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s).`,
       );
       return false;
     }

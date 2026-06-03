@@ -33,9 +33,17 @@ BEGIN
     (v_obj, 'HOT', 'SP2 Test Hotel');
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES (v_obj, v_org, v_pub_role);
 
-  INSERT INTO auth.users (id) VALUES (v_view_uid), (v_contrib_uid), (v_editor_uid);
+  -- auth.users has trigger `on_auth_user_created_app_user_profile` which AUTO-CREATES the
+  -- app_user_profile row. So we insert the users (with unique emails), then UPSERT the profile
+  -- role to a non-superuser value — ON CONFLICT absorbs the trigger-created rows (verified:
+  -- is_platform_superuser() is only owner/super_admin/service_role, so 'tourism_agent' is non-super).
+  INSERT INTO auth.users (id, email) VALUES
+    (v_view_uid,    'sp2_viewer@test.local'),
+    (v_contrib_uid, 'sp2_contributor@test.local'),
+    (v_editor_uid,  'sp2_editor@test.local');
   INSERT INTO app_user_profile (id, role) VALUES
-    (v_view_uid, 'tourism_agent'), (v_contrib_uid, 'tourism_agent'), (v_editor_uid, 'tourism_agent');
+    (v_view_uid, 'tourism_agent'), (v_contrib_uid, 'tourism_agent'), (v_editor_uid, 'tourism_agent')
+  ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES (v_view_uid,    v_org, TRUE) RETURNING id INTO v_m_view;
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES (v_contrib_uid, v_org, TRUE) RETURNING id INTO v_m_contrib;

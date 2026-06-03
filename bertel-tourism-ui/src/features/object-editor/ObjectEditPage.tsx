@@ -127,6 +127,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
   const [mode, setMode] = useState<EditorMode>('complet');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
 
   const meta = resolveArchetypeMeta(resource.type);
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
@@ -182,6 +183,20 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
     return true;
   }
 
+  /** Persist work-in-progress without publishing and without the blocker gate. */
+  async function handleSaveDraft() {
+    setStatusMessage(null);
+    setSavingDraft(true);
+    try {
+      const ok = await persistDirtyModules();
+      if (ok) {
+        setStatusMessage('Brouillon enregistré.');
+      }
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function handlePublish() {
     if (validation.blockers.length > 0) {
       const first = validation.blockers[0];
@@ -200,6 +215,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
 
     try {
       await publishObject.mutateAsync(true);
+      editor.setSavedStatus('published');
       setStatusMessage('Fiche enregistrée et publiée.');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Publication impossible.');
@@ -236,12 +252,14 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
         saving={saving}
+        savingDraft={savingDraft}
         publishDisabled={validation.blockers.length > 0}
         statusMessage={statusMessage}
         onModeChange={setMode}
         onPreview={openPreviewDrawer}
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
+        onSaveDraft={() => void handleSaveDraft()}
       />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
@@ -267,7 +285,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           onGoToSection={scrollToSection}
         />
       </div>
-      <EditorFooter onPreview={openPreviewDrawer} />
+      <EditorFooter onPreview={openPreviewDrawer} onSaveDraft={() => void handleSaveDraft()} savingDraft={savingDraft} />
     </div>
   );
 }

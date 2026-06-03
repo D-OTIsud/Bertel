@@ -15,12 +15,14 @@ interface EditorTopbarProps {
   warningCount?: number;
   publishing?: boolean;
   saving?: boolean;
+  savingDraft?: boolean;
   publishDisabled?: boolean;
   statusMessage?: string | null;
   onModeChange: (mode: EditorMode) => void;
   onPreview: () => void;
   onCancel: () => void;
   onPublish: () => void;
+  onSaveDraft?: () => void;
 }
 
 export function EditorTopbar({
@@ -34,12 +36,14 @@ export function EditorTopbar({
   warningCount = 0,
   publishing = false,
   saving = false,
+  savingDraft = false,
   publishDisabled = false,
   statusMessage = null,
   onModeChange,
   onPreview,
   onCancel,
   onPublish,
+  onSaveDraft,
 }: EditorTopbarProps) {
   const saveLabel = buildEditTopSaveLabel({ statusMessage, dirtyCount, lastSavedAt });
   const saveTitle =
@@ -99,6 +103,16 @@ export function EditorTopbar({
         <button type="button" className="btn" onClick={onCancel}>
           Annuler
         </button>
+        {onSaveDraft && (
+          <button
+            type="button"
+            className="btn"
+            disabled={savingDraft || saving || publishing || dirtyCount === 0}
+            onClick={onSaveDraft}
+          >
+            {savingDraft ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        )}
         <button
           type="button"
           className="btn primary"

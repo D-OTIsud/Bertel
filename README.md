@@ -128,6 +128,8 @@ psql -d votre_database -f "Base de donnée DLL et API/object_workspace_gap_rpcs.
 
 # 5b. SP-1 autorisation d'écriture canonique (après les RPC workspace, avant le branding)
 psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths.sql"
+# 5c. SP-1b couverture canonique complète (tables éditeur restantes)
+psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths_b.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

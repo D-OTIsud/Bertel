@@ -79,6 +79,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp1_canonical_write_auth.sql"
 
+      - name: SP-1b coverage assertions (every editor-write table is canonical-covered)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp1b_canonical_coverage.sql"
+
       - name: SP-2 behavioral test (permission convention + status guard + team notes)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

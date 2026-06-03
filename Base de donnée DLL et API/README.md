@@ -77,6 +77,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- 5b) SP-1 autorisation d'ecriture canonique (apres les RPC workspace, avant le branding)
 \i migration_permission_write_paths.sql
+-- 5c) SP-1b couverture canonique complete (tables editeur restantes)
+\i migration_permission_write_paths_b.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

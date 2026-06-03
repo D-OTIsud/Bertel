@@ -47,6 +47,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir object_workspace_gap_rpcs.sql
 \echo '== 8b     migration_permission_write_paths.sql  (SP-1 canonical-write auth; after RLS + workspace RPCs) =='
 \ir migration_permission_write_paths.sql
+\echo '== 8c     migration_permission_write_paths_b.sql  (SP-1b — complete canonical-write coverage) =='
+\ir migration_permission_write_paths_b.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

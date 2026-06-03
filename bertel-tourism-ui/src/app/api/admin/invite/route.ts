@@ -35,6 +35,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const authorized = isSuper === true || (typeof rank === 'number' && rank >= 30);
   if (!authorized) return NextResponse.json({ error: 'forbidden', detail: 'org_admin (rank ≥ 30) or platform superuser required' }, { status: 403 });
 
+  // Intentionally consumes only `email`; membership + roles + permissions are wired client-side as
+  // the admin via the rank-gated RPCs (see InviteMemberDialog).
   let body: { email?: unknown; orgObjectId?: unknown };
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'bad_json' }, { status: 400 }); }
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email, password: tempPassword, email_confirm: true,
   });
   if (createErr) {
-    const { data: list } = await server.auth.admin.listUsers();
+    // perPage bound: fine at current scale; revisit with a getUserByEmail/paged scan if the user base grows past ~1000.
+    const { data: list } = await server.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === email);
     if (existing) return NextResponse.json({ userId: existing.id, alreadyExisted: true }, { status: 409 });
     return NextResponse.json({ error: 'create_failed', detail: createErr.message }, { status: 500 });

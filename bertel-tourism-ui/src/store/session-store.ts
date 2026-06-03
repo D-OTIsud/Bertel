@@ -33,6 +33,18 @@ interface SessionState {
    */
   orgId: string | null;
   orgName: string | null;
+  /**
+   * The current user's admin rank (integer ≥ 10 means they hold a team-admin
+   * role), resolved at session bootstrap via `api.current_user_admin_rank()`.
+   * NULL when the user has no admin role or the helper is unavailable.
+   */
+  adminRank: number | null;
+  /**
+   * The current user's admin role code (e.g. 'ADMIN_ORG'), resolved at session
+   * bootstrap via `api.current_user_admin_role_code()`. NULL when the user has
+   * no admin role or the helper is unavailable.
+   */
+  adminRoleCode: string | null;
   setDemoRole: (role: UserRole) => void;
   setLangPrefs: (langPrefs: string[]) => void;
   hydrateFromAuth: (payload: {
@@ -45,6 +57,8 @@ interface SessionState {
     canEditObjects: boolean;
     orgId: string | null;
     orgName: string | null;
+    adminRank: number | null;
+    adminRoleCode: string | null;
   }) => void;
   setBooting: () => void;
   setGuest: (message?: string | null) => void;
@@ -67,6 +81,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   canEditObjects: env.demoMode,
   orgId: env.demoMode ? 'ORG-DEMO' : null,
   orgName: env.demoMode ? 'OTI du Sud' : null,
+  adminRank: null,
+  adminRoleCode: null,
   setDemoRole: (role) => {
     const state = useSessionStore.getState();
     if (!state.demoMode) {
@@ -81,7 +97,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     });
   },
   setLangPrefs: (langPrefs) => set({ langPrefs }),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, orgId, orgName }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, orgId, orgName, adminRank, adminRoleCode }) =>
     set({
       status: 'ready',
       role,
@@ -93,6 +109,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       canEditObjects,
       orgId,
       orgName,
+      adminRank,
+      adminRoleCode,
       errorMessage: null,
     }),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
@@ -109,6 +127,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       canEditObjects: false,
       orgId: null,
       orgName: null,
+      adminRank: null,
+      adminRoleCode: null,
     });
   },
   setSessionError: (message) => {
@@ -124,6 +144,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       canEditObjects: false,
       orgId: null,
       orgName: null,
+      adminRank: null,
+      adminRoleCode: null,
     });
   },
 }));

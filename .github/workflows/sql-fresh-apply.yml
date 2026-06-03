@@ -89,6 +89,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp2_permission_behavior.sql"
 
+      - name: P0.3 coverage assertions (read-gate; no residual USING(true); nested FKs indexed)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_p03_read_gate_coverage.sql"
+
+      - name: P0.3 behavioral test (anon/other-ORG cannot read draft child rows)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_p03_read_gate_behavior.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

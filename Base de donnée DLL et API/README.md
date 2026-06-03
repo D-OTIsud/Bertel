@@ -79,6 +79,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_permission_write_paths.sql
 -- 5c) SP-1b couverture canonique complete (tables editeur restantes)
 \i migration_permission_write_paths_b.sql
+-- 5d) P0.3 garde-lecture RLS (tables enfant: objet publie OU can_read_extended)
+\i migration_rls_read_gate_p03.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

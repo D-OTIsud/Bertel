@@ -34,6 +34,7 @@ A fresh database MUST be built in this exact order; each step depends on the pre
 7. `object_workspace_safe_write_rpcs.sql` — creates schema `internal` + the write gate `internal.workspace_assert_can_write_object`.
 8. `object_workspace_gap_rpcs.sql` — depends on step 7 and on the columns from steps 2 & 4.
 8b. `migration_permission_write_paths.sql` — **SP-1 canonical-write authorization**: additive `api.user_can_write_object_canonical` substituted into the workspace gate + 23 write policies, plus the `object.status` guard trigger. After the workspace RPCs (depends on `rls_policies.sql` helpers + the gate); before branding.
+8c. `migration_permission_write_paths_b.sql` — **SP-1b**: additive companion `canonical_write_*` policies completing canonical coverage for ~25 more editor-write tables (incl. `object_taxonomy`/`object_classification`, which had no write policy at all). After 8b.
 9. `ui_whitelabel_branding.sql` — defines `api.is_platform_admin` (a fresh install uses this full file, not the patch).
 10. `media_bucket.sql` — `media` storage bucket + RESTRICTIVE anon/authenticated write-deny.
 11. `seeds_data.sql` — depends on `ref_sustainability_action_group` from step 2.

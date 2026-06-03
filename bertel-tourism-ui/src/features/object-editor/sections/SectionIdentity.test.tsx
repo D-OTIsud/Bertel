@@ -102,23 +102,25 @@ describe('SectionIdentity', () => {
     expect(screen.getByDisplayValue('SARL Domaine du Bel Air')).toBeInTheDocument();
   });
 
-  it('renders publication status options without emoji', () => {
+  it('shows the publication status as a read-only chip — not an editable select', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    const options = screen.getAllByRole('option');
-    expect(options).toHaveLength(4);
-    for (const option of options) {
-      expect(option.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
-    }
+    // Status is now read-only here (managed in §21): no <select>, no <option> elements.
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    // The fixture status (published) renders as a static chip, without emoji.
+    const chip = screen.getByText('Publié — en ligne');
+    expect(chip).toBeInTheDocument();
+    expect(chip.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
   });
 
-  it('keeps the technical publication status values', () => {
+  it('points the user to §21 for managing the publication status (field hint)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    const values = screen.getAllByRole('option').map((option) => (option as HTMLOptionElement).value);
-    expect(values).toEqual(['published', 'draft', 'hidden', 'archived']);
+    // The hint is surfaced through the Field's help affordance (title attribute).
+    expect(screen.getByTitle(/se gère dans la section Publication/i)).toBeInTheDocument();
   });
 
   it('opens a modal when the taxonomy field is clicked', () => {

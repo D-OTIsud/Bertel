@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Fs, Field, Input, Select, EditorModal } from '../primitives';
+import { Fs, Field, Input, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
   ObjectWorkspaceTaxonomyAssignment,
@@ -9,12 +9,14 @@ import type {
 } from '../../../services/object-workspace-parser';
 import { ARCHETYPE_META, TYPE_LABEL } from '../archetypes';
 
-const STATUS_OPTIONS = [
-  { v: 'published', l: 'Publié — en ligne' },
-  { v: 'draft', l: 'Brouillon' },
-  { v: 'hidden', l: 'Hors ligne' },
-  { v: 'archived', l: 'Archivé' },
-];
+// Read-only status chip — the lifecycle is managed in §21 (no write-trap here).
+// Tones reuse the existing .fs-pill ok/warn styling; labels match §21's STATUS_PILL.
+const STATUS_PILL: Record<string, { tone: 'ok' | 'warn'; label: string }> = {
+  published: { tone: 'ok', label: 'Publié — en ligne' },
+  draft: { tone: 'warn', label: 'Brouillon' },
+  hidden: { tone: 'warn', label: 'Hors ligne' },
+  archived: { tone: 'warn', label: 'Archivé' },
+};
 
 function toTaxonomyPathNode(
   node: ObjectWorkspaceTaxonomyNodeOption,
@@ -308,6 +310,7 @@ function TaxonomyModal({
 export function SectionIdentity({ editor, objectId, typeCode, archetype, folded }: SectionProps) {
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
   const info = editor.draft.generalInfo;
+  const statusValue = info.status || 'draft';
   const taxonomy = editor.draft.taxonomy;
   const meta = archetype ? ARCHETYPE_META[archetype] : null;
   const canonicalType = typeCode?.toUpperCase() ?? '';
@@ -342,17 +345,15 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         <Field label="Nom commercial" required>
           <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
         </Field>
-        <Field label="Statut publication" hint="Visibilité dans l'Explorer">
+        <Field label="Statut publication" hint="Le statut se gère dans la section Publication (§21)">
           <div className="identity-status">
             <span
-              className={`identity-status__dot identity-status__dot--${info.status}`}
+              className={`identity-status__dot identity-status__dot--${statusValue}`}
               aria-hidden="true"
             />
-            <Select
-              value={info.status}
-              options={STATUS_OPTIONS}
-              onChange={(status) => editor.patchModule('generalInfo', { status })}
-            />
+            <div className={`fs-pill ${STATUS_PILL[statusValue]?.tone ?? 'warn'}`} style={{ display: 'inline-flex' }}>
+              {STATUS_PILL[statusValue]?.label ?? statusValue}
+            </div>
           </div>
         </Field>
       </div>

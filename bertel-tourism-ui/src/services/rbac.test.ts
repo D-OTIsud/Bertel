@@ -1,5 +1,5 @@
 import { getApiClient } from '../lib/supabase';
-import { listOrgMembers, setBusinessRole, friendlyRbacError } from './rbac';
+import { listOrgMembers, setBusinessRole, upsertMembership, friendlyRbacError } from './rbac';
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 const mockedGetApiClient = jest.mocked(getApiClient);
@@ -31,6 +31,24 @@ describe('rbac service', () => {
     mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
     await setBusinessRole('m1', 'editor');
     expect(rpc).toHaveBeenCalledWith('rpc_set_business_role', { p_membership_id: 'm1', p_role_code: 'editor' });
+  });
+
+  it('upsertMembership calls rpc_upsert_membership and returns the uuid', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: 'mem-uuid', error: null });
+    mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
+    const result = await upsertMembership('user-1', 'org-1', 'contributor');
+    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+      p_target_user_id: 'user-1',
+      p_org_object_id: 'org-1',
+      p_business_role_code: 'contributor',
+    });
+    expect(result).toBe('mem-uuid');
+  });
+
+  it('upsertMembership throws when the RPC returns an error', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
+    await expect(upsertMembership('user-1', 'org-1', 'contributor')).rejects.toMatchObject({ message: 'boom' });
   });
 
   it('friendlyRbacError maps known SQLSTATE messages', () => {

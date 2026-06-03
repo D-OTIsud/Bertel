@@ -65,9 +65,12 @@ async function rpc(name: string, params: Record<string, unknown>): Promise<void>
   const { error } = await requireClient().schema('api').rpc(name, params);
   if (error) throw error;
 }
-export const upsertMembership = (userId: string, orgObjectId: string, businessRoleCode: string) =>
-  requireClient().schema('api').rpc('rpc_upsert_membership',
+export async function upsertMembership(userId: string, orgObjectId: string, businessRoleCode: string): Promise<string> {
+  const { data, error } = await requireClient().schema('api').rpc('rpc_upsert_membership',
     { p_target_user_id: userId, p_org_object_id: orgObjectId, p_business_role_code: businessRoleCode });
+  if (error) throw error;
+  return data as string;
+}
 export const setBusinessRole = (membershipId: string, roleCode: string) =>
   rpc('rpc_set_business_role', { p_membership_id: membershipId, p_role_code: roleCode });
 export const setAdminRole = (membershipId: string, roleCode: string) =>

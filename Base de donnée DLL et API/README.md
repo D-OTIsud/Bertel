@@ -81,6 +81,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_permission_write_paths_b.sql
 -- 5d) P0.3 garde-lecture RLS (tables enfant: objet publie OU can_read_extended)
 \i migration_rls_read_gate_p03.sql
+-- 5e) SP-4 RPC lecture roster api.rpc_list_org_members (identites membres pour la page admin equipe)
+\i migration_sp4_list_org_members.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

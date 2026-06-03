@@ -95,8 +95,11 @@ export async function inviteUser(input: { email: string; orgObjectId: string; bu
     body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId }),
   });
   const body = await res.json();
+  if (res.status === 409 && body?.userId) {
+    return { userId: body.userId, tempPassword: '', alreadyExisted: true };
+  }
   if (!res.ok) throw new Error(body?.detail || body?.error || 'invite_failed');
-  return { userId: body.userId, tempPassword: body.tempPassword, alreadyExisted: !!body.alreadyExisted };
+  return { userId: body.userId, tempPassword: body.tempPassword, alreadyExisted: false };
 }
 
 const FRIENDLY: Array<[string, string]> = [

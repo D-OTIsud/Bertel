@@ -29,6 +29,17 @@ $fn$;
 REVOKE EXECUTE ON FUNCTION api.can_read_object(text) FROM PUBLIC;
 GRANT  EXECUTE ON FUNCTION api.can_read_object(text) TO anon, authenticated, service_role;
 
+-- 1b) Let anon evaluate the SP-1/SP-1b write predicate during SELECT.
+--     These 40 tables also carry `owner_*`/`canonical_write_*` FOR ALL write policies, which apply
+--     to SELECT too. Until now the `USING(true)` read policy constant-folded to TRUE and short-circuited
+--     the permissive-policy OR, so anon SELECT never evaluated the write predicate. With the gated read
+--     policy below, anon SELECT on a draft row evaluates the write policy's USING ->
+--     api.user_can_write_object_canonical, which SP-1 REVOKE'd from anon -> "permission denied for function".
+--     The function returns FALSE for anon (no uid/actor/membership), so granting EXECUTE is safe (no row is
+--     exposed; the OR collapses to api.can_read_object) and necessary for anon direct reads to work instead
+--     of erroring. (api.is_object_owner and api.can_read_extended are already anon-executable.)
+GRANT EXECUTE ON FUNCTION api.user_can_write_object_canonical(text) TO anon;
+
 -- ── Family A — direct object key (24) ───────────────────────────────────────
 DROP POLICY IF EXISTS "Lecture publique des places" ON object_place;
 DROP POLICY IF EXISTS "read_object_place" ON object_place;

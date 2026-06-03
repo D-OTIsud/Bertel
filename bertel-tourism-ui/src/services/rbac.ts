@@ -111,9 +111,21 @@ const FRIENDLY: Array<[string, string]> = [
   ['RANK_VIOLATION', 'Action impossible sur un membre de rang égal ou supérieur au vôtre.'],
   ['INVARIANT_VIOLATION', "Un rôle admin exige d'abord un rôle métier actif."],
   ['INVALID_ORG', "Organisation cible invalide."],
+  ['FORBIDDEN', "Action non autorisée pour votre rôle."],
+  ['NOT_FOUND', "Élément introuvable (le membre ou l'objet n'existe pas / plus)."],
 ];
 export function friendlyRbacError(err: { message?: string } | null | undefined): string {
   const msg = err?.message ?? '';
   for (const [code, friendly] of FRIENDLY) if (msg.includes(code)) return friendly;
   return msg || 'Action impossible.';
+}
+
+/** Fallback ORG for a platform superuser with no active membership: the (currently sole) ORG.
+ *  Multi-org superuser switching is deferred — returns the first ORG object.
+ *  The OTI ORG is published so it is readable under RLS for any authenticated user. */
+export async function getDefaultOrgId(): Promise<string | null> {
+  const { data, error } = await getSupabaseClient()!
+    .from('object').select('id').eq('object_type', 'ORG').order('created_at').limit(1).maybeSingle();
+  if (error) throw error;
+  return (data?.id as string) ?? null;
 }

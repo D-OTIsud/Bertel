@@ -14,6 +14,7 @@ import {
   revokeAdminRole,
   deactivateMembership,
   friendlyRbacError,
+  getDefaultOrgId,
   type OrgMember,
   type RefRole,
   type RefPermission,
@@ -30,6 +31,18 @@ export default function TeamAdminPage() {
   const userId = useSessionStore((s) => s.userId);
   const allowed = canAdministerTeam({ role, adminRank });
 
+  // effectiveOrgId: use the session org when available; fall back to the default ORG for
+  // superusers/owners who have no active membership (e.g. platform admin with no org assignment).
+  const [effectiveOrgId, setEffectiveOrgId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (orgId) {
+      setEffectiveOrgId(orgId);
+    } else if (allowed && (role === 'owner' || role === 'super_admin')) {
+      getDefaultOrgId().then(setEffectiveOrgId).catch(() => {});
+    }
+  }, [orgId, role, allowed]);
+
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,14 +54,14 @@ export default function TeamAdminPage() {
   const [managingId, setManagingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    if (!orgId) { setLoading(false); return; }
+    if (!effectiveOrgId) { setLoading(false); return; }
     setLoading(true);
-    try { setMembers(await listOrgMembers(orgId)); setError(null); }
+    try { setMembers(await listOrgMembers(effectiveOrgId)); setError(null); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
     finally { setLoading(false); }
     // Refresh org-wide permission grants so the drawer reflects latest state.
-    listOrgPermissions(orgId).then(setOrgPerms).catch(() => {});
-  }, [orgId]);
+    listOrgPermissions(effectiveOrgId).then(setOrgPerms).catch(() => {});
+  }, [effectiveOrgId]);
 
   useEffect(() => { if (allowed) void reload(); }, [allowed, reload]);
 
@@ -58,8 +71,8 @@ export default function TeamAdminPage() {
     listBusinessRoles().then(setBizRoles).catch(() => {});
     listAdminRoles().then(setAdminRoles).catch(() => {});
     listPermissionCatalog().then(setCatalog).catch(() => {});
-    if (orgId) listOrgPermissions(orgId).then(setOrgPerms).catch(() => {});
-  }, [allowed, orgId]);
+    if (effectiveOrgId) listOrgPermissions(effectiveOrgId).then(setOrgPerms).catch(() => {});
+  }, [allowed, effectiveOrgId]);
 
   // Caller's effective admin rank (superuser/owner → Infinity so all ranks are assignable).
   const callerRank = (role === 'owner' || role === 'super_admin') ? Infinity : (adminRank ?? 0);
@@ -110,7 +123,7 @@ export default function TeamAdminPage() {
     <section className="p-6 space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Équipe</h1>
-        {orgId && <InviteMemberDialog orgId={orgId} onDone={reload} />}
+        {effectiveOrgId && <InviteMemberDialog orgId={effectiveOrgId} onDone={reload} />}
       </header>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {loading ? <p className="text-sm text-muted-foreground">Chargement…</p>
@@ -146,7 +159,7 @@ export default function TeamAdminPage() {
         )}
       <MemberPermissionsDrawer
         member={managing}
-        orgId={orgId ?? ''}
+        orgId={effectiveOrgId ?? ''}
         catalog={catalog}
         orgPermissions={orgPerms}
         canManageOrgDefaults={canManageOrgDefaults}

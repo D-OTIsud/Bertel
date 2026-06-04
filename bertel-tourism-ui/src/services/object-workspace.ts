@@ -3286,6 +3286,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     sustainabilityModule,
     tagsModule,
     contactsModule,
+    characteristicsModule,
     permissions,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
@@ -3302,6 +3303,13 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     // (saveObjectWorkspaceContacts) already queries. Enriched unconditionally so the
     // editor's contact type/role dropdowns are populated, not behind the optional gate.
     getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
+    // Amenity / payment / environment / language CATALOGS live in ref_amenity, ref_code and
+    // ref_language — basic reference tables the save path already queries. Enriched unconditionally
+    // (like contacts above) so the editor's selectors are populated with the full catalog from the
+    // database, not just the object's existing values (which is all get_object_resource carries).
+    // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
+    // See lot1_mapping_decisions §32.
+    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
     getObjectWorkspacePermissions(objectId),
   ]);
 
@@ -3317,6 +3325,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     sustainability: sustainabilityModule,
     tags: tagsModule,
     contacts: contactsModule,
+    characteristics: characteristicsModule,
     distribution: parsedModules.distribution,
     provider: parsedModules.provider,
   };
@@ -3325,7 +3334,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
     const [
       mediaModule,
-      characteristicsModule,
       capacityPoliciesModule,
       pricingModule,
       roomsModule,
@@ -3337,7 +3345,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
       membershipsModule,
     ] = await Promise.all([
       getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
-      getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
       getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
       getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
       getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
@@ -3351,7 +3358,6 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
 
     Object.assign(modules, {
       media: mediaModule,
-      characteristics: characteristicsModule,
       capacityPolicies: capacityPoliciesModule,
       pricing: pricingModule,
       rooms: roomsModule,

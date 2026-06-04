@@ -55,6 +55,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_sp4_list_org_members.sql
 \echo '== 8f     migration_object_status_lifecycle.sql  (status state-machine RPC; after SP-1 guard) =='
 \ir migration_object_status_lifecycle.sql
+\echo '== 8g     migration_object_act_rls.sql  (gate object_act reads/writes; after P0.3 read gate) =='
+\ir migration_object_act_rls.sql
+\echo '== 8h     migration_rls_ref_and_bak_cleanup.sql  (RLS on 3 ref_* tables; drop *_bak backups) =='
+\ir migration_rls_ref_and_bak_cleanup.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

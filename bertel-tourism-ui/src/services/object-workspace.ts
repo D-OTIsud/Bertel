@@ -2679,7 +2679,7 @@ async function getObjectWorkspaceItineraryModule(
   const [itiResult, practiceRefsResult, practicesResult, stagesResult] = await Promise.allSettled([
     client
       .from('object_iti')
-      .select('distance_km, duration_hours, difficulty_level, elevation_gain, is_loop, open_status, status_note, geom')
+      .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
       .eq('object_id', objectId)
       .maybeSingle(),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_practice').order('position', { ascending: true }),
@@ -2713,22 +2713,15 @@ async function getObjectWorkspaceItineraryModule(
       }))
     : baseModule.stages;
 
-  // object_iti stores duration in hours; the editor's durationMin field is minutes
-  // (BlockITI divides by 60 to display hours). The table has a single elevation_gain
-  // column and no negative-elevation column — elevationNegativeM keeps whatever the
-  // detail payload supplied via baseModule.
-  const durationHours = Number(row.duration_hours);
-  const durationMinValue = row.duration_hours != null && Number.isFinite(durationHours)
-    ? String(Math.round(durationHours * 60))
-    : baseModule.durationMin;
-
+  // object_iti.duration_min is stored in minutes (greenfield retype from duration_hours); read it
+  // directly — no hours->minutes round-trip. elevation_loss carries descent (was unavailable before).
   return {
     ...baseModule,
     distanceKm: readString(row.distance_km, baseModule.distanceKm),
-    durationMin: durationMinValue,
+    durationMin: readString(row.duration_min, baseModule.durationMin),
     difficultyLevel: readString(row.difficulty_level, baseModule.difficultyLevel),
     elevationPositiveM: readString(row.elevation_gain, baseModule.elevationPositiveM),
-    elevationNegativeM: baseModule.elevationNegativeM,
+    elevationNegativeM: readString(row.elevation_loss, baseModule.elevationNegativeM),
     loop: row.is_loop == null ? baseModule.loop : readBoolean(row.is_loop),
     openStatus: readString(row.open_status, baseModule.openStatus || 'open'),
     statusNote: readString(row.status_note, baseModule.statusNote),
@@ -4296,6 +4289,28 @@ export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWo
   }
 }
 
+/**
+ * Pure builder for the object_iti upsert row. Maps editor fields to the REAL columns after the
+ * greenfield retype (migration_iti_duration_elevation.sql): durationMin -> duration_min (minutes),
+ * elevationPositiveM -> elevation_gain, elevationNegativeM -> elevation_loss. The previous inline
+ * payload wrote elevation_positive_m / elevation_negative_m, which do NOT exist in object_iti — so
+ * every itinerary save silently failed. geom / cached_gpx are intentionally NOT written here: trace
+ * geometry stays read-only until a write/validation contract exists.
+ */
+export function buildItineraryUpsertPayload(objectId: string, input: ObjectWorkspaceItineraryModule) {
+  return {
+    object_id: objectId,
+    distance_km: toNullableNumber(input.distanceKm),
+    duration_min: toNullableInteger(input.durationMin),
+    difficulty_level: toNullableText(input.difficultyLevel),
+    elevation_gain: toNullableInteger(input.elevationPositiveM),
+    elevation_loss: toNullableInteger(input.elevationNegativeM),
+    is_loop: input.loop,
+    open_status: toNullableText(input.openStatus) ?? 'open',
+    status_note: toNullableText(input.statusNote),
+  };
+}
+
 export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -4314,17 +4329,8 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
   const practiceIdByCode = buildCodeIdMap(practiceRefsResult.data ?? []);
   ensureKnownCodes(input.practiceCodes, practiceIdByCode, 'Pratique itineraire');
 
-  const { error } = await client.from('object_iti').upsert({
-    object_id: objectId,
-    distance_km: toNullableNumber(input.distanceKm),
-    duration_min: toNullableInteger(input.durationMin),
-    difficulty_level: toNullableText(input.difficultyLevel),
-    elevation_positive_m: toNullableInteger(input.elevationPositiveM),
-    elevation_negative_m: toNullableInteger(input.elevationNegativeM),
-    is_loop: input.loop,
-    open_status: toNullableText(input.openStatus) ?? 'open',
-    status_note: toNullableText(input.statusNote),
-  }, { onConflict: 'object_id' });
+  const { error } = await client.from('object_iti')
+    .upsert(buildItineraryUpsertPayload(objectId, input), { onConflict: 'object_id' });
 
   if (error) {
     throw mapMutationError(error, 'Impossible de sauvegarder l itineraire.');

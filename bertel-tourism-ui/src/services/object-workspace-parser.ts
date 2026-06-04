@@ -1864,7 +1864,7 @@ function parseWorkspaceEventModule(raw: Record<string, unknown>): ObjectWorkspac
   };
 }
 
-function parseWorkspaceItineraryModule(raw: Record<string, unknown>): ObjectWorkspaceItineraryModule {
+export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): ObjectWorkspaceItineraryModule {
   const itinerary = readRecord(raw.itinerary ?? raw.object_iti);
   const details = readRecord(raw.itinerary_details);
   const practiceRecords = [
@@ -1889,7 +1889,7 @@ function parseWorkspaceItineraryModule(raw: Record<string, unknown>): ObjectWork
     durationMin: readString(itinerary.duration_min, readString(raw.duration_min, readString(raw.total_duration_min))),
     difficultyLevel: readString(itinerary.difficulty_level, readString(raw.difficulty_level)),
     elevationPositiveM: readString(itinerary.elevation_positive_m, readString(itinerary.elevation_gain, readString(raw.elevation_gain_m))),
-    elevationNegativeM: readString(itinerary.elevation_negative_m, readString(raw.elevation_negative_m)),
+    elevationNegativeM: readString(itinerary.elevation_loss, readString(itinerary.elevation_negative_m, readString(raw.elevation_negative_m))),
     loop: readBoolean(itinerary.is_loop ?? raw.is_loop),
     openStatus: readString(itinerary.open_status, 'open'),
     statusNote: readString(itinerary.status_note),

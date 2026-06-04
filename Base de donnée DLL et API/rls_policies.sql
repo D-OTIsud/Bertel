@@ -129,66 +129,61 @@ $$;
 --   B. Périmètre propre — l'objet est lié à l'ORG du user via object_org_link (tous rôles, non publiés inclus)
 --   C. Périmètre externe publié — org_config.access_scope = 'all_published' ET objet published
 --      (objets non publiés d'autres ORG hors périmètre, cf. §2.3.B du plan)
+-- Set form of the extended read gate: the current user's extended-readable object ids, computed
+-- ONCE. The `object` SELECT policy uses this as a hashed-set membership test (id IN (SELECT ...)),
+-- so the planner hoists it to a single InitPlan instead of evaluating the predicate per row. The
+-- Explorer editor path (status includes 'draft' => MV bypassed => full object scan) otherwise blew
+-- the 8s authenticated statement_timeout by evaluating it once per draft row (see
+-- migration_explorer_rls_setbased.sql / lot1_mapping_decisions.md §35). SECURITY DEFINER so the
+-- base-table reads bypass RLS. MUST stay byte-equivalent to the 4 paths in can_read_extended below
+-- (tests/test_read_gate_setbased.sql enforces it).
+CREATE OR REPLACE FUNCTION api.current_user_extended_object_ids()
+RETURNS SETOF text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
+  SELECT aor.object_id FROM actor_object_role aor
+  WHERE aor.actor_id IN (SELECT api.user_actor_ids())
+  UNION
+  -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
+  SELECT ool.object_id FROM object_org_link ool
+  WHERE ool.org_object_id IN (
+    SELECT aor.object_id FROM actor_object_role aor
+    WHERE aor.actor_id IN (SELECT api.user_actor_ids())
+  )
+  UNION
+  -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
+  SELECT uom.org_object_id FROM user_org_membership uom
+  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+  UNION
+  -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
+  SELECT ool.object_id FROM user_org_membership uom
+  JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+  UNION
+  -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
+  SELECT o.id FROM object o
+  WHERE o.status = 'published'
+    AND EXISTS (
+      SELECT 1 FROM user_org_membership uom
+      JOIN org_config oc ON oc.org_object_id = uom.org_object_id
+      WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+        AND oc.access_scope = 'all_published'
+    );
+$$;
+REVOKE EXECUTE ON FUNCTION api.current_user_extended_object_ids() FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION api.current_user_extended_object_ids() TO anon, authenticated, service_role;
+
+-- Boolean per-row predicate kept as the single gate used by api.can_read_object -> the ~40
+-- object-child read policies (P0.3). Delegates to the set function above (one source of truth);
+-- MUST stay byte-equivalent to it. Was an inline 4-path WITH (see git history); set-based now.
 CREATE OR REPLACE FUNCTION api.can_read_extended(p_object_id text)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, api, auth
 AS $$
-  WITH
-  -- Chemin 1 : accès acteur historique (conservé intact)
-  actor_path AS (
-    SELECT 1
-    FROM actor_object_role aor
-    WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids())
-      AND (
-        aor.object_id = p_object_id
-        OR aor.object_id IN (
-          SELECT ool.org_object_id
-          FROM object_org_link ool
-          WHERE ool.object_id = p_object_id
-        )
-      )
-    LIMIT 1
-  ),
-  -- Chemin 2A : l'objet est l'ORG elle-même (membership actif sur cet objet-ORG)
-  own_org AS (
-    SELECT 1
-    FROM user_org_membership uom
-    WHERE uom.user_id    = auth.uid()
-      AND uom.is_active  = TRUE
-      AND uom.org_object_id = p_object_id
-    LIMIT 1
-  ),
-  -- Chemin 2B : l'objet est dans le périmètre propre de l'ORG du user
-  --   (rattaché via object_org_link, quel que soit le rôle ORG, publiés et non publiés)
-  own_objects AS (
-    SELECT 1
-    FROM user_org_membership uom
-    JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
-    WHERE uom.user_id   = auth.uid()
-      AND uom.is_active = TRUE
-      AND ool.object_id = p_object_id
-    LIMIT 1
-  ),
-  -- Chemin 2C : périmètre externe publié
-  --   L'ORG du user a le scope 'all_published' ET l'objet est published.
-  --   Les objets non publiés d'autres ORG restent hors portée (§2.3.B).
-  external_published AS (
-    SELECT 1
-    FROM user_org_membership uom
-    JOIN org_config oc ON oc.org_object_id = uom.org_object_id
-    JOIN object     o  ON o.id = p_object_id
-    WHERE uom.user_id   = auth.uid()
-      AND uom.is_active = TRUE
-      AND oc.access_scope = 'all_published'
-      AND o.status        = 'published'
-    LIMIT 1
-  )
-  SELECT
-    EXISTS (SELECT 1 FROM actor_path)
-    OR EXISTS (SELECT 1 FROM own_org)
-    OR EXISTS (SELECT 1 FROM own_objects)
-    OR EXISTS (SELECT 1 FROM external_published);
+  SELECT p_object_id IN (SELECT api.current_user_extended_object_ids());
 $$;
 
 -- ── Forward declarations (fresh-apply ordering fix) ─────────────────────────
@@ -874,7 +869,7 @@ END $$;
 CREATE POLICY "public_objects_published" ON object
   FOR SELECT USING (status = 'published');
 CREATE POLICY "extended_objects_org_actor" ON object
-  FOR SELECT USING (api.can_read_extended(id));
+  FOR SELECT USING (id IN (SELECT api.current_user_extended_object_ids()));
 -- Lecture publique des référentiels ITI
 CREATE POLICY "Lecture publique des pratiques ITI" ON ref_code_iti_practice FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des rôles ITI" ON ref_iti_assoc_role FOR SELECT USING (true);

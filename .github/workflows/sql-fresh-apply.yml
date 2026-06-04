@@ -126,6 +126,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_model.sql"
 
+      - name: Read-gate set-based test (object policy via current_user_extended_object_ids; draft ownership)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_read_gate_setbased.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

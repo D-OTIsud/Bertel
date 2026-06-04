@@ -4732,9 +4732,13 @@ WHERE NOT EXISTS (
     AND r.is_published = TRUE
 );
 
--- Batch refresh cached_is_open_now for all objects
--- Should be called via pg_cron every 5 minutes:
--- SELECT cron.schedule('refresh-open-status', '*/5 * * * *', $$SELECT api.refresh_open_status()$$);
+-- Batch refresh cached_is_open_now for all objects.
+-- Scheduled on live via pg_cron. NOTE (2026-06-04): heavy job (~18-22s/run on ~373 published
+-- objects: correlated EXISTS over the opening_* chain + per-object timezone LATERAL). To avoid
+-- periodic instance saturation it runs every 15 min, STAGGERED off the */5 mv_filtered_objects
+-- refresh:  SELECT cron.alter_job(job_id := <id>, schedule := '3,18,33,48 * * * *');
+-- (orig example: SELECT cron.schedule('refresh-open-status','*/5 * * * *',$$SELECT api.refresh_open_status()$$);)
+-- A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_mapping_decisions.md §35).
 CREATE OR REPLACE FUNCTION api.is_opening_period_active_on_date(
   p_all_years BOOLEAN,
   p_date_start DATE,

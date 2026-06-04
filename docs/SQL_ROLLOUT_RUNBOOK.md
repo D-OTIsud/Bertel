@@ -41,6 +41,7 @@ A fresh database MUST be built in this exact order; each step depends on the pre
 8f. `migration_object_status_lifecycle.sql` — **Object status state-machine RPC `api.rpc_set_object_status`** (publish / unpublish / archive / restore) + `api.rpc_publish_object` rewritten as a thin wrapper over it. Gated by `api.user_can_publish_object`; the transition is re-checked by `trg_guard_object_status_change`. After 8b (needs `api.user_can_publish_object` from `rls_policies.sql` + the status guard trigger from `migration_permission_write_paths.sql`).
 8g. `migration_object_act_rls.sql` — **object_act RLS security fix**: `object_act` (the ACT type-extension) shipped with RLS off + 0 policies while anon/authenticated held full table grants, so it was directly readable/writable via PostgREST, bypassing the publication gate. Enables RLS + `read_object_act` (`api.can_read_object`) + `canonical_write_object_act` (`api.user_can_write_object_canonical`), and re-asserts anon/authenticated EXECUTE on the write predicate (P0.3 gotcha). After 8d (needs `api.can_read_object`).
 8h. `migration_rls_ref_and_bak_cleanup.sql` — housekeeping from the 2026-06-04 audit: enables RLS (pub-read / admin-write) on 3 `ref_*` tables that shipped RLS-off (`ref_classification_equivalent_action`, `ref_classification_equivalent_group`, `ref_sustainability_action_group`) and drops 5 leftover `*_bak_20260519_082607z` backup tables (no-op on a fresh DB). After step 6 (needs `api.is_platform_superuser`) and step 2 (the 3 ref tables).
+8i. `migration_explorer_rls_setbased.sql` — **Explorer `statement_timeout` fix**: replaces the per-row `api.can_read_extended(id)` in the `object` SELECT policy `extended_objects_org_actor` with a hashed-set membership test (`id IN (SELECT api.current_user_extended_object_ids())`), so the read predicate is hoisted to a single InitPlan instead of being evaluated once per draft row (the editor Explorer requests `['published','draft']`, bypasses the published-only MV, and scans the full `object` table). Adds the SECURITY DEFINER set fn (`anon`/`authenticated`/`service_role` EXECUTE; the object policy — role `public` — references it) and re-points `api.can_read_extended` to delegate to it. Visibility unchanged (byte-equivalent to the 4 paths; live equivalence-verified). After 8d (needs `api.can_read_extended`). Folded into `rls_policies.sql` ⇒ idempotent no-op on a fresh build.
 9. `ui_whitelabel_branding.sql` — defines `api.is_platform_admin` (a fresh install uses this full file, not the patch).
 10. `media_bucket.sql` — `media` storage bucket + RESTRICTIVE anon/authenticated write-deny.
 11. `seeds_data.sql` — depends on `ref_sustainability_action_group` from step 2.
@@ -166,3 +167,13 @@ FROM object o
 JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location IS TRUE
 WHERE o.status = 'published';
 ```
+
+## Other Scheduled Jobs (pg_cron)
+
+`api.refresh_open_status()` recomputes `object.cached_is_open_now` for published objects. It is **heavy** (~18–22s/run on ~373 objects: correlated EXISTS over the `opening_*` chain + per-object timezone LATERAL). To avoid periodic instance saturation that amplified the Explorer timeout, it runs **every 15 min, staggered** off the `*/5` MV refresh:
+
+```sql
+SELECT cron.alter_job(job_id := <id>, schedule := '3,18,33,48 * * * *');  -- refresh-open-status
+```
+
+"Open now" staleness budget: ≤15 min. A set-based rewrite (sub-second) is a tracked follow-up (`lot1_mapping_decisions.md` §35).

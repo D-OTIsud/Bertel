@@ -498,7 +498,7 @@ BEGIN
       END IF;
       INSERT INTO public.object_capacity (id, object_id, metric_id, value_integer, effective_from, effective_to)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         v_id,
         NULLIF(v_row->>'value_integer', '')::integer,
@@ -562,7 +562,7 @@ BEGIN
         min_group_size, max_group_size, valid_from, valid_to, source
       )
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         NULLIF(v_row->>'conditions', ''),
         NULLIF(v_row->>'discount_percent', '')::numeric,
@@ -597,7 +597,7 @@ BEGIN
         age_min_enfant, age_max_enfant, age_min_junior, age_max_junior, valid_from, valid_to, conditions, source
       )
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         v_id,
         COALESCE(
@@ -623,7 +623,7 @@ BEGIN
       FOR v_child IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(v_row->'periods')) AS t(value) LOOP
         INSERT INTO public.object_price_period (id, price_id, start_date, end_date, start_time, end_time, note)
         VALUES (
-          COALESCE(internal.workspace_uuid(v_child->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_child->>'id'), gen_random_uuid()),
           v_parent_id,
           NULLIF(v_child->>'start_date', '')::date,
           NULLIF(v_child->>'end_date', '')::date,
@@ -688,7 +688,7 @@ BEGIN
       id, object_id, name, date_start, date_end, source_period_id, all_years, name_i18n, extra
     )
     VALUES (
-      COALESCE(internal.workspace_uuid(v_period->>'id'), uuid_generate_v4()),
+      COALESCE(internal.workspace_uuid(v_period->>'id'), gen_random_uuid()),
       p_object_id,
       NULLIF(v_period->>'name', ''),
       NULLIF(v_period->>'date_start', '')::date,
@@ -715,7 +715,7 @@ BEGIN
         id, period_id, schedule_type_id, name, note, name_i18n, note_i18n, extra
       )
       VALUES (
-        COALESCE(internal.workspace_uuid(v_schedule->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_schedule->>'id'), gen_random_uuid()),
         v_period_id,
         v_schedule_type_id,
         NULLIF(v_schedule->>'name', ''),
@@ -730,7 +730,7 @@ BEGIN
       FOR v_time_period IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(v_schedule->'time_periods')) AS t(value) LOOP
         INSERT INTO public.opening_time_period (id, schedule_id, closed, note)
         VALUES (
-          COALESCE(internal.workspace_uuid(v_time_period->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_time_period->>'id'), gen_random_uuid()),
           v_schedule_id,
           COALESCE(NULLIF(v_time_period->>'closed', '')::boolean, false),
           NULLIF(v_time_period->>'note', '')
@@ -756,7 +756,7 @@ BEGIN
         FOR v_frame IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(v_time_period->'time_frames')) AS t(value) LOOP
           INSERT INTO public.opening_time_frame (id, time_period_id, start_time, end_time, recurrence)
           VALUES (
-            COALESCE(internal.workspace_uuid(v_frame->>'id'), uuid_generate_v4()),
+            COALESCE(internal.workspace_uuid(v_frame->>'id'), gen_random_uuid()),
             v_time_period_id,
             NULLIF(v_frame->>'start_time', '')::time,
             NULLIF(v_frame->>'end_time', '')::time,
@@ -859,7 +859,7 @@ BEGIN
         id, object_id, name, description, position, name_i18n, description_i18n, extra
       )
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         NULLIF(v_row->>'name', ''),
         NULLIF(v_row->>'description', ''),
@@ -880,7 +880,7 @@ BEGIN
         END IF;
         INSERT INTO public.object_iti_stage_media (id, stage_id, media_id, position)
         VALUES (
-          COALESCE(internal.workspace_uuid(v_child->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_child->>'id'), gen_random_uuid()),
           v_stage_id,
           v_id,
           COALESCE(NULLIF(v_child->>'position', '')::integer, 0)
@@ -905,7 +905,7 @@ BEGIN
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'sections')) AS t(value) LOOP
       INSERT INTO public.object_iti_section (id, parent_object_id, name, position, name_i18n, extra)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         NULLIF(v_row->>'name', ''),
         COALESCE(NULLIF(v_row->>'position', '')::integer, v_inserted),
@@ -924,7 +924,7 @@ BEGIN
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'profiles')) AS t(value) LOOP
       INSERT INTO public.object_iti_profile (id, object_id, position_m, elevation_m)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         NULLIF(v_row->>'position_m', '')::numeric,
         NULLIF(v_row->>'elevation_m', '')::numeric
@@ -1006,7 +1006,7 @@ BEGIN
       END IF;
       INSERT INTO public.object_relation (id, source_object_id, target_object_id, relation_type_id, distance_m, note, position)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         v_row->>'target_object_id',
         v_id,
@@ -1105,7 +1105,7 @@ BEGIN
     FOR v_place IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'places')) AS t(value) LOOP
       INSERT INTO public.object_place (id, object_id, label, slug, is_primary, position, effective_from, effective_to, extra)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_place->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_place->>'id'), gen_random_uuid()),
         p_object_id,
         NULLIF(v_place->>'label', ''),
         NULLIF(v_place->>'slug', ''),
@@ -1124,7 +1124,7 @@ BEGIN
           lieu_dit, direction, latitude, longitude, altitude_m, is_main_location, position
         )
         VALUES (
-          COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
           v_place_id,
           NULLIF(v_row->>'address1', ''),
           NULLIF(v_row->>'address1_suite', ''),
@@ -1151,7 +1151,7 @@ BEGIN
           description_offre_hors_zone_i18n, sanitary_measures_i18n, description_adapted_i18n
         )
         VALUES (
-          COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
           v_place_id,
           NULLIF(v_row->>'description', ''),
           NULLIF(v_row->>'description_chapo', ''),
@@ -1186,7 +1186,7 @@ BEGIN
           is_main, is_published, position, rights_expires_at, visibility, kind, title_i18n, description_i18n, org_object_id
         )
         VALUES (
-          COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+          COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
           v_place_id,
           v_id,
           NULLIF(v_row->>'title', ''),
@@ -1219,7 +1219,7 @@ BEGIN
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'zones')) AS t(value) LOOP
       INSERT INTO public.object_zone (id, object_id, insee_commune, position)
       VALUES (
-        COALESCE(internal.workspace_uuid(v_row->>'id'), uuid_generate_v4()),
+        COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
         p_object_id,
         v_row->>'insee_commune',
         COALESCE(NULLIF(v_row->>'position', '')::integer, v_inserted)

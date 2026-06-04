@@ -5,17 +5,18 @@ import { RelationPicker } from '../widgets/RelationPicker';
 import type { ObjectSearchResult } from '../useObjectSearch';
 import type { ObjectWorkspaceRelatedObjectItem } from '../../../services/object-workspace-parser';
 
+// Canonical codes from ref_object_relation_type — api.save_object_relations validates relation_type_code
+// against that table, and loaded relations carry these codes, so the editor must offer exactly them.
 const RELATION_TYPE_OPTIONS = [
-  { v: 'based_at_site', l: 'Situé sur le site' },
-  { v: 'uses_itinerary', l: 'Utilise un itinéraire' },
+  { v: 'based_at_site', l: 'Se pratique sur le site' },
+  { v: 'uses_itinerary', l: "Suit l'itinéraire" },
+  { v: 'nearby', l: 'À proximité de' },
   { v: 'part_of', l: 'Fait partie de' },
-  { v: 'part_of_park', l: "Fait partie d'un parc" },
-  { v: 'inside_zone', l: 'Dans une zone' },
-  { v: 'recommended_by', l: 'Recommandé par' },
-  { v: 'mentioned_in', l: 'Mentionné dans' },
-  { v: 'operated_by', l: 'Exploité par' },
-  { v: 'near', l: 'À proximité' },
-  { v: 'related', l: 'Lié' },
+  { v: 'parent_of', l: 'Parent de' },
+  { v: 'managed_by', l: 'Géré par' },
+  { v: 'partner_of', l: 'Partenaire de' },
+  { v: 'recommended_with', l: 'Recommandé avec' },
+  { v: 'sister', l: 'Objet associé' },
 ];
 
 export function SectionRelations({ editor, folded, objectId = '' }: SectionProps) {
@@ -48,8 +49,8 @@ export function SectionRelations({ editor, folded, objectId = '' }: SectionProps
         type: result.type,
         status: result.status,
         relationTypeId: '',
-        relationTypeCode: 'related',
-        relationTypeLabel: 'Lié',
+        relationTypeCode: 'sister',
+        relationTypeLabel: 'Objet associé',
         direction: 'out',
         note: '',
         distanceM: '',

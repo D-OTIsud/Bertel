@@ -1562,7 +1562,7 @@ async function getObjectWorkspaceRelationshipsModule(
       organizationLinkWriteUnavailableReason: 'Le module D2 est visible dans le shell, mais son edition n est pas encore branchee sur un contrat workspace stable.',
       actorWriteUnavailableReason: 'Le module D2 reste non editable tant que la gestion acteur/contact n a pas de write-path workspace fiable.',
       actorConsentUnavailableReason: "Les consentements d'acteurs ne sont pas exposes dans le workspace objet actuel.",
-      relatedObjectWriteUnavailableReason: 'Les relations objet restent non editables depuis le workspace tant que leur write-path n est pas verrouille.',
+      relatedObjectWriteUnavailableReason: null,
     };
   }
 
@@ -1571,7 +1571,7 @@ async function getObjectWorkspaceRelationshipsModule(
     organizationLinkWriteUnavailableReason: "Les rattachements `object_org_link` restent en lecture seule: le live actuel n'expose pas de write-path workspace pour ce module.",
     actorWriteUnavailableReason: "Les roles acteur et leurs canaux restent en lecture seule: `actor_object_role` et `actor_channel` ne sont pas gerables proprement depuis le client workspace.",
     actorConsentUnavailableReason: "Les consentements `actor_consent` ne sont pas lisibles pour ce contexte de travail et restent hors du module D2.",
-    relatedObjectWriteUnavailableReason: "Les relations `object_relation` restent en lecture seule tant que leur write-path live reste reserve a l'administration.",
+    relatedObjectWriteUnavailableReason: null,
   };
 }
 
@@ -4512,6 +4512,42 @@ export async function saveObjectWorkspaceLegal(objectId: string, input: ObjectWo
     }
 
   }
+}
+
+/**
+ * Pure builder for the api.save_object_relations payload. Maps the editor's OUTGOING related-object
+ * rows (direction !== 'in') to the RPC shape; INCOMING relations are owned by other objects and are
+ * never written from here. The relation record id isn't tracked in the UI, so it's omitted and the
+ * RPC regenerates it (it deletes every relation whose source is this object, then re-inserts the payload).
+ */
+export function buildRelationsPayload(
+  input: ObjectWorkspaceRelationshipsModule,
+): Array<{ target_object_id: string; relation_type_code: string; distance_m: string; note: string; position: number }> {
+  return input.relatedObjects
+    .filter((item) => item.direction !== 'in')
+    .map((item, index) => ({
+      target_object_id: item.id,
+      relation_type_code: item.relationTypeCode,
+      distance_m: item.distanceM,
+      note: item.note,
+      position: index,
+    }));
+}
+
+export async function saveObjectWorkspaceRelationships(
+  objectId: string,
+  input: ObjectWorkspaceRelationshipsModule,
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  await callObjectWorkspaceRpc(
+    'save_object_relations',
+    objectId,
+    { object_relations: buildRelationsPayload(input) },
+    "Impossible de sauvegarder les liens vers d'autres fiches.",
+  );
 }
 
 export async function saveObjectWorkspaceMemberships(objectId: string, input: ObjectWorkspaceMembershipModule): Promise<void> {

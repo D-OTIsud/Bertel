@@ -35,6 +35,7 @@ import {
   saveObjectWorkspaceMenus,
   saveObjectWorkspaceOpenings,
   saveObjectWorkspacePricing,
+  saveObjectWorkspaceRelationships,
   saveObjectWorkspaceRooms,
   saveObjectWorkspaceSustainability,
   saveObjectWorkspaceTags,
@@ -59,6 +60,7 @@ import type {
   ObjectWorkspaceMenusModule,
   ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
+  ObjectWorkspaceRelationshipsModule,
   ObjectWorkspaceRoomsModule,
   ObjectWorkspaceSustainabilityModule,
   ObjectWorkspaceTagsModule,
@@ -86,7 +88,8 @@ export type SaveWorkspaceModuleInput =
   | { moduleId: 'memberships'; value: ObjectWorkspaceMembershipModule }
   | { moduleId: 'legal'; value: ObjectWorkspaceLegalModule }
   | { moduleId: 'sustainability'; value: ObjectWorkspaceSustainabilityModule }
-  | { moduleId: 'tags'; value: ObjectWorkspaceTagsModule };
+  | { moduleId: 'tags'; value: ObjectWorkspaceTagsModule }
+  | { moduleId: 'relationships'; value: ObjectWorkspaceRelationshipsModule };
 
 function useExplorerFilters() {
   const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
@@ -302,6 +305,10 @@ export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
 
       if (input.moduleId === 'memberships') {
         return saveObjectWorkspaceMemberships(objectId, input.value);
+      }
+
+      if (input.moduleId === 'relationships') {
+        return saveObjectWorkspaceRelationships(objectId, input.value);
       }
 
       if (input.moduleId === 'legal') {

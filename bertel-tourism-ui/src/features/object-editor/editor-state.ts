@@ -82,7 +82,6 @@ export const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModu
 export const READONLY_MODULES = new Set<WorkspaceModuleId>([
   'sync-identifiers',
   'provider-follow-up',
-  'relationships',
   'distribution',
   'provider',
 ]);

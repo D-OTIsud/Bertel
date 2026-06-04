@@ -70,6 +70,13 @@ jobs:
               'internal.workspace_assert_can_write_object missing (object_workspace_safe_write_rpcs.sql not applied)';
             ASSERT (SELECT count(*) FROM storage.buckets WHERE id='media') = 1,
               'media storage bucket missing (media_bucket.sql not applied)';
+            ASSERT (SELECT relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public' AND c.relname='object_act'),
+              'object_act RLS not enabled (migration_object_act_rls.sql not applied)';
+            ASSERT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public' AND c.relrowsecurity AND c.relname IN
+                      ('ref_classification_equivalent_action','ref_classification_equivalent_group','ref_sustainability_action_group')) = 3,
+              'ref_* cleanup RLS not enabled (migration_rls_ref_and_bak_cleanup.sql not applied)';
             RAISE NOTICE 'Smoke checks passed: manifest reproduced the expected schema.';
           END$$;
           SQL
@@ -98,6 +105,11 @@ jobs:
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_p03_read_gate_behavior.sql"
+
+      - name: object_act RLS test (anon reads published, not draft; anon cannot write)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_act_rls.sql"
 
       - name: SP-4 roster RPC test (rpc_list_org_members auth + shape)
         env:

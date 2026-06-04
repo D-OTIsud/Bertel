@@ -449,9 +449,10 @@ Table object_legal {
 Table object_iti {
   object_id text [pk]
   distance_km decimal
-  duration_hours decimal
+  duration_min integer
   difficulty_level integer
   elevation_gain integer
+  elevation_loss integer
   is_loop boolean
   geom geography
   open_status text

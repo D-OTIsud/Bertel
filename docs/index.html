@@ -3820,9 +3820,10 @@ const json = await res.json();</pre>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead>
               <tbody>
                 <tr><td><code>distance_km</code></td><td><code>number</code></td><td>Distance totale (km)</td></tr>
-                <tr><td><code>duration_hours</code></td><td><code>number</code></td><td>Durée moyenne (h)</td></tr>
+                <tr><td><code>duration_min</code></td><td><code>number</code></td><td>Durée (min)</td></tr>
                 <tr><td><code>difficulty_level</code></td><td><code>number</code></td><td>Niveau (échelle interne)</td></tr>
                 <tr><td><code>elevation_gain</code></td><td><code>number</code></td><td>Dénivelé + (m)</td></tr>
+                <tr><td><code>elevation_loss</code></td><td><code>number</code></td><td>Dénivelé - (m)</td></tr>
                 <tr><td><code>is_loop</code></td><td><code>boolean</code></td><td>Boucle ?</td></tr>
                 <tr><td><code>track</code></td><td><code>string | null</code></td><td>KML/GPX (XML texte) — uniquement si demandé</td></tr>
                 <tr><td><code>track_format</code></td><td><code>"kml" | "gpx" | null</code></td><td>Format du tracé si présent</td></tr>

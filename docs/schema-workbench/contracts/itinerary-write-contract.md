@@ -8,15 +8,15 @@ The itinerary module is partially writable today. Basic `object_iti` fields and 
 
 `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)` is defined in `Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql`.
 
-The RPC covers `object_iti_info`, stages, stage media, sections, profiles, and associated objects. Geometry keys are accepted only as skipped fields and return warnings until a geometry validation contract exists. Basic `object_iti` fields stay on the existing save path until the live schema mismatch around duration/elevation column names is resolved.
+The RPC covers `object_iti_info`, stages, stage media, sections, profiles, and associated objects. Geometry keys are accepted only as skipped fields and return warnings until a geometry validation contract exists. Basic `object_iti` summary fields (distance, `duration_min`, difficulty, `elevation_gain`, `elevation_loss`, loop, open status, status note) stay on the direct `object_iti` upsert save path (`buildItineraryUpsertPayload`); the earlier duration/elevation column-name mismatch is **resolved** — greenfield retype to `duration_min` (minutes) + added `elevation_loss`.
 
 ## Editable Fields
 
 Already safe:
 - distance.
-- duration, with a frontend/schema mapping gap to resolve between `duration_min` and DB `duration_hours`.
+- duration — **resolved**: the DB column is now `duration_min` (minutes), matching the editor field; no conversion on read/write.
 - difficulty.
-- elevation gain, with a frontend/schema mapping gap to resolve for negative elevation.
+- elevation gain (`elevation_gain`) and negative elevation (`elevation_loss`) — **resolved**: both columns exist; the editor maps elevationPositiveM → `elevation_gain` and elevationNegativeM → `elevation_loss`.
 - loop flag.
 - open status.
 - status note.

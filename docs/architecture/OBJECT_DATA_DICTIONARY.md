@@ -1,8 +1,8 @@
 # Object Data Dictionary — Bertel V3
 
 **Type:** Reference document  
-**Status:** Canonical for V1  
-**Sources:** `schema_unified.sql`, `api_views_functions.sql`, `rls_policies.sql`, `seeds_data.sql`, `ui_whitelabel_branding.sql`, `migration_sustainability_v5.sql`, `bertel-object-workspace-canonical-map.md`, `domain.ts`, `bertel-tourism-ui/src/types/`, `bertel-tourism-ui/src/services/`  
+**Status:** Canonical for V1 — reconciled against the **live** Supabase DB on 2026-06-04 (live-DB gaps from that audit were **closed** the same day — see Appendix F)  
+**Sources (authority order):** fresh-apply manifest `Base de donnée DLL et API/ci_fresh_apply.sql` + `docs/SQL_ROLLOUT_RUNBOOK.md` → live Supabase DB (project `ryycrdhlkmzpxwwwwupy`, introspected 2026-06-04) → `schema_unified.sql`, migrations (`migration_permission_write_paths{,_b}.sql`, `migration_rls_read_gate_p03.sql`, `migration_object_status_lifecycle.sql`, `migration_object_act_rls.sql`, `migration_rls_ref_and_bak_cleanup.sql`, `migration_sustainability_v5.sql`, `migration_room_type_ref.sql`, `migration_tag_link_position.sql`), `api_views_functions.sql`, `rls_policies.sql`, `object_workspace_safe_write_rpcs.sql`, `object_workspace_gap_rpcs.sql`, `media_bucket.sql`, `seeds_data.sql`, `ui_whitelabel_branding.sql` → frontend `bertel-tourism-ui/src/types/domain.ts`, `src/services/object-workspace.ts`, `src/services/object-workspace-parser.ts`, `src/features/object-editor/section-config.ts`, `src/features/object-editor/sections/section-registry.tsx` → legacy `bertel-object-workspace-canonical-map.md`.  
 **Purpose:** Single source of truth describing every data capacity an Object can hold, its supporting infrastructure (users, actors, security, performance), and how it maps to business logic, API functions, and UI panels.
 
 **Coverage note:** This dictionary documents object-facing data plus the governance infrastructure that changes visibility, permissions, publication behavior, synchronization, and API payload shape. Repetitive physical implementations such as `ref_code_*` partitions and default partitions are documented through their canonical parent model unless a child table introduces distinct business semantics. For narrow junction tables, the focus is on business-significant columns and invariants rather than repeating generic audit timestamps on every row.
@@ -431,6 +431,8 @@ Key locked codes (V5 canonical, 2026-03-21):
 
 > **Accessibility evidence model:** The platform now uses two parallel evidence paths for accessibility discovery. Official label evidence comes from `LBL_TOURISME_HANDICAP` classifications plus `subvalue_ids`, while amenity-derived evidence comes from accessibility amenities whose `ref_amenity.extra.disability_types` is populated. Adapted payloads expose both `accessibility_labels` and `accessibility_amenity_coverage`.
 
+> **Label equivalence & coverage (added post-2026-05-26):** A scheme requirement can also be satisfied by *equivalent* evidence — `ref_classification_equivalent_action` / `ref_classification_equivalent_group` map a classification scheme to equivalent sustainability actions/groups, surfaced through views `v_object_classification_or_equivalent_scheme` (ranked label admission — exact granted = rank 0, equivalent evidence = rank 1) and `v_object_classification_coverage` (per-scheme action coverage %). Drives the `label_scheme_ranked` explorer filter (Appendix C). See §5.10.
+
 ---
 
 ### Panel C3 — Eco-responsibility (`object_sustainability_action`, `object_sustainability_action_label`)
@@ -490,8 +492,7 @@ Key locked codes (V5 canonical, 2026-03-21):
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `object_id` | `TEXT` (PK/FK) | Yes | Parent object. |
-| `has_policy` | `BOOLEAN` | Yes | Whether the object has declared a pet policy at all. Distinguishes "no policy set" from "pets refused". |
-| `accepted` | `BOOLEAN` | Yes | Whether pets are accepted. |
+| `accepted` | `BOOLEAN` | Yes | Whether pets are accepted. (There is **no** `has_policy` column — the absence of a row means "no policy set".) |
 | `conditions` | `TEXT` | No | Conditions (size limits, deposit, specific areas, etc.). |
 
 ---
@@ -703,9 +704,11 @@ Key locked codes (V5 canonical, 2026-03-21):
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `id` | `UUID` | Yes | Primary key. |
-| `code` | `TEXT` | Yes | Unique template code. Normalized (`immutable_unaccent(lower(code))`). |
+| `code` | `TEXT` | No | Optional template code. |
 | `name` | `TEXT` | Yes | Human-readable template name. |
-| `description` | `TEXT` | No | What this audit evaluates. |
+| `scheme_id` | `UUID` (FK → `ref_classification_scheme`) | Yes | Classification scheme this template scores against. |
+| `classification_value_id` | `UUID` (FK → `ref_classification_value`) | No | Specific classification value (e.g., star level) the template targets. |
+| `passing_score_required` | `INTEGER` | Yes | Minimum total score required to pass. Default: `0`. |
 | `is_active` | `BOOLEAN` | Yes | Whether this template is available for new audit sessions. Default: `true`. |
 | `metadata` | `JSONB` | No | Extension data (scoring weights, methodology reference, etc.). |
 
@@ -716,10 +719,11 @@ Key locked codes (V5 canonical, 2026-03-21):
 | `id` | `UUID` | Yes | Primary key. |
 | `template_id` | `UUID` (FK → `audit_template`) | Yes | Parent template this criterion belongs to. |
 | `code` | `TEXT` | Yes | Unique code within its template. |
-| `label` | `TEXT` | Yes | Human-readable criterion label. |
-| `weight` | `NUMERIC(5,2)` | No | Scoring weight for this criterion. Default: 1. |
-| `position` | `INTEGER` | No | Display order within the template. |
-| `is_active` | `BOOLEAN` | Yes | Whether this criterion is used in new sessions. Default: `true`. |
+| `question` | `TEXT` | Yes | The criterion text / question the auditor evaluates. |
+| `max_points` | `INTEGER` | Yes | Maximum points awardable (CHECK `> 0`). |
+| `is_mandatory` | `BOOLEAN` | Yes | Whether this criterion is mandatory. Default: `false`. |
+| `position` | `INTEGER` | Yes | Display order within the template. Default: `0`. |
+| `metadata` | `JSONB` | No | Extension data. |
 
 > **Audit flow:** An `audit_session` references a template and an object. Each `audit_result` row scores one criterion within the session. Admin-only access via RLS.
 
@@ -784,6 +788,13 @@ Key locked codes (V5 canonical, 2026-03-21):
 | `document_requested_at` / `document_delivered_at` | `TIMESTAMPTZ` | No | Document request/delivery tracking for compliance workflows. |
 | `note` | `TEXT` | No | Internal compliance notes. |
 
+**Legal projection views (read surfaces):**
+
+| View | Purpose | Security |
+|------|---------|----------|
+| `v_active_legal_records` | Denormalized projection: `object_legal` ⋈ `object` ⋈ `ref_legal_type`. Exposes `object_name`/`object_type`, legal `type_code`/`type_name`/`category`, the record `value`, dates, `status`, request/delivery timestamps, and a computed `days_until_expiry` (`valid_to − CURRENT_DATE`, NULL when open-ended). Despite the name it is **not** filtered to `status='active'` — it is the flat reader the compliance surfaces build on. | `security_invoker = true` — runs with the **caller's** privileges, so the underlying `object_legal` RLS read gate (`can_read_extended`) applies (no RLS bypass). |
+| `v_expiring_legal_records` | `v_active_legal_records` filtered to records expiring within the next 30 days (`valid_to` between `CURRENT_DATE` and `CURRENT_DATE + 30d`), ordered by `valid_to`. Drives expiry alerts / compliance dashboards. | Inherits `security_invoker` through its base view. |
+
 ---
 
 ## 3. Conditional Modules by Object Type
@@ -808,6 +819,8 @@ These panels only appear when the `object_type` matches.
 | `open_status` | `TEXT` | No | Current trail status: `open`, `closed`, `partially_closed`, `warning`. |
 | `status_note` | `TEXT` | No | Human-readable note explaining the status (e.g., storm damage on section 3). |
 | `status_document_id` | `UUID` (FK) | No | Official document backing the status change. |
+
+> ⚠️ **Editor write reality (audited 2026-06-04 — front/DB drift, not yet fixed):** the ITI summary save in `bertel-tourism-ui/src/services/object-workspace.ts` (`saveObjectWorkspaceItinerary`, ~L4317) does a direct `.from('object_iti').upsert(...)` writing **`duration_min`, `elevation_positive_m`, `elevation_negative_m` — columns that do not exist** on `object_iti` (the table has `duration_hours` + `elevation_gain`). Those three fields therefore fail to persist. The read/parser path also reads `duration_min` (vs DB `duration_hours`). `geom` is read-only in the editor (no write/validation contract). A nested write RPC `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)` **exists** but the summary path does not use it. **Default resolution (no DDL change): adapt the front to write `duration_hours`/`elevation_gain`, or route through the RPC** — adding columns is gated on an explicit product decision. Tracked with the §15 Relations/ITI write-traps in `lot1_mapping_decisions.md` §24 / P1.2. The full ITI sub-object matrix (stages, stage media, sections, profile, associated objects, incoming/outgoing relations) + the `itinerary` / `itinerary_details` / `outgoing_relations` / `incoming_relations` payload contract is a **deferred** dictionary pass.
 
 Additional ITI sub-tables:
 - `object_iti_practice` (M:N): Sports practices applicable to this trail (hiking, mountain bike, horse riding, etc.)
@@ -838,6 +851,8 @@ An ACT is a **commercial, supervised, bookable activity** (guided hike, surf les
 | `equipment_provided` | `BOOLEAN` | Yes | Whether the operator provides required equipment. Default: `false`. |
 
 > **Invariant:** The operator of an ACT must be an ACTOR (`actor_object_role`), never an ORG. The meetup location is stored in `object_location`. Links to a physical site or trail are stored in `object_relation`.
+
+> ✅ **Security gap closed (2026-06-04):** Earlier, unlike every other object-child table, `object_act` shipped with **RLS disabled** and zero policies (confirmed in both the live DB and `rls_policies.sql` — it was never added), so it was directly readable/writable through PostgREST by any role, bypassing the gates protecting its siblings. Fixed by **`migration_object_act_rls.sql`**: `ENABLE ROW LEVEL SECURITY` + `read_object_act` (`api.can_read_object`) + `canonical_write_object_act` (`api.user_can_write_object_canonical`, USING + WITH CHECK), keeping `anon`/`authenticated` EXECUTE on the write predicate (the P0.3 gotcha). Applied to live and folded into the fresh-apply manifest (step 8g) with a behavioral test (`tests/test_object_act_rls.sql`). See Appendix F.
 
 ---
 
@@ -887,6 +902,7 @@ Menu item sub-tables:
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `code` | `TEXT` | Yes | Internal code for this room type. Unique per object. |
+| `room_type_id` | `UUID` (FK → `ref_code` `room_type` domain) | No | Optional link to the canonical room-type vocabulary (added 2026-05-21, migration `room_type_ref`). |
 | `name` | `TEXT` | Yes | Display name (e.g., "Superior Double", "Studio"). `name_i18n` for translations. |
 | `description` | `TEXT` | No | Room description. `description_i18n` for translations. |
 | `capacity_adults` / `capacity_children` / `capacity_total` | `INTEGER` | No | Occupancy caps. |
@@ -1099,11 +1115,14 @@ These tables are not part of the Object workspace panels but are critical infras
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `id` | `UUID` | Yes | Primary key. |
-| `url` | `TEXT` | No | Storage URL or external reference. |
-| `title` | `TEXT` | No | Document title. |
-| `issuer` | `TEXT` | No | Issuing authority or organization. |
+| `url` | `TEXT` | Yes | Storage URL or external reference. Non-null. |
+| `title` | `TEXT` | No | Document title. `title_i18n` (JSONB) for translations. |
+| `issuer` | `TEXT` | No | Issuing authority or organization. `issuer_i18n` (JSONB) for translations. |
+| `description` | `TEXT` | No | Free-text description. `description_i18n` (JSONB) for translations. |
+| `icon_url` | `TEXT` | No | Optional icon / asset URL. |
+| `position` | `INTEGER` | No | Display order. |
 | `valid_from` / `valid_to` | `DATE` | No | Document validity period. |
-| `metadata` | `JSONB` | No | Additional document attributes. |
+| `extra` | `JSONB` | No | Extension field. (There is **no** `metadata` column — it is `extra`.) |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | Yes | Timestamps. |
 
 ---
@@ -1209,6 +1228,7 @@ All physical `ref_code_*` partitions inherit the same columns, indexes, and RLS 
 | `target_pk` | `TEXT` | Yes | Primary-key value of the tagged row. |
 | `created_by` | `UUID` (FK → `auth.users`) | No | Audit author. |
 | `created_at` | `TIMESTAMPTZ` | Yes | Link creation timestamp. |
+| `position` | `INTEGER` | Yes | Display order of the tag on its target (added 2026-05-21, migration `tag_link_position`; written by `api.save_object_workspace_tags`). Default: `0`. |
 | `extra` | `JSONB` | No | Extensible metadata on the link itself. |
 
 > **API payload note:** `api.get_object_resource()` returns enriched object tags as `[{ slug, name, color, icon, icon_url }]`. Explorer tag filters also match `ref_tag.slug`, not a legacy `code`.
@@ -1302,6 +1322,10 @@ These tables are smaller than the core object panels but are still architectural
 | `ref_object_relation_type` | Controlled relation list for `object_relation` | Defines typed object-to-object semantics such as child/parent, based_at_site, uses_itinerary. |
 | `ref_iti_assoc_role` | Controlled relation list for itinerary-associated objects | Distinguishes trailhead, parking, viewpoint, service point, and similar route-linked objects. |
 | `ref_sustainability_action_category` | Grouping layer for sustainability actions | Organizes the `ref_sustainability_action` catalog into business-friendly buckets. |
+| `ref_sustainability_action` | Canonical sustainability action catalog (V5) | Carries `category_id`, `group_id` (→ `ref_sustainability_action_group`), `code`, `label`, `external_code`, `action_ui_priority`, `sort_order`. The atom assigned via `object_sustainability_action` (Panel C3). |
+| `ref_sustainability_action_group` | Mid-level grouping within a category (added post-2026-05-26) | Buckets actions under a category for UI grouping. ⚠️ RLS is currently **disabled** on this table (see §8). |
+| `ref_classification_scheme` / `ref_classification_value` | Classification / label vocabulary | Schemes (`is_distinction`, `selection`, `display_group`) and their values (`ordinal`, `parent_id`) consumed by `object_classification` (Panels A2 / C2). |
+| `ref_classification_equivalent_action` / `ref_classification_equivalent_group` | Label ↔ action/group equivalence (added post-2026-05-26) | Power "or-equivalent" label search expansion — a classification scheme can be satisfied by equivalent sustainability actions/groups. Surfaced through views `v_object_classification_or_equivalent_scheme` (ranked admission) and `v_object_classification_coverage` (per-scheme coverage %). ⚠️ RLS currently **disabled** on both (see §8). |
 
 ---
 
@@ -1430,14 +1454,19 @@ The `api` schema exposes all data through PostgreSQL RPC functions, SECURITY DEF
 | Function | Purpose |
 |----------|---------|
 | `api.rpc_create_object()` | Secure object-creation surface. Forces `draft` status, sets `created_by`, and relies on permission + active ORG checks. |
-| `api.rpc_publish_object()` | Transitions an object to `published` status with validation. |
+| `api.rpc_publish_object()` | Publishes / unpublishes an object (`status` → `published` / `draft`) with validation. Gated by `user_can_publish_object`. |
+| `api.rpc_set_object_status()` | Generic status setter (`draft` / `published` / `archived` / `hidden`) for the editor status-lifecycle (added 2026-06-03, migration `object_status_lifecycle`). Status transitions are enforced by `trg_guard_object_status_change`. |
+| `api.rpc_write_org_description()` | The **only** writer of org-scoped `object_description` overlays (§20 enrichment). Server-derives `org_object_id` from the active ORG; gated by `edit_org_enrichment` + `user_can_write_enrichment`. |
 | `api.can_write_object_private_notes()` | Checks if the current user can write private notes for an object. |
 | `api.user_has_permission()` | Base permission helper used by RLS and workflow RPCs to resolve direct-user and ORG-inherited grants. |
 | `api.current_user_org_id()` | Returns the active ORG object ID for the current authenticated user. |
 | `api.user_can_create_object()` | Checks create permission (active org + `create_object` permission). |
 | `api.user_can_publish_object()` | Checks publication permission plus publisher relationship of the active ORG on the target object. |
-| `api.user_can_write_canonical()` | Checks whether the active ORG can edit canonical data as publisher with explicit permission. |
+| `api.user_can_write_canonical()` | Checks whether the active ORG can edit canonical data as publisher with explicit permission (`edit_canonical_when_publisher`). |
+| `api.user_can_write_object_canonical()` | **The single canonical-write predicate** = `is_object_owner OR user_can_write_canonical`. Used by the workspace gate (`internal.workspace_assert_can_write_object`) and every canonical write RLS policy. Additive — retains the legacy owner path. |
 | `api.user_can_write_enrichment()` | Checks whether the active ORG can write ORG-level enrichment with explicit permission and object link. |
+
+> **Workspace section writers** (SECURITY INVOKER, each gated by `internal.workspace_assert_can_write_object` → `user_can_write_object_canonical`): `api.save_object_commercial()`, `api.save_object_places()`, `api.save_object_openings()`, `api.save_object_relations()`, `api.save_object_itinerary_nested()`, `api.save_object_workspace_sustainability()`, `api.save_object_workspace_tags()`. These are the per-section save RPCs invoked by the full-page object editor. (Org-scoped descriptions instead go through `api.rpc_write_org_description()`; publication status through `api.rpc_publish_object()` / `api.rpc_set_object_status()`.)
 
 ### 7.6 — Accessibility RPCs
 
@@ -1480,6 +1509,7 @@ The `api` schema exposes all data through PostgreSQL RPC functions, SECURITY DEF
 |----------|---------|
 | `api.rpc_upsert_membership()` | Creates or reactivates a user membership in an ORG and assigns the initial business role. |
 | `api.rpc_deactivate_membership()` | Deactivates a membership and cascades role deactivation. |
+| `api.rpc_list_org_members()` | Lists an ORG's members with business/admin role codes and effective permission codes (added 2026-06-03, migration `sp4_team_admin`; powers the `/team` admin UI). |
 | `api.rpc_set_business_role()` | Rotates the active business role for a membership. |
 | `api.rpc_set_admin_role()` | Grants or changes an admin role with anti-elevation enforcement by rank. |
 | `api.rpc_revoke_admin_role()` | Removes the active admin role from a membership. |
@@ -1502,7 +1532,9 @@ Not every API function is a business endpoint. Several helper families shape pay
 
 ## 8. Security Model (Row-Level Security)
 
-All tables have RLS enabled. Access is governed by a three-tier model with helper functions.
+RLS is enabled on all application tables (the former exceptions were closed 2026-06-04 — see callout). Access is governed by a three-tier model with helper functions. As of the `p03_rls_read_gate` + `sp1_canonical_write_paths` migrations (2026-06-03), object-child **reads** go through `api.can_read_object()` and canonical **writes** through `api.user_can_write_object_canonical()` — see §8.3.
+
+> ✅ **RLS-disabled gaps closed (2026-06-04):** the tables previously listed here as RLS-disabled have been fixed. `object_act` is now gated by `read_object_act` (`can_read_object`) + `canonical_write_object_act` (`user_can_write_object_canonical`) via **`migration_object_act_rls.sql`**; the 3 newer `ref_*` tables (`ref_classification_equivalent_action`, `ref_classification_equivalent_group`, `ref_sustainability_action_group`) now carry the standard pub-read / admin-write pair, and the 5 leftover `*_bak_20260519_082607z` backup tables were dropped — both via **`migration_rls_ref_and_bak_cleanup.sql`**. No table uses FORCE RLS. See Appendix F.
 
 ---
 
@@ -1510,7 +1542,7 @@ All tables have RLS enabled. Access is governed by a three-tier model with helpe
 
 | Tier | Who | What they see |
 |------|-----|---------------|
-| **Public** | Anonymous / unauthenticated | Only rows with `status = 'published'`, `is_published = TRUE`, `visibility = 'public'`, or fully open tables (locations, opening hours, classifications). |
+| **Public** | Anonymous / unauthenticated | Rows admitted by the object-level read gate: `object.status = 'published'`, and object-child rows where `api.can_read_object(object_id)` is true (parent published). Visibility-gated tables add a per-row filter (`visibility = 'public'`, `media.is_published`, `contact_channel.is_public`); public `ref_*` lookup data is openly readable. **No object-child table is `USING (true)` anymore.** |
 | **Extended** | Authenticated users with org/actor link | All public data + draft/archived objects within their own org scope, plus optional cross-ORG published visibility when their active ORG has `org_config.access_scope = 'all_published'`. Evaluated by `api.can_read_extended(p_object_id)`. |
 | **Admin** | `service_role`, `admin`, platform owner/super_admin | Full unrestricted access to all rows. |
 
@@ -1518,44 +1550,47 @@ All tables have RLS enabled. Access is governed by a three-tier model with helpe
 
 | Function | Purpose |
 |----------|---------|
-| `api.current_user_email()` | Reads email from JWT claims. |
-| `api.user_actor_ids()` | Returns actor UUIDs linked to the current user's email. |
-| `api.can_read_extended()` | Four-path check on a target object: actor role on object, own-org membership, org-owned objects via `object_org_link`, or external published scope. |
-| `api.is_object_owner()` | True if user has primary actor role on the target object, or is admin/service_role. |
+| `api.can_read_object(p_object_id)` | **Primary read gate** (since `p03_rls_read_gate`): true when the object is `published` **OR** `can_read_extended` is true. Used by every object-child SELECT policy. |
+| `api.can_read_extended(p_object_id)` | The *extended* branch of the read gate: actor role on object, own-org membership, org-owned objects via `object_org_link`, or external published scope. |
+| `api.user_can_write_object_canonical(p_object_id)` | **Primary write gate** (since `sp1_canonical_write_paths`): `is_object_owner OR user_can_write_canonical`. Backs the `object` UPDATE/DELETE and every `owner_*` / `canonical_*` child write policy. |
+| `api.user_can_write_canonical(p_object_id)` | Publisher-ORG canonical edit with explicit `edit_canonical_when_publisher` (the additive permission branch). |
+| `api.user_can_write_enrichment(p_object_id)` | Org-enrichment write (gates `rpc_write_org_description`). |
+| `api.user_can_create_object()` | Gates the `object` INSERT policy (active ORG + `create_object`). |
+| `api.user_can_publish_object(p_object_id)` | Gates `object.status` changes via `trg_guard_object_status_change` (publication is **not** covered by canonical-write). |
+| `api.is_object_owner(p_object_id)` | Owner check (primary actor role, or admin/service_role). Now a *component* of `user_can_write_object_canonical`; standalone it backs only the legacy `workspace_*` policies. |
 | `api.is_platform_owner()` | True for `service_role`, `admin`, or `app_user_profile.role = 'owner'`. |
 | `api.is_platform_superuser()` | True for `service_role`, `admin`, or `app_user_profile.role IN ('owner','super_admin')`. |
-| `api.is_platform_admin()` | True for `service_role`, `admin`, or users with `role admin/super_admin` in `raw_app_meta_data`. |
-| `api.current_user_org_id()` | Returns active ORG for the current user via `user_org_membership`. |
-| `api.can_read_object_private_notes()` | Checks whether the current user has an active ORG scope to read private notes. |
-| `api.can_manage_object_private_note()` | Hierarchical: admin rank must be ≥ note author's rank. |
-| `api.can_delete_object_private_note()` | Stricter than manage: requires higher admin rank or self-authored. |
-| `api.current_user_business_role_code()` | Business role code within the user's active ORG. |
-| `api.current_user_admin_role_code()` | Admin role code within the user's active ORG. |
-| `api.current_user_admin_rank()` | Numeric rank for anti-elevation rules. |
-| `api.object_private_note_author_admin_rank()` | Resolves the author's admin rank within the note's ORG for hierarchical moderation checks. |
+| `api.is_platform_admin()` | True for `service_role`, `admin`, or `role admin/super_admin` in `raw_app_meta_data`. |
+| `api.current_user_org_id()` | Active ORG for the current user via `user_org_membership`. |
 | `api.user_has_permission(p_permission_code)` | Resolves explicit user-level and ORG-inherited action permissions. |
+| `api.can_read_object_private_notes()` / `api.can_manage_object_private_note()` / `api.can_delete_object_private_note()` | Private-note read / manage (rank ≥ author) / delete (stricter rank or self) gates used by `object_private_description` policies. |
+
+> **Not policy-level:** `api.current_user_email()`, `api.user_actor_ids()`, `api.current_user_business_role_code()`, `api.current_user_admin_role_code()`, `api.current_user_admin_rank()`, and `api.object_private_note_author_admin_rank()` are helpers called *transitively* inside the functions above — they do not appear directly in any RLS `USING` / `WITH CHECK` expression.
 
 ### 8.3 — Policy Patterns by Table Category
 
 | Table category | Read policy | Write policy |
 |----------------|------------|--------------|
-| **Object core** (`object`) | Published = public; extended via `can_read_extended`; admin = all | Owner (`created_by`) or admin |
-| **Object child tables** (location, classification, capacity, amenity, language, payment, environment, zone, opening_*) | Fully public (`USING (true)`) | Owner via `is_object_owner` |
-| **Visibility-gated** (description, media, contact_channel) | Public where `visibility='public'` / `is_published=true`; extended via `can_read_extended` | Owner via `is_object_owner` |
-| **Private notes** (`object_private_description`) | Extended: same-org only | Insert: same-org + self as author; Update/Delete: hierarchical admin rank |
-| **Legal records** | Extended via `can_read_extended` | Owner via `is_object_owner` |
-| **Admin-curated overlays** (`object_place_description`, `object_origin`, `object_relation`) | Public read or extended read depending on table | Admin write only |
-| **External IDs** (`object_external_id`) | Admin/service_role only | Admin/service_role only |
-| **Reference tables** (`ref_*`) | Public read (`USING (true)`) | Admin write only |
+| **Object core** (`object`) | Published = public; extended via `can_read_extended`; admin = all | UPDATE/DELETE via `user_can_write_object_canonical` (owner OR publisher-permission); INSERT via `user_can_create_object()` + self as `created_by`. Status changes additionally gated by `trg_guard_object_status_change` (`user_can_publish_object`). |
+| **Object child tables** (location, classification, capacity, amenity, language, payment, environment, zone, opening_*, room-type / menu / iti grandchildren, …) | Gated via `api.can_read_object(object_id)` (published OR extended) — **not** `USING (true)` | `canonical_*` policy via `user_can_write_object_canonical`. A redundant legacy `workspace_*` policy using `is_object_owner` still co-exists on most tables (cleanup — decision log §24 SP-1b). |
+| **Visibility-gated** (`object_description`, `media`, `contact_channel`) | Public where `object_description.visibility='public'` / `media.is_published` / `contact_channel.is_public`; extended via `can_read_extended` | Write via `user_can_write_object_canonical` (`object_description` restricts the write to the canonical, `org_object_id IS NULL`, branch) |
+| **Private notes** (`object_private_description`) | Same-org only, via `can_read_object_private_notes` + `org_object_id = current_user_org_id` | Insert: same-org + self as author; Update/Delete: hierarchical admin rank (`can_manage` / `can_delete`) |
+| **Legal records** (`object_legal`) | Extended via `can_read_extended` | Write via `user_can_write_object_canonical` |
+| **Object relations & overlays** (`object_relation`, `object_place_description`, `object_origin`) | Gated via `can_read_object` | `object_relation` / `object_place_description` write via `user_can_write_object_canonical` (parent-resolved); `object_origin` is read-gated with admin-only write |
+| **External IDs** (`object_external_id`) | Admin / service_role only | Admin / service_role only |
+| **Reference tables** (`ref_*`) | Public read (`USING (true)`) | Admin write only (incl. the 3 formerly RLS-disabled `ref_*` tables, gated since 2026-06-04 — see callout) |
 | **User profile** | Self (`id = auth.uid()`) or platform owner | Self or platform owner |
-| **Org scope / permission governance** (`user_org_membership`, `user_org_business_role`, `user_org_admin_role`, `org_config`, `org_permission`, `user_permission`) | Member or superuser scoped | Superuser/admin-managed depending on table |
+| **Org scope / permission governance** (`user_org_membership`, `user_org_business_role`, `user_org_admin_role`, `org_config`, `org_permission`, `user_permission`) | Member or superuser scoped | Superuser/admin-managed via the access-admin RPCs (§7.10) |
 | **CRM** (`crm_interaction`, `crm_task`) | Admin only | Admin only |
 | **Audit** (`audit.audit_log`) | Admin only | Insert by `service_role`/`postgres` (triggers) |
-| **Publications** | Admin only | Admin only |
-| **Promotions** (`promotion`, `promotion_object`) | Public read; usage journal admin-only | Promotion definition admin write |
-| **Reviews** | Published reviews only | Admin only |
+| **Publications** (`publication`, `publication_object`) | Admin only | Admin only |
+| **Promotions** | `promotion`: public where `is_public AND is_active`; `promotion_object`: object-gated via `can_read_object`; `promotion_usage`: admin-only | Admin write |
+| **Reviews** (`object_review`) | Published reviews only (`is_published`) | Admin only |
+| `object_act` | Object-gated via `can_read_object` (published OR extended) — `read_object_act` | Canonical write via `user_can_write_object_canonical` — `canonical_write_object_act` (closed 2026-06-04, see Module E2) |
 
-> **Dynamic RLS on partitions:** A `DO` block iterates over all `ref_code` partitions and applies the standard public-read / admin-write policy pair to each. Same pattern for `object_version` and `audit.audit_log` partitions.
+> **Dynamic RLS on partitions:** A `DO` block iterates over all `ref_code` partitions and applies the standard public-read / admin-write policy pair to each. The same pattern applies to `object_version` and `audit.audit_log` partitions.
+>
+> **Dual write-policy families:** Most object-child tables currently carry **both** a `canonical_*` write policy (predicate `user_can_write_object_canonical`) and a legacy `workspace_*` write policy (predicate `is_object_owner`). Because permissive policies are OR'd this is redundant but not incorrect; consolidation to one write policy per table is a tracked cleanup (decision log §24 SP-1b).
 
 ---
 
@@ -1567,7 +1602,7 @@ All tables have RLS enabled. Access is governed by a three-tier model with helpe
 
 | View | Schema | Refresh | Purpose |
 |------|--------|---------|---------|
-| `internal.mv_ref_data_json` | `internal` | Daily or on ref data change | Pre-joined reference data (amenities with families, languages, media types, contact kinds) as JSONB. Avoids repeated joins in API functions. Indexed on `(ref_type, id)` and `(ref_type, code)`. |
+| `internal.mv_ref_data_json` | `internal` | On ref-data change (no scheduled cron job) | Pre-joined reference data (amenities with families, languages, media types, contact kinds) as JSONB. Avoids repeated joins in API functions. Indexed on `(ref_type, id)` and `(ref_type, code)`. |
 | `internal.mv_filtered_objects` | `internal` | Every 5 minutes (pg_cron) | Hot-path projection: published objects with main location, cached fields, and search vectors. Powers the list/map endpoints without touching the base tables. |
 
 **Staleness targets:**
@@ -1579,19 +1614,20 @@ All tables have RLS enabled. Access is governed by a three-tier model with helpe
 
 | Index type | Tables | Purpose |
 |------------|--------|---------|
-| **GIN on tsvector** | `object.name_search_vector`, `object_location.city_search_vector` | Full-text search in French. |
-| **GiST on geography** | `object_location.geog2` | Proximity queries (`ST_DWithin`), bounding-box filters. |
-| **GIN on arrays** | `object.cached_amenity_codes`, `cached_payment_codes`, `cached_environment_tags`, `cached_language_codes`, `cached_classification_codes`, `cached_taxonomy_codes` | Array-containment filters (`@>`). |
-| **Keyset pagination** | `object(object_type, status, updated_at DESC, id)` | Cursor-based pagination for list endpoints. |
+| **GIN on tsvector** | `object.name_search_vector`, `object_location.city_search_vector` (each with a `WHERE status='published'` partial twin) | Full-text search in French. |
+| **GIN trigram** (`pg_trgm`, `gin_trgm_ops`) | `object.name_normalized`; `object_description.description_normalized` / `description_chapo_normalized`; `actor.{display,first,last}_name_normalized`; `media.{title,description}_normalized` | Fuzzy / accent-insensitive substring search (`ILIKE`, `%`). |
+| **GiST on geography / geometry** | `object_location.geog2` (geography); `object_iti.geom`, `object_iti_stage.geom`, `incident_report.geom` (PostGIS geometry) | Proximity (`ST_DWithin`), bounding-box, and track spatial queries. |
+| **GIN on arrays** | the 6 `object.cached_*` arrays (amenity / payment / environment / language / classification / taxonomy codes); `object_classification.subvalue_ids` | Array-containment filters (`@>`). |
+| **Keyset pagination** | `object(object_type, updated_at, id) WHERE status='published'` (partial; plus `object(updated_at, id) WHERE status='published'`) | Cursor-based pagination for list endpoints. |
 | **Partial unique** | `object_org_link(object_id) WHERE is_primary`, `actor_object_role(object_id, role_id) WHERE is_primary`, `actor_channel(actor_id, kind_id) WHERE is_primary` | At-most-one-primary enforcement. |
-| **GIN on JSONB** | `app_user_profile.preferences`, `object.extra` | JSONB containment queries. |
+| **GIN on JSONB** | `app_user_profile.preferences`, `media.analyse_data`, `object_description.description_i18n` (`jsonb_path_ops`) | JSONB containment queries. (There is **no** GIN on `object.extra`.) |
 | **Composite** | `object_version(object_id, created_at DESC)`, `publication_object(workflow_status, publication_id)` | Common query patterns. |
 
 ### 9.3 — Partitioning Strategy
 
 | Table | Scheme | Partition key | Maintenance |
 |-------|--------|---------------|-------------|
-| `ref_code` | LIST by `domain` | `domain TEXT` | Manual: one partition per domain. ~20 partitions. |
+| `ref_code` | LIST by `domain` | `domain TEXT` | Manual: one partition per domain (~45, see §5.4) plus a default catch-all. |
 | `audit.audit_log` | RANGE by `created_at` | `created_at TIMESTAMPTZ` | Auto: `audit.maintain_partitions()` runs daily at 02:00 via pg_cron. Creates monthly partitions. |
 | `object_version` | RANGE by `created_at` | `created_at TIMESTAMPTZ` | Auto: `create_object_version_monthly_partition()`. Pre-creates current + next month. Default partition as safety net. |
 
@@ -1607,13 +1643,13 @@ All tables have RLS enabled. Access is governed by a three-tier model with helpe
 
 | Cached field | Source table | Trigger |
 |--------------|-------------|---------|
-| `object.cached_min_price` | `object_price` | Updated on price INSERT/UPDATE/DELETE. Also refreshed by maintenance script. |
-| `object.cached_main_image_url` | `media` | Updated on media changes. Picks published `is_main` image, then first by position. |
-| `object.cached_rating` / `cached_review_count` | `object_review` | Updated on review changes. Aggregates published reviews. |
-| `object.cached_is_open_now` | `opening_period` / `opening_schedule` | Updated by `api.refresh_open_status()` every 5 minutes. |
-| `object.cached_amenity_codes` | `object_amenity` | Updated on amenity INSERT/DELETE. |
-| `object.cached_classification_codes` | `object_classification` | Updated on distinction/classification changes. Stores composite tokens encoded as `scheme_code:value_code`. |
-| `object.cached_taxonomy_codes` | `object_taxonomy` | Updated on taxonomy assignment changes. Stores composite tokens encoded as `domain:code` from assignable ancestor paths. |
+| `object.cached_min_price` | `object_price` | `trg_update_cached_min_price`, AFTER INSERT/UPDATE/DELETE. |
+| `object.cached_main_image_url` | `media` | `trg_update_cached_main_image`, AFTER INSERT/UPDATE/DELETE. Picks published `is_main` image, then first by position. |
+| `object.cached_rating` / `cached_review_count` | `object_review` | `trg_update_cached_rating_metrics`, AFTER INSERT/UPDATE/DELETE. Aggregates published reviews. |
+| `object.cached_is_open_now` | `opening_period` / `opening_schedule` | **Not a trigger** — refreshed by `api.refresh_open_status()` every 5 min (pg_cron, §9.4). |
+| `cached_amenity_codes` / `cached_payment_codes` / `cached_environment_tags` / `cached_language_codes` | `object_amenity` / `object_payment_method` / `object_environment_tag` / `object_language` | One `trg_refresh_object_filter_caches_*` trigger per child table (AFTER INSERT/UPDATE/DELETE), all calling the shared `trg_refresh_object_filter_caches_from_child` function. |
+| `object.cached_classification_codes` | `object_classification` | `trg_refresh_object_filter_caches_object_classification` (AFTER INSERT/UPDATE/DELETE, shared function). Stores composite tokens `scheme_code:value_code`. |
+| `object.cached_taxonomy_codes` | `object_taxonomy` | `trg_refresh_object_filter_caches_object_taxonomy` (AFTER INSERT/UPDATE/DELETE, shared function). Stores composite tokens `domain:code` from assignable ancestor paths. |
 
 ---
 
@@ -1623,24 +1659,30 @@ Key database triggers and their business effects.
 
 | Trigger | Table(s) | Event | Purpose |
 |---------|----------|-------|---------|
-| `trg_generate_object_id` | `object` | BEFORE INSERT | Auto-generates structured ID in `{TYPE}{REGION}{SEQ}` format (e.g., `HOTREU000V5014ZU`). |
-| `trg_auto_published_at` | `object` | BEFORE UPDATE | Sets `published_at` timestamp on first transition to `status = 'published'`. |
-| `update_object_updated_at_business` | `object` | BEFORE UPDATE | Updates `updated_at` only when non-cache fields change (excludes `cached_*` columns). |
+| `trg_before_insert_object_generate_id` | `object` | BEFORE INSERT | Auto-generates structured ID in `{TYPE}{REGION}{SEQ}` format (e.g., `HOTREU000V5014ZU`). |
+| `trg_manage_object_published_at` | `object` | BEFORE UPDATE | Sets `published_at` on first transition to `status = 'published'`. |
+| `trg_guard_object_status_change` | `object` | BEFORE UPDATE | Gates `object.status` transitions — only `service_role`/superuser or a caller passing `api.user_can_publish_object` may change status (added 2026-06-03, `object_status_lifecycle`). |
+| `trg_validate_object_business_timezone` | `object` | BEFORE INSERT/UPDATE | Validates `business_timezone` against `pg_timezone_names`. |
+| `update_object_updated_at` | `object` | BEFORE UPDATE | *(func `update_object_updated_at_business`)* Updates `updated_at` only when non-cache fields change (excludes `cached_*`). |
 | `trg_increment_object_version` | `object` | BEFORE INSERT/UPDATE | Maintains the monotonic `current_version` counter ahead of snapshot persistence. |
-| `save_object_version` | `object` | AFTER INSERT/UPDATE and BEFORE DELETE | Snapshots the object state into `object_version` for create, update, and delete lifecycle events. |
+| `trg_object_version` / `trg_object_version_delete` | `object` | AFTER INSERT/UPDATE  /  BEFORE DELETE | *(func `save_object_version`)* Snapshots object state into `object_version` for create/update and delete events. |
+| `trg_auto_attach_object_to_creator_org` | `object` | AFTER INSERT | Creates the primary publisher link from the creator's active ORG when they have exactly one active ORG membership. |
+| `trg_enforce_single_main_media` | `media` | BEFORE INSERT/UPDATE | Enforces at most one `is_main` media per object (added 2026-06-01, `add_enforce_single_main_media_trigger`). |
 | `trg_membership_status_transition` | `object_membership` | AFTER INSERT/UPDATE | Cascades membership status to `object.commercial_visibility`. Propagates ORG-wide memberships to all linked objects. |
-| `trg_pending_change_editing_flag` | `pending_change` | AFTER INSERT/UPDATE/DELETE | Sets `object.is_editing = TRUE` when pending changes exist; `FALSE` when all resolved. |
-| `trg_auto_attach_object_to_creator_org` | `object` | AFTER INSERT | Automatically creates the primary publisher link from the creator's active ORG when the creator has exactly one active ORG membership. |
+| `trg_pending_change_after_insert` / `_after_update` / `_after_delete` | `pending_change` | AFTER INSERT / UPDATE / DELETE | Set `object.is_editing = TRUE` when pending changes exist; `FALSE` when all resolved. |
+| `trg_enforce_classification_single_selection` | `object_classification` | BEFORE INSERT/UPDATE | Enforces one value per single-selection scheme. |
+| `trg_validate_object_taxonomy_assignment` | `object_taxonomy` | BEFORE INSERT/UPDATE | Validates the taxonomy assignment against the domain registry / assignability. |
+| `trg_incident_report_after_insert` | `incident_report` | AFTER INSERT | *(func `create_crm_artifacts_from_incident`)* Auto-creates the linked CRM task / interaction. |
 | `trg_contact_channel_email` | `contact_channel` | BEFORE INSERT/UPDATE | Validates email format when `kind_id` points to the `email` kind. |
 | `trg_actor_channel_email` | `actor_channel` | BEFORE INSERT/UPDATE | Same email validation for actor contact channels. |
 | `trg_publication_object_workflow_timestamps` | `publication_object` | BEFORE UPDATE | Auto-sets `proof_sent_at` and `validated_bat_at` on workflow status transitions. |
-| `api.log_publication_proof_interaction` | `publication_object` | AFTER UPDATE | Auto-creates a CRM interaction record when `workflow_status` transitions to `proof_sent`. |
+| `trg_publication_proof_interaction` | `publication_object` | AFTER UPDATE | *(func `api.log_publication_proof_interaction`)* Auto-creates a CRM interaction when `workflow_status` → `proof_sent`. |
 | `check_membership_org_type` | `user_org_membership` | BEFORE INSERT/UPDATE | Ensures `org_object_id` points to an object with `object_type = 'ORG'`. |
 | `enforce_single_active_org_membership` | `user_org_membership` | BEFORE INSERT/UPDATE | Ensures tourism agents have only one active ORG. Uses `pg_advisory_xact_lock`. |
 | `check_org_config_org_type` | `org_config` | BEFORE INSERT/UPDATE | Ensures `org_object_id` points to an ORG object. |
 | `check_org_permission_org_type` | `org_permission` | BEFORE INSERT/UPDATE | Ensures ORG-level permission grants attach only to ORG objects. |
 | `enforce_app_user_profile_role_change` | `app_user_profile` | BEFORE INSERT/UPDATE | Prevents non-owner users from escalating to owner/super_admin role. |
-| `audit.log_row_changes` | Multiple tables | AFTER UPDATE/DELETE | Writes before/after snapshots to `audit.audit_log` for auditability. |
+| `trg_audit_<table>` → `audit.log_row_changes` | ~150 tables | AFTER UPDATE/DELETE | Writes before/after snapshots to `audit.audit_log` for auditability (one `trg_audit_<table>` per audited table). |
 
 ---
 
@@ -1664,10 +1706,17 @@ The frontend groups the 17 backend `object_type` codes into 7 explorer "buckets"
 
 ## Appendix B — Workspace Module ↔ Panel Mapping
 
-The Object Workspace UI is organized into modules. Each `WorkspaceModuleId` (typed in `bertel-tourism-ui/src/services/object-workspace-parser.ts`) maps to one or more data dictionary panels, while runtime section visibility is currently enforced in `bertel-tourism-ui/src/features/object-drawer/object-drawer-sections.ts`.
+The Object Workspace exposes **two layers** that this dictionary maps onto its panels:
 
-| Module ID | Panel(s) | Per-type availability |
-|-----------|----------|----------------------|
+- **27 `WorkspaceModuleId` data modules** — the API-payload / data layer. Canonically typed as a union in `bertel-tourism-ui/src/services/object-workspace-parser.ts` (L8) and cross-referenced by `MODULE_KEY_MAP` in `src/features/object-editor/editor-state.ts`.
+- **22 editor sections (`01`–`22`)** — the full-page editor UI layer. Declared in `src/features/object-editor/section-config.ts` (order, titles, per-archetype visibility) and bound to components in `src/features/object-editor/sections/section-registry.tsx` (`SECTION_COMPONENTS`). *(The legacy `object-drawer-sections.ts` cited by earlier revisions of this appendix no longer exists.)*
+
+The two layers are **not 1:1**: one section can drive several modules (notably the archetype-conditional section `05`), and some modules (`legal`, `capacity-policies`) are surfaced inside other sections rather than as a standalone `01`–`22` entry.
+
+**Layer 1 — the 27 data modules → dictionary panel / data domain:**
+
+| Module ID | Panel / data domain | Per-type availability |
+|-----------|---------------------|----------------------|
 | `general-info` | A1 | All types |
 | `taxonomy` | A2 (taxonomy part) | All types |
 | `publication` | A3, A5 | All types |
@@ -1685,8 +1734,45 @@ The Object Workspace UI is organized into modules. Each `WorkspaceModuleId` (typ
 | `relationships` | D2 | All types |
 | `memberships` | D3 | Visible only when `resource.modules.memberships.campaignOptions.length > 0` |
 | `legal` | D6 | All except `ITI`, `COM` |
+| `tags` | Object tags (`tag_link` where `target_table='object'`, `ref_tag`) | All types |
+| `sustainability` | C3 | All types |
+| `distribution` | `object.commercial_visibility` + distribution channels | All types |
+| `provider` | Provider identity via D2 (`actor_object_role`, `object_org_link`) | All types |
+| `itinerary` | E1 | `ITI` |
+| `activity` | E2 | `ACT` |
+| `event` | E3 | `FMA` |
+| `menus` | E4 | `RES` |
+| `rooms` | E5 | Accommodation types (`HOT`, `HPA`, `HLO`, `CAMP`, `RVA`) |
+| `meeting-rooms` | E6 | Accommodation types (esp. `HOT`) |
 
-> **Conditional modules E1–E6** (itinerary, activity, event, menus, rooms, meeting rooms) are rendered as additional sections within the relevant panels when the `object_type` matches.
+**Layer 2 — the 22 editor sections → module(s):** titles from `section-config.ts`; sections `05` and `16` route by editor archetype (see `section-config.ts` for the exact per-archetype rules).
+
+| § | Editor section (FR) | Module(s) driven |
+|---|---------------------|------------------|
+| 01 | Identité & taxonomie | `general-info`, `taxonomy` |
+| 02 | Localisation | `location` |
+| 03 | Contacts | `contacts` |
+| 04 | Descriptions | `descriptions` |
+| 05 | Caractéristiques / sous-modules de type | archetype-conditional: `rooms`+`meeting-rooms`, `menus`, `activity`, `event`, or `itinerary` (+ `characteristics`) |
+| 06 | Médias | `media` |
+| 07 | Capacité & cadre | `characteristics` (+ `capacity-policies`) |
+| 08 | Classifications | `distinctions` |
+| 09 | Tags & étiquettes | `tags` |
+| 10 | Accessibilité | `distinctions`, `characteristics` |
+| 11 | Démarche durable | `sustainability` |
+| 12 | Paiements & langues | `characteristics` |
+| 13 | Tarifs & extras | `pricing` |
+| 14 | Périodes d'ouverture | `openings` |
+| 15 | Liens vers fiches | `relationships` |
+| 16 | Lieux & étapes (ITI) / Sous-lieux | `descriptions`, `itinerary` (conditional) |
+| 17 | Rattachements | `memberships` |
+| 18 | Fournisseur | `provider` |
+| 19 | Suivi prestataire | `provider-follow-up` |
+| 20 | Distribution | `distribution` |
+| 21 | Publication | `publication` |
+| 22 | Identifiants externes | `sync-identifiers` |
+
+> Conditional modules E1–E6 (itinerary, activity, event, menus, rooms, meeting rooms) render only when `object_type` matches; in the editor they surface through section `05` (and `16` for ITI stages/places). The full ITI sub-object matrix + payload contract is a **deferred** dictionary pass (see Module E1 write-reality note).
 
 ---
 
@@ -1761,4 +1847,16 @@ Some differences between storage shape and API shape are deliberate and should b
 
 ---
 
-*Document updated 2026-04-13 from `schema_unified.sql` (6067 lines), `api_views_functions.sql`, `rls_policies.sql`, `seeds_data.sql`, `ui_whitelabel_branding.sql`, `migration_sustainability_v5.sql`, `bertel-object-workspace-canonical-map.md`, `domain.ts`, and `bertel-tourism-ui/src/` TypeScript sources. Update this file when schema, invariants, API functions, or workspace mapping changes.*
+## Appendix F — Known Gaps (live-DB audit 2026-06-04)
+
+Live-database deviations found during the 2026-06-04 reconciliation. Unlike Appendix E, these were **not** intentional. **All three were closed on 2026-06-04** by two migrations folded into the fresh-apply manifest (steps 8g/8h), applied to live and CI-gated. Retained here for traceability:
+
+| Gap | Detail | Resolution (2026-06-04) |
+|-----|--------|-------------------------|
+| `object_act` RLS disabled | The only object-child table with **no** RLS and zero policies (confirmed in live + `rls_policies.sql`). Was directly readable/writable via PostgREST by any role, bypassing the parent's publication gate. | ✅ **Closed** — `migration_object_act_rls.sql`: `ENABLE ROW LEVEL SECURITY` + `read_object_act` (`can_read_object`) + `canonical_write_object_act` (`user_can_write_object_canonical`, USING + WITH CHECK); `anon`/`authenticated` keep EXECUTE on the write predicate (P0.3 gotcha). Verified by `tests/test_object_act_rls.sql`. |
+| 3 `ref_*` tables RLS disabled | `ref_classification_equivalent_action`, `ref_classification_equivalent_group`, `ref_sustainability_action_group` had RLS off → **unguarded writes** by `anon`/`authenticated` (reads match other public `ref_*`). | ✅ **Closed** — `migration_rls_ref_and_bak_cleanup.sql`: RLS enabled with the standard `pub_*_read USING(true)` + admin-write pair, matching sibling `ref_*` tables. |
+| Leftover backup tables | 5 `*_bak_20260519_082607z` tables (the `opening_*` family) remained in `public` with RLS off. | ✅ **Closed** — `migration_rls_ref_and_bak_cleanup.sql`: dropped (verified 0 inbound FKs / 0 view deps before drop; no-op on a fresh DB). |
+
+---
+
+*Document audited & updated **2026-06-04** against the **live** Supabase database (project `ryycrdhlkmzpxwwwwupy`) — columns, enums, functions, triggers, RLS policies, indexes, partitions, materialized views, and cron jobs introspected directly. Prior baseline (2026-04-13 / 2026-05-26) from `schema_unified.sql`, `api_views_functions.sql`, `rls_policies.sql`, `seeds_data.sql`, `ui_whitelabel_branding.sql`, `migration_sustainability_v5.sql`, `bertel-object-workspace-canonical-map.md`, `domain.ts`, and `bertel-tourism-ui/src/`. Update this file when schema, invariants, API functions, or workspace mapping change.*

@@ -330,7 +330,7 @@ describe('object drawer utils', () => {
     const raw = {
       itinerary: {
         distance_km: 12.5,
-        duration_hours: 4.2,
+        duration_min: 252,
         difficulty_level: 'Intermediaire',
         elevation_gain: 540,
         is_loop: true,

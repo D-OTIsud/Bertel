@@ -1315,7 +1315,13 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
 
   const summary: ItinerarySummary = {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
-    durationHours: readString(itinerary.duration_hours, readString(raw.duration_hours, readString(raw.duration_h, readString(raw.total_duration_h)))),
+    // object_iti now stores duration in minutes (duration_min); convert to display hours.
+    // Legacy raw.duration_h / total_duration_h (already hours) remain a fallback.
+    durationHours: ((): string => {
+      const minutes = Number(itinerary.duration_min ?? raw.duration_min);
+      if (Number.isFinite(minutes) && minutes > 0) return String(Math.round((minutes / 60) * 100) / 100);
+      return readString(raw.duration_h, readString(raw.total_duration_h));
+    })(),
     difficulty: readNamedValue(itinerary.difficulty, readString(itinerary.difficulty_level, readNamedValue(raw.difficulty, readString(raw.difficulty_level)))),
     elevationGain: readString(itinerary.elevation_gain, readString(raw.elevation_gain, readString(raw.elevation_gain_m))),
     isLoop: loopValue,

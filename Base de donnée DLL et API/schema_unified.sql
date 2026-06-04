@@ -2767,9 +2767,10 @@ CREATE TABLE IF NOT EXISTS object_fma_occurrence (
 CREATE TABLE IF NOT EXISTS object_iti (
   object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
   distance_km DECIMAL(8, 2),
-  duration_hours DECIMAL(4, 2),
+  duration_min INTEGER CONSTRAINT chk_object_iti_duration_min CHECK (duration_min IS NULL OR duration_min > 0), -- minutes (greenfield retype from duration_hours; see migration_iti_duration_elevation.sql)
   difficulty_level INTEGER CHECK (difficulty_level BETWEEN 1 AND 5),
-  elevation_gain INTEGER,
+  elevation_gain INTEGER,   -- positive ascent, metres
+  elevation_loss INTEGER,   -- negative descent, metres
   is_loop BOOLEAN DEFAULT FALSE,
   geom GEOGRAPHY(LINESTRING, 4326),
   -- Cached GPX/KML for performance (auto-regenerated on geometry change)

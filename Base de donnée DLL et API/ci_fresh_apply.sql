@@ -37,6 +37,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_room_type_ref.sql
 \echo '== 4/13  migration_tag_link_position.sql =='
 \ir migration_tag_link_position.sql
+\echo '== 4b     migration_iti_duration_elevation.sql  (object_iti duration_min + elevation_loss; before api_views) =='
+\ir migration_iti_duration_elevation.sql
 \echo '== 5/13  api_views_functions.sql =='
 \ir api_views_functions.sql
 \echo '== 6/13  rls_policies.sql  (defines api.is_object_owner) =='

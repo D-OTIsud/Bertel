@@ -598,9 +598,10 @@ erDiagram
     OBJECT_ITI {
         text object_id PK,FK "Objet ITI"
         decimal distance_km "Distance (km)"
-        decimal duration_hours "Durée (h)"
+        integer duration_min "Durée (min)"
         integer difficulty_level "Difficulté (1..5)"
-        integer elevation_gain "Dénivelé (m)"
+        integer elevation_gain "Dénivelé + (m)"
+        integer elevation_loss "Dénivelé - (m)"
         boolean is_loop "Boucle"
         geography geom "Trajet principal (LINESTRING)"
     }

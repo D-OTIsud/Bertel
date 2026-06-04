@@ -82,7 +82,7 @@ Chaque entrée de data[] suit ce schéma (champs présents si disponibles) :
   ],
 
   "itinerary": {
-    "distance_km": 12.5, "duration_hours": 4, "difficulty_level": 3, "elevation_gain": 450, "is_loop": false,
+    "distance_km": 12.5, "duration_min": 240, "difficulty_level": 3, "elevation_gain": 450, "elevation_loss": 380, "is_loop": false,
     "track_format": "kml",
     "track": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml>…</kml>"
   }

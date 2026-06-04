@@ -2,20 +2,21 @@ import { Fs, Input, ReferenceSelect, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 
+// Canonical object_classification.status lifecycle (OBJECT_DATA_DICTIONARY.md): granted/requested/suspended/expired.
+// The legacy 'active'/'pending'/'revoked' aliases are NOT written — every backend label read/filter
+// gates on status='granted', so a non-canonical status makes an editor-authored label invisible. See lot1_mapping_decisions §30.
 const STATUS_OPTIONS = [
-  { v: 'active', l: 'Accordée' },
   { v: 'granted', l: 'Accordée' },
-  { v: 'pending', l: 'En cours' },
-  { v: 'expired', l: 'Expirée' },
+  { v: 'requested', l: 'En cours / demande' },
   { v: 'suspended', l: 'Retirée' },
-  { v: 'revoked', l: 'Retirée' },
+  { v: 'expired', l: 'Expirée' },
 ];
 
 const CLASS_COLS = '14px 1.4fr 1.2fr 110px 95px 95px auto';
 
 function statusBucket(item: ObjectWorkspaceDistinctionItem) {
-  const status = item.status || 'active';
-  if (status === 'pending') return 'pending';
+  const status = item.status || 'granted';
+  if (status === 'requested' || status === 'pending') return 'pending';
   if (status === 'expired' || status === 'suspended' || status === 'revoked') return 'expired';
   return 'granted';
 }
@@ -119,7 +120,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
               }}
             />
             <Select
-              value={item.status || 'active'}
+              value={item.status || 'granted'}
               options={STATUS_OPTIONS}
               onChange={(status) => update(group.schemeCode, item, { status })}
             />

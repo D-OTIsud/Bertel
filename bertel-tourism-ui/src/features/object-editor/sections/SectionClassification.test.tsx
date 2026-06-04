@@ -22,4 +22,14 @@ describe('SectionClassification', () => {
     view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
     expect(result.current.draft.distinctions.distinctionGroups[0].items[0].valueCode).toBe('3');
   });
+
+  it('offers canonical classification-status options (granted), not the legacy "active" alias', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithStarsScheme()));
+    render(<SectionClassification editor={result.current} permissions={allowAll} />);
+    // Canonical object_classification.status lifecycle is granted/requested/suspended/expired;
+    // the editor must not offer the non-canonical 'active' alias (invisible to every label read/filter).
+    const statusValues = screen.getAllByRole('option').map((opt) => opt.getAttribute('value'));
+    expect(statusValues).toContain('granted');
+    expect(statusValues).not.toContain('active');
+  });
 });

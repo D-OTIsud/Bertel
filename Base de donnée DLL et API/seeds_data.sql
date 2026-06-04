@@ -3665,7 +3665,7 @@ ON CONFLICT (scheme_id, action_id) DO UPDATE SET
 -- ============================================================
 -- Section B: Accessibilité V5
 -- Extrait de seeds_accessibility_v5.sql — label LBL_TOURISME_HANDICAP,
--- famille d'équipements accessibilite, 32 équipements acc_*.
+-- famille d'équipements accessibilite, 43 équipements acc_* (33 mappés V5 + 10 NO-EQUIV).
 -- ============================================================
 
 -- B-1) Schème de classification officiel accessibilité
@@ -3707,7 +3707,7 @@ ON CONFLICT (scheme_id, code) DO UPDATE SET
 -- Vocabulaire canonique verrouillé : motor | hearing | visual | cognitive
 -- Utilisation : object_classification.value_id → 'granted' (top-level inchangé)
 --               object_classification.subvalue_ids → ARRAY[uuid_type_concerné, ...]
--- L'API (api.get_filtered_object_ids) ne lit pas encore subvalue_ids — prévu dans un patch API séparé.
+-- L'API (api.get_filtered_object_ids) lit subvalue_ids via le filtre label_disability_types_any (cf. api_views_functions.sql:1224-1234).
 WITH src(code, name, position, name_i18n, metadata) AS (
 VALUES
   ('granted_motor',

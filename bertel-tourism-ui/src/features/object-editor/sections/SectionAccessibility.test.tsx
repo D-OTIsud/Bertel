@@ -39,4 +39,32 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
     expect(screen.getByText(/Label T&H/i)).toBeInTheDocument();
     expect(screen.getByText(/Description adapt/i)).toBeInTheDocument();
   });
+
+  it('toggles on a Tourisme & Handicap label with canonical status "granted" (not "active")', () => {
+    // Empty accessibilityLabels + an isAccessibility scheme option exposes the opt-in Toggle branch.
+    const mods = fullModulesFixture();
+    mods.distinctions = {
+      ...mods.distinctions,
+      accessibilityLabels: [],
+      schemeOptions: [
+        { id: 'th', code: 'LBL_TOURISME_HANDICAP', label: 'Tourisme & Handicap', selectionMode: 'single', isAccessibility: true, valueOptions: [] },
+      ],
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', mods));
+    const view = render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Établissement labellisé Tourisme & Handicap' }));
+    });
+    view.rerender(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    // Backend label reads/filters gate on status='granted'; the editor must write the canonical value.
+    expect(result.current.draft.distinctions.accessibilityLabels[0].status).toBe('granted');
+  });
+
+  it('offers canonical label-status options (granted), not the legacy "active" vocabulary', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    const statusValues = screen.getAllByRole('option').map((opt) => opt.getAttribute('value'));
+    expect(statusValues).toContain('granted');
+    expect(statusValues).not.toContain('active');
+  });
 });

@@ -162,7 +162,7 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
                   valueId: 'granted',
                   valueCode: 'granted',
                   valueLabel: 'granted',
-                  status: 'active',
+                  status: 'granted',
                   awardedAt: '',
                   validUntil: '',
                   disabilityTypesCovered: [],
@@ -194,8 +194,12 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
             {/* Status, award date, expiry */}
             <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <Select
-                value={item.status || 'active'}
-                options={['active', 'pending', 'expired']}
+                value={item.status || 'granted'}
+                options={[
+                  { v: 'granted', l: 'Obtenu' },
+                  { v: 'requested', l: 'Demandé' },
+                  { v: 'expired', l: 'Expiré' },
+                ]}
                 onChange={(status) => updateLabel(item, { status })}
               />
             </div>

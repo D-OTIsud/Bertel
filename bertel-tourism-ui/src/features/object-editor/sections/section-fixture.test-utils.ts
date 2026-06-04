@@ -175,10 +175,10 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         {
           schemeCode: 'stars',
           schemeLabel: 'Étoiles',
-          items: [{ recordId: 'di1', schemeId: 'stars', schemeCode: 'stars', schemeLabel: 'Étoiles', valueId: '4', valueCode: '4', valueLabel: '4 étoiles', status: 'active', awardedAt: '2025-01-01', validUntil: '', disabilityTypesCovered: [] }],
+          items: [{ recordId: 'di1', schemeId: 'stars', schemeCode: 'stars', schemeLabel: 'Étoiles', valueId: '4', valueCode: '4', valueLabel: '4 étoiles', status: 'granted', awardedAt: '2025-01-01', validUntil: '', disabilityTypesCovered: [] }],
         },
       ],
-      accessibilityLabels: [{ recordId: 'acc1', schemeId: 'acc', schemeCode: 'acc', schemeLabel: 'Accessibilité', valueId: 'pmr', valueCode: 'pmr', valueLabel: 'Tourisme Handicap', status: 'active', awardedAt: '', validUntil: '', disabilityTypesCovered: ['motor'] }],
+      accessibilityLabels: [{ recordId: 'acc1', schemeId: 'acc', schemeCode: 'acc', schemeLabel: 'Accessibilité', valueId: 'pmr', valueCode: 'pmr', valueLabel: 'Tourisme Handicap', status: 'granted', awardedAt: '', validUntil: '', disabilityTypesCovered: ['motor'] }],
       accessibilityAmenityCoverage: [{ code: 'pmr_access', label: 'Accès PMR', disabilityTypes: ['motor'] }],
       schemeOptions: [],
       unavailableReason: null,

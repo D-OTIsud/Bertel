@@ -809,6 +809,40 @@ function readDisabilityTypesCovered(
   return Array.from(new Set(types)).sort((left, right) => left.localeCompare(right, 'fr'));
 }
 
+/**
+ * Write mirror of {@link readDisabilityTypesCovered}: resolve the covered disability-type codes
+ * (motor/hearing/visual/cognitive) of a LBL_TOURISME_HANDICAP label to the UUIDs of the matching
+ * `granted_*` sub-values, scoped to the label's scheme. The sub-values carry
+ * `metadata.disability_type` (seeds_data.sql B-2b §3711-3754); we join by (scheme_id,
+ * disability_type) so the result is the UUID[] for `object_classification.subvalue_ids` — never
+ * hard-coded UUIDs. Codes with no matching sub-value are dropped, the array is de-duplicated, and an
+ * empty input clears `subvalue_ids`. Used by {@link saveObjectWorkspaceDistinctions} to close the
+ * §10 silent write-trap (CLAUDE.md "Editor — no silent write-traps").
+ */
+export function buildClassificationSubvalueIds(
+  disabilityTypesCovered: readonly string[],
+  schemeId: string,
+  subvalueRefs: readonly { id: string; schemeId: string; disabilityType: string | null }[],
+): string[] {
+  const idByType = new Map<string, string>();
+  for (const ref of subvalueRefs) {
+    if (ref.schemeId === schemeId && ref.disabilityType) {
+      idByType.set(ref.disabilityType, ref.id);
+    }
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const type of disabilityTypesCovered) {
+    const id = idByType.get(type);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}
+
 function normalizeWorkspaceDistinctionItem(params: {
   row: Record<string, unknown>;
   schemeById: Map<string, ClassificationSchemeRef>;
@@ -3608,6 +3642,9 @@ export async function saveObjectWorkspaceDistinctions(objectId: string, input: O
       status: toNullableText(item.status),
       awarded_at: toNullableText(item.awardedAt),
       valid_until: toNullableText(item.validUntil),
+      // §10 T&H per-disability-type coverage: resolve the chip codes to granted_* sub-value UUIDs.
+      // Empty for non-accessibility distinctions (their disabilityTypesCovered is always []).
+      subvalue_ids: buildClassificationSubvalueIds(item.disabilityTypesCovered, schemeRef.id, valueRefs),
     };
 
     const existingId =

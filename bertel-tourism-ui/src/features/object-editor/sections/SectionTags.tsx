@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fs, Input, Select, SortableList } from '../primitives';
+import { Fs, Select, SortableList } from '../primitives';
 import type { SelectOption } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
@@ -151,7 +151,6 @@ export function SectionTags({ editor, folded }: SectionProps) {
                       <span className={`tag ${tag.colorVariant}`} style={{ flex: 'none' }}>
                         {tag.label}
                       </span>
-                      <Input value={tag.label} onChange={(label) => updateTag(index, { label })} />
                     </div>
                     <Select
                       value={tag.colorVariant}

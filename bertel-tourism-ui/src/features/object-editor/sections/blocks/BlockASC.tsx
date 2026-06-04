@@ -1,8 +1,7 @@
-import { Chip, ChipSet, Field, Fs, Input, SeasonPicker, Toggle, TriState } from '../../primitives';
+import { Chip, ChipSet, Field, Fs, Input, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-row';
 
-const DEFAULT_SEASON = ['', '', 'high', 'high', 'peak', 'peak', 'peak', 'peak', 'high', 'high', '', ''] as const;
 const FORMULA_COLS = '14px 1.4fr 70px 110px 110px 70px 80px auto';
 
 function repHeader(columns: string, labels: string[]) {
@@ -149,19 +148,6 @@ export function BlockASC({ editor, folded }: SectionProps) {
         + Ajouter une formule
       </button>
 
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Public & niveau accueillis
-      </div>
-      <TriState label="Familles" value="yes" onChange={() => undefined} />
-      <TriState
-        label="Débutants"
-        sub={activity.difficultyLevel || 'première séance'}
-        value={activity.difficultyLevel ? 'conditional' : 'yes'}
-        onChange={() => undefined}
-      />
-      <TriState label="Groupes" sub={`max ${activity.maxParticipants || '—'} pers.`} value="yes" onChange={() => undefined} />
-      <TriState label="Personnes à mobilité réduite" value="no" onChange={() => undefined} />
-
       {activity.equipmentProvided && (
         <>
           <div className="chip-group__label" style={{ marginTop: 18 }}>
@@ -172,11 +158,6 @@ export function BlockASC({ editor, folded }: SectionProps) {
           </ChipSet>
         </>
       )}
-
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Conditions saisonnières
-      </div>
-      <SeasonPicker value={[...DEFAULT_SEASON]} />
 
       <div className="grid-3" style={{ marginTop: 14 }}>
         <Field label="Difficulté">

@@ -4,27 +4,34 @@ import { SectionTags } from './SectionTags';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
 describe('SectionTags', () => {
-  it('renders the displayed tags from the fixture', () => {
+  it('renders the displayed tags as colored chips, not as editable label inputs', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionTags editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText('Tags & étiquettes')).toBeInTheDocument();
-    // Both the colored chip preview and the editable input value should appear.
+    // The label shows as a colored chip (row + preview card), never an editable text input —
+    // the saver deliberately omits the label (it must not diverge from ref_tag.name).
     expect(screen.getAllByText('Hôtel 4★').length).toBeGreaterThan(0);
-    expect(screen.getByDisplayValue('Cuisine')).toBeInTheDocument();
+    expect(screen.getAllByText('Cuisine').length).toBeGreaterThan(0);
+    expect(screen.queryByDisplayValue('Cuisine')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Hôtel 4★')).not.toBeInTheDocument();
   });
 
-  it('renames a tag and marks the tags module dirty', () => {
+  it('renders no editable tag-label input but keeps the colour Select persisting', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionTags editor={result.current} permissions={allowAll} />);
 
+    // T1a: the label write-trap (editable input that was never saved) is removed.
+    expect(screen.queryByDisplayValue('Cuisine')).not.toBeInTheDocument();
+
+    // The per-row colour variant remains editable and still marks the module dirty.
     act(() => {
-      fireEvent.change(screen.getByDisplayValue('Cuisine'), { target: { value: 'Cuisine créole' } });
+      fireEvent.change(screen.getByDisplayValue('Orange · accroche'), { target: { value: 'green' } });
     });
     view.rerender(<SectionTags editor={result.current} permissions={allowAll} />);
 
     expect(result.current.dirtySections.tags).toBe(true);
-    expect(result.current.draft.tags.displayed[1].label).toBe('Cuisine créole');
+    expect(result.current.draft.tags.displayed[1].colorVariant).toBe('green');
   });
 
   it('adds a tag from the library via the Ajouter un tag button', () => {

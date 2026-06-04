@@ -123,7 +123,7 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
               onChange={(metricCode) => update(index, { metricCode })}
             />
             <Input value={item.value} mono onChange={(value) => update(index, { value })} />
-            <Input value={item.unit} placeholder="pers." onChange={(unit) => update(index, { unit })} />
+            <Input value={item.unit} readOnly onChange={() => undefined} />
             <Input type="date" value={item.effectiveFrom} onChange={(effectiveFrom) => update(index, { effectiveFrom })} />
             <Input type="date" value={item.effectiveTo} onChange={(effectiveTo) => update(index, { effectiveTo })} />
             <button type="button" className="del" onClick={() => replace(capacity.capacityItems.filter((_, itemIndex) => itemIndex !== index))}>

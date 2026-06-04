@@ -1,6 +1,6 @@
 # Editor T1a — "Honest controls" write-trap sweep (2026-06-04)
 
-**Status:** design approved (d.philippe@otisud.com, 2026-06-04). Branch `feat/editor-t1a-honest-controls` off `master`.
+**Status:** IMPLEMENTED 2026-06-04 (branch `feat/editor-t1a-honest-controls` off `master`; logged as §34 in `lot1_mapping_decisions.md`). TDD RED→GREEN; FE suite 362 green; `tsc` clean; push/PR pending.
 **Sits in:** §24 P1.2 (editor completion / B2) → §25 remediation **P0** (stop write-traps). Follows §26 (save/status lifecycle), §29 (§15 relations + nested-RPC uuid), §30 (§10 T&H `subvalue_ids`). This is the **first half of T1**; the heavier **T1b** (§16 sub-places persistence via `save_object_places`) is a separate, later tranche.
 
 ---

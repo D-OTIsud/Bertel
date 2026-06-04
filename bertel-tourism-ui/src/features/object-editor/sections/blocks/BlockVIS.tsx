@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Fs, Input, Repeater, ScheduleEditor, Select, Toggle, TriState } from '../../primitives';
+import { Chip, ChipSet, Fs, Input, Repeater, ScheduleEditor, Select, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-row';
 import { applyRowsToFirstPeriod, scheduleRowsFromPeriod } from './opening-schedule';
@@ -139,14 +139,6 @@ export function BlockVIS({ editor, folded }: SectionProps) {
         colB="Après-midi"
         onChange={(rows) => editor.replaceModule('openings', applyRowsToFirstPeriod(openings, rows))}
       />
-
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Public & accessibilité
-      </div>
-      <TriState label="Familles" value="yes" onChange={() => undefined} />
-      <TriState label="Scolaires" sub="sur réservation" value="yes" onChange={() => undefined} />
-      <TriState label="Personnes à mobilité réduire" sub="rampe, comptoir abaissé" value="conditional" onChange={() => undefined} />
-      <TriState label="Malentendants" value="yes" onChange={() => undefined} />
     </Fs>
   );
 }

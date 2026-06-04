@@ -1348,8 +1348,9 @@ AS $$
         AND ( (params.filters->'itinerary'->>'difficulty_max') IS NULL OR oi.difficulty_level <= (params.filters->'itinerary'->>'difficulty_max')::int )
         AND ( (params.filters->'itinerary'->>'distance_min_km') IS NULL OR oi.distance_km >= (params.filters->'itinerary'->>'distance_min_km')::numeric )
         AND ( (params.filters->'itinerary'->>'distance_max_km') IS NULL OR oi.distance_km <= (params.filters->'itinerary'->>'distance_max_km')::numeric )
-        AND ( (params.filters->'itinerary'->>'duration_min_h') IS NULL OR oi.duration_hours >= (params.filters->'itinerary'->>'duration_min_h')::numeric )
-        AND ( (params.filters->'itinerary'->>'duration_max_h') IS NULL OR oi.duration_hours <= (params.filters->'itinerary'->>'duration_max_h')::numeric )
+        -- Public filter contract stays in HOURS (duration_min_h / duration_max_h); object_iti.duration_min is MINUTES, so convert (h * 60).
+        AND ( (params.filters->'itinerary'->>'duration_min_h') IS NULL OR oi.duration_min >= (params.filters->'itinerary'->>'duration_min_h')::numeric * 60 )
+        AND ( (params.filters->'itinerary'->>'duration_max_h') IS NULL OR oi.duration_min <= (params.filters->'itinerary'->>'duration_max_h')::numeric * 60 )
         AND (
           params.iti_practices_any IS NULL
           OR EXISTS (
@@ -3662,9 +3663,10 @@ BEGIN
         'itinerary',
         jsonb_build_object(
           'distance_km',      i.distance_km,
-          'duration_hours',   i.duration_hours,
+          'duration_min',     i.duration_min,
           'difficulty_level', i.difficulty_level,
           'elevation_gain',   i.elevation_gain,
+          'elevation_loss',   i.elevation_loss,
           'is_loop',          i.is_loop,
           'open_status',      i.open_status,
           'status_note',      i.status_note,
@@ -7077,9 +7079,10 @@ BEGIN
       'object_id', object_id,
       'type', 'track',
       'distance_km', distance_km,
-      'duration_hours', duration_hours,
+      'duration_min', duration_min,
       'difficulty_level', difficulty_level,
       'elevation_gain', elevation_gain,
+      'elevation_loss', elevation_loss,
       'is_loop', is_loop
     )
   )

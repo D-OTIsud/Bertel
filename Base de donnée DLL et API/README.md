@@ -64,6 +64,7 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_sustainability_v5.sql
 \i migration_room_type_ref.sql
 \i migration_tag_link_position.sql
+\i migration_iti_duration_elevation.sql
 
 -- 3) Fonctions API
 \i api_views_functions.sql

@@ -115,6 +115,7 @@ psql -d votre_database -f "Base de donnée DLL et API/schema_unified.sql"
 psql -d votre_database -f "Base de donnée DLL et API/migration_sustainability_v5.sql"
 psql -d votre_database -f "Base de donnée DLL et API/migration_room_type_ref.sql"
 psql -d votre_database -f "Base de donnée DLL et API/migration_tag_link_position.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_iti_duration_elevation.sql"
 
 # 3. Vues et fonctions API
 psql -d votre_database -f "Base de donnée DLL et API/api_views_functions.sql"

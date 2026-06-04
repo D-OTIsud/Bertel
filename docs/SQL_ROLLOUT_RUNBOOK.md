@@ -29,6 +29,7 @@ A fresh database MUST be built in this exact order; each step depends on the pre
 2. `migration_sustainability_v5.sql` — DDL; **prerequisite for the V5 sections of `seeds_data.sql`** (creates `ref_sustainability_action_group` + equivalence tables/views).
 3. `migration_room_type_ref.sql` — DDL; adds `object_room_type.room_type_id`.
 4. `migration_tag_link_position.sql` — DDL; adds `tag_link.position` (required at runtime by `api.save_object_workspace_tags`).
+4b. `migration_iti_duration_elevation.sql` — DDL; greenfield ITI retype `object_iti.duration_hours` → `duration_min INTEGER` + adds `elevation_loss INTEGER`. **Before** `api_views_functions.sql` (its `get_object_resource` / `get_filtered_object_ids` / `get_itinerary_track_geojson` reference `duration_min`). Idempotent (`schema_unified.sql` already ships the new shape, so this is a no-op on a fresh DB). ⚠️ BREAKING for live — apply in lockstep with the frontend build that reads `duration_min`/`elevation_loss`.
 5. `api_views_functions.sql`
 6. `rls_policies.sql` — defines `api.is_object_owner` (needed by step 7).
 7. `object_workspace_safe_write_rpcs.sql` — creates schema `internal` + the write gate `internal.workspace_assert_can_write_object`.

@@ -4311,6 +4311,28 @@ export function buildItineraryUpsertPayload(objectId: string, input: ObjectWorks
   };
 }
 
+/**
+ * Pure builder for the `stages` payload of api.save_object_itinerary_nested (Phase 1). Maps the
+ * editor's managed stage rows (BlockITI / SectionPlaces add/edit/remove) to the RPC shape:
+ * recordId -> id (existing stage, preserved); new rows omit id so the RPC generates one.
+ * Returns null when the itinerary module did NOT load (unavailableReason set) — the RPC replaces
+ * all stages (delete + reinsert), so a partial/failed load must not clobber the object's existing
+ * stages. An empty array is intentional (user removed every stage) and correctly clears them.
+ */
+export function buildItineraryStagesPayload(
+  input: ObjectWorkspaceItineraryModule,
+): Array<{ id?: string; name: string; description: string; position: string }> | null {
+  if (input.unavailableReason != null) {
+    return null;
+  }
+  return input.stages.map((stage) => ({
+    ...(stage.recordId ? { id: stage.recordId } : {}),
+    name: stage.name,
+    description: stage.description,
+    position: stage.position,
+  }));
+}
+
 export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -4350,6 +4372,20 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
     if (practicesError) {
       throw mapMutationError(practicesError, 'Impossible de sauvegarder les pratiques itineraire.');
     }
+  }
+
+  // Phase 1: persist itinerary stages (object_iti_stage) via api.save_object_itinerary_nested, which
+  // replaces all stages (delete + reinsert). buildItineraryStagesPayload returns null when the module
+  // did not load, so a partial/failed load cannot clobber existing stages. Only `stages` is sent —
+  // sections / profiles / associated objects / geom are out of scope (Phase 1; geom stays read-only).
+  const stagesPayload = buildItineraryStagesPayload(input);
+  if (stagesPayload !== null) {
+    await callObjectWorkspaceRpc(
+      'save_object_itinerary_nested',
+      objectId,
+      { stages: stagesPayload },
+      'Impossible de sauvegarder les etapes itineraire.',
+    );
   }
 }
 

@@ -85,6 +85,10 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_sp4_list_org_members.sql
 -- 5f) RPC machine a etats du statut objet api.rpc_set_object_status (+ rpc_publish_object devient un wrapper)
 \i migration_object_status_lifecycle.sql
+-- 5g) Correctif securite RLS object_act (lecture/ecriture gardees comme les tables enfant soeurs)
+\i migration_object_act_rls.sql
+-- 5h) Menage: RLS sur 3 tables ref_* + suppression des 5 tables de sauvegarde *_bak_20260519_082607z
+\i migration_rls_ref_and_bak_cleanup.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

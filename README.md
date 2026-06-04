@@ -136,6 +136,10 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_rls_read_gate_p0
 psql -d votre_database -f "Base de donnée DLL et API/migration_sp4_list_org_members.sql"
 # 5f. RPC machine à états du statut objet api.rpc_set_object_status (+ rpc_publish_object devient un wrapper)
 psql -d votre_database -f "Base de donnée DLL et API/migration_object_status_lifecycle.sql"
+# 5g. Correctif sécurité RLS object_act (lecture/écriture gardées comme les tables enfant sœurs)
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_act_rls.sql"
+# 5h. Ménage: RLS sur 3 tables ref_* + suppression des 5 tables de sauvegarde *_bak_20260519_082607z
+psql -d votre_database -f "Base de donnée DLL et API/migration_rls_ref_and_bak_cleanup.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

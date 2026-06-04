@@ -1,4 +1,4 @@
-import { buildItineraryUpsertPayload } from './object-workspace';
+import { buildItineraryUpsertPayload, buildItineraryStagesPayload } from './object-workspace';
 import type { ObjectWorkspaceItineraryModule } from './object-workspace-parser';
 
 // Pins the object_iti WRITE contract to the REAL columns after the greenfield retype
@@ -56,5 +56,32 @@ describe('buildItineraryUpsertPayload', () => {
     expect(p.duration_min).toBeNull();
     expect(p.elevation_gain).toBeNull();
     expect(p.elevation_loss).toBeNull();
+  });
+});
+
+describe('buildItineraryStagesPayload', () => {
+  // Phase 1: stages persist via api.save_object_itinerary_nested, which replaces all stages
+  // (delete + reinsert). The editor manages stages (BlockITI / SectionPlaces add/edit/remove),
+  // so module.stages is the source of truth; the guard below avoids clobbering on a failed load.
+  const stages = [
+    { recordId: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1' },
+    { recordId: null, name: 'Nouvelle etape', description: '', position: '2' },
+  ];
+
+  it('maps managed stages to the RPC shape — recordId becomes id, new rows omit id', () => {
+    expect(buildItineraryStagesPayload({ ...baseInput, stages })).toEqual([
+      { id: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1' },
+      { name: 'Nouvelle etape', description: '', position: '2' },
+    ]);
+  });
+
+  it('returns null when the module did not load (guard against clobbering existing stages)', () => {
+    expect(
+      buildItineraryStagesPayload({ ...baseInput, stages, unavailableReason: 'Le live ne fournit pas le detail.' }),
+    ).toBeNull();
+  });
+
+  it('returns [] for a loaded module with no stages (intentional clear)', () => {
+    expect(buildItineraryStagesPayload(baseInput)).toEqual([]);
   });
 });

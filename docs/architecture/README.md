@@ -34,6 +34,10 @@ Toujours distinguer dans ce document :
 - la **cible canonique**,
 - le **backlog**.
 
+## Post-MVP
+
+- **[Backlog version post-MVP](../roadmap/POST_MVP.md)** — améliorations hors périmètre MVP (ex. panneau d’éligibilité / suggestions de labels dans le rail éditeur).
+
 ## Liens utiles
 
 - [README racine](../../README.md)

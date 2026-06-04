@@ -810,9 +810,10 @@ These panels only appear when the `object_type` matches.
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `distance_km` | `DECIMAL(8,2)` | No | Total distance in kilometers. |
-| `duration_hours` | `DECIMAL(4,2)` | No | Estimated completion time in hours. |
+| `duration_min` | `INTEGER` | No | Estimated completion time in **minutes** (greenfield retype from `duration_hours`; `CHECK > 0`). |
 | `difficulty_level` | `INTEGER (1–5)` | No | 1 = easy, 5 = expert. |
-| `elevation_gain` | `INTEGER` | No | Total positive elevation gain in meters. |
+| `elevation_gain` | `INTEGER` | No | Total positive elevation (ascent) in metres. |
+| `elevation_loss` | `INTEGER` | No | Total negative elevation (descent) in metres. |
 | `is_loop` | `BOOLEAN` | No | Whether the trail returns to its starting point. |
 | `geom` | `GEOGRAPHY(LINESTRING)` | No | Full trace geometry. Powers the map display and GPX export. |
 | `cached_gpx` / `cached_kml` | `TEXT` | No | Pre-generated export formats. Auto-regenerated on geometry change. |
@@ -820,7 +821,7 @@ These panels only appear when the `object_type` matches.
 | `status_note` | `TEXT` | No | Human-readable note explaining the status (e.g., storm damage on section 3). |
 | `status_document_id` | `UUID` (FK) | No | Official document backing the status change. |
 
-> ⚠️ **Editor write reality (audited 2026-06-04 — front/DB drift, not yet fixed):** the ITI summary save in `bertel-tourism-ui/src/services/object-workspace.ts` (`saveObjectWorkspaceItinerary`, ~L4317) does a direct `.from('object_iti').upsert(...)` writing **`duration_min`, `elevation_positive_m`, `elevation_negative_m` — columns that do not exist** on `object_iti` (the table has `duration_hours` + `elevation_gain`). Those three fields therefore fail to persist. The read/parser path also reads `duration_min` (vs DB `duration_hours`). `geom` is read-only in the editor (no write/validation contract). A nested write RPC `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)` **exists** but the summary path does not use it. **Default resolution (no DDL change): adapt the front to write `duration_hours`/`elevation_gain`, or route through the RPC** — adding columns is gated on an explicit product decision. Tracked with the §15 Relations/ITI write-traps in `lot1_mapping_decisions.md` §24 / P1.2. The full ITI sub-object matrix (stages, stage media, sections, profile, associated objects, incoming/outgoing relations) + the `itinerary` / `itinerary_details` / `outgoing_relations` / `incoming_relations` payload contract is a **deferred** dictionary pass.
+> **Editor write model (2026-06-04, §28):** the **summary** fields above are saved by the editor via a **direct `object_iti` upsert** (`bertel-tourism-ui/src/services/object-workspace.ts` → `buildItineraryUpsertPayload`): `duration_min` (minutes), `elevation_gain` (ascent), `elevation_loss` (descent). **`geom` / `cached_gpx` stay read-only** — no editor write contract yet. `api.save_object_itinerary_nested(text, jsonb)` exists for nested rows (info, stages, sections, profile, associated objects) but **stages are not wired in the save dispatcher yet** (Phase 1 deferred — RPC delete-all-then-reinsert; see `lot1_mapping_decisions.md` §28). The explorer itinerary filter keeps its public contract in **hours** (`duration_min_h` / `duration_max_h`) and converts to minutes internally (`× 60`) in `api.get_filtered_object_ids`.
 
 Additional ITI sub-tables:
 - `object_iti_practice` (M:N): Sports practices applicable to this trail (hiking, mountain bike, horse riding, etc.)

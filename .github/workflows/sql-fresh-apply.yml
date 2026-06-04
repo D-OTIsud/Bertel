@@ -131,6 +131,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_read_gate_setbased.sql"
 
+      - name: Cards-batch authorize test (DEFINER self-authorizes p_ids; no cross-persona draft leak)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_batch_authorize.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

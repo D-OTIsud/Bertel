@@ -1763,6 +1763,13 @@ AS $$
   WHERE o.id = p_object_id;
 $$;
 
+-- NOTE (§36): the LIVE / fresh-apply form of this function is SECURITY DEFINER with an
+-- authorize-once gate, defined in migration_cards_batch_authorize_definer.sql (manifest step 8j),
+-- which CREATE OR REPLACE-overrides the SECURITY INVOKER baseline below. The DEFINER form cannot
+-- live in this file because its body forward-references api.current_user_extended_object_ids()
+-- (created at step 8i, AFTER this file at step 5) and a SQL function body is parse-checked at
+-- creation. ⚠ If you change the body below (columns / CTEs), apply the SAME change to that
+-- migration's copy, or fresh-apply will silently ship the migration's (then-stale) body.
 CREATE OR REPLACE FUNCTION api.get_object_cards_batch(
   p_ids TEXT[],
   p_lang_prefs TEXT[] DEFAULT ARRAY['fr']::text[]

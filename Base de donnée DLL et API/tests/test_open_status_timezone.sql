@@ -22,8 +22,10 @@ DECLARE
   v_ts   timestamp;
 BEGIN
   -- ---------- STRUCTURAL: the pg_timezone_names scan is gone (migration applied) ----------
+  -- Strip `--` line comments first: the migrated function keeps an explanatory in-body comment that
+  -- *names* pg_timezone_names, and prosrc includes comments — so check the CODE, not the docs.
   ASSERT (
-    SELECT p.prosrc NOT ILIKE '%pg_timezone_names%'
+    SELECT regexp_replace(p.prosrc, '--.*', '', 'gn') NOT ILIKE '%pg_timezone_names%'
     FROM pg_proc p
     WHERE p.proname = 'get_local_now_for_timezone' AND p.pronamespace = 'api'::regnamespace
   ), 'get_local_now_for_timezone MUST NOT scan pg_timezone_names (timezone-perf migration not applied)';

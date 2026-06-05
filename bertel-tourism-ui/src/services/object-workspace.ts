@@ -124,8 +124,6 @@ export interface ObjectWorkspaceResource {
   permissions: ObjectWorkspacePermissions;
 }
 
-const ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT = false;
-
 function readErrorMessage(error: unknown, fallback: string): Error {
   if (error instanceof Error) {
     return error;
@@ -3337,45 +3335,49 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     provider: parsedModules.provider,
   };
 
-  if (ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT) {
-    const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
-    const [
-      mediaModule,
-      capacityPoliciesModule,
-      pricingModule,
-      roomsModule,
-      meetingRoomsModule,
-      menusModule,
-      activityModule,
-      eventModule,
-      itineraryModule,
-      membershipsModule,
-    ] = await Promise.all([
-      getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
-      getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
-      getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
-      getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
-      getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
-      getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
-      getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
-      getObjectWorkspaceEventModule(objectId, parsedModules.event),
-      getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
-      getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
-    ]);
+  // §42: catalog enrichment for the type-specific / optional modules — moved OUT of the old
+  // `ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT` gate so empty/new objects can ADD catalog values
+  // (room types, price kinds/units, menu categories, capacity metrics, …), not just display
+  // existing ones. Each fn degrades gracefully (base + `unavailableReason`, or Promise.allSettled
+  // with per-result fallback) ⇒ a table not exposed via PostgREST shows "unavailable" for that
+  // module, never breaks the load. Extends the §32 (characteristics) / §41 (zones) precedent.
+  const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
+  const [
+    mediaModule,
+    capacityPoliciesModule,
+    pricingModule,
+    roomsModule,
+    meetingRoomsModule,
+    menusModule,
+    activityModule,
+    eventModule,
+    itineraryModule,
+    membershipsModule,
+  ] = await Promise.all([
+    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
+    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
+    getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
+    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
+    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
+    getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
+    getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
+    getObjectWorkspaceEventModule(objectId, parsedModules.event),
+    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
+    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
+  ]);
 
-    Object.assign(modules, {
-      media: mediaModule,
-      capacityPolicies: capacityPoliciesModule,
-      pricing: pricingModule,
-      rooms: roomsModule,
-      meetingRooms: meetingRoomsModule,
-      menus: menusModule,
-      activity: activityModule,
-      event: eventModule,
-      itinerary: itineraryModule,
-      memberships: membershipsModule,
-    });
-  }
+  Object.assign(modules, {
+    media: mediaModule,
+    capacityPolicies: capacityPoliciesModule,
+    pricing: pricingModule,
+    rooms: roomsModule,
+    meetingRooms: meetingRoomsModule,
+    menus: menusModule,
+    activity: activityModule,
+    event: eventModule,
+    itinerary: itineraryModule,
+    memberships: membershipsModule,
+  });
 
   return {
     id: detail.id,

@@ -1,5 +1,8 @@
 -- migration_cards_batch_authorize_definer.sql
 -- Explorer cards-batch perf fix (2026-06-04) — §36, the residual left by §35.
+-- §38 (2026-06-04): added a PUBLISHED-ONLY FAST-PATH to the authorize-once gate (see step 2 / the
+--   `distinct_ids` CTE) — the per-user extended-scope scan is now skipped entirely for all-published
+--   pages (read-only / public card-deck + map). Set-equivalent ⇒ §36 no-leak guarantee unchanged.
 --
 -- SYMPTOM: the editor list RPCs (api.list_object_resources_*; status ['published','draft'],
 --   card view) spend ~1.4s of their runtime inside api.get_object_cards_batch(ids, langs).
@@ -50,14 +53,18 @@ AS $fn$
   SELECT api.current_user_extended_object_ids();
 $fn$;
 REVOKE EXECUTE ON FUNCTION api.current_user_readable_object_ids() FROM PUBLIC;
--- Only cards_batch (SECURITY DEFINER) calls this, as its owner — no anon/role grant is required for
--- the cards path. Granted to authenticated/service_role for parity with current_user_extended_object_ids.
+-- Retained as the canonical "object SELECT visibility as a SET" helper (published ∪ extended).
+-- NOTE (§38): cards_batch no longer calls this — it inlines the set-equivalent SPLIT
+-- (EXISTS(published) OR id IN (extended)) so the extended scan is skipped for all-published pages.
+-- Granted to authenticated/service_role for parity with current_user_extended_object_ids.
 GRANT  EXECUTE ON FUNCTION api.current_user_readable_object_ids() TO authenticated, service_role;
 
 -- 2) cards_batch -> SECURITY DEFINER + authorize-once. Body is byte-identical to the step-5
 --    definition in api_views_functions.sql EXCEPT THREE changes: (a) the SECURITY DEFINER clause
---    below; (b) the `distinct_ids` CTE gains `WHERE id IN (SELECT api.current_user_readable_object_ids())`
---    (the single authorize-once point — every downstream child CTE joins distinct_ids); and
+--    below; (b) the `distinct_ids` CTE gains the authorize-once gate — `WHERE EXISTS(published)
+--    OR id IN (SELECT api.current_user_extended_object_ids())` (§38 published-only fast-path: the
+--    set-equivalent split of `… current_user_readable_object_ids()` that skips the extended scan
+--    for an all-published page; every downstream child CTE joins distinct_ids); and
 --    (c) `main_description` re-applies the object_description visibility RLS this DEFINER body
 --    bypasses (see the inline note there — the only field-level read gate among the tables read).
 CREATE OR REPLACE FUNCTION api.get_object_cards_batch(
@@ -77,14 +84,22 @@ AS $$
     FROM unnest(COALESCE(p_ids, ARRAY[]::text[])) WITH ORDINALITY AS t(id, ord)
     WHERE t.id IS NOT NULL
   ), distinct_ids AS (
-    -- AUTHORIZE-ONCE: gate the page to objects the caller may actually see
-    -- (published ∪ extended = the `object` table's own SELECT visibility). Uncorrelated
-    -- subquery ⇒ the planner hoists it to a single InitPlan. Because this function is
-    -- SECURITY DEFINER, every child read below runs RLS-free — safe ONLY because distinct_ids
-    -- is already filtered to authorized ids here. Do NOT trust the caller's id list.
+    -- AUTHORIZE-ONCE with a PUBLISHED-ONLY FAST-PATH (§38). Gate the page to objects the caller
+    -- may actually see = published ∪ extended (the `object` table's own SELECT visibility). This
+    -- is the SPLIT form of the prior single combined-readable gate
+    -- (= published ∪ extended, which ALWAYS computed the per-user extended scope): set-identical,
+    -- but the extended-scope SubPlan (api.current_user_extended_object_ids(): a 5-way UNION over
+    -- actor_object_role / object_org_link / user_org_membership) is now evaluated LAZILY — i.e.
+    -- NOT AT ALL when every requested id is already published (the read-only / public card-deck +
+    -- map page). Verified via EXPLAIN: extended = "never executed" for an all-published page
+    -- (~0.6 ms vs ~15 ms / ~1950 buffers). Both branches are uncorrelated ⇒ hoisted to hashed
+    -- SubPlans (one InitPlan each). Because this function is SECURITY DEFINER, every child read
+    -- below runs RLS-free — safe ONLY because distinct_ids is filtered to authorized ids here.
+    -- Do NOT trust the caller's id list; a non-published id still requires extended membership.
     SELECT DISTINCT id
     FROM input_ids
-    WHERE id IN (SELECT api.current_user_readable_object_ids())
+    WHERE EXISTS (SELECT 1 FROM object o WHERE o.id = input_ids.id AND o.status = 'published')
+       OR id IN (SELECT api.current_user_extended_object_ids())
   ), main_location AS (
     SELECT DISTINCT ON (ol.object_id)
       ol.object_id,

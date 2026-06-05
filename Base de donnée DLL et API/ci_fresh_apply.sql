@@ -39,6 +39,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_tag_link_position.sql
 \echo '== 4b     migration_iti_duration_elevation.sql  (object_iti duration_min + elevation_loss; before api_views) =='
 \ir migration_iti_duration_elevation.sql
+\echo '== 4c     migration_open_status_timezone_perf.sql  (get_local_now_for_timezone: drop pg_timezone_names scan; folded into schema_unified, no-op fresh) =='
+\ir migration_open_status_timezone_perf.sql
 \echo '== 5/13  api_views_functions.sql =='
 \ir api_views_functions.sql
 \echo '== 6/13  rls_policies.sql  (defines api.is_object_owner) =='
@@ -65,6 +67,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_explorer_rls_setbased.sql
 \echo '== 8j     migration_cards_batch_authorize_definer.sql  (cards-batch authorize-once + DEFINER; after 8i set fn) =='
 \ir migration_cards_batch_authorize_definer.sql
+\echo '== 8k     migration_rls_initplan_sweep.sql  (wrap auth.x() -> (select auth.x()) in 18 object-family policies; after rls_policies + SP fns) =='
+\ir migration_rls_initplan_sweep.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

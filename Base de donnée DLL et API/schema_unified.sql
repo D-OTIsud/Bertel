@@ -4796,26 +4796,34 @@ RETURNS TABLE (
   local_isodow INT,
   business_timezone TEXT
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
-
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-  SELECT
-    (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name)::DATE AS local_date,
-    (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name)::TIME AS local_time,
-    EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE tz.zone_name))::INT AS local_isodow,
-    tz.zone_name AS business_timezone
-  FROM (
-    SELECT CASE
-      WHEN EXISTS (
-        SELECT 1
-        FROM pg_timezone_names tzn
-        WHERE tzn.name = COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion')
-      ) THEN COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion')
-      ELSE 'Indian/Reunion'
-    END AS zone_name
-  ) tz;
+DECLARE
+  v_zone TEXT := COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion');
+  v_now  TIMESTAMP;
+BEGIN
+  -- Validate the zone CHEAPLY: `AT TIME ZONE` raises 22023 (invalid_parameter_value) on an unknown
+  -- zone, caught to fall back to 'Indian/Reunion'. Replaces the previous
+  -- `EXISTS (SELECT 1 FROM pg_timezone_names ...)` membership test, which enumerated ~1200 zones
+  -- (~253 ms) on EVERY call — and this fn is CROSS JOIN LATERAL'd once per published object by
+  -- api.refresh_open_status (cron, every 15 min), so the scan was ~92% of all DB exec time.
+  -- Behaviour preserved (valid->that zone; empty/blank/NULL->Indian/Reunion; invalid->fallback).
+  -- See migration_open_status_timezone_perf.sql / lot1_mapping_decisions.md §37.
+  BEGIN
+    v_now := CURRENT_TIMESTAMP AT TIME ZONE v_zone;
+  EXCEPTION WHEN invalid_parameter_value THEN
+    v_zone := 'Indian/Reunion';
+    v_now  := CURRENT_TIMESTAMP AT TIME ZONE v_zone;
+  END;
+
+  RETURN QUERY SELECT
+    v_now::DATE                     AS local_date,
+    v_now::TIME                     AS local_time,
+    EXTRACT(ISODOW FROM v_now)::INT AS local_isodow,
+    v_zone                          AS business_timezone;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION api.get_object_local_now(

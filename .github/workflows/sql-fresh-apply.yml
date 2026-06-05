@@ -136,6 +136,21 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_batch_authorize.sql"
 
+      - name: Cards published fast-path test (split gate skips extended scan for all-published; no leak)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_published_fastpath.sql"
+
+      - name: RLS auth-initplan sweep test (object-family policies wrapped; owner/stranger UPDATE gating intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_rls_initplan_sweep.sql"
+
+      - name: Open-status timezone test (get_local_now_for_timezone: no pg_timezone_names scan; fallback contract preserved)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_timezone.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

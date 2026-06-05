@@ -23,7 +23,6 @@ import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-regist
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
-import { EditorFooter } from './shell/EditorFooter';
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
@@ -285,7 +284,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
           onGoToSection={scrollToSection}
         />
       </div>
-      <EditorFooter onPreview={openPreviewDrawer} onSaveDraft={() => void handleSaveDraft()} savingDraft={savingDraft} />
     </div>
   );
 }

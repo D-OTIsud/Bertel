@@ -5160,6 +5160,89 @@ async function writeOrgDescription(objectId: string, overlay: ObjectWorkspaceDes
   }
 }
 
+export interface PlacesReconcilePlan {
+  toInsert: ObjectWorkspaceDescriptionScope[];
+  toUpdate: ObjectWorkspaceDescriptionScope[];
+  toDelete: string[];
+}
+
+/**
+ * Pure (T1b §40): turn the existing `object_place` id set + the draft place scopes into an
+ * insert / update / delete plan. New places (null `placeId`) → insert; existing → update
+ * (idempotent label + description); loaded-but-now-absent → delete. Non-destructive — only
+ * places the editor removed are deleted (no `save_object_places` blanket replace, so a
+ * place's locations/media authored elsewhere are never collaterally wiped).
+ */
+export function computePlacesReconcile(
+  existingPlaceIds: string[],
+  draftPlaces: ObjectWorkspaceDescriptionScope[],
+): PlacesReconcilePlan {
+  const toInsert = draftPlaces.filter((place) => !place.placeId);
+  const toUpdate = draftPlaces.filter((place) => Boolean(place.placeId));
+  const keptIds = new Set(toUpdate.map((place) => place.placeId as string));
+  const toDelete = existingPlaceIds.filter((id) => !keptIds.has(id));
+  return { toInsert, toUpdate, toDelete };
+}
+
+/**
+ * Apply the §16 sub-place reconcile via direct PostgREST as the canonical writer (mirrors
+ * `upsertPlaceDescription`). `object_place` / `object_place_description` are directly
+ * writable under SP-1's `owner_write_place` (`FOR ALL USING user_can_write_object_canonical`).
+ */
+async function reconcilePlaces(objectId: string, places: ObjectWorkspaceDescriptionScope[]): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les sous-lieux.');
+  }
+
+  const { data: existing, error: fetchError } = await client
+    .from('object_place')
+    .select('id')
+    .eq('object_id', objectId);
+  if (fetchError) {
+    throw mapMutationError(fetchError, 'Impossible de charger les sous-lieux existants.');
+  }
+
+  const plan = computePlacesReconcile((existing ?? []).map((row) => String(row.id)), places);
+
+  if (plan.toDelete.length > 0) {
+    const { error } = await client.from('object_place').delete().in('id', plan.toDelete);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de supprimer un sous-lieu.');
+    }
+  }
+
+  for (const place of plan.toUpdate) {
+    const { error } = await client
+      .from('object_place')
+      .update({ label: toNullableText(place.label) })
+      .eq('id', place.placeId as string);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de renommer un sous-lieu.');
+    }
+    await upsertPlaceDescription(place);
+  }
+
+  let position = plan.toUpdate.length;
+  for (const place of plan.toInsert) {
+    const { data: created, error } = await client
+      .from('object_place')
+      .insert({ object_id: objectId, label: toNullableText(place.label), position })
+      .select('id')
+      .single();
+    if (error || !created) {
+      throw mapMutationError(error, 'Impossible de créer un sous-lieu.');
+    }
+    const { error: descError } = await client
+      .from('object_place_description')
+      .insert({ place_id: String(created.id), ...buildDescriptionPayload(place) });
+    if (descError) {
+      throw mapMutationError(descError, 'Impossible de créer la description du sous-lieu.');
+    }
+    position += 1;
+  }
+}
+
 export async function saveObjectWorkspaceDescriptions(
   objectId: string,
   input: ObjectWorkspaceDescriptionsModule,
@@ -5182,7 +5265,5 @@ export async function saveObjectWorkspaceDescriptions(
     return;
   }
 
-  for (const placeScope of input.places) {
-    await upsertPlaceDescription(placeScope);
-  }
+  await reconcilePlaces(objectId, input.places);
 }

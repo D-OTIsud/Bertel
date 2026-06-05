@@ -2,26 +2,11 @@ import { Fs, Input, Repeater, Select, Textarea } from '../primitives';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
 
-const PLACE_KIND_OPTIONS = [
-  { v: 'start', l: 'Départ / Entrée' },
-  { v: 'mid', l: 'Étape / Salle' },
-  { v: 'end', l: 'Arrivée / Sortie' },
-  { v: 'park', l: 'Parking' },
-  { v: 'wc', l: 'Sanitaires' },
-  { v: 'shop', l: 'Boutique' },
-];
-
 const ACCESSIBILITY_OPTIONS = [
   { v: 'public', l: '♿ Accessible' },
   { v: 'partner', l: '◐ Partiellement' },
   { v: 'internal', l: '✕ Non accessible' },
 ];
-
-function placeKindFromIndex(index: number, total: number): string {
-  if (index === 0) return 'start';
-  if (index === total - 1 && total > 1) return 'end';
-  return 'mid';
-}
 
 export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
@@ -32,7 +17,7 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
     return null;
   }
 
-  function updatePlace(index: number, patch: { label?: string; description?: string; visibility?: string; kind?: string }) {
+  function updatePlace(index: number, patch: { label?: string; description?: string; visibility?: string }) {
     const places = descriptions.places.map((place, placeIndex) => {
       if (placeIndex !== index) return place;
       const next = { ...place };
@@ -45,9 +30,6 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
           descriptions.localLanguage,
           patch.description,
         );
-      }
-      if (patch.kind !== undefined) {
-        next.chapo = updateTranslatableField(place.chapo, descriptions.localLanguage, descriptions.localLanguage, patch.kind);
       }
       return next;
     });
@@ -100,20 +82,12 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
       <Repeater
         items={descriptions.places}
         getKey={(place, index) => `${place.placeId ?? place.recordId ?? 'place'}-${index}`}
-        columns="14px 110px 1fr 1fr 130px auto"
+        columns="14px 1fr 1fr 130px auto"
         addLabel="Ajouter un sous-lieu"
         onAdd={addPlace}
         renderRow={(place, index) => (
           <>
             <span className="rep-row__handle" style={{ marginTop: 6 }} aria-hidden />
-            <Select
-              value={
-                readTranslatableField(place.chapo, descriptions.localLanguage, descriptions.localLanguage)
-                || placeKindFromIndex(index, descriptions.places.length)
-              }
-              options={PLACE_KIND_OPTIONS}
-              onChange={(kind) => updatePlace(index, { kind })}
-            />
             <Input value={place.label} placeholder="Nom du sous-lieu" onChange={(label) => updatePlace(index, { label })} />
             <Textarea
               value={readTranslatableField(place.description, descriptions.activeLanguage, descriptions.localLanguage)}
@@ -135,14 +109,9 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
       {itinerary.stages.length > 0 && <div className="chip-group__label">Étapes d’itinéraire</div>}
       <div className="repeater wp-rep">
         {itinerary.stages.map((stage, index) => (
-          <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: '14px 28px 110px 1fr 1fr 80px auto' }}>
+          <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: '14px 28px 1fr 1fr 80px auto' }}>
             <span className="rep-row__handle" aria-hidden />
             <div className="wp-num">{index + 1}</div>
-            <Select
-              value={placeKindFromIndex(index, itinerary.stages.length)}
-              options={PLACE_KIND_OPTIONS}
-              onChange={() => undefined}
-            />
             <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
             <Input value={stage.description} onChange={(description) => updateStage(index, { description })} />
             <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />

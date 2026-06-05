@@ -141,6 +141,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_object_status_li
 psql -d votre_database -f "Base de donnée DLL et API/migration_object_act_rls.sql"
 # 5h. Ménage: RLS sur 3 tables ref_* + suppression des 5 tables de sauvegarde *_bak_20260519_082607z
 psql -d votre_database -f "Base de donnée DLL et API/migration_rls_ref_and_bak_cleanup.sql"
+# 5i. §41 zones: ref_commune (24 communes de La Réunion) + RLS + FK object_zone.insee_commune
+psql -d votre_database -f "Base de donnée DLL et API/migration_ref_commune.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

@@ -151,6 +151,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_timezone.sql"
 
+      - name: ref_commune test (24-commune seed + RLS pub-read/admin-write + object_zone FK)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_commune.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

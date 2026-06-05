@@ -3166,7 +3166,9 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     location: {
       ...directOrBlocked(),
       canEditPlaces: false,
-      canEditZones: false,
+      // §41: zones (communes desservies) authoring — mirror canEditPlaceDescriptions (superuser/demo;
+      // canonical-write enforced by object_zone RLS + save_object_places). Broaden to canonical later.
+      canEditZones: session.demoMode || session.role === 'super_admin',
     },
     descriptions: {
       ...directOrBlocked(),
@@ -3287,6 +3289,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     tagsModule,
     contactsModule,
     characteristicsModule,
+    locationModule,
     permissions,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
@@ -3310,11 +3313,15 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
     // See lot1_mapping_decisions §32.
     getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
+    // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
+    // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
+    getObjectWorkspaceZonesModule(objectId, parsedModules.location),
     getObjectWorkspacePermissions(objectId),
   ]);
 
   const modules: ObjectWorkspaceModules = {
     ...parsedModules,
+    location: locationModule,
     taxonomy: taxonomyModule,
     distinctions: distinctionsModule,
     publication: publicationModule,
@@ -4739,6 +4746,58 @@ export async function saveObjectWorkspaceMemberships(objectId: string, input: Ob
   }
 }
 
+/**
+ * Pure (§41): the zones-only payload for `api.save_object_places` — selected INSEE commune
+ * codes → ordered `{insee_commune, position}`. Dedupes; drops blanks.
+ */
+export function buildZonesPayload(zoneCodes: string[]): { insee_commune: string; position: number }[] {
+  const seen = new Set<string>();
+  const rows: { insee_commune: string; position: number }[] = [];
+  for (const code of zoneCodes) {
+    const trimmed = code.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    rows.push({ insee_commune: trimmed, position: rows.length });
+  }
+  return rows;
+}
+
+/**
+ * §41: enrich the location module with the commune catalog (`ref_commune`, public read) and the
+ * object's selected zones (`object_zone`, gated by `can_read_object`). Mirrors the §32 characteristics
+ * enrichment. On read failure sets `zonesUnavailableReason` ⇒ the saver skips zone persistence (no clobber).
+ */
+async function getObjectWorkspaceZonesModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceLocationModule,
+): Promise<ObjectWorkspaceLocationModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, zonesUnavailableReason: 'Connexion backend indisponible pour charger les communes.' };
+  }
+  const [communeRefs, objectZones] = await Promise.all([
+    client.from('ref_commune').select('insee_code, name, position').eq('is_active', true).order('position', { ascending: true }),
+    client.from('object_zone').select('insee_commune, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+  if (communeRefs.error || objectZones.error) {
+    return { ...baseModule, zonesUnavailableReason: 'Le live actuel ne fournit pas encore le référentiel des communes.' };
+  }
+  const zoneOptions = (communeRefs.data ?? [])
+    .map((row) => ({
+      code: readString((row as Record<string, unknown>).insee_code),
+      label: readString((row as Record<string, unknown>).name),
+    }))
+    .filter((option) => option.code !== '');
+  const zoneCodes = (objectZones.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).insee_commune))
+    .filter(Boolean);
+  return { ...baseModule, zoneOptions, zoneCodes, zonesUnavailableReason: null };
+}
+
 export async function saveObjectWorkspaceLocation(objectId: string, input: ObjectWorkspaceLocationModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -4787,12 +4846,22 @@ export async function saveObjectWorkspaceLocation(objectId: string, input: Objec
     if (error) {
       throw mapMutationError(error, "Impossible d'enregistrer la localisation principale.");
     }
-    return;
+  } else {
+    const { error } = await client.from('object_location').insert(payload);
+    if (error) {
+      throw mapMutationError(error, "Impossible de creer la localisation principale.");
+    }
   }
 
-  const { error } = await client.from('object_location').insert(payload);
-  if (error) {
-    throw mapMutationError(error, "Impossible de creer la localisation principale.");
+  // §41: persist "communes desservies" (object_zone) via the zones-only save_object_places payload,
+  // unless the commune catalog / object_zone read failed on load (guard against clobbering).
+  if (!input.zonesUnavailableReason) {
+    await callObjectWorkspaceRpc(
+      'save_object_places',
+      objectId,
+      { zones: buildZonesPayload(input.zoneCodes) },
+      "Impossible d'enregistrer les communes desservies.",
+    );
   }
 }
 

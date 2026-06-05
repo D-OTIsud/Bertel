@@ -90,6 +90,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_object_act_rls.sql
 -- 5h) Menage: RLS sur 3 tables ref_* + suppression des 5 tables de sauvegarde *_bak_20260519_082607z
 \i migration_rls_ref_and_bak_cleanup.sql
+-- 5i) §41 zones: ref_commune (24 communes de La Reunion) + RLS + FK object_zone.insee_commune
+\i migration_ref_commune.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

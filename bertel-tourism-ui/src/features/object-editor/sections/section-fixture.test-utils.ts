@@ -84,7 +84,12 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         zoneTouristique: 'Sud',
       },
       places: [],
-      zoneCodes: [],
+      zoneCodes: ['97422'],
+      zoneOptions: [
+        { code: '97422', label: 'Le Tampon' },
+        { code: '97412', label: 'Saint-Joseph' },
+      ],
+      zonesUnavailableReason: null,
     },
     contacts: {
       objectItems: [

@@ -1,4 +1,4 @@
-import { Fs, Input, Repeater, Select, Textarea } from '../primitives';
+import { Chip, ChipSet, Fs, Input, Repeater, Select, Textarea } from '../primitives';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
 
@@ -8,13 +8,24 @@ const ACCESSIBILITY_OPTIONS = [
   { v: 'internal', l: '✕ Non accessible' },
 ];
 
-export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
+export function SectionPlaces({ editor, permissions, archetype, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
   const itinerary = editor.draft.itinerary;
+  const location = editor.draft.location;
+  const canEditZones = permissions.location.canEditZones;
   const shouldRender = archetype === 'ITI' || archetype === 'VIS' || descriptions.places.length > 0 || itinerary.stages.length > 0;
 
   if (!shouldRender) {
     return null;
+  }
+
+  // §41: toggle a commune in/out of the object's service area (object_zone), persisted by the
+  // location saver via save_object_places({zones}).
+  function toggleZone(code: string) {
+    const zoneCodes = location.zoneCodes.includes(code)
+      ? location.zoneCodes.filter((existing) => existing !== code)
+      : [...location.zoneCodes, code];
+    editor.replaceModule('location', { ...location, zoneCodes });
   }
 
   function updatePlace(index: number, patch: { label?: string; description?: string; visibility?: string }) {
@@ -119,6 +130,27 @@ export function SectionPlaces({ editor, archetype, folded }: SectionProps) {
           </div>
         ))}
       </div>
+
+      {location.zoneOptions.length > 0 && (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 18 }}>
+            Communes desservies
+            <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
+              {' '}· zone d’intervention (filtre Explorer)
+            </span>
+          </div>
+          <ChipSet>
+            {location.zoneOptions.map((option) => (
+              <Chip
+                key={option.code}
+                label={option.label}
+                on={location.zoneCodes.includes(option.code)}
+                onClick={canEditZones ? () => toggleZone(option.code) : undefined}
+              />
+            ))}
+          </ChipSet>
+        </>
+      )}
     </Fs>
   );
 }

@@ -51,4 +51,22 @@ describe('SectionPlaces — honest controls (T1b)', () => {
     expect(result.current.draft.descriptions.places).toHaveLength(0);
     expect(result.current.dirtySections.descriptions).toBe(true);
   });
+
+  // §41 zones: the "communes desservies" multi-select (object_zone), sourced from ref_commune.
+  it('renders the communes-desservies multi-select reflecting the selected zones', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    // fixture: zoneOptions = [Le Tampon (selected via zoneCodes ['97422']), Saint-Joseph (not)].
+    expect(screen.getByRole('button', { name: 'Le Tampon' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Saint-Joseph' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('toggles a commune and marks the location module dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Saint-Joseph' })); });
+    view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    expect(result.current.dirtySections.location).toBe(true);
+    expect(result.current.draft.location.zoneCodes).toContain('97412');
+  });
 });

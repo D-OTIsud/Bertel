@@ -69,6 +69,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_cards_batch_authorize_definer.sql
 \echo '== 8k     migration_rls_initplan_sweep.sql  (wrap auth.x() -> (select auth.x()) in 18 object-family policies; after rls_policies + SP fns) =='
 \ir migration_rls_initplan_sweep.sql
+\echo '== 8l     migration_ref_commune.sql  (ref_commune seed + RLS + object_zone FK; needs object_zone + is_platform_superuser) =='
+\ir migration_ref_commune.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

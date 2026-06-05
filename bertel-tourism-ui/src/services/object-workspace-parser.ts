@@ -98,10 +98,22 @@ export interface ObjectWorkspacePlaceSummary {
   locationLabel: string;
 }
 
+export interface ObjectWorkspaceZoneOption {
+  /** INSEE commune code (5 digits). */
+  code: string;
+  /** Commune display name. */
+  label: string;
+}
+
 export interface ObjectWorkspaceLocationModule {
   main: ObjectWorkspaceLocationForm;
   places: ObjectWorkspacePlaceSummary[];
+  /** Selected INSEE commune codes (object_zone). */
   zoneCodes: string[];
+  /** Commune catalog for the §16 "communes desservies" multi-select (loaded from ref_commune; empty until enriched). */
+  zoneOptions: ObjectWorkspaceZoneOption[];
+  /** Non-null when the commune catalog / object_zone read failed — the saver then skips zone persistence (no clobber). */
+  zonesUnavailableReason: string | null;
 }
 
 export interface ObjectWorkspaceDescriptionScope {
@@ -2995,6 +3007,8 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
         ...readArray(raw.object_zones),
         ...readArray(raw.object_zone),
       ].map((zone) => readString(zone.insee_commune)).filter(Boolean),
+      zoneOptions: [],
+      zonesUnavailableReason: null,
     },
     descriptions: {
       localLanguage,

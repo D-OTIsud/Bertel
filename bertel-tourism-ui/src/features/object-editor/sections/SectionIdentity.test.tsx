@@ -203,4 +203,19 @@ describe('SectionIdentity', () => {
     expect(within(dialog).getByRole('radio', { name: /Gîte rural/i })).toBeInTheDocument();
     expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
   });
+
+  it('reveals the current selection when "Modifier" is clicked after a search', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    const dialog = screen.getByRole('dialog');
+    const search = within(dialog).getByLabelText('Rechercher une sous-catégorie');
+    fireEvent.change(search, { target: { value: 'rural' } });
+    expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /Modifier/i }));
+    expect(search).toHaveValue('');
+    expect(within(dialog).getByRole('radio', { name: /Hôtel familial/i })).toBeInTheDocument();
+  });
 });

@@ -251,6 +251,16 @@ function TaxonomyModal({
     onClose();
   }
 
+  // "Modifier" — focus the tree on the current choice: expand its branch and clear the search.
+  function revealCurrent() {
+    const targetId = selectedId || assignment?.nodeId || '';
+    const targetNode = nodeById.get(targetId);
+    if (targetNode) {
+      setExpandedIds(new Set(buildTaxonomyPath(nodes, targetNode).slice(0, -1).map((node) => node.id)));
+    }
+    setQuery('');
+  }
+
   function renderNode(node: ObjectWorkspaceTaxonomyNodeOption, depth: number) {
     if (!isVisible(node.id)) {
       return null;
@@ -330,6 +340,11 @@ function TaxonomyModal({
                 <TaxonomyCrumbs path={selectedPath} />
               ) : (
                 <em className="identity-taxo__none">Aucune sous-catégorie sélectionnée</em>
+              )}
+              {hasSelectableNodes && (selectedId || assignment?.nodeId) && (
+                <button type="button" className="taxo2-modify" onClick={revealCurrent}>
+                  <span aria-hidden="true">✎</span> Modifier
+                </button>
               )}
             </div>
 

@@ -12,15 +12,15 @@
   --theme-accent-rgb: 242 139 84;
   --theme-text: #18313b;
   --theme-text-rgb: 24 49 59;
-  --theme-bg: #f4eee5;
-  --theme-bg-rgb: 244 238 229;
-  --theme-surface: #fffdf8;
-  --theme-surface-rgb: 255 253 248;
-  --bg: #f4eee5;             /* page background — warm brand cream */
-  --bg-strong: #e8e5dd;
-  --panel: rgba(255, 253, 248, 0.82);
-  --panel-strong: #fffdf8;
-  --surface: #fffdf8;        /* solid surface (menus, cards, sidebars) — near-white, pops vs --bg */
+  --theme-bg: #eef1f4;
+  --theme-bg-rgb: 238 241 244;
+  --theme-surface: #ffffff;
+  --theme-surface-rgb: 255 255 255;
+  --bg: #eef1f4;             /* page background — cool off-white (de-creamed 2026-06-08) */
+  --bg-strong: #e2e7ec;
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-strong: #ffffff;
+  --surface: #ffffff;        /* solid surface (menus, cards, sidebars) — white, pops vs --bg */
   --surface-soft: #edf5f4;
   --line: rgba(24, 49, 59, 0.10);
   --text: #18313b;
@@ -61,8 +61,8 @@
   --workspace-padding-y: 2.25rem;
   /* Design reskin tokens (Tailwind theme); alias theme-driven values where applicable */
   --sidebar-w: 64px;
-  --bg-tint: #faf6ef;
-  --surface-2: #f7f2e9;
+  --bg-tint: #f3f6f8;
+  --surface-2: #e8edf1;
   --line-soft: rgba(24, 49, 59, 0.06);
   --line-strong: rgba(24, 49, 59, 0.18);
   --ink: var(--text);
@@ -101,12 +101,12 @@ body {
   font-family: 'Manrope', system-ui, sans-serif;
   color: var(--text);
   /* Brand mesh — subtle radial glows (teal top-left, orange top-right,
-     blue bottom-right) over warm cream, per the Tourism UI redesign. */
+     blue bottom-right) over a cool off-white base (de-creamed 2026-06-08). */
   background:
     radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23, 107, 106, 0.1), transparent 60%),
     radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242, 139, 84, 0.1), transparent 55%),
     radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50, 112, 144, 0.08), transparent 55%),
-    linear-gradient(180deg, #faf6ef 0%, var(--bg) 100%);
+    linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 100%);
   background-attachment: fixed;
 }
 

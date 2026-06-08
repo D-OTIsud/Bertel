@@ -114,3 +114,46 @@ Target ("Choisir une sous-catégorie"):
 - **Commit 2 (sous-catégorie modal redesign) — DONE & verified** (FE 387 green, `tsc` clean). `TaxonomyModal` rewritten: compact live-selection breadcrumb + search (`computeSearchVisibleIds`, diacritic-insensitive, match + ancestors + descendants) + single-column tree (expandable groups, radio leaves, "Actuelle" badge); title "Choisir une sous-catégorie", CTA "Valider la sélection". Removed the dead cascade/summary/cell CSS. **"Modifier" added** (mockup): a teal "✎ Modifier" next to the live breadcrumb that re-expands the current choice's branch and clears the search (reveal-current); the breadcrumb itself is also live. Modal inherits the X4 de-cream.
 - **X3 (read-only style) — DONE for §01** (commit 2a, user-requested): new `Readout` primitive; ID OTI + Type d'objet now render as borderless tinted readouts, not inputs. X1 (real-state pills) + X2 (hint popover) still deferred to the cross-cutting commit; X3 sweep to the *other* sections' read-only fields pending there too.
 - **Accent of `TYPE_LABEL`** ("Hôtel"…) — deferred to the cross-cutting/polish pass (touches `archetypes.ts`, shared with the detail view).
+
+### §01 Sous-catégorie — multi-level / arbitrary-depth assignment (review 2026-06-08)
+
+**User goal:** assign an object to a category, subcategory, *and deeper* (arbitrary depth, never hardcoded to 2 levels), DB-driven; always show + save the full path; future-proof.
+
+**Finding — the architecture ALREADY supports this** (verified end-to-end by code/SQL map):
+- **Storage:** `object_taxonomy` = ONE `ref_code_id` per `(object_id, domain)` (unique `uq_object_taxonomy_object_domain`, `schema_unified.sql:1660`). Single node; path NOT stored.
+- **Tree:** `ref_code.parent_id` self-referential (arbitrary depth) + `ref_code_taxonomy_closure` (transitive closure, no depth cap, auto-rebuilt by trigger on any `ref_code` change).
+- **Read:** `get_object_resource` derives the path from the closure (`api_views_functions.sql:2969-3040`); the editor loads the *full* tree (`object-workspace.ts:1070-1177`) and renders it **recursively** (`SectionIdentity.tsx` `renderNode`, no level cap).
+- **Write:** client-side PostgREST upsert of the single chosen `ref_code_id` (`object-workspace.ts:3472-3582`), guards `is_assignable`; server trigger re-validates. No depth assumption.
+- ⇒ Assigning a level-5 node **already works** if that node is `is_assignable`. The "2-level feel" is the **data**, not the code.
+
+**`is_assignable` does two things:** (1) write gate; (2) **path-display filter** — non-assignable ancestors are dropped from the breadcrumb (that's how the technical `root` is hidden). So a non-assignable *intermediate* node would vanish from the displayed path → conflicts with "show full path."
+
+**Data landscape (9 domains, all currently max depth 2):** 4 already follow "only root non-assignable" (act/camp/com/hot). The other 5 hold **15 non-root non-assignable "group" nodes**:
+- **hlo (2):** Auberge (0 children → DEAD), Gîte d'étape et de randonnée (2).
+- **loi (5):** Art (0 → DEAD), Divertissement (5), Patrimoine agricole (5), Patrimoine culturel (2), Patrimoine naturel (3).
+- **org (2):** Autocar (compagnie) (1), Services (4).
+- **psv (4):** Autocar (compagnie) (1), Location de matériel de loisirs (1), Services (2), Transport et mobilité (3).
+- **res (2):** Autre type de restauration (13), Table d'hôtes (2).
+
+**Anomalies:** 2 dead nodes (Auberge, Art — non-assignable + 0 children → inert headers); lowercase names `bulle`/`chambre`/`cottage` (hlo), `atelier` (loi); single-child groups (Autocar, Location de matériel); "Table d'hôte" under accommodation (hlo) vs plural "Table d'hôtes" restaurant group (res); "Chambre d'hôte" duplicating parent "Chambre d'hôtes".
+
+**Plan (data-led; no schema/RPC/UI-architecture change):**
+1. **Rule: only the technical `root` stays non-assignable; flip all 15 group nodes → `is_assignable=true`.** ⇒ select at any level; consistent radios (kills the visual inconsistency); dead nodes become selectable; **full path still shows** (root hidden via its own flag) — *no SQL path-filter change needed.*
+2. Capitalize the 4 lowercase names (+ `name_i18n.fr`).
+3. Flag the semantic oddities for user decision (no auto-change).
+4. **Deploy integrity:** idempotent migration → apply to live + refresh `cached_taxonomy_codes` for affected domains; fold into `seeds_data.sql`; add to manifest/runbook.
+5. **UI:** recursion already present; minor polish only — assignable-parent-with-children = radio + expand caret (already), breadcrumb reads as "chemin enregistré". The earlier alignment complaint auto-resolves (all rows become radios once nothing is a bold group header).
+
+**Single-node-per-domain (deepest, path derived) is retained** — satisfies "assigned to category AND subcategory" via `object.cached_taxonomy_codes` (node + assignable ancestors). Multi-*category* per domain would need dropping the unique constraint — out of scope unless requested.
+
+**Decisions (locked 2026-06-08):** (a) **all non-root nodes selectable** — only each domain's `root` stays non-assignable; (b) **capitalize** the 4 lowercase names; (c) semantic oddities **listed for user, no auto-change**.
+
+**DONE & verified (live):** `migration_taxonomy_assignable_cleanup.sql` applied to live (idempotent DML) — flipped all 15 group nodes + capitalized 4 names + refreshed cache for 5 domains. Verified: 0 non-root non-assignable remaining, 9 roots still non-assignable, full path renders (`Gîte d'étape et de randonnée › Gîte de randonnée`). Added to runbook + `ci_fresh_apply.sql` as step **13b**. **No UI/SQL code change** (architecture already arbitrary-depth; the editor now renders every node as a consistent radio ⇒ the earlier visual inconsistency + alignment bug auto-resolve).
+
+**Flagged (pre-existing, separate):** the hlo/loi/org/psv/res taxonomy nodes live only in `old_data_enrichment_20260512/01_enrich_imported_old_data.sql` (not in the fresh manifest) ⇒ a fresh DB lacks them. Deploy-integrity gap to fold into the seed in its own pass.
+
+**Semantic oddities for user (no change made):**
+- `taxonomy_hlo` "Table d'hôte" (a *dining* concept) sits under accommodation, under "Chambre d'hôtes"; "Chambre d'hôte" (singular) duplicates its parent "Chambre d'hôtes".
+- Single-child groups (redundant nesting): "Autocar (compagnie)" (org, psv), "Location de matériel de loisirs" (psv) — each has exactly 1 child.
+- "Autre type de restauration" (res) is a catch-all with 13 children.
+- Cross-domain name repeats (Services / Autocar / VTC / Excursion touristique …) are **expected** (separate per-type trees), not bugs.

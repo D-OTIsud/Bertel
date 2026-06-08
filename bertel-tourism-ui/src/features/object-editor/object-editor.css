@@ -2173,7 +2173,14 @@
   border-bottom: 1px solid var(--line-soft);
 }
 .object-editor .taxo2-tree > li:last-child > .taxo2-row { border-bottom: 0; }
-.object-editor .taxo2-row.is-selected { background: var(--accent-tint); }
+.object-editor .taxo2-row.is-selected-path {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.object-editor .taxo2-row.is-selected {
+  background: var(--accent-tint);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 .object-editor .taxo2-opt {
   display: flex; align-items: center; gap: 10px;
   flex: 1; min-width: 0; cursor: pointer; padding: 8px 0;

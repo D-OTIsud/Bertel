@@ -82,7 +82,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 13/13 migration_object_location_address1_dedupe.sql  (post-import hygiene; no-op fresh) =='
 \ir migration_object_location_address1_dedupe.sql
 
-\echo '== 13b    migration_taxonomy_assignable_cleanup.sql  (post-seed data fixup; every non-root taxonomy node selectable + capitalize 4 names + refresh taxonomy cache; idempotent, no-op where domains absent) =='
+\echo '== 13b    migration_taxonomy_assignable_cleanup.sql  (taxonomy assignability + duplicate/misplaced node cleanup + cache refresh; idempotent, no-op where domains absent) =='
 \ir migration_taxonomy_assignable_cleanup.sql
 
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh

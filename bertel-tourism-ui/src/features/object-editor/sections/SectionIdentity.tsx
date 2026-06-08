@@ -222,9 +222,13 @@ function TaxonomyModal({
     selectedNode && selectedNode.isAssignable && selectedNode.id !== assignment?.nodeId,
   );
   // Live breadcrumb — the selected path, falling back to the saved assignment path.
+  const rawSelectedPath = selectedNode
+    ? buildTaxonomyPath(nodes, selectedNode)
+    : assignment?.path ?? [];
   const selectedPath = selectedNode
-    ? collapseTaxonomyPath(buildTaxonomyPath(nodes, selectedNode))
+    ? collapseTaxonomyPath(rawSelectedPath)
     : collapseTaxonomyPath(assignment?.path ?? []);
+  const selectedPathNodeIds = new Set(rawSelectedPath.map((node) => node.id));
 
   const foldedQuery = foldText(query);
   const visibleIds = computeSearchVisibleIds(nodes, nodeById, childrenByParentId, foldedQuery);
@@ -269,11 +273,12 @@ function TaxonomyModal({
     const hasChildren = children.length > 0;
     const expanded = isExpanded(node.id);
     const isSelected = node.id === selectedId;
+    const isSelectedPath = selectedPathNodeIds.has(node.id);
     const isCurrent = node.id === assignment?.nodeId;
     return (
       <li key={node.id}>
         <div
-          className={`taxo2-row${isSelected ? ' is-selected' : ''}`}
+          className={`taxo2-row${isSelectedPath ? ' is-selected-path' : ''}${isSelected ? ' is-selected' : ''}`}
           style={{ paddingLeft: 10 + depth * 18 }}
         >
           {node.isAssignable ? (

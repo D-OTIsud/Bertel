@@ -146,6 +146,21 @@ describe('SectionIdentity', () => {
     expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
   });
 
+  it('highlights the full selected taxonomy path in the tree', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    const dialog = screen.getByRole('dialog');
+    const parentRow = within(dialog).getByRole('button', { name: /^Hôtel$/ }).closest('.taxo2-row');
+    const selectedRow = within(dialog).getByRole('radio', { name: /Hôtel familial/i }).closest('.taxo2-row');
+
+    expect(parentRow).toHaveClass('is-selected-path');
+    expect(parentRow).not.toHaveClass('is-selected');
+    expect(selectedRow).toHaveClass('is-selected-path');
+    expect(selectedRow).toHaveClass('is-selected');
+  });
+
   it('shows an unavailable message and a disabled validate button when taxonomy options are not exposed', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);

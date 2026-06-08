@@ -299,6 +299,33 @@
 .object-editor .input.lg { height: 42px; font-size: 14.5px; font-weight: 600; }
 .object-editor .input.has-prefix { padding-left: 32px; }
 .object-editor .input.has-suffix { padding-right: 56px; }
+/* Read-only reference value (X3): visually distinct from an editable input —
+   borderless, tinted, non-interactive. Used for ID OTI, object type, etc. */
+.object-editor .readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 11px;
+  background: var(--bg-tint);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.object-editor .readout.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+.object-editor .readout__prefix {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+.object-editor .readout__value { word-break: break-word; }
+.object-editor .readout.is-empty .readout__value { color: var(--ink-4); font-style: italic; }
 .object-editor .textarea {
   height: auto; min-height: 84px;
   padding: 9px 11px; line-height: 1.5;

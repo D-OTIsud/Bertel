@@ -1,5 +1,6 @@
 export { Field } from './Field';
 export { Input } from './Input';
+export { Readout } from './Readout';
 export { Textarea } from './Textarea';
 export { Select, type SelectOption } from './Select';
 export { Chip, ChipSet } from './Chip';

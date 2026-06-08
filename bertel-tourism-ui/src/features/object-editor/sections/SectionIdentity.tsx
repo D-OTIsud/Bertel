@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Fs, Field, Input, EditorModal } from '../primitives';
+import { Fs, Field, Input, Readout, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
   ObjectWorkspaceTaxonomyAssignment,
@@ -336,13 +336,13 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
           <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
         </Field>
         <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">
-          <Input value={canonicalId} mono readOnly onChange={() => undefined} />
+          <Readout value={canonicalId} mono />
         </Field>
       </div>
 
       <div className="grid-1-2" style={{ marginBottom: 12 }}>
         <Field label="Type d'objet (famille)" required hint="Famille canonique — détermine les sections obligatoires">
-          <Input value={typeDisplay} mono readOnly prefix="●" onChange={() => undefined} />
+          <Readout value={typeDisplay} mono prefix="●" />
         </Field>
         <Field label="Sous-catégorie" hint="Positionnement précis dans la famille métier">
           <button

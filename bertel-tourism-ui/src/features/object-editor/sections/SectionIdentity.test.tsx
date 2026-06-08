@@ -97,8 +97,9 @@ describe('SectionIdentity', () => {
     );
 
     expect(screen.getByDisplayValue('Domaine du Bel Air')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('HLORUN00000000TV')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('HOT — Hotel')).toBeInTheDocument();
+    // ID OTI and object type are read-only readouts (static text), not editable inputs.
+    expect(screen.getByText('HLORUN00000000TV')).toBeInTheDocument();
+    expect(screen.getByText('HOT — Hotel')).toBeInTheDocument();
     // Raison sociale moved out of §01 (it is edited in §18 Fournisseur).
     expect(screen.queryByDisplayValue('SARL Domaine du Bel Air')).not.toBeInTheDocument();
   });

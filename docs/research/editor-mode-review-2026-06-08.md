@@ -69,7 +69,7 @@ Delta walk:
 |---|---------|-------|----------|
 | X1 | Section header **pill** is decorative — §01 hardcodes `{tone:'ok',label:'OK'}`; nav + right rail already track real completion. | `Fs.tsx:34`, every `SectionXX` | **DECIDED → reflect real state.** Drive every card pill from the same validation/completion source the right rail uses (OK / incomplet / requis). Kill hardcoded pills. |
 | X2 | **Hints** render as a hover-only `?` tooltip (`title=`), invisible on touch / until hover. | `Field.tsx:18` | **DECIDED → keep `?`, real popover.** Replace native `title=` with an accessible hover/focus popover (keyboard + touch). Single change in `Field`, applies everywhere. |
-| X3 | **Read-only reference** data uses a real `<input readOnly>` — visually reads as an editable field. | `Input.tsx`, §01 + others | **DECIDED → distinct read-only style.** Render display-only values as plain text / non-editable chip, visually distinct from editable inputs. |
+| X3 | **Read-only reference** data uses a real `<input readOnly>` — visually reads as an editable field. | `Input.tsx`, §01 + others | **DECIDED → distinct read-only style.** Render display-only values as plain text / non-editable chip. **Primitive `Readout` built** (`primitives/Readout.tsx`, borderless tinted) + applied to §01 (ID OTI, Type d'objet) after user feedback. Sweep to other sections' read-only fields pending in the cross-cutting commit. |
 
 ---
 
@@ -111,5 +111,5 @@ Target ("Choisir une sous-catégorie"):
 **Implementation status:**
 - **Commit 1 (cleanup + rail status) — DONE & verified** (FE 381 green, `tsc` clean). Touched `SectionIdentity.tsx` (title "Identité & catégorie", removed Statut + Raison sociale fields, fixed double-`●`, renamed field → "Sous-catégorie"), new `widgets/StatusChip.tsx`, `shell/EditorRail.tsx` + `ObjectEditPage.tsx` (rail status wiring), `object-editor.css` (`.edit-side__status`); tests `StatusChip.test.tsx` (new) + updated `SectionIdentity.test.tsx`.
 - **Commit 2 (sous-catégorie modal redesign) — PENDING.**
-- **X1/X2/X3 — deferred** to the dedicated cross-cutting commit (not applied in §01 yet; ID OTI / Type d'objet remain input-styled until then).
+- **X3 (read-only style) — DONE for §01** (commit 2a, user-requested): new `Readout` primitive; ID OTI + Type d'objet now render as borderless tinted readouts, not inputs. X1 (real-state pills) + X2 (hint popover) still deferred to the cross-cutting commit; X3 sweep to the *other* sections' read-only fields pending there too.
 - **Accent of `TYPE_LABEL`** ("Hôtel"…) — deferred to the cross-cutting/polish pass (touches `archetypes.ts`, shared with the detail view).

@@ -9,15 +9,6 @@ import type {
 } from '../../../services/object-workspace-parser';
 import { ARCHETYPE_META, TYPE_LABEL } from '../archetypes';
 
-// Read-only status chip — the lifecycle is managed in §21 (no write-trap here).
-// Tones reuse the existing .fs-pill ok/warn styling; labels match §21's STATUS_PILL.
-const STATUS_PILL: Record<string, { tone: 'ok' | 'warn'; label: string }> = {
-  published: { tone: 'ok', label: 'Publié — en ligne' },
-  draft: { tone: 'warn', label: 'Brouillon' },
-  hidden: { tone: 'warn', label: 'Hors ligne' },
-  archived: { tone: 'warn', label: 'Archivé' },
-};
-
 function toTaxonomyPathNode(
   node: ObjectWorkspaceTaxonomyNodeOption,
   depth: number,
@@ -306,17 +297,16 @@ function TaxonomyModal({
   );
 }
 
-/** Section 01 — commercial name, publication status, and taxonomy (design: edit-primitives). */
+/** Section 01 — commercial name, object type and sub-category (design: edit-primitives).
+ *  Publication status moved to the editor rail; legal name is edited in §18 Fournisseur. */
 export function SectionIdentity({ editor, objectId, typeCode, archetype, folded }: SectionProps) {
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
   const info = editor.draft.generalInfo;
-  const statusValue = info.status || 'draft';
   const taxonomy = editor.draft.taxonomy;
   const meta = archetype ? ARCHETYPE_META[archetype] : null;
   const canonicalType = typeCode?.toUpperCase() ?? '';
   const typeFamilyLabel = TYPE_LABEL[canonicalType] ?? meta?.codeName ?? canonicalType;
   const typeDisplay = canonicalType ? `${canonicalType} — ${typeFamilyLabel}` : meta?.codeName ?? '';
-  const legalName = editor.draft.provider?.companyName || '';
   const canonicalId = objectId ?? '';
   const taxonomyDomain = taxonomy.domains[0] ?? null;
   const taxonomyPath = formatTaxonomyPath(taxonomyDomain?.assignment);
@@ -336,34 +326,14 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   return (
     <Fs
       num="01"
-      title="Identité & taxonomie"
-      sub="Nom commercial, type principal, sous-catégorie métier, statut"
+      title="Identité & catégorie"
+      sub="Nom commercial, type principal, sous-catégorie"
       folded={folded}
       pill={{ tone: 'ok', label: 'OK' }}
     >
       <div className="grid-2-1" style={{ marginBottom: 12 }}>
         <Field label="Nom commercial" required>
           <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
-        </Field>
-        <Field label="Statut publication" hint="Le statut se gère dans la section Publication (§21)">
-          <div className="identity-status">
-            <span
-              className={`identity-status__dot identity-status__dot--${statusValue}`}
-              aria-hidden="true"
-            />
-            <div className={`fs-pill ${STATUS_PILL[statusValue]?.tone ?? 'warn'}`} style={{ display: 'inline-flex' }}>
-              {STATUS_PILL[statusValue]?.label ?? statusValue}
-            </div>
-          </div>
-        </Field>
-      </div>
-
-      <div className="grid-2" style={{ marginBottom: 12 }}>
-        <Field
-          label="Raison sociale"
-          hint="Nom légal associé à la fiche"
-        >
-          <Input value={legalName} placeholder="Non renseignée" readOnly onChange={() => undefined} />
         </Field>
         <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">
           <Input value={canonicalId} mono readOnly onChange={() => undefined} />
@@ -372,24 +342,21 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
 
       <div className="grid-1-2" style={{ marginBottom: 12 }}>
         <Field label="Type d'objet (famille)" required hint="Famille canonique — détermine les sections obligatoires">
-          <div className="input-wrap">
-            <span className="prefix">●</span>
-            <Input value={typeDisplay} mono readOnly prefix="●" onChange={() => undefined} />
-          </div>
+          <Input value={typeDisplay} mono readOnly prefix="●" onChange={() => undefined} />
         </Field>
-        <Field label="Sous-catégorie métier" hint="Positionnement précis dans la famille métier">
+        <Field label="Sous-catégorie" hint="Positionnement précis dans la famille métier">
           <button
             type="button"
             className="identity-taxo-trigger"
             aria-label={
               taxonomyPath
-                ? `Modifier la sous-catégorie métier (actuelle : ${taxonomyPath})`
-                : 'Modifier la sous-catégorie métier'
+                ? `Modifier la sous-catégorie (actuelle : ${taxonomyPath})`
+                : 'Modifier la sous-catégorie'
             }
             onClick={() => setTaxonomyOpen(true)}
           >
             <span className={`identity-taxo-trigger__value${taxonomyPath ? '' : ' is-empty'}`}>
-              {taxonomyPath || 'Définir la sous-catégorie métier…'}
+              {taxonomyPath || 'Définir la sous-catégorie…'}
             </span>
             <span className="identity-taxo-trigger__caret" aria-hidden="true">▾</span>
           </button>

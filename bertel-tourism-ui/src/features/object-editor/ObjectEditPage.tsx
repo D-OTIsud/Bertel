@@ -277,6 +277,7 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
         </main>
         <EditorRail
           objectId={objectId}
+          status={editor.draft.generalInfo.status || 'draft'}
           overallCompletion={overallCompletion}
           sections={sectionCompletions}
           issues={validationIssues}

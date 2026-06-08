@@ -85,7 +85,7 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
 ];
 
 describe('SectionIdentity', () => {
-  it('renders the commercial name, ID OTI, object type and raison sociale', () => {
+  it('renders the commercial name, ID OTI and object type', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(
       <SectionIdentity
@@ -99,28 +99,31 @@ describe('SectionIdentity', () => {
     expect(screen.getByDisplayValue('Domaine du Bel Air')).toBeInTheDocument();
     expect(screen.getByDisplayValue('HLORUN00000000TV')).toBeInTheDocument();
     expect(screen.getByDisplayValue('HOT — Hotel')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('SARL Domaine du Bel Air')).toBeInTheDocument();
+    // Raison sociale moved out of §01 (it is edited in §18 Fournisseur).
+    expect(screen.queryByDisplayValue('SARL Domaine du Bel Air')).not.toBeInTheDocument();
   });
 
-  it('shows the publication status as a read-only chip — not an editable select', () => {
+  it('titles the section "Identité & catégorie" with no "taxonomie" jargon', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    // Status is now read-only here (managed in §21): no <select>, no <option> elements.
-    expect(screen.queryAllByRole('option')).toHaveLength(0);
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    // The fixture status (published) renders as a static chip, without emoji.
-    const chip = screen.getByText('Publié — en ligne');
-    expect(chip).toBeInTheDocument();
-    expect(chip.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+    expect(screen.queryByText(/taxonomie/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Sous-catégorie')).toBeInTheDocument();
   });
 
-  it('points the user to §21 for managing the publication status (field hint)', () => {
+  it('renders a single bullet on the object type (no doubled prefix)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} typeCode="HOT" />);
+
+    expect(screen.getAllByText('●')).toHaveLength(1);
+  });
+
+  it('no longer shows the publication status — it moved to the editor rail', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    // The hint is surfaced through the Field's help affordance (title attribute).
-    expect(screen.getByTitle(/se gère dans la section Publication/i)).toBeInTheDocument();
+    expect(screen.queryByText('Statut publication')).not.toBeInTheDocument();
+    expect(screen.queryByText('Publié — en ligne')).not.toBeInTheDocument();
   });
 
   it('opens a modal when the taxonomy field is clicked', () => {
@@ -128,7 +131,7 @@ describe('SectionIdentity', () => {
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
@@ -136,7 +139,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getAllByText('Hôtel').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
@@ -146,7 +149,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText(/options de sous-catégorie ne sont pas disponibles/i)).toBeInTheDocument();
     expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
@@ -157,7 +160,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie métier/i }));
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();

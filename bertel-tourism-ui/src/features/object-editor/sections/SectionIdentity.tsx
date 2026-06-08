@@ -131,11 +131,54 @@ function TaxonomyCrumbs({ path }: { path: ObjectWorkspaceTaxonomyPathNode[] }) {
   );
 }
 
+/** Diacritic-insensitive lowercasing for search matching. */
+function foldText(value: string): string {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
 /**
- * Editable taxonomy selector — cascading column drill-down.
- * Column 1 holds the root categories; clicking a node opens the next column with
- * its children. The live path preview updates on each click and "Valider" only
- * enables on an assignable node that differs from the saved assignment.
+ * Node ids to keep visible for a search query: every label match, plus its
+ * ancestors (so the path stays readable) and its descendants (so a matched
+ * branch shows its options). Returns null when the query is empty (show all).
+ */
+function computeSearchVisibleIds(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+  nodeById: Map<string, ObjectWorkspaceTaxonomyNodeOption>,
+  childrenByParentId: Map<string | null, ObjectWorkspaceTaxonomyNodeOption[]>,
+  foldedQuery: string,
+): Set<string> | null {
+  if (!foldedQuery) {
+    return null;
+  }
+  const visible = new Set<string>();
+  function addDescendants(id: string) {
+    for (const child of childrenByParentId.get(id) ?? []) {
+      visible.add(child.id);
+      addDescendants(child.id);
+    }
+  }
+  for (const node of nodes) {
+    if (!foldText(node.label).includes(foldedQuery)) {
+      continue;
+    }
+    visible.add(node.id);
+    let current: ObjectWorkspaceTaxonomyNodeOption | undefined = node;
+    while (current?.parentId) {
+      visible.add(current.parentId);
+      current = nodeById.get(current.parentId);
+    }
+    addDescendants(node.id);
+  }
+  return visible;
+}
+
+/**
+ * Sub-category selector — single readable column with search (redesign 2026-06-08,
+ * from a user mockup; replaces the multi-column cascade). A compact breadcrumb of
+ * the live selection sits on top, then a search box, then a single-column tree where
+ * parent groups expand/collapse and assignable leaves are radio options. The saved
+ * choice is badged "Actuelle"; "Valider la sélection" only enables on a changed
+ * assignable node and persists via the `taxonomy` module.
  */
 function TaxonomyModal({
   open,
@@ -148,142 +191,166 @@ function TaxonomyModal({
   onClose: () => void;
   onApply: (assignment: ObjectWorkspaceTaxonomyAssignment) => void;
 }) {
-  // Node ids from a root down to the deepest drilled node.
-  const [activePath, setActivePath] = useState<string[]>([]);
   const assignment = domain?.assignment ?? null;
   const nodes = domain?.nodes ?? [];
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const childrenByParentId = groupTaxonomyChildren(nodes);
+  const roots = childrenByParentId.get(null) ?? [];
   const hasSelectableNodes = nodes.some((node) => node.isAssignable);
 
-  // On open, expand the cascade down to the saved assignment.
+  const [selectedId, setSelectedId] = useState('');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState('');
+
+  // On open, preselect the saved assignment and expand the branch leading to it.
   useEffect(() => {
     if (!open) {
       return;
     }
-
     const domainNodes = domain?.nodes ?? [];
     const assignedNode = domainNodes.find((node) => node.id === domain?.assignment?.nodeId) ?? null;
-    setActivePath(assignedNode ? buildTaxonomyPath(domainNodes, assignedNode).map((node) => node.id) : []);
+    const ancestorIds = assignedNode
+      ? buildTaxonomyPath(domainNodes, assignedNode).slice(0, -1).map((node) => node.id)
+      : [];
+    setSelectedId(domain?.assignment?.nodeId ?? '');
+    setExpandedIds(new Set(ancestorIds));
+    setQuery('');
   }, [domain?.assignment?.nodeId, domain?.domain, open]);
 
-  // Columns: roots, then the children of each drilled node, stopping at a leaf.
-  const columns: ObjectWorkspaceTaxonomyNodeOption[][] = [];
-  const roots = childrenByParentId.get(null) ?? [];
-  if (roots.length > 0) {
-    columns.push(roots);
-  }
-  for (const id of activePath) {
-    const children = childrenByParentId.get(id) ?? [];
-    if (children.length === 0) {
-      break;
-    }
-    columns.push(children);
-  }
-
-  const selectedId = activePath[activePath.length - 1] ?? '';
   const selectedNode = nodeById.get(selectedId) ?? null;
   const hasSelectionChanged = Boolean(
     selectedNode && selectedNode.isAssignable && selectedNode.id !== assignment?.nodeId,
   );
-  const currentPath = collapseTaxonomyPath(assignment?.path ?? []);
-  const previewPath = collapseTaxonomyPath(
-    activePath
-      .map((id) => nodeById.get(id))
-      .filter((node): node is ObjectWorkspaceTaxonomyNodeOption => Boolean(node))
-      .map((node, index) => toTaxonomyPathNode(node, index)),
-  );
+  // Live breadcrumb — the selected path, falling back to the saved assignment path.
+  const selectedPath = selectedNode
+    ? collapseTaxonomyPath(buildTaxonomyPath(nodes, selectedNode))
+    : collapseTaxonomyPath(assignment?.path ?? []);
 
-  function handleSelect(node: ObjectWorkspaceTaxonomyNodeOption) {
-    setActivePath(buildTaxonomyPath(nodes, node).map((pathNode) => pathNode.id));
+  const foldedQuery = foldText(query);
+  const visibleIds = computeSearchVisibleIds(nodes, nodeById, childrenByParentId, foldedQuery);
+  const isVisible = (id: string) => !visibleIds || visibleIds.has(id);
+  const isExpanded = (id: string) => (foldedQuery ? true : expandedIds.has(id));
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   }
 
   function handleSave() {
     if (!domain || !selectedNode || !hasSelectionChanged) {
       return;
     }
-
     onApply(buildTaxonomyAssignment(domain, selectedNode));
     onClose();
+  }
+
+  function renderNode(node: ObjectWorkspaceTaxonomyNodeOption, depth: number) {
+    if (!isVisible(node.id)) {
+      return null;
+    }
+    const children = childrenByParentId.get(node.id) ?? [];
+    const hasChildren = children.length > 0;
+    const expanded = isExpanded(node.id);
+    const isSelected = node.id === selectedId;
+    const isCurrent = node.id === assignment?.nodeId;
+    return (
+      <li key={node.id}>
+        <div
+          className={`taxo2-row${isSelected ? ' is-selected' : ''}`}
+          style={{ paddingLeft: 10 + depth * 18 }}
+        >
+          {node.isAssignable ? (
+            <label className="taxo2-opt">
+              <input
+                type="radio"
+                name="taxo2-choice"
+                className="taxo2-radio"
+                checked={isSelected}
+                onChange={() => setSelectedId(node.id)}
+              />
+              <span className="taxo2-label">{node.label}</span>
+              {isCurrent && <span className="taxo2-badge">Actuelle</span>}
+            </label>
+          ) : (
+            <button
+              type="button"
+              className="taxo2-group"
+              aria-expanded={hasChildren ? expanded : undefined}
+              onClick={() => hasChildren && toggleExpand(node.id)}
+            >
+              <span className="taxo2-label">{node.label}</span>
+              {isCurrent && <span className="taxo2-badge">Actuelle</span>}
+            </button>
+          )}
+          {hasChildren && (
+            <button
+              type="button"
+              className={`taxo2-caret${expanded ? ' is-open' : ''}`}
+              aria-label={expanded ? `Réduire ${node.label}` : `Développer ${node.label}`}
+              aria-expanded={expanded}
+              onClick={() => toggleExpand(node.id)}
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+          )}
+        </div>
+        {hasChildren && expanded && (
+          <ul className="taxo2-children">{children.map((child) => renderNode(child, depth + 1))}</ul>
+        )}
+      </li>
+    );
   }
 
   return (
     <EditorModal
       open={open}
-      title="Sous-catégorie métier"
+      title="Choisir une sous-catégorie"
       onClose={onClose}
       onSave={handleSave}
-      saveLabel="Valider"
+      saveLabel="Valider la sélection"
       saveDisabled={!hasSelectionChanged}
     >
-      <div className="object-editor identity-taxo">
+      <div className="object-editor taxo2">
         {!domain ? (
           <p className="identity-taxo__notice">
             Aucune sous-catégorie n'est définie pour ce type de fiche.
           </p>
         ) : (
           <>
-            <p className="identity-taxo__domain">
-              Domaine — <strong>{domain.label}</strong>
-            </p>
-
-            <div className="identity-taxo__summary">
-              <div className="identity-taxo__summary-row">
-                <span className="identity-taxo__field-label">Sous-catégorie actuelle</span>
-                {assignment ? (
-                  <TaxonomyCrumbs path={currentPath} />
-                ) : (
-                  <em className="identity-taxo__none">Aucune sous-catégorie assignée</em>
-                )}
-              </div>
-              {hasSelectableNodes && (
-                <div className="identity-taxo__summary-row identity-taxo__summary-row--live">
-                  <span className="identity-taxo__field-label">Sélection en cours</span>
-                  {previewPath.length > 0 ? (
-                    <TaxonomyCrumbs path={previewPath} />
-                  ) : (
-                    <em className="identity-taxo__none">
-                      Choisissez une catégorie dans la première colonne.
-                    </em>
-                  )}
-                </div>
+            <div className="taxo2-path">
+              <span className="taxo2-path__label">Sélection</span>
+              {selectedPath.length > 0 ? (
+                <TaxonomyCrumbs path={selectedPath} />
+              ) : (
+                <em className="identity-taxo__none">Aucune sous-catégorie sélectionnée</em>
               )}
             </div>
 
             {hasSelectableNodes ? (
-              <div className="identity-taxo__cascade">
-                {columns.map((column, columnIndex) => (
-                  <ul key={columnIndex} className="identity-taxo__col">
-                    {column.map((node) => {
-                      const onActivePath = activePath.includes(node.id);
-                      const isSelected = node.id === selectedId;
-                      const isCurrent = node.id === assignment?.nodeId;
-                      const hasChildren = (childrenByParentId.get(node.id)?.length ?? 0) > 0;
-                      return (
-                        <li key={node.id}>
-                          <button
-                            type="button"
-                            className={[
-                              'identity-taxo__cell',
-                              node.isAssignable ? 'is-option' : 'is-group',
-                              onActivePath ? 'is-active' : '',
-                              isSelected ? 'is-selected' : '',
-                            ].filter(Boolean).join(' ')}
-                            aria-pressed={onActivePath}
-                            onClick={() => handleSelect(node)}
-                          >
-                            <span className="identity-taxo__cell-label">{node.label}</span>
-                            {isCurrent && <span className="identity-taxo__cell-tag">Actuel</span>}
-                            {hasChildren && (
-                              <span className="identity-taxo__cell-caret" aria-hidden="true">›</span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ))}
-              </div>
+              <>
+                <div className="taxo2-search">
+                  <span className="taxo2-search__icon" aria-hidden="true">⌕</span>
+                  <input
+                    type="text"
+                    className="taxo2-search__input"
+                    placeholder="Rechercher une sous-catégorie…"
+                    aria-label="Rechercher une sous-catégorie"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </div>
+                <ul className="taxo2-tree">{roots.map((root) => renderNode(root, 0))}</ul>
+                {Boolean(foldedQuery) && (visibleIds?.size ?? 0) === 0 && (
+                  <p className="taxo2-empty">Aucune sous-catégorie ne correspond à votre recherche.</p>
+                )}
+              </>
             ) : (
               <p className="identity-taxo__notice">
                 Les options de sous-catégorie ne sont pas disponibles pour ce type de fiche.

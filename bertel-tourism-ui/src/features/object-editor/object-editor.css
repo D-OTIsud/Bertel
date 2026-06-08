@@ -2101,26 +2101,7 @@
 .object-editor .identity-taxo-trigger__value.is-empty { color: var(--ink-4); }
 .object-editor .identity-taxo-trigger__caret { flex: none; color: var(--ink-4); font-size: 11px; }
 
-/* Taxonomy modal body. */
-.object-editor .identity-taxo { display: flex; flex-direction: column; gap: 12px; }
-.object-editor .identity-taxo__domain {
-  margin: 0;
-  font-size: 11px; color: var(--ink-4);
-}
-.object-editor .identity-taxo__domain strong { color: var(--ink-2); font-weight: 600; }
-.object-editor .identity-taxo__field-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.object-editor .identity-taxo__summary {
-  display: flex; flex-direction: column; gap: 9px;
-  background: var(--surface-2);
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.object-editor .identity-taxo__summary-row { display: flex; flex-direction: column; gap: 4px; }
-.object-editor .identity-taxo__summary-row--live .identity-taxo__field-label { color: var(--accent); }
+/* Taxonomy breadcrumbs + notices (shared by the sous-catégorie modal). */
 .object-editor .identity-taxo__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .object-editor .identity-taxo__crumb { display: inline-flex; align-items: center; gap: 4px; }
 .object-editor .identity-taxo__sep { color: var(--ink-4); font-size: 11px; }
@@ -2133,60 +2114,6 @@
   background: var(--accent-tint); color: var(--ink);
 }
 .object-editor .identity-taxo__none { color: var(--ink-4); font-size: 12px; }
-/* Cascade selector — drill-down columns. */
-.object-editor .identity-taxo__cascade {
-  display: flex; gap: 6px;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  padding: 6px;
-  overflow-x: auto;
-}
-.object-editor .identity-taxo__col {
-  list-style: none; margin: 0; padding: 0;
-  flex: 1 0 150px; min-width: 150px;
-  max-height: 248px; overflow-y: auto;
-  border-right: 1px solid var(--line-soft);
-}
-.object-editor .identity-taxo__col:last-child { border-right: 0; }
-.object-editor .identity-taxo__cell {
-  display: flex; align-items: center; gap: 6px;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 12.5px; color: var(--ink-2);
-  text-align: left;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.object-editor .identity-taxo__cell:hover,
-.object-editor .identity-taxo__cell:focus-visible {
-  outline: 0;
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.object-editor .identity-taxo__cell.is-group { font-weight: 600; color: var(--ink); }
-.object-editor .identity-taxo__cell.is-active {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.object-editor .identity-taxo__cell.is-selected {
-  background: var(--accent-tint);
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.object-editor .identity-taxo__cell-label {
-  flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.object-editor .identity-taxo__cell-caret { flex: none; color: var(--ink-4); font-size: 13px; }
-.object-editor .identity-taxo__cell-tag {
-  flex: none;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--accent);
-}
 .object-editor .identity-taxo__notice {
   margin: 0;
   font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
@@ -2195,3 +2122,80 @@
   border-radius: 8px;
   padding: 9px 11px;
 }
+
+/* Sous-catégorie picker — single-column searchable tree (redesign 2026-06-08). */
+.object-editor .taxo2 { display: flex; flex-direction: column; gap: 12px; }
+.object-editor .taxo2-path {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+.object-editor .taxo2-path__label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.object-editor .taxo2-search { position: relative; display: flex; align-items: center; }
+.object-editor .taxo2-search__icon {
+  position: absolute; left: 11px; color: var(--ink-4); font-size: 15px; pointer-events: none;
+}
+.object-editor .taxo2-search__input {
+  width: 100%; height: 38px; padding: 0 11px 0 32px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 13px; color: var(--ink);
+  outline: 0; font-family: var(--font-sans);
+}
+.object-editor .taxo2-search__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .taxo2-tree,
+.object-editor .taxo2-children { list-style: none; margin: 0; padding: 0; }
+.object-editor .taxo2-tree {
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+.object-editor .taxo2-row {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 40px; padding-right: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .taxo2-tree > li:last-child > .taxo2-row { border-bottom: 0; }
+.object-editor .taxo2-row.is-selected { background: var(--accent-tint); }
+.object-editor .taxo2-opt {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1; min-width: 0; cursor: pointer; padding: 8px 0;
+}
+.object-editor .taxo2-group {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; min-width: 0;
+  background: none; border: 0; cursor: pointer;
+  text-align: left; padding: 8px 0; font: inherit;
+  color: var(--ink-2); font-weight: 600;
+}
+.object-editor .taxo2-radio { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+.object-editor .taxo2-label {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13px; color: var(--ink);
+}
+.object-editor .taxo2-group .taxo2-label { color: var(--ink-2); }
+.object-editor .taxo2-badge {
+  flex: none;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #1a6b48; background: var(--green-soft);
+  padding: 2px 7px; border-radius: 999px;
+}
+.object-editor .taxo2-caret {
+  flex: none;
+  background: none; border: 0; cursor: pointer;
+  color: var(--ink-4); font-size: 18px; line-height: 1;
+  padding: 4px 8px;
+  transition: transform 0.12s ease;
+}
+.object-editor .taxo2-caret.is-open { transform: rotate(90deg); }
+.object-editor .taxo2-empty { font-size: 12px; color: var(--ink-4); padding: 6px 2px; }

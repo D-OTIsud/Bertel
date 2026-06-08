@@ -153,8 +153,7 @@ describe('SectionIdentity', () => {
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText(/options de sous-catégorie ne sont pas disponibles/i)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).toBeDisabled();
   });
 
   it('lets an assignable taxonomy node update the draft assignment', () => {
@@ -163,15 +162,45 @@ describe('SectionIdentity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).queryByText(/pas encore disponible/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Valider' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).toBeDisabled();
 
-    fireEvent.click(within(dialog).getByRole('button', { name: /Gîte rural/i }));
-    expect(within(dialog).getByRole('button', { name: 'Valider' })).not.toBeDisabled();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Valider' }));
+    // Leaves are radios in the single-column tree; the current branch is pre-expanded.
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Gîte rural/i }));
+    expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).not.toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Valider la sélection' }));
 
     expect(result.current.dirtySections.taxonomy).toBe(true);
     rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
+  });
+
+  it('titles the redesigned modal "Choisir une sous-catégorie"', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    expect(screen.getByText('Choisir une sous-catégorie')).toBeInTheDocument();
+  });
+
+  it('badges the saved assignment as "Actuelle"', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    expect(within(screen.getByRole('dialog')).getByText('Actuelle')).toBeInTheDocument();
+  });
+
+  it('filters the tree with the search box', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Rechercher une sous-catégorie'), {
+      target: { value: 'rural' },
+    });
+
+    expect(within(dialog).getByRole('radio', { name: /Gîte rural/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
   });
 });

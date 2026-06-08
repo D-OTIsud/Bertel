@@ -255,16 +255,6 @@ function TaxonomyModal({
     onClose();
   }
 
-  // "Modifier" — focus the tree on the current choice: expand its branch and clear the search.
-  function revealCurrent() {
-    const targetId = selectedId || assignment?.nodeId || '';
-    const targetNode = nodeById.get(targetId);
-    if (targetNode) {
-      setExpandedIds(new Set(buildTaxonomyPath(nodes, targetNode).slice(0, -1).map((node) => node.id)));
-    }
-    setQuery('');
-  }
-
   function renderNode(node: ObjectWorkspaceTaxonomyNodeOption, depth: number) {
     if (!isVisible(node.id)) {
       return null;
@@ -283,12 +273,15 @@ function TaxonomyModal({
         >
           {node.isAssignable ? (
             <label className="taxo2-opt">
+              {/* checked reflects the whole selected PATH (ancestors + leaf), so picking a
+                  child also marks its parent as selected. onClick (not onChange) so clicking
+                  an already-in-path ancestor still narrows the selection to it. */}
               <input
                 type="radio"
-                name="taxo2-choice"
                 className="taxo2-radio"
-                checked={isSelected}
-                onChange={() => setSelectedId(node.id)}
+                checked={isSelectedPath}
+                readOnly
+                onClick={() => setSelectedId(node.id)}
               />
               <span className="taxo2-label">{node.label}</span>
               {isCurrent && <span className="taxo2-badge">Actuelle</span>}
@@ -345,11 +338,6 @@ function TaxonomyModal({
                 <TaxonomyCrumbs path={selectedPath} />
               ) : (
                 <em className="identity-taxo__none">Aucune sous-catégorie sélectionnée</em>
-              )}
-              {hasSelectableNodes && (selectedId || assignment?.nodeId) && (
-                <button type="button" className="taxo2-modify" onClick={revealCurrent}>
-                  <span aria-hidden="true">✎</span> Modifier
-                </button>
               )}
             </div>
 

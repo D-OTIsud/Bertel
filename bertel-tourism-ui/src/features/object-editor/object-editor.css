@@ -2136,14 +2136,6 @@
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--ink-4);
 }
-.object-editor .taxo2-modify {
-  margin-left: auto;
-  display: inline-flex; align-items: center; gap: 4px;
-  background: none; border: 0; cursor: pointer;
-  color: var(--teal); font: inherit; font-size: 12px; font-weight: 600;
-  padding: 2px 4px; border-radius: 6px;
-}
-.object-editor .taxo2-modify:hover { text-decoration: underline; }
 .object-editor .taxo2-search { position: relative; display: flex; align-items: center; }
 .object-editor .taxo2-search__icon {
   position: absolute; left: 11px; color: var(--ink-4); font-size: 15px; pointer-events: none;

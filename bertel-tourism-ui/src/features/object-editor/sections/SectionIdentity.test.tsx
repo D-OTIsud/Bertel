@@ -84,6 +84,20 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
   },
 ];
 
+const nestedAssignableNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
+  { id: 'n-cat', code: 'cat', label: 'Catégorie mère', description: '', parentId: null, parentCode: null, depth: 0, isAssignable: true, position: 1 },
+  { id: 'n-sub', code: 'sub', label: 'Sous-catégorie', description: '', parentId: 'n-cat', parentCode: 'cat', depth: 1, isAssignable: true, position: 2 },
+];
+
+const nestedAssignment: ObjectWorkspaceTaxonomyAssignment = {
+  recordId: 'a', nodeId: 'n-sub', code: 'sub', label: 'Sous-catégorie', description: '', depth: 1,
+  path: [
+    { id: 'n-cat', code: 'cat', label: 'Catégorie mère', description: '', depth: 0 },
+    { id: 'n-sub', code: 'sub', label: 'Sous-catégorie', description: '', depth: 1 },
+  ],
+  updatedAt: '', source: '',
+};
+
 describe('SectionIdentity', () => {
   it('renders the commercial name, ID OTI and object type', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
@@ -219,18 +233,32 @@ describe('SectionIdentity', () => {
     expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
   });
 
-  it('reveals the current selection when "Modifier" is clicked after a search', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+  it('checks the parent radio when a child is selected (the whole path reads as selected)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
     const dialog = screen.getByRole('dialog');
-    const search = within(dialog).getByLabelText('Rechercher une sous-catégorie');
-    fireEvent.change(search, { target: { value: 'rural' } });
-    expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: /Catégorie mère/ })).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: /Sous-catégorie/ })).toBeChecked();
+  });
 
-    fireEvent.click(within(dialog).getByRole('button', { name: /Modifier/i }));
-    expect(search).toHaveValue('');
-    expect(within(dialog).getByRole('radio', { name: /Hôtel familial/i })).toBeInTheDocument();
+  it('narrows the selection to the parent when the parent row is clicked', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Catégorie mère/ }));
+    expect(within(dialog).getByRole('radio', { name: /Catégorie mère/ })).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: /Sous-catégorie/ })).not.toBeChecked();
+  });
+
+  it('no longer shows a redundant "Modifier" button (the modal is already the edit surface)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Modifier/i })).not.toBeInTheDocument();
   });
 });

@@ -116,10 +116,10 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **INSERT** `canonical_ins_contact_channel` — roles ['public']
   - `api.user_can_write_object_canonical(object_id)`
-- **SELECT** `ext_contacts_org_actor` — roles ['public']
-  - `api.can_read_extended(object_id)`
-- **SELECT** `pub_contacts_public` — roles ['public']
-  - `(is_public IS TRUE)`
+- **SELECT** `read_contact_channel` — roles ['public']
+  - `(((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = contact_channel.object_id) AND (o.status = 'published'::object_status)))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_contact_channel` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 

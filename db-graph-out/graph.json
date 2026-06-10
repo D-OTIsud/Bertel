@@ -3,10 +3,10 @@
   "table_count": 116,
   "view_count": 6,
   "function_count": 242,
-  "policy_count": 475,
+  "policy_count": 474,
   "trigger_count": 267,
   "enum_count": 9,
-  "edge_count": 1623
+  "edge_count": 1622
  },
  "nodes": [
   {
@@ -18112,86 +18112,6 @@
    }
   },
   {
-   "id": "policy:public.contact_channel:canonical_del_contact_channel",
-   "kind": "policy",
-   "label": "canonical_del_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "DELETE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:canonical_ins_contact_channel",
-   "kind": "policy",
-   "label": "canonical_ins_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "INSERT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:canonical_upd_contact_channel",
-   "kind": "policy",
-   "label": "canonical_upd_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "UPDATE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:ext_contacts_org_actor",
-   "kind": "policy",
-   "label": "ext_contacts_org_actor",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.can_read_extended(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:pub_contacts_public",
-   "kind": "policy",
-   "label": "pub_contacts_public",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(is_public IS TRUE)"
-   }
-  },
-  {
    "id": "policy:public.ref_code_tourism_type:admin_ref_code_write",
    "kind": "policy",
    "label": "admin_ref_code_write",
@@ -23836,6 +23756,70 @@
      "service_role"
     ],
     "predicate": "(bucket_id = 'media'::text) | (bucket_id = 'media'::text)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_del_contact_channel",
+   "kind": "policy",
+   "label": "canonical_del_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_ins_contact_channel",
+   "kind": "policy",
+   "label": "canonical_ins_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_upd_contact_channel",
+   "kind": "policy",
+   "label": "canonical_upd_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:read_contact_channel",
+   "kind": "policy",
+   "label": "read_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = contact_channel.object_id) AND (o.status = 'published'::object_status)))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
    }
   },
   {
@@ -30010,36 +29994,6 @@
    }
   },
   {
-   "source": "policy:public.contact_channel:canonical_del_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:canonical_ins_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:canonical_upd_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:ext_contacts_org_actor",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:pub_contacts_public",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
    "source": "policy:public.ref_code_tourism_type:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -32292,6 +32246,30 @@
   {
    "source": "policy:storage.objects:media_service_role_write",
    "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_del_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_ins_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_upd_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:read_contact_channel",
+   "target": "public.contact_channel",
    "kind": "gates",
    "props": {}
   },

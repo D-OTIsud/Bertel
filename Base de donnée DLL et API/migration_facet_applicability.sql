@@ -54,7 +54,7 @@ INSERT INTO ref_facet_registry (facet_table, object_id_column, description) VALU
   ('object_iti_section',           'parent_object_id', 'Sections ITI (cle parent_object_id)'),
   ('object_fma',                   'object_id',        'Extension FMA -- evenements (1:1)'),
   ('object_fma_occurrence',        'object_id',        'Occurrences FMA'),
-  ('object_act',                   'object_id',        'Extension ACT -- prestation encadree (1:1)'),
+  ('object_act',                   'object_id',        'Extension activite ASC+ACT -- prestation encadree (1:1, §48)'),
   ('object_room_type',             'object_id',        'Types de chambre (famille HEB)'),
   ('object_meeting_room',          'object_id',        'Salles de reunion / MICE'),
   ('object_menu',                  'object_id',        'Menus restaurant')

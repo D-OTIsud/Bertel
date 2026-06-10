@@ -2924,9 +2924,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_object_iti_profile_pos
 ON object_iti_profile(object_id, position_m);
 
 -- =====================================================
--- Spécifiques ACT (activités commerciales encadrées)
--- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+-- Spécifiques activités (facette partagée ASC+ACT — §48)
+-- ─── Lot ACT — 2026-03-21 ; élargi ASC 2026-06-10 (§48, migration 8q) ────────
 -- ACT = prestation commerciale encadrée, réservable, tarifée, définie par une durée.
+-- Depuis §48, object_act est une facette PARTAGÉE ASC+ACT (ref_facet_applicability) :
+-- les deux types portent les données d'activité (l'éditeur mappe ACT→archétype ASC).
 -- Distinct de PNA (site), ITI (tracé), FMA (événement daté).
 -- L'opérateur est un ACTOR (actor_object_role), jamais une ORG institutionnelle.
 -- Lien vers PNA/site support   : object_relation [based_at_site]

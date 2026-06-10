@@ -5,6 +5,8 @@ _FACET = ("object_iti", "object_fma", "object_act", "object_room_type", "object_
 
 def classify(node):
     s, label, kind = node.get("schema"), (node.get("label") or ""), node.get("kind")
+    if kind in ("trigger", "policy"):
+        return kind
     if s == "audit":
         return "audit"
     if s == "crm":

@@ -207,6 +207,7 @@ SELECT json_build_object(
       'used_by', (SELECT COALESCE(json_agg(DISTINCT (cn.nspname || '.' || c.relname || '.' || a.attname)), '[]'::json)
                   FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace cn ON cn.oid = c.relnamespace
                   WHERE a.atttypid = t.oid AND a.attnum > 0 AND NOT a.attisdropped
+                    AND c.relkind IN ('r','p','v','m')   -- real relations only (exclude index pseudo-columns)
                     AND cn.nspname IN ('public','api','internal','audit','crm'))
     ))
     FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
@@ -219,7 +220,7 @@ SELECT json_build_object(
 ) AS extra;
 ```
 
-- [ ] **Step 2: Run it against live and save a fixture.** Run the query via the Supabase MCP `execute_sql` (paste the SQL body). Take the returned `extra` JSON. Trim it to ~3 functions (include one with an `INSERT INTO`, one with `EXECUTE format(...)`, one read-only `SELECT`), ~3 policies, the `object_type` enum, and ~3 applicability rows. Save that trimmed object as `tools/db-graph/fixtures/catalog_extra.sample.json` (pretty-printed). This fixture drives the TDD in Tasks 4–7 without a live DB.
+- [ ] **Step 2: Run it against live and save a fixture.** Run the query via the Supabase MCP `execute_sql` (paste the SQL body). Build `tools/db-graph/fixtures/catalog_extra.sample.json` from the result with: **exactly these 3 functions** — `api.rpc_create_object` (body contains `INSERT INTO object`), `api.assert_object_type_change_consistent` (body contains `EXECUTE format(` — and it is the function the `schema_tbls.sample.json` trigger executes, so the build's `executes` edge resolves), and `api.is_object_owner` (read-only `SELECT … FROM actor_object_role`); the **3 `object_fma` per-command policies** (`canonical_ins/upd/del_object_fma`); the **`object_type` enum** (its 17 values + a `used_by` of `["public.object.object_type"]`); and **3 applicability rows**. Keep the function `body` short — trim to the lines that contain the read/write/dynamic clauses. This fixture drives the TDD in Tasks 3–7 without a live DB.
 
 - [ ] **Step 3: Commit**
 
@@ -486,7 +487,7 @@ def _resolve(ident, tables):
         return ident, "high"
     # bare name -> match a public.<name> or any schema.<name>
     bare = ident.split(".")[-1]
-    cands = [t for t in tables if t.split(".")[-1] == bare]
+    cands = sorted(t for t in tables if t.split(".")[-1] == bare)  # sorted => deterministic across runs
     if ("public." + bare) in tables:
         return "public." + bare, "high"
     if len(cands) == 1:
@@ -591,6 +592,8 @@ _FACET = ("object_iti", "object_fma", "object_act", "object_room_type", "object_
 
 def classify(node):
     s, label, kind = node.get("schema"), (node.get("label") or ""), node.get("kind")
+    if kind in ("trigger", "policy"):
+        return kind
     if s == "audit":
         return "audit"
     if s == "crm":
@@ -723,6 +726,15 @@ def test_build_tags_object_relation_carrier_if_present():
     g = build_graph(tbls, _fix("catalog_extra.sample.json"), sql_paths=[])
     rel = next(n for n in g["nodes"] if n["id"] == "public.object_relation")
     assert rel["props"].get("relationship_carrier") == "object_rel"
+
+def test_build_has_no_dangling_edges_and_resolves_executes():
+    g = build_graph(_fix("schema_tbls.sample.json"), _fix("catalog_extra.sample.json"), sql_paths=[])
+    ids = {n["id"] for n in g["nodes"]}
+    for e in g["edges"]:
+        assert e["source"] in ids and e["target"] in ids, "dangling edge: %s" % e
+    ex = [e for e in g["edges"] if e["kind"] == "executes"]
+    if ex:  # the trigger's executes edge resolved to the function node id (which carries args)
+        assert "assert_object_type_change_consistent" in ex[0]["target"]
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -781,6 +793,17 @@ def build_graph(tbls, extra, sql_paths):
         if enum_id and facet_id in present:
             edges.append({"source": enum_id, "target": facet_id, "kind": "applies_to",
                           "props": {"object_type": row["object_type"]}})
+
+    # resolve `executes` targets (trigger def gives schema.name; function ids carry args), then prune
+    # any edge referencing a missing node id (prevents the d3 force graph from crashing on dangling edges).
+    fn_by_name = {}
+    for n in nodes:
+        if n["kind"] == "function":
+            fn_by_name.setdefault("%s.%s" % (n["schema"], n["label"]), n["id"])
+    for e in edges:
+        if e["kind"] == "executes" and e["target"] not in present:
+            e["target"] = fn_by_name.get(e["target"], e["target"])
+    edges = [e for e in edges if e["source"] in present and e["target"] in present]
 
     meta = {
         "table_count": sum(1 for n in nodes if n["kind"] == "table"),

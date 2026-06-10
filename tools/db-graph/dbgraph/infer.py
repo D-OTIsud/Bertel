@@ -13,7 +13,7 @@ def _resolve(ident, tables):
     if ident in tables:
         return ident, "high"
     bare = ident.split(".")[-1]
-    cands = [t for t in tables if t.split(".")[-1] == bare]
+    cands = sorted(t for t in tables if t.split(".")[-1] == bare)  # sorted => deterministic across runs
     if ("public." + bare) in tables:
         return "public." + bare, "high"
     if len(cands) == 1:

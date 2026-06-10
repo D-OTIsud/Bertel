@@ -48,10 +48,14 @@ export function BlockASC({ editor, folded }: SectionProps) {
       title="Formules, public & saison"
       sub="Sous-type d'activité, sessions/forfaits, niveau, public cible, fenêtre saisonnière, conditions"
       folded={folded}
-      pill={{
-        tone: activity.guideRequired ? 'ok' : 'warn',
-        label: formulaCount > 0 ? `${formulaCount} formule(s)` : activity.guideRequired ? 'Encadrée' : 'Libre',
-      }}
+      pill={
+        activity.unavailableReason
+          ? { tone: 'warn', label: 'Non applicable' }
+          : {
+              tone: activity.guideRequired ? 'ok' : 'warn',
+              label: formulaCount > 0 ? `${formulaCount} formule(s)` : activity.guideRequired ? 'Encadrée' : 'Libre',
+            }
+      }
     >
       {/* §46 type-gated activity module — notice INSTEAD of controls when gated.
           The notice renders only here; the other activity sites below are suppressed. */}

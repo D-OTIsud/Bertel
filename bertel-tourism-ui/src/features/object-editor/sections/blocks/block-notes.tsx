@@ -4,11 +4,16 @@
  * Rendered INSTEAD of the module's editable controls when `unavailableReason`
  * is set — the saver throws on that reason, so showing it here surfaces the
  * gate BEFORE save instead of a generic "section en échec" afterwards.
+ *
+ * role="note": static advisory content — not a live region (role="status"
+ * would announce on initial render, which is unhelpful here). The loader
+ * also reuses unavailableReason for transient fetch failures; "désactivé"
+ * would claim a deliberate gate in those cases, so the prefix is "indisponible".
  */
 export function ModuleUnavailableNotice({ reason }: { reason: string }) {
   return (
     <p
-      role="status"
+      role="note"
       style={{
         fontSize: 12,
         color: 'var(--ink-4)',
@@ -19,7 +24,7 @@ export function ModuleUnavailableNotice({ reason }: { reason: string }) {
         border: '1px solid var(--line-soft)',
       }}
     >
-      <strong style={{ color: 'var(--ink-3)' }}>Module désactivé.</strong> {reason}
+      <strong style={{ color: 'var(--ink-3)' }}>Module indisponible.</strong> {reason}
     </p>
   );
 }

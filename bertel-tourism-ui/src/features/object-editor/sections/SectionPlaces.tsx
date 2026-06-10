@@ -1,12 +1,44 @@
 import { Chip, ChipSet, Fs, Input, Repeater, Select, Textarea } from '../primitives';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
+import { ModuleUnavailableNotice } from './blocks/block-notes';
 
 const ACCESSIBILITY_OPTIONS = [
   { v: 'public', l: '♿ Accessible' },
   { v: 'partner', l: '◐ Partiellement' },
   { v: 'internal', l: '✕ Non accessible' },
 ];
+
+// §48 §46 gate: extracted to avoid SWC ternary-in-JSX parse issues with `??` in deeply
+// nested JSX attributes. Renders the itinerary stage rows or nothing (the gate is applied
+// by the caller — this component is only rendered when the module is available).
+function StageList({
+  stages,
+  updateStage,
+}: {
+  stages: { recordId: string | null; name: string; description: string; position: string }[];
+  updateStage: (index: number, patch: { name?: string; description?: string; position?: string }) => void;
+}) {
+  if (stages.length === 0) return null;
+  const STAGE_COLS = '14px 28px 1fr 1fr 80px auto';
+  return (
+    <>
+      <div className="chip-group__label">Étapes d'itinéraire</div>
+      <div className="repeater wp-rep">
+        {stages.map((stage, index) => (
+          <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: STAGE_COLS }}>
+            <span className="rep-row__handle" aria-hidden />
+            <div className="wp-num">{index + 1}</div>
+            <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
+            <Input value={stage.description} onChange={(description) => updateStage(index, { description })} />
+            <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />
+            <span />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export function SectionPlaces({ editor, permissions, archetype, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
@@ -117,19 +149,14 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
         )}
       />
 
-      {itinerary.stages.length > 0 && <div className="chip-group__label">Étapes d’itinéraire</div>}
-      <div className="repeater wp-rep">
-        {itinerary.stages.map((stage, index) => (
-          <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: '14px 28px 1fr 1fr 80px auto' }}>
-            <span className="rep-row__handle" aria-hidden />
-            <div className="wp-num">{index + 1}</div>
-            <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
-            <Input value={stage.description} onChange={(description) => updateStage(index, { description })} />
-            <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />
-            <span />
-          </div>
-        ))}
-      </div>
+      {/* §48 §46 gate: the stage area edits the `itinerary` module exclusively — show
+          the notice instead when the module is unavailable for this object type. The
+          sub-places repeater and the zones multi-select are different modules
+          (descriptions / location) and are NOT affected by this gate. */}
+      {itinerary.unavailableReason
+        ? <ModuleUnavailableNotice reason={itinerary.unavailableReason} />
+        : <StageList stages={itinerary.stages} updateStage={updateStage} />
+      }
 
       {location.zoneOptions.length > 0 && (
         <>

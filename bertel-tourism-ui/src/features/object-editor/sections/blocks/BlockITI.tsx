@@ -54,7 +54,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
       title="Tracé, étapes & praticabilité"
       sub="GPX, distance, dénivelé, durée, balisage, type de boucle, waypoints, conditions et équipement"
       folded={folded}
-      pill={{ tone: itinerary.geometrySummary || itinerary.traceEditable ? 'ok' : 'warn', label: traceLabel }}
+      pill={itinerary.unavailableReason ? { tone: 'warn', label: 'Non applicable' } : { tone: itinerary.geometrySummary || itinerary.traceEditable ? 'ok' : 'warn', label: traceLabel }}
     >
       {/* §46 type-gated itinerary module — the WHOLE section body edits `itinerary`,
           so the notice replaces everything when gated */}

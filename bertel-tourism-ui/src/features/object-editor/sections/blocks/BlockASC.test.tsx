@@ -65,6 +65,11 @@ describe('BlockASC — §46 disabled-with-reason (activity module)', () => {
     expect(screen.getByText(/Module non applicable au type RES/)).toBeInTheDocument();
     expect(screen.queryByText('Durée minimale')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Encadrement obligatoire')).not.toBeInTheDocument();
+    // §48 pins: secondary suppression sites (Difficulté + Durée affichée in the grid-3 below pricing)
+    expect(screen.queryByText('Durée affichée')).not.toBeInTheDocument();
+    expect(screen.queryByText('Difficulté')).not.toBeInTheDocument();
+    // notice renders exactly once (no duplicate from a secondary render site)
+    expect(screen.getAllByText(/Module non applicable au type RES/)).toHaveLength(1);
   });
 
   it('keeps the non-type-gated controls editable while the activity module is gated', () => {

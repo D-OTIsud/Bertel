@@ -70,3 +70,16 @@ describe('SectionPlaces — honest controls (T1b)', () => {
     expect(result.current.draft.location.zoneCodes).toContain('97412');
   });
 });
+
+describe('SectionPlaces — §46 gated itinerary module (§48)', () => {
+  it('hides the stage editor and shows the notice when the itinerary module is gated', () => {
+    const modules = fullModulesFixture();
+    modules.itinerary.unavailableReason = 'Module non applicable au type FMA (référentiel ref_facet_applicability).';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+
+    expect(screen.getByText(/Module non applicable au type FMA/)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Départ')).not.toBeInTheDocument(); // stage name input gone
+    expect(screen.getByDisplayValue('Belvédère')).toBeInTheDocument(); // sub-place label (descriptions module) stays
+  });
+});

@@ -156,6 +156,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_commune.sql"
 
+      - name: facet applicability registry test (§46 — registry + triggers + violations fn)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_facet_applicability.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -92,6 +92,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_rls_ref_and_bak_cleanup.sql
 -- 5i) §41 zones: ref_commune (24 communes de La Reunion) + RLS + FK object_zone.insee_commune
 \i migration_ref_commune.sql
+-- 5j) §46 registre type->facette: ref_facet_registry + ref_facet_applicability + triggers d'applicabilite (+ violations fn)
+\i migration_facet_applicability.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

@@ -3080,8 +3080,9 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, api, auth
 AS $$
 DECLARE
-  v_caller_id uuid := auth.uid();
-  v_new_id    text;
+  v_caller_id   uuid := auth.uid();
+  v_new_id      text;
+  v_valid_types text;
 BEGIN
   -- 0. Contexte utilisateur requis
   -- auth.uid() est NULL en appel service_role pur (sans JWT applicatif).
@@ -3104,9 +3105,14 @@ BEGIN
     WHERE enumtypid = 'object_type'::regtype
       AND enumlabel = p_object_type
   ) THEN
-    RAISE EXCEPTION
-      'INVALID_OBJECT_TYPE: type d''objet inconnu : %. Types valides : RES, PCU, PNA, ORG, ITI, VIL, HPA, ASC, COM, HOT, HLO, LOI, FMA, CAMP, PSV, RVA',
-      p_object_type;
+    -- §46: derive the valid-type list from pg_enum (was a hardcoded list that omitted ACT/others).
+    SELECT string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder)
+    INTO v_valid_types
+    FROM pg_enum e
+    WHERE e.enumtypid = 'object_type'::regtype;
+    RAISE EXCEPTION 'INVALID_OBJECT_TYPE: type d''objet inconnu : %. Types valides : %',
+      p_object_type, v_valid_types
+      USING ERRCODE = 'P0001';
   END IF;
 
   -- 3. Validation du nom

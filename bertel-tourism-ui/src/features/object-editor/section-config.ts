@@ -23,6 +23,7 @@ const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
   ITI: 'Tracé & étapes',
   VIS: 'Visite & médiation',
   SRV: 'Prestations & zone',
+  FMA: 'Dates & programmation',
 };
 
 export function makeSections(archetype: ArchetypeCode): SectionGroup[] {

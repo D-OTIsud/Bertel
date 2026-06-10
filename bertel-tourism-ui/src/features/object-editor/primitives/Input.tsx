@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 interface InputProps {
   value: string;
   onChange: (next: string) => void;
-  type?: 'text' | 'date' | 'time' | 'number';
+  type?: 'text' | 'date' | 'time' | 'number' | 'datetime-local';
   placeholder?: string;
   prefix?: ReactNode;
   suffix?: ReactNode;

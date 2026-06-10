@@ -80,7 +80,9 @@ import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta } from '../object-edit
 
 const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
 const RESTAURANT_TYPES = new Set(['RES']);
-const ITINERARY_TYPES = new Set(['ITI', 'FMA']);
+// §48: FMA is no longer rendered as an itinerary — events fall through to GenericDetailView
+// (no trail/GPX panels); the editor gives them BlockFMA (object_fma dates/occurrences).
+const ITINERARY_TYPES = new Set(['ITI']);
 const ACTIVITY_TYPES = new Set(['ASC']);
 const VISITABLE_TYPES = new Set(['LOI', 'PCU']);
 const NATURAL_TYPES = new Set(['PNA']);

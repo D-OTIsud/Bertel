@@ -44,6 +44,10 @@ const VALIDATION_RULES: ValidationRule[] = [
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
       ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }
       : null,
+  ({ archetype, draft }) =>
+    archetype === 'FMA' && !hasText(draft.event.startDate) && draft.event.occurrences.length === 0
+      ? { section: '05', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
+      : null,
   ({ draft }) =>
     hasLongDescription(draft)
       ? null

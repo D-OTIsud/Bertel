@@ -3,7 +3,7 @@
  *
  * Keys = the DB `object_type` enum MINUS ORG (ORG is deliberately unmapped —
  * the editor renders an explicit unsupported-type panel; ORGs are managed via
- * /team administration). The mapped codes collapse into 6 archetypes, each with
+ * /team administration). The mapped codes collapse into 7 archetypes, each with
  * its own accent palette and ribbon metadata. Shared by the per-type detail view
  * and the full-page editor so the mapping has a single source of truth.
  * SRV/HEB/VIS are archetype names, NOT DB types. See decision log §46.
@@ -12,10 +12,13 @@
  * editor block that reaches the `object_act` facet table; DB applicability
  * registry (`ref_facet_applicability`) allows object_act for both ASC and ACT.
  * ASC_ARCHETYPE.covers now includes ACT; SRV_ARCHETYPE.covers/family no longer
- * list ACT. See decision log §48.
+ * list ACT. Likewise FMA gets its OWN archetype (was collapsed into ITI, which
+ * gave events a trail/GPX editor and no UI for `object_fma` dates/occurrences) —
+ * BlockFMA is the editor block that reaches object_fma + object_fma_occurrence.
+ * See decision log §48.
  */
 
-export type ArchetypeCode = 'HEB' | 'RES' | 'ASC' | 'ITI' | 'VIS' | 'SRV';
+export type ArchetypeCode = 'HEB' | 'RES' | 'ASC' | 'ITI' | 'VIS' | 'SRV' | 'FMA';
 
 export type DetailAccentClass =
   | 'acc-teal' | 'acc-orange' | 'acc-blue' | 'acc-green' | 'acc-plum' | 'acc-rust';
@@ -36,7 +39,7 @@ export const TYPE_LABEL: Record<string, string> = {
   RVA: 'Residence vacances',
   RES: 'Restaurant',
   ITI: 'Itineraire',
-  FMA: 'Itineraire',
+  FMA: 'Fete / manifestation',
   ASC: 'Activite',
   LOI: 'Loisir',
   PCU: 'Patrimoine',
@@ -77,7 +80,15 @@ const ITI_ARCHETYPE: ArchetypeMeta = {
   accent: 'acc-green',
   codeName: 'Itinéraire',
   family: 'Randonnée · Trail · VTT · Boucle',
-  covers: 'ITI · FMA',
+  covers: 'ITI',
+};
+
+const FMA_ARCHETYPE: ArchetypeMeta = {
+  archetype: 'FMA',
+  accent: 'acc-orange', // reuses the RES palette — no new CSS accent class required
+  codeName: 'Fête & manifestation',
+  family: 'Événement · Animation · Manifestation',
+  covers: 'FMA',
 };
 
 const VIS_ARCHETYPE: ArchetypeMeta = {
@@ -109,7 +120,7 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   ASC: ASC_ARCHETYPE,
   ACT: ASC_ARCHETYPE, // §48: ACT shares the ASC archetype (object_act facet applies to both)
   ITI: ITI_ARCHETYPE,
-  FMA: ITI_ARCHETYPE,
+  FMA: FMA_ARCHETYPE, // §48: own archetype — BlockFMA edits object_fma dates/occurrences
   LOI: VIS_ARCHETYPE,
   PCU: VIS_ARCHETYPE,
   PNA: VIS_ARCHETYPE,
@@ -133,4 +144,5 @@ export const ARCHETYPE_META: Record<ArchetypeCode, ArchetypeMeta> = {
   ITI: ITI_ARCHETYPE,
   VIS: VIS_ARCHETYPE,
   SRV: SRV_ARCHETYPE,
+  FMA: FMA_ARCHETYPE,
 };

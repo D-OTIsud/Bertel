@@ -13,9 +13,12 @@ describe('getArchetypeMeta', () => {
     expect(getArchetypeMeta('CAMP')?.accent).toBe('acc-teal');
   });
 
-  it('maps every itinerary code to ITI', () => {
+  it('maps the itinerary code to ITI (FMA has its own archetype since §48)', () => {
     expect(getArchetypeMeta('ITI')?.archetype).toBe('ITI');
-    expect(getArchetypeMeta('FMA')?.archetype).toBe('ITI');
+  });
+
+  it('routes FMA to the FMA archetype (object_fma dates editor, not the trail editor)', () => {
+    expect(getArchetypeMeta('FMA')?.archetype).toBe('FMA');
   });
 
   it('is case-insensitive', () => {

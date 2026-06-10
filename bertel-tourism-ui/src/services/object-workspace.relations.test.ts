@@ -1,4 +1,4 @@
-import { buildOrgLinksPayload, buildRelationsPayload } from './object-workspace';
+import { buildOrgLinksPayload, buildRelationsPayload, buildRelationshipsRpcPayload } from './object-workspace';
 import type {
   ObjectWorkspaceRelationshipsModule,
   ObjectWorkspaceRelatedObjectItem,
@@ -59,7 +59,21 @@ describe('buildRelationsPayload', () => {
 describe('buildOrgLinksPayload', () => {
   it('maps org links to the save_object_relations org_links shape', () => {
     const payload = buildOrgLinksPayload(mod([], { organizationLinks: [orgLink({ isPrimary: true, note: 'n' })] }));
-    expect(payload).toEqual([{ org_object_id: 'ORG1', role_code: 'publisher', is_primary: true, note: 'n' }]);
+    expect(payload).toEqual([{ org_object_id: 'ORG1', role_id: 'r-pub', role_code: 'publisher', is_primary: true, note: 'n' }]);
+  });
+
+  it('passes role_id through for airtight RPC role resolution', () => {
+    const value = mod([], { organizationLinks: [orgLink({ roleId: 'r-uuid-1' })] });
+    expect(buildOrgLinksPayload(value)![0].role_id).toBe('r-uuid-1');
+  });
+
+  it('does not lose the primary flag when the primary row is a dropped duplicate', () => {
+    const value = mod([], {
+      organizationLinks: [orgLink({ isPrimary: false }), orgLink({ isPrimary: true })], // same (org, role)
+    });
+    const rows = buildOrgLinksPayload(value)!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].is_primary).toBe(true);
   });
 
   it('keeps only the first primary (the RPC raises on >1)', () => {
@@ -79,5 +93,18 @@ describe('buildOrgLinksPayload', () => {
   it('returns null (omit the key — anti-clobber) when the load was unreliable', () => {
     const payload = buildOrgLinksPayload(mod([], { organizationLinkWriteUnavailableReason: 'load failed' }));
     expect(payload).toBeNull();
+  });
+});
+
+describe('buildRelationshipsRpcPayload', () => {
+  it('omits the org_links key entirely when the load was unreliable', () => {
+    const payload = buildRelationshipsRpcPayload(mod([], { organizationLinkWriteUnavailableReason: 'load failed' }));
+    expect(payload).toHaveProperty('object_relations');
+    expect('org_links' in payload).toBe(false);
+  });
+
+  it('sends an empty org_links array when the list is reliably empty (clears links)', () => {
+    const payload = buildRelationshipsRpcPayload(mod([]));
+    expect(payload.org_links).toEqual([]);
   });
 });

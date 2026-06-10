@@ -46,4 +46,31 @@ describe('SectionAttachments — §17 org-link authoring (§48)', () => {
     expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Rattacher une organisation/i })).not.toBeInTheDocument();
   });
+
+  it('setting a row primary clears the other rows (uq_object_primary_org)', () => {
+    const modules = fullModulesFixture();
+    modules.relationships.organizationLinks = [
+      { ...modules.relationships.organizationLinks[0], isPrimary: true },
+      { ...modules.relationships.organizationLinks[0], id: 'ORG2', name: 'OTI Nord', roleCode: 'contributor', roleLabel: 'ORG contributrice', isPrimary: false },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByLabelText('Définir comme organisation principale')); });
+    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    const links = result.current.draft.relationships.organizationLinks;
+    expect(links.map((link) => link.isPrimary)).toEqual([false, true]);
+  });
+
+  it('removes an org link and marks relationships dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0]); });
+    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.relationships.organizationLinks).toHaveLength(0);
+    expect(result.current.dirtySections.relationships).toBe(true);
+  });
 });

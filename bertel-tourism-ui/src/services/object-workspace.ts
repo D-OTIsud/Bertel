@@ -1584,8 +1584,10 @@ async function getObjectWorkspaceContactsModule(
 
 /**
  * §48 relationships loader. The org-link ROWS come from direct PostgREST reads (§41 pattern)
- * instead of the parsed get_object_resource payload, because that JSON does not carry
- * `is_primary` — a delete+reinsert save built from it would silently clear primary flags.
+ * instead of the parsed get_object_resource payload, because NEITHER of that JSON's two
+ * org-link shapes is save-grade: the raw `org_links` array (to_jsonb) DOES carry `is_primary`
+ * but lacks the org id/name/role-code decoration, and the decorated `organizations` LATERAL
+ * lacks `is_primary`. A delete+reinsert save built from either would silently drop one half.
  * Also loads the §17 authoring catalogs (ref_org_role, ORG objects, ref_actor_role).
  */
 async function getObjectWorkspaceRelationshipsModule(
@@ -1621,7 +1623,9 @@ async function getObjectWorkspaceRelationshipsModule(
       .from('object_org_link')
       .select('org_object_id, role_id, is_primary, note, org:org_object_id(id, name, object_type, status), role:role_id(id, code, name)')
       .eq('object_id', objectId)
-      .order('is_primary', { ascending: false }),
+      // nullable is_primary: legacy NULL rows must not float on top; created_at keeps the order deterministic.
+      .order('is_primary', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: true }),
     client.from('object').select('id, name').eq('object_type', 'ORG').order('name', { ascending: true }),
     client.from('ref_actor_role').select('id, code, name').order('position', { ascending: true }),
   ]);
@@ -4763,27 +4767,53 @@ export function buildRelationsPayload(
  * Pure builder for the org_links arm of api.save_object_relations. Returns null when the
  * org links could not be loaded reliably — the caller must then OMIT the key entirely so the
  * RPC's delete-all + re-insert branch never runs blind (anti-clobber, §28/§40 pattern).
- * The RPC raises on >1 primary, so only the first primary survives here.
+ * `role_id` is sent alongside `role_code` (the RPC resolves role_id first, role_code as
+ * fallback — airtight role resolution). The RPC raises on >1 primary, so only the first
+ * primary survives here; when a dropped duplicate (same org, role) carried the primary flag,
+ * the KEPT row is promoted instead so the flag is never silently lost.
  */
 export function buildOrgLinksPayload(
   input: ObjectWorkspaceRelationshipsModule,
-): Array<{ org_object_id: string; role_code: string; is_primary: boolean; note: string }> | null {
+): Array<{ org_object_id: string; role_id: string; role_code: string; is_primary: boolean; note: string }> | null {
   if (input.organizationLinkWriteUnavailableReason) {
     return null;
   }
-  const seen = new Set<string>();
   let primarySeen = false;
-  const rows: Array<{ org_object_id: string; role_code: string; is_primary: boolean; note: string }> = [];
+  const kept = new Map<string, { org_object_id: string; role_id: string; role_code: string; is_primary: boolean; note: string }>();
   for (const item of input.organizationLinks) {
     if (!item.id || !item.roleCode) continue;
     const key = `${item.id}:${item.roleCode.toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const existing = kept.get(key);
+    if (existing) {
+      // Duplicate (org, role) pair: the row is dropped, but its primary flag must not be.
+      if (item.isPrimary && !primarySeen) {
+        existing.is_primary = true;
+        primarySeen = true;
+      }
+      continue;
+    }
     const isPrimary = item.isPrimary && !primarySeen;
     if (isPrimary) primarySeen = true;
-    rows.push({ org_object_id: item.id, role_code: item.roleCode, is_primary: isPrimary, note: item.note });
+    kept.set(key, {
+      org_object_id: item.id,
+      role_id: item.roleId,
+      role_code: item.roleCode,
+      is_primary: isPrimary,
+      note: item.note,
+    });
   }
-  return rows;
+  return Array.from(kept.values());
+}
+
+/** §48 — pure assembly of the api.save_object_relations payload. org_links is OMITTED
+ *  (not sent) when buildOrgLinksPayload returns null (unreliable load — anti-clobber). */
+export function buildRelationshipsRpcPayload(input: ObjectWorkspaceRelationshipsModule): Record<string, unknown> {
+  const payload: Record<string, unknown> = { object_relations: buildRelationsPayload(input) };
+  const orgLinks = buildOrgLinksPayload(input);
+  if (orgLinks !== null) {
+    payload.org_links = orgLinks;
+  }
+  return payload;
 }
 
 export async function saveObjectWorkspaceRelationships(
@@ -4794,15 +4824,10 @@ export async function saveObjectWorkspaceRelationships(
   if (session.demoMode) {
     return;
   }
-  const payload: Record<string, unknown> = { object_relations: buildRelationsPayload(input) };
-  const orgLinks = buildOrgLinksPayload(input);
-  if (orgLinks !== null) {
-    payload.org_links = orgLinks;
-  }
   await callObjectWorkspaceRpc(
     'save_object_relations',
     objectId,
-    payload,
+    buildRelationshipsRpcPayload(input),
     "Impossible de sauvegarder les liens vers d'autres fiches.",
   );
 }

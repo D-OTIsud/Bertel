@@ -149,6 +149,12 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
           {relationships.organizationLinkWriteUnavailableReason}
         </p>
       ) : (
+        <>
+          {(relationships.orgOptions.length === 0 || relationships.orgRoleOptions.length === 0) && (
+            <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 8px' }}>
+              Catalogue des organisations ou des rôles indisponible — l&apos;ajout est désactivé.
+            </p>
+          )}
         <Repeater
           items={relationships.organizationLinks}
           getKey={(item, index) => `${item.id}-${item.roleCode}-${index}`}
@@ -174,7 +180,12 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
               <span className="rep-row__handle" aria-hidden />
               <Select
                 value={item.id}
-                options={relationships.orgOptions.map((option) => ({ v: option.id, l: option.name }))}
+                options={[
+                  ...(relationships.orgOptions.some((option) => option.id === item.id)
+                    ? []
+                    : [{ v: item.id, l: item.name }]), // §48: preserved link outside the ORG catalog — keep it identifiable
+                  ...relationships.orgOptions.map((option) => ({ v: option.id, l: option.name })),
+                ]}
                 onChange={(orgId) => {
                   const org = relationships.orgOptions.find((option) => option.id === orgId);
                   updateLink(index, { id: orgId, name: org?.name ?? item.name });
@@ -192,6 +203,7 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
                 type="button"
                 className="pill-mini"
                 aria-pressed={item.isPrimary}
+                aria-label={item.isPrimary ? 'Organisation principale' : 'Définir comme organisation principale'}
                 title={item.isPrimary ? 'Organisation principale' : 'Définir comme principale'}
                 onClick={() => setPrimaryLink(index)}
               >
@@ -208,6 +220,7 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
             </>
           )}
         />
+        </>
       )}
 
       {/* Read-only actors display — Task 7 (§48 actor write-path, migration 8r) replaces it. */}

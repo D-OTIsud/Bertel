@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQueries';
-import { Fs, Field, Input } from '../primitives';
+import { Fs, Field, Input, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
 import { LocationFormattedInput } from '../widgets/LocationFormattedInput';
@@ -9,10 +9,24 @@ import { LocationReferenceCombobox } from '../widgets/LocationReferenceCombobox'
 import { PendingFieldControl } from '../widgets/PendingFieldControl';
 import { dismissPendingFieldChange, findPendingFieldChange } from '../widgets/pending-field-change';
 
+/** Diacritic-insensitive fold for snapping a legacy free-text city to its ref_commune option. */
+function foldCommuneLabel(value: string): string {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
 /** Section 02 — address, commune, GPS. object_zone (multi-commune) is edited on itinerary sections, not here. */
 export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   const location = editor.draft.location;
   const main = location.main;
+  // Commune is a strict ref_commune select when the catalog is loaded (§41 seed);
+  // legacy rows carry only a free-text city, so snap it to its option by folded label.
+  const communeOptions = (location.zoneOptions ?? []).map((zone) => ({
+    id: zone.code,
+    code: zone.code,
+    label: zone.label,
+  }));
+  const communeCode = main.codeInsee
+    || (communeOptions.find((option) => foldCommuneLabel(option.label) === foldCommuneLabel(main.city))?.code ?? '');
   const [approvingLieuDit, setApprovingLieuDit] = useState(false);
   const pendingLieuDit = findPendingFieldChange(editor.draft.publication.moderation.items, 'lieuDit');
   const { data: locationReferences } = useLocationReferenceOptionsQuery();
@@ -40,7 +54,7 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
     <Fs
       num="02"
       title="Localisation"
-      sub="Adresse postale, commune, lieu-dit, zone touristique, coordonnées GPS"
+      sub="Adresse postale, commune, lieu-dit, coordonnées GPS"
       folded={folded}
       pill={{ tone: hasCoords ? 'ok' : 'warn', label: hasCoords ? 'Géocodé' : 'GPS manquant' }}
     >
@@ -57,18 +71,22 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         </Field>
       </div>
 
-      <div className="grid-4" style={{ marginBottom: 12 }}>
+      <div className="grid-2" style={{ marginBottom: 12 }}>
         <Field label="Code postal" required>
           <Input value={main.postcode} onChange={(v) => patch({ postcode: v })} mono />
         </Field>
-        <Field label="Commune">
-          <Input value={main.city} onChange={(v) => patch({ city: v })} />
-        </Field>
-        <Field label="Bureau postal" hint="Ex : Le Tampon">
-          <Input value={main.address3} onChange={(v) => patch({ address3: v })} />
-        </Field>
-        <Field label="Zone touristique" hint="Secteur touristique associé">
-          <Input value={main.zoneTouristique} onChange={(v) => patch({ zoneTouristique: v })} />
+        <Field label="Commune" required>
+          {communeOptions.length > 0 ? (
+            <ReferenceSelect
+              value={communeCode}
+              options={communeOptions}
+              placeholder="Choisir une commune…"
+              aria-label="Commune"
+              onChange={(code, option) => patch({ codeInsee: code, city: option?.label ?? main.city })}
+            />
+          ) : (
+            <Input value={main.city} onChange={(v) => patch({ city: v })} aria-label="Commune" />
+          )}
         </Field>
       </div>
 

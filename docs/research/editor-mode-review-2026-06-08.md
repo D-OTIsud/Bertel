@@ -163,3 +163,27 @@ Target ("Choisir une sous-catégorie"):
 **Round 3 — picker fixes (user-flagged):** (a) **removed the redundant "Modifier" button** + its `revealCurrent` — opening the picker *is* editing, so it added nothing; (b) the radio now reflects the **selected path** (`checked={isSelectedPath}`, dropped the shared `name`, `onClick`-driven selection) so picking a child **checks its parent's radio too** — "the parent is selected" is now literal (not just a row highlight), as agreed. Clicking an ancestor still narrows the selection to it (and `Valider la sélection` saves the deepest node, path derived as before). FE **391 green**, tsc clean.
 
 **Deferred — taxonomy facets (post-MVP, user-decided 2026-06-09):** the HLO taxonomy conflates two **independent axes** in one tree — **business model** (Chambre d'hôtes = hosted, Location saisonnière = self-catering, Auberge, Gîte d'étape) and **dwelling format** (appartement, studio, bungalow, **bulle**, lodge…). The single-tree + single-assignment model files each format under one business model arbitrarily, so it cannot express e.g. *"self-catering bulle"* (user: "une bulle peut aussi être une location saisonnière"). **Proper fix = faceted classification** — an object carries a business-model AND a format (drop `uq_object_taxonomy_object_domain` + multi-select picker); its own spec→build. **MVP decision:** leave as-is, business type stays the primary classification.
+
+---
+
+## §02 — Localisation
+
+Component: `sections/SectionLocation.tsx`. Solid base: formatted address inputs, lieu-dit
+corpus combobox + pending-change approval flow, draggable GPS pin-map with confirm,
+**real-state pill** (`Géocodé / GPS manquant` — the X1 reference).
+
+| Element | ⑤ | Decision |
+|---------|----|----------|
+| Adresse (`address1`, formatted) + Complément (`address2`) | ✅ | Keep. |
+| Code postal (`postcode`) | ✅ | Keep, required. |
+| **Commune** (`city`) | ✅ | **DONE — required + ref_commune select.** Strict `ReferenceSelect` over `location.zoneOptions` (the §41 `ref_commune` catalog); selecting writes `city` + `codeInsee` (saver persists `code_insee` — verified, line 5134); legacy free-text city snaps to its option by folded label; free-text fallback when the catalog is empty. Publication blocker (city OR codeInsee) — rule user-implemented (`101426f`), tests pinned. |
+| **Bureau postal** (`address3`) | ✅→cut | **DONE — removed from the editor** (unclear vs Commune; niche). Column stays; data round-trips untouched. |
+| **Zone touristique** (`zoneTouristique`) | ✅→cut | **DONE — removed from the editor** (free text duplicating the structured `object_zone`/INSEE territory model of §16). Column stays. |
+| Lieu-dit (corpus + moderation flow) | ✅ | Keep — best-in-class pattern. |
+| Latitude / Longitude | ✅ | Keep, required-marked. |
+| **Géocoder l'adresse** (button) | ⚠️ disabled | **DECIDED — BUILD IT** (commit 2): wire to the BAN API (`api-adresse.data.gouv.fr`, covers Réunion, no key); loading + not-found handling; pin-map stays the manual fallback. |
+| Pin map (drag + confirm) | ✅ | Keep. |
+
+**Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS
+asterisks were visual-only. Commune is now enforced; **Adresse/CP/GPS required-vs-validation
+alignment** logged for the cross-cutting honest-controls pass (X1 family).

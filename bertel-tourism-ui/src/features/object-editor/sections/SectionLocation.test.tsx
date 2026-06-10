@@ -155,4 +155,38 @@ describe('SectionLocation', () => {
     expect(screen.queryByText('Communes associées')).not.toBeInTheDocument();
     expect(screen.queryByText('97416')).not.toBeInTheDocument();
   });
+
+  it('no longer renders Bureau postal nor Zone touristique', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    expect(screen.queryByText('Bureau postal')).not.toBeInTheDocument();
+    expect(screen.queryByText(/zone touristique/i)).not.toBeInTheDocument();
+  });
+
+  it('uses a ref_commune select for Commune and snaps the legacy city text to its option', () => {
+    const base = modules();
+    base.location.zoneOptions = [
+      { code: '97414', label: "L'Entre-Deux" },
+      { code: '97411', label: 'Saint-Pierre' },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    const commune = screen.getByRole('combobox', { name: 'Commune' });
+    // Legacy row (city text, no INSEE code) snaps to the matching option.
+    expect(commune).toHaveValue('97414');
+
+    fireEvent.change(commune, { target: { value: '97411' } });
+    expect(result.current.draft.location.main.codeInsee).toBe('97411');
+    expect(result.current.draft.location.main.city).toBe('Saint-Pierre');
+  });
+
+  it('falls back to a free-text Commune input when the commune catalog is empty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    const commune = screen.getByRole('textbox', { name: 'Commune' });
+    expect(commune).toHaveValue("L'Entre-Deux");
+    fireEvent.change(commune, { target: { value: 'Le Tampon' } });
+    expect(result.current.draft.location.main.city).toBe('Le Tampon');
+  });
 });

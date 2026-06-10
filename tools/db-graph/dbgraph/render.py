@@ -86,40 +86,171 @@ def write_index_md(g):
     return "\n".join(out)
 
 
-_HTML = """<!doctype html><meta charset="utf-8"><title>DB graph</title>
-<style>body{font:13px sans-serif;margin:0}#side{position:fixed;right:0;top:0;width:300px;height:100%;
-overflow:auto;border-left:1px solid #ddd;padding:8px;background:#fff}#f{padding:6px}
-.n{cursor:pointer}text{pointer-events:none;font-size:9px}</style>
-<div id="f"><input id="q" placeholder="search…" oninput="hl()"> <span id="meta"></span></div>
-<svg id="svg" width="100%" height="640"></svg><div id="side"></div>
+# Interactive viewer: dark/light theme, kind + table-domain ("family") filters, d3 zoom/pan,
+# click-to-highlight neighborhood with a clickable connections list in the side panel.
+_HTML = """<!doctype html><html><head><meta charset="utf-8"><title>DB graph</title>
+<style>
+:root{--bg:#0d1117;--panel:rgba(22,27,34,.92);--fg:#d7dde5;--muted:#8b949e;--border:#30363d;
+  --edge:#46506033;--edge-solid:#465060;--hl:#ffb454;--chip:#21262d;--code:#161b22}
+[data-theme="light"]{--bg:#ffffff;--panel:rgba(246,248,250,.95);--fg:#1f2328;--muted:#656d76;
+  --border:#d0d7de;--edge:#9aa3ad55;--edge-solid:#9aa3ad;--hl:#e36209;--chip:#eaeef2;--code:#f6f8fa}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:13px/1.45 system-ui,"Segoe UI",sans-serif;overflow:hidden}
+#svg{position:fixed;inset:0;width:100%;height:100%;cursor:grab}
+#svg:active{cursor:grabbing}
+#bar{position:fixed;left:0;top:0;right:320px;z-index:2;padding:8px 10px;background:var(--panel);
+  border-bottom:1px solid var(--border);backdrop-filter:blur(4px)}
+#bar input{background:var(--chip);border:1px solid var(--border);color:var(--fg);border-radius:6px;
+  padding:3px 8px;width:220px;outline:none}
+#meta{color:var(--muted);margin-left:8px}
+#theme{float:right;cursor:pointer;background:var(--chip);border:1px solid var(--border);color:var(--fg);
+  border-radius:6px;padding:3px 10px}
+.row{margin-top:6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.rowlab{color:var(--muted);font-size:11px;text-transform:uppercase;width:58px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{cursor:pointer;border:1px solid var(--border);background:var(--chip);border-radius:12px;
+  padding:1px 9px;user-select:none;display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.chip.off{opacity:.4;filter:grayscale(.7)}
+.chip .ct{color:var(--muted);font-size:10px}
+.mini{cursor:pointer;color:var(--muted);font-size:11px;text-decoration:underline;user-select:none}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+#side{position:fixed;right:0;top:0;width:320px;height:100%;overflow:auto;border-left:1px solid var(--border);
+  padding:10px;background:var(--panel);box-sizing:border-box;z-index:2;backdrop-filter:blur(4px)}
+#side h3{margin:4px 0 2px}
+#side h4{margin:10px 0 2px;color:var(--muted);font-size:11px;text-transform:uppercase}
+#side p{margin:4px 0}
+#side ul{margin:4px 0;padding-left:18px}
+#side pre{white-space:pre-wrap;background:var(--code);border:1px solid var(--border);padding:6px;
+  border-radius:6px;font-size:11px;overflow-x:auto}
+#side code{background:var(--code);padding:0 3px;border-radius:3px}
+.muted{color:var(--muted)}
+.conn{cursor:pointer;padding:2px 4px;border-radius:4px;display:flex;gap:6px;align-items:center}
+.conn:hover{background:var(--chip)}
+line{stroke:var(--edge-solid)}
+line.hl{stroke:var(--hl)}
+circle{stroke:var(--bg);stroke-width:.8px;cursor:pointer}
+circle.sel{stroke:var(--hl);stroke-width:2.5px}
+text{pointer-events:none;font-size:9px;fill:var(--fg);paint-order:stroke;stroke:var(--bg);stroke-width:2.5px}
+</style></head><body>
+<div id="bar">
+  <button id="theme">Light</button>
+  <input id="q" placeholder="search… (id or name)"><span id="meta"></span>
+  <div class="row"><span class="rowlab">Kinds</span><span id="kinds" class="chips"></span>
+    <span class="mini" data-g="kind" data-v="1">all</span><span class="mini" data-g="kind" data-v="0">none</span></div>
+  <div class="row"><span class="rowlab">Domains</span><span id="doms" class="chips"></span>
+    <span class="mini" data-g="dom" data-v="1">all</span><span class="mini" data-g="dom" data-v="0">none</span></div>
+</div>
+<svg id="svg"></svg><div id="side"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 const G = __GRAPH__;
-const COLOR = {table:"#1D9E75",view:"#5DCAA5",matview:"#5DCAA5",enum:"#7F77DD",function:"#D85A30",policy:"#378ADD",trigger:"#BA7517"};
-document.getElementById("meta").textContent = G.meta.table_count+" tables · "+G.meta.function_count+" fns · "+G.meta.policy_count+" policies";
-const svg=d3.select("#svg"), W=svg.node().clientWidth, H=640;
-const link=svg.append("g").attr("stroke","#bbb").attr("stroke-opacity",.4).selectAll("line").data(G.edges).join("line");
-const node=svg.append("g").selectAll("circle").data(G.nodes).join("circle").attr("class","n")
-  .attr("r",d=>d.kind==="table"?6:4).attr("fill",d=>COLOR[d.kind]||"#888").on("click",(e,d)=>detail(d));
-const label=svg.append("g").selectAll("text").data(G.nodes).join("text").text(d=>d.label).attr("dx",6).attr("dy",3);
+const KCOLOR={table:"#2ea043",view:"#56d4a0",matview:"#56d4a0",enum:"#a78bfa",function:"#f0883e",policy:"#539bf5",trigger:"#d4a72c"};
+const TABLELIKE=new Set(["table","view","matview"]);
+const SIDEW=320;
+document.getElementById("meta").textContent=G.meta.table_count+" tables · "+G.meta.function_count+" fns · "+G.meta.policy_count+" policies · "+G.meta.edge_count+" edges";
+const byId={};G.nodes.forEach(n=>byId[n.id]=n);
+// adjacency on string ids (built before forceLink mutates edge endpoints into objects)
+const adj=new Map();
+function addAdj(a,b){if(!adj.has(a))adj.set(a,new Set());adj.get(a).add(b);}
+G.edges.forEach(e=>{addAdj(e.source,e.target);addAdj(e.target,e.source);});
+// filter state ("families" = node kinds + table domains)
+const kinds=[...new Set(G.nodes.map(n=>n.kind))];
+const kindCount={};G.nodes.forEach(n=>kindCount[n.kind]=(kindCount[n.kind]||0)+1);
+const doms=[...new Set(G.nodes.filter(n=>TABLELIKE.has(n.kind)).map(n=>n.domain))].sort();
+const domCount={};G.nodes.filter(n=>TABLELIKE.has(n.kind)).forEach(n=>domCount[n.domain]=(domCount[n.domain]||0)+1);
+const kindOn=Object.fromEntries(kinds.map(x=>[x,true]));
+const domOn=Object.fromEntries(doms.map(x=>[x,true]));
+let sel=null,q="",zk=1;
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+// svg / simulation
+const svg=d3.select("#svg"),root=svg.append("g");
+const link=root.append("g").selectAll("line").data(G.edges).join("line");
+const node=root.append("g").selectAll("circle").data(G.nodes).join("circle")
+  .attr("r",d=>d.kind==="table"?7:TABLELIKE.has(d.kind)?6:d.kind==="function"?4.5:d.kind==="enum"?5.5:3)
+  .attr("fill",d=>KCOLOR[d.kind]||"#888")
+  .on("click",(e,d)=>{e.stopPropagation();select(d);});
+const label=root.append("g").selectAll("text").data(G.nodes).join("text").text(d=>d.label).attr("dx",7).attr("dy",3);
+const W=Math.max(innerWidth-SIDEW,400),H=innerHeight;
 const sim=d3.forceSimulation(G.nodes).force("link",d3.forceLink(G.edges).id(d=>d.id).distance(40))
   .force("charge",d3.forceManyBody().strength(-60)).force("center",d3.forceCenter(W/2,H/2));
 sim.on("tick",()=>{link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
   node.attr("cx",d=>d.x).attr("cy",d=>d.y);label.attr("x",d=>d.x).attr("y",d=>d.y);});
 node.call(d3.drag().on("start",(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
   .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y;}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
-function hl(){const q=document.getElementById("q").value.toLowerCase();
-  node.attr("opacity",d=>!q||d.id.toLowerCase().includes(q)?1:.1);
-  label.attr("opacity",d=>!q||d.id.toLowerCase().includes(q)?1:.1);}
-function detail(d){const s=document.getElementById("side");let h="<h3>"+d.label+"</h3><p>"+d.kind+" · "+d.schema+" · "+d.domain+"</p>";
-  if(d.doc)h+="<pre style='white-space:pre-wrap'>"+d.doc+"</pre>";
-  if(d.props.columns)h+="<ul>"+d.props.columns.map(c=>"<li>"+c.name+" : "+c.type+(c.pk?" 🔑":"")+"</li>").join("")+"</ul>";
-  if(d.props.signature)h+="<p><code>"+d.props.signature+" → "+d.props.returns+"</code></p>";
-  if(d.props.values)h+="<p>"+d.props.values.join(", ")+"</p>";
-  if(d.props.predicate)h+="<pre style='white-space:pre-wrap'>"+d.props.predicate+"</pre>";
-  s.innerHTML=h;}
-</script>"""
+// zoom & pan; labels for noisy kinds (policy/trigger/function) only appear past the zoom threshold
+const ZTHRESH=1.3;
+const zoom=d3.zoom().scaleExtent([.08,10]).on("zoom",e=>{
+  root.attr("transform",e.transform);
+  const big=e.transform.k>=ZTHRESH,wasBig=zk>=ZTHRESH;zk=e.transform.k;
+  if(big!==wasBig)refresh();});
+svg.call(zoom).on("dblclick.zoom",null);
+svg.on("click",()=>{if(sel){sel=null;refresh();sideDefault();}});
+// visibility model: filters hide, selection/search dim
+const isConn=d=>!!sel&&(d.id===sel.id||(adj.get(sel.id)||new Set()).has(d.id));
+const matches=d=>d.id.toLowerCase().includes(q)||d.label.toLowerCase().includes(q);
+const visible=n=>kindOn[n.kind]&&(!TABLELIKE.has(n.kind)||domOn[n.domain]);
+function labelShow(d){if(!visible(d))return false;if(sel)return isConn(d);if(q)return matches(d);
+  return TABLELIKE.has(d.kind)||d.kind==="enum"||zk>=ZTHRESH;}
+function refresh(){
+  node.attr("display",d=>visible(d)?null:"none").classed("sel",d=>!!sel&&d.id===sel.id)
+    .attr("opacity",d=>sel?(isConn(d)?1:.06):(q?(matches(d)?1:.1):.92));
+  label.attr("display",d=>labelShow(d)?null:"none")
+    .attr("opacity",d=>sel?(isConn(d)?1:.06):(q?(matches(d)?1:.1):.9));
+  link.attr("display",e=>visible(e.source)&&visible(e.target)?null:"none")
+    .classed("hl",e=>!!sel&&(e.source.id===sel.id||e.target.id===sel.id))
+    .attr("stroke-opacity",e=>{if(sel)return(e.source.id===sel.id||e.target.id===sel.id)?.95:.04;
+      if(q)return(matches(e.source)&&matches(e.target))?.5:.06;return .3;})
+    .attr("stroke-width",e=>sel&&(e.source.id===sel.id||e.target.id===sel.id)?1.8:1);
+}
+function select(d){sel=d;refresh();detail(d);}
+function selectById(id){const n=byId[id];if(!n)return;select(n);
+  svg.transition().duration(450).call(zoom.transform,
+    d3.zoomIdentity.translate((innerWidth-SIDEW)/2-n.x*1.4,innerHeight/2-n.y*1.4).scale(1.4));}
+// side panel
+function detail(d){
+  let h="<h3>"+esc(d.label)+"</h3><p class=muted>"+esc(d.kind)+" · "+esc(d.schema)+" · "+esc(d.domain)+"</p>";
+  if(d.doc)h+="<pre>"+esc(d.doc)+"</pre>";
+  if(d.props.columns)h+="<ul>"+d.props.columns.map(c=>"<li><code>"+esc(c.name)+"</code> : "+esc(c.type)+(c.pk?" 🔑":"")+"</li>").join("")+"</ul>";
+  if(d.props.signature)h+="<p><code>"+esc(d.props.signature)+" → "+esc(d.props.returns)+"</code></p>";
+  if(d.props.values)h+="<p>"+d.props.values.map(esc).join(", ")+"</p>";
+  if(d.props.predicate)h+="<pre>"+esc(d.props.predicate)+"</pre>";
+  const out={},inn={};
+  G.edges.forEach(e=>{const s0=e.source.id||e.source,t0=e.target.id||e.target;
+    if(s0===d.id)(out[e.kind]=out[e.kind]||[]).push(t0);
+    else if(t0===d.id)(inn[e.kind]=inn[e.kind]||[]).push(s0);});
+  const row=id=>{const n2=byId[id];return "<div class=conn data-id=\\""+esc(id)+"\\"><span class=dot style=\\"background:"+(n2?KCOLOR[n2.kind]||"#888":"#888")+"\\"></span>"+esc(n2?n2.label:id)+(n2?" <span class=muted>("+esc(n2.kind)+")</span>":"")+"</div>";};
+  const grp=(o,arrow)=>Object.keys(o).sort().map(kk=>"<h4>"+esc(kk)+" "+arrow+" ("+o[kk].length+")</h4>"+o[kk].sort().map(row).join("")).join("");
+  const conn=grp(out,"→")+grp(inn,"←");
+  if(conn)h+="<h4>Connections</h4>"+conn;
+  const s=document.getElementById("side");s.innerHTML=h;s.scrollTop=0;
+  s.querySelectorAll(".conn").forEach(el=>el.onclick=()=>selectById(el.dataset.id));
+}
+function sideDefault(){document.getElementById("side").innerHTML=
+  "<h3>DB graph</h3><p class=muted>Click a node to inspect it and highlight its connections. "+
+  "Click the background to clear. Scroll to zoom, drag to pan. Use the chips to filter by kind and table domain. "+
+  "Labels for functions / policies / triggers appear when zoomed in.</p>";}
+// filter chips
+function mkChip(parent,name,count,color,get,set){
+  const el=document.createElement("span");el.className="chip";
+  el.innerHTML=(color?"<span class=dot style=\\"background:"+color+"\\"></span>":"")+esc(name)+" <span class=ct>"+count+"</span>";
+  el.onclick=()=>{set(!get());el.classList.toggle("off",!get());refresh();};
+  parent.appendChild(el);return el;}
+const kindChips={},domChips={};
+kinds.forEach(x=>kindChips[x]=mkChip(document.getElementById("kinds"),x,kindCount[x],KCOLOR[x]||"#888",()=>kindOn[x],v=>kindOn[x]=v));
+doms.forEach(x=>domChips[x]=mkChip(document.getElementById("doms"),x,domCount[x],null,()=>domOn[x],v=>domOn[x]=v));
+document.querySelectorAll(".mini").forEach(el=>el.onclick=()=>{
+  const v=el.dataset.v==="1";
+  if(el.dataset.g==="kind"){kinds.forEach(x=>{kindOn[x]=v;kindChips[x].classList.toggle("off",!v);});}
+  else{doms.forEach(x=>{domOn[x]=v;domChips[x].classList.toggle("off",!v);});}
+  refresh();});
+// search + theme
+document.getElementById("q").addEventListener("input",e=>{q=e.target.value.toLowerCase();refresh();});
+const tbtn=document.getElementById("theme");
+tbtn.onclick=()=>{const light=document.documentElement.dataset.theme!=="light";
+  document.documentElement.dataset.theme=light?"light":"";tbtn.textContent=light?"Dark":"Light";};
+refresh();sideDefault();
+</script></body></html>"""
 
 
 def render_html(g):
-    return _HTML.replace("__GRAPH__", json.dumps(g))
+    # "<\\/" parses identically to "</" in a JS string literal but cannot close the <script> tag
+    return _HTML.replace("__GRAPH__", json.dumps(g).replace("</", "<\\/"))

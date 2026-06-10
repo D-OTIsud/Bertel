@@ -171,6 +171,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_fma_rls.sql"
 
+      - name: write-policy per-command test (§47 8o — per-command coverage + owner/stranger/anon probe)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_write_policy_percommand.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

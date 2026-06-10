@@ -96,6 +96,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_facet_applicability.sql
 -- 5k) §47 object_fma: triple de politiques d'ecriture par commande (canonical_ins/upd/del) -- corrige l'upsert FMA RLS-refuse
 \i migration_object_fma_write_policy.sql
+-- 5l) §47 convergence: 93 politiques FOR ALL -> triples par commande (canonical/admin_ins/upd/del) sur 57 tables enfant
+\i migration_write_policy_percommand.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

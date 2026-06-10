@@ -147,6 +147,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_ref_commune.sql"
 psql -d votre_database -f "Base de donnée DLL et API/migration_facet_applicability.sql"
 # 5k. §47 object_fma: triple de politiques d'écriture par commande (canonical_ins/upd/del) — corrige l'upsert FMA RLS-refusé
 psql -d votre_database -f "Base de donnée DLL et API/migration_object_fma_write_policy.sql"
+# 5l. §47 convergence: 93 politiques FOR ALL → triples par commande (canonical/admin_ins/upd/del) sur 57 tables enfant
+psql -d votre_database -f "Base de donnée DLL et API/migration_write_policy_percommand.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

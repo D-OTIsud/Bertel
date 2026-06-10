@@ -32,6 +32,10 @@ BEGIN
   -- Every targeted write policy must reference the helper in its USING (qual).
   -- object_description is intentionally excluded (carve-out keeps is_object_owner OR
   -- (user_can_write_canonical AND org_object_id IS NULL)).
+  -- §47 (8o) NOTE: these legacy owner_* policy names are RETIRED (collapsed into per-command
+  -- canonical_*/admin_* families), so on a post-8o DB this IN-list matches no rows and the check is
+  -- vacuously satisfied. Kept as a regression tripwire in case a legacy name is ever resurrected on
+  -- the legacy predicate. The per-command coverage is enforced by test_write_policy_percommand.sql.
   SELECT array_agg(policyname) INTO v_legacy
   FROM pg_policies
   WHERE schemaname='public'
@@ -49,11 +53,23 @@ BEGIN
     RAISE EXCEPTION 'Policies still on legacy predicate (not wired to helper): %', array_to_string(v_legacy, ', ');
   END IF;
 
-  -- object_description carve-out: must reference BOTH the canonical helper and the overlay guard.
-  IF NOT EXISTS (SELECT 1 FROM pg_policies
-                 WHERE schemaname='public' AND policyname='owner_write_description'
+  -- §47 (8o): the object_description carve-out is now the per-command triple
+  -- (owner_write_description retired). Each of canonical_ins/upd/del_object_description must still
+  -- reference BOTH the canonical helper and the overlay guard (org_object_id IS NULL).
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_description'
+                   AND policyname='canonical_ins_object_description' AND cmd='INSERT'
+                   AND with_check LIKE '%user_can_write_canonical%' AND with_check LIKE '%org_object_id%') THEN
+    RAISE EXCEPTION 'canonical_ins_object_description carve-out (canonical + org_object_id IS NULL) not in place';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_description'
+                   AND policyname='canonical_upd_object_description' AND cmd='UPDATE'
                    AND qual LIKE '%user_can_write_canonical%' AND qual LIKE '%org_object_id%') THEN
-    RAISE EXCEPTION 'owner_write_description carve-out (canonical + org_object_id IS NULL) not in place';
+    RAISE EXCEPTION 'canonical_upd_object_description carve-out not in place';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_description'
+                   AND policyname='canonical_del_object_description' AND cmd='DELETE'
+                   AND qual LIKE '%user_can_write_canonical%' AND qual LIKE '%org_object_id%') THEN
+    RAISE EXCEPTION 'canonical_del_object_description carve-out not in place';
   END IF;
 
   RAISE NOTICE 'SP-1 structural assertions passed.';

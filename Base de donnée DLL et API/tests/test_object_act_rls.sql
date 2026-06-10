@@ -23,11 +23,22 @@ BEGIN
                  AND policyname='read_object_act' AND cmd='SELECT'
                  AND COALESCE(qual,'') LIKE '%can_read_object%'),
          'read_object_act policy missing / not gated on api.can_read_object';
+  -- §47 (8o): object_act write policy is now the per-command canonical triple (FOR ALL retired).
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act'
-                 AND policyname='canonical_write_object_act' AND cmd='ALL'
+                 AND policyname='canonical_ins_object_act' AND cmd='INSERT'
+                 AND COALESCE(with_check,'') LIKE '%user_can_write_object_canonical%'),
+         'canonical_ins_object_act missing / not gated on api.user_can_write_object_canonical';
+  ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act'
+                 AND policyname='canonical_upd_object_act' AND cmd='UPDATE'
                  AND COALESCE(qual,'') LIKE '%user_can_write_object_canonical%'
                  AND COALESCE(with_check,'') LIKE '%user_can_write_object_canonical%'),
-         'canonical_write_object_act policy missing / not gated on api.user_can_write_object_canonical (USING + WITH CHECK)';
+         'canonical_upd_object_act missing / not gated (USING + WITH CHECK)';
+  ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act'
+                 AND policyname='canonical_del_object_act' AND cmd='DELETE'
+                 AND COALESCE(qual,'') LIKE '%user_can_write_object_canonical%'),
+         'canonical_del_object_act missing / not gated';
+  ASSERT NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act' AND cmd='ALL'),
+         'object_act must have NO FOR ALL write policy (per-command only -- §47)';
   ASSERT has_function_privilege('anon', 'api.user_can_write_object_canonical(text)', 'EXECUTE'),
          'P0.3 gotcha: anon lacks EXECUTE on api.user_can_write_object_canonical(text) -> anon SELECT on object_act would error';
 

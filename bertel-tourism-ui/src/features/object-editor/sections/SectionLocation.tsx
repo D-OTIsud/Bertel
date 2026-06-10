@@ -3,7 +3,8 @@ import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQuer
 import { Fs, Field, Input, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
-import { geocodeAddress } from '../widgets/geocode-address';
+import { geocodeAddress, type GeocodeHit } from '../widgets/geocode-address';
+import { AddressBanCombobox } from '../widgets/AddressBanCombobox';
 import { LocationFormattedInput } from '../widgets/LocationFormattedInput';
 import { LocationPinMap } from '../widgets/LocationPinMap';
 import { LocationReferenceCombobox } from '../widgets/LocationReferenceCombobox';
@@ -40,7 +41,23 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
     editor.replaceModule('location', { ...location, main: { ...main, ...next } });
   }
 
-  // Address → GPS via the BAN; the draggable pin stays the manual fallback.
+  // Below this BAN confidence, the matched street can be plain wrong — never write it silently.
+  const BAN_CONFIDENT_SCORE = 0.6;
+
+  /** Apply a BAN hit: standardized address + commune (ref_commune label wins) + GPS. */
+  function applyBanHit(hit: GeocodeHit) {
+    const communeLabel = communeOptions.find((option) => option.code === hit.citycode)?.label;
+    patch({
+      address1: hit.name || main.address1,
+      postcode: hit.postcode || main.postcode,
+      city: communeLabel ?? (hit.city || main.city),
+      codeInsee: hit.citycode || main.codeInsee,
+      latitude: hit.latitude,
+      longitude: hit.longitude,
+    });
+  }
+
+  // Address → standardized address + GPS via the BAN; the draggable pin stays the manual fallback.
   async function handleGeocode() {
     setGeocoding(true);
     setGeocodeMessage(null);
@@ -54,7 +71,14 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         setGeocodeMessage('Adresse introuvable — placez le repère sur la carte.');
         return;
       }
-      patch({ latitude: hit.latitude, longitude: hit.longitude });
+      if (hit.score < BAN_CONFIDENT_SCORE) {
+        setGeocodeMessage(
+          `Correspondance incertaine : « ${hit.label} » — vérifiez l'adresse ou placez le repère sur la carte.`,
+        );
+        return;
+      }
+      applyBanHit(hit);
+      setGeocodeMessage(`Adresse standardisée : ${hit.label}`);
     } catch {
       setGeocodeMessage('Géocodage indisponible — réessayez plus tard.');
     } finally {
@@ -84,8 +108,13 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
       pill={{ tone: hasCoords ? 'ok' : 'warn', label: hasCoords ? 'Géocodé' : 'GPS manquant' }}
     >
       <div className="grid-2" style={{ marginBottom: 12 }}>
-        <Field label="Adresse" required>
-          <LocationFormattedInput value={main.address1} onChange={(v) => patch({ address1: v })} />
+        <Field label="Adresse" required hint="Tapez pour obtenir les suggestions de la Base Adresse Nationale">
+          <AddressBanCombobox
+            value={main.address1}
+            onChange={(v) => patch({ address1: v })}
+            onSelect={applyBanHit}
+            aria-label="Adresse"
+          />
         </Field>
         <Field label="Complément d'adresse">
           <LocationFormattedInput

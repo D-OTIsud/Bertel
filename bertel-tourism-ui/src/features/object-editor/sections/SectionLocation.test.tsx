@@ -11,6 +11,7 @@ jest.mock('../../../hooks/useExplorerQueries', () => ({
 
 jest.mock('../widgets/geocode-address', () => ({
   geocodeAddress: jest.fn(),
+  searchAddresses: jest.fn(),
 }));
 
 jest.mock('react-map-gl/maplibre', () => ({
@@ -24,11 +25,29 @@ jest.mock('react-map-gl/maplibre', () => ({
 }));
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionLocation } from './SectionLocation';
-import { geocodeAddress } from '../widgets/geocode-address';
+import { geocodeAddress, searchAddresses } from '../widgets/geocode-address';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
 
 const geocodeAddressMock = geocodeAddress as jest.Mock;
+const searchAddressesMock = searchAddresses as jest.Mock;
+
+beforeEach(() => {
+  searchAddressesMock.mockReset();
+  searchAddressesMock.mockResolvedValue([]);
+  geocodeAddressMock.mockReset();
+});
+
+const BAN_HIT = {
+  latitude: '-21.271070',
+  longitude: '55.467030',
+  label: '38 Chemin Dijoux 97414 Entre-Deux',
+  name: '38 Chemin Dijoux',
+  postcode: '97414',
+  city: 'Entre-Deux',
+  citycode: '97403',
+  score: 0.82,
+};
 
 const perms = {} as ObjectWorkspacePermissions;
 
@@ -197,8 +216,8 @@ describe('SectionLocation', () => {
     expect(result.current.draft.location.main.city).toBe('Le Tampon');
   });
 
-  it('geocodes the address into the GPS fields on click', async () => {
-    geocodeAddressMock.mockResolvedValue({ latitude: '-21.271070', longitude: '55.467030', label: 'ok' });
+  it('geocodes AND standardizes the address on a confident BAN match', async () => {
+    geocodeAddressMock.mockResolvedValue(BAN_HIT);
     const { result } = renderHook(() => useObjectEditorState('o1', modules()));
     render(<SectionLocation editor={result.current} permissions={perms} />);
 
@@ -213,8 +232,57 @@ describe('SectionLocation', () => {
       postcode: '97414',
       city: "L'Entre-Deux",
     });
-    expect(result.current.draft.location.main.latitude).toBe('-21.271070');
-    expect(result.current.draft.location.main.longitude).toBe('55.467030');
+    const main = result.current.draft.location.main;
+    expect(main.latitude).toBe('-21.271070');
+    expect(main.longitude).toBe('55.467030');
+    // Standardized (BAN) address replaces the free-text one.
+    expect(main.address1).toBe('38 Chemin Dijoux');
+    expect(main.postcode).toBe('97414');
+    expect(main.city).toBe('Entre-Deux');
+    expect(main.codeInsee).toBe('97403');
+    expect(screen.getByText(/adresse standardisée/i)).toBeInTheDocument();
+  });
+
+  it('applies nothing on a low-confidence BAN match and says so', async () => {
+    geocodeAddressMock.mockResolvedValue({ ...BAN_HIT, score: 0.41 });
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: "Géocoder l'adresse" }));
+    });
+
+    const main = result.current.draft.location.main;
+    expect(main.latitude).toBe('');
+    expect(main.address1).toBe('38 Chemin du Bel Air');
+    expect(screen.getByText(/correspondance incertaine/i)).toBeInTheDocument();
+  });
+
+  it('fills the standardized address, commune and GPS from an autocomplete pick', async () => {
+    jest.useFakeTimers();
+    try {
+      searchAddressesMock.mockResolvedValue([BAN_HIT]);
+      const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+      render(<SectionLocation editor={result.current} permissions={perms} />);
+
+      const address = screen.getByRole('combobox', { name: 'Adresse' });
+      fireEvent.change(address, { target: { value: '38 chemin dij' } });
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+      });
+
+      fireEvent.click(await screen.findByRole('option', { name: /38 Chemin Dijoux 97414 Entre-Deux/ }));
+
+      const main = result.current.draft.location.main;
+      expect(main.address1).toBe('38 Chemin Dijoux');
+      expect(main.postcode).toBe('97414');
+      expect(main.city).toBe('Entre-Deux');
+      expect(main.codeInsee).toBe('97403');
+      expect(main.latitude).toBe('-21.271070');
+      expect(main.longitude).toBe('55.467030');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('shows a not-found message when the geocoder has no match (coords untouched)', async () => {

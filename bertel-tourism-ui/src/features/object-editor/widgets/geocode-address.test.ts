@@ -1,17 +1,24 @@
-import { geocodeAddress } from './geocode-address';
+import { geocodeAddress, searchAddresses } from './geocode-address';
+
+const BAN_FEATURE = {
+  geometry: { coordinates: [55.46703, -21.27107] },
+  properties: {
+    label: '38 Chemin Dijoux 97414 Entre-Deux',
+    name: '38 Chemin Dijoux',
+    postcode: '97414',
+    city: 'Entre-Deux',
+    citycode: '97403',
+    score: 0.82,
+  },
+};
 
 function banResponse(features: unknown[]): Response {
   return { ok: true, json: async () => ({ features }) } as unknown as Response;
 }
 
 describe('geocodeAddress', () => {
-  it('returns 6-decimal coordinate strings and the matched label', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue(banResponse([
-      {
-        geometry: { coordinates: [55.46703, -21.27107] },
-        properties: { label: '38 Chemin du Bel Air 97414 Entre-Deux' },
-      },
-    ]));
+  it('returns the standardized address parts and 6-decimal coordinates', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(banResponse([BAN_FEATURE]));
 
     const hit = await geocodeAddress(
       { address1: '38 Chemin du Bel Air', postcode: '97414', city: "L'Entre-Deux" },
@@ -21,7 +28,12 @@ describe('geocodeAddress', () => {
     expect(hit).toEqual({
       latitude: '-21.271070',
       longitude: '55.467030',
-      label: '38 Chemin du Bel Air 97414 Entre-Deux',
+      label: '38 Chemin Dijoux 97414 Entre-Deux',
+      name: '38 Chemin Dijoux',
+      postcode: '97414',
+      city: 'Entre-Deux',
+      citycode: '97403',
+      score: 0.82,
     });
   });
 
@@ -56,5 +68,43 @@ describe('geocodeAddress', () => {
       { address1: '1 rue de la Gare', postcode: '', city: '' },
       fetchImpl as unknown as typeof fetch,
     )).rejects.toThrow();
+  });
+});
+
+describe('searchAddresses', () => {
+  it('returns mapped suggestions for the autocomplete', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(banResponse([BAN_FEATURE]));
+
+    const hits = await searchAddresses('38 chemin dij', fetchImpl as unknown as typeof fetch);
+
+    expect(hits).toEqual([
+      {
+        latitude: '-21.271070',
+        longitude: '55.467030',
+        label: '38 Chemin Dijoux 97414 Entre-Deux',
+        name: '38 Chemin Dijoux',
+        postcode: '97414',
+        city: 'Entre-Deux',
+        citycode: '97403',
+        score: 0.82,
+      },
+    ]);
+  });
+
+  it('queries the BAN in autocomplete mode with a suggestion budget', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(banResponse([]));
+
+    await searchAddresses('38 chemin', fetchImpl as unknown as typeof fetch);
+
+    const url = String(fetchImpl.mock.calls[0][0]);
+    expect(url).toContain('autocomplete=1');
+    expect(url).toContain('limit=5');
+  });
+
+  it('returns an empty list for a blank query without calling the BAN', async () => {
+    const fetchImpl = jest.fn();
+    const hits = await searchAddresses('   ', fetchImpl as unknown as typeof fetch);
+    expect(hits).toEqual([]);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,6 @@
-import { Chip, ChipSet, Fs, Input, Repeater, ScheduleEditor, Select, Toggle } from '../../primitives';
+import { Chip, ChipSet, Fs, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
-import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-row';
-import { applyRowsToFirstPeriod, scheduleRowsFromPeriod } from './opening-schedule';
-
-const TARIFF_COLS = '14px 1.6fr 1fr 80px auto';
+import { OwnedElsewhereNote } from './block-notes';
 
 function toggle(values: string[], code: string) {
   return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
@@ -87,58 +84,9 @@ export function BlockVIS({ editor, folded }: SectionProps) {
         ))}
       </ChipSet>
 
-      <div className="chip-group__label" style={{ marginTop: 16 }}>
-        Tarifs
-      </div>
-      <Repeater
-        items={pricing.prices}
-        getKey={(price, index) => `${price.recordId ?? 'price'}-${index}`}
-        columns={TARIFF_COLS}
-        addLabel="Ajouter une ligne tarifaire"
-        onAdd={() => editor.replaceModule('pricing', addPricingRow(pricing))}
-        renderRow={(price, index) => (
-          <>
-            <span className="rep-row__handle" aria-hidden />
-            <Input
-              value={price.kindLabel}
-              placeholder="Libellé tarif"
-              onChange={(kindLabel) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { kindLabel }))}
-            />
-            <Input
-              value={price.amount}
-              mono
-              onChange={(amount) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { amount }))}
-            />
-            <Select
-              value={price.unitCode || 'eur'}
-              options={pricing.priceUnitOptions.map((o) => ({ v: o.code, l: o.label }))}
-              onChange={(unitCode) => {
-                const opt = pricing.priceUnitOptions.find((o) => o.code === unitCode);
-                editor.replaceModule('pricing', updatePricingRow(pricing, index, { unitCode, unitLabel: opt?.label ?? unitCode }));
-              }}
-            />
-            <div className="rep-row__act">
-              <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removePricingRow(pricing, index))}>
-                ×
-              </button>
-            </div>
-          </>
-        )}
-      />
-
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Horaires haute saison
-        <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-          {' '}
-          · détail dans les périodes d'ouverture (§14)
-        </span>
-      </div>
-      <ScheduleEditor
-        rows={scheduleRowsFromPeriod(openings.periods[0])}
-        colA="Matin / journée"
-        colB="Après-midi"
-        onChange={(rows) => editor.replaceModule('openings', applyRowsToFirstPeriod(openings, rows))}
-      />
+      {/* §48 single-owner: tariffs are edited in §13, opening hours in §14 (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${pricing.prices.length} ligne(s) tarifaire(s)`} />
+      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );
 }

@@ -1,8 +1,7 @@
-import { Chip, ChipSet, Field, Fs, Input, Repeater, ScheduleEditor, Select, Toggle } from '../../primitives';
+import { Chip, ChipSet, Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
-import { applyRowsToFirstPeriod, scheduleRowsFromPeriod } from './opening-schedule';
-import { ModuleUnavailableNotice } from './block-notes';
+import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 
 const MENU_COLS = '14px 36px 1fr 90px 90px auto';
 
@@ -51,45 +50,16 @@ export function BlockRES({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Identité culinaire
       </div>
-      <div className="grid-3" style={{ marginBottom: 10 }}>
-        <Field label="Capacité groupe min">
-          <Input
-            value={capacity.groupPolicy.minSize}
-            mono
-            suffix="pers."
-            onChange={(minSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, minSize },
-              })
-            }
-          />
-        </Field>
-        <Field label="Capacité groupe max">
-          <Input
-            value={capacity.groupPolicy.maxSize}
-            mono
-            suffix="pers."
-            onChange={(maxSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, maxSize },
-              })
-            }
-          />
-        </Field>
-        <Toggle
-          label="Groupes uniquement"
-          sub="Sur réservation"
-          on={capacity.groupPolicy.groupOnly}
-          onChange={(groupOnly) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              groupPolicy: { ...capacity.groupPolicy, groupOnly },
-            })
-          }
-        />
-      </div>
+      {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote
+        num="07"
+        label="Capacité & cadre"
+        summary={
+          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
+            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
+            : undefined
+        }
+      />
 
       {/* §46 type-gated menus module — notice INSTEAD of controls when gated.
           The cuisine chips, the menu repeater and the PDF/notes grid all edit
@@ -190,13 +160,8 @@ export function BlockRES({ editor, folded }: SectionProps) {
         </>
       )}
 
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Horaires de service
-      </div>
-      <ScheduleEditor
-        rows={scheduleRowsFromPeriod(openings.periods[0])}
-        onChange={(rows) => editor.replaceModule('openings', applyRowsToFirstPeriod(openings, rows))}
-      />
+      {/* §48 single-owner: service hours are edited in §14 only (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );
 }

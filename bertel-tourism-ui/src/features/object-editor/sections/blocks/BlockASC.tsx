@@ -1,34 +1,9 @@
 import { Chip, ChipSet, Field, Fs, Input, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
-import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-row';
-import { ModuleUnavailableNotice } from './block-notes';
-
-const FORMULA_COLS = '14px 1.4fr 70px 110px 110px 70px 80px auto';
+import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 
 function toggle(values: string[], code: string) {
   return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
-
-function repHeader(columns: string, labels: string[]) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: columns,
-        gap: 8,
-        padding: '6px 12px',
-        fontSize: 10,
-        fontWeight: 700,
-        color: 'var(--ink-4)',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-      }}
-    >
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
-      ))}
-    </div>
-  );
 }
 
 export function BlockASC({ editor, folded }: SectionProps) {
@@ -143,48 +118,8 @@ export function BlockASC({ editor, folded }: SectionProps) {
         </>
       )}
 
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Formules & sessions
-      </div>
-      {repHeader(FORMULA_COLS, ['', 'Nom de la formule', 'Montant', 'Unité', 'Conditions', 'Saison', ''])}
-      <div className="repeater">
-        {pricing.prices.map((price, index) => (
-          <div key={`${price.recordId ?? 'price'}-${index}`} className="rep-row" style={{ gridTemplateColumns: FORMULA_COLS }}>
-            <span className="rep-row__handle" aria-hidden />
-            <Input
-              value={price.kindLabel}
-              onChange={(kindLabel) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { kindLabel }))}
-            />
-            <Input
-              value={price.amount}
-              mono
-              suffix="€"
-              onChange={(amount) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { amount }))}
-            />
-            <Input
-              value={price.unitLabel || price.unitCode}
-              onChange={(unitLabel) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { unitLabel }))}
-            />
-            <Input
-              value={price.conditions}
-              onChange={(conditions) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { conditions }))}
-            />
-            <Input
-              value={price.seasonCode}
-              placeholder="—"
-              onChange={(seasonCode) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { seasonCode }))}
-            />
-            <div className="rep-row__act">
-              <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removePricingRow(pricing, index))}>
-                ×
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <button type="button" className="rep-add" onClick={() => editor.replaceModule('pricing', addPricingRow(pricing))}>
-        + Ajouter une formule
-      </button>
+      {/* §48 single-owner: pricing formulas are edited in §13 only (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${pricing.prices.length} formule(s)`} />
 
       {/* §46 activity module (secondary sites) — suppressed when gated; the notice already rendered above */}
       {!activity.unavailableReason && activity.equipmentProvided && (

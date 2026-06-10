@@ -29,3 +29,21 @@ describe('BlockVIS — honest controls (T1a)', () => {
     expect(result.current.dirtySections.characteristics).toBe(true);
   });
 });
+
+describe('BlockVIS — single-owner surfaces (§48)', () => {
+  it('no longer edits tariffs in §05 (owned by §13)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockVIS editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText(/Ajouter une ligne tarifaire/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 13/)).toBeInTheDocument();
+  });
+
+  it('no longer edits opening hours in §05 (owned by §14)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockVIS editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText('Copier')).not.toBeInTheDocument(); // ScheduleEditor header gone
+    expect(screen.getByText(/Géré dans la section 14/)).toBeInTheDocument();
+  });
+});

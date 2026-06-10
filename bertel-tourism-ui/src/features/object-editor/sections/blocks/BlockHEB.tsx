@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Field, Fs, Input, Repeater, Textarea, Toggle } from '../../primitives';
+import { Field, Fs, Repeater, Textarea, Toggle } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
@@ -7,7 +7,7 @@ import type {
   ObjectWorkspaceMeetingRoomItem,
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
-import { ModuleUnavailableNotice } from './block-notes';
+import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 
 const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
 const MICE_COLS = '14px 1.4fr 70px 70px 70px 70px auto';
@@ -201,45 +201,9 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 20 }}>
         Politiques d'accueil
       </div>
-      <div className="grid-3" style={{ marginBottom: 10 }}>
-        <Field label="Groupes — min">
-          <Input
-            value={capacity.groupPolicy.minSize}
-            mono
-            suffix="pers."
-            onChange={(minSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, minSize },
-              })
-            }
-          />
-        </Field>
-        <Field label="Groupes — max">
-          <Input
-            value={capacity.groupPolicy.maxSize}
-            mono
-            suffix="pers."
-            onChange={(maxSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, maxSize },
-              })
-            }
-          />
-        </Field>
-        <Field label="Notes groupes">
-          <Input
-            value={capacity.groupPolicy.notes}
-            onChange={(notes) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, notes },
-              })
-            }
-          />
-        </Field>
-      </div>
+      {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise).
+          petPolicy stays: this block is its SOLE editing surface (not duplicated in §07). */}
+      <OwnedElsewhereNote num="07" label="Capacité & cadre" />
       <div className="grid-3">
         <div>
           <Toggle
@@ -268,17 +232,6 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             </Field>
           )}
         </div>
-        <Toggle
-          label="Groupes uniquement"
-          sub="Réservation groupe obligatoire"
-          on={capacity.groupPolicy.groupOnly}
-          onChange={(groupOnly) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              groupPolicy: { ...capacity.groupPolicy, groupOnly },
-            })
-          }
-        />
       </div>
 
       {/* §46 type-gated meetingRooms module — notice INSTEAD of controls when gated (independent of rooms) */}

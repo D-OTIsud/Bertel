@@ -55,6 +55,17 @@ describe('BlockASC — prestations & équipements (§48)', () => {
   });
 });
 
+describe('BlockASC — single-owner surfaces (§48)', () => {
+  it('no longer edits pricing formulas in §05 (owned by §13)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockASC editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText(/Ajouter une formule/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Formules & sessions')).not.toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 13/)).toBeInTheDocument();
+  });
+});
+
 describe('BlockASC — §46 disabled-with-reason (activity module)', () => {
   it('renders the unavailable notice instead of activity controls when gated', () => {
     const modules = fullModulesFixture();

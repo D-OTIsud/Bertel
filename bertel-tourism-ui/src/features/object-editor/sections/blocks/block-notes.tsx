@@ -28,3 +28,12 @@ export function ModuleUnavailableNotice({ reason }: { reason: string }) {
     </p>
   );
 }
+
+/** §48 single-owner rule: a concept is editable in exactly ONE section; the §05 copy points there. */
+export function OwnedElsewhereNote({ num, label, summary }: { num: string; label: string; summary?: string }) {
+  return (
+    <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '4px 0 12px' }}>
+      {summary ? <>{summary} · </> : null}Géré dans la section {num} — {label}.
+    </p>
+  );
+}

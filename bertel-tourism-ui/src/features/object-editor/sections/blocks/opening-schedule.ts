@@ -1,7 +1,4 @@
-import type {
-  ObjectWorkspaceOpeningPeriod,
-  ObjectWorkspaceOpeningsModule,
-} from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceOpeningPeriod } from '../../../../services/object-workspace-parser';
 import type { ScheduleRow } from '../../primitives';
 
 const WEEKDAY_META: Record<string, { shortLabel: string; label: string }> = {
@@ -16,6 +13,11 @@ const WEEKDAY_META: Record<string, { shortLabel: string; label: string }> = {
 
 const WEEKDAY_CODES = Object.keys(WEEKDAY_META);
 
+/**
+ * Read-side helper: project a workspace opening period onto the 7-day ScheduleEditor row shape.
+ * Sole remaining consumer is §14's OpeningPeriodsEditor (the single owner of hours since §48);
+ * the write-path helpers (applyRowsToFirstPeriod & co) were removed with the §05 ScheduleEditors.
+ */
 export function scheduleRowsFromPeriod(period: ObjectWorkspaceOpeningPeriod | undefined): ScheduleRow[] {
   return WEEKDAY_CODES.map((code) => {
     const meta = WEEKDAY_META[code];
@@ -27,44 +29,4 @@ export function scheduleRowsFromPeriod(period: ObjectWorkspaceOpeningPeriod | un
       slots: [weekday?.slots[0] ?? null, weekday?.slots[1] ?? null],
     };
   });
-}
-
-function emptyPeriod(index: number): ObjectWorkspaceOpeningPeriod {
-  return {
-    recordId: null,
-    order: String(index + 1),
-    bucket: 'current',
-    label: '',
-    startDate: '',
-    endDate: '',
-    allYears: true,
-    closedDays: [],
-    weekdays: [],
-  };
-}
-
-function applyRowsToPeriod(period: ObjectWorkspaceOpeningPeriod, rows: ScheduleRow[]): ObjectWorkspaceOpeningPeriod {
-  return {
-    ...period,
-    weekdays: rows.map((row) => ({
-      code: row.code,
-      label: row.label,
-      slots: row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot)),
-    })),
-  };
-}
-
-export function applyRowsToPeriodAt(
-  openings: ObjectWorkspaceOpeningsModule,
-  periodIndex: number,
-  rows: ScheduleRow[],
-): ObjectWorkspaceOpeningsModule {
-  const periods = [...openings.periods];
-  const base = periods[periodIndex] ?? emptyPeriod(periodIndex);
-  periods[periodIndex] = applyRowsToPeriod(base, rows);
-  return { ...openings, periods };
-}
-
-export function applyRowsToFirstPeriod(openings: ObjectWorkspaceOpeningsModule, rows: ScheduleRow[]): ObjectWorkspaceOpeningsModule {
-  return applyRowsToPeriodAt(openings, 0, rows);
 }

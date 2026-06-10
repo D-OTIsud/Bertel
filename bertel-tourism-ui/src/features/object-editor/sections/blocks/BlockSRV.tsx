@@ -1,6 +1,6 @@
-import { Chip, ChipSet, Fs, ScheduleEditor } from '../../primitives';
+import { Chip, ChipSet, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
-import { applyRowsToFirstPeriod, scheduleRowsFromPeriod } from './opening-schedule';
+import { OwnedElsewhereNote } from './block-notes';
 
 function toggle(values: string[], code: string) {
   return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
@@ -46,52 +46,9 @@ export function BlockSRV({ editor, folded }: SectionProps) {
         ))}
       </ChipSet>
 
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Langues parlées au comptoir
-      </div>
-      <ChipSet>
-        {characteristics.languageOptions.map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedLanguages.some((item) => item.code === option.code)}
-            onClick={() => {
-              const existing = characteristics.selectedLanguages.find((item) => item.code === option.code);
-              const level = characteristics.languageLevelOptions[0];
-              editor.replaceModule('characteristics', {
-                ...characteristics,
-                selectedLanguages: existing
-                  ? characteristics.selectedLanguages.filter((item) => item.code !== option.code)
-                  : [
-                      ...characteristics.selectedLanguages,
-                      {
-                        languageId: option.id,
-                        code: option.code,
-                        label: option.label,
-                        levelId: level?.id ?? '',
-                        levelCode: level?.code ?? '',
-                        levelLabel: level?.label ?? '',
-                      },
-                    ],
-              });
-            }}
-          />
-        ))}
-      </ChipSet>
-
-      <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Horaires d'accueil — haute saison
-        <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-          {' '}
-          · juil-août, déc-janv
-        </span>
-      </div>
-      <ScheduleEditor
-        rows={scheduleRowsFromPeriod(openings.periods[0])}
-        colA="Saison"
-        colB="Hors saison"
-        onChange={(rows) => editor.replaceModule('openings', applyRowsToFirstPeriod(openings, rows))}
-      />
+      {/* §48 single-owner: languages are edited in §12, opening hours in §14 (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote num="12" label="Paiements & langues" summary={`${langCount} langue(s)`} />
+      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );
 }

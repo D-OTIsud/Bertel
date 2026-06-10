@@ -55,6 +55,26 @@ describe('BlockHEB meeting-room edit modal', () => {
   });
 });
 
+describe('BlockHEB — single-owner surfaces (§48)', () => {
+  it('no longer edits the group policy in §05 (owned by §07)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    expect(screen.queryByText('Groupes — min')).not.toBeInTheDocument();
+    expect(screen.queryByText('Groupes — max')).not.toBeInTheDocument();
+    expect(screen.queryByText('Notes groupes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Groupes uniquement')).not.toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
+  });
+
+  it('keeps the pet policy editable (sole owner — not duplicated in §07)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    expect(screen.getByLabelText('Animaux acceptés')).toBeInTheDocument();
+  });
+});
+
 describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)', () => {
   it('renders the rooms unavailable notice instead of the rooms repeater when gated', () => {
     const modules = fullModulesFixture();

@@ -23,8 +23,9 @@ describe('BlockRES — §46 disabled-with-reason (menus module)', () => {
     expect(screen.queryByText(/Ajouter un menu \/ une carte/)).not.toBeInTheDocument();
     // The cuisine chips edit menus.items — part of the gated module.
     expect(screen.queryByText('Cuisines proposées')).not.toBeInTheDocument();
-    // capacityPolicies is NOT type-gated — the group policy stays editable.
-    expect(screen.getByText('Capacité groupe min')).toBeInTheDocument();
+    // §48: the group policy is owned by §07 — the §05 pointer is NOT part of
+    // the gated menus module, so it stays rendered while menus is gated.
+    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
   });
 
   it('renders the menu controls when no reason is set', () => {
@@ -32,5 +33,25 @@ describe('BlockRES — §46 disabled-with-reason (menus module)', () => {
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText(/Ajouter un menu \/ une carte/)).toBeInTheDocument();
+  });
+});
+
+describe('BlockRES — single-owner surfaces (§48)', () => {
+  it('no longer edits the group policy in §05 (owned by §07)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText('Capacité groupe min')).not.toBeInTheDocument();
+    expect(screen.queryByText('Capacité groupe max')).not.toBeInTheDocument();
+    expect(screen.queryByText('Groupes uniquement')).not.toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
+  });
+
+  it('no longer edits service hours in §05 (owned by §14)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText('Copier')).not.toBeInTheDocument(); // ScheduleEditor header gone
+    expect(screen.getByText(/Géré dans la section 14/)).toBeInTheDocument();
   });
 });

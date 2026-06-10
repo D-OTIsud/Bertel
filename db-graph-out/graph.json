@@ -3,10 +3,10 @@
   "table_count": 116,
   "view_count": 6,
   "function_count": 242,
-  "policy_count": 474,
+  "policy_count": 472,
   "trigger_count": 267,
   "enum_count": 9,
-  "edge_count": 1622
+  "edge_count": 1771
  },
  "nodes": [
   {
@@ -16212,6 +16212,56 @@
    }
   },
   {
+   "id": "policy:storage.objects:media_no_anon_write",
+   "kind": "policy",
+   "label": "media_no_anon_write",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "ALL",
+    "roles": [
+     "anon",
+     "authenticated"
+    ],
+    "predicate": "(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)",
+    "restrictive": true
+   }
+  },
+  {
+   "id": "policy:storage.objects:media_public_read",
+   "kind": "policy",
+   "label": "media_public_read",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(bucket_id = 'media'::text)"
+   }
+  },
+  {
+   "id": "policy:storage.objects:media_service_role_write",
+   "kind": "policy",
+   "label": "media_service_role_write",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "ALL",
+    "roles": [
+     "service_role"
+    ],
+    "predicate": "(bucket_id = 'media'::text) | (bucket_id = 'media'::text)"
+   }
+  },
+  {
    "id": "policy:public.ref_commune:admin_write_ref_commune",
    "kind": "policy",
    "label": "admin_write_ref_commune",
@@ -16937,9 +16987,9 @@
    }
   },
   {
-   "id": "policy:public.object_description:ext_descriptions_org_actor",
+   "id": "policy:public.object_description:read_object_description",
    "kind": "policy",
-   "label": "ext_descriptions_org_actor",
+   "label": "read_object_description",
    "schema": "public",
    "domain": "policy",
    "doc": null,
@@ -16949,23 +16999,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "api.can_read_extended(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.object_description:pub_descriptions_public",
-   "kind": "policy",
-   "label": "pub_descriptions_public",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.object_description",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(visibility = 'public'::text)"
+    "predicate": "(((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = object_description.object_id) AND (o.status = 'published'::object_status)))) AND (visibility = 'public'::text)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
    }
   },
   {
@@ -18046,9 +18080,9 @@
    }
   },
   {
-   "id": "policy:public.media:ext_media_org_actor",
+   "id": "policy:public.media:read_media",
    "kind": "policy",
-   "label": "ext_media_org_actor",
+   "label": "read_media",
    "schema": "public",
    "domain": "policy",
    "doc": null,
@@ -18058,23 +18092,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "api.can_read_extended(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.media:pub_media_published",
-   "kind": "policy",
-   "label": "pub_media_published",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.media",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(is_published IS TRUE)"
+    "predicate": "(((is_published IS TRUE) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = media.object_id) AND (o.status = 'published'::object_status))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM (object_place p\n     JOIN object o ON ((o.id = p.object_id)))\n  WHERE ((p.id = media.place_id) AND (o.status = 'published'::object_status))))))) OR ((object_id IS NO …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -18109,6 +18127,70 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_del_contact_channel",
+   "kind": "policy",
+   "label": "canonical_del_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_ins_contact_channel",
+   "kind": "policy",
+   "label": "canonical_ins_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:canonical_upd_contact_channel",
+   "kind": "policy",
+   "label": "canonical_upd_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.contact_channel:read_contact_channel",
+   "kind": "policy",
+   "label": "read_contact_channel",
+   "schema": "public",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "public.contact_channel",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = contact_channel.object_id) AND (o.status = 'published'::object_status)))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
    }
   },
   {
@@ -23709,120 +23791,6 @@
    }
   },
   {
-   "id": "policy:storage.objects:media_no_anon_write",
-   "kind": "policy",
-   "label": "media_no_anon_write",
-   "schema": "storage",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "storage.objects",
-    "cmd": "ALL",
-    "roles": [
-     "anon",
-     "authenticated"
-    ],
-    "predicate": "(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)",
-    "restrictive": true
-   }
-  },
-  {
-   "id": "policy:storage.objects:media_public_read",
-   "kind": "policy",
-   "label": "media_public_read",
-   "schema": "storage",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "storage.objects",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(bucket_id = 'media'::text)"
-   }
-  },
-  {
-   "id": "policy:storage.objects:media_service_role_write",
-   "kind": "policy",
-   "label": "media_service_role_write",
-   "schema": "storage",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "storage.objects",
-    "cmd": "ALL",
-    "roles": [
-     "service_role"
-    ],
-    "predicate": "(bucket_id = 'media'::text) | (bucket_id = 'media'::text)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:canonical_del_contact_channel",
-   "kind": "policy",
-   "label": "canonical_del_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "DELETE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:canonical_ins_contact_channel",
-   "kind": "policy",
-   "label": "canonical_ins_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "INSERT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:canonical_upd_contact_channel",
-   "kind": "policy",
-   "label": "canonical_upd_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "UPDATE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
-   }
-  },
-  {
-   "id": "policy:public.contact_channel:read_contact_channel",
-   "kind": "policy",
-   "label": "read_contact_channel",
-   "schema": "public",
-   "domain": "policy",
-   "doc": null,
-   "props": {
-    "table": "public.contact_channel",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = contact_channel.object_id) AND (o.status = 'published'::object_status)))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
-   }
-  },
-  {
    "id": "public.object_type",
    "kind": "enum",
    "label": "object_type",
@@ -29238,6 +29206,24 @@
    }
   },
   {
+   "source": "policy:storage.objects:media_no_anon_write",
+   "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage.objects:media_public_read",
+   "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage.objects:media_service_role_write",
+   "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
    "source": "policy:public.ref_commune:admin_write_ref_commune",
    "target": "public.ref_commune",
    "kind": "gates",
@@ -29516,13 +29502,7 @@
    "props": {}
   },
   {
-   "source": "policy:public.object_description:ext_descriptions_org_actor",
-   "target": "public.object_description",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.object_description:pub_descriptions_public",
+   "source": "policy:public.object_description:read_object_description",
    "target": "public.object_description",
    "kind": "gates",
    "props": {}
@@ -29966,13 +29946,7 @@
    "props": {}
   },
   {
-   "source": "policy:public.media:ext_media_org_actor",
-   "target": "public.media",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.media:pub_media_published",
+   "source": "policy:public.media:read_media",
    "target": "public.media",
    "kind": "gates",
    "props": {}
@@ -29992,6 +29966,30 @@
    "props": {
     "via_partition": "public.ref_code_transport_type"
    }
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_del_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_ins_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:canonical_upd_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.contact_channel:read_contact_channel",
+   "target": "public.contact_channel",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "policy:public.ref_code_tourism_type:admin_ref_code_write",
@@ -32232,48 +32230,6 @@
    }
   },
   {
-   "source": "policy:storage.objects:media_no_anon_write",
-   "target": "storage.objects",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:storage.objects:media_public_read",
-   "target": "storage.objects",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:storage.objects:media_service_role_write",
-   "target": "storage.objects",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:canonical_del_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:canonical_ins_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:canonical_upd_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.contact_channel:read_contact_channel",
-   "target": "public.contact_channel",
-   "kind": "gates",
-   "props": {}
-  },
-  {
    "source": "internal.mv_filtered_objects",
    "target": "public.object_type",
    "kind": "typed_by",
@@ -32479,6 +32435,78 @@
   },
   {
    "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.ref_org_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
    "target": "public.ref_code",
    "kind": "writes",
    "props": {
@@ -32498,6 +32526,138 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "INSERT INTO ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.ref_classification_value",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO ref_classification_value"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_external_id",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_external_id"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_location",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_location"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.contact_channel",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO contact_channel"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.ref_org_role",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_org_link",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_classification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_amenity",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.object_payment_method",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_payment_method"
+    }
+   }
+  },
+  {
+   "source": "api.commit_staging_to_public(p_batch_id text)",
+   "target": "public.media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO media"
     }
    }
   },
@@ -32726,6 +32886,126 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_domain_registry"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.tag_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM tag_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_environment_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_environment_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_classification_value",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_value"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_amenity"
     }
    }
   },
@@ -33222,6 +33502,18 @@
    }
   },
   {
+   "source": "api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.contact_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM contact_channel"
+    }
+   }
+  },
+  {
    "source": "api.get_organization_data(p_object_id text)",
    "target": "public.object_org_link",
    "kind": "reads",
@@ -33710,6 +34002,270 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN   object"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "internal.mv_filtered_objects",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from internal.mv_filtered_objects"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_location"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_value",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_value"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_sustainability_action_category",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action_category"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_pet_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_pet_policy"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_meeting_room",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_meeting_room"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.meeting_room_equipment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM meeting_room_equipment"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_capacity_metric",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_capacity_metric"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_capacity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_capacity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.tag_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM tag_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_iti",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_sustainability_action_label",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_sustainability_action_label"
     }
    }
   },
@@ -35011,6 +35567,90 @@
   },
   {
    "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_capacity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_capacity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_capacity_metric",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_capacity_metric"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_group_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_group_policy"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_pet_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_pet_policy"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_discount",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_discount"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_price",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_price"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
    "target": "public.object_language",
    "kind": "writes",
    "props": {
@@ -35054,6 +35694,78 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM public.object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_capacity",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_capacity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_group_policy",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_group_policy"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_pet_policy",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_pet_policy"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_discount",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_discount"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_price",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_price"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_commercial(p_object_id text, p_payload jsonb)",
+   "target": "public.object_price_period",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.object_price_period"
     }
    }
   },
@@ -35106,6 +35818,30 @@
    }
   },
   {
+   "source": "api.save_object_openings(p_object_id text, p_payload jsonb)",
+   "target": "public.opening_time_period_weekday",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.opening_time_period_weekday"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_openings(p_object_id text, p_payload jsonb)",
+   "target": "public.opening_time_frame",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.opening_time_frame"
+    }
+   }
+  },
+  {
    "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
    "target": "public.object_iti_info",
    "kind": "reads",
@@ -35131,6 +35867,90 @@
   },
   {
    "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.media"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_place",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_place"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_section",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_section"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_profile"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_associated_object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_associated_object"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_iti_assoc_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_iti_assoc_role"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
    "target": "public.object_iti_info",
    "kind": "writes",
    "props": {
@@ -35150,6 +35970,54 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM public.object_iti_stage"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_stage_media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.object_iti_stage_media"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_section",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_iti_section"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_profile",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_iti_profile"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)",
+   "target": "public.object_iti_associated_object",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_iti_associated_object"
     }
    }
   },
@@ -35191,6 +36059,18 @@
   },
   {
    "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_zone",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_zone"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
    "target": "public.object_place",
    "kind": "writes",
    "props": {
@@ -35222,6 +36102,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "INSERT INTO public.object_place_description"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.media"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_zone",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_zone"
     }
    }
   },
@@ -35287,6 +36191,42 @@
   },
   {
    "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_actor_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_actor_role"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
    "target": "public.object_relation",
    "kind": "writes",
    "props": {
@@ -35306,6 +36246,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM public.object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
+   "target": "public.actor_object_role",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.actor_object_role"
     }
    }
   },
@@ -35546,6 +36498,810 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from object_location"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_private_description",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_private_description"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_language",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_language"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_description",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_description"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_external_id",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_external_id"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_contact_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_contact_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.contact_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM contact_channel"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_language",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_language"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.media_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_capacity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_capacity"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_capacity_metric",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_capacity_metric"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_environment_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_environment_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_payment_method",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_payment_method"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_pet_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_pet_policy"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_price_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_price_period"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_price",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_price"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_classification_value",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_classification_value"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_code_taxonomy_closure",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_taxonomy_closure"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_code",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_taxonomy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_taxonomy"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_code_domain_registry",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_domain_registry"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.tag_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM tag_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_discount",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_discount"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_group_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_group_policy"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_origin",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_origin"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_membership"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.actor_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor_channel"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_actor_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_actor_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_legal",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_legal"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_legal_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_legal_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.meeting_room_equipment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM meeting_room_equipment"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_meeting_room",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_meeting_room"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_fma",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_fma"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_fma_occurrence",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_fma_occurrence"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_place_description",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_place_description"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_place",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_place"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_sustainability_action_label",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action_label"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_sustainability_action_category",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action_category"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_info",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_info"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_section",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_section"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_stage_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_stage_media"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_stage",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_stage"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti_associated_object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_associated_object"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_relation",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_relation"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_iti",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu_item",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_menu_item"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu_item_cuisine_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_menu_item_cuisine_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu_item_dietary_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_menu_item_dietary_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu_item_allergen",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_menu_item_allergen"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu_item_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_menu_item_media"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.object_menu",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_menu"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_object_relation_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_object_relation_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.opening_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM opening_period"
     }
    }
   },
@@ -37226,6 +38982,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN object_location"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource_adapted(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_description",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_description"
     }
    }
   },

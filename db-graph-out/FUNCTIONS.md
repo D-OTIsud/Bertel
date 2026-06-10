@@ -155,9 +155,26 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.commit_staging_to_public(p_batch_id text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_code` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.contact_channel` _(high)_
+- writes `public.media` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_amenity` _(high)_
+- writes `public.object_classification` _(high)_
+- writes `public.object_external_id` _(high)_
+- writes `public.object_location` _(high)_
+- writes `public.object_org_link` _(high)_
+- writes `public.object_payment_method` _(high)_
 - writes `public.ref_classification_scheme` _(high)_
+- writes `public.ref_classification_value` _(high)_
 - writes `public.ref_code` _(high)_
+- writes `public.ref_org_role` _(high)_
 
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
@@ -494,6 +511,28 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer)` — SECURITY DEFINER
+- reads `internal.mv_filtered_objects` _(high)_
+- reads `public.media` _(high)_
+- reads `public.meeting_room_equipment` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_sustainability_action_label` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
 
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -562,12 +601,22 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `json` — SECURITY DEFINER
 - reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
 - reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
 - reads `public.object_location` _(high)_
+- reads `public.object_sustainability_action` _(high)_
 - reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code` _(high)_
 - reads `public.ref_code_domain_registry` _(high)_
 - reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
 
 > 2) cards_batch -> SECURITY DEFINER + authorize-once. Body is byte-identical to the step-5
 > definition in api_views_functions.sql EXCEPT THREE changes: (a) the SECURITY DEFINER clause
@@ -654,8 +703,75 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)`
 - returns: `json` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.media` _(high)_
+- reads `public.media_tag` _(high)_
+- reads `public.meeting_room_equipment` _(high)_
 - reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_discount` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_external_id` _(high)_
+- reads `public.object_fma` _(high)_
+- reads `public.object_fma_occurrence` _(high)_
+- reads `public.object_group_policy` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_associated_object` _(high)_
+- reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_section` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_iti_stage_media` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_membership` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_cuisine_type` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_menu_item_media` _(high)_
 - reads `public.object_org_link` _(high)_
+- reads `public.object_origin` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.object_place_description` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.object_price_period` _(high)_
+- reads `public.object_private_description` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_sustainability_action_label` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_legal_type` _(high)_
+- reads `public.ref_object_relation_type` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
 
 ## `api.get_object_resource_adapted(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `jsonb` — SECURITY DEFINER
@@ -663,6 +779,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.object_amenity` _(high)_
 - reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
 - reads `public.object_location` _(high)_
 - reads `public.ref_amenity` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
@@ -733,6 +850,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
 - reads `public.actor_object_role` _(high)_
+- reads `public.contact_channel` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
 - reads `public.object_relation` _(high)_
@@ -1344,43 +1462,76 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.save_object_commercial(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
 - reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_discount` _(high)_
 - reads `public.object_environment_tag` _(high)_
+- reads `public.object_group_policy` _(high)_
 - reads `public.object_language` _(high)_
 - reads `public.object_payment_method` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
 - reads `public.ref_language` _(high)_
 - writes `public.object_amenity` _(high)_
+- writes `public.object_capacity` _(high)_
+- writes `public.object_discount` _(high)_
 - writes `public.object_environment_tag` _(high)_
+- writes `public.object_group_policy` _(high)_
 - writes `public.object_language` _(high)_
 - writes `public.object_payment_method` _(high)_
+- writes `public.object_pet_policy` _(high)_
+- writes `public.object_price` _(high)_
+- writes `public.object_price_period` _(high)_
 
 ## `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_iti_associated_object` _(high)_
 - reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_section` _(high)_
 - reads `public.object_iti_stage` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.ref_iti_assoc_role` _(high)_
+- writes `public.object_iti_associated_object` _(high)_
 - writes `public.object_iti_info` _(high)_
+- writes `public.object_iti_profile` _(high)_
+- writes `public.object_iti_section` _(high)_
 - writes `public.object_iti_stage` _(high)_
+- writes `public.object_iti_stage_media` _(high)_
 
 ## `api.save_object_openings(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
 - reads `public.opening_period` _(high)_
 - writes `public.opening_period` _(high)_
 - writes `public.opening_schedule` _(high)_
+- writes `public.opening_time_frame` _(high)_
 - writes `public.opening_time_period` _(high)_
+- writes `public.opening_time_period_weekday` _(high)_
 
 ## `api.save_object_places(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
 - reads `public.object_place` _(high)_
+- reads `public.object_zone` _(high)_
+- writes `public.media` _(high)_
 - writes `public.object_location` _(high)_
 - writes `public.object_place` _(high)_
 - writes `public.object_place_description` _(high)_
+- writes `public.object_zone` _(high)_
 
 ## `api.save_object_relations(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
 - reads `public.object_relation` _(high)_
+- reads `public.ref_actor_role` _(high)_
 - reads `public.ref_object_relation_type` _(high)_
 - reads `public.ref_org_role` _(high)_
+- writes `public.actor_object_role` _(high)_
 - writes `public.object_org_link` _(high)_
 - writes `public.object_relation` _(high)_
 

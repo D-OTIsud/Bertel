@@ -541,9 +541,11 @@ DROP POLICY IF EXISTS "ext_contacts_org_actor" ON contact_channel;
 DROP POLICY IF EXISTS "read_contact_channel" ON contact_channel;
 DROP POLICY IF EXISTS "pub_media_published" ON media;
 DROP POLICY IF EXISTS "ext_media_org_actor" ON media;
+DROP POLICY IF EXISTS "read_media" ON media;
 DROP POLICY IF EXISTS "Lecture restreinte identifiants externes" ON object_external_id;
 DROP POLICY IF EXISTS "pub_descriptions_public" ON object_description;
 DROP POLICY IF EXISTS "ext_descriptions_org_actor" ON object_description;
+DROP POLICY IF EXISTS "read_object_description" ON object_description;
 DROP POLICY IF EXISTS "ext_private_descriptions_org_actor" ON object_private_description;
 DROP POLICY IF EXISTS "org_insert_private_description" ON object_private_description;
 DROP POLICY IF EXISTS "author_update_private_description" ON object_private_description;
@@ -895,14 +897,33 @@ CREATE POLICY "read_contact_channel" ON contact_channel
     OR object_id IN (SELECT api.current_user_extended_object_ids())
   );
 
--- Médias: publiés pour tous, autres via accès étendu
+-- Médias: §38/§51 split read gate (migration_media_description_read_gate.sql, manifest 8t).
+-- is_published rows of PUBLISHED parents for everyone; the caller's extended scope
+-- (set-based, one InitPlan — §35) reads all rows. media is object-XOR-place keyed
+-- (chk_media_target_present), so both arms carry a place leg probed through
+-- object_place (its own §38 gate resolves the parent). The retired pub_media_published's
+-- bare `is_published` leaked draft/hidden/archived media to anon direct PostgREST, and
+-- the retired ext arm was NULL-dead on place-keyed rows.
 DO $$ BEGIN
   BEGIN DROP POLICY IF EXISTS "Lecture publique des médias" ON media; EXCEPTION WHEN others THEN NULL; END;
 END $$;
-CREATE POLICY "pub_media_published" ON media
-  FOR SELECT USING (is_published IS TRUE);
-CREATE POLICY "ext_media_org_actor" ON media
-  FOR SELECT USING (api.can_read_extended(object_id));
+CREATE POLICY "read_media" ON media FOR SELECT USING (
+  (
+    is_published IS TRUE
+    AND (
+      (object_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM object o WHERE o.id = media.object_id AND o.status = 'published'))
+      OR
+      (place_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM object_place p JOIN object o ON o.id = p.object_id
+        WHERE p.id = media.place_id AND o.status = 'published'))
+    )
+  )
+  OR (object_id IS NOT NULL AND object_id IN (SELECT api.current_user_extended_object_ids()))
+  OR (place_id IS NOT NULL AND place_id IN (
+    SELECT p.id FROM object_place p
+    WHERE p.object_id IN (SELECT api.current_user_extended_object_ids())))
+);
 -- Pas de lecture publique pour les identifiants externes
 CREATE POLICY "Lecture restreinte identifiants externes" ON object_external_id FOR SELECT USING (
     auth.role() IN ('service_role','admin')
@@ -918,10 +939,15 @@ DO $$ BEGIN
   BEGIN DROP POLICY IF EXISTS "ext_group_policies_org_actor" ON object_group_policy; EXCEPTION WHEN others THEN NULL; END;
 END $$;
 
-CREATE POLICY "pub_descriptions_public" ON object_description
-  FOR SELECT USING (visibility = 'public');
-CREATE POLICY "ext_descriptions_org_actor" ON object_description
-  FOR SELECT USING (api.can_read_extended(object_id));
+-- Descriptions: §38/§51 split read gate (migration_media_description_read_gate.sql, 8t).
+-- visibility='public' rows of PUBLISHED parents for everyone (NULL/'private'/'partners'
+-- stay extended-only, as before); the extended arm is set-based (§35). The retired
+-- pub_descriptions_public's bare field gate leaked draft/hidden/archived public
+-- descriptions to anon direct PostgREST.
+CREATE POLICY "read_object_description" ON object_description FOR SELECT USING (
+  (EXISTS (SELECT 1 FROM object o WHERE o.id = object_id AND o.status = 'published') AND visibility = 'public')
+  OR object_id IN (SELECT api.current_user_extended_object_ids())
+);
 
 -- Private notes: user must have extended access to the object AND the note must belong
 -- to their own active org. Users without active org membership do not see any note.

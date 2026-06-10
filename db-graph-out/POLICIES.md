@@ -150,10 +150,13 @@
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
-- **SELECT** `ext_media_org_actor` — roles ['public']
-  - `api.can_read_extended(object_id)`
-- **SELECT** `pub_media_published` — roles ['public']
-  - `(is_published IS TRUE)`
+- **SELECT** `read_media` — roles ['public']
+  - `(((is_published IS TRUE) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = media.object_id) AND (o.status = 'published'::object_status))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM (object_place p
+     JOIN object o ON ((o.id = p.object_id)))
+  WHERE ((p.id = media.place_id) AND (o.status = 'published'::object_status))))))) OR ((object_id IS NO …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
@@ -278,10 +281,10 @@
   - `(api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL)))`
 - **INSERT** `canonical_ins_object_description` — roles ['public']
   - `(api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL)))`
-- **SELECT** `ext_descriptions_org_actor` — roles ['public']
-  - `api.can_read_extended(object_id)`
-- **SELECT** `pub_descriptions_public` — roles ['public']
-  - `(visibility = 'public'::text)`
+- **SELECT** `read_object_description` — roles ['public']
+  - `(((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_description.object_id) AND (o.status = 'published'::object_status)))) AND (visibility = 'public'::text)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_description` — roles ['public']
   - `(api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL))) | (api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL)))`
 

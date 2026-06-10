@@ -3,6 +3,7 @@ import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQuer
 import { Fs, Field, Input, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
+import { geocodeAddress } from '../widgets/geocode-address';
 import { LocationFormattedInput } from '../widgets/LocationFormattedInput';
 import { LocationPinMap } from '../widgets/LocationPinMap';
 import { LocationReferenceCombobox } from '../widgets/LocationReferenceCombobox';
@@ -28,6 +29,8 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   const communeCode = main.codeInsee
     || (communeOptions.find((option) => foldCommuneLabel(option.label) === foldCommuneLabel(main.city))?.code ?? '');
   const [approvingLieuDit, setApprovingLieuDit] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeMessage, setGeocodeMessage] = useState<string | null>(null);
   const pendingLieuDit = findPendingFieldChange(editor.draft.publication.moderation.items, 'lieuDit');
   const { data: locationReferences } = useLocationReferenceOptionsQuery();
   const lieuDitOptions = locationReferences?.lieuDits ?? [];
@@ -35,6 +38,28 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
 
   function patch(next: Partial<ObjectWorkspaceLocationForm>) {
     editor.replaceModule('location', { ...location, main: { ...main, ...next } });
+  }
+
+  // Address → GPS via the BAN; the draggable pin stays the manual fallback.
+  async function handleGeocode() {
+    setGeocoding(true);
+    setGeocodeMessage(null);
+    try {
+      const hit = await geocodeAddress({
+        address1: main.address1,
+        postcode: main.postcode,
+        city: main.city,
+      });
+      if (!hit) {
+        setGeocodeMessage('Adresse introuvable — placez le repère sur la carte.');
+        return;
+      }
+      patch({ latitude: hit.latitude, longitude: hit.longitude });
+    } catch {
+      setGeocodeMessage('Géocodage indisponible — réessayez plus tard.');
+    } finally {
+      setGeocoding(false);
+    }
   }
 
   function approveLieuDit() {
@@ -121,8 +146,13 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
                 <span>
                   Coordonnées GPS <span className="req"> *</span>
                 </span>
-                <button type="button" className="pill-mini" disabled title="Bientôt">
-                  Géocoder l&apos;adresse
+                <button
+                  type="button"
+                  className="pill-mini"
+                  disabled={!main.address1.trim() || geocoding}
+                  onClick={() => void handleGeocode()}
+                >
+                  {geocoding ? 'Géocodage…' : "Géocoder l'adresse"}
                 </button>
               </div>
               <div className="map-shell__coords">
@@ -133,6 +163,9 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
                   <Input value={main.longitude} onChange={(v) => patch({ longitude: v })} mono />
                 </Field>
               </div>
+              {geocodeMessage && (
+                <p className="map-shell__geocode-note" role="status">{geocodeMessage}</p>
+              )}
             </div>
           </div>
           <LocationPinMap

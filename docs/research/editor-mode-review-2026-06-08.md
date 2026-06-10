@@ -37,7 +37,7 @@ modal, redesigned from a user mockup).
 
 Main walk (HEB / HLO):
 - [x] §01 Identité & taxonomie
-- [ ] §02 Localisation
+- [x] §02 Localisation
 - [ ] §03 Contacts
 - [ ] §04 Descriptions
 - [ ] §05 Chambres & séminaire (BlockHEB)
@@ -181,7 +181,7 @@ corpus combobox + pending-change approval flow, draggable GPS pin-map with confi
 | **Zone touristique** (`zoneTouristique`) | ✅→cut | **DONE — removed from the editor** (free text duplicating the structured `object_zone`/INSEE territory model of §16). Column stays. |
 | Lieu-dit (corpus + moderation flow) | ✅ | Keep — best-in-class pattern. |
 | Latitude / Longitude | ✅ | Keep, required-marked. |
-| **Géocoder l'adresse** (button) | ⚠️ disabled | **DECIDED — BUILD IT** (commit 2): wire to the BAN API (`api-adresse.data.gouv.fr`, covers Réunion, no key); loading + not-found handling; pin-map stays the manual fallback. |
+| **Géocoder l'adresse** (button) | ✅ | **DONE (commit 2)** — wired to the BAN API (`api-adresse.data.gouv.fr`, keyless; Réunion coverage probed live — real Entre-Deux hit, context "974, La Réunion"). `widgets/geocode-address.ts`: q + 5-digit postcode filter, limit 1, 6-decimal coords; button disabled without address1, "Géocodage…" while pending; not-found → "Adresse introuvable — placez le repère sur la carte."; service error → "Géocodage indisponible". Pin-map stays the manual fallback. **Polish note (later):** BAN returns a `score` — we accept the best hit as-is (the user sees the pin move and can correct); a score threshold could gate low-confidence hits. |
 | Pin map (drag + confirm) | ✅ | Keep. |
 
 **Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS

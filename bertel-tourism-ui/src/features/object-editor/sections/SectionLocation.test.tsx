@@ -9,6 +9,10 @@ jest.mock('../../../hooks/useExplorerQueries', () => ({
   }),
 }));
 
+jest.mock('../widgets/geocode-address', () => ({
+  geocodeAddress: jest.fn(),
+}));
+
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children, onClick }: { children?: ReactNode; onClick?: (e: { lngLat: { lat: number; lng: number } }) => void }) => (
     <button type="button" data-testid="location-pin-map" onClick={() => onClick?.({ lngLat: { lat: -21.2, lng: 55.5 } })}>
@@ -20,8 +24,11 @@ jest.mock('react-map-gl/maplibre', () => ({
 }));
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionLocation } from './SectionLocation';
+import { geocodeAddress } from '../widgets/geocode-address';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
+
+const geocodeAddressMock = geocodeAddress as jest.Mock;
 
 const perms = {} as ObjectWorkspacePermissions;
 
@@ -188,5 +195,59 @@ describe('SectionLocation', () => {
     expect(commune).toHaveValue("L'Entre-Deux");
     fireEvent.change(commune, { target: { value: 'Le Tampon' } });
     expect(result.current.draft.location.main.city).toBe('Le Tampon');
+  });
+
+  it('geocodes the address into the GPS fields on click', async () => {
+    geocodeAddressMock.mockResolvedValue({ latitude: '-21.271070', longitude: '55.467030', label: 'ok' });
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    const button = screen.getByRole('button', { name: "Géocoder l'adresse" });
+    expect(button).toBeEnabled();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(geocodeAddressMock).toHaveBeenCalledWith({
+      address1: '38 Chemin du Bel Air',
+      postcode: '97414',
+      city: "L'Entre-Deux",
+    });
+    expect(result.current.draft.location.main.latitude).toBe('-21.271070');
+    expect(result.current.draft.location.main.longitude).toBe('55.467030');
+  });
+
+  it('shows a not-found message when the geocoder has no match (coords untouched)', async () => {
+    geocodeAddressMock.mockResolvedValue(null);
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: "Géocoder l'adresse" }));
+    });
+
+    expect(screen.getByText(/adresse introuvable/i)).toBeInTheDocument();
+    expect(result.current.draft.location.main.latitude).toBe('');
+  });
+
+  it('shows a service-unavailable message when the geocoder throws', async () => {
+    geocodeAddressMock.mockRejectedValue(new Error('503'));
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: "Géocoder l'adresse" }));
+    });
+
+    expect(screen.getByText(/indisponible/i)).toBeInTheDocument();
+    expect(result.current.draft.location.main.latitude).toBe('');
+  });
+
+  it('disables the geocode button when the address is empty', () => {
+    const base = modules();
+    base.location.main.address1 = '';
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+    expect(screen.getByRole('button', { name: "Géocoder l'adresse" })).toBeDisabled();
   });
 });

@@ -1,0 +1,52 @@
+{
+  "functions": [
+    {
+      "schema": "api",
+      "name": "rpc_create_object",
+      "args": "p_object_type text, p_name text, p_region_code text DEFAULT NULL::text",
+      "returns": "text",
+      "security_definer": true,
+      "volatility": "v",
+      "comment": null,
+      "body": "DECLARE v_caller_id uuid := auth.uid(); v_new_id text; BEGIN INSERT INTO object (object_type, name, region_code, status, created_by) VALUES (p_object_type::object_type, trim(p_name), p_region_code, 'draft', v_caller_id) RETURNING id INTO v_new_id; RETURN v_new_id; END"
+    },
+    {
+      "schema": "api",
+      "name": "assert_object_type_change_consistent",
+      "args": "",
+      "returns": "trigger",
+      "security_definer": false,
+      "volatility": "v",
+      "comment": null,
+      "body": "DECLARE r RECORD; v_exists BOOLEAN; BEGIN FOR r IN SELECT reg.facet_table, reg.object_id_column FROM ref_facet_registry reg WHERE NOT EXISTS (SELECT 1 FROM ref_facet_applicability a WHERE a.facet_table = reg.facet_table AND a.object_type = NEW.object_type) LOOP EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I WHERE %I = $1)', r.facet_table, r.object_id_column) INTO v_exists USING NEW.id; END LOOP; RETURN NEW; END"
+    },
+    {
+      "schema": "api",
+      "name": "is_object_owner",
+      "args": "p_object_id text",
+      "returns": "boolean",
+      "security_definer": true,
+      "volatility": "s",
+      "comment": null,
+      "body": "SELECT EXISTS (SELECT 1 FROM actor_object_role aor WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids()) AND aor.object_id = p_object_id AND aor.is_primary = TRUE) OR auth.role() IN ('service_role','admin')"
+    }
+  ],
+  "policies": [
+    {"schema": "public", "table": "object_fma", "name": "canonical_ins_object_fma", "cmd": "INSERT", "roles": ["public"], "qual": null, "with_check": "api.user_can_write_object_canonical(object_id)"},
+    {"schema": "public", "table": "object_fma", "name": "canonical_upd_object_fma", "cmd": "UPDATE", "roles": ["public"], "qual": "api.user_can_write_object_canonical(object_id)", "with_check": "api.user_can_write_object_canonical(object_id)"},
+    {"schema": "public", "table": "object_fma", "name": "canonical_del_object_fma", "cmd": "DELETE", "roles": ["public"], "qual": "api.user_can_write_object_canonical(object_id)", "with_check": null}
+  ],
+  "enums": [
+    {
+      "schema": "public",
+      "name": "object_type",
+      "values": ["RES", "PCU", "PNA", "ORG", "ITI", "VIL", "HPA", "ASC", "COM", "HOT", "HLO", "LOI", "FMA", "CAMP", "PSV", "RVA", "ACT"],
+      "used_by": ["public.object.object_type"]
+    }
+  ],
+  "applicability": [
+    {"object_type": "FMA", "facet_table": "object_fma"},
+    {"object_type": "ITI", "facet_table": "object_iti"},
+    {"object_type": "ACT", "facet_table": "object_act"}
+  ]
+}

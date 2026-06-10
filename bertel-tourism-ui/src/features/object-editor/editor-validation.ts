@@ -40,6 +40,11 @@ const VALIDATION_RULES: ValidationRule[] = [
     canUsePublicationGate(permissions)
       ? null
       : { section: '21', message: 'Vos droits ne permettent pas de demander ou publier cette fiche.', tone: 'req' },
+  ({ draft }) =>
+    // The commune may arrive as a display name or as an INSEE code alone (ref_commune resolves it).
+    hasText(draft.location.main.city) || hasText(draft.location.main.codeInsee)
+      ? null
+      : { section: '02', message: 'La commune de localisation est obligatoire avant publication.', tone: 'req' },
   ({ archetype, draft }) =>
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
       ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }

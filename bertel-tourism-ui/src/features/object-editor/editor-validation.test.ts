@@ -40,4 +40,28 @@ describe('editor publication validation', () => {
       tone: 'req',
     });
   });
+
+  it('requires a commune of location (§02)', () => {
+    const draft = fullModulesFixture();
+    draft.location.main.city = '';
+    draft.location.main.codeInsee = '';
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '02',
+      message: expect.stringContaining('commune'),
+      tone: 'req',
+    });
+  });
+
+  it('accepts a commune given by its INSEE code alone', () => {
+    const draft = fullModulesFixture();
+    draft.location.main.city = '';
+    draft.location.main.codeInsee = '97411';
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '02')).toBe(false);
+  });
 });

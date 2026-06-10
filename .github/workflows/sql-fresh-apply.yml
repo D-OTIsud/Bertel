@@ -176,6 +176,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_write_policy_percommand.sql"
 
+      - name: actor links editor test (§48 8r — per-command actor_object_role + actors branch + search_actors)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_links_editor.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -1059,9 +1059,41 @@ BEGIN
     v_skipped := array_append(v_skipped, 'incoming_relations');
     v_warnings := array_append(v_warnings, 'Incoming relations are read-only here because their source object owns the write.');
   END IF;
+  -- §48: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
   IF p_payload ? 'actors' THEN
-    v_skipped := array_append(v_skipped, 'actors');
-    v_warnings := array_append(v_warnings, 'Actor/contact consent writes require a separate audit contract.');
+    DELETE FROM public.actor_object_role WHERE object_id = p_object_id;
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    v_inserted := 0;
+    FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'actors')) AS t(value) LOOP
+      IF internal.workspace_uuid(v_row->>'actor_id') IS NULL
+         OR NOT EXISTS (SELECT 1 FROM public.actor WHERE id = internal.workspace_uuid(v_row->>'actor_id')) THEN
+        RAISE EXCEPTION 'Unknown actor_id: %', v_row->>'actor_id' USING ERRCODE = '23503';
+      END IF;
+      v_id := internal.workspace_uuid(v_row->>'role_id');
+      IF v_id IS NULL THEN
+        SELECT ref.id INTO v_id FROM public.ref_actor_role ref WHERE lower(ref.code) = lower(v_row->>'role_code');
+      END IF;
+      IF v_id IS NULL THEN
+        RAISE EXCEPTION 'Unknown actor role reference: %', v_row USING ERRCODE = '23503';
+      END IF;
+      IF COALESCE(NULLIF(v_row->>'visibility', ''), 'public') NOT IN ('public', 'private', 'partners') THEN
+        RAISE EXCEPTION 'Invalid actor link visibility: %', v_row->>'visibility' USING ERRCODE = '22023';
+      END IF;
+      -- ≤1 primary per (object, role) is enforced by uq_actor_object_role_primary (unique partial index).
+      INSERT INTO public.actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to, visibility, note)
+      VALUES (
+        internal.workspace_uuid(v_row->>'actor_id'),
+        p_object_id,
+        v_id,
+        COALESCE(NULLIF(v_row->>'is_primary', '')::boolean, false),
+        NULLIF(v_row->>'valid_from', '')::date,
+        NULLIF(v_row->>'valid_to', '')::date,
+        COALESCE(NULLIF(v_row->>'visibility', ''), 'public'),
+        NULLIF(v_row->>'note', '')
+      );
+      v_inserted := v_inserted + 1;
+    END LOOP;
+    v_counts := v_counts || jsonb_build_object('actor_object_role_deleted', v_deleted, 'actor_object_role_inserted', v_inserted);
   END IF;
 
   RETURN internal.workspace_result(true, v_counts, v_skipped, v_warnings);

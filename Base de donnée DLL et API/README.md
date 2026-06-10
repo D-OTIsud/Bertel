@@ -102,6 +102,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_child_read_gate_setbased.sql
 -- 5n) §48 applicabilite object_act etendue a ASC (les deux types ASC et ACT portent object_act)
 \i migration_object_act_asc_applicability.sql
+-- 5o) §48 chemin d'ecriture acteurs: actor_object_role en politiques par commande (canonical_ins/upd/del) + branche actors de save_object_relations + RPC api.search_actors (gate editeurs)
+\i migration_actor_links_editor.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

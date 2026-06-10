@@ -145,6 +145,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_rls_ref_and_bak_
 psql -d votre_database -f "Base de donnée DLL et API/migration_ref_commune.sql"
 # 5j. §46 registre type→facette: ref_facet_registry + ref_facet_applicability + triggers d'applicabilité (+ violations fn)
 psql -d votre_database -f "Base de donnée DLL et API/migration_facet_applicability.sql"
+# 5k. §47 object_fma: triple de politiques d'écriture par commande (canonical_ins/upd/del) — corrige l'upsert FMA RLS-refusé
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_fma_write_policy.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

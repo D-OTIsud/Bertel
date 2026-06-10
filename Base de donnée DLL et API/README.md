@@ -94,6 +94,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_ref_commune.sql
 -- 5j) §46 registre type->facette: ref_facet_registry + ref_facet_applicability + triggers d'applicabilite (+ violations fn)
 \i migration_facet_applicability.sql
+-- 5k) §47 object_fma: triple de politiques d'ecriture par commande (canonical_ins/upd/del) -- corrige l'upsert FMA RLS-refuse
+\i migration_object_fma_write_policy.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

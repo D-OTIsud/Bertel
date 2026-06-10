@@ -73,6 +73,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_ref_commune.sql
 \echo '== 8m     migration_facet_applicability.sql  (type->facet registry + triggers + violations fn; needs facet tables + is_platform_superuser) =='
 \ir migration_facet_applicability.sql
+\echo '== 8n     migration_object_fma_write_policy.sql  (object_fma per-command canonical write triple; needs user_can_write_object_canonical) =='
+\ir migration_object_fma_write_policy.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

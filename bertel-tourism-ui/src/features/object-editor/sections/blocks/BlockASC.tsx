@@ -1,6 +1,7 @@
 import { Chip, ChipSet, Field, Fs, Input, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-row';
+import { ModuleUnavailableNotice } from './block-notes';
 
 const FORMULA_COLS = '14px 1.4fr 70px 110px 110px 70px 80px auto';
 
@@ -52,37 +53,45 @@ export function BlockASC({ editor, folded }: SectionProps) {
         label: formulaCount > 0 ? `${formulaCount} formule(s)` : activity.guideRequired ? 'Encadrée' : 'Libre',
       }}
     >
-      <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Caractéristiques métier
-      </div>
-      <div className="grid-4" style={{ marginBottom: 10 }}>
-        <Field label="Durée minimale" hint="Durée minimale de la séance">
-          <Input value={activity.durationMin} mono suffix="min" onChange={(durationMin) => patch({ durationMin })} />
-        </Field>
-        <Field label="Participants min.">
-          <Input value={activity.minParticipants} mono suffix="pers." onChange={(minParticipants) => patch({ minParticipants })} />
-        </Field>
-        <Field label="Participants max.">
-          <Input value={activity.maxParticipants} mono suffix="pers." onChange={(maxParticipants) => patch({ maxParticipants })} />
-        </Field>
-        <Field label="Âge minimum">
-          <Input value={activity.minAge} mono suffix="ans" onChange={(minAge) => patch({ minAge })} />
-        </Field>
-      </div>
-      <div className="grid-2" style={{ marginBottom: 14 }}>
-        <Toggle
-          label="Encadrement obligatoire"
-          sub="Guide ou encadrant requis"
-          on={activity.guideRequired}
-          onChange={(guideRequired) => patch({ guideRequired })}
-        />
-        <Toggle
-          label="Équipement fourni"
-          sub={activity.equipmentProvided || 'Matériel disponible sur place'}
-          on={Boolean(activity.equipmentProvided)}
-          onChange={() => patch({ equipmentProvided: activity.equipmentProvided ? '' : 'Fourni sur place' })}
-        />
-      </div>
+      {/* §46 type-gated activity module — notice INSTEAD of controls when gated.
+          The notice renders only here; the other activity sites below are suppressed. */}
+      {activity.unavailableReason ? (
+        <ModuleUnavailableNotice reason={activity.unavailableReason} />
+      ) : (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 0 }}>
+            Caractéristiques métier
+          </div>
+          <div className="grid-4" style={{ marginBottom: 10 }}>
+            <Field label="Durée minimale" hint="Durée minimale de la séance">
+              <Input value={activity.durationMin} mono suffix="min" onChange={(durationMin) => patch({ durationMin })} />
+            </Field>
+            <Field label="Participants min.">
+              <Input value={activity.minParticipants} mono suffix="pers." onChange={(minParticipants) => patch({ minParticipants })} />
+            </Field>
+            <Field label="Participants max.">
+              <Input value={activity.maxParticipants} mono suffix="pers." onChange={(maxParticipants) => patch({ maxParticipants })} />
+            </Field>
+            <Field label="Âge minimum">
+              <Input value={activity.minAge} mono suffix="ans" onChange={(minAge) => patch({ minAge })} />
+            </Field>
+          </div>
+          <div className="grid-2" style={{ marginBottom: 14 }}>
+            <Toggle
+              label="Encadrement obligatoire"
+              sub="Guide ou encadrant requis"
+              on={activity.guideRequired}
+              onChange={(guideRequired) => patch({ guideRequired })}
+            />
+            <Toggle
+              label="Équipement fourni"
+              sub={activity.equipmentProvided || 'Matériel disponible sur place'}
+              on={Boolean(activity.equipmentProvided)}
+              onChange={() => patch({ equipmentProvided: activity.equipmentProvided ? '' : 'Fourni sur place' })}
+            />
+          </div>
+        </>
+      )}
 
       {/* characteristics module — not type-gated; keep outside any activity.unavailableReason wrap (§46/§48) */}
       <div className="chip-group__label" style={{ marginTop: 14 }}>
@@ -173,7 +182,8 @@ export function BlockASC({ editor, folded }: SectionProps) {
         + Ajouter une formule
       </button>
 
-      {activity.equipmentProvided && (
+      {/* §46 activity module (secondary sites) — suppressed when gated; the notice already rendered above */}
+      {!activity.unavailableReason && activity.equipmentProvided && (
         <>
           <div className="chip-group__label" style={{ marginTop: 18 }}>
             Équipement & sécurité fournis
@@ -184,17 +194,19 @@ export function BlockASC({ editor, folded }: SectionProps) {
         </>
       )}
 
-      <div className="grid-3" style={{ marginTop: 14 }}>
-        <Field label="Difficulté">
-          <Input value={activity.difficultyLevel} placeholder="Débutant → Expert" onChange={(difficultyLevel) => patch({ difficultyLevel })} />
-        </Field>
-        <Field label="Équipement fourni (détail)">
-          <Input value={activity.equipmentProvided} onChange={(equipmentProvided) => patch({ equipmentProvided })} />
-        </Field>
-        <Field label="Durée affichée">
-          <Input value={activity.durationMin} mono suffix="min" onChange={(durationMin) => patch({ durationMin })} />
-        </Field>
-      </div>
+      {!activity.unavailableReason && (
+        <div className="grid-3" style={{ marginTop: 14 }}>
+          <Field label="Difficulté">
+            <Input value={activity.difficultyLevel} placeholder="Débutant → Expert" onChange={(difficultyLevel) => patch({ difficultyLevel })} />
+          </Field>
+          <Field label="Équipement fourni (détail)">
+            <Input value={activity.equipmentProvided} onChange={(equipmentProvided) => patch({ equipmentProvided })} />
+          </Field>
+          <Field label="Durée affichée">
+            <Input value={activity.durationMin} mono suffix="min" onChange={(durationMin) => patch({ durationMin })} />
+          </Field>
+        </div>
+      )}
     </Fs>
   );
 }

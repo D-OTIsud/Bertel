@@ -54,3 +54,31 @@ describe('BlockHEB meeting-room edit modal', () => {
     expect(result.current.draft.meetingRooms.items[0].equipmentCodes).toContain('projector');
   });
 });
+
+describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)', () => {
+  it('renders the rooms unavailable notice instead of the rooms repeater when gated', () => {
+    const modules = fullModulesFixture();
+    modules.rooms.unavailableReason = 'Module non applicable au type RES (référentiel ref_facet_applicability).';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    expect(screen.getByText(/Module non applicable au type RES/)).toBeInTheDocument();
+    // Regex matcher: the Repeater add button renders "+ {addLabel}" as two text
+    // nodes, so an exact-string match can never hit it (and would be vacuous).
+    expect(screen.queryByText(/Ajouter un type de chambre/)).not.toBeInTheDocument();
+    // capacityPolicies is NOT type-gated — its controls stay rendered and editable.
+    expect(screen.getByText("Politiques d'accueil")).toBeInTheDocument();
+  });
+
+  it('renders the meeting-rooms unavailable notice independently of the rooms area', () => {
+    const modules = fullModulesFixture();
+    modules.meetingRooms.unavailableReason = 'Module non applicable au type ITI (référentiel ref_facet_applicability).';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    expect(screen.getByText(/Module non applicable au type ITI/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ajouter une salle/)).not.toBeInTheDocument();
+    // The rooms area is gated by its OWN reason — it stays editable here.
+    expect(screen.getByText(/Ajouter un type de chambre/)).toBeInTheDocument();
+  });
+});

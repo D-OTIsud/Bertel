@@ -54,3 +54,26 @@ describe('BlockASC — prestations & équipements (§48)', () => {
     expect(result.current.draft.characteristics.selectedAmenityCodes).toContain('pmr_access');
   });
 });
+
+describe('BlockASC — §46 disabled-with-reason (activity module)', () => {
+  it('renders the unavailable notice instead of activity controls when gated', () => {
+    const modules = fullModulesFixture();
+    modules.activity.unavailableReason = 'Module non applicable au type RES (référentiel ref_facet_applicability).';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockASC editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(/Module non applicable au type RES/)).toBeInTheDocument();
+    expect(screen.queryByText('Durée minimale')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Encadrement obligatoire')).not.toBeInTheDocument();
+  });
+
+  it('keeps the non-type-gated controls editable while the activity module is gated', () => {
+    const modules = fullModulesFixture();
+    modules.activity.unavailableReason = 'Module non applicable au type RES (référentiel ref_facet_applicability).';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockASC editor={result.current} permissions={allowAll} />);
+
+    // The §48 amenity chips edit the characteristics module — never gated by activity.
+    expect(screen.getByRole('button', { name: 'Accès PMR' })).toBeInTheDocument();
+  });
+});

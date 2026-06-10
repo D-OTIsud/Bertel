@@ -7,6 +7,7 @@ import type {
   ObjectWorkspaceMeetingRoomItem,
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
+import { ModuleUnavailableNotice } from './block-notes';
 
 const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
 const MICE_COLS = '14px 1.4fr 70px 70px 70px 70px auto';
@@ -117,77 +118,84 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       folded={folded}
       pill={{ tone: rooms.items.length > 0 ? 'ok' : 'warn', label: pillLabel }}
     >
-      <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Chambres / unités locatives
-      </div>
-      {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
-      <Repeater
-        items={rooms.items}
-        getKey={(item, index) => item.recordId ?? item.code ?? `room-${index}`}
-        columns={ROOM_COLS}
-        addLabel="Ajouter un type de chambre"
-        onAdd={() =>
-          editor.replaceModule('rooms', {
-            ...rooms,
-            items: [...rooms.items, createRoom(rooms.items.length)],
-          })
-        }
-        renderRow={(item, index) => (
-          <>
-            <span className="rep-row__handle" aria-hidden />
-            {/* Compact summary — full editing is done inside RoomEditModal */}
-            <div>
-              <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
-              {item.viewTypeLabel && (
-                <span style={{ color: 'var(--ink-4)', marginLeft: 6, fontSize: 12 }}>{item.viewTypeLabel}</span>
-              )}
-            </div>
-            <span>{item.capacityTotal || item.capacityAdults || '—'}</span>
-            <span>{item.sizeSqm ? `${item.sizeSqm} m²` : '—'}</span>
-            <span>{item.quantity || '—'}</span>
-            <span>{item.basePrice ? `${item.basePrice} €` : '—'}</span>
-            <div className="rep-row__act">
-              {item.accessible && (
-                <span style={{ fontSize: 11, color: 'var(--ink-3)' }} title="Chambre PMR">PMR</span>
-              )}
-              <button
-                type="button"
-                aria-label={`Modifier la chambre ${item.name || index + 1}`}
-                onClick={() => setEditingRoom(index)}
-                style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
-              >
-                Modifier
-              </button>
-              <button
-                type="button"
-                className="del"
-                onClick={() =>
-                  editor.replaceModule('rooms', {
-                    ...rooms,
-                    items: rooms.items.filter((_, itemIndex) => itemIndex !== index),
-                  })
-                }
-              >
-                ×
-              </button>
-            </div>
-          </>
-        )}
-      />
+      {/* §46 type-gated rooms module — notice INSTEAD of controls when gated */}
+      {rooms.unavailableReason ? (
+        <ModuleUnavailableNotice reason={rooms.unavailableReason} />
+      ) : (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 0 }}>
+            Chambres / unités locatives
+          </div>
+          {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
+          <Repeater
+            items={rooms.items}
+            getKey={(item, index) => item.recordId ?? item.code ?? `room-${index}`}
+            columns={ROOM_COLS}
+            addLabel="Ajouter un type de chambre"
+            onAdd={() =>
+              editor.replaceModule('rooms', {
+                ...rooms,
+                items: [...rooms.items, createRoom(rooms.items.length)],
+              })
+            }
+            renderRow={(item, index) => (
+              <>
+                <span className="rep-row__handle" aria-hidden />
+                {/* Compact summary — full editing is done inside RoomEditModal */}
+                <div>
+                  <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
+                  {item.viewTypeLabel && (
+                    <span style={{ color: 'var(--ink-4)', marginLeft: 6, fontSize: 12 }}>{item.viewTypeLabel}</span>
+                  )}
+                </div>
+                <span>{item.capacityTotal || item.capacityAdults || '—'}</span>
+                <span>{item.sizeSqm ? `${item.sizeSqm} m²` : '—'}</span>
+                <span>{item.quantity || '—'}</span>
+                <span>{item.basePrice ? `${item.basePrice} €` : '—'}</span>
+                <div className="rep-row__act">
+                  {item.accessible && (
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)' }} title="Chambre PMR">PMR</span>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`Modifier la chambre ${item.name || index + 1}`}
+                    onClick={() => setEditingRoom(index)}
+                    style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    className="del"
+                    onClick={() =>
+                      editor.replaceModule('rooms', {
+                        ...rooms,
+                        items: rooms.items.filter((_, itemIndex) => itemIndex !== index),
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              </>
+            )}
+          />
 
-      {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
-          not in the compact row, so every room (not just rooms.items[0]) can have its own amenities. */}
-      {editingRoom !== null && rooms.items[editingRoom] && (
-        <RoomEditModal
-          open
-          room={rooms.items[editingRoom]}
-          module={rooms}
-          onClose={() => setEditingRoom(null)}
-          onSave={(updated) => {
-            updateRoom(editingRoom, updated);
-            setEditingRoom(null);
-          }}
-        />
+          {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
+              not in the compact row, so every room (not just rooms.items[0]) can have its own amenities. */}
+          {editingRoom !== null && rooms.items[editingRoom] && (
+            <RoomEditModal
+              open
+              room={rooms.items[editingRoom]}
+              module={rooms}
+              onClose={() => setEditingRoom(null)}
+              onSave={(updated) => {
+                updateRoom(editingRoom, updated);
+                setEditingRoom(null);
+              }}
+            />
+          )}
+        </>
       )}
 
       <div className="chip-group__label" style={{ marginTop: 20 }}>
@@ -273,69 +281,76 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         />
       </div>
 
-      <div className="chip-group__label" style={{ marginTop: 20 }}>
-        Salles séminaire & événementiel
-      </div>
-      {repHeader(MICE_COLS, ['', 'Salle', 'Surface m²', 'Théâtre', 'Classe', 'Banquet'])}
-      <Repeater
-        items={meetingRooms.items}
-        getKey={(item, index) => item.recordId ?? `meeting-${index}`}
-        columns={MICE_COLS}
-        addLabel="Ajouter une salle"
-        onAdd={() =>
-          editor.replaceModule('meetingRooms', {
-            ...meetingRooms,
-            items: [...meetingRooms.items, createMeetingRoom()],
-          })
-        }
-        renderRow={(item, index) => (
-          <>
-            <span className="rep-row__handle" aria-hidden />
-            {/* Compact summary — full editing is done inside MeetingRoomEditModal */}
-            <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
-            <span>{item.areaM2 ? `${item.areaM2} m²` : '—'}</span>
-            <span>{item.capacityTheatre || '—'}</span>
-            <span>{item.capacityClassroom || '—'}</span>
-            <span>{item.capacityBoardroom || '—'}</span>
-            <div className="rep-row__act">
-              <button
-                type="button"
-                aria-label={`Modifier la salle ${item.name || index + 1}`}
-                onClick={() => setEditingMeeting(index)}
-                style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
-              >
-                Modifier
-              </button>
-              <button
-                type="button"
-                className="del"
-                onClick={() =>
-                  editor.replaceModule('meetingRooms', {
-                    ...meetingRooms,
-                    items: meetingRooms.items.filter((_, itemIndex) => itemIndex !== index),
-                  })
-                }
-              >
-                ×
-              </button>
-            </div>
-          </>
-        )}
-      />
+      {/* §46 type-gated meetingRooms module — notice INSTEAD of controls when gated (independent of rooms) */}
+      {meetingRooms.unavailableReason ? (
+        <ModuleUnavailableNotice reason={meetingRooms.unavailableReason} />
+      ) : (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 20 }}>
+            Salles séminaire & événementiel
+          </div>
+          {repHeader(MICE_COLS, ['', 'Salle', 'Surface m²', 'Théâtre', 'Classe', 'Banquet'])}
+          <Repeater
+            items={meetingRooms.items}
+            getKey={(item, index) => item.recordId ?? `meeting-${index}`}
+            columns={MICE_COLS}
+            addLabel="Ajouter une salle"
+            onAdd={() =>
+              editor.replaceModule('meetingRooms', {
+                ...meetingRooms,
+                items: [...meetingRooms.items, createMeetingRoom()],
+              })
+            }
+            renderRow={(item, index) => (
+              <>
+                <span className="rep-row__handle" aria-hidden />
+                {/* Compact summary — full editing is done inside MeetingRoomEditModal */}
+                <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
+                <span>{item.areaM2 ? `${item.areaM2} m²` : '—'}</span>
+                <span>{item.capacityTheatre || '—'}</span>
+                <span>{item.capacityClassroom || '—'}</span>
+                <span>{item.capacityBoardroom || '—'}</span>
+                <div className="rep-row__act">
+                  <button
+                    type="button"
+                    aria-label={`Modifier la salle ${item.name || index + 1}`}
+                    onClick={() => setEditingMeeting(index)}
+                    style={{ fontSize: 12, padding: '2px 8px', cursor: 'pointer' }}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    className="del"
+                    onClick={() =>
+                      editor.replaceModule('meetingRooms', {
+                        ...meetingRooms,
+                        items: meetingRooms.items.filter((_, itemIndex) => itemIndex !== index),
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              </>
+            )}
+          />
 
-      {/* Per-meeting-room edit modal — opens when editingMeeting is set. Equipment is edited here,
-          not in the compact row, so every meeting room can have its own equipment set. */}
-      {editingMeeting !== null && meetingRooms.items[editingMeeting] && (
-        <MeetingRoomEditModal
-          open
-          room={meetingRooms.items[editingMeeting]}
-          equipmentOptions={meetingRooms.equipmentOptions}
-          onClose={() => setEditingMeeting(null)}
-          onSave={(updated) => {
-            updateMeetingRoom(editingMeeting, updated);
-            setEditingMeeting(null);
-          }}
-        />
+          {/* Per-meeting-room edit modal — opens when editingMeeting is set. Equipment is edited here,
+              not in the compact row, so every meeting room can have its own equipment set. */}
+          {editingMeeting !== null && meetingRooms.items[editingMeeting] && (
+            <MeetingRoomEditModal
+              open
+              room={meetingRooms.items[editingMeeting]}
+              equipmentOptions={meetingRooms.equipmentOptions}
+              onClose={() => setEditingMeeting(null)}
+              onSave={(updated) => {
+                updateMeetingRoom(editingMeeting, updated);
+                setEditingMeeting(null);
+              }}
+            />
+          )}
+        </>
       )}
     </Fs>
   );

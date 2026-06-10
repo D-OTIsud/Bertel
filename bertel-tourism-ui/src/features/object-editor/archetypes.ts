@@ -7,6 +7,12 @@
  * its own accent palette and ribbon metadata. Shared by the per-type detail view
  * and the full-page editor so the mapping has a single source of truth.
  * SRV/HEB/VIS are archetype names, NOT DB types. See decision log §46.
+ *
+ * §48 (2026-06-10): ACT maps to the ASC archetype (NOT SRV). BlockASC is the
+ * editor block that reaches the `object_act` facet table; DB applicability
+ * registry (`ref_facet_applicability`) allows object_act for both ASC and ACT.
+ * ASC_ARCHETYPE.covers now includes ACT; SRV_ARCHETYPE.covers/family no longer
+ * list ACT. See decision log §48.
  */
 
 export type ArchetypeCode = 'HEB' | 'RES' | 'ASC' | 'ITI' | 'VIS' | 'SRV';
@@ -63,7 +69,7 @@ const ASC_ARCHETYPE: ArchetypeMeta = {
   accent: 'acc-blue',
   codeName: 'Activité sportive & culturelle',
   family: 'Activité encadrée · Stage · Initiation',
-  covers: 'ASC',
+  covers: 'ASC · ACT',
 };
 
 const ITI_ARCHETYPE: ArchetypeMeta = {
@@ -86,12 +92,13 @@ const SRV_ARCHETYPE: ArchetypeMeta = {
   archetype: 'SRV',
   accent: 'acc-rust',
   codeName: 'Service & commerce',
-  family: 'OT · Commerce · Service · Activité encadrée',
-  covers: 'PSV · VIL · COM · ACT',
+  family: 'OT · Commerce · Service',
+  covers: 'PSV · VIL · COM',
 };
 
 // Keys = DB object_type enum minus ORG (ORG is deliberately unmapped: the editor renders an
 // explicit unsupported-type panel; see ObjectEditPage). SRV/HEB/VIS are archetype names, NOT DB types.
+// ACT → ASC_ARCHETYPE (§48): BlockASC reaches the object_act facet; applicability = ASC+ACT per DB registry.
 export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   HOT: HEB_ARCHETYPE,
   HPA: HEB_ARCHETYPE,
@@ -106,7 +113,7 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   PCU: VIS_ARCHETYPE,
   PNA: VIS_ARCHETYPE,
   PSV: SRV_ARCHETYPE,
-  ACT: SRV_ARCHETYPE,
+  ACT: ASC_ARCHETYPE,
   VIL: SRV_ARCHETYPE,
   COM: SRV_ARCHETYPE,
 };

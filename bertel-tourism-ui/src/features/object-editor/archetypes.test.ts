@@ -26,8 +26,9 @@ describe('getArchetypeMeta', () => {
     expect(Object.keys(TYPE_ARCHETYPES).sort()).toEqual([...DB_OBJECT_TYPES_MINUS_ORG].sort());
   });
 
-  it('routes ACT to the SRV archetype', () => {
-    expect(getArchetypeMeta('ACT')?.archetype).toBe('SRV');
+  it('routes ACT to the ASC archetype (object_act is the shared activity facet — §48)', () => {
+    expect(getArchetypeMeta('ACT')?.archetype).toBe('ASC');
+    expect(getArchetypeMeta('ACT')?.covers).toContain('ACT');
   });
 
   it('returns null for ORG and unknown codes (no silent HEB fallback)', () => {

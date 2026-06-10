@@ -1,8 +1,7 @@
-import { Chip, ChipSet, Field, Fs, Input, SeasonPicker, StatCard, Toggle } from '../../primitives';
+import { Chip, ChipSet, Field, Fs, Input, StatCard, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
 
-const TRAIL_SEASON = ['closed', 'closed', 'high', 'high', 'peak', 'peak', 'peak', 'high', 'high', '', '', 'closed'] as const;
 const STAGE_COLS = '14px 28px 1fr 90px 80px auto';
 
 function repHeader(columns: string, labels: string[]) {
@@ -63,11 +62,14 @@ export function BlockITI({ editor, folded }: SectionProps) {
       ) : (
         <>
           <div className="grid-1-2" style={{ marginBottom: 14 }}>
-            <div className="dropzone">
+            {/* §48: no GPX upload pipeline; object_iti.geom has no write path in the nested RPC.
+                The dropzone is disabled-with-reason instead of an inviting drop target. */}
+            <div className="dropzone" aria-disabled="true" style={{ opacity: 0.62, cursor: 'not-allowed' }}>
               <span className="ico">GPX</span>
-              <strong>{itinerary.geometrySummary || 'Déposer un fichier GPX ou KML'}</strong>
+              <strong>{itinerary.geometrySummary || 'Aucune trace importée'}</strong>
               <small>
-                {itinerary.sectionsCount} section(s) · {itinerary.profilesCount} profil(s) — le profil altimétrique sera recalculé
+                Import GPX/KML indisponible dans l&apos;éditeur — la géométrie est gérée par l&apos;import de données.
+                {' '}{itinerary.sectionsCount} section(s) · {itinerary.profilesCount} profil(s)
               </small>
             </div>
             <div className="grid-2-1" style={{ alignItems: 'center' }}>
@@ -152,10 +154,9 @@ export function BlockITI({ editor, folded }: SectionProps) {
             + Ajouter une étape / un POI
           </button>
 
-          <div className="chip-group__label" style={{ marginTop: 18 }}>
-            Praticabilité saisonnière
-          </div>
-          <SeasonPicker value={[...TRAIL_SEASON]} />
+          {/* §48: TRAIL_SEASON mock removed (§34 pattern — inert hardcoded constant, no onChange).
+              SeasonPicker primitive retained for the future per-object seasonality profile feature.
+              statusNote persists via the nested RPC — kept. */}
           <Field label="Note de fermeture saisonnière" hint="Affiché en bandeau quand le sentier est fermé">
             <Input value={itinerary.statusNote} onChange={(statusNote) => patch({ statusNote })} />
           </Field>

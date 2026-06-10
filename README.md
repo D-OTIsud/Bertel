@@ -158,6 +158,8 @@ psql -d votre_database -f "Base de donnée DLL et API/seeds_data.sql"
 # 9. Correctifs de données APRÈS seeds (no-op sur une base neuve sans données importées)
 psql -d votre_database -f "Base de donnée DLL et API/migration_legal_siret_canonical.sql"
 psql -d votre_database -f "Base de donnée DLL et API/migration_object_location_address1_dedupe.sql"
+# §46: seed ref_capacity_applicability (facettes capacité Explorer HOT/RES) — nécessite ref_capacity_metric (seeds)
+psql -d votre_database -f "Base de donnée DLL et API/migration_capacity_applicability_seed.sql"
 
 # Ordre complet, refresh des vues matérialisées et rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```

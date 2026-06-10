@@ -762,7 +762,7 @@ npm run typecheck
 
   Expected: new spec PASSES, no regressions in `object-workspace*.test.ts`.
 
-- [ ] **Step 7: Commit:**
+- [x] **Step 7: Commit:** **DONE — `d2a12fc`** (3 files; parser untouched as predicted; co-author Claude Opus 4.8 (1M context)).
 
 ```bash
 git -C "C:\Users\dphil\Bertel3.0" add bertel-tourism-ui/src/services/object-workspace.ts bertel-tourism-ui/src/services/object-workspace.facets.test.ts
@@ -780,9 +780,9 @@ The table exists (SU:2228), has RLS + policies, is read by the Explorer (`explor
 - Create: `Base de donnée DLL et API/tests/test_capacity_applicability_seed.sql`
 - Modify: runbook + `ci_fresh_apply.sql` + workflow + READMEs (same drill as Task 4, position **13c** — after `seeds_data.sql`, which seeds `ref_capacity_metric`)
 
-- [ ] **Step 1: Read `bertel-tourism-ui/src/services/explorer-reference.ts`** around lines 176–186 and 421–422 (`bucketCapacityOptions`, `hotCapacityMetrics`, `resCapacityMetrics`) and note which metric codes each Explorer bucket expects, so the seed makes those buckets non-empty.
+- [x] **Step 1: Read `bertel-tourism-ui/src/services/explorer-reference.ts`** — **DONE.** `bucketCapacityOptions` is called only for HOT (HOT/HPA/HLO/CAMP/RVA) + RES ({RES}); surfaces applicable metrics minus `meeting_rooms`. Static fallbacks: HOT→beds/bedrooms/pitches; RES→seats/standing_places. ⇒ extended the matrix with `standing_places→RES` so the RES bucket is non-empty per its fallback. around lines 176–186 and 421–422 (`bucketCapacityOptions`, `hotCapacityMetrics`, `resCapacityMetrics`) and note which metric codes each Explorer bucket expects, so the seed makes those buckets non-empty.
 
-- [ ] **Step 2: Write the migration** (PROPOSED matrix — extend per Step 1 findings; loosening later = one INSERT):
+- [x] **Step 2: Write the migration** — **DONE** (`migration_capacity_applicability_seed.sql`; baseline matrix + `standing_places→RES`; all 12 referenced metric codes verified present on live). (PROPOSED matrix — extend per Step 1 findings; loosening later = one INSERT):
 
 ```sql
 -- migration_capacity_applicability_seed.sql
@@ -824,7 +824,7 @@ ON CONFLICT DO NOTHING;
 COMMIT;
 ```
 
-- [ ] **Step 3: Write the test** `tests/test_capacity_applicability_seed.sql` (same transactional template):
+- [x] **Step 3: Write the test** — **DONE** (`tests/test_capacity_applicability_seed.sql`; added seats@RES + standing_places@RES asserts; RED-confirmed on live before seed). `tests/test_capacity_applicability_seed.sql` (same transactional template):
 
 ```sql
 -- test_capacity_applicability_seed.sql
@@ -848,8 +848,8 @@ END$$;
 ROLLBACK;
 ```
 
-- [ ] **Step 4: Wiring** — runbook entry `13c` (format as Task 4 Step 1; "After step 11 (needs ref_capacity_metric seeds)"); `ci_fresh_apply.sql` `\echo`/`\ir` pair **after the 13b `\ir` (~lines 85–86) and before the MV-refresh block (~line 91)**; workflow test step (4-line shape from Task 4 Step 3). **READMEs:** the 13c line goes under the post-seed data-fixups section ("# 9. Correctifs de données APRÈS seeds" — `README.md` ~156–158, `Base de donnée DLL et API/README.md` ~105–107), **NOT** in the lettered `5x` pre-seed list — the `5x` list runs before `seeds_data.sql`, where `ref_capacity_metric` is still empty and the seed would silently insert 0 rows.
-- [ ] **Step 5: Apply to live** (`apply_migration` name `capacity_applicability_seed`), read back `SELECT count(*) FROM ref_capacity_applicability;` (expected ≥ 30 + 17), run the test body via `execute_sql`.
+- [x] **Step 4: Wiring** — **DONE** (runbook 13c after 13b before step 14; `ci_fresh_apply.sql` pair after 13b `\ir` before MV refresh; workflow test step after the facet step; both READMEs under "# 9. Correctifs … APRÈS seeds", NOT the 5x list). — runbook entry `13c` (format as Task 4 Step 1; "After step 11 (needs ref_capacity_metric seeds)"); `ci_fresh_apply.sql` `\echo`/`\ir` pair **after the 13b `\ir` (~lines 85–86) and before the MV-refresh block (~line 91)**; workflow test step (4-line shape from Task 4 Step 3). **READMEs:** the 13c line goes under the post-seed data-fixups section ("# 9. Correctifs de données APRÈS seeds" — `README.md` ~156–158, `Base de donnée DLL et API/README.md` ~105–107), **NOT** in the lettered `5x` pre-seed list — the `5x` list runs before `seeds_data.sql`, where `ref_capacity_metric` is still empty and the seed would silently insert 0 rows.
+- [x] **Step 5: Apply to live** — **DONE** (MCP migration `capacity_applicability_seed`, `{success:true}`). Read-back: `total=54, max_capacity_types=17, seats@RES=1, standing@RES=1, beds@RES=0`. Test body green on live. (`apply_migration` name `capacity_applicability_seed`), read back `SELECT count(*) FROM ref_capacity_applicability;` (expected ≥ 30 + 17), run the test body via `execute_sql`.
 - [ ] **Step 6: Commit:** `feat(db): seed ref_capacity_applicability — Explorer capacity facets come alive (manifest 13c, §46)`.
 
 ---

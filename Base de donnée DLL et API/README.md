@@ -107,6 +107,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- 9) Correctifs de donnees APRES seeds (no-op sur base neuve)
 \i migration_legal_siret_canonical.sql
 \i migration_object_location_address1_dedupe.sql
+-- §46: seed ref_capacity_applicability (facettes capacite Explorer HOT/RES) -- necessite ref_capacity_metric (seeds)
+\i migration_capacity_applicability_seed.sql
 
 -- Ordre complet + refresh MV + rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```

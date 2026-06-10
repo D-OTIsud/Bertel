@@ -258,6 +258,30 @@ describe('SectionLocation', () => {
     expect(screen.getByText(/correspondance incertaine/i)).toBeInTheDocument();
   });
 
+  it('does not write a commune outside the admin-defined ref_commune scope (BAN pick)', async () => {
+    geocodeAddressMock.mockResolvedValue({ ...BAN_HIT, citycode: '97499', city: 'Hors Scope' });
+    const base = modules();
+    base.location.zoneOptions = [
+      { code: '97414', label: "L'Entre-Deux" },
+      { code: '97411', label: 'Saint-Pierre' },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: "Géocoder l'adresse" }));
+    });
+
+    const main = result.current.draft.location.main;
+    // Standardized street + GPS still apply…
+    expect(main.address1).toBe('38 Chemin Dijoux');
+    expect(main.latitude).toBe('-21.271070');
+    // …but the out-of-scope commune is NOT written (admin scope preserved).
+    expect(main.codeInsee).toBe('');
+    expect(main.city).toBe("L'Entre-Deux");
+    expect(screen.getByText(/hors du périmètre/i)).toBeInTheDocument();
+  });
+
   it('fills the standardized address, commune and GPS from an autocomplete pick', async () => {
     jest.useFakeTimers();
     try {

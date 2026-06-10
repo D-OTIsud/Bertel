@@ -44,17 +44,33 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   // Below this BAN confidence, the matched street can be plain wrong — never write it silently.
   const BAN_CONFIDENT_SCORE = 0.6;
 
-  /** Apply a BAN hit: standardized address + commune (ref_commune label wins) + GPS. */
+  /**
+   * Apply a BAN hit: standardized address + commune (ref_commune label wins) + GPS.
+   * The commune is only written inside the admin-defined `ref_commune` scope —
+   * a BAN address whose citycode is not in the (loaded) catalog keeps the current
+   * commune untouched and says so, instead of silently bypassing the scope.
+   */
   function applyBanHit(hit: GeocodeHit) {
-    const communeLabel = communeOptions.find((option) => option.code === hit.citycode)?.label;
+    const commune = communeOptions.find((option) => option.code === hit.citycode);
+    const inScope = communeOptions.length === 0 || Boolean(commune);
     patch({
       address1: hit.name || main.address1,
       postcode: hit.postcode || main.postcode,
-      city: communeLabel ?? (hit.city || main.city),
-      codeInsee: hit.citycode || main.codeInsee,
+      ...(inScope
+        ? {
+            city: commune?.label ?? (hit.city || main.city),
+            codeInsee: hit.citycode || main.codeInsee,
+          }
+        : {}),
       latitude: hit.latitude,
       longitude: hit.longitude,
     });
+    if (!inScope) {
+      setGeocodeMessage(
+        `La commune « ${hit.city} » est hors du périmètre configuré — sélectionnez une commune dans la liste.`,
+      );
+    }
+    return inScope;
   }
 
   // Address → standardized address + GPS via the BAN; the draggable pin stays the manual fallback.
@@ -77,8 +93,10 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
         );
         return;
       }
-      applyBanHit(hit);
-      setGeocodeMessage(`Adresse standardisée : ${hit.label}`);
+      const communeApplied = applyBanHit(hit);
+      if (communeApplied) {
+        setGeocodeMessage(`Adresse standardisée : ${hit.label}`);
+      }
     } catch {
       setGeocodeMessage('Géocodage indisponible — réessayez plus tard.');
     } finally {

@@ -24,7 +24,7 @@ Turn the Bertel3.0 Postgres schema into kept-in-sync artifacts: an **interactive
 
 ```
 tbls doc                       →  dbdoc/                       (per-table .md, ER svg+mermaid, viewpoints)   [existing tool]
-tbls out --format json         →  db-graph-out/schema_tbls.json (machine-readable table/FK/trigger backbone)  [existing tool]
+tbls out -t json -o …          →  db-graph-out/schema_tbls.json (machine-readable table/FK/trigger backbone)  [existing tool]
 db_supplement_extract.sql      →  db-graph-out/catalog_extra.json (functions + policies + enums + applicability) [psql or MCP]
 db_graph.py  reads schema_tbls.json + catalog_extra.json
              →  db-graph-out/graph.json + graph.html            (unified force graph)
@@ -33,12 +33,16 @@ Supabase Studio                →  live interactive FK exploration             
 ```
 
 ### Components
-1. **tbls** — release binary on PATH (no go/scoop here → GitHub release `tbls_*_windows_amd64` dropped in `~/.local/bin`, or `winget`). Driven by a committed **`tools/db-graph/.tbls.yml`**: DSN from env (`TBLS_DSN`), output `dbdoc/`, ER format `mermaid` + `svg`, and **viewpoints** including an **"Object model"** viewpoint (object + object_* facet/child tables + `object_relation`/`object_org_link`/`actor_object_role` + `ref_facet_*`). Run: `tbls doc`.
+1. **tbls** — release binary on PATH (no go/scoop here → GitHub release `tbls_*_windows_amd64` dropped in `~/.local/bin`, or `winget`). Driven by a committed **`tools/db-graph/.tbls.yml`** with:
+   - `dsn: ${TBLS_DSN}` — **env interpolation only; the file MUST NOT contain a literal connection string** (it is committed).
+   - `disableOutputSchema: true` — so `tbls doc` does **not** write `dbdoc/schema.json` (the JSON backbone comes from `tbls out` into `db-graph-out/` instead, avoiding a stray committed schema dump and a `--rm-dist` conflict).
+   - output `dbdoc/`, ER format `mermaid` + `svg`, and **viewpoints** including an **"Object model"** viewpoint (object + object_* facet/child tables + `object_relation`/`object_org_link`/`actor_object_role` + `ref_facet_*`).
+   Run: `tbls doc` then `tbls out -t json -o db-graph-out/schema_tbls.json`.
 2. **Gap extract** — committed **`tools/db-graph/db_supplement_extract.sql`**: one query → `catalog_extra.json` with `pg_proc` (functions: schema, name, args, returns, `prosecdef`, `prosrc`, comment), `pg_policies` (RLS), `pg_type`/`pg_enum` (enums + values + columns using each), and the small `ref_facet_applicability` rows (the type→facet rule). Run via psql (`TBLS_DSN`) **or** the Supabase MCP.
 3. **Glue build** — **`tools/db-graph/db_graph.py`** (Python, `.tools/python` venv). Pure transforms, each unit-testable:
    - `load_tbls_schema(db-graph-out/schema_tbls.json)` → table/view/column/FK/trigger backbone, produced by `tbls out --format json` (no re-introspection — tbls already did it).
    - `load_extra(catalog_extra.json)` → function/policy/enum records.
-   - `infer_rpc_table_edges(functions)` → `reads`/`writes` edges by regex over `prosrc` (after `from`/`join` = read; `insert into`/`update`/`delete from` = write), resolved against the table set, tagged `inferred`; unresolved `EXECUTE format(...)` → `dynamic_sql: true`, no guessed edge.
+   - `infer_rpc_table_edges(functions)` → `reads`/`writes` edges by regex over `prosrc` (after `from`/`join` = read; `insert into`/`update`/`delete from` = write), resolved against the known table set. **Each edge carries confidence metadata**: `inference: { method: "regex", confidence: "high|medium|low", evidence: "<matched clause>" }` — `high` for an unambiguous `insert into <known_table>` / `from <known_table>`; `medium`/`low` when the identifier is an alias/CTE name, qualified oddly, or sits near a dynamic block. Unresolved `EXECUTE format(...)` → a function-level `dynamic_sql: true` flag, **no guessed edge**.
    - `attach_sql_docs(nodes, "Base de donnée DLL et API/*.sql")` → the preceding `--` comment block for each `CREATE … FUNCTION`/policy (which tbls never sees); `COMMENT ON` wins when present.
    - `build_graph(...)` → unified `graph.json` + renders `graph.html`.
    - `write_supplement(...)` → `FUNCTIONS.md`, `POLICIES.md`, `TYPES.md`, `DB_AGENT_INDEX.md`.
@@ -50,9 +54,11 @@ Supabase Studio                →  live interactive FK exploration             
 - **Object-model layer (first-class, SCHEMA-level — not per-row instances):** the `object_type` enum + 17 values; the three link tables (`object_relation`, `object_org_link`, `actor_object_role`) tagged as relationship carriers with their FK endpoints into `object`/`actor` highlighted + `ref_object_relation_type` vocabulary; and the type→facet rule from `ref_facet_applicability`'s 21 rows rendered as `applies_to` edges. Per-row instance relationships are data, not schema → out of scope v1.
 - **Clustering / filtering**: by schema + domain tag; the `graph.html` filter panel toggles node kinds / schemas / domains / edge kinds, has search, and a click→detail panel.
 
+**Committed-artifact content (no function bodies):** function nodes in the **committed** `graph.json` and `FUNCTIONS.md` carry **signature, return type, SECURITY DEFINER flag, the inferred reads/writes edges (+ confidence), and the doc — NOT the full `prosrc` body**. `prosrc` is read only transiently for edge inference and lives **only** in the gitignored `catalog_extra.json`. (The repo is private, so this is a deliberate leanness/dedup choice — bodies already live in the `.sql` files — not a secrecy requirement.)
+
 ## Outputs
 
-1. **`dbdoc/` (tbls, COMMITTED)** — per-table Markdown, ER diagrams (SVG + Mermaid incl. the object-model viewpoint), `schema.json`. The human/agent table+FK documentation.
+1. **`dbdoc/` (tbls, COMMITTED)** — per-table Markdown + ER diagrams (SVG + Mermaid incl. the object-model viewpoint). The human/agent table+FK documentation. (No `schema.json` here — `disableOutputSchema: true`; the JSON backbone is `db-graph-out/schema_tbls.json` via `tbls out`.)
 2. **Supabase Studio Schema Visualizer** — live interactive FK exploration, no artifact (just a workflow note in the README).
 3. **`db-graph-out/` glue (mixed git)** — `graph.html` (custom interactive force graph; gitignored, regenerable), `graph.json` (unified model; committed), `FUNCTIONS.md` + `POLICIES.md` + `TYPES.md` + `DB_AGENT_INDEX.md` (agent artifacts; committed).
 4. **`CLAUDE.md` pointer** — one line → `db-graph-out/DB_AGENT_INDEX.md` (which links to `dbdoc/` + the supplement), mirroring how graphify is referenced.
@@ -61,11 +67,12 @@ Supabase Studio                →  live interactive FK exploration             
 
 ```
 tools/db-graph/
-  .tbls.yml                  # tbls config (DSN env, viewpoints, dbdoc/)   — committed
+  .tbls.yml                  # tbls config (${TBLS_DSN} only, viewpoints, dbdoc/) — committed
   db_supplement_extract.sql  # functions+policies+enums query              — committed
   db_graph.py                # glue build                                  — committed
   test_db_graph.py           # tests                                       — committed
-dbdoc/                       # tbls output (md, ER, schema.json)           — COMMITTED (tbls convention)
+  README.md                  # refresh command sequence + prerequisites    — committed
+dbdoc/                       # tbls output (md, ER; NO schema.json — disabled) — COMMITTED (tbls convention)
 db-graph-out/
   schema_tbls.json           # tbls JSON (glue input)  — GITIGNORED
   catalog_extra.json         # gap extract (glue input)— GITIGNORED
@@ -74,7 +81,7 @@ db-graph-out/
   FUNCTIONS.md POLICIES.md TYPES.md DB_AGENT_INDEX.md   — COMMITTED
 ```
 
-**Refresh:** `set TBLS_DSN=…` → `tbls doc` → `tbls out --format json -o db-graph-out/schema_tbls.json` → run the gap extract (psql or MCP → `catalog_extra.json`) → `.tools/python/Scripts/python tools/db-graph/db_graph.py`.
+**Refresh** (also documented in `tools/db-graph/README.md`): `set TBLS_DSN=…` → `tbls doc` → `tbls out -t json -o db-graph-out/schema_tbls.json` → run the gap extract (psql or MCP → `catalog_extra.json`) → `.tools/python/Scripts/python tools/db-graph/db_graph.py`.
 
 ## Prerequisites (confirm before implementation)
 

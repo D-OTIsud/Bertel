@@ -19,10 +19,11 @@ BEGIN
   ASSERT (SELECT relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE n.nspname = 'public' AND c.relname = 'object_act'),
          'object_act does not have RLS enabled (migration_object_act_rls.sql not applied)';
+  -- §38 (8p): read_object_act adopts the set-based form (current_user_extended_object_ids); accept either.
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act'
                  AND policyname='read_object_act' AND cmd='SELECT'
-                 AND COALESCE(qual,'') LIKE '%can_read_object%'),
-         'read_object_act policy missing / not gated on api.can_read_object';
+                 AND (COALESCE(qual,'') LIKE '%can_read_object%' OR COALESCE(qual,'') LIKE '%current_user_extended_object_ids%')),
+         'read_object_act policy missing / not gated (can_read_object or §38 set-based form)';
   -- §47 (8o): object_act write policy is now the per-command canonical triple (FOR ALL retired).
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='object_act'
                  AND policyname='canonical_ins_object_act' AND cmd='INSERT'

@@ -15,6 +15,13 @@ DO $$
 DECLARE
   t text;
   v_missing text := '';
+  v_read_missing text := '';
+  read_tables text[] := ARRAY[
+    'object_place','object_price','object_capacity','object_zone','object_org_link','object_origin',
+    'object_fma_occurrence','object_pet_policy','object_menu','object_meeting_room','object_iti_practice',
+    'object_iti_stage','object_iti_info','object_iti_associated_object','object_iti_profile','opening_period',
+    'object_classification','object_amenity','object_environment_tag','object_language','object_payment_method',
+    'promotion_object','object_relation','object_iti_section','object_act'];
   tables text[] := ARRAY[
     'opening_period','opening_schedule','opening_time_period','opening_time_period_weekday',
     'opening_time_frame','object_language','object_payment_method','object_environment_tag',
@@ -51,7 +58,18 @@ BEGIN
   ASSERT v_missing = '', 'per-command coverage gaps (§47 8o not applied / incomplete): ' || v_missing;
   ASSERT has_function_privilege('anon','api.user_can_write_object_canonical(text)','EXECUTE'),
          'P0.3 heritage: anon must keep EXECUTE on api.user_can_write_object_canonical(text)';
-  RAISE NOTICE 'structural per-command coverage OK (58 tables, 0 FOR ALL).';
+  -- §47/§38 (8p): the 25 flat child read policies use the set-based form (current_user_extended_object_ids),
+  -- not the per-row can_read_object() scalar. Set-equivalent to published OR extended (§36/§38).
+  FOREACH t IN ARRAY read_tables LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename=t
+                   AND policyname='read_'||t AND cmd='SELECT'
+                   AND COALESCE(qual,'') LIKE '%current_user_extended_object_ids%'
+                   AND COALESCE(qual,'') NOT LIKE '%can_read_object%') THEN
+      v_read_missing := v_read_missing || t || ' ';
+    END IF;
+  END LOOP;
+  ASSERT v_read_missing = '', 'set-based read gate missing/old-form (§38 8p not applied): ' || v_read_missing;
+  RAISE NOTICE 'structural per-command coverage OK (58 tables, 0 FOR ALL) + 25 set-based read gates.';
 END$$;
 
 -- ============ DO #2 — personas (INVARIANT behaviour; the Task 12 pre/post probe) ============

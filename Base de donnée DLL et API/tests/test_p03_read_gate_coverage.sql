@@ -29,12 +29,16 @@ BEGIN
   END IF;
 
   -- 2) Every table has a SELECT-capable policy referencing the read gate.
+  --    §38 (8p): the 25 flat policies adopted the set-based form (current_user_extended_object_ids),
+  --    which references neither can_read_object nor can_read_extended — accept it as an equivalent gate.
+  --    The ~15 nested-EXISTS policies (menu items, opening sub-tree, location, tag_link, media_tag)
+  --    still use can_read_object/can_read_extended.
   SELECT string_agg(t, ', ') INTO v_bad
   FROM unnest(v_tables) AS t
   WHERE NOT EXISTS (
     SELECT 1 FROM pg_policies p
     WHERE p.schemaname = 'public' AND p.tablename = t AND p.cmd IN ('SELECT','ALL')
-      AND COALESCE(p.qual,'') ILIKE ANY (ARRAY['%can_read_object%','%can_read_extended%'])
+      AND COALESCE(p.qual,'') ILIKE ANY (ARRAY['%can_read_object%','%can_read_extended%','%current_user_extended_object_ids%'])
   );
   IF v_bad IS NOT NULL THEN
     RAISE EXCEPTION 'P0.3: tables missing a read-gate policy: %', v_bad;

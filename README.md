@@ -149,6 +149,8 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_facet_applicabil
 psql -d votre_database -f "Base de donnée DLL et API/migration_object_fma_write_policy.sql"
 # 5l. §47 convergence: 93 politiques FOR ALL → triples par commande (canonical/admin_ins/upd/del) sur 57 tables enfant
 psql -d votre_database -f "Base de donnée DLL et API/migration_write_policy_percommand.sql"
+# 5m. §38 lectures: 25 politiques de lecture plates passent au gabarit ensembliste (InitPlan unique au lieu d'un scalaire par ligne)
+psql -d votre_database -f "Base de donnée DLL et API/migration_child_read_gate_setbased.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"

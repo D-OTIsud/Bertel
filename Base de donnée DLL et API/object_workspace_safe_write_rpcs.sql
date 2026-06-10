@@ -965,6 +965,7 @@ BEGIN
 END;
 $$;
 
+-- ⚠ BODY SYNC: this function body must stay byte-identical to the copy in migration_actor_links_editor.sql (8r re-applies it after this file on fresh installs). Edit BOTH or fresh ≠ live.
 CREATE OR REPLACE FUNCTION api.save_object_relations(p_object_id text, p_payload jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql

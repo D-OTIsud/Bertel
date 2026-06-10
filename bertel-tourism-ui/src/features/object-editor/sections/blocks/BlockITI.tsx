@@ -19,8 +19,8 @@ function repHeader(columns: string, labels: string[]) {
         textTransform: 'uppercase',
       }}
     >
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
+      {labels.map((label, index) => (
+        <span key={`${label}-${index}`}>{label}</span>
       ))}
     </div>
   );
@@ -41,11 +41,8 @@ export function BlockITI({ editor, folded }: SectionProps) {
     });
   }
 
-  const traceLabel = itinerary.geometrySummary
-    ? 'Trace GPX importée'
-    : itinerary.traceEditable
-      ? 'Trace éditable'
-      : 'Trace verrouillée';
+  // traceEditable is loader-hardcoded false — no editable-trace state exists today (§48).
+  const traceLabel = itinerary.geometrySummary ? 'Trace GPX importée' : 'Aucune trace — import requis';
 
   return (
     <Fs
@@ -53,7 +50,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
       title="Tracé, étapes & praticabilité"
       sub="GPX, distance, dénivelé, durée, balisage, type de boucle, waypoints, conditions et équipement"
       folded={folded}
-      pill={itinerary.unavailableReason ? { tone: 'warn', label: 'Non applicable' } : { tone: itinerary.geometrySummary || itinerary.traceEditable ? 'ok' : 'warn', label: traceLabel }}
+      pill={itinerary.unavailableReason ? { tone: 'warn', label: 'Non applicable' } : { tone: itinerary.geometrySummary ? 'ok' : 'warn', label: traceLabel }}
     >
       {/* §46 type-gated itinerary module — the WHOLE section body edits `itinerary`,
           so the notice replaces everything when gated */}

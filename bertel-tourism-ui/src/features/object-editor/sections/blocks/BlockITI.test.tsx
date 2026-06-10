@@ -17,6 +17,19 @@ describe('BlockITI — honest controls (§48)', () => {
 
     expect(screen.queryByText('Déposer un fichier GPX ou KML')).not.toBeInTheDocument();
     expect(screen.getByText(/import de données/i)).toBeInTheDocument();
+    expect(screen.getByText(/import de données/i).closest('.dropzone')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('renders honest empty-trace pill and empty-state text when no geometry', () => {
+    const modules = fullModulesFixture();
+    modules.itinerary.geometrySummary = '';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockITI editor={result.current} permissions={allowAll} />);
+
+    // The dropzone inner text still says "Aucune trace importée"
+    expect(screen.getByText('Aucune trace importée')).toBeInTheDocument();
+    // The pill must be the honest "no trace" label, not the stale "Trace verrouillée"
+    expect(screen.getByText('Aucune trace — import requis')).toBeInTheDocument();
   });
 
   it('renders no inert seasonal-availability picker', () => {

@@ -22,3 +22,11 @@ psql "%TBLS_DSN%" -tAf tools/db-graph/db_supplement_extract.sql > db-graph-out/c
 ```
 
 Outputs: `dbdoc/` (committed), `db-graph-out/graph.json` + `*.md` (committed), `graph.html` + the JSON inputs (gitignored).
+
+## Viewer (`graph.html`)
+Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),
+filter chips by node kind and table domain (with all/none shortcuts), search, wheel-zoom + drag-pan,
+and click-a-node to highlight its edges/neighbors and list its connections (clickable — click-through
+pans to the target; background click clears). Function/policy/trigger labels appear past ~1.3× zoom to
+keep the default view readable. Re-render after template changes with
+`.tools/python/Scripts/python.exe tools/db-graph/db_graph.py` (re-uses the existing JSON inputs).

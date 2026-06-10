@@ -19,10 +19,10 @@ export interface SectionGroup {
 const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
   HEB: 'Chambres & séminaire',
   RES: 'Cuisine & service',
-  ASC: 'Formules & saison',
+  ASC: 'Fiche activité',
   ITI: 'Tracé & étapes',
   VIS: 'Visite & médiation',
-  SRV: 'Prestations & zone',
+  SRV: 'Prestations',
   FMA: 'Dates & programmation',
 };
 

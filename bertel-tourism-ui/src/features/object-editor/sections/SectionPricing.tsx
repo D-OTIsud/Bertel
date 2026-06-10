@@ -57,10 +57,12 @@ export function SectionPricing({ editor, folded }: SectionProps) {
         renderRow={(price, index) => (
           <>
             <span className="rep-row__handle" aria-hidden />
+            {/* §48: kindLabel is derived from the kind ref on reload — the saver only persists kind_id/kind_code; edit the kind via the Catégorie select. */}
             <Input
               value={price.kindLabel}
               placeholder="Libellé tarif"
-              onChange={(kindLabel) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { kindLabel }))}
+              readOnly
+              onChange={() => undefined}
             />
             <Input
               value={price.amount}

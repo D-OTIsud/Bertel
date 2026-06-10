@@ -18,8 +18,8 @@ export function BlockVIS({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="05"
-      title="Visite, médiation & accessibilité"
-      sub="Sous-type patrimonial, modes de visite, tarifs, horaires basse/haute saison, publics"
+      title="Visite & médiation"
+      sub="Modes de visite et équipements de médiation — tarifs gérés en §13, horaires en §14"
       folded={folded}
       pill={{
         tone: visitModes > 0 || pricing.prices.length > 0 ? 'ok' : 'warn',

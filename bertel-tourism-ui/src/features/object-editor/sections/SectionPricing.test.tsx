@@ -16,6 +16,17 @@ describe('SectionPricing — discounts (§48)', () => {
     expect(result.current.dirtySections.pricing).toBe(true);
   });
 
+  it('renders the price label read-only (kindLabel is derived from the kind ref — §48)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    // getByDisplayValue('Adulte') is ambiguous here: the Catégorie <select>'s
+    // selected option also displays 'Adulte' — target the label input by placeholder.
+    const labelInput = screen.getByPlaceholderText('Libellé tarif');
+    expect(labelInput).toHaveDisplayValue('Adulte');
+    expect(labelInput).toHaveAttribute('readonly');
+  });
+
   it('typing a percent clears any amount on the same row (chk_discount_xor)', () => {
     const modules = fullModulesFixture();
     modules.pricing.discounts = [{ recordId: 'd1', conditions: 'Groupes', discountPercent: '', discountAmount: '15', currency: 'EUR', minGroupSize: '', maxGroupSize: '', validFrom: '', validTo: '', source: '' }];

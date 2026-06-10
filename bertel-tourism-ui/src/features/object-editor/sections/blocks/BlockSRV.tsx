@@ -16,8 +16,8 @@ export function BlockSRV({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="05"
-      title="Prestations & zone d'intervention"
-      sub="Prestations délivrées au comptoir, communes desservies, langues et horaires saisonniers"
+      title="Prestations au comptoir"
+      sub="Prestations délivrées au comptoir — langues gérées en §12, horaires en §14"
       folded={folded}
       pill={{
         tone: selectedCount > 0 ? 'ok' : 'warn',

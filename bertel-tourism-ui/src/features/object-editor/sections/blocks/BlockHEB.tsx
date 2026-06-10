@@ -203,7 +203,15 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       </div>
       {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise).
           petPolicy stays: this block is its SOLE editing surface (not duplicated in §07). */}
-      <OwnedElsewhereNote num="07" label="Capacité & cadre" />
+      <OwnedElsewhereNote
+        num="07"
+        label="Capacité & cadre"
+        summary={
+          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
+            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
+            : undefined
+        }
+      />
       <div className="grid-3">
         <div>
           <Toggle

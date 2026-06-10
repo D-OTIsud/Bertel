@@ -40,7 +40,7 @@ export function BlockRES({ editor, folded }: SectionProps) {
     <Fs
       num="05"
       title="Cuisine, cartes & service"
-      sub="Cuisines & spécialités, capacité couverts, ticket moyen, cartes PDF, horaires midi / soir, services"
+      sub="Cuisines, cartes & menus PDF — capacité groupes en §07, horaires en §14"
       folded={folded}
       pill={{
         tone: activeMenus > 0 ? 'ok' : 'warn',

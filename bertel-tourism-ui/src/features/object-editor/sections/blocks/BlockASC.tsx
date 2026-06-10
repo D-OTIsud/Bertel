@@ -20,8 +20,8 @@ export function BlockASC({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="05"
-      title="Formules, public & saison"
-      sub="Sous-type d'activité, sessions/forfaits, niveau, public cible, fenêtre saisonnière, conditions"
+      title="Fiche activité & encadrement"
+      sub="Durée, participants, âge, niveau, encadrement et équipements de l'activité"
       folded={folded}
       pill={
         activity.unavailableReason
@@ -119,7 +119,7 @@ export function BlockASC({ editor, folded }: SectionProps) {
       )}
 
       {/* §48 single-owner: pricing formulas are edited in §13 only (last-edit-wins trap otherwise) */}
-      <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${pricing.prices.length} formule(s)`} />
+      <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${formulaCount} formule(s)`} />
 
       {/* §46 activity module (secondary sites) — suppressed when gated; the notice already rendered above */}
       {!activity.unavailableReason && activity.equipmentProvided && (

@@ -67,10 +67,14 @@ def load_extra(extra):
         pid = "policy:%s.%s:%s" % (p["schema"], p["table"], p["name"])
         tid = "%s.%s" % (p["schema"], p["table"])
         pred = " | ".join(x for x in [p.get("qual"), p.get("with_check")] if x) or ""
+        # cap predicate size in the committed artifacts, but make the cut visible —
+        # a silent mid-word truncation reads as a complete (wrong) predicate
+        if len(pred) > 400:
+            pred = pred[:400] + " …[truncated — full text in catalog_extra.json or live pg_policies]"
         nodes.append({"id": pid, "kind": "policy", "label": p["name"], "schema": p["schema"],
                       "domain": None, "doc": None,
                       "props": {"table": tid, "cmd": p.get("cmd", ""), "roles": p.get("roles") or [],
-                                "predicate": pred[:400]}})
+                                "predicate": pred}})
         edges.append({"source": pid, "target": tid, "kind": "gates", "props": {}})
     for en in extra.get("enums", []):
         eid = "%s.%s" % (en["schema"], en["name"])

@@ -55,6 +55,68 @@ describe('editor publication validation', () => {
     });
   });
 
+  it('warns when no PUBLIC contact exists (internal-only is not enough)', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], isPublic: false },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '03',
+      message: expect.stringContaining('public'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn about contacts when a public contact exists', () => {
+    const draft = fullModulesFixture();
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03')).toBe(false);
+  });
+
+  it('warns on a malformed e-mail contact before save', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'email', value: 'pas-un-email' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '03',
+      message: expect.stringContaining('format'),
+      tone: 'warn',
+    });
+  });
+
+  it('warns on a malformed phone contact', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'phone', value: 'abc' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03' && /format/.test(w.message))).toBe(true);
+  });
+
+  it('does not flag well-formed contact values', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'phone', value: '+262 692 12 34 56' },
+      { ...draft.contacts.objectItems[0], id: 'c2', kindCode: 'email', value: 'contact@otisud.re' },
+      { ...draft.contacts.objectItems[0], id: 'c3', kindCode: 'website', value: 'https://www.otisud.re' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03' && /format/.test(w.message))).toBe(false);
+  });
+
   it('accepts a commune given by its INSEE code alone', () => {
     const draft = fullModulesFixture();
     draft.location.main.city = '';

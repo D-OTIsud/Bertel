@@ -31,6 +31,44 @@ function canUsePublicationGate(permissions: ObjectWorkspacePermissions): boolean
   return publication.canDirectWrite || publication.canPrepareProposal || publication.canSubmitProposal;
 }
 
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Heuristic kind family from the ref contact_kind code (codes vary: phone/mobile/fax/email/website…). */
+function classifyContactKind(kindCode: string): 'email' | 'phone' | 'url' | 'other' {
+  const code = kindCode.toLowerCase();
+  if (code.includes('mail')) return 'email';
+  if (/(phone|tel|mobile|fax|gsm)/.test(code)) return 'phone';
+  if (/(web|site|url)/.test(code)) return 'url';
+  return 'other';
+}
+
+/**
+ * Soft pre-save format check (warn-only): the DB only enforces the e-mail shape,
+ * and only at save time — surface obvious slips before that. Empty values are the
+ * presence rule's concern, not a format issue.
+ */
+function isContactValueWellFormed(kindCode: string, value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+  switch (classifyContactKind(kindCode)) {
+    case 'email':
+      return EMAIL_SHAPE.test(trimmed);
+    case 'phone':
+      return /^[+0-9 ().\-/]+$/.test(trimmed) && (trimmed.match(/\d/g)?.length ?? 0) >= 6;
+    case 'url':
+      try {
+        new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+        return true;
+      } catch {
+        return false;
+      }
+    default:
+      return true;
+  }
+}
+
 const VALIDATION_RULES: ValidationRule[] = [
   ({ draft }) =>
     hasText(draft.generalInfo.name)
@@ -65,9 +103,22 @@ const VALIDATION_RULES: ValidationRule[] = [
       ? null
       : { section: '06', message: 'Ajoutez au moins un média publié pour améliorer la fiche.', tone: 'warn' },
   ({ draft }) =>
-    draft.contacts.objectItems.some((item) => hasText(item.value))
+    // An internal-only channel is not published — the public card needs a PUBLIC contact.
+    draft.contacts.objectItems.some((item) => hasText(item.value) && item.isPublic)
       ? null
-      : { section: '03', message: 'Ajoutez un contact public ou opérationnel.', tone: 'warn' },
+      : { section: '03', message: 'Ajoutez au moins un contact public (les canaux internes ne sont pas publiés).', tone: 'warn' },
+  ({ draft }) => {
+    const malformed = draft.contacts.objectItems.filter(
+      (item) => !isContactValueWellFormed(item.kindCode, item.value),
+    );
+    return malformed.length === 0
+      ? null
+      : {
+          section: '03',
+          message: `${malformed.length} contact(s) au format invalide — vérifiez e-mail, téléphone ou URL.`,
+          tone: 'warn',
+        };
+  },
   ({ draft }) =>
     draft.openings.periods.length > 0
       ? null

@@ -1,13 +1,16 @@
 import { Trash2 } from 'lucide-react';
-import { Fs, Repeater, Input, ReferenceSelect } from '../primitives';
+import { Fs, SortableList, Input, ReferenceSelect } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceContactItem } from '../../../services/object-workspace-parser';
 import { resolveWebPlatform } from '../../../lib/web-platform';
+import { reindexContactPositions } from './contacts-reorder';
 
-/** Section 03 — contact channels (design: edit-primitives repeater rows). */
+/** Section 03 — contact channels (design: edit-primitives sortable rows). */
 export function SectionContacts({ editor, folded }: SectionProps) {
   const contacts = editor.draft.contacts;
   const kindOptionsAvailable = contacts.kindOptions.length > 0;
+  const linkedContactsCount =
+    (contacts.relatedActorContactsCount ?? 0) + (contacts.relatedOrganizationContactsCount ?? 0);
 
   function updateItem(id: string, patch: Partial<ObjectWorkspaceContactItem>) {
     editor.replaceModule('contacts', {
@@ -46,6 +49,14 @@ export function SectionContacts({ editor, folded }: SectionProps) {
     });
   }
 
+  /** Drag reorder — persist the new order through `position` (drawer sorts on it). */
+  function reorderItems(next: ObjectWorkspaceContactItem[]) {
+    editor.replaceModule('contacts', {
+      ...contacts,
+      objectItems: reindexContactPositions(next),
+    });
+  }
+
   /**
    * Mark one row as the primary channel for its kind. Mirrors the saver's
    * per-kind dedupe in saveObjectWorkspaceContacts (one is_primary per kind):
@@ -66,27 +77,25 @@ export function SectionContacts({ editor, folded }: SectionProps) {
   }
 
   return (
-    <Fs num="03" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
+    <Fs num="03" title="Contacts" sub="Téléphones, e-mail, web, réseaux sociaux" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
       {!kindOptionsAvailable && (
         <p className="contacts-notice" role="status">
           Les types de contact ne sont pas disponibles : le référentiel des types de contact n'a pas
           pu être chargé. Les canaux existants restent modifiables ; rechargez la page pour réessayer.
         </p>
       )}
-      <Repeater
+      <SortableList
         items={contacts.objectItems}
-        getKey={(it) => it.id}
+        getId={(it) => it.id}
+        onReorder={reorderItems}
         columns="14px 130px 150px 1fr auto auto auto"
-        addLabel="Ajouter un canal de contact"
-        onAdd={addItem}
-        renderRow={(it) => {
+        renderItem={(it) => {
           // URL-valued contacts (booking platform, website, social…) get the platform
           // favicon as a prefix; the URL stays fully visible and editable. Value-driven —
           // see lib/web-platform. onError hides the icon if the favicon fails to load.
           const platform = resolveWebPlatform(it.value);
           return (
             <>
-              <span className="rep-row__handle" aria-hidden />
               <ReferenceSelect
                 value={it.kindCode}
                 options={contacts.kindOptions}
@@ -166,6 +175,16 @@ export function SectionContacts({ editor, folded }: SectionProps) {
           );
         }}
       />
+      <button type="button" className="rep-add" onClick={addItem}>
+        + Ajouter un canal de contact
+      </button>
+      {linkedContactsCount > 0 && (
+        <p className="contacts-notice contacts-notice--linked">
+          {contacts.relatedActorContactsCount ?? 0} contact(s) d’acteurs et{' '}
+          {contacts.relatedOrganizationContactsCount ?? 0} contact(s) d’organisations liés sont
+          aussi publiés sur la fiche — gérés via les sections 17 (Rattachements) et 18 (Fournisseur).
+        </p>
+      )}
     </Fs>
   );
 }

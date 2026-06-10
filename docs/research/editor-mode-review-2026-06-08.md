@@ -38,7 +38,7 @@ modal, redesigned from a user mockup).
 Main walk (HEB / HLO):
 - [x] §01 Identité & taxonomie
 - [x] §02 Localisation
-- [ ] §03 Contacts
+- [x] §03 Contacts
 - [ ] §04 Descriptions
 - [ ] §05 Chambres & séminaire (BlockHEB)
 - [ ] §06 Médias
@@ -188,6 +188,33 @@ corpus combobox + pending-change approval flow, draggable GPS pin-map with confi
 **Deferred (§02):** ref-data **admin UI** for `ref_commune` (activate/deactivate/extend the commune
 scope from the app — today it takes SQL/Studio; the RLS write path already exists). Candidate for a
 small ref-data management page alongside other `ref_*` catalogs, post-MVP.
+
+---
+
+## §03 — Contacts
+
+Component: `sections/SectionContacts.tsx`. **Healthiest section reviewed so far** — the §48 pass
+(`c809a67` + `3a96477`) already added the Public/Interne toggle, the per-kind ★ primary with
+kind-change reconcile, and honest a11y. Persistence verified end-to-end (2-agent workflow map):
+direct PostgREST on `contact_channel`; DB enforces `UNIQUE(object_id,kind_id,value)`, one-primary-
+per-kind (`uq_contact_primary`), e-mail shape (trigger); RLS per-command canonical (§47 class D).
+**No write-traps** — every control persists.
+
+| Element | ⑤ | Decision |
+|---------|----|----------|
+| Type / Rôle / Valeur (favicon URL) / Public-Interne / ★ principal / Suppr / Ajout | ✅ | Keep — §48 quality. |
+| Sub-title « …dirigeants » | ④ | **DONE — replaced with « réseaux sociaux »** (the director contact lives in §18 Fournisseur). |
+| Decorative drag handle (`position` persisted, no reorder UI) | ⚠️→✅ | **DONE — real drag & drop** via the existing `SortableList` (dnd-kit, keyboard-accessible); `reindexContactPositions` materializes the new order into `position` (the saver persists it; the drawer sorts on `is_primary DESC, position`). |
+| Dead counters `relatedActor/OrganizationContactsCount` (computed, rendered nowhere since the drawer workspace panel died) | ⚠️→✅ | **DONE — liaison note**: « N contact(s) d'acteurs et M d'organisations liés sont aussi publiés sur la fiche — gérés via §17/§18 ». The editor now sees everything the public drawer aggregates (object + actor + org contacts). |
+| Validation presence-only, warn-only | ④→✅ | **DONE — hardened**: the §03 warning now requires a **PUBLIC** contact (an internal-only channel no longer satisfies it), and a new warn flags malformed values pre-save (e-mail shape / phone charset+≥6 digits / URL parse — heuristic kind classification on the ref codes). DB stays the hard gate for e-mail. |
+
+**Backend findings logged (not §03 UI scope):** (a) stale `roleCode` silently resolves to `role_id NULL`
+at save (kind fails loudly; role doesn't); (b) the contacts reconcile is N sequential PostgREST calls —
+non-atomic, a mid-loop constraint failure leaves partial state; inserts run before deletes, so a
+delete-primary + add-new-primary same-kind in one save can hit `uq_contact_primary` (loud abort);
+(c) **`pub_contacts_public` exposes public contacts of DRAFT objects to anon direct PostgREST**
+(`USING (is_public IS TRUE)` only — diverges from the `can_read_object` read-gate doctrine; predates
+the §38/§47 sweeps). (c) is the one worth a backend pass.
 | Pin map (drag + confirm) | ✅ | Keep. |
 
 **Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS

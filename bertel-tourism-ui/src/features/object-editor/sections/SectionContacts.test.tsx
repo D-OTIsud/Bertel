@@ -163,6 +163,70 @@ describe('SectionContacts', () => {
   });
 });
 
+describe('SectionContacts — review round (sub-title, liaison note, reorder)', () => {
+  it('drops "dirigeants" from the sub-title (director lives in §18)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts()));
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText(/dirigeants/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/réseaux sociaux/i)).toBeInTheDocument();
+  });
+
+  it('surfaces the linked actor/org contacts published elsewhere (liaison note)', () => {
+    const { result } = renderHook(() =>
+      useObjectEditorState('o1', modulesWithContacts({
+        relatedActorContactsCount: 2,
+        relatedOrganizationContactsCount: 1,
+      })),
+    );
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    const note = screen.getByText(/aussi publiés sur la fiche/i);
+    expect(note).toHaveTextContent('2 contact(s) d’acteurs');
+    expect(note).toHaveTextContent('1 contact(s) d’organisations');
+    expect(note).toHaveTextContent(/Rattachements/);
+  });
+
+  it('shows no liaison note when there are no linked contacts', () => {
+    const { result } = renderHook(() =>
+      useObjectEditorState('o1', modulesWithContacts({
+        relatedActorContactsCount: 0,
+        relatedOrganizationContactsCount: 0,
+      })),
+    );
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText(/aussi publiés sur la fiche/i)).not.toBeInTheDocument();
+  });
+
+  it('renders a real drag handle per row (sortable list, no decorative span)', () => {
+    const modules = modulesWithContacts({
+      objectItems: [
+        contact({ id: 'c1', value: '+262 111' }),
+        contact({ id: 'c2', value: '+262 222', isPrimary: false, position: '1' }),
+      ],
+    });
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getAllByRole('button', { name: 'Déplacer' })).toHaveLength(2);
+  });
+});
+
+describe('reindexContactPositions', () => {
+  it('rewrites position from the new array order', async () => {
+    const { reindexContactPositions } = await import('./contacts-reorder');
+    const reordered = reindexContactPositions([
+      contact({ id: 'c2', position: '1' }),
+      contact({ id: 'c1', position: '0' }),
+    ]);
+    expect(reordered.map((item) => [item.id, item.position])).toEqual([
+      ['c2', '0'],
+      ['c1', '1'],
+    ]);
+  });
+});
+
 describe('SectionContacts — §48 contact flags', () => {
   // Fix 2: public/interne toggle — accessible name is now fixed 'Visibilité publique' (aria-label),
   // visible text flips Public / Interne; aria-pressed flips true → false.

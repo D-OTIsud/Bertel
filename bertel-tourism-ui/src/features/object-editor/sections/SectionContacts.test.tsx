@@ -164,15 +164,20 @@ describe('SectionContacts', () => {
 });
 
 describe('SectionContacts — §48 contact flags', () => {
+  // Fix 2: public/interne toggle — accessible name is now fixed 'Visibilité publique' (aria-label),
+  // visible text flips Public / Interne; aria-pressed flips true → false.
   it('toggles is_public and marks contacts dirty', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Public' })); });
+    const toggle = screen.getAllByLabelText('Visibilité publique')[0];
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    act(() => { fireEvent.click(toggle); });
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.contacts.objectItems[0].isPublic).toBe(false);
-    expect(screen.getByRole('button', { name: 'Interne' })).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle).toHaveTextContent('Interne');
     expect(result.current.dirtySections.contacts).toBe(true);
   });
 
@@ -191,5 +196,53 @@ describe('SectionContacts — §48 contact flags', () => {
     const items = result.current.draft.contacts.objectItems;
     expect(items.find((item) => item.id === 'c2')?.isPrimary).toBe(true);
     expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(false);
+  });
+
+  // Fix 1: kind-change must not create a double primary for the destination kind.
+  it('moving a primary row to a kind that already has a primary clears its star (no double primary)', () => {
+    const modules = fullModulesFixture();
+    modules.contacts.objectItems = [
+      { ...modules.contacts.objectItems[0], id: 'c1', kindCode: 'phone', isPrimary: true },
+      { ...modules.contacts.objectItems[0], id: 'c2', kindCode: 'email', kindLabel: 'E-mail', value: 'a@b.re', isPrimary: true },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.change(screen.getAllByLabelText('Type de contact')[0], { target: { value: 'email' } }); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    const items = result.current.draft.contacts.objectItems;
+    expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(false);
+    expect(items.find((item) => item.id === 'c2')?.isPrimary).toBe(true);
+  });
+
+  // Fix 5a: per-kind isolation — setting phone primary must not touch email primary.
+  it('setting a phone primary leaves an email primary untouched (per-kind isolation)', () => {
+    const modules = fullModulesFixture();
+    modules.contacts.objectItems = [
+      { ...modules.contacts.objectItems[0], id: 'c1', kindCode: 'phone', isPrimary: false },
+      { ...modules.contacts.objectItems[0], id: 'c2', kindCode: 'phone', value: '+262 111', isPrimary: true },
+      { ...modules.contacts.objectItems[0], id: 'c3', kindCode: 'email', kindLabel: 'E-mail', value: 'a@b.re', isPrimary: true },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getAllByLabelText('Définir comme canal principal')[0]); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    const items = result.current.draft.contacts.objectItems;
+    expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(true);
+    expect(items.find((item) => item.id === 'c2')?.isPrimary).toBe(false);
+    expect(items.find((item) => item.id === 'c3')?.isPrimary).toBe(true);
+  });
+
+  // Fix 5b: clicking the current primary star is a no-op and does not dirty the section.
+  it('clicking the current primary star is a no-op and does not dirty the section', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByLabelText('Canal principal pour ce type')); });
+
+    expect(result.current.dirtySections.contacts).toBe(false);
   });
 });

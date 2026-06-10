@@ -782,6 +782,8 @@
   min-height: 22px;
 }
 .object-editor button.pill-mini:disabled { opacity: 0.62; cursor: not-allowed; }
+.object-editor button.pill-mini { cursor: pointer; }
+.object-editor button.pill-mini:hover { filter: brightness(0.97); }
 
 /* ---------- Cross-cutting editor widgets (rail issues) ---------- */
 .object-editor .issue__dot {

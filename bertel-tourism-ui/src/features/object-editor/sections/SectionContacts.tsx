@@ -50,6 +50,7 @@ export function SectionContacts({ editor, folded }: SectionProps) {
    * Mark one row as the primary channel for its kind. Mirrors the saver's
    * per-kind dedupe in saveObjectWorkspaceContacts (one is_primary per kind):
    * setting a row primary clears the flag on every other row of the same kind.
+   * Kind comparison is lowercased to match the saver's normalisation (Fix 4).
    */
   function setPrimary(id: string) {
     const target = contacts.objectItems.find((item) => item.id === id);
@@ -57,7 +58,9 @@ export function SectionContacts({ editor, folded }: SectionProps) {
     editor.replaceModule('contacts', {
       ...contacts,
       objectItems: contacts.objectItems.map((item) =>
-        item.kindCode === target.kindCode ? { ...item, isPrimary: item.id === id } : item,
+        item.kindCode.toLowerCase() === target.kindCode.toLowerCase()
+          ? { ...item, isPrimary: item.id === id }
+          : item,
       ),
     });
   }
@@ -88,13 +91,19 @@ export function SectionContacts({ editor, folded }: SectionProps) {
                 value={it.kindCode}
                 options={contacts.kindOptions}
                 aria-label="Type de contact"
-                onChange={(code, opt) =>
+                onChange={(code, opt) => {
+                  // §48: a primary moving to a kind that already has one would silently demote
+                  // at save (per-kind dedupe in saveObjectWorkspaceContacts) — reconcile here instead.
+                  const destinationHasPrimary = contacts.objectItems.some(
+                    (other) => other.id !== it.id && other.kindCode.toLowerCase() === code.toLowerCase() && other.isPrimary,
+                  );
                   updateItem(it.id, {
                     kindCode: code,
                     kindId: opt?.id ?? it.kindId,
                     kindLabel: opt?.label ?? it.kindLabel,
-                  })
-                }
+                    ...(destinationHasPrimary ? { isPrimary: false } : {}),
+                  });
+                }}
               />
               <ReferenceSelect
                 value={it.roleCode}
@@ -127,19 +136,23 @@ export function SectionContacts({ editor, folded }: SectionProps) {
                 }
                 onChange={(v) => updateItem(it.id, { value: v })}
               />
+              {/* Fix 2: fixed aria-label so SRs announce a stable name; visible text + title flip with state;
+                  aria-pressed tracks the current state so assistive technology reads "pressed/not pressed". */}
               <button
                 type="button"
                 className="pill-mini"
+                aria-label="Visibilité publique"
                 aria-pressed={it.isPublic}
                 title={it.isPublic ? 'Visible publiquement — cliquer pour passer en interne' : 'Interne — cliquer pour rendre public'}
                 onClick={() => updateItem(it.id, { isPublic: !it.isPublic })}
               >
                 {it.isPublic ? 'Public' : 'Interne'}
               </button>
+              {/* Fix 3: no aria-pressed on the ★ button (it is an action — "set as primary" — not a toggle state);
+                  the action label flip + title already convey the state; pressed-state info lives in the label. */}
               <button
                 type="button"
                 className="pill-mini"
-                aria-pressed={it.isPrimary}
                 aria-label={it.isPrimary ? 'Canal principal pour ce type' : 'Définir comme canal principal'}
                 title={it.isPrimary ? 'Canal principal pour ce type' : 'Définir comme canal principal'}
                 onClick={() => setPrimary(it.id)}

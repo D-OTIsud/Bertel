@@ -1,6 +1,7 @@
 import { Field, Fs, Input, Repeater, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import { addPricingRow, removePricingRow, updatePricingRow } from './pricing-row';
+import { addDiscountRow, removeDiscountRow, updateDiscountRow } from './discount-row';
 
 const CATEGORY_OPTIONS = [
   { v: 'all', l: 'Tarif principal' },
@@ -25,7 +26,7 @@ export function SectionPricing({ editor, folded }: SectionProps) {
       title="Tarifs & extras"
       sub="Tarifs, options, saisons, publics et conditions"
       folded={folded}
-      pill={{ tone: 'ok', label: `${pricing.prices.length} ligne(s)` }}
+      pill={{ tone: 'ok', label: `${pricing.prices.length} ligne(s) · ${pricing.discounts.length} remise(s)` }}
     >
       <div
         style={{
@@ -122,6 +123,74 @@ export function SectionPricing({ editor, folded }: SectionProps) {
           />
         </Field>
       </div>
+
+      <div className="chip-group__label" style={{ marginTop: 14 }}>
+        Remises &amp; réductions
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '14px 1.6fr 80px 80px 70px 70px 110px 110px auto',
+          gap: 8, padding: '6px 12px', fontSize: 10, fontWeight: 700,
+          color: 'var(--ink-4)', letterSpacing: '0.06em', textTransform: 'uppercase',
+        }}
+      >
+        <span /><span>Conditions</span><span>%</span><span>Montant</span><span>Grp min</span><span>Grp max</span><span>Du</span><span>Au</span><span />
+      </div>
+      <Repeater
+        items={pricing.discounts}
+        getKey={(discount, index) => `${discount.recordId ?? 'discount'}-${index}`}
+        columns="14px 1.6fr 80px 80px 70px 70px 110px 110px auto"
+        addLabel="Ajouter une remise"
+        onAdd={() => editor.replaceModule('pricing', addDiscountRow(pricing))}
+        renderRow={(discount, index) => (
+          <>
+            <span className="rep-row__handle" aria-hidden />
+            <Input
+              value={discount.conditions}
+              placeholder="Conditions (ex. groupes, scolaires…)"
+              onChange={(conditions) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { conditions }))}
+            />
+            <Input
+              value={discount.discountPercent}
+              mono
+              suffix="%"
+              aria-label="Remise en pourcentage"
+              onChange={(discountPercent) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { discountPercent }))}
+            />
+            <Input
+              value={discount.discountAmount}
+              mono
+              suffix="€"
+              aria-label="Remise en montant"
+              onChange={(discountAmount) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { discountAmount }))}
+            />
+            <Input
+              value={discount.minGroupSize}
+              mono
+              onChange={(minGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { minGroupSize }))}
+            />
+            <Input
+              value={discount.maxGroupSize}
+              mono
+              onChange={(maxGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { maxGroupSize }))}
+            />
+            <Input
+              type="date"
+              value={discount.validFrom}
+              onChange={(validFrom) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validFrom }))}
+            />
+            <Input
+              type="date"
+              value={discount.validTo}
+              onChange={(validTo) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validTo }))}
+            />
+            <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removeDiscountRow(pricing, index))}>
+              Supprimer
+            </button>
+          </>
+        )}
+      />
     </Fs>
   );
 }

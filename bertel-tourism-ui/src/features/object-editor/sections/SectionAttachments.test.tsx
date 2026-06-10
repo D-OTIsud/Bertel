@@ -171,4 +171,22 @@ describe('SectionAttachments — §17 actor authoring (§48)', () => {
     expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Lier un acteur/i })).not.toBeInTheDocument();
   });
+
+  it('setting an actor primary clears only same-role rows (uq per (object, role))', () => {
+    const modules = fullModulesFixture();
+    modules.relationships.actors = [
+      { ...modules.relationships.actors[0], id: 'a1', displayName: 'Marie Guide', roleCode: 'operator', isPrimary: true },
+      { ...modules.relationships.actors[0], id: 'a2', displayName: 'Paul Op', roleCode: 'operator', isPrimary: false },
+      { ...modules.relationships.actors[0], id: 'a3', displayName: 'Jean Guide', roleCode: 'guide', isPrimary: true },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    // Promote Paul (operator) — Marie (same role) must clear, Jean (guide) must stay primary.
+    act(() => { fireEvent.click(screen.getAllByLabelText('Définir comme acteur principal pour ce rôle')[0]); });
+    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
+
+    const actors = result.current.draft.relationships.actors;
+    expect(actors.map((a) => a.isPrimary)).toEqual([false, true, true]);
+  });
 });

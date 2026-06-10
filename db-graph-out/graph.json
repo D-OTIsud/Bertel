@@ -3,10 +3,10 @@
   "table_count": 116,
   "view_count": 6,
   "function_count": 242,
-  "policy_count": 472,
+  "policy_count": 475,
   "trigger_count": 267,
   "enum_count": 9,
-  "edge_count": 1388
+  "edge_count": 1623
  },
  "nodes": [
   {
@@ -16122,7 +16122,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16138,7 +16139,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16154,7 +16156,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16170,7 +16173,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16186,7 +16190,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16202,7 +16207,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -16266,7 +16272,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -16474,7 +16481,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -16555,7 +16563,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -16571,7 +16580,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -17627,7 +17637,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17643,7 +17654,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17659,7 +17671,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17675,7 +17688,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17707,7 +17721,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17723,7 +17738,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17739,7 +17755,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17755,7 +17772,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17771,7 +17789,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17787,7 +17806,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17803,7 +17823,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17819,7 +17840,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17835,7 +17857,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17851,7 +17874,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17867,7 +17891,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17883,7 +17908,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17899,7 +17925,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17915,7 +17942,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17931,7 +17959,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17947,7 +17976,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -17963,7 +17993,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18059,7 +18090,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18075,7 +18107,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18171,7 +18204,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18187,7 +18221,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18203,7 +18238,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18219,7 +18255,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18235,7 +18272,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18251,7 +18289,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18331,7 +18370,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18347,7 +18387,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18427,7 +18468,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18443,7 +18485,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18459,7 +18502,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18475,7 +18519,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18491,7 +18536,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18507,7 +18553,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18523,7 +18570,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18539,7 +18587,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18555,7 +18604,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18571,7 +18621,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18587,7 +18638,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18603,7 +18655,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18619,7 +18672,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18635,7 +18689,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18651,7 +18706,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18667,7 +18723,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18891,7 +18948,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -18907,7 +18965,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19483,7 +19542,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19499,7 +19559,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19515,7 +19576,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19531,7 +19593,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19547,7 +19610,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19563,7 +19627,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19579,7 +19644,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19595,7 +19661,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19611,7 +19678,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19627,7 +19695,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19643,7 +19712,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19659,7 +19729,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19675,7 +19746,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19691,7 +19763,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19707,7 +19780,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19723,7 +19797,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19739,7 +19814,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19755,7 +19831,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19771,7 +19848,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19787,7 +19865,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -19836,7 +19915,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19852,7 +19932,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19868,7 +19949,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -19884,7 +19966,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -19901,7 +19984,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19917,7 +20001,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19934,7 +20019,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19950,7 +20036,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19967,7 +20054,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -19983,7 +20071,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -20000,7 +20089,8 @@
      "postgres",
      "service_role"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -20016,7 +20106,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -20400,7 +20491,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -20416,7 +20508,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -20432,7 +20525,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -20448,7 +20542,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -20560,7 +20655,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -20576,7 +20672,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21617,7 +21714,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21633,7 +21731,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21649,7 +21748,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21697,7 +21797,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21713,7 +21814,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21729,7 +21831,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21745,7 +21848,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21873,7 +21977,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -21889,7 +21994,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -22321,7 +22427,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -22337,7 +22444,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23297,7 +23405,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23313,7 +23422,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23329,7 +23439,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23345,7 +23456,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23361,7 +23473,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23377,7 +23490,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23393,7 +23507,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23409,7 +23524,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+    "predicate": "((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23617,7 +23733,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23633,7 +23750,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23649,7 +23767,8 @@
     "roles": [
      "public"
     ],
-    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+    "predicate": "(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
    }
   },
   {
@@ -23665,7 +23784,58 @@
     "roles": [
      "public"
     ],
-    "predicate": "true"
+    "predicate": "true",
+    "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:storage.objects:media_no_anon_write",
+   "kind": "policy",
+   "label": "media_no_anon_write",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "ALL",
+    "roles": [
+     "anon",
+     "authenticated"
+    ],
+    "predicate": "(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)",
+    "restrictive": true
+   }
+  },
+  {
+   "id": "policy:storage.objects:media_public_read",
+   "kind": "policy",
+   "label": "media_public_read",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(bucket_id = 'media'::text)"
+   }
+  },
+  {
+   "id": "policy:storage.objects:media_service_role_write",
+   "kind": "policy",
+   "label": "media_service_role_write",
+   "schema": "storage",
+   "domain": "policy",
+   "doc": null,
+   "props": {
+    "table": "storage.objects",
+    "cmd": "ALL",
+    "roles": [
+     "service_role"
+    ],
+    "predicate": "(bucket_id = 'media'::text) | (bucket_id = 'media'::text)"
    }
   },
   {
@@ -23827,6 +23997,19 @@
      "fixed_end_date"
     ]
    }
+  },
+  {
+   "id": "storage.objects",
+   "kind": "table",
+   "label": "objects",
+   "schema": "storage",
+   "domain": "other",
+   "doc": "(outside tbls scope — stub carrying RLS policies)",
+   "props": {
+    "columns": [],
+    "rls_enabled": true,
+    "external": true
+   }
   }
  ],
  "edges": [
@@ -23849,6 +24032,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.crm_task:update_crm_task_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_external_id:trg_audit_object_external_id",
    "target": "public.object_external_id",
    "kind": "trigger_on",
@@ -23867,9 +24056,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_external_id:update_object_external_id_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_external_id:trg_validate_org_object_type_object_external_id",
    "target": "public.object_external_id",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_external_id:trg_validate_org_object_type_object_external_id",
+   "target": "public.validate_org_object_type()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -23915,6 +24116,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.user_org_membership:update_user_org_membership_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.user_org_business_role:trg_audit_user_org_business_role",
    "target": "public.user_org_business_role",
    "kind": "trigger_on",
@@ -23933,6 +24140,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.user_org_business_role:update_user_org_business_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.user_org_admin_role:trg_audit_user_org_admin_role",
    "target": "public.user_org_admin_role",
    "kind": "trigger_on",
@@ -23948,6 +24161,12 @@
    "source": "trigger:public.user_org_admin_role:update_user_org_admin_role_updated_at",
    "target": "public.user_org_admin_role",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.user_org_admin_role:update_user_org_admin_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -23981,6 +24200,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.org_config:update_org_config_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_menu:trg_audit_object_menu",
    "target": "public.object_menu",
    "kind": "trigger_on",
@@ -23996,6 +24221,12 @@
    "source": "trigger:public.object_menu:update_object_menu_updated_at",
    "target": "public.object_menu",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_menu:update_object_menu_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24026,6 +24257,12 @@
    "source": "trigger:public.object_act:update_object_act_updated_at",
    "target": "public.object_act",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_act:update_object_act_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24095,9 +24332,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object:trg_object_version",
+   "target": "public.save_object_version()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object:trg_object_version_delete",
    "target": "public.object",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object:trg_object_version_delete",
+   "target": "public.save_object_version()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24107,9 +24356,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object:update_object_updated_at",
+   "target": "public.update_object_updated_at_business()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object:trg_increment_object_version",
    "target": "public.object",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object:trg_increment_object_version",
+   "target": "public.increment_object_version()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24179,6 +24440,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.crm_interaction:update_crm_interaction_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.opening_period:trg_audit_opening_period",
    "target": "public.opening_period",
    "kind": "trigger_on",
@@ -24194,6 +24461,12 @@
    "source": "trigger:public.opening_period:update_opening_period_updated_at",
    "target": "public.opening_period",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.opening_period:update_opening_period_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24215,9 +24488,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_description:trg_validate_org_object_type_object_description",
+   "target": "public.validate_org_object_type()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_description:update_object_description_updated_at",
    "target": "public.object_description",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_description:update_object_description_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24236,6 +24521,12 @@
    "source": "trigger:public.opening_time_period:update_opening_time_period_updated_at",
    "target": "public.opening_time_period",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.opening_time_period:update_opening_time_period_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24305,9 +24596,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.pending_change:update_pending_change_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.pending_change:trg_pending_change_after_insert",
    "target": "public.pending_change",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.pending_change:trg_pending_change_after_insert",
+   "target": "public.pending_change_after_insert()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24317,9 +24620,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.pending_change:trg_pending_change_after_update",
+   "target": "public.pending_change_after_update()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.pending_change:trg_pending_change_after_delete",
    "target": "public.pending_change",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.pending_change:trg_pending_change_after_delete",
+   "target": "public.pending_change_after_delete()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24365,6 +24680,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_iti_profile:update_object_iti_profile_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti_profile:trg_assert_facet_applicable",
    "target": "public.object_iti_profile",
    "kind": "trigger_on",
@@ -24392,6 +24713,12 @@
    "source": "trigger:public.object_iti_associated_object:update_object_iti_associated_object_updated_at",
    "target": "public.object_iti_associated_object",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_iti_associated_object:update_object_iti_associated_object_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24425,9 +24752,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_org_link:trg_validate_org_object_type_object_org_link",
+   "target": "public.validate_org_object_type()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_org_link:update_object_org_link_updated_at",
    "target": "public.object_org_link",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_org_link:update_object_org_link_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24449,6 +24788,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_zone:update_object_zone_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_price:trg_audit_object_price",
    "target": "public.object_price",
    "kind": "trigger_on",
@@ -24467,9 +24812,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_price:trg_update_cached_min_price",
+   "target": "public.update_object_cached_min_price()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_price:update_object_price_updated_at",
    "target": "public.object_price",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_price:update_object_price_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24491,6 +24848,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_sustainability_action:update_object_sustainability_action_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_org_role:trg_audit_ref_org_role",
    "target": "public.ref_org_role",
    "kind": "trigger_on",
@@ -24506,6 +24869,12 @@
    "source": "trigger:public.ref_org_role:update_ref_org_role_updated_at",
    "target": "public.ref_org_role",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_org_role:update_ref_org_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24527,9 +24896,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.media:trg_validate_media_dimensions",
+   "target": "public.validate_media_dimensions()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.media:trg_update_cached_main_image",
    "target": "public.media",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.media:trg_update_cached_main_image",
+   "target": "public.update_object_cached_main_image()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24539,9 +24920,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.media:update_media_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.media:trg_enforce_single_main_media",
    "target": "public.media",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.media:trg_enforce_single_main_media",
+   "target": "public.enforce_single_main_media()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24575,6 +24968,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.contact_channel:update_contact_channel_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_discount:trg_audit_object_discount",
    "target": "public.object_discount",
    "kind": "trigger_on",
@@ -24590,6 +24989,12 @@
    "source": "trigger:public.object_discount:update_object_discount_updated_at",
    "target": "public.object_discount",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_discount:update_object_discount_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24611,6 +25016,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.actor_object_role:update_actor_object_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti_stage:trg_audit_object_iti_stage",
    "target": "public.object_iti_stage",
    "kind": "trigger_on",
@@ -24626,6 +25037,12 @@
    "source": "trigger:public.object_iti_stage:update_object_iti_stage_updated_at",
    "target": "public.object_iti_stage",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_iti_stage:update_object_iti_stage_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24659,6 +25076,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_iti_section:update_object_iti_section_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti_section:trg_assert_facet_applicable",
    "target": "public.object_iti_section",
    "kind": "trigger_on",
@@ -24689,9 +25112,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_iti:trg_cache_iti_track",
+   "target": "public.regenerate_iti_track_cache()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti:update_object_iti_updated_at",
    "target": "public.object_iti",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_iti:update_object_iti_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24725,6 +25160,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_fma:update_object_fma_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_fma:trg_assert_facet_applicable",
    "target": "public.object_fma",
    "kind": "trigger_on",
@@ -24752,6 +25193,12 @@
    "source": "trigger:public.object_iti_practice:update_object_iti_practice_updated_at",
    "target": "public.object_iti_practice",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_iti_practice:update_object_iti_practice_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24797,6 +25244,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_meeting_room:update_object_meeting_room_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_meeting_room:trg_assert_facet_applicable",
    "target": "public.object_meeting_room",
    "kind": "trigger_on",
@@ -24839,6 +25292,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_place_description:update_object_place_description_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.meeting_room_equipment:trg_audit_meeting_room_equipment",
    "target": "public.meeting_room_equipment",
    "kind": "trigger_on",
@@ -24866,6 +25325,12 @@
    "source": "trigger:public.opening_schedule:update_opening_schedule_updated_at",
    "target": "public.opening_schedule",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.opening_schedule:update_opening_schedule_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24899,6 +25364,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_classification_value:update_ref_classification_value_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.incident_report:trg_audit_incident_report",
    "target": "public.incident_report",
    "kind": "trigger_on",
@@ -24929,6 +25400,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.incident_report:update_incident_report_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.user_permission:trg_audit_user_permission",
    "target": "public.user_permission",
    "kind": "trigger_on",
@@ -24944,6 +25421,12 @@
    "source": "trigger:public.user_permission:update_user_permission_updated_at",
    "target": "public.user_permission",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.user_permission:update_user_permission_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -24965,6 +25448,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_legal:update_object_legal_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.publication:trg_audit_publication",
    "target": "public.publication",
    "kind": "trigger_on",
@@ -24980,6 +25469,12 @@
    "source": "trigger:public.publication:update_publication_updated_at",
    "target": "public.publication",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.publication:update_publication_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25025,6 +25520,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.publication_object:update_publication_object_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.audit_template:trg_audit_audit_template",
    "target": "public.audit_template",
    "kind": "trigger_on",
@@ -25043,6 +25544,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.audit_template:update_audit_template_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.audit_criteria:trg_audit_audit_criteria",
    "target": "public.audit_criteria",
    "kind": "trigger_on",
@@ -25058,6 +25565,12 @@
    "source": "trigger:public.audit_criteria:update_audit_criteria_updated_at",
    "target": "public.audit_criteria",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.audit_criteria:update_audit_criteria_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25088,6 +25601,12 @@
    "source": "trigger:public.audit_session:update_audit_session_updated_at",
    "target": "public.audit_session",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.audit_session:update_audit_session_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25133,6 +25652,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.audit_result:update_audit_result_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_org_business_role:trg_audit_ref_org_business_role",
    "target": "public.ref_org_business_role",
    "kind": "trigger_on",
@@ -25148,6 +25673,12 @@
    "source": "trigger:public.ref_org_business_role:update_ref_org_business_role_updated_at",
    "target": "public.ref_org_business_role",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_org_business_role:update_ref_org_business_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25169,6 +25700,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_org_admin_role:update_ref_org_admin_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_permission:trg_audit_ref_permission",
    "target": "public.ref_permission",
    "kind": "trigger_on",
@@ -25184,6 +25721,12 @@
    "source": "trigger:public.ref_permission:update_ref_permission_updated_at",
    "target": "public.ref_permission",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_permission:update_ref_permission_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25217,6 +25760,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.org_permission:update_org_permission_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_taxonomy:trg_audit_object_taxonomy",
    "target": "public.object_taxonomy",
    "kind": "trigger_on",
@@ -25247,6 +25796,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_taxonomy:update_object_taxonomy_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_taxonomy:trg_validate_object_taxonomy_assignment",
    "target": "public.object_taxonomy",
    "kind": "trigger_on",
@@ -25262,6 +25817,12 @@
    "source": "trigger:public.ref_code_domain_registry:update_ref_code_domain_registry_updated_at",
    "target": "public.ref_code_domain_registry",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_domain_registry:update_ref_code_domain_registry_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25295,6 +25856,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_classification_scheme:update_ref_classification_scheme_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_classification:trg_audit_object_classification",
    "target": "public.object_classification",
    "kind": "trigger_on",
@@ -25325,9 +25892,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_classification:update_object_classification_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_classification:trg_enforce_classification_single_selection",
    "target": "public.object_classification",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_classification:trg_enforce_classification_single_selection",
+   "target": "public.enforce_classification_single_selection()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25346,6 +25925,12 @@
    "source": "trigger:public.ref_sustainability_action:update_ref_sustainability_action_updated_at",
    "target": "public.ref_sustainability_action",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_sustainability_action:update_ref_sustainability_action_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25391,6 +25976,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_menu_item:update_object_menu_item_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti_info:trg_audit_object_iti_info",
    "target": "public.object_iti_info",
    "kind": "trigger_on",
@@ -25406,6 +25997,12 @@
    "source": "trigger:public.object_iti_info:update_object_iti_info_updated_at",
    "target": "public.object_iti_info",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_iti_info:update_object_iti_info_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25439,6 +26036,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_menu_item_media:update_object_menu_item_media_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_iti_stage_media:trg_audit_object_iti_stage_media",
    "target": "public.object_iti_stage_media",
    "kind": "trigger_on",
@@ -25457,6 +26060,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_iti_stage_media:update_object_iti_stage_media_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_private_description:trg_audit_object_private_description",
    "target": "public.object_private_description",
    "kind": "trigger_on",
@@ -25472,6 +26081,12 @@
    "source": "trigger:public.object_private_description:update_object_private_description_updated_at",
    "target": "public.object_private_description",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_private_description:update_object_private_description_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25517,6 +26132,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.opening_time_period_weekday:update_opening_time_period_weekday_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.promotion:trg_audit_promotion",
    "target": "public.promotion",
    "kind": "trigger_on",
@@ -25532,6 +26153,12 @@
    "source": "trigger:public.promotion:update_promotion_updated_at",
    "target": "public.promotion",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.promotion:update_promotion_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25577,6 +26204,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_actor_role:update_ref_actor_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_object_relation_type:trg_audit_ref_object_relation_type",
    "target": "public.ref_object_relation_type",
    "kind": "trigger_on",
@@ -25595,6 +26228,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_object_relation_type:update_ref_object_relation_type_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_code:trg_audit_ref_code",
    "target": "public.ref_code",
    "kind": "trigger_on",
@@ -25610,6 +26249,12 @@
    "source": "trigger:public.ref_code:update_ref_code_updated_at",
    "target": "public.ref_code",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code:update_ref_code_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25655,6 +26300,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.opening_time_frame:update_opening_time_frame_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_iti_assoc_role:trg_audit_ref_iti_assoc_role",
    "target": "public.ref_iti_assoc_role",
    "kind": "trigger_on",
@@ -25673,6 +26324,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_iti_assoc_role:update_ref_iti_assoc_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.app_branding_settings:trg_audit_app_branding_settings",
    "target": "public.app_branding_settings",
    "kind": "trigger_on",
@@ -25688,6 +26345,12 @@
    "source": "trigger:public.app_branding_settings:update_app_branding_settings_updated_at",
    "target": "public.app_branding_settings",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.app_branding_settings:update_app_branding_settings_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25721,9 +26384,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_membership:update_object_membership_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_membership:trg_validate_org_object_type_object_membership",
    "target": "public.object_membership",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_membership:trg_validate_org_object_type_object_membership",
+   "target": "public.validate_org_object_type()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25745,6 +26420,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_contact_role:update_ref_contact_role_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_location:trg_audit_object_location",
    "target": "public.object_location",
    "kind": "trigger_on",
@@ -25760,6 +26441,12 @@
    "source": "trigger:public.object_location:update_object_location_updated_at",
    "target": "public.object_location",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_location:update_object_location_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25781,6 +26468,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_place:update_object_place_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_review:trg_audit_object_review",
    "target": "public.object_review",
    "kind": "trigger_on",
@@ -25799,9 +26492,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_review:trg_update_cached_rating_metrics",
+   "target": "public.update_object_cached_rating_metrics()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_review:update_object_review_updated_at",
    "target": "public.object_review",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_review:update_object_review_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25823,9 +26528,21 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_capacity_metric:trg_ref_capacity_metric_unit_change",
+   "target": "public.propagate_capacity_unit_change()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_capacity_metric:update_ref_capacity_metric_updated_at",
    "target": "public.ref_capacity_metric",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_capacity_metric:update_ref_capacity_metric_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25859,6 +26576,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_document:update_ref_document_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_review_source:trg_audit_ref_review_source",
    "target": "public.ref_review_source",
    "kind": "trigger_on",
@@ -25874,6 +26597,12 @@
    "source": "trigger:public.ref_review_source:update_ref_review_source_updated_at",
    "target": "public.ref_review_source",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_review_source:update_ref_review_source_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25895,6 +26624,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_sustainability_action_category:update_ref_sustainability_action_category_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.app_user_profile:trg_audit_app_user_profile",
    "target": "public.app_user_profile",
    "kind": "trigger_on",
@@ -25910,6 +26645,12 @@
    "source": "trigger:public.app_user_profile:update_app_user_profile_updated_at",
    "target": "public.app_user_profile",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.app_user_profile:update_app_user_profile_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25943,15 +26684,33 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_capacity:trg_object_capacity_sync_unit_ins",
+   "target": "public.sync_object_capacity_unit()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_capacity:trg_object_capacity_sync_unit_upd",
    "target": "public.object_capacity",
    "kind": "trigger_on",
    "props": {}
   },
   {
+   "source": "trigger:public.object_capacity:trg_object_capacity_sync_unit_upd",
+   "target": "public.sync_object_capacity_unit()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_capacity:update_object_capacity_updated_at",
    "target": "public.object_capacity",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_capacity:update_object_capacity_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -25973,6 +26732,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_group_policy:update_object_group_policy_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_pet_policy:trg_audit_object_pet_policy",
    "target": "public.object_pet_policy",
    "kind": "trigger_on",
@@ -25991,6 +26756,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_pet_policy:update_object_pet_policy_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_fma_occurrence:trg_audit_object_fma_occurrence",
    "target": "public.object_fma_occurrence",
    "kind": "trigger_on",
@@ -26006,6 +26777,12 @@
    "source": "trigger:public.object_fma_occurrence:update_object_fma_occurrence_updated_at",
    "target": "public.object_fma_occurrence",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_fma_occurrence:update_object_fma_occurrence_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -26039,6 +26816,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_origin:update_object_origin_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_legal_type:trg_audit_ref_legal_type",
    "target": "public.ref_legal_type",
    "kind": "trigger_on",
@@ -26054,6 +26837,12 @@
    "source": "trigger:public.ref_legal_type:update_ref_legal_type_updated_at",
    "target": "public.ref_legal_type",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_legal_type:update_ref_legal_type_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -26075,6 +26864,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_tag:update_ref_tag_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_price_period:trg_audit_object_price_period",
    "target": "public.object_price_period",
    "kind": "trigger_on",
@@ -26090,6 +26885,12 @@
    "source": "trigger:public.object_price_period:update_object_price_period_updated_at",
    "target": "public.object_price_period",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_price_period:update_object_price_period_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -26111,6 +26912,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.object_relation:update_object_relation_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_room_type:trg_audit_object_room_type",
    "target": "public.object_room_type",
    "kind": "trigger_on",
@@ -26126,6 +26933,12 @@
    "source": "trigger:public.object_room_type:update_object_room_type_updated_at",
    "target": "public.object_room_type",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_room_type:update_object_room_type_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -26219,6 +27032,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.actor:update_actor_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.actor_consent:trg_audit_actor_consent",
    "target": "public.actor_consent",
    "kind": "trigger_on",
@@ -26273,6 +27092,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.actor_channel:update_actor_channel_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.i18n_translation:trg_audit_i18n_translation",
    "target": "public.i18n_translation",
    "kind": "trigger_on",
@@ -26291,15 +27116,33 @@
    "props": {}
   },
   {
+   "source": "trigger:public.i18n_translation:trg_validate_i18n_translation_target",
+   "target": "public.validate_i18n_translation_target()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.i18n_translation:update_i18n_translation_updated_at",
    "target": "public.i18n_translation",
    "kind": "trigger_on",
    "props": {}
   },
   {
+   "source": "trigger:public.i18n_translation:update_i18n_translation_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_language:trg_ref_language_set_position",
    "target": "public.ref_language",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_language:trg_ref_language_set_position",
+   "target": "public.ref_language_set_position()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -26321,6 +27164,12 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_language:update_ref_language_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.ref_amenity:trg_audit_ref_amenity",
    "target": "public.ref_amenity",
    "kind": "trigger_on",
@@ -26336,6 +27185,12 @@
    "source": "trigger:public.ref_amenity:update_ref_amenity_updated_at",
    "target": "public.ref_amenity",
    "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_amenity:update_ref_amenity_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
    "props": {}
   },
   {
@@ -28351,6 +29206,54 @@
    }
   },
   {
+   "source": "policy:public.ref_code_mood:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_mood"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_mood:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_mood"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_menu_category:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_menu_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_menu_category:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_menu_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_dietary_tag:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_dietary_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_dietary_tag:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_dietary_tag"
+   }
+  },
+  {
    "source": "policy:public.ref_commune:admin_write_ref_commune",
    "target": "public.ref_commune",
    "kind": "gates",
@@ -28367,6 +29270,14 @@
    "target": "public.crm_task",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.object_version_default:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_default"
+   }
   },
   {
    "source": "policy:public.object_external_id:Lecture restreinte identifiants externes",
@@ -28441,6 +29352,14 @@
    "props": {}
   },
   {
+   "source": "policy:public.object_version_2026_05:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_05"
+   }
+  },
+  {
    "source": "policy:public.object_menu:canonical_del_object_menu",
    "target": "public.object_menu",
    "kind": "gates",
@@ -28463,6 +29382,22 @@
    "target": "public.object_menu",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:audit.audit_log_2026_07:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_07"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_07:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_07"
+   }
   },
   {
    "source": "policy:public.object_act:canonical_del_object_act",
@@ -28855,10 +29790,178 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_social_network:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_social_network"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_social_network:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_social_network"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_price_unit:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_price_unit"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_price_unit:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_price_unit"
+   }
+  },
+  {
    "source": "policy:public.ref_org_role:Lecture publique des rôles d'organisation",
    "target": "public.ref_org_role",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_meeting_equipment:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_meeting_equipment"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_meeting_equipment:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_meeting_equipment"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_opening_schedule_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_opening_schedule_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_opening_schedule_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_opening_schedule_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_demand_subtopic:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_demand_subtopic"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_demand_subtopic:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_demand_subtopic"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_allergen:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_allergen"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_allergen:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_allergen"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_cuisine_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_cuisine_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_cuisine_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_cuisine_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_iti_practice:Lecture publique des pratiques ITI",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_iti_practice"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_iti_practice:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_iti_practice"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_iti_practice:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_iti_practice"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_demand_topic:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_demand_topic"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_demand_topic:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_demand_topic"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_accommodation_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_accommodation_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_accommodation_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_accommodation_type"
+   }
   },
   {
    "source": "policy:public.media:canonical_del_media",
@@ -28891,6 +29994,22 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_transport_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_transport_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_transport_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_transport_type"
+   }
+  },
+  {
    "source": "policy:public.contact_channel:canonical_del_contact_channel",
    "target": "public.contact_channel",
    "kind": "gates",
@@ -28921,6 +30040,54 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_tourism_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_tourism_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_tourism_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_tourism_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_season_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_season_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_season_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_season_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_booking_status:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_booking_status"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_booking_status:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_booking_status"
+   }
+  },
+  {
    "source": "policy:public.object_discount:canonical_del_object_discount",
    "target": "public.object_discount",
    "kind": "gates",
@@ -28945,6 +30112,22 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_promotion_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_promotion_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_promotion_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_promotion_type"
+   }
+  },
+  {
    "source": "policy:public.actor_object_role:canonical_del_actor_object_role",
    "target": "public.actor_object_role",
    "kind": "gates",
@@ -28967,6 +30150,134 @@
    "target": "public.actor_object_role",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_activity_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_activity_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_activity_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_activity_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_partnership_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_partnership_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_partnership_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_partnership_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_assistance_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_assistance_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_assistance_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_assistance_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_destination_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_destination_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_destination_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_destination_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_document_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_document_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_document_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_document_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_insurance_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_insurance_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_insurance_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_insurance_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_feedback_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_feedback_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_feedback_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_feedback_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_event_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_event_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_event_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_event_type"
+   }
   },
   {
    "source": "policy:public.object_iti_stage:canonical_del_object_iti_stage",
@@ -29045,6 +30356,22 @@
    "target": "public.object_iti",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_package_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_package_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_package_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_package_type"
+   }
   },
   {
    "source": "policy:public.object_fma:canonical_del_object_fma",
@@ -29257,6 +30584,166 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_membership_campaign:admin_membership_campaign_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_campaign"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_campaign:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_campaign"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_campaign:pub_membership_campaign_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_campaign"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_campaign:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_campaign"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_incident_category:admin_incident_category_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_incident_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_incident_category:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_incident_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_incident_category:pub_incident_category_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_incident_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_incident_category:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_incident_category"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_room_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_room_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_room_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_room_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_view_type:Lecture publique des types de vue",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_view_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_view_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_view_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_view_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_view_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_view_type:Écriture admin des types de vue",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_view_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_amenity_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_amenity_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_amenity_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_amenity_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_tier:admin_membership_tier_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_tier"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_tier:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_tier"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_tier:pub_membership_tier_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_tier"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_membership_tier:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_membership_tier"
+   }
+  },
+  {
    "source": "policy:public.ref_classification_value:Lecture publique des valeurs de classification",
    "target": "public.ref_classification_value",
    "kind": "gates",
@@ -29267,6 +30754,102 @@
    "target": "public.ref_classification_value",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:audit.audit_log_2026_06:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_06"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_06:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_06"
+   }
+  },
+  {
+   "source": "policy:public.object_version_2026_03:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_03"
+   }
+  },
+  {
+   "source": "policy:public.object_version_2026_04:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_04"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_03:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_03"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_03:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_03"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_04:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_04"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_04:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_04"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_default:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_default"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_default:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_default"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_05:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_05"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_05:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_05"
+   }
   },
   {
    "source": "policy:public.incident_report:admin_incident_report",
@@ -29407,6 +30990,38 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_environment_tag:Lecture publique des tags d'environnement",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_environment_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_environment_tag:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_environment_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_environment_tag:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_environment_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_environment_tag:Écriture admin des tags d'environnement",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_environment_tag"
+   }
+  },
+  {
    "source": "policy:public.object_taxonomy:canonical_del_object_taxonomy",
    "target": "public.object_taxonomy",
    "kind": "gates",
@@ -29441,6 +31056,22 @@
    "target": "public.ref_code_taxonomy_closure",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_amenity_family:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_amenity_family"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_amenity_family:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_amenity_family"
+   }
   },
   {
    "source": "policy:public.tag_link:canonical_del_tag_link",
@@ -29827,6 +31458,30 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_media_tag:Lecture publique des tags média",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_media_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_media_tag:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_media_tag"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_media_tag:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_media_tag"
+   }
+  },
+  {
    "source": "policy:public.app_branding_settings:branding_settings_read_authenticated",
    "target": "public.app_branding_settings",
    "kind": "gates",
@@ -29837,6 +31492,38 @@
    "target": "public.app_branding_settings",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_weekday:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_weekday"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_weekday:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_weekday"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_language_level:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_language_level"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_language_level:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_language_level"
+   }
   },
   {
    "source": "policy:public.object_membership:canonical_del_object_membership",
@@ -29879,6 +31566,22 @@
    "target": "public.ref_contact_role",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_price_kind:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_price_kind"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_price_kind:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_price_kind"
+   }
   },
   {
    "source": "policy:public.object_location:canonical_del_object_location",
@@ -30035,6 +31738,22 @@
    "target": "public.app_user_profile",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_other:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_other"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_other:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_other"
+   }
   },
   {
    "source": "policy:public.object_capacity:canonical_del_object_capacity",
@@ -30391,6 +32110,70 @@
    "props": {}
   },
   {
+   "source": "policy:public.ref_code_contact_kind:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_contact_kind"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_contact_kind:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_contact_kind"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_media_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_media_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_media_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_media_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_payment_method:Lecture publique des moyens de paiement",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_payment_method"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_payment_method:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_payment_method"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_payment_method:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_payment_method"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_payment_method:Écriture admin des moyens de paiement",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_payment_method"
+   }
+  },
+  {
    "source": "policy:public.actor_channel:admin_actor_channel_write",
    "target": "public.actor_channel",
    "kind": "gates",
@@ -30459,6 +32242,56 @@
   {
    "source": "policy:public.ref_classification_equivalent_group:pub_ref_classification_equivalent_group_read",
    "target": "public.ref_classification_equivalent_group",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.ref_code_client_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_client_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_client_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_client_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_service_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_service_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_service_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_service_type"
+   }
+  },
+  {
+   "source": "policy:storage.objects:media_no_anon_write",
+   "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage.objects:media_public_read",
+   "target": "storage.objects",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage.objects:media_service_role_write",
+   "target": "storage.objects",
    "kind": "gates",
    "props": {}
   },

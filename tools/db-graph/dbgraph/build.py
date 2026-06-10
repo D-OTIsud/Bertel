@@ -13,6 +13,19 @@ def build_graph(tbls, extra, sql_paths):
     en, ee = load_extra(extra)
     nodes += en
     edges += ee
+
+    # policies can gate tables outside the tbls scope (e.g. storage.objects, the media-bucket
+    # RESTRICTIVE policy): keep them attached via an explicit stub node rather than silently
+    # pruning the gates edge. Stubs are excluded from meta counts.
+    known = {n["id"] for n in nodes}
+    for e in edges:
+        if e["kind"] == "gates" and e["target"] not in known:
+            sch, _, nm = e["target"].partition(".")
+            nodes.append({"id": e["target"], "kind": "table", "label": nm, "schema": sch,
+                          "domain": None, "doc": "(outside tbls scope — stub carrying RLS policies)",
+                          "props": {"columns": [], "rls_enabled": True, "external": True}})
+            known.add(e["target"])
+
     table_ids = {n["id"] for n in nodes if n["kind"] in ("table", "view", "matview")}
 
     inferred, flags = infer_rpc_table_edges(extra.get("functions", []), table_ids)
@@ -54,7 +67,7 @@ def build_graph(tbls, extra, sql_paths):
     edges = [e for e in edges if e["source"] in present and e["target"] in present]
 
     meta = {
-        "table_count": sum(1 for n in nodes if n["kind"] == "table"),
+        "table_count": sum(1 for n in nodes if n["kind"] == "table" and not n["props"].get("external")),
         "view_count": sum(1 for n in nodes if n["kind"] in ("view", "matview")),
         "function_count": sum(1 for n in nodes if n["kind"] == "function"),
         "policy_count": sum(1 for n in nodes if n["kind"] == "policy"),

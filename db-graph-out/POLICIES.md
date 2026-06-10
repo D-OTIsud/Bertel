@@ -1629,3 +1629,11 @@
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
    FROM (user_org_membership m_caller
      JOIN user_org_admin_role  …[truncated — full text in catalog_extra.json or live pg_policies]`
+
+## `storage.objects`
+- **ALL RESTRICTIVE** `media_no_anon_write` — roles ['anon', 'authenticated']
+  - `(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)`
+- **ALL** `media_service_role_write` — roles ['service_role']
+  - `(bucket_id = 'media'::text) | (bucket_id = 'media'::text)`
+- **SELECT** `media_public_read` — roles ['public']
+  - `(bucket_id = 'media'::text)`

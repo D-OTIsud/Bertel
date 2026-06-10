@@ -15,7 +15,7 @@ functions/RPCs, RLS policies, enums, and a unified interactive force graph. See 
 set TBLS_DSN=postgres://...               # PowerShell: $env:TBLS_DSN = "postgres://..."
 tbls doc --rm-dist -c tools/db-graph/.tbls.yml
 tbls out -t json -o db-graph-out/schema_tbls.json -c tools/db-graph/.tbls.yml
-# Gap extract (functions/policies/enums) — psql, OR run db_supplement_extract.sql via the Supabase MCP and save the JSON:
+# Gap extract (functions/policies incl. storage + RESTRICTIVE flag/enums/partition map) — psql, OR run db_supplement_extract.sql via the Supabase MCP and save the JSON:
 psql "%TBLS_DSN%" -tAf tools/db-graph/db_supplement_extract.sql > db-graph-out/catalog_extra.json
 # Build the unified graph + agent artifacts:
 .tools/python/Scripts/python.exe tools/db-graph/db_graph.py

@@ -1,6 +1,8 @@
 -- db_supplement_extract.sql — the gaps tbls does not cover: functions (with bodies, for edge
--- inference only), RLS policies, enums (+ columns using them), and the type->facet applicability rows.
--- Emits a single JSON document. Run via psql (-tA) or the Supabase MCP.
+-- inference only), RLS policies, enums (+ columns using them), the type->facet applicability rows,
+-- and the partition child->parent map (tbls omits partitions; policies live per-partition).
+-- Policies also include 'storage' (the media-bucket RESTRICTIVE policy); 'cron' is deliberately
+-- excluded (pg_cron internals). Emits a single JSON document. Run via psql (-tA) or the Supabase MCP.
 SELECT json_build_object(
   'functions', COALESCE((
     SELECT json_agg(json_build_object(
@@ -20,9 +22,22 @@ SELECT json_build_object(
   'policies', COALESCE((
     SELECT json_agg(json_build_object(
       'schema', schemaname, 'table', tablename, 'name', policyname,
-      'cmd', cmd, 'roles', roles, 'qual', qual, 'with_check', with_check
+      'cmd', cmd, 'roles', roles, 'qual', qual, 'with_check', with_check,
+      'permissive', permissive
     ))
-    FROM pg_policies WHERE schemaname IN ('public','api','internal','audit','crm')
+    FROM pg_policies WHERE schemaname IN ('public','api','internal','audit','crm','storage')
+  ), '[]'::json),
+  'partitions', COALESCE((
+    SELECT json_agg(json_build_object(
+      'child', cn.nspname || '.' || c.relname,
+      'parent', pn.nspname || '.' || p.relname
+    ))
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid JOIN pg_namespace cn ON cn.oid = c.relnamespace
+    JOIN pg_class p ON p.oid = i.inhparent JOIN pg_namespace pn ON pn.oid = p.relnamespace
+    -- relkind filter: pg_inherits also tracks partitioned-INDEX inheritance — tables only here
+    WHERE c.relispartition AND c.relkind IN ('r','p')
+      AND cn.nspname IN ('public','api','internal','audit','crm')
   ), '[]'::json),
   'enums', COALESCE((
     SELECT json_agg(json_build_object(

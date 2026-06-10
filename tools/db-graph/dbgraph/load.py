@@ -2,7 +2,9 @@
 into the shared node/edge model. No DB access; pure transforms."""
 import re
 
-_EXEC_FN = re.compile(r"execute\s+(?:function|procedure)\s+([a-z_][\w]*\.[a-z_][\w]*)\s*\(", re.I)
+# schema part optional: trigger defs say `EXECUTE FUNCTION update_updated_at_column()` unqualified
+# when the function resolves via search_path — requiring the dot silently dropped 112/267 edges.
+_EXEC_FN = re.compile(r"execute\s+(?:function|procedure)\s+((?:[a-z_][\w]*\.)?[a-z_][\w]*)\s*\(", re.I)
 
 
 def _split(qualname):
@@ -37,7 +39,11 @@ def load_tbls_schema(tbls):
             edges.append({"source": tid, "target": t["name"], "kind": "trigger_on", "props": {}})
             m = _EXEC_FN.search(tr.get("def", ""))
             if m:
-                edges.append({"source": tid, "target": m.group(1), "kind": "executes", "props": {}})
+                fname = m.group(1)
+                if "." not in fname:
+                    # unqualified = search_path resolution; in this DB that is the table's own schema
+                    fname = "%s.%s" % (schema, fname)
+                edges.append({"source": tid, "target": fname, "kind": "executes", "props": {}})
     for r in tbls.get("relations", []):
         child = r.get("table", {}).get("name")
         parent = r.get("parent_table", {}).get("name")
@@ -63,6 +69,9 @@ def load_extra(extra):
                       "props": {"signature": "%s(%s)" % (f["name"], f.get("args", "")),
                                 "returns": f.get("returns", ""), "security_definer": bool(f.get("security_definer")),
                                 "volatility": f.get("volatility", ""), "dynamic_sql": False}})
+    # partitions are not tbls table nodes — roll their policies' gates edges up to the parent
+    # (props.table keeps the real partition name; the edge records which partition it came via)
+    part_parent = {p["child"]: p["parent"] for p in extra.get("partitions", [])}
     for p in extra.get("policies", []):
         pid = "policy:%s.%s:%s" % (p["schema"], p["table"], p["name"])
         tid = "%s.%s" % (p["schema"], p["table"])
@@ -71,11 +80,17 @@ def load_extra(extra):
         # a silent mid-word truncation reads as a complete (wrong) predicate
         if len(pred) > 400:
             pred = pred[:400] + " …[truncated — full text in catalog_extra.json or live pg_policies]"
+        props = {"table": tid, "cmd": p.get("cmd", ""), "roles": p.get("roles") or [],
+                 "predicate": pred}
+        if p.get("permissive") == "RESTRICTIVE":
+            props["restrictive"] = True
+        gate_target = part_parent.get(tid, tid)
+        if gate_target != tid:
+            props["partition_of"] = gate_target
         nodes.append({"id": pid, "kind": "policy", "label": p["name"], "schema": p["schema"],
-                      "domain": None, "doc": None,
-                      "props": {"table": tid, "cmd": p.get("cmd", ""), "roles": p.get("roles") or [],
-                                "predicate": pred}})
-        edges.append({"source": pid, "target": tid, "kind": "gates", "props": {}})
+                      "domain": None, "doc": None, "props": props})
+        edges.append({"source": pid, "target": gate_target, "kind": "gates",
+                      "props": ({"via_partition": tid} if gate_target != tid else {})})
     for en in extra.get("enums", []):
         eid = "%s.%s" % (en["schema"], en["name"])
         nodes.append({"id": eid, "kind": "enum", "label": en["name"], "schema": en["schema"],

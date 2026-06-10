@@ -40,8 +40,9 @@ def write_policies_md(g):
     for tbl in sorted(by_table):
         out.append("## `%s`" % tbl)
         for p in sorted(by_table[tbl], key=lambda x: (x["props"]["cmd"], x["label"])):
-            out.append("- **%s** `%s` — roles %s\n  - `%s`" % (
-                p["props"]["cmd"], p["label"], p["props"]["roles"], p["props"]["predicate"]))
+            out.append("- **%s%s** `%s` — roles %s\n  - `%s`" % (
+                p["props"]["cmd"], " RESTRICTIVE" if p["props"].get("restrictive") else "",
+                p["label"], p["props"]["roles"], p["props"]["predicate"]))
         out.append("")
     return "\n".join(out)
 

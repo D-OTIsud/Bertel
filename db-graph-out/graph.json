@@ -17003,7 +17003,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM (opening_schedule s\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM (opening_schedule s\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical("
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (opening_schedule s\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM (opening_schedule s\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical( …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -18011,7 +18011,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHE"
+    "predicate": "(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHE …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -19099,7 +19099,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_wr"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_wr …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -19227,7 +19227,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM object_sustainability_action osa\n  WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((EXISTS ( SELECT 1\n   FROM object_sustainability_action osa\n  WHERE ((osa"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM object_sustainability_action osa\n  WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((EXISTS ( SELECT 1\n   FROM object_sustainability_action osa\n  WHERE ((osa …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -20064,7 +20064,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(api.is_platform_superuser() OR ((is_active = true) AND (user_id = auth.uid())) OR ((is_active = true) AND (EXISTS ( SELECT 1\n   FROM user_org_membership m_target\n  WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1\n   FROM (user_org_membership m_caller\n     JOIN user_org_admin_role "
+    "predicate": "(api.is_platform_superuser() OR ((is_active = true) AND (user_id = auth.uid())) OR ((is_active = true) AND (EXISTS ( SELECT 1\n   FROM user_org_membership m_target\n  WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1\n   FROM (user_org_membership m_caller\n     JOIN user_org_admin_role  …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21008,7 +21008,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_ob"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_ob …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21200,7 +21200,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_ …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21264,7 +21264,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n    "
+    "predicate": "(EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21409,7 +21409,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.use"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.use …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21569,7 +21569,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN ope"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN ope …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -21937,7 +21937,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_pla"
+    "predicate": "(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_place p\n  WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM object_pla …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -23089,7 +23089,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1\n   FROM (object_room_type rt\n     JOIN object o ON ((o.id = rt.object_id)))\n  WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.roo"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1\n   FROM (object_room_type rt\n     JOIN object o ON ((o.id = rt.object_id)))\n  WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.roo …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -23153,7 +23153,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1\n   FROM (object_room_type rt\n     JOIN object o ON ((o.id = rt.object_id)))\n  WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.roo"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1\n   FROM (object_room_type rt\n     JOIN object o ON ((o.id = rt.object_id)))\n  WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1\n   FROM object_room_type rt\n  WHERE ((rt.id = rt.roo …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -23169,7 +23169,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -23185,7 +23185,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {
@@ -23201,7 +23201,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON"
+    "predicate": "((EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1\n           FROM object_place p\n          WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1\n   FROM (media m\n     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]"
    }
   },
   {

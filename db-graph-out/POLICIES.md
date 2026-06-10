@@ -159,7 +159,7 @@
    FROM object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
-  WHE`
+  WHE …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.media_tag`
 - **DELETE** `canonical_del_media_tag` — roles ['public']
@@ -169,7 +169,7 @@
            FROM object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1
    FROM (media m
-     JOIN object o ON`
+     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **INSERT** `canonical_ins_media_tag` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM media m
@@ -177,7 +177,7 @@
            FROM object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1
    FROM (media m
-     JOIN object o ON`
+     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **SELECT** `read_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
    FROM media m
@@ -189,7 +189,7 @@
            FROM object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) OR (EXISTS ( SELECT 1
    FROM (media m
-     JOIN object o ON`
+     JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.meeting_room_equipment`
 - **DELETE** `canonical_del_meeting_room_equipment` — roles ['public']
@@ -498,7 +498,7 @@
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
   WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_pla`
+   FROM object_pla …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_meeting_room`
 - **DELETE** `canonical_del_object_meeting_room` — roles ['public']
@@ -581,7 +581,7 @@
   WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
    FROM (object_menu_item omi
      JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_wr`
+  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_wr …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_cuisine_type`
 - **DELETE** `canonical_del_object_menu_item_cuisine_type` — roles ['public']
@@ -606,7 +606,7 @@
   WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
    FROM (object_menu_item omi
      JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.use`
+  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.use …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_dietary_tag`
 - **DELETE** `canonical_del_object_menu_item_dietary_tag` — roles ['public']
@@ -631,7 +631,7 @@
   WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
    FROM (object_menu_item omi
      JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_`
+  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_ …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_media`
 - **DELETE** `canonical_del_object_menu_item_media` — roles ['public']
@@ -656,7 +656,7 @@
   WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
    FROM (object_menu_item omi
      JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_ob`
+  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_ob …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_org_link`
 - **DELETE** `canonical_del_object_org_link` — roles ['public']
@@ -849,7 +849,7 @@
      JOIN object o ON ((o.id = rt.object_id)))
   WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
    FROM object_room_type rt
-  WHERE ((rt.id = rt.roo`
+  WHERE ((rt.id = rt.roo …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_room_type_media`
 - **DELETE** `canonical_del_object_room_type_media` — roles ['public']
@@ -878,7 +878,7 @@
      JOIN object o ON ((o.id = rt.object_id)))
   WHERE ((rt.id = rt.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
    FROM object_room_type rt
-  WHERE ((rt.id = rt.roo`
+  WHERE ((rt.id = rt.roo …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_sustainability_action`
 - **DELETE** `canonical_del_object_sustainability_action` — roles ['public']
@@ -911,7 +911,7 @@
    FROM object_sustainability_action osa
   WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((EXISTS ( SELECT 1
    FROM object_sustainability_action osa
-  WHERE ((osa`
+  WHERE ((osa …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_taxonomy`
 - **DELETE** `canonical_del_object_taxonomy` — roles ['public']
@@ -1016,7 +1016,7 @@
   WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
    FROM ((opening_time_period tp
      JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN ope`
+     JOIN ope …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.opening_time_period`
 - **DELETE** `canonical_del_opening_time_period` — roles ['public']
@@ -1041,7 +1041,7 @@
   WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
    FROM (opening_schedule s
      JOIN opening_period p ON ((p.id = s.period_id)))
-  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(`
+  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical( …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.opening_time_period_weekday`
 - **DELETE** `canonical_del_opening_time_period_weekday` — roles ['public']
@@ -1070,7 +1070,7 @@
   WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
    FROM ((opening_time_period tp
      JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-    `
+     …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.org_config`
 - **ALL** `superuser_org_config_write` — roles ['public']
@@ -1628,4 +1628,4 @@
    FROM user_org_membership m_target
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
    FROM (user_org_membership m_caller
-     JOIN user_org_admin_role `
+     JOIN user_org_admin_role  …[truncated — full text in catalog_extra.json or live pg_policies]`

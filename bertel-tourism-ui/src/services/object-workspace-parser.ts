@@ -633,6 +633,7 @@ export interface ObjectWorkspaceOrganizationLinkItem {
   roleId: string;
   roleCode: string;
   roleLabel: string;
+  isPrimary: boolean;
   note: string;
   contacts: ObjectWorkspaceLinkedContactItem[];
 }
@@ -667,10 +668,19 @@ export interface ObjectWorkspaceRelatedObjectItem {
   distanceM: string;
 }
 
+export interface ObjectWorkspaceOrgOption {
+  id: string;
+  name: string;
+}
+
 export interface ObjectWorkspaceRelationshipsModule {
   organizationLinks: ObjectWorkspaceOrganizationLinkItem[];
   actors: ObjectWorkspaceActorLinkItem[];
   relatedObjects: ObjectWorkspaceRelatedObjectItem[];
+  /** §48 reference catalogs filled by the relationships loader (empty in the parser defaults). */
+  orgRoleOptions: WorkspaceReferenceOption[];
+  orgOptions: ObjectWorkspaceOrgOption[];
+  actorRoleOptions: WorkspaceReferenceOption[];
   organizationLinkWriteUnavailableReason: string | null;
   actorWriteUnavailableReason: string | null;
   actorConsentUnavailableReason: string | null;
@@ -2281,6 +2291,7 @@ function parseWorkspaceOrganizationLink(
     roleId: readString(record.role_id, readString(roleRecord.id)),
     roleCode: readString(record.role_code, readString(roleRecord.code)),
     roleLabel: readString(record.role_name, readString(roleRecord.name, 'Rattachement')),
+    isPrimary: readBoolean(record.is_primary),
     note: readString(record.note),
     contacts,
   };
@@ -2403,6 +2414,9 @@ function parseWorkspaceRelationshipsModule(raw: Record<string, unknown>): Object
     organizationLinks: dedupedOrganizationLinks,
     actors,
     relatedObjects: dedupedRelatedObjects,
+    orgRoleOptions: [],
+    orgOptions: [],
+    actorRoleOptions: [],
     organizationLinkWriteUnavailableReason: null,
     actorWriteUnavailableReason: null,
     actorConsentUnavailableReason: null,

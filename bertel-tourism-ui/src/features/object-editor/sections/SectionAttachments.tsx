@@ -112,6 +112,20 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
     );
   }
 
+  // §48 — org_link authoring (object_org_link via the org_links arm of api.save_object_relations).
+  function replaceLinks(organizationLinks: typeof relationships.organizationLinks) {
+    editor.replaceModule('relationships', { ...relationships, organizationLinks });
+  }
+
+  function updateLink(index: number, patch: Partial<(typeof relationships.organizationLinks)[number]>) {
+    replaceLinks(relationships.organizationLinks.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  // One primary per object (uq_object_primary_org) — setting one clears the others.
+  function setPrimaryLink(index: number) {
+    replaceLinks(relationships.organizationLinks.map((item, i) => ({ ...item, isPrimary: i === index })));
+  }
+
   return (
     <Fs
       num="17"
@@ -128,11 +142,76 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
         <StatCard label="Acteurs liés" value={String(relationships.actors.length)} suffix="rôles" />
       </div>
 
-      <div className="grid-2" style={{ marginBottom: 12 }}>
-        <div className="kv">
-          <span className="k">Organisation éditrice</span>
-          <span className="v">{publisher?.name ?? 'Non renseignée'}</span>
-        </div>
+      <div className="chip-group__label">Organisations liées — publisher & partenaires</div>
+      {relationships.organizationLinkWriteUnavailableReason ? (
+        <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 12px' }}>
+          <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong>{' '}
+          {relationships.organizationLinkWriteUnavailableReason}
+        </p>
+      ) : (
+        <Repeater
+          items={relationships.organizationLinks}
+          getKey={(item, index) => `${item.id}-${item.roleCode}-${index}`}
+          columns="14px 1.6fr 160px 90px 1fr auto"
+          addLabel="Rattacher une organisation"
+          onAdd={() => {
+            const org = relationships.orgOptions[0];
+            const role =
+              relationships.orgRoleOptions.find((option) => option.code === 'publisher')
+              ?? relationships.orgRoleOptions[0];
+            if (!org || !role) return;
+            replaceLinks([
+              ...relationships.organizationLinks,
+              {
+                id: org.id, source: 'org_link', type: 'ORG', name: org.name, status: '',
+                roleId: role.id, roleCode: role.code, roleLabel: role.label,
+                isPrimary: relationships.organizationLinks.length === 0, note: '', contacts: [],
+              },
+            ]);
+          }}
+          renderRow={(item, index) => (
+            <>
+              <span className="rep-row__handle" aria-hidden />
+              <Select
+                value={item.id}
+                options={relationships.orgOptions.map((option) => ({ v: option.id, l: option.name }))}
+                onChange={(orgId) => {
+                  const org = relationships.orgOptions.find((option) => option.id === orgId);
+                  updateLink(index, { id: orgId, name: org?.name ?? item.name });
+                }}
+              />
+              <Select
+                value={item.roleCode}
+                options={relationships.orgRoleOptions.map((option) => ({ v: option.code, l: option.label }))}
+                onChange={(roleCode) => {
+                  const role = relationships.orgRoleOptions.find((option) => option.code === roleCode);
+                  updateLink(index, { roleCode, roleId: role?.id ?? '', roleLabel: role?.label ?? roleCode });
+                }}
+              />
+              <button
+                type="button"
+                className="pill-mini"
+                aria-pressed={item.isPrimary}
+                title={item.isPrimary ? 'Organisation principale' : 'Définir comme principale'}
+                onClick={() => setPrimaryLink(index)}
+              >
+                {item.isPrimary ? 'Principale' : '—'}
+              </button>
+              <Input value={item.note} placeholder="Note" onChange={(note) => updateLink(index, { note })} />
+              <button
+                type="button"
+                className="del"
+                onClick={() => replaceLinks(relationships.organizationLinks.filter((_, i) => i !== index))}
+              >
+                Supprimer
+              </button>
+            </>
+          )}
+        />
+      )}
+
+      {/* Read-only actors display — Task 7 (§48 actor write-path, migration 8r) replaces it. */}
+      <div className="grid-2" style={{ margin: '12px 0' }}>
         <div className="kv">
           <span className="k">Acteurs liés</span>
           <span className="v">{relationships.actors.map((actor) => actor.displayName).join(', ') || 'Aucun'}</span>

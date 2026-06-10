@@ -1582,8 +1582,14 @@ async function getObjectWorkspaceContactsModule(
   };
 }
 
+/**
+ * §48 relationships loader. The org-link ROWS come from direct PostgREST reads (§41 pattern)
+ * instead of the parsed get_object_resource payload, because that JSON does not carry
+ * `is_primary` — a delete+reinsert save built from it would silently clear primary flags.
+ * Also loads the §17 authoring catalogs (ref_org_role, ORG objects, ref_actor_role).
+ */
 async function getObjectWorkspaceRelationshipsModule(
-  _objectId: string,
+  objectId: string,
   baseModule: ObjectWorkspaceRelationshipsModule,
 ): Promise<ObjectWorkspaceRelationshipsModule> {
   const session = useSessionStore.getState();
@@ -1591,18 +1597,79 @@ async function getObjectWorkspaceRelationshipsModule(
   if (session.demoMode) {
     return {
       ...baseModule,
-      organizationLinkWriteUnavailableReason: 'Le module D2 est visible dans le shell, mais son edition n est pas encore branchee sur un contrat workspace stable.',
-      actorWriteUnavailableReason: 'Le module D2 reste non editable tant que la gestion acteur/contact n a pas de write-path workspace fiable.',
-      actorConsentUnavailableReason: "Les consentements d'acteurs ne sont pas exposes dans le workspace objet actuel.",
+      organizationLinkWriteUnavailableReason: 'Mode démo — écriture désactivée.',
+      actorWriteUnavailableReason: 'Mode démo — écriture désactivée.',
+      actorConsentUnavailableReason: "Les consentements d'acteurs ne sont pas exposés dans le workspace objet actuel.",
       relatedObjectWriteUnavailableReason: null,
     };
   }
 
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      organizationLinkWriteUnavailableReason: 'Connexion backend indisponible pour charger les rattachements.',
+      actorWriteUnavailableReason: 'Connexion backend indisponible pour charger les acteurs.',
+      actorConsentUnavailableReason: "Les consentements `actor_consent` restent hors du module.",
+      relatedObjectWriteUnavailableReason: null,
+    };
+  }
+
+  const [orgRolesResult, orgLinksResult, orgObjectsResult, actorRolesResult] = await Promise.all([
+    client.from('ref_org_role').select('id, code, name').order('position', { ascending: true }),
+    client
+      .from('object_org_link')
+      .select('org_object_id, role_id, is_primary, note, org:org_object_id(id, name, object_type, status), role:role_id(id, code, name)')
+      .eq('object_id', objectId)
+      .order('is_primary', { ascending: false }),
+    client.from('object').select('id, name').eq('object_type', 'ORG').order('name', { ascending: true }),
+    client.from('ref_actor_role').select('id, code, name').order('position', { ascending: true }),
+  ]);
+
+  // Anti-clobber: when org links can't be read reliably, keep the parser rows AND a reason —
+  // the saver omits the org_links key on a set reason, so existing rows can never be wiped blind.
+  const orgLinksReadable = orgLinksResult.error == null;
+  const organizationLinks = orgLinksReadable
+    ? ((orgLinksResult.data ?? []) as Record<string, unknown>[]).map((row, index) => {
+        const org = readRecord(row.org);
+        const role = readRecord(row.role);
+        return {
+          id: readString(org.id, readString(row.org_object_id)),
+          source: 'org_link' as const,
+          type: readString(org.object_type, 'ORG'),
+          name: readString(org.name, `Organisation ${index + 1}`),
+          status: readString(org.status),
+          roleId: readString(row.role_id),
+          roleCode: readString(role.code),
+          roleLabel: readString(role.name, 'Rattachement'),
+          isPrimary: readBoolean(row.is_primary),
+          note: readString(row.note),
+          contacts: [],
+        };
+      })
+    : baseModule.organizationLinks;
+
   return {
     ...baseModule,
-    organizationLinkWriteUnavailableReason: "Les rattachements `object_org_link` restent en lecture seule: le live actuel n'expose pas de write-path workspace pour ce module.",
-    actorWriteUnavailableReason: "Les roles acteur et leurs canaux restent en lecture seule: `actor_object_role` et `actor_channel` ne sont pas gerables proprement depuis le client workspace.",
-    actorConsentUnavailableReason: "Les consentements `actor_consent` ne sont pas lisibles pour ce contexte de travail et restent hors du module D2.",
+    organizationLinks,
+    orgRoleOptions: orgRolesResult.error == null
+      ? (orgRolesResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
+      : [],
+    orgOptions: orgObjectsResult.error == null
+      ? ((orgObjectsResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
+          id: readString(row.id),
+          name: readString(row.name),
+        }))
+      : [],
+    actorRoleOptions: actorRolesResult.error == null
+      ? (actorRolesResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
+      : [],
+    organizationLinkWriteUnavailableReason: orgLinksReadable
+      ? null
+      : "Les rattachements n'ont pas pu être chargés — édition désactivée pour éviter toute perte.",
+    // Actor authoring arrives with Task 7; until then keep the read-only reason accurate:
+    actorWriteUnavailableReason: "Les rôles acteur seront éditables après le déploiement du write-path acteurs (migration 8r).",
+    actorConsentUnavailableReason: "Les consentements `actor_consent` restent hors du module (contrat dédié).",
     relatedObjectWriteUnavailableReason: null,
   };
 }
@@ -3223,11 +3290,16 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
           ? null
           : "Vos droits actuels ne permettent pas de gerer le suivi relation prestataire sur cette fiche.",
     },
+    // §48: the relationships save path goes through api.save_object_relations, which enforces
+    // workspace_assert_can_write_object server-side — same gate as the other save_object_* RPCs.
+    // (The previous hard-false here routed every §15/§17 edit to `blocked`, orphaning the §29 saver.)
     relationships: {
-      canDirectWrite: false,
+      canDirectWrite: canWriteSafeWorkspaceRpc,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: 'Le module D2 reste en lecture seule tant que les write-paths live des rattachements, acteurs et relations ne sont pas verrouilles.',
+      disabledReason: canWriteSafeWorkspaceRpc
+        ? null
+        : "Vos droits actuels ne permettent pas de modifier les liens et rattachements de cette fiche.",
     },
     memberships: {
       canDirectWrite: directWrite,
@@ -4687,6 +4759,33 @@ export function buildRelationsPayload(
     }));
 }
 
+/**
+ * Pure builder for the org_links arm of api.save_object_relations. Returns null when the
+ * org links could not be loaded reliably — the caller must then OMIT the key entirely so the
+ * RPC's delete-all + re-insert branch never runs blind (anti-clobber, §28/§40 pattern).
+ * The RPC raises on >1 primary, so only the first primary survives here.
+ */
+export function buildOrgLinksPayload(
+  input: ObjectWorkspaceRelationshipsModule,
+): Array<{ org_object_id: string; role_code: string; is_primary: boolean; note: string }> | null {
+  if (input.organizationLinkWriteUnavailableReason) {
+    return null;
+  }
+  const seen = new Set<string>();
+  let primarySeen = false;
+  const rows: Array<{ org_object_id: string; role_code: string; is_primary: boolean; note: string }> = [];
+  for (const item of input.organizationLinks) {
+    if (!item.id || !item.roleCode) continue;
+    const key = `${item.id}:${item.roleCode.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const isPrimary = item.isPrimary && !primarySeen;
+    if (isPrimary) primarySeen = true;
+    rows.push({ org_object_id: item.id, role_code: item.roleCode, is_primary: isPrimary, note: item.note });
+  }
+  return rows;
+}
+
 export async function saveObjectWorkspaceRelationships(
   objectId: string,
   input: ObjectWorkspaceRelationshipsModule,
@@ -4695,10 +4794,15 @@ export async function saveObjectWorkspaceRelationships(
   if (session.demoMode) {
     return;
   }
+  const payload: Record<string, unknown> = { object_relations: buildRelationsPayload(input) };
+  const orgLinks = buildOrgLinksPayload(input);
+  if (orgLinks !== null) {
+    payload.org_links = orgLinks;
+  }
   await callObjectWorkspaceRpc(
     'save_object_relations',
     objectId,
-    { object_relations: buildRelationsPayload(input) },
+    payload,
     "Impossible de sauvegarder les liens vers d'autres fiches.",
   );
 }

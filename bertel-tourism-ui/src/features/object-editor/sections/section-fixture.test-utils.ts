@@ -247,9 +247,15 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
     },
     providerFollowUp: { notes: [{ id: 'n1', body: 'Relance qualité', audience: 'private', category: 'followup', isPinned: false, isArchived: false, canEdit: false, canDelete: false, language: 'fr', createdAt: '2026-01-01T08:00:00Z', updatedAt: '2026-01-02T08:00:00Z', createdById: 'u1', createdByName: 'OTI', createdByAvatarUrl: '' }], interactionsUnavailableReason: null, tasksUnavailableReason: null },
     relationships: {
-      organizationLinks: [{ id: 'org1', source: 'org_link', type: 'ORG', name: 'OTI du Sud', status: 'active', roleId: 'publisher', roleCode: 'publisher', roleLabel: 'Publisher', note: '', contacts: [] }],
+      organizationLinks: [{ id: 'org1', source: 'org_link', type: 'ORG', name: 'OTI du Sud', status: 'active', roleId: 'publisher', roleCode: 'publisher', roleLabel: 'Publisher', isPrimary: true, note: '', contacts: [] }],
       actors: [{ id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '', roleId: 'operator', roleCode: 'operator', roleLabel: 'Opérateur', visibility: 'public', isPrimary: true, validFrom: '', validTo: '', note: '', contacts: [] }],
       relatedObjects: [{ id: 'rel1', name: 'Sentier voisin', type: 'ITI', status: 'published', relationTypeId: 'near', relationTypeCode: 'near', relationTypeLabel: 'À proximité', direction: 'out', note: '5 min', distanceM: '400' }],
+      orgRoleOptions: [
+        { id: 'publisher', code: 'publisher', label: 'Publisher principal' },
+        { id: 'contributor', code: 'contributor', label: 'ORG contributrice' },
+      ],
+      orgOptions: [{ id: 'ORG0000000000001', name: 'OTI du Sud' }],
+      actorRoleOptions: [{ id: 'operator', code: 'operator', label: 'Exploitant' }],
       organizationLinkWriteUnavailableReason: null,
       actorWriteUnavailableReason: null,
       actorConsentUnavailableReason: null,

@@ -1671,8 +1671,9 @@ async function getObjectWorkspaceRelationshipsModule(
     organizationLinkWriteUnavailableReason: orgLinksReadable
       ? null
       : "Les rattachements n'ont pas pu être chargés — édition désactivée pour éviter toute perte.",
-    // Actor authoring arrives with Task 7; until then keep the read-only reason accurate:
-    actorWriteUnavailableReason: "Les rôles acteur seront éditables après le déploiement du write-path acteurs (migration 8r).",
+    // §48 Task 7 — the parser-supplied actor rows ARE save-grade (the resource JSON's actors
+    // carry role/visibility/is_primary/valid_from/valid_to/note), so actor authoring is open.
+    actorWriteUnavailableReason: null,
     actorConsentUnavailableReason: "Les consentements `actor_consent` restent hors du module (contrat dédié).",
     relatedObjectWriteUnavailableReason: null,
   };
@@ -4805,13 +4806,89 @@ export function buildOrgLinksPayload(
   return Array.from(kept.values());
 }
 
-/** §48 — pure assembly of the api.save_object_relations payload. org_links is OMITTED
- *  (not sent) when buildOrgLinksPayload returns null (unreliable load — anti-clobber). */
+/**
+ * §48 — pure builder for the actors arm of api.save_object_relations (actor_object_role).
+ * Mirrors buildOrgLinksPayload: returns null when the actor links could not be loaded
+ * reliably — the caller must then OMIT the key entirely so the RPC's delete-all + re-insert
+ * branch never runs blind (anti-clobber). `role_id` is sent alongside `role_code` (the RPC
+ * resolves role_id first, role_code as fallback). The DB enforces ≤1 primary PER (object, role)
+ * (uq_actor_object_role_primary), so first-primary-wins is tracked per role here; when a
+ * dropped duplicate (same actor, role) carried the primary flag, the KEPT row is promoted.
+ */
+export function buildActorLinksPayload(
+  input: ObjectWorkspaceRelationshipsModule,
+): Array<{ actor_id: string; role_id: string; role_code: string; is_primary: boolean; visibility: string; valid_from: string; valid_to: string; note: string }> | null {
+  if (input.actorWriteUnavailableReason) {
+    return null;
+  }
+  const primaryByRole = new Set<string>();
+  const kept = new Map<string, { actor_id: string; role_id: string; role_code: string; is_primary: boolean; visibility: string; valid_from: string; valid_to: string; note: string }>();
+  for (const item of input.actors) {
+    if (!item.id || !item.roleCode) continue;
+    const roleKey = item.roleCode.toLowerCase();
+    const key = `${item.id}:${roleKey}`;
+    const existing = kept.get(key);
+    if (existing) {
+      // Duplicate (actor, role) pair: the row is dropped, but its primary flag must not be.
+      if (item.isPrimary && !primaryByRole.has(roleKey)) {
+        existing.is_primary = true;
+        primaryByRole.add(roleKey);
+      }
+      continue;
+    }
+    const isPrimary = item.isPrimary && !primaryByRole.has(roleKey);
+    if (isPrimary) primaryByRole.add(roleKey);
+    kept.set(key, {
+      actor_id: item.id,
+      role_id: item.roleId,
+      role_code: item.roleCode,
+      is_primary: isPrimary,
+      visibility: item.visibility || 'public',
+      valid_from: item.validFrom,
+      valid_to: item.validTo,
+      note: item.note,
+    });
+  }
+  return Array.from(kept.values());
+}
+
+export interface ActorSearchResult {
+  id: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+}
+
+/** §48 — actor picker search via api.search_actors (SECURITY DEFINER, editor-gated and
+ *  scoped to caller-readable actors server-side; wildcard-escaped, LIMIT 20). */
+export async function searchActors(query: string): Promise<ActorSearchResult[]> {
+  const client = getSupabaseClient();
+  if (!client || query.trim().length < 2) {
+    return [];
+  }
+  const { data, error } = await client.schema('api').rpc('search_actors', { p_query: query.trim() });
+  if (error) {
+    return [];
+  }
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: readString(row.id),
+    displayName: readString(row.display_name),
+    firstName: readString(row.first_name),
+    lastName: readString(row.last_name),
+  }));
+}
+
+/** §48 — pure assembly of the api.save_object_relations payload. org_links / actors are
+ *  each OMITTED (not sent) when their builder returns null (unreliable load — anti-clobber). */
 export function buildRelationshipsRpcPayload(input: ObjectWorkspaceRelationshipsModule): Record<string, unknown> {
   const payload: Record<string, unknown> = { object_relations: buildRelationsPayload(input) };
   const orgLinks = buildOrgLinksPayload(input);
   if (orgLinks !== null) {
     payload.org_links = orgLinks;
+  }
+  const actors = buildActorLinksPayload(input);
+  if (actors !== null) {
+    payload.actors = actors;
   }
   return payload;
 }

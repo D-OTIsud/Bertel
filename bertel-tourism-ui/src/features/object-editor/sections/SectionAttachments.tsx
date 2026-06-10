@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Chip, ChipSet, Fs, Input, Repeater, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLegalRecord, ObjectWorkspaceMembershipItem } from '../../../services/object-workspace-parser';
@@ -6,6 +7,7 @@ import {
   findRaisonSocialeFromLegalRecords,
 } from '../../../services/object-workspace-parser';
 import { SiretCard, type SiretCardProps } from '../widgets/SiretCard';
+import { ActorPicker } from '../widgets/ActorPicker';
 
 const STATUSES = ['prospect', 'invoiced', 'paid', 'canceled', 'lapsed'];
 
@@ -126,6 +128,25 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
     replaceLinks(relationships.organizationLinks.map((item, i) => ({ ...item, isPrimary: i === index })));
   }
 
+  // §48 Task 7 — actor-role authoring (actor_object_role via the actors arm of api.save_object_relations).
+  const [actorPickerOpen, setActorPickerOpen] = useState(false);
+
+  function replaceActors(actors: typeof relationships.actors) {
+    editor.replaceModule('relationships', { ...relationships, actors });
+  }
+
+  function updateActor(index: number, patch: Partial<(typeof relationships.actors)[number]>) {
+    replaceActors(relationships.actors.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  // ≤1 primary per (object, role) (uq_actor_object_role_primary) — setting one clears the SAME role only.
+  function setPrimaryActor(index: number) {
+    const role = relationships.actors[index]?.roleCode;
+    replaceActors(relationships.actors.map((item, i) => (
+      item.roleCode === role ? { ...item, isPrimary: i === index } : item
+    )));
+  }
+
   return (
     <Fs
       num="17"
@@ -223,15 +244,98 @@ export function SectionAttachments({ editor, folded }: SectionProps) {
         </>
       )}
 
-      {/* Read-only actors display — Task 7 (§48 actor write-path, migration 8r) replaces it. */}
-      <div className="grid-2" style={{ margin: '12px 0' }}>
-        <div className="kv">
-          <span className="k">Acteurs liés</span>
-          <span className="v">{relationships.actors.map((actor) => actor.displayName).join(', ') || 'Aucun'}</span>
-        </div>
-      </div>
+      <div className="chip-group__label" style={{ marginTop: 14 }}>Acteurs liés — opérateurs & encadrants</div>
+      {relationships.actorWriteUnavailableReason ? (
+        <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 12px' }}>
+          <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong>{' '}
+          {relationships.actorWriteUnavailableReason}
+        </p>
+      ) : (
+        <>
+          {relationships.actorRoleOptions.length === 0 && (
+            <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 8px' }}>
+              Catalogue des rôles acteur indisponible — l&apos;ajout est désactivé.
+            </p>
+          )}
+          <Repeater
+            items={relationships.actors}
+            getKey={(item, index) => `${item.id}-${item.roleCode}-${index}`}
+            columns="14px 1.4fr 150px 110px 90px 1fr auto"
+            addLabel="Lier un acteur…"
+            onAdd={() => {
+              if (relationships.actorRoleOptions.length === 0) return; // catalog unavailable — adding is disabled
+              setActorPickerOpen(true);
+            }}
+            renderRow={(item, index) => (
+              <>
+                <span className="rep-row__handle" aria-hidden />
+                <Input value={item.displayName} readOnly onChange={() => undefined} />
+                <Select
+                  value={item.roleCode}
+                  options={[
+                    ...(relationships.actorRoleOptions.some((option) => option.code === item.roleCode)
+                      ? []
+                      : [{ v: item.roleCode, l: item.roleLabel || item.roleCode }]), // §48: preserved role outside the catalog — keep it identifiable
+                    ...relationships.actorRoleOptions.map((option) => ({ v: option.code, l: option.label })),
+                  ]}
+                  onChange={(roleCode) => {
+                    const role = relationships.actorRoleOptions.find((option) => option.code === roleCode);
+                    updateActor(index, { roleCode, roleId: role?.id ?? '', roleLabel: role?.label ?? roleCode });
+                  }}
+                />
+                <Select
+                  value={item.visibility || 'public'}
+                  options={[{ v: 'public', l: 'Public' }, { v: 'private', l: 'Interne' }, { v: 'partners', l: 'Partenaires' }]}
+                  onChange={(visibility) => updateActor(index, { visibility })}
+                />
+                <button
+                  type="button"
+                  className="pill-mini"
+                  aria-pressed={item.isPrimary}
+                  aria-label={item.isPrimary ? 'Acteur principal pour ce rôle' : 'Définir comme acteur principal pour ce rôle'}
+                  title={item.isPrimary ? 'Acteur principal pour ce rôle' : 'Définir comme principal'}
+                  onClick={() => setPrimaryActor(index)}
+                >
+                  {item.isPrimary ? 'Principal' : '—'}
+                </button>
+                <Input value={item.note} placeholder="Note" onChange={(note) => updateActor(index, { note })} />
+                <button
+                  type="button"
+                  className="del"
+                  aria-label={`Supprimer l'acteur ${item.displayName}`}
+                  onClick={() => replaceActors(relationships.actors.filter((_, i) => i !== index))}
+                >
+                  Supprimer
+                </button>
+              </>
+            )}
+          />
+          {actorPickerOpen && (
+            <ActorPicker
+              onPick={(actor) => {
+                const role =
+                  relationships.actorRoleOptions.find((option) => option.code === 'operator')
+                  ?? relationships.actorRoleOptions[0];
+                if (!role) return; // catalog unavailable — never fabricate a role row
+                replaceActors([
+                  ...relationships.actors,
+                  {
+                    id: actor.id, displayName: actor.displayName, firstName: actor.firstName, lastName: actor.lastName,
+                    gender: '', roleId: role.id, roleCode: role.code, roleLabel: role.label,
+                    visibility: 'public',
+                    // ≤1 primary per (object, role): primary only when this role has none yet.
+                    isPrimary: !relationships.actors.some((a) => a.roleCode === role.code && a.isPrimary),
+                    validFrom: '', validTo: '', note: '', contacts: [],
+                  },
+                ]);
+                setActorPickerOpen(false);
+              }}
+            />
+          )}
+        </>
+      )}
 
-      <div className="chip-group__label">Campagnes disponibles</div>
+      <div className="chip-group__label" style={{ marginTop: 14 }}>Campagnes disponibles</div>
       <ChipSet>
         {memberships.campaignOptions.map((campaign) => (
           <Chip key={campaign.code} label={campaign.label} on={memberships.items.some((item) => item.campaignCode === campaign.code)} />

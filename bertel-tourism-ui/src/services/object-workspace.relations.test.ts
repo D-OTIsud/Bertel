@@ -1,4 +1,4 @@
-import { buildOrgLinksPayload, buildRelationsPayload, buildRelationshipsRpcPayload } from './object-workspace';
+import { buildActorLinksPayload, buildOrgLinksPayload, buildRelationsPayload, buildRelationshipsRpcPayload } from './object-workspace';
 import type {
   ObjectWorkspaceRelationshipsModule,
   ObjectWorkspaceRelatedObjectItem,
@@ -96,6 +96,62 @@ describe('buildOrgLinksPayload', () => {
   });
 });
 
+// §48 — pins the actors arm of api.save_object_relations
+// ({actors:[{actor_id, role_id, role_code, is_primary, visibility, valid_from, valid_to, note}]});
+// the RPC deletes every actor_object_role row for the object then re-inserts the payload
+// (≤1 primary per (object, role) enforced by uq_actor_object_role_primary).
+const actorLink = (over: Partial<ObjectWorkspaceRelationshipsModule['actors'][number]> = {}) => ({
+  id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '',
+  roleId: 'r-op', roleCode: 'operator', roleLabel: 'Exploitant', visibility: 'public',
+  isPrimary: false, validFrom: '', validTo: '', note: '', contacts: [], ...over,
+});
+
+describe('buildActorLinksPayload', () => {
+  it('maps actor links to the save_object_relations actors shape (incl. role_id passthrough)', () => {
+    const value = mod([], { actors: [actorLink({ isPrimary: true, note: 'n' })] });
+    expect(buildActorLinksPayload(value)).toEqual([
+      { actor_id: 'a1', role_id: 'r-op', role_code: 'operator', is_primary: true, visibility: 'public', valid_from: '', valid_to: '', note: 'n' },
+    ]);
+  });
+
+  it('defaults visibility to public when empty', () => {
+    const value = mod([], { actors: [actorLink({ visibility: '' })] });
+    expect(buildActorLinksPayload(value)![0].visibility).toBe('public');
+  });
+
+  it('keeps only the first primary PER ROLE (uq_actor_object_role_primary)', () => {
+    const value = mod([], {
+      actors: [
+        actorLink({ id: 'a1', roleCode: 'operator', isPrimary: true }),
+        actorLink({ id: 'a2', roleCode: 'operator', isPrimary: true }),
+        actorLink({ id: 'a3', roleCode: 'guide', isPrimary: true }),
+      ],
+    });
+    expect(buildActorLinksPayload(value)!.map((row) => row.is_primary)).toEqual([true, false, true]);
+  });
+
+  it('does not lose the primary flag when the primary row is a dropped duplicate', () => {
+    const value = mod([], {
+      actors: [actorLink({ isPrimary: false }), actorLink({ isPrimary: true })], // same (actor, role)
+    });
+    const rows = buildActorLinksPayload(value)!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].is_primary).toBe(true);
+  });
+
+  it('dedupes identical (actor, role) pairs and drops incomplete rows', () => {
+    const value = mod([], {
+      actors: [actorLink({}), actorLink({}), actorLink({ id: '', roleCode: 'operator' })],
+    });
+    expect(buildActorLinksPayload(value)).toHaveLength(1);
+  });
+
+  it('returns null (omit the key — anti-clobber) when actor links were not loaded reliably', () => {
+    const value = mod([], { actorWriteUnavailableReason: 'pending 8r' });
+    expect(buildActorLinksPayload(value)).toBeNull();
+  });
+});
+
 describe('buildRelationshipsRpcPayload', () => {
   it('omits the org_links key entirely when the load was unreliable', () => {
     const payload = buildRelationshipsRpcPayload(mod([], { organizationLinkWriteUnavailableReason: 'load failed' }));
@@ -106,5 +162,16 @@ describe('buildRelationshipsRpcPayload', () => {
   it('sends an empty org_links array when the list is reliably empty (clears links)', () => {
     const payload = buildRelationshipsRpcPayload(mod([]));
     expect(payload.org_links).toEqual([]);
+  });
+
+  it('omits the actors key entirely when the actor load was unreliable', () => {
+    const payload = buildRelationshipsRpcPayload(mod([], { actorWriteUnavailableReason: 'load failed' }));
+    expect(payload).toHaveProperty('object_relations');
+    expect('actors' in payload).toBe(false);
+  });
+
+  it('sends an empty actors array when the list is reliably empty (clears actor roles)', () => {
+    const payload = buildRelationshipsRpcPayload(mod([]));
+    expect(payload.actors).toEqual([]);
   });
 });

@@ -627,7 +627,7 @@ npm run typecheck
 
   Expected: archetypes/section-registry/page suites PASS (the pre-existing `editor-validation.test.ts` failure is baseline — ignore it; everything else green). If `section-registry.test.tsx` or page specs pinned the old fallback behavior, update them to the new contract.
 
-- [ ] **Step 7: Commit:**
+- [x] **Step 7: Commit:** **DONE — `9b18847`** (5 files; co-author Claude Opus 4.8 (1M context)).
 
 ```bash
 git -C "C:\Users\dphil\Bertel3.0" add bertel-tourism-ui/src/features/object-editor/archetypes.ts bertel-tourism-ui/src/features/object-editor/archetypes.test.ts bertel-tourism-ui/src/features/object-editor/ObjectEditPage.tsx bertel-tourism-ui/src/features/object-editor/sections/section-registry.tsx
@@ -646,7 +646,7 @@ Mapping (module key → enrolled facet table): `rooms→object_room_type`, `meet
 
 Semantics: if the registry says the object's type is not applicable for a module's facet table, the module gets `unavailableReason` set, which (a) renders the section's disabled-with-reason state and (b) makes the saver skip persistence (existing §28/§40/§41 anti-clobber machinery). **Fail-open:** if the registry fetch fails or returns no rows for a facet table, no gating is applied — the DB trigger from Task 3 remains the hard gate, and a save attempt surfaces its error. This is NOT a regression of §42 (that was an env-flag hiding catalogs from everyone; this is per-type semantics from the DB).
 
-- [ ] **Step 1: Write the failing spec** `src/services/object-workspace.facets.test.ts` (pure-helper tests, mirroring the project's exported-pure-helper convention from §28/§30):
+- [x] **Step 1: Write the failing spec** — **DONE** (`object-workspace.facets.test.ts`). `src/services/object-workspace.facets.test.ts` (pure-helper tests, mirroring the project's exported-pure-helper convention from §28/§30):
 
 ```ts
 import { facetUnavailableReason, TYPE_SPECIFIC_MODULE_FACETS } from './object-workspace';
@@ -679,9 +679,9 @@ describe('facetUnavailableReason (§46 registry gating)', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure:** `cd bertel-tourism-ui; npx jest src/services/object-workspace.facets.test.ts` — FAIL (exports missing).
+- [x] **Step 2: Run to verify failure:** **DONE — RED (5 failed: exports missing).** `cd bertel-tourism-ui; npx jest src/services/object-workspace.facets.test.ts` — FAIL (exports missing).
 
-- [ ] **Step 3: Implement in `object-workspace.ts`.** Add near the other §4x helpers:
+- [x] **Step 3: Implement in `object-workspace.ts`.** **DONE** (helpers added before `getObjectWorkspaceResource`; keyed-access `readString((row as Record<string, unknown>).field)` form used). Add near the other §4x helpers:
 
 ```ts
 // §46 — type→facet applicability (mirror of ref_facet_applicability + the DB triggers).
@@ -732,7 +732,7 @@ async function getFacetApplicabilityRows(): Promise<FacetApplicabilityRow[]> {
 
   **`readString` signature is `readString(value: unknown, fallback = ''): string` (`object-workspace.ts:243-251`) — it takes the VALUE, not (row, key). `readString(row, 'facet_table')` would return the literal fallback string `'facet_table'` for every row, type-check fine, and silently disable all gating (fail-open forever). Use the keyed-access form above, exactly as `getObjectWorkspaceZonesModule` does at ~4793-4798.**
 
-- [ ] **Step 4: Wire into `getObjectWorkspaceResource`.** In the §42 block (~3344): fetch applicability in the same `Promise.all` round as the 10 module loaders (add `getFacetApplicabilityRows()` as an 11th entry), and determine the object's type the same way the function's return value populates `ObjectWorkspaceResource.type` (read the end of the function to find the exact source — likely `detail` payload; reuse it). Then, after the `Object.assign(modules, { … })`, apply the gate:
+- [x] **Step 4: Wire into `getObjectWorkspaceResource`.** **DONE** (11th Promise.all entry `getFacetApplicabilityRows()`→`facetRows`; object type = `detail.type` (confirmed source of `resource.type`); gate loop mutates each gated module's `unavailableReason` in place after `Object.assign`). In the §42 block (~3344): fetch applicability in the same `Promise.all` round as the 10 module loaders (add `getFacetApplicabilityRows()` as an 11th entry), and determine the object's type the same way the function's return value populates `ObjectWorkspaceResource.type` (read the end of the function to find the exact source — likely `detail` payload; reuse it). Then, after the `Object.assign(modules, { … })`, apply the gate:
 
 ```ts
   // §46: registry-driven type gating for the 6 type-specific modules.
@@ -750,9 +750,9 @@ async function getFacetApplicabilityRows(): Promise<FacetApplicabilityRow[]> {
 
   Adapt the typing to the file's idiom (the cast gymnastics above are illustrative; if the module types make a cleaner per-module assignment easier, write six explicit lines instead — clarity beats cleverness).
 
-- [ ] **Step 5: Add the saver guard to ALL 6 modules — none has one today.** Verified inventory (2026-06-10): `saveObjectWorkspaceRooms` (`object-workspace.ts:~3912`) — no guard; `saveObjectWorkspaceMeetingRooms` (~4018) — none; `saveObjectWorkspaceMenus` (~4087) — none; `saveObjectWorkspaceActivity` (~4271) — none; `saveObjectWorkspaceEvent` (~4298) — none, **and it deletes all `object_fma_occurrence` rows (~4323) before reinserting** (worst clobber risk); `saveObjectWorkspaceItinerary` (~4388) — the §28 guard covers **stages only** (`buildItineraryStagesPayload` returns null), while the `object_iti` upsert (~4406) and the `object_iti_practice` delete/reinsert (~4413) are unguarded — **itinerary needs the top guard too, do not judge it compliant.** Guard shape (top of each of the 6 functions): `if (input.unavailableReason) { throw new Error(input.unavailableReason); }` — **throw, don't silently return**: `useEditorSave` counts a returning saver as `saved` and the editor commits the module clean ("Brouillon enregistré"), which would be a CLAUDE.md-class silent write-trap; throwing routes it to the `failed` path with the reason visible. (The guard is unreachable-by-construction in the normal flow — a gated module loads disabled and can't go dirty — this is defense-in-depth.) Parser check: all 6 module types ALREADY declare `unavailableReason: string | null` (`object-workspace-parser.ts:441/459/504/515/533/559`) — **no parser change needed**.
+- [x] **Step 5: Add the saver guard to ALL 6 modules — none has one today.** **DONE** — `if (input.unavailableReason) throw new Error(...)` added after the demo no-op in all 6 savers (rooms/meetingRooms/menus/activity/event/itinerary). No parser change (types already carry `unavailableReason`). Verified inventory (2026-06-10): `saveObjectWorkspaceRooms` (`object-workspace.ts:~3912`) — no guard; `saveObjectWorkspaceMeetingRooms` (~4018) — none; `saveObjectWorkspaceMenus` (~4087) — none; `saveObjectWorkspaceActivity` (~4271) — none; `saveObjectWorkspaceEvent` (~4298) — none, **and it deletes all `object_fma_occurrence` rows (~4323) before reinserting** (worst clobber risk); `saveObjectWorkspaceItinerary` (~4388) — the §28 guard covers **stages only** (`buildItineraryStagesPayload` returns null), while the `object_iti` upsert (~4406) and the `object_iti_practice` delete/reinsert (~4413) are unguarded — **itinerary needs the top guard too, do not judge it compliant.** Guard shape (top of each of the 6 functions): `if (input.unavailableReason) { throw new Error(input.unavailableReason); }` — **throw, don't silently return**: `useEditorSave` counts a returning saver as `saved` and the editor commits the module clean ("Brouillon enregistré"), which would be a CLAUDE.md-class silent write-trap; throwing routes it to the `failed` path with the reason visible. (The guard is unreachable-by-construction in the normal flow — a gated module loads disabled and can't go dirty — this is defense-in-depth.) Parser check: all 6 module types ALREADY declare `unavailableReason: string | null` (`object-workspace-parser.ts:441/459/504/515/533/559`) — **no parser change needed**.
 
-- [ ] **Step 6: Run tests + typecheck:**
+- [x] **Step 6: Run tests + typecheck:** **DONE — GREEN: services suite 16 passed / 64 tests (incl. new facets spec); `npm run typecheck` clean.**
 
 ```bash
 cd bertel-tourism-ui

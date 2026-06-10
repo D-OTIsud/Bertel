@@ -3268,6 +3268,52 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   };
 }
 
+// §46 — type→facet applicability (mirror of ref_facet_applicability + the DB triggers).
+// A non-applicable module is disabled-with-reason (its saver skips persistence: same anti-clobber
+// machinery as §28/§40/§41). Fail-open on fetch failure / missing rows — the DB trigger stays the
+// hard gate, the UI gate is comfort. NOT a regression of §42 (that was an env flag hiding catalogs
+// from everyone; this is per-type semantics sourced from the DB registry).
+export interface FacetApplicabilityRow {
+  facetTable: string;
+  objectType: string;
+}
+
+export const TYPE_SPECIFIC_MODULE_FACETS = {
+  rooms: 'object_room_type',
+  meetingRooms: 'object_meeting_room',
+  menus: 'object_menu',
+  activity: 'object_act',
+  event: 'object_fma',
+  itinerary: 'object_iti',
+} as const;
+
+export function facetUnavailableReason(
+  facetTable: string,
+  objectType: string,
+  rows: FacetApplicabilityRow[],
+): string | null {
+  if (!objectType) return null;
+  const allowed = rows.filter((row) => row.facetTable === facetTable).map((row) => row.objectType);
+  if (allowed.length === 0 || allowed.includes(objectType)) return null;
+  return `Module non applicable au type ${objectType} (référentiel ref_facet_applicability).`;
+}
+
+async function getFacetApplicabilityRows(): Promise<FacetApplicabilityRow[]> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) return [];
+  const client = getSupabaseClient();
+  if (!client) return [];
+  const result = await client
+    .from('ref_facet_applicability')
+    .select('facet_table, object_type')
+    .in('facet_table', Object.values(TYPE_SPECIFIC_MODULE_FACETS));
+  if (result.error) return []; // fail open — see header comment
+  return (result.data ?? []).map((row) => ({
+    facetTable: readString((row as Record<string, unknown>).facet_table),
+    objectType: readString((row as Record<string, unknown>).object_type),
+  }));
+}
+
 export async function getObjectWorkspaceResource(objectId: string, langPrefs: string[]): Promise<ObjectWorkspaceResource> {
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
@@ -3353,6 +3399,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     eventModule,
     itineraryModule,
     membershipsModule,
+    facetRows,
   ] = await Promise.all([
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
@@ -3364,6 +3411,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
+    getFacetApplicabilityRows(),
   ]);
 
   Object.assign(modules, {
@@ -3378,6 +3426,19 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     itinerary: itineraryModule,
     memberships: membershipsModule,
   });
+
+  // §46: registry-driven type gating for the 6 type-specific modules. A non-applicable type
+  // disables the module (its saver throws if invoked — defense-in-depth). Fail-open: empty
+  // facetRows (fetch failed / unenrolled) ⇒ no gating; the DB trigger is the hard gate.
+  const objectType = (detail.type ?? '').toUpperCase();
+  for (const [moduleId, facetTable] of Object.entries(TYPE_SPECIFIC_MODULE_FACETS)) {
+    const reason = facetUnavailableReason(facetTable, objectType, facetRows);
+    if (!reason) continue;
+    const current = modules[moduleId as keyof ObjectWorkspaceModules] as { unavailableReason?: string | null };
+    if (current && typeof current === 'object') {
+      current.unavailableReason = current.unavailableReason ?? reason;
+    }
+  }
 
   return {
     id: detail.id,
@@ -3914,6 +3975,12 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
   if (session.demoMode) {
     return;
   }
+  // §46: a type-gated module loads disabled and can't go dirty — this is unreachable in the normal
+  // flow; throw (don't silently return) so a stray invocation routes to useEditorSave's `failed`
+  // path with the reason visible, never a silent write-trap.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
 
   const client = getSupabaseClient();
   if (!client) {
@@ -4020,6 +4087,10 @@ export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: O
   if (session.demoMode) {
     return;
   }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
 
   const client = getSupabaseClient();
   if (!client) {
@@ -4088,6 +4159,10 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
   }
 
   const client = getSupabaseClient();
@@ -4273,6 +4348,10 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
   if (session.demoMode) {
     return;
   }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
 
   const client = getSupabaseClient();
   if (!client) {
@@ -4299,6 +4378,11 @@ export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWo
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  // (event also deletes all object_fma_occurrence rows before reinserting — worst clobber risk.)
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
   }
 
   const client = getSupabaseClient();
@@ -4389,6 +4473,12 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  // (the §28 stages guard only covers stages; this top guard also protects the object_iti upsert
+  // and the object_iti_practice delete/reinsert.)
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
   }
 
   const client = getSupabaseClient();

@@ -75,3 +75,8 @@ graphify-out/
 # Local-only operational SQL kept out of the open-source repo
 Base de donnée DLL et API/lot1_pilot_inserts.sql
 
+# DB knowledge graph — transient/bulky outputs (db-graph-out/graph.json + *.md ARE committed)
+db-graph-out/schema_tbls.json
+db-graph-out/catalog_extra.json
+db-graph-out/graph.html
+

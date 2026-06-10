@@ -45,7 +45,10 @@ const VALIDATION_RULES: ValidationRule[] = [
       ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }
       : null,
   ({ archetype, draft }) =>
-    archetype === 'FMA' && !hasText(draft.event.startDate) && draft.event.occurrences.length === 0
+    // §48 — mirror the saver: it drops occurrence rows with neither startAt nor endAt,
+    // so an all-empty repeater must still block publication.
+    archetype === 'FMA' && !hasText(draft.event.startDate) &&
+    !draft.event.occurrences.some((occurrence) => hasText(occurrence.startAt) || hasText(occurrence.endAt))
       ? { section: '05', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
       : null,
   ({ draft }) =>

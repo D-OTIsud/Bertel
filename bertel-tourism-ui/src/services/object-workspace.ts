@@ -4390,6 +4390,19 @@ export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWo
     throw new Error('Connexion backend indisponible pour enregistrer la programmation.');
   }
 
+  // §48 — validate BEFORE the delete-all+reinsert: a constraint-violating row would
+  // otherwise wipe every saved occurrence (two non-atomic PostgREST calls).
+  const occurrenceRows = input.occurrences.filter((occurrence) => occurrence.startAt || occurrence.endAt);
+  const missingStart = occurrenceRows.find((occurrence) => !occurrence.startAt);
+  if (missingStart) {
+    throw new Error('Chaque occurrence doit avoir une date de début.');
+  }
+  const inverted = occurrenceRows.find((occurrence) =>
+    occurrence.endAt && new Date(occurrence.endAt).getTime() < new Date(occurrence.startAt).getTime());
+  if (inverted) {
+    throw new Error("La fin d'une occurrence doit être postérieure à son début.");
+  }
+
   const { error } = await client.from('object_fma').upsert({
     object_id: objectId,
     event_start_date: toNullableText(input.startDate),
@@ -4409,16 +4422,14 @@ export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWo
     throw mapMutationError(deleteOccurrencesError, 'Impossible de reinitialiser les occurrences.');
   }
 
-  const occurrenceRows = input.occurrences
-    .filter((occurrence) => occurrence.startAt || occurrence.endAt)
-    .map((occurrence) => ({
-      object_id: objectId,
-      start_at: toNullableText(occurrence.startAt),
-      end_at: toNullableText(occurrence.endAt),
-      state: toNullableText(occurrence.state) ?? 'scheduled',
-    }));
-  if (occurrenceRows.length > 0) {
-    const { error: occurrencesError } = await client.from('object_fma_occurrence').insert(occurrenceRows);
+  const occurrenceInsertRows = occurrenceRows.map((occurrence) => ({
+    object_id: objectId,
+    start_at: toNullableText(occurrence.startAt),
+    end_at: toNullableText(occurrence.endAt),
+    state: toNullableText(occurrence.state) ?? 'scheduled',
+  }));
+  if (occurrenceInsertRows.length > 0) {
+    const { error: occurrencesError } = await client.from('object_fma_occurrence').insert(occurrenceInsertRows);
     if (occurrencesError) {
       throw mapMutationError(occurrencesError, 'Impossible de sauvegarder les occurrences.');
     }

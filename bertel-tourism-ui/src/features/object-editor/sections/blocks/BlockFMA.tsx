@@ -1,6 +1,7 @@
 import { Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
+import { fromReunionInputValue, toReunionInputValue } from './fma-datetime';
 
 const OCCURRENCE_COLS = '14px 1fr 1fr 130px auto';
 // object_fma_occurrence.state is free TEXT; the loader defaults to 'scheduled'.
@@ -10,11 +11,6 @@ const STATE_OPTIONS = [
   { v: 'cancelled', l: 'Annulée' },
   { v: 'postponed', l: 'Reportée' },
 ];
-
-/** ISO timestamptz → <input type="datetime-local"> value (minute precision). */
-function toLocalInputValue(value: string): string {
-  return value ? value.slice(0, 16) : '';
-}
 
 export function BlockFMA({ editor, folded }: SectionProps) {
   const event = editor.draft.event;
@@ -87,7 +83,7 @@ export function BlockFMA({ editor, folded }: SectionProps) {
           <div className="chip-group__label">Occurrences détaillées</div>
           <Repeater
             items={event.occurrences}
-            getKey={(occurrence, index) => `${occurrence.recordId ?? 'occ'}-${index}`}
+            getKey={(occurrence, index) => occurrence.recordId ?? `new-${index}`}
             columns={OCCURRENCE_COLS}
             addLabel="Ajouter une occurrence"
             onAdd={() =>
@@ -100,15 +96,15 @@ export function BlockFMA({ editor, folded }: SectionProps) {
                 <span className="rep-row__handle" aria-hidden />
                 <Input
                   type="datetime-local"
-                  aria-label="Début de l'occurrence"
-                  value={toLocalInputValue(occurrence.startAt)}
-                  onChange={(startAt) => updateOccurrence(index, { startAt })}
+                  aria-label={`Début de l'occurrence ${index + 1}`}
+                  value={toReunionInputValue(occurrence.startAt)}
+                  onChange={(startAt) => updateOccurrence(index, { startAt: fromReunionInputValue(startAt) })}
                 />
                 <Input
                   type="datetime-local"
-                  aria-label="Fin de l'occurrence"
-                  value={toLocalInputValue(occurrence.endAt)}
-                  onChange={(endAt) => updateOccurrence(index, { endAt })}
+                  aria-label={`Fin de l'occurrence ${index + 1}`}
+                  value={toReunionInputValue(occurrence.endAt)}
+                  onChange={(endAt) => updateOccurrence(index, { endAt: fromReunionInputValue(endAt) })}
                 />
                 <Select
                   value={occurrence.state || 'scheduled'}
@@ -118,6 +114,7 @@ export function BlockFMA({ editor, folded }: SectionProps) {
                 <button
                   type="button"
                   className="del"
+                  aria-label={`Supprimer l'occurrence ${index + 1}`}
                   onClick={() => patch({ occurrences: event.occurrences.filter((_, i) => i !== index) })}
                 >
                   ×

@@ -26,6 +26,16 @@ describe('editor publication validation — FMA', () => {
     expect(result.blockers.some((issue) => issue.section === '05')).toBe(false);
   });
 
+  it('still blocks when the only occurrence row is empty (the saver drops it)', () => {
+    const draft = fullModulesFixture();
+    draft.event.startDate = '';
+    draft.event.occurrences = [{ recordId: null, startAt: '', endAt: '', state: 'scheduled' }];
+
+    const result = validateForPublication(draft, allowAll, 'FMA');
+
+    expect(result.blockers.some((issue) => issue.section === '05')).toBe(true);
+  });
+
   it('does not apply the ITI trace blocker to FMA', () => {
     const draft = fullModulesFixture();
     draft.itinerary.geometrySummary = '';

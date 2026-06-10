@@ -45,6 +45,35 @@ describe('BlockFMA — event dates & occurrences', () => {
     expect(screen.getByText('Règle de récurrence')).toBeInTheDocument();
   });
 
+  it('edits an occurrence start in Réunion local time and stores an explicit-offset instant', () => {
+    const modules = fullModulesFixture();
+    modules.event.occurrences = [{ recordId: 'occ1', startAt: '2026-07-14T14:00:00+00:00', endAt: '', state: 'scheduled' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockFMA editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByLabelText("Début de l'occurrence 1")).toHaveValue('2026-07-14T18:00');
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Début de l'occurrence 1"), { target: { value: '2026-07-15T09:30' } });
+    });
+    view.rerender(<BlockFMA editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.event.occurrences[0].startAt).toBe('2026-07-15T09:30:00+04:00');
+    expect(result.current.dirtySections.event).toBe(true);
+  });
+
+  it('removes an occurrence and marks the module dirty', () => {
+    const modules = fullModulesFixture();
+    modules.event.occurrences = [{ recordId: 'occ1', startAt: '2026-07-14T14:00:00+00:00', endAt: '', state: 'scheduled' }];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockFMA editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByLabelText("Supprimer l'occurrence 1")); });
+    view.rerender(<BlockFMA editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.event.occurrences).toHaveLength(0);
+    expect(result.current.dirtySections.event).toBe(true);
+  });
+
   it('renders the §46 notice instead of controls when the module is gated', () => {
     const modules = fullModulesFixture();
     modules.event.unavailableReason = 'Module non applicable au type HOT (référentiel ref_facet_applicability).';

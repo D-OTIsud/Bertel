@@ -168,21 +168,25 @@ export function SectionPricing({ editor, folded }: SectionProps) {
             <Input
               value={discount.minGroupSize}
               mono
+              aria-label="Taille de groupe minimale"
               onChange={(minGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { minGroupSize }))}
             />
             <Input
               value={discount.maxGroupSize}
               mono
+              aria-label="Taille de groupe maximale"
               onChange={(maxGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { maxGroupSize }))}
             />
             <Input
               type="date"
               value={discount.validFrom}
+              aria-label="Début de validité de la remise"
               onChange={(validFrom) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validFrom }))}
             />
             <Input
               type="date"
               value={discount.validTo}
+              aria-label="Fin de validité de la remise"
               onChange={(validTo) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validTo }))}
             />
             <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removeDiscountRow(pricing, index))}>

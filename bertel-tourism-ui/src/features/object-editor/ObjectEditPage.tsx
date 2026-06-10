@@ -178,7 +178,9 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     );
 
     if (result.failed.length > 0) {
-      setStatusMessage(`${result.failed.length} section(s) en échec.`);
+      // §48 — surface the first failure reason (e.g. a pre-save discount validation error)
+      // instead of an opaque count, so the user can act on it from the save bar.
+      setStatusMessage(`${result.failed.length} section(s) en échec : ${result.failed[0].message}`);
       return false;
     }
     if (result.blocked.length > 0) {

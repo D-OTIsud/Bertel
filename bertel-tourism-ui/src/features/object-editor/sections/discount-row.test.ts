@@ -1,4 +1,4 @@
-import { addDiscountRow, removeDiscountRow, updateDiscountRow } from './discount-row';
+import { addDiscountRow, removeDiscountRow, updateDiscountRow, validateDiscountRowsForSave } from './discount-row';
 import type { ObjectWorkspacePricingModule } from '../../../services/object-workspace-parser';
 
 const base = (): ObjectWorkspacePricingModule => ({
@@ -27,5 +27,35 @@ describe('discount-row helpers (§48 — object_discount XOR contract)', () => {
 
   it('removes a row', () => {
     expect(removeDiscountRow(base(), 0).discounts).toHaveLength(0);
+  });
+
+  it('patching both percent and amount in one call keeps the amount (last-XOR-wins, not both-empty)', () => {
+    const next = updateDiscountRow(base(), 0, { discountPercent: '20', discountAmount: '15' });
+    expect(next.discounts[0].discountAmount).toBe('15');
+    expect(next.discounts[0].discountPercent).toBe('');
+  });
+});
+
+describe('validateDiscountRowsForSave (§48 — DB-constraint mirror)', () => {
+  const blank = { recordId: null, conditions: '', discountPercent: '', discountAmount: '', currency: '', minGroupSize: '', maxGroupSize: '', validFrom: '', validTo: '', source: '' };
+
+  it('silently drops fully-blank rows (freshly added, untouched)', () => {
+    expect(validateDiscountRowsForSave([blank])).toEqual([]);
+  });
+
+  it('throws a French actionable error for a row with content but no value', () => {
+    expect(() => validateDiscountRowsForSave([{ ...blank, conditions: 'Groupes' }]))
+      .toThrow('Chaque remise doit avoir un pourcentage ou un montant.');
+  });
+
+  it('throws on inverted group sizes and validity windows, and percent over 100', () => {
+    expect(() => validateDiscountRowsForSave([{ ...blank, discountPercent: '10', minGroupSize: '10', maxGroupSize: '5' }])).toThrow(/groupe/);
+    expect(() => validateDiscountRowsForSave([{ ...blank, discountPercent: '10', validFrom: '2026-08-01', validTo: '2026-07-01' }])).toThrow(/validité/);
+    expect(() => validateDiscountRowsForSave([{ ...blank, discountPercent: '120' }])).toThrow(/100/);
+  });
+
+  it('passes valid rows through unchanged', () => {
+    const row = { ...blank, discountPercent: '10', conditions: 'Groupes' };
+    expect(validateDiscountRowsForSave([row])).toEqual([row]);
   });
 });

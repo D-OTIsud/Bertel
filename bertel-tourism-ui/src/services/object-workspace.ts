@@ -62,6 +62,7 @@ import {
   normalizeTagSource,
   resolveTagColor,
 } from './object-workspace-parser';
+import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
 
 // Re-export resolveTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
@@ -3888,8 +3889,11 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
     return;
   }
 
+  // §48 — mirror the object_discount DB CHECKs client-side before the RPC (FMA occurrence-saver precedent).
+  const discounts = validateDiscountRowsForSave(input.discounts);
+
   await callObjectWorkspaceRpc('save_object_commercial', objectId, {
-    discounts: input.discounts.map((discount) => ({
+    discounts: discounts.map((discount) => ({
       id: toRpcUuid(discount.recordId),
       conditions: toNullableText(discount.conditions),
       discount_percent: toNullableNumber(discount.discountPercent),

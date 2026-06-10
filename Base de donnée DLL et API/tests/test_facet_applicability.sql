@@ -2,6 +2,7 @@
 -- Proves migration_facet_applicability.sql (§46): ref_facet_registry + ref_facet_applicability
 -- (single machine-readable type->facet registry), the assert_facet_applicable trigger on the 13
 -- type-specific facet tables, the object_type change guard, and the violations report fn.
+-- Also proves migration_object_act_asc_applicability.sql (§48 / 8q): the ('object_act','ASC') pair.
 -- Run AFTER the full manifest. Self-contained + transactional (ROLLBACK; nothing persists).
 -- Against a DB WITHOUT the migration, every assertion goes red.
 \set ON_ERROR_STOP on
@@ -41,6 +42,8 @@ BEGIN
   -- ---------- Seed matrix (superset asserts — observed-data extensions are allowed) ----------
   ASSERT EXISTS (SELECT 1 FROM ref_facet_applicability WHERE facet_table='object_iti' AND object_type='ITI'), 'object_iti must accept ITI';
   ASSERT EXISTS (SELECT 1 FROM ref_facet_applicability WHERE facet_table='object_act' AND object_type='ACT'), 'object_act must accept ACT';
+  ASSERT EXISTS (SELECT 1 FROM ref_facet_applicability WHERE facet_table='object_act' AND object_type='ASC'),
+         'object_act must accept ASC (8q — decision log §48)';
   ASSERT EXISTS (SELECT 1 FROM ref_facet_applicability WHERE facet_table='object_fma' AND object_type='FMA'), 'object_fma must accept FMA';
   ASSERT (SELECT count(*) FROM ref_facet_applicability WHERE facet_table='object_room_type'
           AND object_type IN ('HOT','HPA','HLO','CAMP','RVA')) = 5, 'object_room_type must accept the HEB family';

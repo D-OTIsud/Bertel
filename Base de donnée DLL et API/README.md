@@ -100,6 +100,8 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_write_policy_percommand.sql
 -- 5m) §38 lectures: 25 politiques de lecture plates passent au gabarit ensembliste (InitPlan unique au lieu d'un scalaire par ligne)
 \i migration_child_read_gate_setbased.sql
+-- 5n) §48 applicabilite object_act etendue a ASC (les deux types ASC et ACT portent object_act)
+\i migration_object_act_asc_applicability.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql

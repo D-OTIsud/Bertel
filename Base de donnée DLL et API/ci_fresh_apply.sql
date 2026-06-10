@@ -79,6 +79,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \ir migration_write_policy_percommand.sql
 \echo '== 8p     migration_child_read_gate_setbased.sql  (25 flat child read gates -> set-based §38 form; after p03/8d + 8o) =='
 \ir migration_child_read_gate_setbased.sql
+\echo '== 8q     migration_object_act_asc_applicability.sql  (extend object_act applicability to ASC; after 8m) =='
+\ir migration_object_act_asc_applicability.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

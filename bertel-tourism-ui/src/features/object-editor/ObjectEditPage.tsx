@@ -6,7 +6,7 @@ import { useUiStore } from '../../store/ui-store';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
-import { resolveArchetypeMeta, TYPE_LABEL } from './archetypes';
+import { getArchetypeMeta, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
 import { useObjectEditorState } from './useObjectEditorState';
 import { useUnsavedDraftGuard } from './useUnsavedDraftGuard';
 import { useEditorSave } from './useEditorSave';
@@ -31,14 +31,24 @@ import './object-editor.css';
  *  EditorReady so the editor hooks only run once data is present. */
 export function ObjectEditPage({ objectId }: { objectId: string }) {
   const { data, isError, error } = useObjectWorkspaceQuery(objectId);
-
   if (isError) {
     return <div className="panel-card panel-card--warning">{(error as Error).message}</div>;
   }
   if (!data) {
     return <div className="panel-card">Chargement de l&apos;éditeur…</div>;
   }
-  return <EditorReady resource={data} objectId={objectId} />;
+  // §46: no silent archetype fallback — an unmapped type (ORG, or future enum values not yet
+  // wired) gets an explicit unsupported panel instead of rendering as a Hébergement.
+  const meta = getArchetypeMeta(data.type);
+  if (!meta) {
+    return (
+      <div className="panel-card panel-card--warning">
+        Le type d&apos;objet «{data.type ?? '?'}» n&apos;est pas pris en charge par l&apos;éditeur de fiches.
+        Les organisations (ORG) se gèrent via l&apos;administration d&apos;équipe.
+      </div>
+    );
+  }
+  return <EditorReady resource={data} objectId={objectId} meta={meta} />;
 }
 
 function flattenSectionItems(groups: ReturnType<typeof makeSections>): SectionItem[] {
@@ -117,7 +127,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
     .slice(0, 5);
 }
 
-function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource; objectId: string }) {
+function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta }) {
   const router = useRouter();
   const openDrawer = useUiStore((state) => state.openDrawer);
   const editor = useObjectEditorState(objectId, resource.modules);
@@ -128,7 +138,6 @@ function EditorReady({ resource, objectId }: { resource: ObjectWorkspaceResource
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
 
-  const meta = resolveArchetypeMeta(resource.type);
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
   const navItems = useMemo(() => flattenSectionItems(groups), [groups]);
   const sections = useMemo(() => getRegisteredSections(meta.archetype), [meta.archetype]);

@@ -1,9 +1,12 @@
 /**
- * Archetype identity for the 16 object type codes.
+ * Archetype identity for the editor's object type codes.
  *
- * The 16 canonical type codes collapse into 6 archetypes, each with its own
- * accent palette and ribbon metadata. Shared by the per-type detail view and
- * the full-page editor so the mapping has a single source of truth.
+ * Keys = the DB `object_type` enum MINUS ORG (ORG is deliberately unmapped —
+ * the editor renders an explicit unsupported-type panel; ORGs are managed via
+ * /team administration). The mapped codes collapse into 6 archetypes, each with
+ * its own accent palette and ribbon metadata. Shared by the per-type detail view
+ * and the full-page editor so the mapping has a single source of truth.
+ * SRV/HEB/VIS are archetype names, NOT DB types. See decision log §46.
  */
 
 export type ArchetypeCode = 'HEB' | 'RES' | 'ASC' | 'ITI' | 'VIS' | 'SRV';
@@ -33,9 +36,10 @@ export const TYPE_LABEL: Record<string, string> = {
   PCU: 'Patrimoine',
   PNA: 'Site naturel',
   PSV: 'Prestataire',
-  SRV: 'Service',
   VIL: 'Ville',
   COM: 'Commerce',
+  ACT: 'Activite encadree',
+  ORG: 'Organisation',
 };
 
 const HEB_ARCHETYPE: ArchetypeMeta = {
@@ -82,10 +86,12 @@ const SRV_ARCHETYPE: ArchetypeMeta = {
   archetype: 'SRV',
   accent: 'acc-rust',
   codeName: 'Service & commerce',
-  family: 'OT · Commerce · Service · Ville',
-  covers: 'PSV · SRV · COM · VIL',
+  family: 'OT · Commerce · Service · Activité encadrée',
+  covers: 'PSV · VIL · COM · ACT',
 };
 
+// Keys = DB object_type enum minus ORG (ORG is deliberately unmapped: the editor renders an
+// explicit unsupported-type panel; see ObjectEditPage). SRV/HEB/VIS are archetype names, NOT DB types.
 export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   HOT: HEB_ARCHETYPE,
   HPA: HEB_ARCHETYPE,
@@ -100,7 +106,7 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   PCU: VIS_ARCHETYPE,
   PNA: VIS_ARCHETYPE,
   PSV: SRV_ARCHETYPE,
-  SRV: SRV_ARCHETYPE,
+  ACT: SRV_ARCHETYPE,
   VIL: SRV_ARCHETYPE,
   COM: SRV_ARCHETYPE,
 };
@@ -110,11 +116,6 @@ export function getArchetypeMeta(typeCode: string | null | undefined): Archetype
     return null;
   }
   return TYPE_ARCHETYPES[typeCode.toUpperCase()] ?? null;
-}
-
-/** Like getArchetypeMeta but always resolves — an unknown code falls back to HEB. */
-export function resolveArchetypeMeta(typeCode: string | null | undefined): ArchetypeMeta {
-  return getArchetypeMeta(typeCode) ?? HEB_ARCHETYPE;
 }
 
 /** Resolve ribbon/meta from archetype bucket (editor sections). */

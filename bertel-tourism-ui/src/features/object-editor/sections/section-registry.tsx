@@ -30,7 +30,10 @@ import { TYPE_BLOCKS } from './blocks';
 export const MODE_ESSENTIAL = new Set(['01', '02', '03', '04', '05', '13', '14', '21']);
 
 function TypeBlockSection(props: SectionProps) {
-  const Block = TYPE_BLOCKS[props.archetype ?? 'HEB'];
+  // §46: archetype is guaranteed by the ObjectEditPage guard; render nothing rather than
+  // silently impersonating the HEB block if a future caller omits it.
+  if (!props.archetype) return null;
+  const Block = TYPE_BLOCKS[props.archetype];
   return <Block {...props} />;
 }
 

@@ -464,20 +464,20 @@ COMMIT;
 - Modify: `.github/workflows/sql-fresh-apply.yml` (new test step after the `test_ref_commune.sql` step)
 - Modify: `README.md` (~line 144 area) and `Base de donnée DLL et API/README.md` (~line 93 area)
 
-- [ ] **Step 1: Runbook manifest entry** (insert after 8l):
+- [x] **Step 1: Runbook manifest entry** (insert after 8l): **DONE** (8m entry added after 8l).
 
 ```markdown
 8m. `migration_facet_applicability.sql` — **§46 type→facet applicability registry**: creates `ref_facet_registry` + `ref_facet_applicability` (single machine-readable source of truth for which object_type may carry which type-specific facet table), attaches `trg_assert_facet_applicable` to the 13 enrolled tables (object_iti family ×7, object_fma ×2, object_act, object_room_type, object_meeting_room, object_menu), guards `object.object_type` changes (`trg_guard_object_type_change`), adds the ops report `api.facet_applicability_violations()`, and side-fixes `rpc_create_object`'s hardcoded (pre-ACT) valid-type message. The editor consumes the same registry (module gating); legacy violating rows are reported, never auto-deleted. After step 6 (needs `api.is_platform_superuser`) and step 1 (facet tables). Idempotent; listed in the manifest (not folded into `schema_unified.sql`).
 ```
 
-- [ ] **Step 2: `ci_fresh_apply.sql`** — after the 8l pair add:
+- [x] **Step 2: `ci_fresh_apply.sql`** — **DONE** (8m `\echo`/`\ir` pair added after the 8l pair). after the 8l pair add:
 
 ```
 \echo '== 8m     migration_facet_applicability.sql  (type→facet registry + triggers + violations fn; needs facet tables + is_platform_superuser) =='
 \ir migration_facet_applicability.sql
 ```
 
-- [ ] **Step 3: CI workflow test step.** The real step shape in `.github/workflows/sql-fresh-apply.yml` (see the `test_ref_commune.sql` step at lines ~154–157) is a 4-line block **with its own `env:` defining `DB_URL`** — omit it and the step runs `psql ""` and fails to connect. Append a sibling step after the ref_commune one:
+- [x] **Step 3: CI workflow test step.** **DONE** (4-line step with its own `env: DB_URL` added after the ref_commune step). The real step shape in `.github/workflows/sql-fresh-apply.yml` (see the `test_ref_commune.sql` step at lines ~154–157) is a 4-line block **with its own `env:` defining `DB_URL`** — omit it and the step runs `psql ""` and fails to connect. Append a sibling step after the ref_commune one:
 
 ```yaml
       - name: facet applicability registry test (§46 — registry + triggers + violations fn)
@@ -488,9 +488,9 @@ COMMIT;
 
   (Tasks 8/9/11/13 reuse this exact 4-line shape for their test steps.)
 
-- [ ] **Step 4: Both READMEs** — add one line each in their lettered pre-seed migration lists (ref_commune is `5i` in both — `README.md:144-145`, `Base de donnée DLL et API/README.md:93-94`); 8m becomes **`5j`** (8n/8o/8p in later tasks become `5k`/`5l`/`5m`). The 13c entry (Task 8) does **NOT** go in this lettered list — see Task 8 Step 4.
+- [x] **Step 4: Both READMEs** — **DONE** (`5j` line added after `5i` in both READMEs, matching each file's accent style). add one line each in their lettered pre-seed migration lists (ref_commune is `5i` in both — `README.md:144-145`, `Base de donnée DLL et API/README.md:93-94`); 8m becomes **`5j`** (8n/8o/8p in later tasks become `5k`/`5l`/`5m`). The 13c entry (Task 8) does **NOT** go in this lettered list — see Task 8 Step 4.
 
-- [ ] **Step 5: Commit** (exclude `bertel-tourism-ui/src/features/object-editor/editor-validation.test.ts` and `docs/superpowers/plans/.research/`):
+- [x] **Step 5: Commit** — **DONE: `54beb50`** (9 files, +1711; `editor-validation.test.ts` unstaged, `.research/` untracked; co-author = Claude Opus 4.8 (1M context) per harness). NB: applied to live BEFORE this commit (verified-then-committed). (exclude `bertel-tourism-ui/src/features/object-editor/editor-validation.test.ts` and `docs/superpowers/plans/.research/`):
 
 ```bash
 git -C "C:\Users\dphil\Bertel3.0" add "Base de donnée DLL et API/migration_facet_applicability.sql" "Base de donnée DLL et API/tests/test_facet_applicability.sql" "Base de donnée DLL et API/ci_fresh_apply.sql" "Base de donnée DLL et API/rls_policies.sql" docs/SQL_ROLLOUT_RUNBOOK.md .github/workflows/sql-fresh-apply.yml README.md "Base de donnée DLL et API/README.md" docs/superpowers/plans/2026-06-10-db-audit-fixes.md
@@ -524,7 +524,7 @@ SELECT (SELECT count(*) FROM ref_facet_registry) AS enrolled,
 
 Background: the DB enum has 17 values incl. `ACT` and `ORG`; `TYPE_ARCHETYPES` has 16 keys — **missing ACT and ORG, and containing a bogus `SRV` key** (`SRV` is an archetype name, not a DB type). `resolveArchetypeMeta` silently falls back to `HEB_ARCHETYPE`, so an ACT or ORG object renders as a Hébergement (teal accent, rooms UI, HEB publication validation). Decision: **ACT → SRV archetype** (the decision log §41 already groups "service-only (SRV/ACT) objects"); **ORG → deliberately unmapped** — the editor shows an explicit unsupported-type panel (ORGs are managed via `/team` administration, not the tourism-object editor).
 
-- [ ] **Step 1: Write the failing tests.** In `archetypes.test.ts`, update/add (adapt to the file's existing style — read it first; it currently pins 16 keys at lines ~23–25):
+- [x] **Step 1: Write the failing tests.** **DONE.** In `archetypes.test.ts`, update/add (adapt to the file's existing style — read it first; it currently pins 16 keys at lines ~23–25):
 
 ```ts
 import { getArchetypeMeta, TYPE_ARCHETYPES, TYPE_LABEL } from './archetypes';
@@ -553,15 +553,15 @@ it('labels ACT and ORG in the topbar vocabulary', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure:** `cd bertel-tourism-ui; npx jest src/features/object-editor/archetypes.test.ts` — expected FAIL (SRV key present, ACT missing, etc.). If other existing assertions in that file pin the old 16-key set, update them in the same spirit (the new source of truth is "DB enum minus ORG").
+- [x] **Step 2: Run to verify failure:** **DONE — RED: 3 failed (enum-minus-ORG keys, ACT→SRV, TYPE_LABEL), 4 retained tests passed.** `cd bertel-tourism-ui; npx jest src/features/object-editor/archetypes.test.ts` — expected FAIL (SRV key present, ACT missing, etc.). If other existing assertions in that file pin the old 16-key set, update them in the same spirit (the new source of truth is "DB enum minus ORG").
 
-- [ ] **Step 3: Edit `archetypes.ts`:**
+- [x] **Step 3: Edit `archetypes.ts`:** **DONE** (header comment, TYPE_LABEL −SRV +ACT/+ORG, SRV_ARCHETYPE family/covers, TYPE_ARCHETYPES −SRV +ACT + comment, deleted `resolveArchetypeMeta`).
   - `TYPE_LABEL`: remove the `SRV: 'Service',` entry; add `ACT: 'Activite encadree',` and `ORG: 'Organisation',` (file uses accent-free labels — keep that style).
   - `SRV_ARCHETYPE`: change `family` to `'OT · Commerce · Service · Activité encadrée'` and `covers` to `'PSV · VIL · COM · ACT'`.
   - `TYPE_ARCHETYPES`: remove the `SRV: SRV_ARCHETYPE,` entry; add `ACT: SRV_ARCHETYPE,`. Add a comment above the map: `// Keys = DB object_type enum minus ORG (ORG is deliberately unmapped: the editor renders an explicit unsupported-type panel; see ObjectEditPage). SRV/HEB/VIS are archetype names, NOT DB types.`
   - **Delete `resolveArchetypeMeta` entirely** (the silent-fallback function). Before deleting, grep for usages: `cd bertel-tourism-ui; npx rg -n "resolveArchetypeMeta" src/`. Expected: only `ObjectEditPage.tsx:131` (+ its import). If other call sites exist, convert each to `getArchetypeMeta` with an explicit null branch appropriate to that surface (view-only surfaces may keep a neutral default; the *editor* must not).
 
-- [ ] **Step 4: Edit `ObjectEditPage.tsx`.** The guard must live in the wrapper (before `EditorReady`'s hooks), not inside `EditorReady` (early-returning between hooks violates the rules of hooks). Current wrapper (lines 32–41):
+- [x] **Step 4: Edit `ObjectEditPage.tsx`.** **DONE** (import→getArchetypeMeta+ArchetypeMeta; wrapper guard renders unsupported panel for null meta; `meta` passed as prop; deleted line-131 resolveArchetypeMeta call). The guard must live in the wrapper (before `EditorReady`'s hooks), not inside `EditorReady` (early-returning between hooks violates the rules of hooks). Current wrapper (lines 32–41):
 
 ```tsx
 export function ObjectEditPage({ objectId }: { objectId: string }) {
@@ -605,7 +605,7 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
 
   Then in `EditorReady`: add `meta: ArchetypeMeta` to its props, delete line 131 (`const meta = resolveArchetypeMeta(resource.type);`), and fix imports (`getArchetypeMeta, type ArchetypeMeta` instead of `resolveArchetypeMeta`).
 
-- [ ] **Step 5: Edit `section-registry.tsx`** — `TypeBlockSection` currently does `const Block = TYPE_BLOCKS[props.archetype ?? 'HEB'];`. The page-level guard means `archetype` is always set when sections render; replace the second silent fallback:
+- [x] **Step 5: Edit `section-registry.tsx`** — **DONE** (`if (!props.archetype) return null;` replaces the `?? 'HEB'` fallback). — `TypeBlockSection` currently does `const Block = TYPE_BLOCKS[props.archetype ?? 'HEB'];`. The page-level guard means `archetype` is always set when sections render; replace the second silent fallback:
 
 ```tsx
 function TypeBlockSection(props: SectionProps) {
@@ -617,7 +617,7 @@ function TypeBlockSection(props: SectionProps) {
 }
 ```
 
-- [ ] **Step 6: Run tests + typecheck:**
+- [x] **Step 6: Run tests + typecheck:** **DONE — GREEN:** object-editor suite = 60 passed / 1 failed (only the baseline `editor-validation.test.ts §02 commune`), 194 tests pass incl. new archetypes specs; `npm run typecheck` clean. No spec pinned the old fallback (no extra edits needed).
 
 ```bash
 cd bertel-tourism-ui

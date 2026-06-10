@@ -46,6 +46,22 @@ export function SectionContacts({ editor, folded }: SectionProps) {
     });
   }
 
+  /**
+   * Mark one row as the primary channel for its kind. Mirrors the saver's
+   * per-kind dedupe in saveObjectWorkspaceContacts (one is_primary per kind):
+   * setting a row primary clears the flag on every other row of the same kind.
+   */
+  function setPrimary(id: string) {
+    const target = contacts.objectItems.find((item) => item.id === id);
+    if (!target) return;
+    editor.replaceModule('contacts', {
+      ...contacts,
+      objectItems: contacts.objectItems.map((item) =>
+        item.kindCode === target.kindCode ? { ...item, isPrimary: item.id === id } : item,
+      ),
+    });
+  }
+
   return (
     <Fs num="03" title="Contacts" sub="Téléphones, e-mail, web, dirigeants" folded={folded} pill={{ tone: 'ok', label: 'OK' }}>
       {!kindOptionsAvailable && (
@@ -57,7 +73,7 @@ export function SectionContacts({ editor, folded }: SectionProps) {
       <Repeater
         items={contacts.objectItems}
         getKey={(it) => it.id}
-        columns="14px 130px 150px 1fr auto auto"
+        columns="14px 130px 150px 1fr auto auto auto"
         addLabel="Ajouter un canal de contact"
         onAdd={addItem}
         renderRow={(it) => {
@@ -111,7 +127,25 @@ export function SectionContacts({ editor, folded }: SectionProps) {
                 }
                 onChange={(v) => updateItem(it.id, { value: v })}
               />
-              <span className="pill-mini">{it.isPublic ? 'Public' : 'Interne'}</span>
+              <button
+                type="button"
+                className="pill-mini"
+                aria-pressed={it.isPublic}
+                title={it.isPublic ? 'Visible publiquement — cliquer pour passer en interne' : 'Interne — cliquer pour rendre public'}
+                onClick={() => updateItem(it.id, { isPublic: !it.isPublic })}
+              >
+                {it.isPublic ? 'Public' : 'Interne'}
+              </button>
+              <button
+                type="button"
+                className="pill-mini"
+                aria-pressed={it.isPrimary}
+                aria-label={it.isPrimary ? 'Canal principal pour ce type' : 'Définir comme canal principal'}
+                title={it.isPrimary ? 'Canal principal pour ce type' : 'Définir comme canal principal'}
+                onClick={() => setPrimary(it.id)}
+              >
+                {it.isPrimary ? '★' : '☆'}
+              </button>
               <button type="button" className="del" onClick={() => removeItem(it.id)} aria-label="Supprimer">
                 <Trash2 size={15} aria-hidden />
               </button>

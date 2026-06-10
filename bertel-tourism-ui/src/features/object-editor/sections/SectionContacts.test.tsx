@@ -162,3 +162,34 @@ describe('SectionContacts', () => {
     expect(container.querySelector('img[src^="https://icons.duckduckgo.com"]')).not.toBeInTheDocument();
   });
 });
+
+describe('SectionContacts — §48 contact flags', () => {
+  it('toggles is_public and marks contacts dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Public' })); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.contacts.objectItems[0].isPublic).toBe(false);
+    expect(screen.getByRole('button', { name: 'Interne' })).toBeInTheDocument();
+    expect(result.current.dirtySections.contacts).toBe(true);
+  });
+
+  it('sets a row primary and clears other rows of the same kind', () => {
+    const modules = fullModulesFixture();
+    modules.contacts.objectItems = [
+      { ...modules.contacts.objectItems[0], id: 'c1', isPrimary: true },
+      { ...modules.contacts.objectItems[0], id: 'c2', value: '+262 111', isPrimary: false },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getAllByLabelText('Définir comme canal principal')[0]); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    const items = result.current.draft.contacts.objectItems;
+    expect(items.find((item) => item.id === 'c2')?.isPrimary).toBe(true);
+    expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(false);
+  });
+});

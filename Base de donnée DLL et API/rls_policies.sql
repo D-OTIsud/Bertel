@@ -538,6 +538,7 @@ DROP POLICY IF EXISTS "Lecture publique des localisations" ON object_location;
 DROP POLICY IF EXISTS "Lecture publique des places" ON object_place;
 DROP POLICY IF EXISTS "pub_contacts_public" ON contact_channel;
 DROP POLICY IF EXISTS "ext_contacts_org_actor" ON contact_channel;
+DROP POLICY IF EXISTS "read_contact_channel" ON contact_channel;
 DROP POLICY IF EXISTS "pub_media_published" ON media;
 DROP POLICY IF EXISTS "ext_media_org_actor" ON media;
 DROP POLICY IF EXISTS "Lecture restreinte identifiants externes" ON object_external_id;
@@ -881,14 +882,18 @@ DO $$ BEGIN
 END $$;
 CREATE POLICY "Lecture publique des localisations" ON object_location FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des places" ON object_place FOR SELECT USING (true);
--- Contacts: publics seulement si is_public, sinon accès étendu
+-- Contacts: §38/§49 split read gate (migration_contact_channel_read_gate.sql, manifest 8s).
+-- Public rows of PUBLISHED objects for everyone; the caller's extended scope (set-based,
+-- one InitPlan — §35) reads all rows incl. private. The retired pub_contacts_public's bare
+-- `is_public` leaked draft/hidden/archived public contacts to anon direct PostgREST.
 DO $$ BEGIN
   BEGIN DROP POLICY IF EXISTS "Lecture publique des contacts" ON contact_channel; EXCEPTION WHEN others THEN NULL; END;
 END $$;
-CREATE POLICY "pub_contacts_public" ON contact_channel
-  FOR SELECT USING (is_public IS TRUE);
-CREATE POLICY "ext_contacts_org_actor" ON contact_channel
-  FOR SELECT USING (api.can_read_extended(object_id));
+CREATE POLICY "read_contact_channel" ON contact_channel
+  FOR SELECT USING (
+    (EXISTS (SELECT 1 FROM object o WHERE o.id = object_id AND o.status = 'published') AND is_public IS TRUE)
+    OR object_id IN (SELECT api.current_user_extended_object_ids())
+  );
 
 -- Médias: publiés pour tous, autres via accès étendu
 DO $$ BEGIN

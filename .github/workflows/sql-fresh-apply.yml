@@ -181,6 +181,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_links_editor.sql"
 
+      - name: contact_channel read gate test (§49 8s — anon draft-contact leak closed, extended arm intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_contact_channel_read_gate.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

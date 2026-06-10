@@ -4,6 +4,10 @@ import { addPricingRow, removePricingRow, updatePricingRow } from '../pricing-ro
 
 const FORMULA_COLS = '14px 1.4fr 70px 110px 110px 70px 80px auto';
 
+function toggle(values: string[], code: string) {
+  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
+}
+
 function repHeader(columns: string, labels: string[]) {
   return (
     <div
@@ -30,6 +34,7 @@ export function BlockASC({ editor, folded }: SectionProps) {
   const activity = editor.draft.activity;
   const pricing = editor.draft.pricing;
   const relationships = editor.draft.relationships;
+  const characteristics = editor.draft.characteristics;
   const formulaCount = pricing.prices.length;
 
   function patch(patchValue: Partial<typeof activity>) {
@@ -78,6 +83,26 @@ export function BlockASC({ editor, folded }: SectionProps) {
           onChange={() => patch({ equipmentProvided: activity.equipmentProvided ? '' : 'Fourni sur place' })}
         />
       </div>
+
+      {/* characteristics module — not type-gated; keep outside any activity.unavailableReason wrap (§46/§48) */}
+      <div className="chip-group__label" style={{ marginTop: 14 }}>
+        Prestations & équipements
+      </div>
+      <ChipSet>
+        {characteristics.amenityGroups.flatMap((group) => group.options).slice(0, 18).map((option) => (
+          <Chip
+            key={option.code}
+            label={option.label}
+            on={characteristics.selectedAmenityCodes.includes(option.code)}
+            onClick={() =>
+              editor.replaceModule('characteristics', {
+                ...characteristics,
+                selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, option.code),
+              })
+            }
+          />
+        ))}
+      </ChipSet>
 
       {relationships.actors.length > 0 && (
         <>

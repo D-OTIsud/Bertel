@@ -107,13 +107,13 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   RVA: HEB_ARCHETYPE,
   RES: RES_ARCHETYPE,
   ASC: ASC_ARCHETYPE,
+  ACT: ASC_ARCHETYPE, // §48: ACT shares the ASC archetype (object_act facet applies to both)
   ITI: ITI_ARCHETYPE,
   FMA: ITI_ARCHETYPE,
   LOI: VIS_ARCHETYPE,
   PCU: VIS_ARCHETYPE,
   PNA: VIS_ARCHETYPE,
   PSV: SRV_ARCHETYPE,
-  ACT: ASC_ARCHETYPE,
   VIL: SRV_ARCHETYPE,
   COM: SRV_ARCHETYPE,
 };

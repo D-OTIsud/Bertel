@@ -29,6 +29,7 @@ describe('getArchetypeMeta', () => {
   it('routes ACT to the ASC archetype (object_act is the shared activity facet — §48)', () => {
     expect(getArchetypeMeta('ACT')?.archetype).toBe('ASC');
     expect(getArchetypeMeta('ACT')?.covers).toContain('ACT');
+    expect(getArchetypeMeta('PSV')?.covers).not.toContain('ACT');
   });
 
   it('returns null for ORG and unknown codes (no silent HEB fallback)', () => {

@@ -41,3 +41,16 @@ describe('BlockASC — honest controls (T1a)', () => {
     expect(result.current.dirtySections.activity).toBe(true);
   });
 });
+
+describe('BlockASC — prestations & équipements (§48)', () => {
+  it('toggles a general amenity chip and marks characteristics dirty', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockASC editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Accès PMR' })); });
+    view.rerender(<BlockASC editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.dirtySections.characteristics).toBe(true);
+    expect(result.current.draft.characteristics.selectedAmenityCodes).toContain('pmr_access');
+  });
+});

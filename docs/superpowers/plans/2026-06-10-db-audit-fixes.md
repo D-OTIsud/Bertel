@@ -1220,10 +1220,10 @@ Object-child tables carry exactly one write-policy family: `canonical_ins/upd/de
 
 ## Task 15: Memory refresh + final verification sweep
 
-- [ ] **Step 1: Full frontend suite:** `cd bertel-tourism-ui; npm run test:run; npm run typecheck`. Expected: everything green except the pre-existing `editor-validation.test.ts` local failure (baseline). Record exact counts.
-- [ ] **Step 2: MCP memory** (per CLAUDE.md memory workflow — AFTER the decision log is updated): `mcp__memory__search_nodes` for the editor/DB entities, delete stale observations (e.g. "type applicability enforced nowhere", "owner/workspace duplication pending"), add observations referencing §46/§47. If the MCP memory server is unavailable, skip and note it.
-- [ ] **Step 3: Push + CI:** `git -C "C:\Users\dphil\Bertel3.0" push` (if blocked, tell the user to push). After push, the fresh-apply gate must go green — it is the proof that fresh DB == live including 8m/8n/8o/8p/13c. If reachable, watch with `gh run watch` (or `gh run list --workflow=sql-fresh-apply.yml --limit 1`).
-- [ ] **Step 4: Final report** (completion criteria from CLAUDE.md — state all five): what changed (5 migrations + 2 frontend commits + docs), where, why (audit issues #1/#2 + 2 discovered gaps), what was verified (live read-backs, persona probes, EXPLAIN, advisors, Jest, CI), what remains uncertain/deferred (editor §07 filtering, nested read policies, meeting-room/menu matrix breadth, any live violations found in Task 1, smells watchlist).
+- [x] **Step 1: Full frontend suite:** **DONE — 103/104 suites, 399/400 tests pass** (only failure = the baseline `editor-validation.test.ts §02 commune`); `npm run typecheck` clean. `cd bertel-tourism-ui; npm run test:run; npm run typecheck`.
+- [x] **Step 2: MCP memory** — **MCP memory server UNAVAILABLE** in this session; updated the **file-based** memory instead (`db-audit-fix-plan-2026-06.md` → EXECUTED + outcomes; MEMORY.md index pointer refreshed). (per CLAUDE.md memory workflow — AFTER the decision log is updated): `mcp__memory__search_nodes` for the editor/DB entities, delete stale observations, add observations referencing §46/§47. If the MCP memory server is unavailable, skip and note it.
+- [x] **Step 3: Push + CI:** **DONE — pushed** (`97b7053..e3df391 master`) **and the fresh-apply gate is GREEN** (run 27261627039): the full manifest applies on a fresh DB and all new test steps (facet registry, capacity seed, object_fma RLS, write-policy per-command incl. 8p read asserts) + all pre-existing tests pass ⇒ fresh DB == live including 8m/8n/8o/8p/13c.
+- [x] **Step 4: Final report** — **DONE** (delivered in the session response; all five completion criteria stated). (completion criteria from CLAUDE.md — state all five): what changed, where, why, what was verified, what remains uncertain/deferred.
 
 ---
 

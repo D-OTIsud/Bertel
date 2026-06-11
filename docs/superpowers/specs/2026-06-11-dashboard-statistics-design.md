@@ -97,10 +97,10 @@
 ## 5. Filtres
 
 ### 5.1 Alignement Explorer (UI seulement — les clés SQL existent)
-Le panneau gagne un groupe repliable **« Filtres avancés »** (fermé par défaut) : taxonomie par domaine (`taxonomy_any` — réutiliser les composants de sélection de l'Explorer), distinctions/classements (`classifications_any`), labels (`tags_any`), équipements + familles (`amenities_any`/`amenity_families_any`), langues (`languages_any`). Le bloc de base reste : types, statut, communes, lieux-dits, période, PMR, animaux. `buildRpcParams` (`dashboard-rpc.ts`) est étendu pour sérialiser les nouvelles clés — il en mappe déjà une partie (`labelsAny`, `taxonomyAny`) sans UI.
+Le panneau gagne un groupe repliable **« Filtres avancés »** (fermé par défaut) : taxonomie par domaine (`taxonomy_any` — réutiliser les composants de sélection de l'Explorer), distinctions/classements (`classifications_any`, paires scheme+valeur), tags (`tags_any` — slugs `ref_tag`), familles d'équipements (`amenity_families_any` ; le niveau équipement individuel est écarté en v1 : `amenities_any` est déjà réservé au mapping PMR et le besoin réel est au niveau famille), langues (`languages_any`). Le bloc de base reste : types, statut, communes, lieux-dits, période, PMR, animaux. `buildRpcParams` (`dashboard-rpc.ts`) est étendu pour sérialiser les nouvelles clés — il en mappe déjà une partie (`labelsAny`, `taxonomyAny`) sans UI.
 
 ### 5.2 Drill-down interactif
-- Tout segment de graphique est cliquable **en toggle** : clic « Hôtels » dans TypeBreakdown → `setFilters({types:['HOT']})`, re-clic → retire ; pareil commune (CommuneDistribution), scheme (DistinctionOverview → `classifications_any`), type dans Actualisation/Complétude. Saisonnalité : le clic sur un mois ne filtre pas (la période des filtres porte sur `updated_at`, pas sur l'ouverture — pas de mapping honnête) ; il ouvre la liste des objets ouvrants/fermants du mois.
+- Tout segment de graphique est cliquable **en toggle** : clic « Hôtels » dans TypeBreakdown → `setFilters({types:['HOT']})`, re-clic → retire ; pareil commune (CommuneDistribution — **déjà implémenté**, sert de modèle), type dans Actualisation/Complétude. Saisonnalité : le clic sur un mois ne filtre pas (la période des filtres porte sur `updated_at`, pas sur l'ouverture — pas de mapping honnête) ; il ouvre la liste des objets ouvrants/fermants du mois. **DistinctionOverview : drill par scheme reporté au lot 5** — `classifications_any` exige des paires `{scheme_code, value_code}` (match exact sur `cached_classification_codes` au format `scheme:value`) ; « tout objet distingué du scheme X » demande une nouvelle clé résolveur `classification_schemes_any` (préfixe `scheme:`), ajoutée au lot 5 avec `publisher_org_any`.
 - Affordance : curseur pointer + tooltip « Filtrer : <valeur> » ; le segment actif est marqué visuellement.
 - Le mapping clic→filtre est une **fonction pure par widget** (testable Jest), qui appelle le `setFilters` du store existant.
 
@@ -131,7 +131,7 @@ Bouton **« Ouvrir dans l'Explorer »** sur la barre de filtres actifs : mappe `
 | **2 — Qualité** | complétude (RPC + widget + scorecard `avg_completeness`) + fiches à problème | 2 fonctions | Lot 0 |
 | **3 — Offre** | capacités + saisonnalité + profil de l'offre | 3 fonctions | Lot 0 |
 | **4 — Activité** | vélocité (+ publications) + contributeurs + modération | 3 fonctions | Lot 0 |
-| **5 — Filtre ORG** | `publisher_org_any` dans le résolveur + UI select/« Ma base » | résolveur + tests | indépendant, peut glisser |
+| **5 — Extensions résolveur** | `publisher_org_any` (+ UI select/« Ma base ») et `classification_schemes_any` (drill DistinctionOverview) | résolveur + tests | indépendant, peut glisser |
 
 Les lots 2/3/4 sont permutables ; l'ordre proposé suit la priorité d'usage (l'équipe SIT au quotidien d'abord).
 

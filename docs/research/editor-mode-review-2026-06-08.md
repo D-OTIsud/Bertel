@@ -48,7 +48,7 @@ Main walk (HEB / HLO):
 - [x] §04 Descriptions
 - [x] §06 Chambres & séminaire (BlockHEB) *(ex-§05 — renumber 7ee937e)*
 - [x] §05 Médias *(ex-§06)*
-- [ ] §07 Capacité & cadre
+- [x] §07 Capacité & accueil *(ex-« cadre »/« contenance » — renamed this pass)*
 - [ ] §08 Classifications
 - [ ] §09 Tags & étiquettes
 - [ ] §10 Accessibilité
@@ -342,3 +342,33 @@ every archetype (the type block is HEB-only). Pure UI move (same `capacityPolici
 module, no migration); §06 keeps the `OwnedElsewhereNote` pointer (now summarising
 groups + animals; label drift fixed: « Capacité & contenance », was « & cadre »).
 Two §48 test pins flipped. FE 616 green.
+
+---
+
+## §07 — Capacité & accueil (reviewed 2026-06-11)
+
+Component: `sections/SectionCapacity.tsx` (module `capacityPolicies` + the shared
+`characteristics` chips). 2-agent investigation + live probes (658 `object_capacity`
+rows = exactly one metric per object — max_capacity 566, seats 92; **0** group
+policies; **0** pet policies; 3 484 environment tags). Full detail: decision log §62.
+Five commits (`d77791d`, `b3276c0`, `5d0f7f6`, `dac503f` + docs); FE 730 green, tsc clean.
+
+| Finding | Decision |
+|---------|----------|
+| **§54 rooms→capacity auto-sync was a production NO-OP**: it keyed on `capacity_total`, a metric code that never existed in `ref_capacity_metric` (12 codes, live-verified); tests were green because the fixture invented the code (2nd « lying fixture » case after §05's media codes). | **FIXED (PO)** — retargeted to `max_capacity` (pax; the live-populated metric); derived-unless-overridden contract unchanged; fixtures realigned on real catalog codes. |
+| Pet policy: « non renseigné » was coerced to `accepted=false` and the FE always sent the object — the FIRST save of an untouched §07 published « Animaux non acceptés »; a refusal couldn't carry conditions. | **FIXED** — tri-state (`accepted: boolean \| null`, NULL≠false class like §04/§05 visibility): absent row = « — Non renseigné — », saver sends `pet_policy: null` (RPC deletes), conditions editable for accepted AND refused. Drawer was already tri-state. |
+| No degraded-load guard on §07 NOR on the shared `characteristics` module: saving the parser-fallback wiped `effective_from/to` (capacities delete-reinsert) and language levels (`object_language` rewritten with empty level_ids). | **FIXED** — `ModuleUnavailableNotice` + saver throws for BOTH modules (§28/§40/§59 precedent); env chips get their own notice. |
+| Sub-title lied 3×: Explorer cards display NO capacity (« 120 pers. » card line is mock-only), « contenance » exists nowhere, « prix d'appel » is §13's. Nav said « cadre », title said « contenance ». | **FIXED (PO)** — « Capacité & accueil » everywhere (nav + title + BlockRES pointer); honest sub with an explicit price→§13 pointer. |
+| Editor offered all 12 metrics to every type (THE known §07 deferred item) and PRD/SPU had **0** `ref_capacity_applicability` rows (13c predates both enums) — filtering would have bricked them. | **FIXED (PO)** — 13c amended in place (PRD: seats, standing_places; SPU: seats, vehicles; max_capacity cross-join self-heals on fresh) + idempotent live re-run; loader filters `metricOptions` by type, fail-open, already-used non-applicable metrics kept. |
+| Repeater UX dead-ends: duplicate metric pickable (generic UNIQUE failure at save), Add fell back to `options[0]` when exhausted, value input accepted free text (silent NULL / truncation). | **FIXED** — per-row select excludes other rows' metrics; Add disabled with reason (`Repeater.addDisabled`); numeric value input. |
+| Drawer rendered every capacity as generic « Capacite » without unit (parser read pre-live keys; test fixture cemented the stale shape; equal-value dedupe collapsed distinct metrics) and `object_group_policy` was parsed-then-dropped (write-and-forget table). | **FIXED** — `metric_name`/`unit` read first (« Capacité max. » / « 12 pax »), dedupe by metric code; new `parseGroupPolicy` + « Groupes » practical fact (range, « Réservé aux groupes », notes). |
+| Effective dates: editable + persisted but emitted nowhere outside the editor (0 dated rows live). | **KEPT (PO)** + honest hint « dates internes (non publiées) ». |
+| Pill vs rail disagreed (rail counted value-less rows). | **FIXED** — completion counts non-empty values only. |
+| Fake −/+ steppers on StatCards (disabled, decorative). | **REMOVED from §07** (BlockITI keeps its own — its review pass). |
+
+**Deferred (§07):** Explorer `environment_tags_any` facet unreachable (full SQL machinery,
+no UI/URL param); `render.capacity_lines` has 0 consumers; phantom card fields
+(`card.pet_accepted`, `card.render.capacity` mock-only); `object_group_policy` RLS read is
+extended-only (published objects' group policy not anon-readable via direct PostgREST —
+the drawer reads through the DEFINER resource, so no user impact); capacity-on-cards =
+a feature decision if ever wanted; capacities delete-reinsert `created_at` churn (cosmetic).

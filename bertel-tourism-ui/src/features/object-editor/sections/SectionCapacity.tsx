@@ -6,7 +6,9 @@ function createCapacityItem(
   items: ObjectWorkspaceCapacityItem[],
   options: SectionProps['editor']['draft']['capacityPolicies']['metricOptions'],
 ): ObjectWorkspaceCapacityItem | null {
-  const option = options.find((candidate) => !items.some((item) => item.metricCode === candidate.code)) ?? options[0];
+  // First UNUSED metric only — the old `?? options[0]` fallback duplicated a used
+  // metric and guaranteed a UNIQUE(object_id, metric_id) failure at save time.
+  const option = options.find((candidate) => !items.some((item) => item.metricCode === candidate.code));
   if (!option) {
     return null;
   }
@@ -81,6 +83,9 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
   }
 
   const filledMetrics = capacity.capacityItems.filter((item) => item.value.trim()).length;
+  const hasUnusedMetric = capacity.metricOptions.some(
+    (option) => !capacity.capacityItems.some((item) => item.metricCode === option.code),
+  );
 
   return (
     <Fs
@@ -110,6 +115,8 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         getKey={(item, index) => `${item.recordId ?? item.metricCode}-${index}`}
         columns={CAP_COLS}
         addLabel="Ajouter une capacité"
+        addDisabled={!hasUnusedMetric}
+        addDisabledReason="Toutes les métriques applicables à ce type sont déjà renseignées."
         onAdd={() => {
           const next = createCapacityItem(capacity.capacityItems, capacity.metricOptions);
           if (next) replace([...capacity.capacityItems, next]);
@@ -119,10 +126,19 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
             <span className="rep-row__handle" aria-hidden />
             <Select
               value={item.metricCode}
-              options={capacity.metricOptions.map((option) => ({ v: option.code, l: option.label }))}
+              // A metric can carry ONE row per object (UNIQUE) — hide the ones other rows use.
+              options={capacity.metricOptions
+                .filter(
+                  (option) =>
+                    option.code === item.metricCode ||
+                    !capacity.capacityItems.some(
+                      (other, otherIndex) => otherIndex !== index && other.metricCode === option.code,
+                    ),
+                )
+                .map((option) => ({ v: option.code, l: option.label }))}
               onChange={(metricCode) => update(index, { metricCode })}
             />
-            <Input value={item.value} mono onChange={(value) => update(index, { value })} />
+            <Input value={item.value} type="number" mono onChange={(value) => update(index, { value })} />
             <Input value={item.unit} readOnly onChange={() => undefined} />
             <Input type="date" value={item.effectiveFrom} onChange={(effectiveFrom) => update(index, { effectiveFrom })} />
             <Input type="date" value={item.effectiveTo} onChange={(effectiveTo) => update(index, { effectiveTo })} />

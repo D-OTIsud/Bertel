@@ -174,8 +174,10 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       unavailableReason: null,
     },
     capacityPolicies: {
-      metricOptions: [{ id: 'cap', code: 'capacity_total', label: 'Capacité totale' }],
-      capacityItems: [{ recordId: 'cap1', metricId: 'cap', metricCode: 'capacity_total', metricLabel: 'Capacité totale', unit: 'pers.', value: '48', effectiveFrom: '', effectiveTo: '' }],
+      // Real ref_capacity_metric code — the old fictional 'capacity_total' let the §06→§07
+      // sync tests pass while the sync was a silent no-op against the live catalog.
+      metricOptions: [{ id: 'cap', code: 'max_capacity', label: 'Capacité max.' }],
+      capacityItems: [{ recordId: 'cap1', metricId: 'cap', metricCode: 'max_capacity', metricLabel: 'Capacité max.', unit: 'pax', value: '48', effectiveFrom: '', effectiveTo: '' }],
       groupPolicy: { minSize: '8', maxSize: '40', groupOnly: false, notes: 'Sur réservation' },
       petPolicy: { accepted: false, conditions: 'Petits animaux' },
       unavailableReason: null,

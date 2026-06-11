@@ -169,7 +169,16 @@ describe('rooms-utils', () => {
     ])).toBe(28);
   });
 
-  it('syncCapacityWithRooms updates the §07 capacity_total metric while it tracks the cumul', async () => {
+  it('syncCapacityWithRooms targets the REAL max_capacity metric (capacity_total never existed in ref_capacity_metric)', async () => {
+    const { syncCapacityWithRooms } = await import('./rooms-utils');
+    const capacity = fullModulesFixture().capacityPolicies;
+    capacity.capacityItems = []; // no row yet — the sync must CREATE the max_capacity item
+    const synced = syncCapacityWithRooms(capacity, [], [{ capacityTotal: '2', quantity: '10' }]);
+    expect(synced?.capacityItems[0].metricCode).toBe('max_capacity');
+    expect(synced?.capacityItems[0].value).toBe('20');
+  });
+
+  it('syncCapacityWithRooms updates the §07 max_capacity metric while it tracks the cumul', async () => {
     const { syncCapacityWithRooms } = await import('./rooms-utils');
     const capacity = fullModulesFixture().capacityPolicies;
     capacity.capacityItems[0].value = '24'; // = prev cumul (2 × 12)

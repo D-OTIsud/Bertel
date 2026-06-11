@@ -680,9 +680,10 @@ function normalizeCapacityItem(params: {
   };
 }
 
-async function getObjectWorkspaceCapacityPoliciesModule(
+export async function getObjectWorkspaceCapacityPoliciesModule(
   objectId: string,
   baseModule: ObjectWorkspaceCapacityPoliciesModule,
+  objectType: string,
 ): Promise<ObjectWorkspaceCapacityPoliciesModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -697,11 +698,14 @@ async function getObjectWorkspaceCapacityPoliciesModule(
     };
   }
 
-  const [metricRefsResult, capacitiesResult, groupPolicyResult, petPolicyResult] = await Promise.all([
+  const [metricRefsResult, capacitiesResult, groupPolicyResult, petPolicyResult, applicabilityResult] = await Promise.all([
     client.from('ref_capacity_metric').select('id, code, name, position').order('position', { ascending: true }),
     client.from('object_capacity').select('id, metric_id, value_integer, unit, effective_from, effective_to').eq('object_id', objectId),
     client.from('object_group_policy').select('min_size, max_size, group_only, notes').eq('object_id', objectId).maybeSingle(),
     client.from('object_pet_policy').select('accepted, conditions').eq('object_id', objectId).maybeSingle(),
+    objectType
+      ? client.from('ref_capacity_applicability').select('metric_id').eq('object_type', objectType)
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (metricRefsResult.error || capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error) {
@@ -711,10 +715,10 @@ async function getObjectWorkspaceCapacityPoliciesModule(
     };
   }
 
-  const metricOptions = dedupeReferenceOptions(
+  const allMetricOptions = dedupeReferenceOptions(
     (metricRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
   );
-  const metricById = new Map(metricOptions.map((option) => [option.id, option]));
+  const metricById = new Map(allMetricOptions.map((option) => [option.id, option]));
   const capacityItems = ((capacitiesResult.data ?? []) as Record<string, unknown>[])
     .map((row) => normalizeCapacityItem({
       row,
@@ -722,6 +726,21 @@ async function getObjectWorkspaceCapacityPoliciesModule(
     }))
     .filter((item): item is ObjectWorkspaceCapacityItem => item !== null)
     .sort((left, right) => left.metricLabel.localeCompare(right.metricLabel, 'fr'));
+
+  // §07 review: offer only the metrics applicable to the object's type
+  // (ref_capacity_applicability, 13c) — FAIL-OPEN on probe failure or an empty
+  // matrix (a type with 0 rows must not brick the section), and a non-applicable
+  // metric the object ALREADY carries stays selectable (no data loss).
+  const applicableIds =
+    objectType && !applicabilityResult.error && (applicabilityResult.data ?? []).length > 0
+      ? new Set(
+          ((applicabilityResult.data ?? []) as Record<string, unknown>[]).map((row) => readString(row.metric_id)),
+        )
+      : null;
+  const usedMetricIds = new Set(capacityItems.map((item) => item.metricId));
+  const metricOptions = applicableIds
+    ? allMetricOptions.filter((option) => applicableIds.has(option.id) || usedMetricIds.has(option.id))
+    : allMetricOptions;
   const groupPolicy = readRecord(groupPolicyResult.data);
   const petPolicy = readRecord(petPolicyResult.data);
 
@@ -3558,7 +3577,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     facetRows,
   ] = await Promise.all([
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
-    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies),
+    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? ''),
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),

@@ -7,10 +7,14 @@ interface RepeaterProps<T> {
   renderRow: (item: T, index: number) => ReactNode;
   addLabel: string;
   onAdd: () => void;
+  /** Disables the add affordance (e.g. every available option is already used). */
+  addDisabled?: boolean;
+  /** Tooltip explaining WHY adding is disabled. */
+  addDisabledReason?: string;
 }
 
 /** A list of grid rows with an "add" affordance — the editor's repeated-row pattern. */
-export function Repeater<T>({ items, getKey, columns, renderRow, addLabel, onAdd }: RepeaterProps<T>) {
+export function Repeater<T>({ items, getKey, columns, renderRow, addLabel, onAdd, addDisabled = false, addDisabledReason }: RepeaterProps<T>) {
   return (
     <>
       <div className="repeater">
@@ -20,7 +24,13 @@ export function Repeater<T>({ items, getKey, columns, renderRow, addLabel, onAdd
           </div>
         ))}
       </div>
-      <button type="button" className="rep-add" onClick={onAdd}>
+      <button
+        type="button"
+        className="rep-add"
+        onClick={onAdd}
+        disabled={addDisabled}
+        title={addDisabled ? addDisabledReason : undefined}
+      >
         + {addLabel}
       </button>
     </>

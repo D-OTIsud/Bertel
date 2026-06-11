@@ -50,10 +50,15 @@ type CapacityModuleSlice = {
 };
 
 /**
- * Derived-unless-overridden sync of the §07 `capacity_total` metric with the rooms
+ * Derived-unless-overridden sync of the §07 `max_capacity` metric with the rooms
  * cumul: the metric follows the rooms while it is empty or still equal to the
  * PREVIOUS cumul; a manually diverged value is never clobbered (no write-magic).
  * Returns the next capacityPolicies module, or null when nothing should change.
+ *
+ * Target metric (§07 review, 2026-06-11): `max_capacity` — the REAL
+ * ref_capacity_metric code (unit pax). The original §54 target `capacity_total`
+ * never existed in the catalog, so the sync was a silent no-op on live (the
+ * fixtures invented the code and kept the tests green).
  */
 export function syncCapacityWithRooms<M extends CapacityModuleSlice>(
   capacity: M,
@@ -66,7 +71,7 @@ export function syncCapacityWithRooms<M extends CapacityModuleSlice>(
     return null;
   }
 
-  const existing = capacity.capacityItems.find((item) => item.metricCode === 'capacity_total');
+  const existing = capacity.capacityItems.find((item) => item.metricCode === 'max_capacity');
   if (existing) {
     const tracking = existing.value.trim() === '' || existing.value.trim() === String(prevSum);
     if (!tracking) {
@@ -80,7 +85,7 @@ export function syncCapacityWithRooms<M extends CapacityModuleSlice>(
     };
   }
 
-  const metric = capacity.metricOptions.find((option) => option.code === 'capacity_total');
+  const metric = capacity.metricOptions.find((option) => option.code === 'max_capacity');
   if (!metric || nextSum <= 0) {
     return null;
   }
@@ -93,7 +98,8 @@ export function syncCapacityWithRooms<M extends CapacityModuleSlice>(
         metricId: metric.id,
         metricCode: metric.code,
         metricLabel: metric.label,
-        unit: 'pers.',
+        // Display-only until save — the DB trigger fills the real ref unit on persist.
+        unit: 'pax',
         value: String(nextSum),
         effectiveFrom: '',
         effectiveTo: '',

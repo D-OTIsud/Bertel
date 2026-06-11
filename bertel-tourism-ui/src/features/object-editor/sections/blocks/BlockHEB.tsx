@@ -113,7 +113,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
   const [creatingRoom, setCreatingRoom] = useState<ObjectWorkspaceRoomTypeItem | null>(null);
   const [creatingMeeting, setCreatingMeeting] = useState<ObjectWorkspaceMeetingRoomItem | null>(null);
 
-  /** Write the rooms list + keep the §07 capacity_total metric in sync (derived-unless-overridden). */
+  /** Write the rooms list + keep the §07 max_capacity metric in sync (derived-unless-overridden). */
   function setRoomItems(nextItems: ObjectWorkspaceRoomTypeItem[]) {
     editor.replaceModule('rooms', { ...rooms, items: nextItems });
     const syncedCapacity = syncCapacityWithRooms(capacity, rooms.items, nextItems);

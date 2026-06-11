@@ -119,9 +119,11 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       relatedOrganizationContactsCount: 0,
     },
     media: {
+      // Real ref_code media_type codes (seeds_data.sql) — fictional codes would
+      // dodge the authorable-type filter the section applies.
       typeOptions: [
-        { id: 'mt1', code: 'image', label: 'Image' },
-        { id: 'mt2', code: 'pdf', label: 'PDF' },
+        { id: 'mt1', code: 'photo', label: 'Photo' },
+        { id: 'mt2', code: 'brochure_pdf', label: 'Brochure PDF' },
       ],
       tagOptions: [],
       objectItems: [
@@ -131,8 +133,8 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
           placeId: null,
           scopeLabel: 'Objet',
           typeId: 'mt1',
-          typeCode: 'image',
-          typeLabel: 'Image',
+          typeCode: 'photo',
+          typeLabel: 'Photo',
           title: 'Hero image',
           titleTranslations: {},
           description: 'Façade',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { EditorModal, ReferenceSelect, Field, Input, Textarea, Toggle, Select, LangTabs } from '../primitives';
+import { EditorModal, ReferenceSelect, Field, Input, Readout, Textarea, Toggle, Select, LangTabs } from '../primitives';
 import type { ObjectWorkspaceMediaItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
 import { MediaUploadField } from './MediaUploadField';
 import { getSupabaseClient } from '../../../lib/supabase';
@@ -40,6 +40,11 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
     client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
   }, []);
 
+  // Authorable = the user may (re)choose the type and upload a file. A document item
+  // (type outside the offered options) keeps its type/file read-only — documents are
+  // created from their owning sections (§05 decision).
+  const typeIsAuthorable = typeOptions.some((option) => option.code === draft.typeCode);
+
   const isPrimary = lang === primary;
   const titleValue = isPrimary ? draft.title : (draft.titleTranslations[lang] ?? '');
   const descValue = isPrimary ? draft.description : (draft.descriptionTranslations[lang] ?? '');
@@ -70,16 +75,32 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
       // global save — block here with a disabled action instead of a late raw error.
       saveDisabled={!draft.url.trim()}
     >
-      {draft.url && <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />}
-      <Field label="Type de média">
-        <ReferenceSelect
-          value={draft.typeCode}
-          options={typeOptions}
-          aria-label="Type de média"
-          onChange={(code, opt) => set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })}
-        />
-      </Field>
-      {accessToken && (
+      {typeIsAuthorable && draft.url && (
+        <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />
+      )}
+      {typeIsAuthorable ? (
+        <Field label="Type de média">
+          <ReferenceSelect
+            value={draft.typeCode}
+            options={typeOptions}
+            aria-label="Type de média"
+            onChange={(code, opt) => set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })}
+          />
+        </Field>
+      ) : (
+        // Documents are created from their owning sections (menus, labels…) — the type
+        // and the file are read-only here; only the metadata stays editable.
+        <Field label="Type de média">
+          <Readout value={draft.typeLabel || draft.typeCode} />
+        </Field>
+      )}
+      {!typeIsAuthorable && (
+        <p className="ed-modal__note">
+          Ce document est géré depuis sa section dédiée — seules les informations (titre, crédit,
+          visibilité) sont modifiables ici.
+        </p>
+      )}
+      {typeIsAuthorable && accessToken && (
         <MediaUploadField
           objectId={objectId}
           accessToken={accessToken}

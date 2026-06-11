@@ -1341,6 +1341,23 @@
   font-weight: 600;
   gap: 4px;
 }
+/* SortableGrid wrapper — becomes the grid item; the tile keeps its own aspect-ratio. */
+.object-editor .sortable-tile { min-width: 0; }
+/* Étoile couverture sur tuile : l'état actif reste lisible malgré le disabled. */
+.object-editor .media-tile__act .cover-btn.is-on {
+  color: var(--accent);
+  opacity: 1;
+  cursor: default;
+}
+.object-editor .ed-modal__note {
+  font-size: 12px;
+  color: var(--ink-4);
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+}
 .object-editor .location-combobox {
   position: relative;
 }

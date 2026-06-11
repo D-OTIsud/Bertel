@@ -3,20 +3,36 @@ import type {
   ObjectWorkspaceMediaModule,
 } from '../../../services/object-workspace-parser';
 
+/**
+ * Types a user can CREATE from §05 Médias. Documents (brochure_pdf, plan, press_kit…)
+ * are uploaded from their owning sections (menu → menus, certificats → labels…) and
+ * only remain visible/metadata-editable here. 'video' joins once the upload pipeline
+ * supports it.
+ */
+export const AUTHORABLE_MEDIA_TYPE_CODES: readonly string[] = ['photo'];
+
 function draftId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/** Rewrite `position` from the array order — the saver persists it verbatim. */
+function reindexPositions(items: ObjectWorkspaceMediaItem[]): ObjectWorkspaceMediaItem[] {
+  return items.map((item, index) => (
+    item.position === String(index) ? item : { ...item, position: String(index) }
+  ));
+}
+
 export function createObjectMediaItem(media: ObjectWorkspaceMediaModule): ObjectWorkspaceMediaItem {
-  const firstType = media.typeOptions[0];
+  const firstType =
+    media.typeOptions.find((option) => AUTHORABLE_MEDIA_TYPE_CODES.includes(option.code)) ?? media.typeOptions[0];
   return {
     id: draftId('draft-media'),
     scope: 'object',
     placeId: null,
     scopeLabel: 'Objet',
     typeId: firstType?.id ?? '',
-    typeCode: firstType?.code ?? 'image',
-    typeLabel: firstType?.label ?? 'Image',
+    typeCode: firstType?.code ?? 'photo',
+    typeLabel: firstType?.label ?? 'Photo',
     title: '',
     titleTranslations: {},
     description: '',
@@ -66,5 +82,13 @@ export function removeObjectMediaItem(media: ObjectWorkspaceMediaModule, id: str
   if (nextItems.length > 0 && !nextItems.some((item) => item.isMain)) {
     nextItems[0] = { ...nextItems[0], isMain: true };
   }
-  return { ...media, objectItems: nextItems };
+  return { ...media, objectItems: reindexPositions(nextItems) };
+}
+
+/** Apply a drag reorder: the new array order becomes the persisted `position`. */
+export function reorderObjectMediaItems(
+  media: ObjectWorkspaceMediaModule,
+  nextItems: ObjectWorkspaceMediaItem[],
+): ObjectWorkspaceMediaModule {
+  return { ...media, objectItems: reindexPositions(nextItems) };
 }

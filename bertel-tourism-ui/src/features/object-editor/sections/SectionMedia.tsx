@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Fs } from '../primitives';
+import { Pencil, Star, Trash2 } from 'lucide-react';
+import { Fs, SortableGrid } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceMediaItem } from '../../../services/object-workspace-parser';
 import {
+  AUTHORABLE_MEDIA_TYPE_CODES,
   createObjectMediaItem,
   patchObjectMediaItem,
   removeObjectMediaItem,
+  reorderObjectMediaItems,
 } from './media-items';
 import { MediaEditModal } from '../widgets/MediaEditModal';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
@@ -39,6 +42,9 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
   const [draftNewItem, setDraftNewItem] = useState<ObjectWorkspaceMediaItem | null>(null);
 
   const photos = media.objectItems.filter(isVisualMedia);
+  const authorableTypeOptions = media.typeOptions.filter((option) =>
+    AUTHORABLE_MEDIA_TYPE_CODES.includes(option.code),
+  );
   const recommended = 4;
   const unavailable = Boolean(media.unavailableReason);
   const pillTone = unavailable || photos.length < recommended ? 'warn' : 'ok';
@@ -69,7 +75,7 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
     <Fs
       num="05"
       title="Médias"
-      sub="Photos (≥ 4 recommandées), documents, vidéo de présentation"
+      sub="Photos (≥ 4 recommandées) — les documents (menus, certificats…) s'ajoutent depuis leurs sections"
       folded={folded}
       pill={{ tone: pillTone, label: pillLabel }}
     >
@@ -79,9 +85,13 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
       {unavailable && <ModuleUnavailableNotice reason={media.unavailableReason as string} />}
 
       {!unavailable && (
-      <div className="media-grid">
-        {media.objectItems.map((item) => (
-          <article key={item.id} className="media-tile">
+      <SortableGrid
+        items={media.objectItems}
+        getId={(item) => item.id}
+        className="media-grid"
+        onReorder={(next) => editor.replaceModule('media', reorderObjectMediaItems(media, next))}
+        renderItem={(item, _index, handle) => (
+          <article className="media-tile">
             {isVisualMedia(item) && item.url ? (
               <img src={item.url} alt={item.description || item.title || 'Média'} />
             ) : (
@@ -93,24 +103,35 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
               <span className="media-tile__name">{titleFallback(item)}</span>
             </div>
             <div className="media-tile__act">
+              {handle}
+              <button
+                type="button"
+                className={`cover-btn${item.isMain ? ' is-on' : ''}`}
+                aria-label={item.isMain ? 'Photo de couverture actuelle' : 'Définir comme photo de couverture'}
+                aria-pressed={item.isMain}
+                disabled={item.isMain}
+                onClick={() => editor.replaceModule('media', patchObjectMediaItem(media, item.id, { isMain: true }))}
+              >
+                <Star size={12} fill={item.isMain ? 'currentColor' : 'none'} />
+              </button>
               <button
                 type="button"
                 aria-label={`Modifier le média ${item.title || 'sans titre'}`}
                 onClick={() => setEditing(item.id)}
               >
-                ✏
+                <Pencil size={12} />
               </button>
               <button
                 type="button"
                 aria-label="Supprimer le média"
                 onClick={() => handleDelete(item.id)}
               >
-                ×
+                <Trash2 size={12} />
               </button>
             </div>
           </article>
-        ))}
-      </div>
+        )}
+      />
       )}
 
       {!unavailable && (
@@ -123,7 +144,9 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
         <MediaEditModal
           open
           media={editingItem}
-          typeOptions={media.typeOptions}
+          // Only authorable types are offered (documents are created from their owning
+          // sections); an existing document item renders its type read-only in the modal.
+          typeOptions={authorableTypeOptions}
           languages={editor.draft.descriptions.availableLanguages}
           objectId={objectId}
           onClose={() => {

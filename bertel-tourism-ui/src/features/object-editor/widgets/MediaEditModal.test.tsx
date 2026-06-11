@@ -18,10 +18,10 @@ jest.mock('./MediaUploadField', () => ({
 
 const media: ObjectWorkspaceMediaItem = {
   id: 'm1', scope: 'object', placeId: null, scopeLabel: 'Objet',
-  typeId: 'mt1', typeCode: 'image', typeLabel: 'Image',
+  typeId: 'mt1', typeCode: 'photo', typeLabel: 'Photo',
   title: 'Façade', titleTranslations: {}, description: '', descriptionTranslations: {},
   url: 'https://x/y.jpg', credit: '', visibility: 'public', position: '0',
-  width: '', height: '', rightsExpiresAt: '', kind: 'image', isMain: true, isPublished: true, tags: [],
+  width: '', height: '', rightsExpiresAt: '', kind: '', isMain: true, isPublished: true, tags: [],
 };
 
 describe('MediaEditModal', () => {
@@ -30,7 +30,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={media} languages={['fr', 'en', 'cre']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }, { id: 'mt2', code: 'pdf', label: 'PDF' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'brochure_pdf', label: 'Brochure PDF' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -48,7 +48,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={media} languages={['fr', 'en', 'cre']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -68,7 +68,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={media} languages={['fr', 'en', 'cre']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -87,7 +87,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={{ ...media, titleTranslations: { fr: 'Façade' } }} languages={['fr', 'en', 'cre']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -104,7 +104,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={{ ...media, visibility: '' }} languages={['fr']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -123,7 +123,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={{ ...media, visibility: '' }} languages={['fr']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={onSave}
       />,
@@ -137,7 +137,7 @@ describe('MediaEditModal', () => {
     render(
       <MediaEditModal
         open media={{ ...media, url: '' }} languages={['fr']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="m1"
         onClose={() => {}} onSave={() => {}}
       />,
@@ -148,6 +148,29 @@ describe('MediaEditModal', () => {
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
   });
 
+  it('renders a non-authorable type (document) read-only, without upload or type select', async () => {
+    // Documents are uploaded from their owning sections (§05 decision) — an existing
+    // document row stays visible/metadata-editable here, but its type and file are not.
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open
+        media={{ ...media, typeCode: 'brochure_pdf', typeLabel: 'Brochure PDF', url: 'https://x/menu.pdf' }}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    expect(screen.getByText('Brochure PDF')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Type de média')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'mock-upload' })).not.toBeInTheDocument();
+    // Metadata stays editable and saves.
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Menu du restaurant' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect((onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem).title).toBe('Menu du restaurant');
+  });
+
   it('captures upload result (url, width, height) into the saved draft', async () => {
     const onSave = jest.fn();
     render(
@@ -155,7 +178,7 @@ describe('MediaEditModal', () => {
         open
         media={media}
         languages={['fr']}
-        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
         objectId="obj-edit-1"
         onClose={() => {}}
         onSave={onSave}

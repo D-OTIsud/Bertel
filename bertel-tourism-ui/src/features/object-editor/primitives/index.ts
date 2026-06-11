@@ -16,4 +16,5 @@ export { TriState, type TriStateValue } from './TriState';
 export { ReferenceSelect } from './ReferenceSelect';
 export { ChipMultiSelect } from './ChipMultiSelect';
 export { SortableList } from './SortableList';
+export { SortableGrid } from './SortableGrid';
 export { EditorModal } from './EditorModal';

@@ -48,6 +48,28 @@ describe('SectionMedia', () => {
     expect(hook.result.current.draft.media.objectItems).toHaveLength(startingCount);
   });
 
+  it('sets a tile as cover from the grid star (exclusive)', () => {
+    const modules = fullModulesFixture();
+    modules.media.objectItems = [
+      modules.media.objectItems[0],
+      { ...modules.media.objectItems[0], id: 'm2', title: 'Seconde photo', isMain: false, position: '1' },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
+    const stars = screen.getAllByRole('button', { name: /photo de couverture/i });
+    expect(stars).toHaveLength(2);
+    act(() => { fireEvent.click(stars[1]); });
+    view.rerender(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
+    const items = result.current.draft.media.objectItems;
+    expect(items.find((m) => m.id === 'm2')?.isMain).toBe(true);
+    expect(items.find((m) => m.id === 'm1')?.isMain).toBe(false);
+  });
+
+  it('renders a drag handle per tile (position is a real public ordering)', () => {
+    setup();
+    expect(screen.getAllByRole('button', { name: /déplacer/i })).toHaveLength(1);
+  });
+
   it('renders the unavailable notice instead of the grid when the media load failed (R1 no-clobber)', () => {
     const modules = fullModulesFixture();
     modules.media = { ...modules.media, unavailableReason: 'Lecture des médias indisponible.' };

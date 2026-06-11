@@ -137,6 +137,11 @@ export interface SaveCrmTaskInput {
 export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   const client = requireCrmClient();
   if (!client) {
+    // Mode démo : reflète le move dans le mock pour éviter un contrôle sans effet.
+    if (input.id) {
+      const task = mockCrmTasks.find((t) => t.id === input.id);
+      if (task && input.status) task.status = input.status;
+    }
     return input.id ?? 'demo-task';
   }
   const payload: GenericRecord = {};

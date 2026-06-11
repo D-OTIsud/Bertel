@@ -65,4 +65,21 @@ describe('CrmPage (§58 — données réelles)', () => {
     expect(screen.getByText(/Hotel Basalte & Lagon · Demande de visite · Positif/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /charger plus/i })).toBeInTheDocument();
   });
+
+  it('affiche une erreur quand le déplacement échoue (pas d échec silencieux)', async () => {
+    crmMock.saveCrmTask.mockRejectedValue(new Error('refus RLS'));
+    renderPage();
+    fireEvent.click((await screen.findAllByRole('button', { name: /avancer/i }))[0]);
+    expect(await screen.findByText(/Échec du déplacement/)).toBeInTheDocument();
+  });
+
+  it('garde la page rendue pendant « Charger plus » (pas de collapse)', async () => {
+    crmMock.listCrmTimeline.mockResolvedValue({ ...mockCrmTimeline, hasMore: true });
+    renderPage();
+    await screen.findByText('Appel de suivi');
+    crmMock.listCrmTimeline.mockReturnValue(new Promise<never>(() => {})); // page 2 jamais résolue
+    fireEvent.click(screen.getByRole('button', { name: /charger plus/i }));
+    expect(screen.getByText('Rappeler le directeur')).toBeInTheDocument(); // kanban toujours là
+    expect(screen.queryByText('Chargement du CRM...')).not.toBeInTheDocument();
+  });
 });

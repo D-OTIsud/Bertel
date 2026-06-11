@@ -7,7 +7,7 @@
 // La création/édition de tâches et d'interactions scoping objet vit dans l'éditeur §19 (Task 11).
 
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { StatusPill } from '../components/common/StatusPill';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { listCrmTasks, listCrmTimeline, saveCrmTask, userCanWriteCrmNotes } from '../services/crm';
@@ -36,10 +36,14 @@ export default function CrmPage() {
   const timelineQuery = useQuery({
     queryKey: ['crm-timeline', cursor?.beforeId ?? null],
     queryFn: () => listCrmTimeline(cursor ? { before: cursor.before, beforeId: cursor.beforeId } : {}),
+    // « Charger plus » change la queryKey : garder la page précédente affichée pendant le fetch.
+    placeholderData: keepPreviousData,
   });
   const { peers, typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });
 
   const canWrite = canWriteQuery.data === true;
+  // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).
+  const canWriteKnown = !canWriteQuery.isLoading;
   const tasks = tasksQuery.data ?? [];
 
   const moveMutation = useMutation({
@@ -59,6 +63,8 @@ export default function CrmPage() {
 
   const grouped = LANES.map((lane) => ({ lane, items: tasks.filter((task) => task.status === lane) }));
   const activeTasks = tasks.filter((task) => task.status === 'todo' || task.status === 'in_progress').length;
+  // Statuts hors lanes (canceled/blocked) : signalés par un chip pour ne pas les masquer silencieusement.
+  const hiddenTasks = tasks.filter((t) => t.status === 'canceled' || t.status === 'blocked').length;
 
   function loadMore() {
     const current = timelineQuery.data;
@@ -75,10 +81,12 @@ export default function CrmPage() {
     moveMutation.mutate({ id: task.id, status: next });
   }
 
-  if (tasksQuery.isLoading || timelineQuery.isLoading) {
+  // Garde plein-écran sur le chargement INITIAL uniquement : une page 2 (cursor non nul)
+  // en chargement/erreur ne doit pas remplacer la page entière (erreur inline près du bouton).
+  if (tasksQuery.isLoading || (timelineQuery.isLoading && cursor === null)) {
     return <section className="panel-card panel-card--wide m-4">Chargement du CRM...</section>;
   }
-  if (tasksQuery.isError || timelineQuery.isError) {
+  if (tasksQuery.isError || (timelineQuery.isError && cursor === null)) {
     return (
       <section className="panel-card panel-card--warning panel-card--wide m-4">
         {(tasksQuery.error as Error | null)?.message ?? (timelineQuery.error as Error | null)?.message}
@@ -94,7 +102,7 @@ export default function CrmPage() {
           <h2>Coordination terrain et relation prestataire</h2>
           <p>
             {peers.length} collaborateur(s) en ligne.
-            {!canWrite && ' Lecture seule : la permission « Écrire des notes CRM » est requise pour saisir.'}
+            {canWriteKnown && !canWrite && ' Lecture seule : la permission « Écrire des notes CRM » est requise pour saisir.'}
           </p>
         </div>
         <div className="crm-hero__stats">
@@ -127,6 +135,9 @@ export default function CrmPage() {
           {timelineQuery.data?.hasMore && (
             <button type="button" className="ghost-button" onClick={loadMore}>Charger plus</button>
           )}
+          {timelineQuery.isError && cursor !== null && (
+            <div className="inline-alert">Échec du chargement : {(timelineQuery.error as Error).message}</div>
+          )}
         </article>
 
         <article className="panel-card panel-card--wide">
@@ -135,8 +146,12 @@ export default function CrmPage() {
               <span className="eyebrow">Pipeline</span>
               <h2>Kanban des taches</h2>
             </div>
-            {!canWrite && <span className="pill-mini">Lecture seule</span>}
+            {canWriteKnown && !canWrite && <span className="pill-mini">Lecture seule</span>}
+            {hiddenTasks > 0 && <span className="pill-mini">{hiddenTasks} annulée(s)/bloquée(s)</span>}
           </div>
+          {moveMutation.isError && (
+            <div className="inline-alert">Échec du déplacement : {(moveMutation.error as Error).message}</div>
+          )}
           <div className="kanban-grid">
             {grouped.map((group) => (
               <section key={group.lane} className="kanban-column">
@@ -155,7 +170,12 @@ export default function CrmPage() {
                     <p>{task.objectName}</p>
                     <small className="kanban-card__meta">{task.ownerName ?? '—'} · {formatWhen(task.dueAt)}</small>
                     {canWrite && NEXT_LANE[task.status] && (
-                      <button type="button" className="ghost-button" onClick={() => advance(task)}>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={() => advance(task)}
+                        disabled={moveMutation.isPending}
+                      >
                         Avancer
                       </button>
                     )}

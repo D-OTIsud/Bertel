@@ -8489,3 +8489,26 @@ a {
 }
 .dashboard-widget-state { color: var(--ink-3); font-size: 0.8rem; }
 .dashboard-widget-state--error { color: var(--destructive); }
+
+/* ── Dashboard — onglets par vocation ──────────────────────────────────────── */
+.dashboard-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: 4px 0 12px;
+}
+.dashboard-tab {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+.dashboard-tab:hover { color: var(--ink-1); }
+.dashboard-tab--active {
+  color: var(--ink-1);
+  border-bottom-color: var(--teal);
+}

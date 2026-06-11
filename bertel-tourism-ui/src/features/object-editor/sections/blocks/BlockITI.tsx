@@ -46,7 +46,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Tracé, étapes & praticabilité"
       sub="GPX, distance, dénivelé, durée, balisage, type de boucle, waypoints, conditions et équipement"
       folded={folded}

@@ -36,7 +36,7 @@ export function BlockFMA({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Dates & programmation"
       sub="Période de l'événement, horaires, récurrence et occurrences détaillées"
       folded={folded}

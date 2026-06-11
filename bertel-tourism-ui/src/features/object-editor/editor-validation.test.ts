@@ -79,7 +79,7 @@ describe('editor publication validation', () => {
     const result = validateForPublication(draft, allowAll, 'HEB');
 
     expect(result.warnings).toContainEqual({
-      section: '05',
+      section: '06',
       message: expect.stringContaining('chambre'),
       tone: 'warn',
     });
@@ -116,7 +116,7 @@ describe('editor publication validation', () => {
 
     const result = validateForPublication(draft, allowAll, 'RES');
 
-    expect(result.warnings.some((w) => w.section === '05')).toBe(false);
+    expect(result.warnings.some((w) => w.section === '06')).toBe(false);
   });
 
   it('requires an itinerary trace for ITI objects', () => {
@@ -126,7 +126,7 @@ describe('editor publication validation', () => {
     const result = validateForPublication(draft, allowAll, 'ITI');
 
     expect(result.blockers).toContainEqual({
-      section: '05',
+      section: '06',
       message: expect.stringContaining('itinéraire'),
       tone: 'req',
     });

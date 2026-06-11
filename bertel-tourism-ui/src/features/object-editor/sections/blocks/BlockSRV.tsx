@@ -15,7 +15,7 @@ export function BlockSRV({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Prestations au comptoir"
       sub="Prestations délivrées au comptoir — langues gérées en §12, horaires en §14"
       folded={folded}

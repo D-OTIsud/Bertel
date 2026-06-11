@@ -61,7 +61,7 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
 
   return (
     <Fs
-      num="06"
+      num="05"
       title="Médias"
       sub="Photos (≥ 4 recommandées), documents, vidéo de présentation"
       folded={folded}

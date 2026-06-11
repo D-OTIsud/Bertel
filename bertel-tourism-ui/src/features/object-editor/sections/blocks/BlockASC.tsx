@@ -19,7 +19,7 @@ export function BlockASC({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Fiche activité & encadrement"
       sub="Durée, participants, âge, niveau, encadrement et équipements de l'activité"
       folded={folded}

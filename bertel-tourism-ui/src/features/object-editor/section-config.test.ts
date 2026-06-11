@@ -13,13 +13,13 @@ describe('makeSections', () => {
     expect(flat.some((s) => s.num === '16')).toBe(false);
   });
 
-  it('labels section 05 per archetype', () => {
+  it('labels section 06 (type block) per archetype', () => {
     const heb = makeSections('HEB')
       .flatMap((g) => g.items)
-      .find((s) => s.num === '05');
+      .find((s) => s.num === '06');
     const res = makeSections('RES')
       .flatMap((g) => g.items)
-      .find((s) => s.num === '05');
+      .find((s) => s.num === '06');
     expect(heb?.label).toBe('Chambres & séminaire');
     expect(res?.label).toBe('Cuisine & service');
   });

@@ -41,8 +41,10 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
       group: 'Caractéristiques',
       items: [
         { num: '04', label: 'Descriptions' },
-        { num: '05', label: TYPE_BLOCK_LABEL[archetype] },
-        { num: '06', label: 'Médias' },
+        // Renumbered 2026-06-11 (user): Médias is 05 and the type block 06, so the
+        // rooms/equipment inventory sits right before the Capacité it feeds (§07).
+        { num: '05', label: 'Médias' },
+        { num: '06', label: TYPE_BLOCK_LABEL[archetype] },
         { num: '07', label: 'Capacité & cadre' },
         { num: '08', label: 'Classifications' },
         { num: '09', label: 'Tags & étiquettes' },

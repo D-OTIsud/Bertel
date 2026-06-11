@@ -13,6 +13,6 @@ describe('EditorNav', () => {
     const onSelect = jest.fn();
     render(<EditorNav groups={makeSections('HEB')} activeNum="01" onSelect={onSelect} />);
     fireEvent.click(screen.getByText('Médias'));
-    expect(onSelect).toHaveBeenCalledWith('06');
+    expect(onSelect).toHaveBeenCalledWith('05');
   });
 });

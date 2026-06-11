@@ -21,13 +21,13 @@ describe('editor completion scoring', () => {
     expect(computeSectionCompletion('04', draft)).toBe(100);
   });
 
-  it('scores §05 incomplete when a HEB object has no rooms, complete when gated', () => {
+  it('scores §06 (type block) incomplete when a HEB object has no rooms, complete when gated', () => {
     const draft = fullModulesFixture();
     draft.rooms.items = [];
-    expect(computeSectionCompletion('05', draft)).toBeLessThan(100);
+    expect(computeSectionCompletion('06', draft)).toBeLessThan(100);
 
     draft.rooms.unavailableReason = 'Module non applicable au type RES.';
-    expect(computeSectionCompletion('05', draft)).toBe(100);
+    expect(computeSectionCompletion('06', draft)).toBe(100);
   });
 
   it('averages known completion sections and returns nav-ready rows', () => {

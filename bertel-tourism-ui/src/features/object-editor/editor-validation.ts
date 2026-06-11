@@ -99,20 +99,20 @@ const VALIDATION_RULES: ValidationRule[] = [
   },
   ({ archetype, draft }) =>
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
-      ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }
+      ? { section: '06', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }
       : null,
   ({ archetype, draft }) =>
     // §48 — mirror the saver: it drops occurrence rows with neither startAt nor endAt,
     // so an all-empty repeater must still block publication.
     archetype === 'FMA' && !hasText(draft.event.startDate) &&
     !draft.event.occurrences.some((occurrence) => hasText(occurrence.startAt) || hasText(occurrence.endAt))
-      ? { section: '05', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
+      ? { section: '06', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
       : null,
   ({ archetype, draft }) =>
     // §05 HEB: an accommodation with no room inventory publishes silently otherwise.
     // Skipped when the rooms module is §46-gated (non-HEB types reaching this archetype).
     archetype === 'HEB' && !draft.rooms.unavailableReason && draft.rooms.items.length === 0
-      ? { section: '05', message: "Ajoutez au moins un type de chambre ou d'unité locative.", tone: 'warn' }
+      ? { section: '06', message: "Ajoutez au moins un type de chambre ou d'unité locative.", tone: 'warn' }
       : null,
   ({ draft }) => {
     // A PMR room declared in §05 should be reflected in the §10 accessibility equipment
@@ -131,7 +131,7 @@ const VALIDATION_RULES: ValidationRule[] = [
       ? null
       : {
           section: '10',
-          message: 'Une chambre PMR est déclarée (§05) — sélectionnez les équipements d’accessibilité correspondants.',
+          message: 'Une chambre PMR est déclarée (§06) — sélectionnez les équipements d’accessibilité correspondants.',
           tone: 'warn',
         };
   },
@@ -142,7 +142,7 @@ const VALIDATION_RULES: ValidationRule[] = [
   ({ draft }) =>
     draft.media.objectItems.length > 0
       ? null
-      : { section: '06', message: 'Ajoutez au moins un média publié pour améliorer la fiche.', tone: 'warn' },
+      : { section: '05', message: 'Ajoutez au moins un média publié pour améliorer la fiche.', tone: 'warn' },
   ({ draft }) =>
     // An internal-only channel is not published — the public card needs a PUBLIC contact.
     draft.contacts.objectItems.some((item) => hasText(item.value) && item.isPublic)

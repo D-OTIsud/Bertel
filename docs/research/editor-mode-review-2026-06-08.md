@@ -33,6 +33,12 @@ action prominence, plain language) — not just keep/cut. Propose redesigns for
 controls that are functional but poorly designed (precedent: §01 sous-catégorie
 modal, redesigned from a user mockup).
 
+> **RENUMBERED 2026-06-11 (user):** Médias = **§05** and the type block (Chambres &
+> séminaire / Cuisine & service / …) = **§06**, so the rooms/equipment inventory sits
+> right before the §07 Capacité it feeds. Section headings below predating the swap
+> keep their original numbering (historical); validation/completion/MODE_ESSENTIAL/
+> anchors all follow the new numbers.
+
 ## Coverage tracker
 
 Main walk (HEB / HLO):

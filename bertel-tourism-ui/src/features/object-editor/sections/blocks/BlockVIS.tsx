@@ -17,7 +17,7 @@ export function BlockVIS({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Visite & médiation"
       sub="Modes de visite et équipements de médiation — tarifs gérés en §13, horaires en §14"
       folded={folded}

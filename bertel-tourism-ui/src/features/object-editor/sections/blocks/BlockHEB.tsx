@@ -138,7 +138,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Chambres, équipements & séminaire"
       sub="Inventaire de l'offre hébergement : unités locatives, capacités, tarifs, équipements, salles MICE"
       folded={folded}

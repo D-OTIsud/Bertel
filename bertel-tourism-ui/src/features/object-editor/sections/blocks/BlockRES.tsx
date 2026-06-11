@@ -38,7 +38,7 @@ export function BlockRES({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="05"
+      num="06"
       title="Cuisine, cartes & service"
       sub="Cuisines, cartes & menus PDF — capacité groupes en §07, horaires en §14"
       folded={folded}

@@ -27,7 +27,8 @@ import {
 } from './index';
 import { TYPE_BLOCKS } from './blocks';
 
-export const MODE_ESSENTIAL = new Set(['01', '02', '03', '04', '05', '13', '14', '21']);
+// '06' = the type block (renumbered 2026-06-11; Médias took '05' and stays non-essential).
+export const MODE_ESSENTIAL = new Set(['01', '02', '03', '04', '06', '13', '14', '21']);
 
 function TypeBlockSection(props: SectionProps) {
   // §46: archetype is guaranteed by the ObjectEditPage guard; render nothing rather than
@@ -42,8 +43,8 @@ export const SECTION_COMPONENTS: Record<string, ComponentType<SectionProps>> = {
   '02': SectionLocation,
   '03': SectionContacts,
   '04': SectionDescriptions,
-  '05': TypeBlockSection,
-  '06': SectionMedia,
+  '05': SectionMedia,
+  '06': TypeBlockSection,
   '07': SectionCapacity,
   '08': SectionClassification,
   '09': SectionTags,

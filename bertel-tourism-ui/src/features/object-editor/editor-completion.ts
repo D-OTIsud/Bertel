@@ -76,17 +76,18 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
       (draft) => hasTranslatableText(draft.descriptions.object.description),
     ],
   },
+  // Renumbered 2026-06-11: '05' = Médias, '06' = the type block.
   '05': {
     fields: [
-      // Rooms inventory — counts as complete when the module is §46-gated for the type
-      // (the §05 block then shows other content, e.g. RES menus, scored by their own use).
-      (draft) => Boolean(draft.rooms?.unavailableReason) || (draft.rooms?.items.length ?? 0) > 0,
+      (draft) => draft.media.objectItems.length > 0,
+      (draft) => draft.media.objectItems.some((item) => item.isMain),
     ],
   },
   '06': {
     fields: [
-      (draft) => draft.media.objectItems.length > 0,
-      (draft) => draft.media.objectItems.some((item) => item.isMain),
+      // Rooms inventory — counts as complete when the module is §46-gated for the type
+      // (the type block then shows other content, e.g. RES menus, scored by their own use).
+      (draft) => Boolean(draft.rooms?.unavailableReason) || (draft.rooms?.items.length ?? 0) > 0,
     ],
   },
   '07': {
@@ -227,7 +228,7 @@ export function computeNavHint(num: string, draft: ObjectWorkspaceModules, pct: 
       return `${langs.length - 1} lang.`;
     }
   }
-  if (num === '06') {
+  if (num === '05') {
     const photos = draft.media.objectItems.filter((item) => {
       const text = `${item.typeCode} ${item.typeLabel} ${item.kind}`.toLowerCase();
       return ['image', 'photo', 'visuel', 'cover'].some((t) => text.includes(t));

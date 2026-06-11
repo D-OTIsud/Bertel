@@ -11,7 +11,7 @@ describe('editor publication validation — FMA', () => {
     const result = validateForPublication(draft, allowAll, 'FMA');
 
     expect(result.blockers).toContainEqual({
-      section: '05',
+      section: '06',
       message: expect.stringContaining('événement'),
       tone: 'req',
     });
@@ -23,7 +23,7 @@ describe('editor publication validation — FMA', () => {
 
     const result = validateForPublication(draft, allowAll, 'FMA');
 
-    expect(result.blockers.some((issue) => issue.section === '05')).toBe(false);
+    expect(result.blockers.some((issue) => issue.section === '06')).toBe(false);
   });
 
   it('still blocks when the only occurrence row is empty (the saver drops it)', () => {
@@ -33,7 +33,7 @@ describe('editor publication validation — FMA', () => {
 
     const result = validateForPublication(draft, allowAll, 'FMA');
 
-    expect(result.blockers.some((issue) => issue.section === '05')).toBe(true);
+    expect(result.blockers.some((issue) => issue.section === '06')).toBe(true);
   });
 
   it('does not apply the ITI trace blocker to FMA', () => {

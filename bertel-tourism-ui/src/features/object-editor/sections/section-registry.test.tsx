@@ -12,6 +12,15 @@ describe('section registry', () => {
     expect(getRegisteredSections('ITI')).toHaveLength(22);
   });
 
+  it('orders Médias (05) before the type block (06), right before Capacité (07)', () => {
+    const sections = getRegisteredSections('HEB');
+    const nums = sections.map((section) => section.num);
+    expect(nums.indexOf('05')).toBeLessThan(nums.indexOf('06'));
+    expect(nums.indexOf('06')).toBe(nums.indexOf('07') - 1);
+    expect(sections.find((section) => section.num === '05')?.label).toBe('Médias');
+    expect(sections.find((section) => section.num === '06')?.label).toBe('Chambres & séminaire');
+  });
+
   it('mounts the HEB registered sections with fixture data', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     // SectionLocation reads location reference options via react-query, so the full

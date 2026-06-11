@@ -29,6 +29,12 @@ export interface DashboardFilters {
   updatedAtFrom?: string;
   /** Maps to p_updated_at_to DATE (inclusive upper bound) */
   updatedAtTo?: string;
+  /** Maps to p_filters.classifications_any — paires scheme+valeur (cached_classification_codes 'scheme:value') */
+  classificationsAny?: { schemeCode: string; valueCode: string }[];
+  /** Maps to p_filters.amenity_families_any — codes famille d'équipements */
+  amenityFamiliesAny?: string[];
+  /** Maps to p_filters.languages_any — codes langue (cached_language_codes) */
+  languagesAny?: string[];
 }
 
 // ─── §1  Hero Scorecards  (LOCKED — Phase 2A) ────────────────────────────────

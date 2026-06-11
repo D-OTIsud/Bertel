@@ -31,7 +31,7 @@ interface RpcParams {
   p_updated_at_to?: string | null;
 }
 
-function buildRpcParams(filters: DashboardFilters): RpcParams {
+export function buildRpcParams(filters: DashboardFilters): RpcParams {
   const p_filters: Record<string, unknown> = {};
 
   if (filters.cities && filters.cities.length > 0) {
@@ -52,8 +52,22 @@ function buildRpcParams(filters: DashboardFilters): RpcParams {
   if (filters.petsAccepted) {
     p_filters.pet_accepted = true;
   }
+  // NOTE: p_filters.amenities_any est réservé au mapping PMR — pas de champ
+  // « équipement individuel » côté dashboard (conflit sinon) ; le niveau famille suffit (spec §5.1).
   if (filters.pmr) {
     p_filters.amenities_any = ['wheelchair_access'];
+  }
+  if (filters.classificationsAny && filters.classificationsAny.length > 0) {
+    p_filters.classifications_any = filters.classificationsAny.map((c) => ({
+      scheme_code: c.schemeCode,
+      value_code: c.valueCode,
+    }));
+  }
+  if (filters.amenityFamiliesAny && filters.amenityFamiliesAny.length > 0) {
+    p_filters.amenity_families_any = filters.amenityFamiliesAny;
+  }
+  if (filters.languagesAny && filters.languagesAny.length > 0) {
+    p_filters.languages_any = filters.languagesAny;
   }
 
   return {

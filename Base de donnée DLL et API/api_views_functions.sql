@@ -6656,46 +6656,62 @@ BEGIN
         FROM object_review r
         WHERE r.object_id = p_object_id AND r.is_published = TRUE
       ),
+      -- per-source COUNT/AVG must be grouped in an inner subquery: nesting them
+      -- directly inside jsonb_agg at the same level is SQLSTATE 42803
       'by_source', COALESCE((
         SELECT jsonb_agg(
           jsonb_build_object(
-            'source', rs.code,
-            'count', COUNT(*),
-            'avg_rating', ROUND(AVG(r.rating)::numeric, 2)
+            'source', s.source,
+            'count', s.review_count,
+            'avg_rating', s.avg_rating
           )
-          ORDER BY rs.code
+          ORDER BY s.source
         )
-        FROM object_review r
-        JOIN ref_review_source rs ON rs.id = r.source_id
-        WHERE r.object_id = p_object_id AND r.is_published = TRUE
-        GROUP BY rs.code
+        FROM (
+          SELECT rs.code AS source,
+                 COUNT(*) AS review_count,
+                 ROUND(AVG(r.rating)::numeric, 2) AS avg_rating
+          FROM object_review r
+          JOIN ref_review_source rs ON rs.id = r.source_id
+          WHERE r.object_id = p_object_id AND r.is_published = TRUE
+          GROUP BY rs.code
+        ) s
       ), '[]'::jsonb)
     ),
+    -- paginate rows BEFORE aggregating: LIMIT/OFFSET on the jsonb_agg result
+    -- applies to its single output row, so any p_offset > 0 returned '[]'
     'reviews', COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
-          'id', r.id,
-          'source', rs.code,
-          'rating', r.rating,
-          'rating_max', r.rating_max,
-          'title', r.title,
-          'content', r.content,
-          'author_name', r.author_name,
-          'author_avatar_url', r.author_avatar_url,
-          'review_date', r.review_date,
-          'visit_date', r.visit_date,
-          'traveler_type', r.traveler_type,
-          'language_id', r.language_id,
-          'helpful_count', r.helpful_count,
-          'response', r.response,
-          'response_date', r.response_date
+          'id', p.id,
+          'source', p.source,
+          'rating', p.rating,
+          'rating_max', p.rating_max,
+          'title', p.title,
+          'content', p.content,
+          'author_name', p.author_name,
+          'author_avatar_url', p.author_avatar_url,
+          'review_date', p.review_date,
+          'visit_date', p.visit_date,
+          'traveler_type', p.traveler_type,
+          'language_id', p.language_id,
+          'helpful_count', p.helpful_count,
+          'response', p.response,
+          'response_date', p.response_date
         )
-        ORDER BY r.review_date DESC NULLS LAST, r.imported_at DESC
+        ORDER BY p.review_date DESC NULLS LAST, p.imported_at DESC
       )
-      FROM object_review r
-      JOIN ref_review_source rs ON rs.id = r.source_id
-      WHERE r.object_id = p_object_id AND r.is_published = TRUE
-      LIMIT p_limit OFFSET p_offset
+      FROM (
+        SELECT r.id, rs.code AS source, r.rating, r.rating_max, r.title, r.content,
+               r.author_name, r.author_avatar_url, r.review_date, r.visit_date,
+               r.traveler_type, r.language_id, r.helpful_count, r.response,
+               r.response_date, r.imported_at
+        FROM object_review r
+        JOIN ref_review_source rs ON rs.id = r.source_id
+        WHERE r.object_id = p_object_id AND r.is_published = TRUE
+        ORDER BY r.review_date DESC NULLS LAST, r.imported_at DESC
+        LIMIT p_limit OFFSET p_offset
+      ) p
     ), '[]'::jsonb)
   );
 END;

@@ -570,6 +570,7 @@ DROP POLICY IF EXISTS "Accès admin/service_role (object_sustainability_action_l
 DROP POLICY IF EXISTS "pub_object_sustainability_action_read" ON object_sustainability_action;
 DROP POLICY IF EXISTS "pub_object_sustainability_action_label_read" ON object_sustainability_action_label;
 DROP POLICY IF EXISTS "Lecture publique des avis" ON object_review;
+DROP POLICY IF EXISTS "read_object_review" ON object_review;
 DROP POLICY IF EXISTS "Écriture admin des avis" ON object_review;
 DROP POLICY IF EXISTS "pub_fma_published" ON object_fma;
 DROP POLICY IF EXISTS "ext_fma_org_actor" ON object_fma;
@@ -1125,9 +1126,17 @@ CREATE POLICY "pub_object_sustainability_action_label_read" ON object_sustainabi
     )
   );
 
--- Avis (reviews): lecture publique si publiés, écriture admin seulement
-CREATE POLICY "Lecture publique des avis" ON object_review
-  FOR SELECT USING (is_published = TRUE);
+-- Avis (§56 / 8w — migration_object_review_read_gate.sql, folded here per the 8s/8t/8v
+-- precedent): ONE §38 split-form SELECT policy. The published arm COMPOSES the row's
+-- is_published flag with the parent-object publication gate (the old bare flag let anon
+-- read is_published reviews of DRAFT objects); the extended arm is set-based (§35).
+-- Écriture admin seulement (per-command admin_* family since 8o — incremental caveat).
+CREATE POLICY "read_object_review" ON object_review FOR SELECT USING (
+  (is_published IS TRUE AND EXISTS (
+    SELECT 1 FROM object o
+    WHERE o.id = object_review.object_id AND o.status = 'published'))
+  OR object_id IN (SELECT api.current_user_extended_object_ids())
+);
 CREATE POLICY "Écriture admin des avis" ON object_review
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR

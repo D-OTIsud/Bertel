@@ -8,7 +8,7 @@ import type {
   ObjectWorkspaceMeetingRoomItem,
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
-import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
+import { ModuleUnavailableNotice } from './block-notes';
 import { computeRoomsCapacitySum, nextRoomCode, reindexRoomPositions, syncCapacityWithRooms } from './rooms-utils';
 
 const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
@@ -250,26 +250,10 @@ export function BlockHEB({ editor, folded }: SectionProps) {
         </>
       )}
 
-      <div className="chip-group__label" style={{ marginTop: 20 }}>
-        Politiques d'accueil
-      </div>
       {/* §48 single-owner: group policy AND pet policy are edited in §07 only
-          (PO 2026-06-11 — accueil concerns belong to Capacité, for every type;
-          last-edit-wins trap otherwise). This note is the §06 pointer. */}
-      <OwnedElsewhereNote
-        num="07"
-        label="Capacité & contenance"
-        summary={
-          [
-            capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
-              ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
-              : null,
-            capacity.petPolicy.accepted ? 'Animaux acceptés' : null,
-          ]
-            .filter(Boolean)
-            .join(' · ') || undefined
-        }
-      />
+          (PO 2026-06-11 — accueil concerns belong to Capacité, for every type).
+          The « Politiques d'accueil » label + §07 pointer note were removed the
+          same day (PO: useless residue once nothing is editable here). */}
 
       {/* §46 type-gated meetingRooms module — notice INSTEAD of controls when gated (independent of rooms) */}
       {meetingRooms.unavailableReason ? (

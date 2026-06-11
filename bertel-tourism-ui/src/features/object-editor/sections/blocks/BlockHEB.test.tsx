@@ -4,7 +4,7 @@ import { BlockHEB } from './BlockHEB';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
 
 describe('BlockHEB pet policy (moved to §07 — PO 2026-06-11)', () => {
-  it('renders no pet-policy controls; the §07 note carries the animals summary', () => {
+  it('renders no pet-policy controls and no pointer note (label + note removed — PO)', () => {
     const modules = fullModulesFixture();
     modules.capacityPolicies.petPolicy.accepted = true;
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
@@ -12,9 +12,11 @@ describe('BlockHEB pet policy (moved to §07 — PO 2026-06-11)', () => {
 
     expect(screen.queryByLabelText('Animaux acceptés')).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Conditions d'accueil des animaux")).not.toBeInTheDocument();
-    // Single-owner pointer (§48 pattern): the note names §07 and reflects the state.
-    expect(screen.getByText(/Capacité & contenance/)).toBeInTheDocument();
-    expect(screen.getByText(/Animaux acceptés/)).toBeInTheDocument();
+    // PO 2026-06-11: the « Politiques d'accueil » label + §07 pointer note were judged
+    // useless once §07 owns the controls — the block mentions accueil nowhere.
+    expect(screen.queryByText("Politiques d'accueil")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Capacité & contenance/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Animaux acceptés/)).not.toBeInTheDocument();
   });
 });
 
@@ -55,7 +57,8 @@ describe('BlockHEB — single-owner surfaces (§48)', () => {
     expect(screen.queryByText('Groupes — max')).not.toBeInTheDocument();
     expect(screen.queryByText('Notes groupes')).not.toBeInTheDocument();
     expect(screen.queryByText('Groupes uniquement')).not.toBeInTheDocument();
-    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
+    // PO 2026-06-11: the §07 pointer note was removed too — no accueil residue here.
+    expect(screen.queryByText(/Géré dans la section 07/)).not.toBeInTheDocument();
   });
 
   it('no longer hosts the pet policy (single owner = §07, PO 2026-06-11)', () => {
@@ -267,8 +270,8 @@ describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)'
     // Regex matcher: the Repeater add button renders "+ {addLabel}" as two text
     // nodes, so an exact-string match can never hit it (and would be vacuous).
     expect(screen.queryByText(/Ajouter un type de chambre/)).not.toBeInTheDocument();
-    // capacityPolicies is NOT type-gated — its controls stay rendered and editable.
-    expect(screen.getByText("Politiques d'accueil")).toBeInTheDocument();
+    // The accueil label/note no longer exist in this block (owned by §07, PO 2026-06-11).
+    expect(screen.queryByText("Politiques d'accueil")).not.toBeInTheDocument();
   });
 
   it('renders the meeting-rooms unavailable notice independently of the rooms area', () => {

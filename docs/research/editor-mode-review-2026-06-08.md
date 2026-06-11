@@ -46,8 +46,8 @@ Main walk (HEB / HLO):
 - [x] §02 Localisation
 - [x] §03 Contacts
 - [x] §04 Descriptions
-- [x] §05 Chambres & séminaire (BlockHEB)
-- [ ] §06 Médias
+- [x] §06 Chambres & séminaire (BlockHEB) *(ex-§05 — renumber 7ee937e)*
+- [x] §05 Médias *(ex-§06)*
 - [ ] §07 Capacité & cadre
 - [ ] §08 Classifications
 - [ ] §09 Tags & étiquettes
@@ -297,3 +297,38 @@ have no UI — post-MVP; `floorLevel`/`currency`/`*_i18n` round-trip blind. **De
 **Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS
 asterisks were visual-only. Commune is now enforced; **Adresse/CP/GPS required-vs-validation
 alignment** logged for the cross-cutting honest-controls pass (X1 family).
+
+---
+
+## §05 — Médias (new numbering; reviewed 2026-06-11)
+
+Component: `sections/SectionMedia.tssx`-era grid + `widgets/MediaEditModal.tsx` +
+`widgets/MediaUploadField.tsx` + `media-items.ts`. Investigated with the 2-agent
+workflow (persistence map + cross-consumer map) + live probes (4014 media rows,
+100 % type `photo`, 100 % `visibility` NULL, 0 private covers, 0 media_tag links).
+**No strict write-trap** — everything the modal edits persists — but one destructive
+risk, maximal-magnitude visibility coercion, two lying labels, and cross-consumer
+drift. All fixed in 5 commits (`8a9fd1f`, `0668a74`, `c450359`, `097c1af`,
+`ae215fc`+`ed2f5bc`); FE 610 green ×2, tsc clean; backend live (migration 14a +
+2 fn deploys). Full detail in decision log §59.
+
+| Finding | Decision |
+|---------|----------|
+| **R1 destructive clobber**: failed media select → silent `objectItems=[]`, no guard; one save deleted EVERY media row (delete reconcile). | **FIXED** — loader `unavailableReason` + `ModuleUnavailableNotice` instead of the grid + saver throw (§28/§40 precedent). |
+| **visibility NULL→'public' coercion** (parser ×2 + saver `?? 'public'`, items rewritten each save) — live: 4014/4014 NULL. | **FIXED** (§04 class) — parser keeps NULL='', UPDATE preserves, INSERT defaults 'public'; « — Visibilité non définie — » option; vocabulary Publique/Partenaires/Interne (§52). |
+| « Description (texte alternatif) » saved to `media.description` that NO public reader consumed (drawer alt = title). | **FIXED** — `get_object_resource` emits `description` (i18n-picked); drawer alt = description‖title‖name (hero/lightbox/thumbs); 217 imported rows now active. Deployed live (also settles the §54 `room_types` deploy). |
+| Sub-title promised « documents, vidéo » — unauthorable (no URL field; upload images-only); dimension-trigger landmine on type switch. | **PO vision locked**: §05 authors photos + videos; documents are uploaded from their owning sections (menus, §08/§10/§11 with validity metadata) and stay visible here. **Implemented**: video pipeline end-to-end (route `process-video.ts` mp4/webm/mov ≤100 Mo stored as-is — container metadata NOT stripped, documented; accept/hints per kind; `<video>` preview + drawer hero/lightbox/thumb rendering); type select restricted to AUTHORABLE (photo, video); existing documents render type+file as Readout, metadata editable. Landmine defused (no cross-type switch left). |
+| `position` has real public effect (drawer gallery order) but no editing surface; stale positions after delete. | **FIXED** — new `SortableGrid` primitive (dnd-kit rect strategy, keyboard OK, handle injected via renderProp); reorder + delete reindex (`reorderObjectMediaItems`). |
+| Cover semantics: cover = `cached_main_image_url` (is_main, no fallback) feeding public cards; cache had NO visibility filter; editor cover toggle modal-only. | **FIXED** — tile star (exclusive, disabled on videos — the cache pick is photo-shaped) + migration 14a gates the cache pick AND `read_media` on `(visibility IS NULL OR 'public')` (§49 compose; NULL ≈ public for media, deliberately unlike descriptions). |
+| Upload route TODO: any authenticated user could fill any object's storage prefix (service-role write). | **FIXED (R7)** — as-the-caller probe `api.user_can_write_object_canonical(p_object_id)` (admin/invite pattern), fail-closed 403. Pipeline invariant otherwise verified intact (single writer, MIME allowlist, resize, EXIF strip, RESTRICTIVE bucket). |
+| `media_tag`: 0 links, no UI, no live consumer — saver still churned delete+reinsert (wipe risk on partial load). | **FIXED** — tag writes removed from the saver (row deletes still cascade links). |
+| Title i18n shadowing (flat edit shadowed by an i18n key for public readers) — 0 fr keys live (latent). | **FIXED preventively** — primary-language edits write flat + `*_i18n[primary]`; emptied value removes the key. |
+| Modal accepted empty `url` → raw `chk_media_url_*` failure at global save. | **FIXED** — `saveDisabled` until a file is uploaded. |
+| Dead weight: `kind` (never written ⇒ InDesign `'asset'` export structurally empty), `rights_expires_at`/`analyse_data` (0 readers), `org_object_id` (invisible drawer filter), place media (loaded, no surface, saver stub, 0 rows). | **Logged, deferred** — see §59 deferred list. |
+
+**Deferred (§05, with reasons — full list in decision log §59):** documents-per-owning-section
+upload feature (PO spec recorded); storage orphan GC (no cleanup on cancel/re-upload/delete);
+video metadata strip (needs a transcoder); non-atomic saver + clear-main-first (§54 reconcile
+family); enrichment-only silent 0-row saves (§48 family, latent until SP-2); ITI stage-media
+cascade destruction on stage save (latent, 0 ITI — B1/ITI pass); cover-cache photo-type filter
+(star guard is UI-only today); `read_media_tag` bare-flag shape (low sensitivity).

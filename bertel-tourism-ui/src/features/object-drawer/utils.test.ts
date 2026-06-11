@@ -13,7 +13,9 @@ import {
   parseOpenings,
   parsePetPolicy,
   parsePrices,
+  parseMeetingRooms,
   parseRelatedObjects,
+  parseRoomTypes,
   parseTaxonomyGroups,
 } from './utils';
 
@@ -394,5 +396,61 @@ describe('object drawer utils', () => {
         expect.objectContaining({ name: 'Guide local', direction: 'in', relationship: 'Anime' }),
       ]),
     );
+  });
+
+  it('parses meeting rooms from the live resource shape (to_jsonb cap_* columns)', () => {
+    const raw = {
+      meeting_rooms: [
+        {
+          id: 'mr-1',
+          name: 'Salle Bras-Long',
+          area_m2: 78,
+          cap_theatre: 60,
+          cap_u: 24,
+          cap_classroom: 32,
+          cap_boardroom: 20,
+          equipment: [{ code: 'projector', name: 'Vidéoprojecteur' }],
+        },
+      ],
+    } as Record<string, unknown>;
+
+    const rooms = parseMeetingRooms(raw);
+
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0]).toMatchObject({
+      name: 'Salle Bras-Long',
+      areaM2: '78',
+      capacityTheatre: '60',
+      capacityU: '24',
+      capacityClassroom: '32',
+      capacityBoardroom: '20',
+    });
+    expect(rooms[0].equipment).toContain('Vidéoprojecteur');
+  });
+
+  it('parses room types from the live resource shape (to_jsonb object_room_type columns)', () => {
+    const raw = {
+      room_types: [
+        {
+          id: 'rt-1',
+          name: 'Chambre standard',
+          capacity_adults: 2,
+          bed_config: '1 lit double',
+          total_rooms: 12,
+          amenities: [{ code: 'wifi', name: 'Wi-Fi' }],
+        },
+      ],
+    } as Record<string, unknown>;
+
+    const rooms = parseRoomTypes(raw);
+
+    expect(rooms).toHaveLength(1);
+    expect(rooms[0]).toMatchObject({
+      name: 'Chambre standard',
+      capacityAdults: '2',
+      beds: '1 lit double',
+      quantity: '12',
+    });
+    expect(rooms[0].amenities).toContain('Wi-Fi');
   });
 });

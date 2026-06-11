@@ -3303,6 +3303,39 @@ BEGIN
     );
   END IF;
 
+  -- Room types (+ amenities) — §05 editor review 2026-06-11: the drawer's RoomList
+  -- always read raw.room_types but nothing emitted it (the standalone
+  -- api.get_object_room_types is uncalled), so authored rooms were publicly
+  -- invisible. Field-gated like descriptions: the function is SECURITY DEFINER
+  -- (RLS does not apply inside), so anon/stranger callers must only see
+  -- is_published rows; extended callers see everything.
+  IF v_fields IS NULL OR 'room_types' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'room_types',
+      COALESCE((
+      SELECT jsonb_agg(
+               (to_jsonb(rt) - 'object_id')
+               ||
+               jsonb_build_object(
+                 'amenities', COALESCE((
+                   SELECT jsonb_agg(
+                            jsonb_build_object('code', a.code, 'name', a.name, 'icon_url', a.icon_url)
+                            ORDER BY a.name, a.code
+                          )
+                   FROM object_room_type_amenity ra
+                   JOIN ref_amenity a ON a.id = ra.amenity_id
+                   WHERE ra.room_type_id = rt.id
+                 ), '[]'::jsonb)
+               )
+               ORDER BY rt.position NULLS LAST, rt.name, rt.id
+             )
+      FROM object_room_type rt
+      WHERE rt.object_id = obj.id
+        AND (v_can_read_extended OR rt.is_published IS TRUE)
+      ), '[]'::jsonb)
+    );
+  END IF;
+
   -- FMA & occurrences
   IF v_fields IS NULL OR 'fma' = ANY(v_fields) THEN
     js := js || jsonb_build_object(

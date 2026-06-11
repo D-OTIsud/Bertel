@@ -1130,24 +1130,27 @@ export function parseOpenings(raw: Record<string, unknown>): OpeningItem[] {
 }
 
 export function parseRoomTypes(raw: Record<string, unknown>): RoomTypeItem[] {
+  // Live shape = get_object_resource's to_jsonb(object_room_type): bed_config / total_rooms.
   return readArray(raw.room_types ?? raw.object_room_types).map((room, index) => ({
     id: readString(room.id, `room-${index}`),
     name: readString(room.name, readNamedValue(room.room_type, 'Type de chambre')),
     capacityAdults: readString(room.capacity_adults, readString(room.max_capacity, 'n/a')),
-    beds: readString(room.beds, readString(room.bed_config_summary, 'n/a')),
-    quantity: readString(room.quantity, readString(room.inventory_count, 'n/a')),
+    beds: readString(room.beds, readString(room.bed_config_summary, readString(room.bed_config, 'n/a'))),
+    quantity: readString(room.quantity, readString(room.inventory_count, readString(room.total_rooms, 'n/a'))),
     amenities: readArray(room.amenities ?? room.room_type_amenities).map((amenity) => readNamedValue(amenity.amenity ?? amenity, 'Amenite')).filter(Boolean),
   }));
 }
 
 export function parseMeetingRooms(raw: Record<string, unknown>): MeetingRoomItem[] {
+  // Live shape = get_object_resource's to_jsonb(object_meeting_room): cap_* columns —
+  // the old capacity_* keys matched nothing, so every capacity rendered 'n/a'.
   return readArray(raw.meeting_rooms ?? raw.object_meeting_rooms).map((room, index) => ({
     id: readString(room.id, `meeting-${index}`),
     name: readString(room.name, 'Salle MICE'),
-    capacityTheatre: readString(room.capacity_theatre, readString(room.capacity_seated, 'n/a')),
-    capacityClassroom: readString(room.capacity_classroom, 'n/a'),
-    capacityBoardroom: readString(room.capacity_boardroom, 'n/a'),
-    capacityU: readString(room.capacity_u, readString(room.capacity_u_shape, 'n/a')),
+    capacityTheatre: readString(room.capacity_theatre, readString(room.capacity_seated, readString(room.cap_theatre, 'n/a'))),
+    capacityClassroom: readString(room.capacity_classroom, readString(room.cap_classroom, 'n/a')),
+    capacityBoardroom: readString(room.capacity_boardroom, readString(room.cap_boardroom, 'n/a')),
+    capacityU: readString(room.capacity_u, readString(room.capacity_u_shape, readString(room.cap_u, 'n/a'))),
     areaM2: readString(room.area_m2, readString(room.surface_m2, 'n/a')),
     equipment: readArray(room.equipment ?? room.meeting_room_equipment).map((item) => readNamedValue(item.equipment ?? item, 'equipement')).filter(Boolean),
   }));

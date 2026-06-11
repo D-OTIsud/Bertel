@@ -40,7 +40,7 @@ Main walk (HEB / HLO):
 - [x] §02 Localisation
 - [x] §03 Contacts
 - [x] §04 Descriptions
-- [ ] §05 Chambres & séminaire (BlockHEB)
+- [x] §05 Chambres & séminaire (BlockHEB)
 - [ ] §06 Médias
 - [ ] §07 Capacité & cadre
 - [ ] §08 Classifications
@@ -246,6 +246,36 @@ a separate feature (new field), not this column.
 **Dead weight logged (drawer scope, not §04):** the drawer's « Voir versions · FR/EN » button is
 permanently disabled ("Bientôt disponible") while per-language descriptions are parsed and never
 rendered; `parseContacts`-style dead panels remain (§23). For the drawer review pass.
+
+---
+
+## §05 — Chambres & séminaire (BlockHEB)
+
+Component: `sections/blocks/BlockHEB.tsx` + `RoomEditModal` / `MeetingRoomEditModal`.
+**No field-level write-traps** (every modal control persists; §46 gates rendered per module,
+savers throw as defense-in-depth; §48 single-owner notes in place; petPolicy = sole surface).
+The 2-agent map found a public-invisibility hole, label/coverage gaps, and backend risks.
+
+| Finding | Decision |
+|---------|----------|
+| **Rooms publicly INVISIBLE**: the drawer's RoomList reads `raw.room_types` but `get_object_resource` never emitted it (the standalone `api.get_object_room_types` is uncalled); meeting-room capacities always « n/a » (parser read `capacity_*`, resource emits to_jsonb `cap_*`). | **FIXED (commit B)** — `get_object_resource` now emits `room_types` (+ amenities), **field-gated** `v_can_read_extended OR is_published` (the fn is SECURITY DEFINER — RLS doesn't apply inside; this also gives the room « Publiée » toggle its public effect); parser fallbacks `cap_*` / `bed_config` / `total_rooms` added to the live parser (`object-drawer/utils.ts`, consumed via `object-detail-parser`). `object_room_type` is empty on live today (0 rows) — forward-looking correctness for B1 authoring. **Deploy: apply `api_views_functions.sql`'s `get_object_resource` to live** (CI fresh-apply validates the file). |
+| « Banquet » labeled `cap_boardroom` (drawer says « Conseil ») | **FIXED (commit A)** — Conseil partout ; chiffres banquet ne polluent plus la colonne boardroom. |
+| `cap_u` persisted, un-authorable | **FIXED** — « Capacité en U » in the meeting modal. |
+| `capacityAdults/Children` import-frozen while the public card leads with « X adultes » | **FIXED** — Adultes/Enfants in the room modal; « Couchages » → « Couchages (total) ». |
+| `unit-N` code collisions (UNIQUE(object_id,code) + delete-reinsert saver = abort mid-rewrite) | **FIXED** — `nextRoomCode` skips existing suffixes. |
+| Inert handles; bare « × » deletes | **FIXED** — rooms get SortableList DnD (position reindexed on reorder AND delete); meeting rooms lose the handle instead (no position column — a drag affordance would lie); deletes = Trash2 + aria-label (§03 pattern). |
+| §05 always 100 % complete + no validation (a hotel with 0 rooms publishes silently) | **FIXED** — §05 joins completion scoring (rooms>0 or §46-gated ⇒ complete) + HEB warn « Ajoutez au moins un type de chambre ». |
+| Pill « 0 type(s) » when module gated | **FIXED** — « Non applicable ». |
+
+**Backend logged (not this pass):** destructive delete-all-then-reinsert savers (non-transactional,
+identity churn — new UUIDs each save, wipes `extra` + link positions) → needs an RPC reconcile, its
+own pass; **RLS `object_room_type` trio readable anon on own `is_published` (default TRUE) without
+parent-publication gate** → user-owned (chip `task_89e3f5cf`, same class as his 8s/8t);
+`floor_level` text→INTEGER latent type mismatch; `room_type_id` trusted verbatim (no code
+re-resolution); `migration_room_type_ref.sql` not folded into `schema_unified.sql` (manifest-order
+dependency). **Coverage gaps left (deliberate):** room `mediaIds`/`mediaOptions` (per-room photos)
+have no UI — post-MVP; `floorLevel`/`currency`/`*_i18n` round-trip blind. **Dead code:**
+`ObjectRoomsPanel`/`ObjectMicePanel` never imported (drawer pass).
 | Pin map (drag + confirm) | ✅ | Keep. |
 
 **Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS

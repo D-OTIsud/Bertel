@@ -800,8 +800,10 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **INSERT** `admin_ins_object_review` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
-- **SELECT** `Lecture publique des avis` — roles ['public']
-  - `(is_published = true)`
+- **SELECT** `read_object_review` — roles ['public']
+  - `(((is_published IS TRUE) AND (EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_review.object_id) AND (o.status = 'published'::object_status))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `admin_upd_object_review` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
@@ -814,7 +816,7 @@
   - `(api.user_can_write_object_canonical(object_id) OR (EXISTS ( SELECT 1
    FROM object o
   WHERE ((o.id = object_room_type.object_id) AND (o.created_by = ( SELECT auth.uid() AS uid))))))`
-- **SELECT** `read_object_room_type` — roles ['public']  <!-- hand-patched §55/8v; pipeline refresh pending -->
+- **SELECT** `read_object_room_type` — roles ['public']
   - `(((is_published IS TRUE) AND (EXISTS ( SELECT 1
    FROM object o
   WHERE ((o.id = object_room_type.object_id) AND (o.status = 'published'::object_status))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
@@ -826,7 +828,7 @@
   WHERE ((o.id = object_room_type.object_id) AND (o.created_by = ( SELECT auth.uid() AS uid))))))`
 
 ## `public.object_room_type_amenity`
-- **DELETE** `canonical_del_object_room_type_amenity` — roles ['public']  <!-- hand-patched §55/8v: outer column now qualified (was deny-all rt.id = rt.room_type_id); pipeline refresh pending -->
+- **DELETE** `canonical_del_object_room_type_amenity` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
@@ -846,17 +848,18 @@
      JOIN object o ON ((o.id = rt.object_id)))
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (rt.is_published IS TRUE) AND (o.status = 'published'::object_status)))) OR (room_type_id IN ( SELECT rt.id
    FROM object_room_type rt
-  WHERE (rt.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))))`
+  WHERE (rt.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_id …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_room_type_amenity` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
    FROM (object_room_type rt
      JOIN object o ON ((o.id = rt.object_id)))
-  WHERE ((rt.id = object_room_type_amenity.room_t …[truncated — full text in catalog_extra.json or live pg_policies]`
+  WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
+   FROM  …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_room_type_media`
-- **DELETE** `canonical_del_object_room_type_media` — roles ['public']  <!-- hand-patched §55/8v: outer column now qualified (was deny-all rt.id = rt.room_type_id); pipeline refresh pending -->
+- **DELETE** `canonical_del_object_room_type_media` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
@@ -876,14 +879,15 @@
      JOIN object o ON ((o.id = rt.object_id)))
   WHERE ((rt.id = object_room_type_media.room_type_id) AND (rt.is_published IS TRUE) AND (o.status = 'published'::object_status)))) OR (room_type_id IN ( SELECT rt.id
    FROM object_room_type rt
-  WHERE (rt.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))))`
+  WHERE (rt.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids) …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_room_type_media` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
    FROM (object_room_type rt
      JOIN object o ON ((o.id = rt.object_id)))
-  WHERE ((rt.id = object_room_type_media.room_typ …[truncated — full text in catalog_extra.json or live pg_policies]`
+  WHERE ((rt.id = object_room_type_media.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
+   FROM obje …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_sustainability_action`
 - **DELETE** `canonical_del_object_sustainability_action` — roles ['public']

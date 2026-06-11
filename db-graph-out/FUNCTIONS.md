@@ -50,6 +50,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.auto_populate_interaction_subject()`
 - returns: `trigger`
+- reads `public.ref_code_demand_subtopic` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
 
 ## `api.b64url_decode(p text)`
 - returns: `bytea`
@@ -161,7 +163,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_amenity` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_code` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
 - reads `public.ref_org_role` _(high)_
+- reads `staging.contact_channel_temp` _(high)_
+- reads `staging.import_batches` _(high)_
+- reads `staging.media_temp` _(high)_
+- reads `staging.object_amenity_temp` _(high)_
+- reads `staging.object_classification_temp` _(high)_
+- reads `staging.object_location_temp` _(high)_
+- reads `staging.object_org_link_temp` _(high)_
+- reads `staging.object_payment_method_temp` _(high)_
+- reads `staging.object_temp` _(high)_
+- reads `staging.org_temp` _(high)_
+- reads `staging.ref_classification_scheme_temp` _(high)_
+- reads `staging.ref_classification_value_temp` _(high)_
+- reads `staging.ref_code_temp` _(high)_
 - writes `public.contact_channel` _(high)_
 - writes `public.media` _(high)_
 - writes `public.object` _(high)_
@@ -175,6 +193,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.ref_classification_value` _(high)_
 - writes `public.ref_code` _(high)_
 - writes `public.ref_org_role` _(high)_
+- writes `staging.batch_commit_ledger` _(high)_
+- writes `staging.batch_commit_ledger_item` _(high)_
+- writes `staging.import_batches` _(high)_
+- writes `staging.media_temp` _(high)_
+- writes `staging.object_temp` _(high)_
+- writes `staging.org_temp` _(high)_
+- writes `staging.ref_classification_scheme_temp` _(high)_
+- writes `staging.ref_classification_value_temp` _(high)_
+- writes `staging.ref_code_temp` _(high)_
 
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
@@ -298,13 +325,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.enforce_actor_channel_email_shape()`
 - returns: `trigger`
+- reads `public.ref_code_contact_kind` _(high)_
 
 ## `api.enforce_app_user_profile_role_change()`
 - returns: `trigger` — SECURITY DEFINER
+- reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
 
 ## `api.enforce_contact_email_shape()`
 - returns: `trigger`
+- reads `public.ref_code_contact_kind` _(high)_
 
 > Email shape enforcement (object + actor)
 
@@ -383,6 +413,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor_channel` _(high)_
 - reads `public.actor_object_role` _(high)_
 - reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_contact_role` _(high)_
 
 > =====================================================
@@ -395,6 +426,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_frame` _(high)_
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 
 > =====================================================
 > Optimized function to get all opening time slots for a period
@@ -529,6 +561,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_capacity_metric` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_meeting_equipment` _(high)_
 - reads `public.ref_sustainability_action` _(high)_
 - reads `public.ref_sustainability_action_category` _(high)_
 - reads `public.ref_tag` _(high)_
@@ -536,9 +572,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- reads `staging.import_events` _(high)_
+- reads `staging.mapping_contract` _(high)_
+- reads `staging.media_temp` _(high)_
+- reads `staging.object_amenity_temp` _(high)_
+- reads `staging.object_org_link_temp` _(high)_
+- reads `staging.object_payment_method_temp` _(high)_
 
 ## `api.get_ingestor_scheduler_health()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `cron.job` _(high)_
+- reads `cron.job_run_details` _(high)_
 
 ## `api.get_itinerary_track_geojson(p_object_id text, p_simplify boolean DEFAULT false, p_tolerance double precision DEFAULT 0.0001)`
 - returns: `json`
@@ -560,6 +605,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json`
 - reads `public.media` _(high)_
 - reads `public.media_tag` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
 
 > =====================================================
 > Get filtered media for web display (excludes internal/sensitive)
@@ -579,6 +626,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_amenity` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
 - reads `public.ref_sustainability_action` _(high)_
 
 > Compact badges from official classifications, sustainability actions and canonical acc_* accessibility amenities.
@@ -612,7 +660,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
 - reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
 - reads `public.ref_code_taxonomy_closure` _(high)_
 - reads `public.ref_sustainability_action` _(high)_
 - reads `public.ref_tag` _(high)_
@@ -630,6 +680,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `jsonb`
 - reads `public.object_environment_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
 
 > Compact environment tag payload for cards, maps and LCP/list payloads.
 
@@ -703,6 +754,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)`
 - returns: `json` — SECURITY DEFINER
+- reads `auth.users` _(high)_
 - reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
 - reads `public.actor_object_role` _(high)_
@@ -761,7 +813,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
 - reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_meeting_equipment` _(high)_
+- reads `public.ref_code_membership_campaign` _(high)_
+- reads `public.ref_code_membership_tier` _(high)_
+- reads `public.ref_code_menu_category` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
 - reads `public.ref_code_taxonomy_closure` _(high)_
 - reads `public.ref_contact_role` _(high)_
 - reads `public.ref_document` _(high)_
@@ -784,6 +852,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_amenity` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 
 > FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
 > description_adapted preferred over regular description, essential location,
@@ -813,6 +882,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_room_type_amenity` _(high)_
 - reads `public.object_room_type_media` _(high)_
 - reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_view_type` _(high)_
 
 > =====================================================
 > Get room types for accommodations
@@ -855,6 +925,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_org_link` _(high)_
 - reads `public.object_relation` _(high)_
 - reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_contact_role` _(high)_
 - reads `public.ref_object_relation_type` _(high)_
 - reads `public.ref_org_role` _(high)_
@@ -869,6 +940,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_frame` _(high)_
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 
 > =====================================================
 > Optimized: get ALL opening time frames per weekday as arrays (unbounded)
@@ -880,6 +952,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_frame` _(high)_
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 
 > =====================================================
 > Helper function to extract opening time slots for a specific day (legacy)
@@ -890,6 +963,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.contact_channel` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_contact_role` _(high)_
 - reads `public.ref_org_role` _(high)_
 
@@ -985,6 +1059,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_frame` _(high)_
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 
 ## `api.is_object_owner(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -1009,6 +1084,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.is_platform_admin()`
 - returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
 
 > Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.
@@ -1119,14 +1195,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.prevent_duplicate_actor_email()`
 - returns: `trigger`
 - reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 
 > Unicité email cross-actors
 
 ## `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
 
 ## `api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
 
 ## `api.recompute_audit_session_score()`
 - returns: `trigger`
@@ -1145,6 +1226,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
 - reads `public.ref_code_taxonomy_closure` _(high)_
 - reads `public.ref_language` _(high)_
 - writes `public.object` _(high)_
@@ -1167,6 +1250,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_frame` _(high)_
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 - writes `public.object` _(high)_
 
 ## `api.refresh_ref_code_taxonomy_closure(p_domain text)`
@@ -1240,13 +1324,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.retry_failed_media_downloads(p_limit integer DEFAULT 200)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `staging.media_temp` _(high)_
+- writes `staging.media_temp` _(high)_
 
 ## `api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.media` _(high)_
 - reads `public.object` _(high)_
+- reads `staging.batch_commit_ledger` _(high)_
+- reads `staging.batch_commit_ledger_item` _(high)_
+- reads `staging.import_batches` _(high)_
 - writes `public.media` _(high)_
 - writes `public.object` _(high)_
+- writes `staging.batch_commit_ledger` _(high)_
+- writes `staging.import_batches` _(high)_
 
 ## `api.rpc_create_object(p_object_type text, p_name text, p_region_code text DEFAULT NULL::text)`
 - returns: `text` — SECURITY DEFINER
@@ -1314,6 +1405,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_list_org_members(p_org_object_id text)`
 - returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])` — SECURITY DEFINER
+- reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.ref_org_admin_role` _(high)_
 - reads `public.ref_org_business_role` _(high)_
@@ -1472,6 +1564,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_price` _(high)_
 - reads `public.ref_amenity` _(high)_
 - reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_language_level` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
 - reads `public.ref_language` _(high)_
 - writes `public.object_amenity` _(high)_
 - writes `public.object_capacity` _(high)_
@@ -1505,6 +1602,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.save_object_openings(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
 - reads `public.opening_period` _(high)_
+- reads `public.ref_code_opening_schedule_type` _(high)_
+- reads `public.ref_code_weekday` _(high)_
 - writes `public.opening_period` _(high)_
 - writes `public.opening_schedule` _(high)_
 - writes `public.opening_time_frame` _(high)_
@@ -1515,6 +1614,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb`
 - reads `public.object_place` _(high)_
 - reads `public.object_zone` _(high)_
+- reads `public.ref_code_media_type` _(high)_
 - writes `public.media` _(high)_
 - writes `public.object_location` _(high)_
 - writes `public.object_place` _(high)_
@@ -1565,6 +1665,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_menu_item` _(high)_
 - reads `public.object_menu_item_cuisine_type` _(high)_
 - reads `public.object_relation` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
 
 ## `api.search_objects_by_label(p_label_value_id uuid, p_include_partial boolean DEFAULT true, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
 - returns: `json`
@@ -1594,6 +1695,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_menu` _(high)_
 - reads `public.object_menu_item` _(high)_
 - reads `public.object_menu_item_cuisine_type` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
 
 ## `api.set_publication_workflow_timestamps()`
 - returns: `trigger`
@@ -1636,6 +1738,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.user_actor_ids()`
 - returns: `SETOF uuid`
 - reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 
 > Acteurs liés à l'utilisateur via email dans actor_channel.kind='email'
 
@@ -1758,6 +1861,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.watchdog_mark_stale_batches(p_stale_minutes integer DEFAULT 30, p_limit integer DEFAULT 200)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
 
 ## `audit.attach_missing_triggers()`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
@@ -1881,6 +1986,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `public.validate_media_dimensions()`
 - returns: `trigger`
+- reads `public.ref_code_media_type` _(high)_
 
 ## `public.validate_org_object_type()`
 - returns: `trigger`

@@ -15,6 +15,22 @@ def _split(qualname):
     return "public", qualname
 
 
+def _rel_name(value):
+    if isinstance(value, dict):
+        return value.get("name")
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _rel_col_name(value):
+    if isinstance(value, dict):
+        return value.get("name")
+    if isinstance(value, str):
+        return value
+    return None
+
+
 def load_tbls_schema(tbls):
     nodes, edges = [], []
     pk_cols = {}  # table id -> set of pk column names
@@ -45,12 +61,12 @@ def load_tbls_schema(tbls):
                     fname = "%s.%s" % (schema, fname)
                 edges.append({"source": tid, "target": fname, "kind": "executes", "props": {}})
     for r in tbls.get("relations", []):
-        child = r.get("table", {}).get("name")
-        parent = r.get("parent_table", {}).get("name")
+        child = _rel_name(r.get("table"))
+        parent = _rel_name(r.get("parent_table"))
         if not child or not parent:
             continue
-        pairs = list(zip([c["name"] for c in r.get("columns", [])],
-                         [c["name"] for c in r.get("parent_columns", [])]))
+        pairs = list(zip([name for name in (_rel_col_name(c) for c in r.get("columns", [])) if name],
+                         [name for name in (_rel_col_name(c) for c in r.get("parent_columns", [])) if name]))
         edges.append({"source": child, "target": parent, "kind": "fk",
                       "props": {"columns": [list(p) for p in pairs]}})
     return nodes, edges

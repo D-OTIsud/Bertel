@@ -20,6 +20,24 @@ def test_load_tbls_yields_fk_edge_child_to_parent():
     assert {"source": "public.object_fma", "target": "public.object"} == {"source": fk[0]["source"], "target": fk[0]["target"]}
     assert fk[0]["props"]["columns"] == [["object_id", "id"]]
 
+def test_load_tbls_accepts_string_relation_shape():
+    nodes, edges = load_tbls_schema({
+        "tables": [],
+        "relations": [{
+            "table": "public.object_fma",
+            "columns": ["object_id"],
+            "parent_table": "public.object",
+            "parent_columns": ["id"],
+        }],
+    })
+    assert nodes == []
+    assert edges == [{
+        "source": "public.object_fma",
+        "target": "public.object",
+        "kind": "fk",
+        "props": {"columns": [["object_id", "id"]]},
+    }]
+
 def test_load_tbls_yields_trigger_node_and_executes_edge():
     nodes, edges = load_tbls_schema(_fix("schema_tbls.sample.json"))
     trig = next(n for n in nodes if n["kind"] == "trigger")

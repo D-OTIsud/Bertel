@@ -87,7 +87,7 @@ def write_index_md(g):
     return "\n".join(out)
 
 
-# Interactive viewer: dark/light theme, kind + table-domain ("family") filters, d3 zoom/pan,
+# Interactive viewer: dark/light theme, kind + domain + schema filters, d3 zoom/pan,
 # click-to-highlight neighborhood with a clickable connections list in the side panel.
 _HTML = """<!doctype html><html><head><meta charset="utf-8"><title>DB graph</title>
 <style>
@@ -103,10 +103,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:13px/1.
 #bar input{background:var(--chip);border:1px solid var(--border);color:var(--fg);border-radius:6px;
   padding:3px 8px;width:220px;outline:none}
 #meta{color:var(--muted);margin-left:8px}
-#theme{float:right;cursor:pointer;background:var(--chip);border:1px solid var(--border);color:var(--fg);
-  border-radius:6px;padding:3px 10px}
+#theme,#fit{float:right;cursor:pointer;background:var(--chip);border:1px solid var(--border);color:var(--fg);
+  border-radius:6px;padding:3px 10px;margin-left:6px}
 .row{margin-top:6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
-.rowlab{color:var(--muted);font-size:11px;text-transform:uppercase;width:58px;flex:none}
+.rowlab{color:var(--muted);font-size:11px;text-transform:uppercase;width:64px;flex:none}
 .chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{cursor:pointer;border:1px solid var(--border);background:var(--chip);border-radius:12px;
   padding:1px 9px;user-select:none;display:inline-flex;align-items:center;gap:5px;font-size:12px}
@@ -134,11 +134,15 @@ text{pointer-events:none;font-size:9px;fill:var(--fg);paint-order:stroke;stroke:
 </style></head><body>
 <div id="bar">
   <button id="theme">Light</button>
+  <button id="fit">Center tables</button>
   <input id="q" placeholder="search… (id or name)"><span id="meta"></span>
   <div class="row"><span class="rowlab">Kinds</span><span id="kinds" class="chips"></span>
     <span class="mini" data-g="kind" data-v="1">all</span><span class="mini" data-g="kind" data-v="0">none</span></div>
   <div class="row"><span class="rowlab">Domains</span><span id="doms" class="chips"></span>
     <span class="mini" data-g="dom" data-v="1">all</span><span class="mini" data-g="dom" data-v="0">none</span></div>
+  <div class="row"><span class="rowlab">Schemas</span><span id="schemas" class="chips"></span>
+    <span class="mini" data-g="schema" data-v="1">all</span><span class="mini" data-g="schema" data-v="0">none</span>
+    <span class="mini" id="publicApi">public+api</span></div>
 </div>
 <svg id="svg"></svg><div id="side"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -153,13 +157,22 @@ const byId={};G.nodes.forEach(n=>byId[n.id]=n);
 const adj=new Map();
 function addAdj(a,b){if(!adj.has(a))adj.set(a,new Set());adj.get(a).add(b);}
 G.edges.forEach(e=>{addAdj(e.source,e.target);addAdj(e.target,e.source);});
-// filter state ("families" = node kinds + table domains)
-const kinds=[...new Set(G.nodes.map(n=>n.kind))];
+// filter state ("families" = node kinds + domains + schemas)
+const sortByPriority=(xs,priority=[])=>[...xs].sort((a,b)=>{
+  const ia=priority.indexOf(a),ib=priority.indexOf(b);
+  if(ia!==-1||ib!==-1)return(ia===-1?999:ia)-(ib===-1?999:ib);
+  return String(a).localeCompare(String(b));});
+const kinds=sortByPriority(new Set(G.nodes.map(n=>n.kind)),["table","view","matview","enum","function","policy","trigger"]);
 const kindCount={};G.nodes.forEach(n=>kindCount[n.kind]=(kindCount[n.kind]||0)+1);
-const doms=[...new Set(G.nodes.filter(n=>TABLELIKE.has(n.kind)).map(n=>n.domain))].sort();
-const domCount={};G.nodes.filter(n=>TABLELIKE.has(n.kind)).forEach(n=>domCount[n.domain]=(domCount[n.domain]||0)+1);
+const doms=sortByPriority(new Set(G.nodes.map(n=>n.domain||"unclassified")),
+  ["object-core","object-facets","ref-lookups","actor-org","pricing","opening","media","sustainability","rbac","audit","api","other"]);
+const domCount={};G.nodes.forEach(n=>{const d=n.domain||"unclassified";domCount[d]=(domCount[d]||0)+1;});
+const schemas=sortByPriority(new Set(G.nodes.map(n=>n.schema||"unknown")),
+  ["public","api","internal","audit","crm","storage","auth","staging","realtime"]);
+const schemaCount={};G.nodes.forEach(n=>{const s=n.schema||"unknown";schemaCount[s]=(schemaCount[s]||0)+1;});
 const kindOn=Object.fromEntries(kinds.map(x=>[x,true]));
 const domOn=Object.fromEntries(doms.map(x=>[x,true]));
+const schemaOn=Object.fromEntries(schemas.map(x=>[x,true]));
 let sel=null,q="",zk=1;
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 // svg / simulation
@@ -171,8 +184,12 @@ const node=root.append("g").selectAll("circle").data(G.nodes).join("circle")
   .on("click",(e,d)=>{e.stopPropagation();select(d);});
 const label=root.append("g").selectAll("text").data(G.nodes).join("text").text(d=>d.label).attr("dx",7).attr("dy",3);
 const W=Math.max(innerWidth-SIDEW,400),H=innerHeight;
-const sim=d3.forceSimulation(G.nodes).force("link",d3.forceLink(G.edges).id(d=>d.id).distance(40))
-  .force("charge",d3.forceManyBody().strength(-60)).force("center",d3.forceCenter(W/2,H/2));
+const sim=d3.forceSimulation(G.nodes).force("link",d3.forceLink(G.edges).id(d=>d.id).distance(d=>{
+    const sk=d.source.kind,tk=d.target.kind;
+    return sk==="policy"||tk==="policy"||sk==="trigger"||tk==="trigger"?28:48;}))
+  .force("charge",d3.forceManyBody().strength(d=>TABLELIKE.has(d.kind)?-95:d.kind==="enum"?-75:-42))
+  .force("x",d3.forceX(W/2).strength(d=>TABLELIKE.has(d.kind)?0.12:d.kind==="enum"?0.08:0.025))
+  .force("y",d3.forceY(H/2).strength(d=>TABLELIKE.has(d.kind)?0.12:d.kind==="enum"?0.08:0.025));
 sim.on("tick",()=>{link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
   node.attr("cx",d=>d.x).attr("cy",d=>d.y);label.attr("x",d=>d.x).attr("y",d=>d.y);});
 node.call(d3.drag().on("start",(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
@@ -188,7 +205,7 @@ svg.on("click",()=>{if(sel){sel=null;refresh();sideDefault();}});
 // visibility model: filters hide, selection/search dim
 const isConn=d=>!!sel&&(d.id===sel.id||(adj.get(sel.id)||new Set()).has(d.id));
 const matches=d=>d.id.toLowerCase().includes(q)||d.label.toLowerCase().includes(q);
-const visible=n=>kindOn[n.kind]&&(!TABLELIKE.has(n.kind)||domOn[n.domain]);
+const visible=n=>kindOn[n.kind]&&domOn[n.domain||"unclassified"]&&schemaOn[n.schema||"unknown"];
 function labelShow(d){if(!visible(d))return false;if(sel)return isConn(d);if(q)return matches(d);
   return TABLELIKE.has(d.kind)||d.kind==="enum"||zk>=ZTHRESH;}
 function refresh(){
@@ -206,6 +223,16 @@ function select(d){sel=d;refresh();detail(d);}
 function selectById(id){const n=byId[id];if(!n)return;select(n);
   svg.transition().duration(450).call(zoom.transform,
     d3.zoomIdentity.translate((innerWidth-SIDEW)/2-n.x*1.4,innerHeight/2-n.y*1.4).scale(1.4));}
+function fitVisibleTables(){
+  const ns=G.nodes.filter(n=>visible(n)&&TABLELIKE.has(n.kind)&&Number.isFinite(n.x)&&Number.isFinite(n.y));
+  if(!ns.length)return;
+  const xs=ns.map(n=>n.x),ys=ns.map(n=>n.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const vw=Math.max(innerWidth-SIDEW,400),vh=innerHeight,pad=96;
+  const bw=Math.max(maxX-minX,40),bh=Math.max(maxY-minY,40);
+  const scale=Math.max(.08,Math.min(4,.86*Math.min(vw/(bw+pad),vh/(bh+pad))));
+  const tx=vw/2-scale*(minX+maxX)/2,ty=vh/2-scale*(minY+maxY)/2;
+  svg.transition().duration(550).call(zoom.transform,d3.zoomIdentity.translate(tx,ty).scale(scale));
+}
 // side panel
 function detail(d){
   let h="<h3>"+esc(d.label)+"</h3><p class=muted>"+esc(d.kind)+" · "+esc(d.schema)+" · "+esc(d.domain)+"</p>";
@@ -227,7 +254,7 @@ function detail(d){
 }
 function sideDefault(){document.getElementById("side").innerHTML=
   "<h3>DB graph</h3><p class=muted>Click a node to inspect it and highlight its connections. "+
-  "Click the background to clear. Scroll to zoom, drag to pan. Use the chips to filter by kind and table domain. "+
+  "Click the background to clear. Scroll to zoom, drag to pan. Use the chips to filter by kind, domain, and schema. "+
   "Labels for functions / policies / triggers appear when zoomed in.</p>";}
 // filter chips
 function mkChip(parent,name,count,color,get,set){
@@ -235,20 +262,26 @@ function mkChip(parent,name,count,color,get,set){
   el.innerHTML=(color?"<span class=dot style=\\"background:"+color+"\\"></span>":"")+esc(name)+" <span class=ct>"+count+"</span>";
   el.onclick=()=>{set(!get());el.classList.toggle("off",!get());refresh();};
   parent.appendChild(el);return el;}
-const kindChips={},domChips={};
+const kindChips={},domChips={},schemaChips={};
 kinds.forEach(x=>kindChips[x]=mkChip(document.getElementById("kinds"),x,kindCount[x],KCOLOR[x]||"#888",()=>kindOn[x],v=>kindOn[x]=v));
 doms.forEach(x=>domChips[x]=mkChip(document.getElementById("doms"),x,domCount[x],null,()=>domOn[x],v=>domOn[x]=v));
+schemas.forEach(x=>schemaChips[x]=mkChip(document.getElementById("schemas"),x,schemaCount[x],null,()=>schemaOn[x],v=>schemaOn[x]=v));
 document.querySelectorAll(".mini").forEach(el=>el.onclick=()=>{
   const v=el.dataset.v==="1";
   if(el.dataset.g==="kind"){kinds.forEach(x=>{kindOn[x]=v;kindChips[x].classList.toggle("off",!v);});}
-  else{doms.forEach(x=>{domOn[x]=v;domChips[x].classList.toggle("off",!v);});}
+  else if(el.dataset.g==="dom"){doms.forEach(x=>{domOn[x]=v;domChips[x].classList.toggle("off",!v);});}
+  else if(el.dataset.g==="schema"){schemas.forEach(x=>{schemaOn[x]=v;schemaChips[x].classList.toggle("off",!v);});}
   refresh();});
+document.getElementById("publicApi").onclick=()=>{
+  schemas.forEach(x=>{schemaOn[x]=["public","api","internal"].includes(x);schemaChips[x].classList.toggle("off",!schemaOn[x]);});
+  refresh();fitVisibleTables();};
 // search + theme
 document.getElementById("q").addEventListener("input",e=>{q=e.target.value.toLowerCase();refresh();});
+document.getElementById("fit").onclick=fitVisibleTables;
 const tbtn=document.getElementById("theme");
 tbtn.onclick=()=>{const light=document.documentElement.dataset.theme!=="light";
   document.documentElement.dataset.theme=light?"light":"";tbtn.textContent=light?"Dark":"Light";};
-refresh();sideDefault();
+refresh();sideDefault();setTimeout(fitVisibleTables,700);
 </script></body></html>"""
 
 

@@ -26,8 +26,6 @@
 
 ## `public.object_type`
 - values: `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU`, `PRD`
-  <!-- SPU (§53, 8u) + PRD (§57, 8x) appended 2026-06-11 — hand-patched pending the next full db-graph pipeline run.
-       §57 also added ref_facet_applicability (object_meeting_room, LOI) — not yet reflected in the applicability list below. -->.
 
 ## Type → facet applicability (`ref_facet_applicability`)
 
@@ -39,5 +37,6 @@
 - `HOT` → `public.object_meeting_room`, `public.object_room_type`
 - `HPA` → `public.object_meeting_room`, `public.object_room_type`
 - `ITI` → `public.object_iti`, `public.object_iti_associated_object`, `public.object_iti_info`, `public.object_iti_practice`, `public.object_iti_profile`, `public.object_iti_section`, `public.object_iti_stage`
+- `LOI` → `public.object_meeting_room`
 - `RES` → `public.object_menu`
 - `RVA` → `public.object_meeting_room`, `public.object_room_type`

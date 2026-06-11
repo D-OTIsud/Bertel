@@ -8,6 +8,32 @@ from .classify import classify
 _CARRIER = {"object_relation": "object_rel", "object_org_link": "org_link", "actor_object_role": "actor_role"}
 
 
+def _inherit_attached_domains(nodes, edges):
+    by_id = {n["id"]: n for n in nodes}
+
+    def domain_for(node_id):
+        node = by_id.get(node_id)
+        return node.get("domain") if node else None
+
+    gate_targets = {}
+    for e in edges:
+        if e["kind"] == "gates":
+            gate_targets.setdefault(e["source"], []).append(e["target"])
+
+    for n in nodes:
+        if n["kind"] == "trigger":
+            dom = domain_for(n.get("props", {}).get("table"))
+            if dom:
+                n["domain"] = dom
+        elif n["kind"] == "policy":
+            candidates = [n.get("props", {}).get("table")] + gate_targets.get(n["id"], [])
+            for target in candidates:
+                dom = domain_for(target)
+                if dom:
+                    n["domain"] = dom
+                    break
+
+
 def build_graph(tbls, extra, sql_paths):
     nodes, edges = load_tbls_schema(tbls)
     en, ee = load_extra(extra)
@@ -42,6 +68,7 @@ def build_graph(tbls, extra, sql_paths):
     attach_sql_docs(nodes, sql_paths)
     for n in nodes:
         n["domain"] = classify(n)
+    _inherit_attached_domains(nodes, edges)
 
     for n in nodes:
         if n["kind"] == "table" and n["label"] in _CARRIER:

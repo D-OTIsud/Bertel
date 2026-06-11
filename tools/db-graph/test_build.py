@@ -29,6 +29,13 @@ def test_build_tags_object_relation_carrier_if_present():
     rel = next(n for n in g["nodes"] if n["id"] == "public.object_relation")
     assert rel["props"].get("relationship_carrier") == "object_rel"
 
+def test_build_policies_and_triggers_inherit_table_domain():
+    g = build_graph(_fix("schema_tbls.sample.json"), _fix("catalog_extra.sample.json"), sql_paths=[])
+    policy = next(n for n in g["nodes"] if n["id"] == "policy:public.object_fma:canonical_ins_object_fma")
+    trigger = next(n for n in g["nodes"] if n["id"] == "trigger:public.object:trg_guard_object_type_change")
+    assert policy["domain"] == "object-facets"
+    assert trigger["domain"] == "object-core"
+
 def test_build_has_no_dangling_edges_and_resolves_executes():
     g = build_graph(_fix("schema_tbls.sample.json"), _fix("catalog_extra.sample.json"), sql_paths=[])
     ids = {n["id"] for n in g["nodes"]}

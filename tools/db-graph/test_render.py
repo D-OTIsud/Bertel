@@ -31,3 +31,7 @@ def test_render_html_embeds_graph_json_and_d3():
     html = render_html(_g())
     assert "<svg" in html and "d3" in html
     assert '"nodes"' in html
+    assert 'id="schemas"' in html
+    assert 'id="publicApi"' in html
+    assert "fitVisibleTables" in html
+    assert "schemaOn[n.schema" in html

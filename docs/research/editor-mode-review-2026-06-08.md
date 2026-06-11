@@ -332,3 +332,13 @@ video metadata strip (needs a transcoder); non-atomic saver + clear-main-first (
 family); enrichment-only silent 0-row saves (§48 family, latent until SP-2); ITI stage-media
 cascade destruction on stage save (latent, 0 ITI — B1/ITI pass); cover-cache photo-type filter
 (star guard is UI-only today); `read_media_tag` bare-flag shape (low sensitivity).
+
+### §06/§07 addendum (PO 2026-06-11, `f2a22cd`) — pet policy re-homed to §07
+
+« Animaux acceptés » + conditions moved from BlockHEB (§06) to §07 Capacité &
+contenance, sub-group « Politique d'accueil » — reverses the §48 "sole surface"
+choice: accepting animals is an accueil concern for ANY type, and §07 renders for
+every archetype (the type block is HEB-only). Pure UI move (same `capacityPolicies`
+module, no migration); §06 keeps the `OwnedElsewhereNote` pointer (now summarising
+groups + animals; label drift fixed: « Capacité & contenance », was « & cadre »).
+Two §48 test pins flipped. FE 616 green.

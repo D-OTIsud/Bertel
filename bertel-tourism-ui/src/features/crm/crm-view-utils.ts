@@ -137,6 +137,19 @@ export function interactionTypeLabelOf(interactionType: string): string {
   return INTERACTION_TYPE_LABELS[interactionType] ?? interactionType;
 }
 
+/** Raison standard du gating page-wide (no-write-trap) — permission write_crm_notes. */
+export const CRM_READ_ONLY_REASON = 'Lecture seule : permission "Écrire des notes CRM" requise';
+
+/** Vocabulaire sentiment (ref_code, domaine sentiment) — les 6 codes connus, labels FR. */
+export const CRM_SENTIMENT_OPTIONS = [
+  { code: 'tres_positif', name: 'Très positif' },
+  { code: 'positif', name: 'Positif' },
+  { code: 'interrogatif', name: 'Interrogatif' },
+  { code: 'inquiet', name: 'Inquiet' },
+  { code: 'mecontent', name: 'Mécontent' },
+  { code: 'tres_mecontent', name: 'Très mécontent' },
+] as const;
+
 export type TlIcoClass = 'call' | 'mail' | 'field' | 'sys';
 
 /** Classe d'icône timeline : call→call, email→mail, visit→field, tout le reste→sys. */

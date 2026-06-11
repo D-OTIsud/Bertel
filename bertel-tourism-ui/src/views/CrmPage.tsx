@@ -1,191 +1,163 @@
 "use client";
 
-// Page /crm (§58) — branchée sur les RPCs réels api.list_crm_timeline / list_crm_tasks /
-// save_crm_task via src/services/crm.ts. Le kanban persiste les déplacements de lane
-// (saveCrmTask) et toute écriture est masquée avec raison sans la permission
-// write_crm_notes (no-write-trap). La timeline pagine en keyset (before/before_id).
-// La création/édition de tâches et d'interactions scoping objet vit dans l'éditeur §19 (Task 11).
+// Page /crm (§61, design v2 acteur-centré 2026-06-11) — shell du module CRM.
+// Modèle : l'ACTEUR (personne/organisation) est l'entité CRM principale ; l'objet
+// (établissement) n'est que le CONTEXTE. Le même acteur peut être lié à plusieurs
+// objets avec des rôles différents — les interactions le suivent à travers tous
+// ses contextes, et l'UI porte les deux sens de navigation (acteur ⇄ objet).
+//
+// 3 onglets (Acteurs / Tâches & relances / Timeline) + 2 drill-ins (fiche acteur,
+// vue établissement). État de navigation persisté dans localStorage
+// `bertel-crm-nav-v2`. Toutes les vues sont sur données réelles (RPCs api.*) via
+// src/services/crm. Gating page-wide write_crm_notes : aucune écriture rendue
+// active sans permission (no-write-trap), raison affichée.
 
-import { useMemo, useState } from 'react';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { StatusPill } from '../components/common/StatusPill';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { usePresenceRoom } from '../hooks/usePresenceRoom';
-import { listCrmTasks, listCrmTimeline, saveCrmTask, userCanWriteCrmNotes } from '../services/crm';
-import type { CrmInteraction, CrmTask, CrmTaskStatus } from '../types/domain';
+import { listCrmDirectory, listCrmTasks, userCanWriteCrmNotes } from '../services/crm';
+import { CrmAnnuaire } from '../features/crm/CrmAnnuaire';
+import { CrmActorFiche } from '../features/crm/CrmActorFiche';
+import { CrmObjectView } from '../features/crm/CrmObjectView';
+import { CrmTaches } from '../features/crm/CrmTaches';
+import { CrmTimelineView } from '../features/crm/CrmTimelineView';
+import { CRM_READ_ONLY_REASON } from '../features/crm/crm-view-utils';
 
-const LANES: CrmTaskStatus[] = ['todo', 'in_progress', 'done'];
-const LANE_LABELS: Record<CrmTaskStatus, string> = {
-  todo: 'A faire', in_progress: 'En cours', done: 'Termine', canceled: 'Annulee', blocked: 'Bloquee',
-};
-const NEXT_LANE: Partial<Record<CrmTaskStatus, CrmTaskStatus>> = { todo: 'in_progress', in_progress: 'done' };
+const NAV_KEY = 'bertel-crm-nav-v2';
 
-function formatWhen(value: string | null): string {
-  if (!value) return '—';
-  const ts = Date.parse(value);
-  if (!Number.isFinite(ts)) return value;
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(ts));
+type CrmView = 'annuaire' | 'taches' | 'timeline';
+
+interface CrmNav {
+  view: CrmView;
+  actorId?: string;
+  objectId?: string;
+  /** Acteur d'origine d'une vue établissement — le retour y revient. */
+  originActorId?: string;
+}
+
+const DEFAULT_NAV: CrmNav = { view: 'annuaire' };
+
+function loadNav(): CrmNav {
+  try {
+    const raw = localStorage.getItem(NAV_KEY);
+    if (!raw) return DEFAULT_NAV;
+    const parsed = JSON.parse(raw) as Partial<CrmNav> | null;
+    if (!parsed || (parsed.view !== 'annuaire' && parsed.view !== 'taches' && parsed.view !== 'timeline')) {
+      return DEFAULT_NAV;
+    }
+    return {
+      view: parsed.view,
+      actorId: typeof parsed.actorId === 'string' ? parsed.actorId : undefined,
+      objectId: typeof parsed.objectId === 'string' ? parsed.objectId : undefined,
+      originActorId: typeof parsed.originActorId === 'string' ? parsed.originActorId : undefined,
+    };
+  } catch {
+    return DEFAULT_NAV;
+  }
 }
 
 export default function CrmPage() {
-  const queryClient = useQueryClient();
-  const [olderPages, setOlderPages] = useState<CrmInteraction[][]>([]);
-  const [cursor, setCursor] = useState<{ before: string; beforeId: string } | null>(null);
+  // Hydratation différée du nav : l'état initial est stable côté SSR, puis le nav
+  // persisté est restauré au mount (pas de mismatch d'hydratation).
+  const [nav, setNav] = useState<CrmNav>(DEFAULT_NAV);
+  const [hydrated, setHydrated] = useState(false);
 
+  useEffect(() => {
+    setNav(loadNav());
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(NAV_KEY, JSON.stringify(nav));
+    } catch {
+      /* stockage indisponible : la navigation reste fonctionnelle, juste non persistée */
+    }
+  }, [nav, hydrated]);
+
+  // Requêtes partagées (mêmes clés que les vues → une seule charge réseau) :
+  // compteurs d'onglets + résolution du libellé de retour de la vue établissement.
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: listCrmDirectory });
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   const canWriteQuery = useQuery({ queryKey: ['crm-can-write'], queryFn: userCanWriteCrmNotes });
-  const timelineQuery = useQuery({
-    queryKey: ['crm-timeline', cursor?.beforeId ?? null],
-    queryFn: () => listCrmTimeline(cursor ? { before: cursor.before, beforeId: cursor.beforeId } : {}),
-    // « Charger plus » change la queryKey : garder la page précédente affichée pendant le fetch.
-    placeholderData: keepPreviousData,
-  });
   const { peers, typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });
 
   const canWrite = canWriteQuery.data === true;
   // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).
   const canWriteKnown = !canWriteQuery.isLoading;
-  const tasks = tasksQuery.data ?? [];
 
-  const moveMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
-  });
+  const actorCount = directoryQuery.data?.length ?? null;
+  const activeTasks = (tasksQuery.data ?? []).filter((task) => task.status === 'todo' || task.status === 'in_progress').length;
 
-  // Pages déjà chargées + page courante, dédupliquées (le keyset garantit l'ordre).
-  const timelineItems = useMemo(() => {
-    const seen = new Set<string>();
-    const merged: CrmInteraction[] = [];
-    for (const item of [...olderPages.flat(), ...(timelineQuery.data?.items ?? [])]) {
-      if (!seen.has(item.id)) { seen.add(item.id); merged.push(item); }
-    }
-    return merged;
-  }, [olderPages, timelineQuery.data]);
+  const originActorName = useMemo(() => {
+    if (!nav.originActorId) return null;
+    return directoryQuery.data?.find((entry) => entry.actorId === nav.originActorId)?.displayName ?? null;
+  }, [directoryQuery.data, nav.originActorId]);
 
-  const grouped = LANES.map((lane) => ({ lane, items: tasks.filter((task) => task.status === lane) }));
-  const activeTasks = tasks.filter((task) => task.status === 'todo' || task.status === 'in_progress').length;
-  // Statuts hors lanes (canceled/blocked) : signalés par un chip pour ne pas les masquer silencieusement.
-  const hiddenTasks = tasks.filter((t) => t.status === 'canceled' || t.status === 'blocked').length;
-
-  function loadMore() {
-    const current = timelineQuery.data;
-    if (!current?.hasMore) return;
-    const last = current.items[current.items.length - 1];
-    if (!last?.occurredAt) return;
-    setOlderPages((prev) => [...prev, current.items]);
-    setCursor({ before: last.occurredAt, beforeId: last.id });
-  }
-
-  function advance(task: CrmTask) {
-    const next = NEXT_LANE[task.status];
-    if (!next) return;
-    moveMutation.mutate({ id: task.id, status: next });
-  }
-
-  // Garde plein-écran sur le chargement INITIAL uniquement : une page 2 (cursor non nul)
-  // en chargement/erreur ne doit pas remplacer la page entière (erreur inline près du bouton).
-  if (tasksQuery.isLoading || (timelineQuery.isLoading && cursor === null)) {
-    return <section className="panel-card panel-card--wide m-4">Chargement du CRM...</section>;
-  }
-  if (tasksQuery.isError || (timelineQuery.isError && cursor === null)) {
-    return (
-      <section className="panel-card panel-card--warning panel-card--wide m-4">
-        {(tasksQuery.error as Error | null)?.message ?? (timelineQuery.error as Error | null)?.message}
-      </section>
+  const goTab = (view: CrmView) => setNav({ view });
+  const openActor = (actorId: string) => setNav((current) => ({ view: current.view, actorId }));
+  const openObject = (objectId: string) =>
+    setNav((current) => ({ ...current, objectId, originActorId: current.actorId ?? current.originActorId }));
+  const backFromActor = () => setNav({ view: 'annuaire' });
+  const backFromObject = () =>
+    setNav((current) =>
+      current.originActorId ? { view: current.view, actorId: current.originActorId } : { view: current.view },
     );
+
+  const tabs: Array<{ key: CrmView; label: string; count: number | null }> = [
+    { key: 'annuaire', label: 'Acteurs', count: actorCount },
+    { key: 'taches', label: 'Tâches & relances', count: tasksQuery.data ? activeTasks : null },
+    { key: 'timeline', label: 'Timeline', count: null },
+  ];
+
+  let body;
+  if (nav.objectId) {
+    body = (
+      <CrmObjectView
+        objectId={nav.objectId}
+        backLabel={originActorName ?? (nav.originActorId ? 'Fiche acteur' : 'Annuaire des acteurs')}
+        onBack={backFromObject}
+        onOpenActor={openActor}
+      />
+    );
+  } else if (nav.actorId) {
+    body = <CrmActorFiche actorId={nav.actorId} canWrite={canWrite} onBack={backFromActor} onOpenObject={openObject} />;
+  } else if (nav.view === 'taches') {
+    body = <CrmTaches canWrite={canWrite} onOpenObject={openObject} />;
+  } else if (nav.view === 'timeline') {
+    body = <CrmTimelineView onOpenObject={openObject} />;
+  } else {
+    body = <CrmAnnuaire onOpenActor={openActor} />;
   }
 
   return (
-    <section className="page-grid crm-page p-4">
-      <article className="hero-panel crm-hero">
-        <div>
-          <span className="eyebrow">CRM</span>
-          <h2>Coordination terrain et relation prestataire</h2>
-          <p>
-            {peers.length} collaborateur(s) en ligne.
-            {canWriteKnown && !canWrite && ' Lecture seule : la permission « Écrire des notes CRM » est requise pour saisir.'}
-          </p>
+    <section className="crm-app">
+      <div className="crm-sub">
+        <div className="crm-sub__title">
+          Relation acteurs
+          <small>{peers.length} collaborateur(s) en ligne</small>
         </div>
-        <div className="crm-hero__stats">
-          <article className="dashboard-metric-card"><span>Taches actives</span><strong>{activeTasks}</strong></article>
-          <article className="dashboard-metric-card"><span>Interactions chargees</span><strong>{timelineItems.length}</strong></article>
-          <article className="dashboard-metric-card"><span>Contributeurs</span><strong>{peers.length}</strong></article>
+        <div className="crm-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={nav.view === tab.key && !nav.actorId && !nav.objectId ? 'is-on' : ''}
+              onClick={() => goTab(tab.key)}
+            >
+              {tab.label}
+              {tab.count !== null && <span className="n">{tab.count}</span>}
+            </button>
+          ))}
         </div>
-      </article>
-
-      <div className="crm-layout">
-        <article className="panel-card">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Timeline</span>
-              <h2>Flux de relation</h2>
-            </div>
-          </div>
-          {typingUsers.length > 0 && <div className="inline-alert">{typingUsers.join(' · ')}</div>}
-          <div className="stack-list">
-            {timelineItems.map((item) => (
-              <article key={item.id} className="timeline-item">
-                <strong>{item.subject}</strong>
-                <p>{item.body ?? ''}</p>
-                <span>
-                  {item.objectName} · {item.topicName ?? 'Sans sujet'} · {item.sentimentName ?? '—'} · {formatWhen(item.occurredAt)}
-                </span>
-              </article>
-            ))}
-          </div>
-          {timelineQuery.data?.hasMore && (
-            <button type="button" className="ghost-button" onClick={loadMore}>Charger plus</button>
-          )}
-          {timelineQuery.isError && cursor !== null && (
-            <div className="inline-alert">Échec du chargement : {(timelineQuery.error as Error).message}</div>
-          )}
-        </article>
-
-        <article className="panel-card panel-card--wide">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">Pipeline</span>
-              <h2>Kanban des taches</h2>
-            </div>
-            {canWriteKnown && !canWrite && <span className="pill-mini">Lecture seule</span>}
-            {hiddenTasks > 0 && <span className="pill-mini">{hiddenTasks} annulée(s)/bloquée(s)</span>}
-          </div>
-          {moveMutation.isError && (
-            <div className="inline-alert">Échec du déplacement : {(moveMutation.error as Error).message}</div>
-          )}
-          <div className="kanban-grid">
-            {grouped.map((group) => (
-              <section key={group.lane} className="kanban-column">
-                <div className="kanban-column__header">
-                  <h3>{LANE_LABELS[group.lane]}</h3>
-                  <span>{group.items.length}</span>
-                </div>
-                {group.items.map((task) => (
-                  <article key={task.id} className="kanban-card">
-                    <div className="kanban-card__header">
-                      <strong>{task.title}</strong>
-                      <StatusPill tone={task.status === 'done' ? 'green' : task.status === 'in_progress' ? 'orange' : 'neutral'}>
-                        {LANE_LABELS[task.status]}
-                      </StatusPill>
-                    </div>
-                    <p>{task.objectName}</p>
-                    <small className="kanban-card__meta">{task.ownerName ?? '—'} · {formatWhen(task.dueAt)}</small>
-                    {canWrite && NEXT_LANE[task.status] && (
-                      <button
-                        type="button"
-                        className="ghost-button"
-                        onClick={() => advance(task)}
-                        disabled={moveMutation.isPending}
-                      >
-                        Avancer
-                      </button>
-                    )}
-                  </article>
-                ))}
-              </section>
-            ))}
-          </div>
-        </article>
+        <div className="crm-sub__actions">
+          {typingUsers.length > 0 && <span className="pill-mini">{typingUsers.join(' · ')}</span>}
+          {canWriteKnown && !canWrite && <span className="pill-mini crm-readonly-pill">{CRM_READ_ONLY_REASON}</span>}
+        </div>
       </div>
+
+      {body}
     </section>
   );
 }

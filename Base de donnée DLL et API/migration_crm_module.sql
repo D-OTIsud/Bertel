@@ -1,5 +1,5 @@
 -- migration_crm_module.sql
--- §58 — Module CRM (P2.2) : vocabulaires + backfill + helpers + RPCs + RLS par commande
+-- §61 — Module CRM (P2.2) : vocabulaires + backfill + helpers + RPCs + RLS par commande
 -- + modèle ACTEUR-CENTRÉ (révision design 2026-06-11, v2 — point 5 ci-dessous).
 --
 -- 1) DETTE D'IMPORT (lot1_crm_import_plan.md §4) : demand_topic_id / request_mood_id NULL
@@ -20,7 +20,7 @@
 --    conservé (source préservée).
 --    Conservés volontairement (vides) : la partition ref_code_demand_subtopic, la colonne
 --    crm_interaction.demand_subtopic_id et sa FK — emplacement d'un futur vocabulaire de
---    sous-sujets OTI (décision §58 ; ref_code_mood garde ses consommateurs object_taxonomy/closure).
+--    sous-sujets OTI (décision §61 ; ref_code_mood garde ses consommateurs object_taxonomy/closure).
 -- 4) ACCÈS (décisions spec 2026-06-11) : RPC-only authorize-once+DEFINER (§36) ; lecture =
 --    membres ORG publisher (api.current_user_crm_object_ids, set-based §35) ; écriture =
 --    write_crm_notes OU admin ORG OU superuser. Tables verrouillées : famille admin par

@@ -318,7 +318,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('iti_practice','patrimoine', 'Découverte patrimoniale', 'Circuit patrimoine & culture')
 ON CONFLICT DO NOTHING;
 
--- demand_topic : vocabulaire = les 20 sujets OTI (§58) ; les 11 codes génériques + 22 demand_subtopic ont été retirés (jamais référencés — voir migration_crm_module.sql).
+-- demand_topic : vocabulaire = les 20 sujets OTI (§61) ; les 11 codes génériques + 22 demand_subtopic ont été retirés (jamais référencés — voir migration_crm_module.sql).
 
 -- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
 
@@ -338,7 +338,7 @@ ON CONFLICT DO NOTHING;
 -- "Accompagnement Taxe de séjour" (casse canonique, 636 occ.).
 -- "Promotion  Explore" (double espace) normalisé sur "Promotion Explore".
 -- "Problème  juridique, Sirene" (double espace) normalisé sur "Problème juridique, Sirene".
--- Depuis §58 (migration_crm_module.sql, 8z) ces 20 sujets SONT le domaine demand_topic
+-- Depuis §61 (migration_crm_module.sql, 8z) ces 20 sujets SONT le domaine demand_topic
 -- (partition ref_code_demand_topic, cible de la FK crm_interaction.demand_topic_id).
 INSERT INTO ref_code (domain, code, name, position) VALUES
  ('demand_topic','accompagnement_taxe_sejour',  'Accompagnement Taxe de séjour',      1),
@@ -1386,7 +1386,7 @@ FROM ref_code_translations rct
 WHERE rc.domain = rct.domain AND rc.code = rct.code;
 
 -- ref_code translations (moods, cuisines, menus)
--- NOTE §58 : les traductions des 11 demand_topic génériques + 22 demand_subtopic ont été
+-- NOTE §61 : les traductions des 11 demand_topic génériques + 22 demand_subtopic ont été
 -- retirées avec leurs seeds (codes supprimés — voir migration_crm_module.sql) ; les 20
 -- sujets OTI du domaine demand_topic n'ont pas de traduction en/es (vocabulaire interne FR).
 WITH ref_code_translations(domain, code, name_en, name_es, description_en, description_es) AS (

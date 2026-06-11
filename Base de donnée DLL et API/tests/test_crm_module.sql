@@ -1,5 +1,5 @@
 -- test_crm_module.sql
--- Prouve §58 (migration_crm_module.sql, 8z) :
+-- Prouve §61 (migration_crm_module.sql, 8z) :
 -- A) VOCABULAIRES : domaine demand_topic = sujets OTI uniquement ; crm_demand_topic_oti vide ;
 --    demand_subtopic vide ; partition crm_sentiment = 6 codes ; colonnes *_sentiment_id + FK.
 -- B) ACCÈS : membre ORG publisher lit via RPC ; étranger lit zéro ; écriture refusée sans
@@ -291,6 +291,6 @@ BEGIN
            'fiche acteur: plus aucune interaction après suppression';
   RESET ROLE;
 
-  RAISE NOTICE 'CRM module §58 + acteur-centré v2 : vocabulaires, ancrages, accès/écriture/cross-ORG — assertions passées.';
+  RAISE NOTICE 'CRM module §61 + acteur-centré v2 : vocabulaires, ancrages, accès/écriture/cross-ORG — assertions passées.';
 END$$;
 ROLLBACK;

@@ -1,6 +1,6 @@
 "use client";
 
-// Timeline org-wide (§61) — EXTRACTION de l'implémentation §58 de CrmPage :
+// Timeline org-wide (§61) — EXTRACTION de l'implémentation §61 phase 1 de CrmPage :
 // pagination keyset (before/before_id) via api.list_crm_timeline, « Charger plus »
 // sans collapse (placeholderData), erreurs de page 2 inline près du bouton.
 // Nouveauté acteur-centrée : objectName peut être NULL (interaction « générale »)

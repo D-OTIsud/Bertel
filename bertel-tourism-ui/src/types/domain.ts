@@ -292,7 +292,7 @@ export interface FieldLock {
   name: string;
 }
 
-// CRM (§58) — types alignés sur les enums DB (crm_task_status / crm_task_priority)
+// CRM (§61) — types alignés sur les enums DB (crm_task_status / crm_task_priority)
 // et sur les clés des RPCs api.list_crm_tasks / api.list_crm_timeline.
 export type CrmTaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled' | 'blocked';
 export type CrmTaskPriority = 'low' | 'medium' | 'high' | 'urgent';

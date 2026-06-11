@@ -12,7 +12,7 @@ describe('isDemoOnlyModule', () => {
     expect(isDemoOnlyModule('/dashboard')).toBe(false);
   });
 
-  it('le CRM est branche sur ses RPC reels (§58) — plus demo-only', () => {
+  it('le CRM est branche sur ses RPC reels (§61) — plus demo-only', () => {
     expect(isDemoOnlyModule('/crm')).toBe(false);
   });
 });

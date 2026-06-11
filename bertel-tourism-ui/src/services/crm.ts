@@ -1,4 +1,4 @@
-// Service CRM (§58) — toutes les lectures/écritures passent par les RPCs api.* DEFINER
+// Service CRM (§61) — toutes les lectures/écritures passent par les RPCs api.* DEFINER
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
 import { getApiClient, getSupabaseClient } from '../lib/supabase';

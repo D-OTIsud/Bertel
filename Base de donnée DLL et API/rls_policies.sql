@@ -1411,7 +1411,7 @@ CREATE POLICY "own_actor_consent_read" ON actor_consent
 CREATE POLICY "own_actor_consent_write" ON actor_consent
   FOR ALL USING (actor_id = auth.uid());
 
--- CRM tables: admin only, par commande (§47/§58) — accès agent via RPCs DEFINER (migration_crm_module.sql)
+-- CRM tables: admin only, par commande (§47/§61) — accès agent via RPCs DEFINER (migration_crm_module.sql)
 ALTER TABLE crm_interaction ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm_task ENABLE ROW LEVEL SECURITY;
 

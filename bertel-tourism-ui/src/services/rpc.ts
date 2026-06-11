@@ -449,7 +449,7 @@ export async function listPendingChanges(): Promise<PendingChangeItem[]> {
   return [];
 }
 
-// CRM (§58) : implémentations réelles dans services/crm.ts (RPC-only — voir la spec).
+// CRM (§61) : implémentations réelles dans services/crm.ts (RPC-only — voir la spec).
 export { listCrmTasks, listCrmTimeline } from './crm';
 
 // TODO: wire to real backend RPC when available

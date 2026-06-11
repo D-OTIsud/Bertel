@@ -107,7 +107,7 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     expect(await screen.findByText('Appel de suivi')).toBeInTheDocument();
   });
 
-  // ── Assertions verrouillées par revue (§58) — conservées sur le nouveau shell ──
+  // ── Assertions verrouillées par revue (§61) — conservées sur le nouveau shell ──
 
   it('persiste un changement d état de tâche via saveCrmTask (vue tâches)', async () => {
     renderPage();

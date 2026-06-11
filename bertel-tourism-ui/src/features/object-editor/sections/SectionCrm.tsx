@@ -4,7 +4,7 @@ import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCrmInteractionItem } from '../../../services/object-workspace-parser';
 import { deleteCrmInteraction, listDemandTopics, listObjectCrm, saveCrmInteraction, saveCrmTask } from '../../../services/crm';
 
-// Types d'interaction (enum DB crm_interaction_type, module CRM §58).
+// Types d'interaction (enum DB crm_interaction_type, module CRM §61).
 const INTERACTION_TYPE_OPTIONS = [
   { v: 'call', l: 'Appel' },
   { v: 'email', l: 'E-mail' },

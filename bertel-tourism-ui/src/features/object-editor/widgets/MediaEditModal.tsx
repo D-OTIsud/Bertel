@@ -14,10 +14,12 @@ interface Props {
   onSave: (media: ObjectWorkspaceMediaItem) => void;
 }
 
+// Read-audience vocabulary (§52 precedent — aligned with §16): media.visibility gates
+// WHO reads the row, it is not a publication switch ("Publié" is). 'private' = Interne.
 const VISIBILITY = [
-  { v: 'public', l: 'Public' },
-  { v: 'private', l: 'Privé' },
+  { v: 'public', l: 'Publique' },
   { v: 'partners', l: 'Partenaires' },
+  { v: 'private', l: 'Interne' },
 ];
 const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
 
@@ -41,13 +43,33 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
   const isPrimary = lang === primary;
   const titleValue = isPrimary ? draft.title : (draft.titleTranslations[lang] ?? '');
   const descValue = isPrimary ? draft.description : (draft.descriptionTranslations[lang] ?? '');
+  // Primary-language edits write BOTH the flat column and the i18n key: public readers
+  // prefer the i18n map, so a flat-only edit would be silently shadowed by an existing
+  // imported key. An emptied value removes the key (no '' shadow left behind).
+  const withLangKey = (map: Record<string, string>, v: string) => {
+    if (v.trim()) return { ...map, [lang]: v };
+    const { [lang]: _removed, ...rest } = map;
+    return rest;
+  };
   const setTitle = (v: string) =>
-    isPrimary ? set({ title: v }) : set({ titleTranslations: { ...draft.titleTranslations, [lang]: v } });
+    isPrimary
+      ? set({ title: v, titleTranslations: withLangKey(draft.titleTranslations, v) })
+      : set({ titleTranslations: { ...draft.titleTranslations, [lang]: v } });
   const setDesc = (v: string) =>
-    isPrimary ? set({ description: v }) : set({ descriptionTranslations: { ...draft.descriptionTranslations, [lang]: v } });
+    isPrimary
+      ? set({ description: v, descriptionTranslations: withLangKey(draft.descriptionTranslations, v) })
+      : set({ descriptionTranslations: { ...draft.descriptionTranslations, [lang]: v } });
 
   return (
-    <EditorModal open={open} title={draft.title || 'Média'} onClose={onClose} onSave={() => onSave(draft)}>
+    <EditorModal
+      open={open}
+      title={draft.title || 'Média'}
+      onClose={onClose}
+      onSave={() => onSave(draft)}
+      // A media row without a file would fail the DB chk_media_url_* constraints at
+      // global save — block here with a disabled action instead of a late raw error.
+      saveDisabled={!draft.url.trim()}
+    >
       {draft.url && <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />}
       <Field label="Type de média">
         <ReferenceSelect
@@ -96,7 +118,16 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
           final toggle. Styling lives in object-editor.css under .ed-modal__group. */}
       <div className="ed-modal__group">
         <Field label="Visibilité">
-          <Select value={draft.visibility} options={VISIBILITY} onChange={(visibility) => set({ visibility })} />
+          {/* A NULL DB visibility renders honestly (§16 precedent) instead of a fake
+              "Publique" display — picking a real value is an explicit user choice. */}
+          <Select
+            value={draft.visibility}
+            options={draft.visibility === ''
+              ? [{ v: '', l: '— Visibilité non définie —' }, ...VISIBILITY]
+              : VISIBILITY}
+            aria-label="Visibilité"
+            onChange={(visibility) => set({ visibility })}
+          />
         </Field>
         <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
       </div>

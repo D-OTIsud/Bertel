@@ -137,7 +137,9 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
           titleTranslations: {},
           description: 'Façade',
           descriptionTranslations: {},
-          url: '',
+          // A DB media row always has a URL (chk_media_url_not_empty) — an empty url
+          // would trip the modal's honest save guard and make the fixture unrealistic.
+          url: 'https://cdn.example/hero.jpg',
           credit: '',
           visibility: 'public',
           position: '0',
@@ -152,6 +154,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       ],
       placeItems: [],
       placeScopeUnavailableReason: null,
+      unavailableReason: null,
     },
     characteristics: {
       languageOptions: [{ id: 'fr', code: 'fr', label: 'Français' }, { id: 'en', code: 'en', label: 'Anglais' }],

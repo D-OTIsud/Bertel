@@ -1353,7 +1353,7 @@ async function getObjectWorkspaceDistinctionsModule(
   };
 }
 
-function normalizeWorkspaceMediaItem(params: {
+export function normalizeWorkspaceMediaItem(params: {
   row: Record<string, unknown>;
   typeById: Map<string, WorkspaceReferenceOption>;
   tagsByMediaId: Map<string, string[]>;
@@ -1377,7 +1377,9 @@ function normalizeWorkspaceMediaItem(params: {
     descriptionTranslations: readRecord(params.row.description_i18n) as Record<string, string>,
     url: readString(params.row.url),
     credit: readString(params.row.credit),
-    visibility: readString(params.row.visibility, 'public'),
+    // No 'public' default — keep a NULL DB visibility as '' so saves don't widen it
+    // (the 8t read gate treats NULL as extended-scope-only). INSERTs default at the call site.
+    visibility: readString(params.row.visibility),
     position: readString(params.row.position),
     width: readString(params.row.width),
     height: readString(params.row.height),
@@ -1389,7 +1391,7 @@ function normalizeWorkspaceMediaItem(params: {
   };
 }
 
-async function getObjectWorkspaceMediaModule(
+export async function getObjectWorkspaceMediaModule(
   objectId: string,
   baseModule: ObjectWorkspaceMediaModule,
   placeLabelById: Map<string, string>,
@@ -1413,6 +1415,7 @@ async function getObjectWorkspaceMediaModule(
   if (!client) {
     return {
       ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger les médias.',
       placeScopeUnavailableReason: 'Connexion backend indisponible pour charger le module media.',
     };
   }
@@ -1446,8 +1449,24 @@ async function getObjectWorkspaceMediaModule(
       ? (tagRefResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
       : baseModule.tagOptions;
 
+  // R1 no-clobber: a failed object-media select must NOT silently become an empty
+  // grid — the saver's delete reconcile would interpret it as "delete everything".
+  // Surface the failure; the section hides its controls and the saver throws.
+  const objectLegFailed = !(objectMediaResult.status === 'fulfilled' && objectMediaResult.value.error == null);
+  if (objectLegFailed) {
+    return {
+      ...baseModule,
+      typeOptions,
+      tagOptions,
+      objectItems: [],
+      placeItems: [],
+      unavailableReason: 'Lecture des médias indisponible — édition désactivée pour éviter toute perte.',
+      placeScopeUnavailableReason: null,
+    };
+  }
+
   const mediaRows = [
-    ...(objectMediaResult.status === 'fulfilled' && objectMediaResult.value.error == null ? objectMediaResult.value.data ?? [] : []),
+    ...(objectMediaResult.value.data ?? []),
     ...(placeMediaResult.status === 'fulfilled' && placeMediaResult.value.error == null ? placeMediaResult.value.data ?? [] : []),
   ] as Record<string, unknown>[];
 
@@ -1502,6 +1521,7 @@ async function getObjectWorkspaceMediaModule(
       .filter((item) => item.scope === 'place')
       .sort((left, right) => Number(left.position || 0) - Number(right.position || 0)),
     placeScopeUnavailableReason,
+    unavailableReason: null,
   };
 }
 
@@ -5178,10 +5198,6 @@ export async function saveObjectWorkspaceLocation(objectId: string, input: Objec
   }
 }
 
-function normalizeTagCodes(tags: string[]): string[] {
-  return Array.from(new Set(tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean)));
-}
-
 export async function saveObjectWorkspaceMedia(
   objectId: string,
   input: ObjectWorkspaceMediaModule,
@@ -5190,6 +5206,13 @@ export async function saveObjectWorkspaceMedia(
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
+  }
+
+  // R1 no-clobber: a module whose load failed carries an empty objectItems list —
+  // reconciling against it would DELETE every media row of the object. The section
+  // hides its controls on unavailableReason; this throw is the defense-in-depth.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
   }
 
   const client = getSupabaseClient();
@@ -5202,18 +5225,13 @@ export async function saveObjectWorkspaceMedia(
     position: item.position || String(index),
   }));
 
-  const [typeRefsResult, tagRefsResult, existingMediaResult] = await Promise.all([
+  const [typeRefsResult, existingMediaResult] = await Promise.all([
     client.from('ref_code').select('id, code, name').eq('domain', 'media_type'),
-    client.from('ref_code').select('id, code, name').eq('domain', 'media_tag'),
     client.from('media').select('id').eq('object_id', objectId),
   ]);
 
   if (typeRefsResult.error) {
     throw mapMutationError(typeRefsResult.error, 'Impossible de charger les types de media.');
-  }
-
-  if (tagRefsResult.error) {
-    throw mapMutationError(tagRefsResult.error, 'Impossible de charger les tags de media.');
   }
 
   if (existingMediaResult.error) {
@@ -5223,21 +5241,11 @@ export async function saveObjectWorkspaceMedia(
   const typeByCode = new Map(
     (typeRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
   );
-  const tagByCode = new Map(
-    (tagRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
   const existingIds = new Set((existingMediaResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean));
 
   const unknownType = normalizedObjectItems.find((item) => !typeByCode.has(item.typeCode.toLowerCase()));
   if (unknownType) {
     throw new Error(`Type de media inconnu: ${unknownType.typeCode || 'vide'}.`);
-  }
-
-  const unknownTag = normalizedObjectItems
-    .flatMap((item) => normalizeTagCodes(item.tags))
-    .find((tag) => !tagByCode.has(tag));
-  if (unknownTag) {
-    throw new Error(`Tag media inconnu: ${unknownTag}.`);
   }
 
   const { error: clearMainError } = await client.from('media').update({ is_main: false }).eq('object_id', objectId);
@@ -5261,7 +5269,9 @@ export async function saveObjectWorkspaceMedia(
       is_published: item.isPublished,
       position: toNullableInteger(item.position) ?? 0,
       rights_expires_at: toNullableText(item.rightsExpiresAt),
-      visibility: toNullableText(item.visibility) ?? 'public',
+      // §04 fix class: an UPDATE preserves a NULL visibility (extended-only under the
+      // 8t gate) instead of silently widening it to 'public'; INSERTs default below.
+      visibility: toNullableText(item.visibility),
       width: toNullableInteger(item.width),
       height: toNullableInteger(item.height),
       kind: toNullableText(item.kind),
@@ -5274,7 +5284,9 @@ export async function saveObjectWorkspaceMedia(
         throw mapMutationError(error, "Impossible d'enregistrer un media objet.");
       }
     } else {
-      const { data, error } = await client.from('media').insert(payload).select('id').single();
+      // Editor-authored rows are public by design (the user can narrow via the select).
+      const insertPayload = { ...payload, visibility: payload.visibility ?? 'public' };
+      const { data, error } = await client.from('media').insert(insertPayload).select('id').single();
       if (error) {
         throw mapMutationError(error, "Impossible de creer un media objet.");
       }
@@ -5282,23 +5294,9 @@ export async function saveObjectWorkspaceMedia(
     }
 
     keptIds.add(mediaId);
-
-    const { error: deleteTagsError } = await client.from('media_tag').delete().eq('media_id', mediaId);
-    if (deleteTagsError) {
-      throw mapMutationError(deleteTagsError, 'Impossible de synchroniser les tags media.');
-    }
-
-    const normalizedTags = normalizeTagCodes(item.tags)
-      .map((tag) => tagByCode.get(tag))
-      .filter(Boolean)
-      .map((tagId) => ({ media_id: mediaId, tag_id: tagId as string }));
-
-    if (normalizedTags.length > 0) {
-      const { error: insertTagsError } = await client.from('media_tag').insert(normalizedTags);
-      if (insertTagsError) {
-        throw mapMutationError(insertTagsError, 'Impossible de sauvegarder les tags media.');
-      }
-    }
+    // media_tag is deliberately NOT written here: no tag UI exists, no live consumer
+    // reads the links, and the old delete+reinsert churn could wipe links after a
+    // partial load. Row deletes still cascade their links (FK ON DELETE CASCADE).
   }
 
   const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));

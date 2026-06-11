@@ -61,6 +61,93 @@ describe('MediaEditModal', () => {
     expect(saved.titleTranslations.en).toBe('Front view');
   });
 
+  it('writes the primary-language title and description into the i18n maps too', () => {
+    // An imported row can carry title_i18n.fr; public readers prefer the i18n map
+    // over the flat column, so a flat-only edit would be silently shadowed.
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={media} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Nouvelle façade' } });
+    fireEvent.change(screen.getByLabelText('Description (texte alternatif)'), { target: { value: 'Vue de la façade' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('Nouvelle façade');
+    expect(saved.titleTranslations.fr).toBe('Nouvelle façade');
+    expect(saved.descriptionTranslations.fr).toBe('Vue de la façade');
+  });
+
+  it('clearing the primary-language title removes the stale i18n key', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, titleTranslations: { fr: 'Façade' } }} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('');
+    expect(saved.titleTranslations.fr).toBeUndefined();
+  });
+
+  it('shows « non définie » for a NULL visibility and saves an explicit choice with the audience vocabulary', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    // NULL visibility renders honestly instead of a fake "public" display (§16 precedent).
+    expect(screen.getByDisplayValue('— Visibilité non définie —')).toBeInTheDocument();
+    // Audience vocabulary (§52): Publique / Partenaires / Interne — 'private' = Interne.
+    fireEvent.change(screen.getByLabelText('Visibilité'), { target: { value: 'private' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.visibility).toBe('private');
+  });
+
+  it('keeps an untouched NULL visibility empty on save (no silent widening)', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.visibility).toBe('');
+  });
+
+  it('disables Enregistrer until the media has a file (url)', async () => {
+    render(
+      <MediaEditModal
+        open media={{ ...media, url: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'image', label: 'Image' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
+    fireEvent.click(uploadBtn);
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+  });
+
   it('captures upload result (url, width, height) into the saved draft', async () => {
     const onSave = jest.fn();
     render(

@@ -809,6 +809,10 @@ export interface ObjectWorkspaceMediaModule {
   objectItems: ObjectWorkspaceMediaItem[];
   placeItems: ObjectWorkspaceMediaItem[];
   placeScopeUnavailableReason: string | null;
+  /** R1 no-clobber: set when the object-media load failed — the section renders a
+   *  notice instead of an empty grid and the saver refuses to reconcile (a save
+   *  against a failure-born empty list would delete every media row). */
+  unavailableReason: string | null;
 }
 
 export interface ObjectWorkspaceContactItem {
@@ -1230,7 +1234,7 @@ function collectLanguages(params: {
   return Array.from(new Set(languages.length > 0 ? languages : ['fr']));
 }
 
-function parseWorkspaceMediaItem(params: {
+export function parseWorkspaceMediaItem(params: {
   record: GenericRecord;
   index: number;
   scope: 'object' | 'place';
@@ -1253,7 +1257,9 @@ function parseWorkspaceMediaItem(params: {
     descriptionTranslations: readTextMap(params.record.description_i18n),
     url: readString(params.record.url, readString(params.record.secure_url)),
     credit: readString(params.record.credit, readString(params.record.author)),
-    visibility: readString(params.record.visibility, 'public'),
+    // No 'public' default — keep a NULL DB visibility as '' so saves don't widen it
+    // (the 8t read gate treats NULL as extended-scope-only). INSERTs default at the call site.
+    visibility: readString(params.record.visibility),
     position: readString(params.record.position),
     width: readString(params.record.width),
     height: readString(params.record.height),
@@ -3040,6 +3046,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       objectItems: objectMedia,
       placeItems: [],
       placeScopeUnavailableReason: null,
+      unavailableReason: null,
     },
     contacts: {
       kindOptions: [],

@@ -48,6 +48,15 @@ describe('SectionMedia', () => {
     expect(hook.result.current.draft.media.objectItems).toHaveLength(startingCount);
   });
 
+  it('renders the unavailable notice instead of the grid when the media load failed (R1 no-clobber)', () => {
+    const modules = fullModulesFixture();
+    modules.media = { ...modules.media, unavailableReason: 'Lecture des médias indisponible.' };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByText(/Module indisponible/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Ajouter un média' })).not.toBeInTheDocument();
+  });
+
   it('saving a new media via "+ Ajouter un média" appends one item to the draft', () => {
     const { hook, rerender } = setup();
     const startingCount = hook.result.current.draft.media.objectItems.length;

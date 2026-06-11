@@ -8,6 +8,7 @@ import {
   removeObjectMediaItem,
 } from './media-items';
 import { MediaEditModal } from '../widgets/MediaEditModal';
+import { ModuleUnavailableNotice } from './blocks/block-notes';
 
 function isVisualMedia(item: ObjectWorkspaceMediaItem) {
   const text = `${item.typeCode} ${item.typeLabel} ${item.kind}`.toLowerCase();
@@ -39,8 +40,13 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
 
   const photos = media.objectItems.filter(isVisualMedia);
   const recommended = 4;
-  const pillTone = photos.length >= recommended ? 'ok' : 'warn';
-  const pillLabel = photos.length >= recommended ? `${photos.length} photo(s)` : `${photos.length} / ${recommended}`;
+  const unavailable = Boolean(media.unavailableReason);
+  const pillTone = unavailable || photos.length < recommended ? 'warn' : 'ok';
+  const pillLabel = unavailable
+    ? 'Indisponible'
+    : photos.length >= recommended
+      ? `${photos.length} photo(s)`
+      : `${photos.length} / ${recommended}`;
 
   function handleAdd() {
     const item = createObjectMediaItem(media);
@@ -67,6 +73,12 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
       folded={folded}
       pill={{ tone: pillTone, label: pillLabel }}
     >
+      {/* R1 no-clobber: a failed load renders the notice INSTEAD of an empty grid —
+          editing an empty grid born from a failure would delete every media row on
+          save (the saver also throws on this reason, defense-in-depth). */}
+      {unavailable && <ModuleUnavailableNotice reason={media.unavailableReason as string} />}
+
+      {!unavailable && (
       <div className="media-grid">
         {media.objectItems.map((item) => (
           <article key={item.id} className="media-tile">
@@ -99,10 +111,13 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
           </article>
         ))}
       </div>
+      )}
 
+      {!unavailable && (
       <button type="button" className="rep-add" onClick={handleAdd}>
         + Ajouter un média
       </button>
+      )}
 
       {editing && editingItem && objectId && (
         <MediaEditModal

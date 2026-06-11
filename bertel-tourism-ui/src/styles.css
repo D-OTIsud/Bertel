@@ -8526,4 +8526,4 @@ a {
   border: 0;
   cursor: pointer;
 }
-.dashboard-filter-error { color: var(--destructive); font-size: 0.75rem; margin-top: 6px; }
+/* Fix 5 — règle .dashboard-filter-error dupliquée supprimée ; la règle préexistante (~ligne 7905) reste active. */

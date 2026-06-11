@@ -86,13 +86,18 @@ export async function getDashboardAdvancedFilterOptions(): Promise<DashboardAdva
     name: d.name ?? d.domain,
   }));
 
+  const domainCodes = taxonomyDomains.map((d) => d.domain);
+
   const [codesRes, valuesRes, languagesRes, amenitiesRes, tagsRes] = await Promise.all([
-    client
-      .from('ref_code')
-      .select('domain,code,name')
-      .in('domain', taxonomyDomains.map((d) => d.domain))
-      .eq('is_active', true)
-      .order('position', { ascending: true }),
+    // Fix 6 — garde tableau vide : .in('domain', []) produirait un 400 PostgREST.
+    domainCodes.length > 0
+      ? client
+          .from('ref_code')
+          .select('domain,code,name')
+          .in('domain', domainCodes)
+          .eq('is_active', true)
+          .order('position', { ascending: true })
+      : Promise.resolve({ data: [] as { domain: string; code: string; name: string }[], error: null }),
     client
       .from('ref_classification_value')
       .select('code,name,scheme:scheme_id(code,name,is_distinction)')

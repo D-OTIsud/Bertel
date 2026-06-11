@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
@@ -133,10 +133,22 @@ export function DashboardFiltersPanel({
     setFilters({ taxonomyAny: next.length > 0 ? next : undefined });
   }
 
-  const distinctionOptions = (advancedOptions?.distinctionValues ?? []).map((v) => ({
-    code: `${v.schemeCode}:${v.valueCode}`,
-    label: `${v.schemeName} — ${v.valueName}`,
-  }));
+  // Fix 1 — Reset du sélecteur de domaine quand le filtre taxonomie est vidé (ex. « Réinitialiser »).
+  useEffect(() => {
+    if (!filters.taxonomyAny || filters.taxonomyAny.length === 0) {
+      setTaxonomyDomain('');
+    }
+  }, [filters.taxonomyAny]);
+
+  // Fix 3 — Memoize distinctionOptions (aligné sur taxonomyCodeOptions).
+  const distinctionOptions = useMemo(
+    () =>
+      (advancedOptions?.distinctionValues ?? []).map((v) => ({
+        code: `${v.schemeCode}:${v.valueCode}`,
+        label: `${v.schemeName} — ${v.valueName}`,
+      })),
+    [advancedOptions],
+  );
   const selectedDistinctions = (filters.classificationsAny ?? []).map(
     (c) => `${c.schemeCode}:${c.valueCode}`,
   );
@@ -328,7 +340,8 @@ export function DashboardFiltersPanel({
           >
             Filtres avancés {advancedOpen ? '▾' : '▸'}
           </button>
-          {advancedLoadError && advancedOpen && (
+          {/* Fix 4 — erreur visible même section fermée */}
+          {advancedLoadError && (
             <p className="dashboard-filter-error">{advancedLoadError}</p>
           )}
           {advancedOpen && advancedOptions && (
@@ -339,7 +352,15 @@ export function DashboardFiltersPanel({
                   placeholder="Choisir un domaine"
                   options={advancedOptions.taxonomyDomains.map((d) => ({ code: d.domain, label: d.name }))}
                   selected={taxonomyDomain ? [taxonomyDomain] : []}
-                  onChange={(vals) => setTaxonomyDomain(vals[0] ?? '')}
+                  onChange={(vals) => {
+                    const next = vals[0] ?? '';
+                    if (!next && taxonomyDomain) {
+                      // Fix 2 — Dé-sélection du domaine : purger ses codes pour ne pas laisser
+                      // un filtre actif invisible (les autres domaines sont préservés).
+                      setTaxonomyCodes([]);
+                    }
+                    setTaxonomyDomain(next);
+                  }}
                 />
               </FilterField>
               {taxonomyDomain && (

@@ -63,4 +63,20 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
     const { url } = mapDashboardFiltersToExplorerUrl({});
     expect(url).toBe('/explorer');
   });
+
+  it("signale l'élargissement de bucket pour un type partiel (LOI → bucket ACT)", () => {
+    const { url, dropped } = mapDashboardFiltersToExplorerUrl({ types: ['LOI'] });
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('buckets')).toBe('ACT');
+    expect(dropped).toEqual(
+      expect.arrayContaining([expect.stringContaining('LOI')]),
+    );
+  });
+
+  it("ne signale rien quand la famille du bucket est couverte en entier", () => {
+    const { dropped } = mapDashboardFiltersToExplorerUrl({
+      types: ['COM', 'PSV', 'ASC', 'SPU'],
+    });
+    expect(dropped).toEqual([]);
+  });
 });

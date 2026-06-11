@@ -56,6 +56,6 @@ describe('ActiveFilterStrip — chips', () => {
     });
     render(<ActiveFilterStrip />);
     fireEvent.click(screen.getByRole('button', { name: "Ouvrir dans l'Explorer" }));
-    expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/explorer/));
+    expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/explorer(\?|$)/));
   });
 });

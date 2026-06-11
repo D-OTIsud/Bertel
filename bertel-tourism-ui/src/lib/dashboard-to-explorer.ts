@@ -52,6 +52,20 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
   // Les sous-types HOT sont les types dashboard qui font partie de la famille HOT.
   const hotSubtypes = types.filter((t) => HOT_BUCKET_TYPES.includes(t));
 
+  // Buckets multi-types sans narrowing côté Explorer (HOT a hotSubtypes) : si la
+  // sélection ne couvre pas toute la famille du bucket, l'Explorer affichera plus
+  // large que le filtre dashboard — on le signale, jamais d'élargissement silencieux.
+  const widenedTypes = types.filter((t) => {
+    if (HOT_BUCKET_TYPES.includes(t)) return false;
+    const bucket = buckets.find((b) => EXPLORER_BUCKET_TYPE_MAP[b].includes(t));
+    if (!bucket) return false;
+    const family = EXPLORER_BUCKET_TYPE_MAP[bucket];
+    return family.length > 1 && !family.every((m) => types.includes(m));
+  });
+  if (widenedTypes.length > 0) {
+    dropped.push(`précision de type (l'Explorer élargira : ${widenedTypes.join(', ')})`);
+  }
+
   // ── Statuts ───────────────────────────────────────────────────────────────
   // L'Explorer ne connaît que published/draft ; archived/hidden sont unsupported.
   const statuses = (filters.status ?? []).filter(

@@ -133,3 +133,49 @@ CREATE INDEX IF NOT EXISTS idx_crm_interaction_object_occurred
   ON crm_interaction(object_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_interaction_occurred
   ON crm_interaction(occurred_at DESC, id DESC); -- keyset timeline org-wide
+
+-- ---------- 7. Helpers d'autorisation (style current_user_extended_object_ids, §35) ----------
+-- Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
+-- Volontairement plus étroit que extended (pas d'arme acteur, pas d'arme all_published) :
+-- le CRM est le pilotage interne de l'ORG publicatrice, pas un droit d'édition.
+CREATE OR REPLACE FUNCTION api.current_user_crm_object_ids()
+RETURNS SETOF text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT ool.object_id
+  FROM user_org_membership uom
+  JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+  JOIN ref_org_role r      ON r.id = ool.role_id AND r.code = 'publisher'
+  WHERE uom.user_id = auth.uid()
+    AND uom.is_active = TRUE;
+$$;
+
+CREATE OR REPLACE FUNCTION api.user_can_read_crm(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT api.is_platform_superuser()
+      OR p_object_id IN (SELECT api.current_user_crm_object_ids());
+$$;
+
+-- Écriture : superuser OU (membre ORG publisher ET (permission write_crm_notes OU rôle
+-- admin ORG actif — current_user_admin_rank() IS NOT NULL, cf. rls_policies.sql:331)).
+CREATE OR REPLACE FUNCTION api.user_can_write_crm(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT api.is_platform_superuser()
+      OR (p_object_id IN (SELECT api.current_user_crm_object_ids())
+          AND (api.user_has_permission('write_crm_notes')
+               OR api.current_user_admin_rank() IS NOT NULL));
+$$;
+
+REVOKE ALL ON FUNCTION api.current_user_crm_object_ids() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.current_user_crm_object_ids() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.user_can_read_crm(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.user_can_read_crm(text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.user_can_write_crm(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.user_can_write_crm(text) TO authenticated, service_role;

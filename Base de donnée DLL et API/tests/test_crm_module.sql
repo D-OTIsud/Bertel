@@ -6,6 +6,13 @@
 --    write_crm_notes, acceptée avec ; PostgREST direct refusé (RLS) même pour le membre.
 -- C) ÉCRITURE : save_crm_interaction résout topic/sentiment par code ; save_crm_task upsert + move ;
 --    delete_crm_interaction supprime (membre autorisé) et refuse (membre sans permission).
+-- D) ACTEUR-CENTRÉ (correction design 2026-06-11, v2) : ancrage acteur OU objet (CHECK
+--    chk_crm_interaction_anchor + object_id nullable) ; interaction acteur-seul créée, listée
+--    (fiche acteur list_actor_crm + arme acteur de la timeline) puis supprimée ; annuaire
+--    list_crm_directory ré-écrit PAR ACTEUR ; acteurs liés exposés par list_object_crm ;
+--    ajout de contexte objet NULL→valeur permis, re-parentage objet→objet refusé (22023) ;
+--    cross-ORG acteur : list_actor_crm refuse l'étranger (42501), l'annuaire de B contient
+--    son acteur lié mais jamais celui de A.
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
 -- Mécanique de fixture calquée sur test_room_type_read_gate.sql / test_sp2_permission_behavior.sql.
@@ -17,13 +24,19 @@ DECLARE
   v_orgA   text := 'ORGRUN9999990801';
   v_orgB   text := 'ORGRUN9999990802';
   v_objA   text := 'HOTRUN9999990811';
+  v_objB   text := 'HOTRUN9999990812'; -- objet de l'ORG B (probes cross-ORG acteur-centrées)
   v_userA  uuid := '00000000-0000-4000-a000-000000000101'; -- membre ORG A, AVEC write_crm_notes
   v_userB  uuid := '00000000-0000-4000-a000-000000000102'; -- membre ORG B (étranger à l'objet)
   v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- membre ORG A, SANS permission
+  v_actorA uuid := '00000000-0000-4000-a000-000000000821'; -- acteur lié à objA (ORG A)
+  v_actorB uuid := '00000000-0000-4000-a000-000000000822'; -- acteur lié à objB (ORG B)
   v_pub_role uuid;
+  v_actor_role uuid;
   v_perm uuid;
   v_payload jsonb;
   v_int_id uuid;
+  v_actor_int_id uuid; -- interaction acteur-seul (sans contexte objet)
+  v_ctx_id uuid;       -- interaction acteur-seul contextualisée ensuite (NULL → objA)
   v_task_id uuid;
   v_denied boolean;
 BEGIN
@@ -57,6 +70,13 @@ BEGIN
                  WHERE conname = 'crm_interaction_response_sentiment_id_fkey'
                    AND confrelid = 'ref_code_crm_sentiment'::regclass),
          'FK: crm_interaction_response_sentiment_id_fkey doit cibler ref_code_crm_sentiment';
+  -- Ancrage acteur-centré : au moins un ancrage requis, contexte objet OPTIONNEL.
+  ASSERT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_crm_interaction_anchor'),
+         'ancrage: contrainte chk_crm_interaction_anchor absente';
+  ASSERT (SELECT c.is_nullable FROM information_schema.columns c
+          WHERE c.table_schema='public' AND c.table_name='crm_interaction'
+            AND c.column_name='object_id') = 'YES',
+         'ancrage: crm_interaction.object_id doit être NULLABLE (contexte objet optionnel)';
 
   -- ---------- Fixture (superuser, RLS bypass) ----------
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code = 'publisher' LIMIT 1;
@@ -75,10 +95,27 @@ BEGIN
   INSERT INTO object (id, object_type, name, status) VALUES
     (v_orgA, 'ORG', 'ORG A CRM test', 'published'),
     (v_orgB, 'ORG', 'ORG B CRM test', 'published'),
-    (v_objA, 'HOT', 'Hôtel CRM test', 'draft')
+    (v_objA, 'HOT', 'Hôtel CRM test', 'draft'),
+    (v_objB, 'HOT', 'Hôtel CRM test B', 'draft')
     ON CONFLICT (id) DO NOTHING;
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
-    (v_objA, v_orgA, v_pub_role)
+    (v_objA, v_orgA, v_pub_role),
+    (v_objB, v_orgB, v_pub_role)
+    ON CONFLICT DO NOTHING;
+  -- Acteurs (modèle acteur-centré) : rôle 'operator' fixture-guardé (normalement seedé par
+  -- seeds_data.sql) ; un acteur lié par ORG via actor_object_role.
+  SELECT id INTO v_actor_role FROM ref_actor_role WHERE code = 'operator' LIMIT 1;
+  IF v_actor_role IS NULL THEN
+    v_actor_role := gen_random_uuid();
+    INSERT INTO ref_actor_role (id, code, name) VALUES (v_actor_role, 'operator', 'Exploitant');
+  END IF;
+  INSERT INTO actor (id, display_name, first_name, last_name) VALUES
+    (v_actorA, 'Acteur CRM Test A', 'Alice', 'Hoarau'),
+    (v_actorB, 'Acteur CRM Test B', 'Bruno', 'Payet')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary) VALUES
+    (v_actorA, v_objA, v_actor_role, TRUE),
+    (v_actorB, v_objB, v_actor_role, TRUE)
     ON CONFLICT DO NOTHING;
   -- 1 membership actif par user (trigger « 1 tourism_agent = 1 ORG active » respecté)
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
@@ -124,6 +161,47 @@ BEGIN
            'RLS: un membre ne doit PAS lire crm_interaction en direct (RPC-only)';
     ASSERT (SELECT count(*) FROM crm_task WHERE object_id = v_objA) = 0,
            'RLS: un membre ne doit PAS lire crm_task en direct (RPC-only)';
+
+    -- ----- Acteur-centré : interaction SANS contexte objet (ancrage acteur seul) -----
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'actor_id', v_actorA, 'body', 'Vœux annuels', 'interaction_type', 'note'));
+    v_actor_int_id := (v_payload->>'id')::uuid;
+    ASSERT v_actor_int_id IS NOT NULL, 'save_crm_interaction (acteur-seul): pas d''id retourné';
+    ASSERT (SELECT count(*) FROM crm_interaction WHERE actor_id = v_actorA) = 0,
+           'RLS: un membre ne doit PAS lire crm_interaction en direct (acteur-seul inclus)';
+    -- Fiche acteur : objets liés + interactions tous contextes (la générale porte object_id NULL).
+    v_payload := api.list_actor_crm(v_actorA);
+    ASSERT v_payload->'actor'->>'display_name' = 'Acteur CRM Test A',
+           'list_actor_crm: identité acteur absente/incorrecte';
+    ASSERT jsonb_array_length(v_payload->'objects') = 1
+           AND v_payload->'objects'->0->>'object_id' = v_objA
+           AND v_payload->'objects'->0->>'role_name' IS NOT NULL,
+           'list_actor_crm: le lien actor_object_role vers objA (avec role_name) doit remonter';
+    ASSERT jsonb_array_length(v_payload->'interactions') >= 1,
+           'list_actor_crm: au moins l''interaction acteur-seul attendue';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'interactions') i
+                   WHERE (i->>'id')::uuid = v_actor_int_id AND i->'object_id' = 'null'::jsonb),
+           'list_actor_crm: l''interaction générale doit porter object_id NULL';
+    -- Timeline org-wide : l'interaction acteur-seul remonte via l'arme acteur du périmètre.
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_crm_timeline()->'items') i
+                   WHERE (i->>'id')::uuid = v_actor_int_id),
+           'list_crm_timeline: l''interaction acteur-seul doit remonter via l''arme acteur';
+    -- Annuaire acteur-centré : une ligne par acteur du périmètre, avec volumes et objets liés.
+    v_payload := api.list_crm_directory();
+    ASSERT jsonb_array_length(v_payload) >= 1,
+           'annuaire acteur-centré: au moins une ligne attendue';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
+                   WHERE (d->>'actor_id')::uuid = v_actorA
+                     AND (d->>'interaction_count')::int >= 1
+                     AND jsonb_array_length(d->'objects') >= 1),
+           'annuaire acteur-centré: actorA avec interaction_count>=1 et objets liés attendu';
+    -- Navigation objet → acteurs liés (clé ''actors'' de list_object_crm).
+    v_payload := api.list_object_crm(v_objA);
+    ASSERT jsonb_array_length(v_payload->'actors') >= 1,
+           'list_object_crm: la clé actors doit lister les acteurs liés';
+    ASSERT (v_payload->'actors'->0->>'actor_id')::uuid = v_actorA
+           AND v_payload->'actors'->0->>'role_name' IS NOT NULL,
+           'list_object_crm: actorA (avec role_name) attendu en tête des acteurs liés';
   RESET ROLE;
 
   -- ---------- USER C (membre SANS permission) : lit mais n'écrit pas ----------
@@ -143,6 +221,13 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'suppression: le membre sans write_crm_notes doit être refusé (42501)';
+    -- Acteur-centré : l'écriture ancrée acteur exige la même permission (arme acteur).
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_interaction(jsonb_build_object('actor_id', v_actorA, 'body', 'refusé'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'écriture acteur-seul: le membre sans write_crm_notes doit être refusé (42501)';
   RESET ROLE;
 
   -- ---------- USER B (autre ORG) : ne lit rien ----------
@@ -158,17 +243,54 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'cross-ORG: list_object_crm doit refuser l''étranger (42501)';
+    -- Acteur-centré : la fiche d'un acteur hors périmètre est refusée ; l'annuaire de B
+    -- contient son propre acteur lié (lien sans interaction) mais jamais celui de A.
+    v_denied := false;
+    BEGIN
+      PERFORM api.list_actor_crm(v_actorA);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'cross-ORG: list_actor_crm doit refuser l''étranger (42501)';
+    v_payload := api.list_crm_directory();
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
+                   WHERE (d->>'actor_id')::uuid = v_actorB),
+           'annuaire: l''acteur lié de l''ORG B doit apparaître (lien sans interaction)';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
+                       WHERE (d->>'actor_id')::uuid = v_actorA),
+           'cross-ORG: l''annuaire de B ne doit pas contenir l''acteur de l''ORG A';
   RESET ROLE;
 
-  -- ---------- USER A : suppression autorisée (6e RPC) ----------
+  -- ---------- USER A : suppression autorisée (6e RPC) + cycle de contexte acteur-centré ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userA, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     v_payload := api.delete_crm_interaction(v_int_id);
     ASSERT (v_payload->>'deleted')::boolean, 'delete_crm_interaction: deleted=true attendu';
+    -- Suppression de l'interaction acteur-seul : exerce la branche object_id NULL du delete.
+    v_payload := api.delete_crm_interaction(v_actor_int_id);
+    ASSERT (v_payload->>'deleted')::boolean, 'delete (acteur-seul): deleted=true attendu';
+    -- Ajout d'un contexte objet sur une interaction acteur-seul (NULL → valeur) : PERMIS.
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'actor_id', v_actorA, 'body', 'À contextualiser'));
+    v_ctx_id := (v_payload->>'id')::uuid;
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_ctx_id, 'object_id', v_objA));
+    ASSERT (v_payload->>'id')::uuid = v_ctx_id, 'contexte: ajout NULL → objet doit réussir';
+    ASSERT jsonb_array_length(api.list_object_crm(v_objA)->'interactions') = 1,
+           'contexte: l''interaction contextualisée doit apparaître côté objet';
+    -- Re-parentage objet → AUTRE objet : toujours refusé (22023).
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_interaction(jsonb_build_object('id', v_ctx_id, 'object_id', v_objB));
+    EXCEPTION WHEN invalid_parameter_value THEN v_denied := true;
+    END;
+    ASSERT v_denied, 're-parentage: objet → autre objet doit rester refusé (22023)';
+    v_payload := api.delete_crm_interaction(v_ctx_id);
+    ASSERT (v_payload->>'deleted')::boolean, 'delete (contextualisée): deleted=true attendu';
     ASSERT jsonb_array_length(api.list_object_crm(v_objA)->'interactions') = 0,
            'delete_crm_interaction: l''interaction doit avoir disparu';
+    ASSERT jsonb_array_length(api.list_actor_crm(v_actorA)->'interactions') = 0,
+           'fiche acteur: plus aucune interaction après suppression';
   RESET ROLE;
 
-  RAISE NOTICE 'CRM module §58 : vocabulaires, accès/écriture/cross-ORG — assertions passées.';
+  RAISE NOTICE 'CRM module §58 + acteur-centré v2 : vocabulaires, ancrages, accès/écriture/cross-ORG — assertions passées.';
 END$$;
 ROLLBACK;

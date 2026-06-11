@@ -267,6 +267,16 @@ The 2-agent map found a public-invisibility hole, label/coverage gaps, and backe
 | §05 always 100 % complete + no validation (a hotel with 0 rooms publishes silently) | **FIXED** — §05 joins completion scoring (rooms>0 or §46-gated ⇒ complete) + HEB warn « Ajoutez au moins un type de chambre ». |
 | Pill « 0 type(s) » when module gated | **FIXED** — « Non applicable ». |
 
+**Round 2 (user-requested UX):** (a) **« Ajouter » ouvre directement la modale** (chambres ET salles)
+sur un brouillon hors-liste — Enregistrer ajoute la ligne, Annuler ne laisse aucune ligne fantôme ;
+(b) **capacité auto-calculée** : cumul = Σ couchages × unités, affiché sous la liste et **reporté
+dans la métrique `capacity_total` de §07** en mode dérivé-sauf-override (suit le cumul tant que la
+valeur §07 est vide ou égale à l'ancien cumul ; une saisie manuelle divergente n'est jamais écrasée
+— pas de write-magic) ; (c) **liaison PMR** : note « ♿ N chambre(s) PMR déclarée(s) — équipements en
+§10 » + warn de validation §10 quand une chambre PMR existe sans équipement d'accessibilité
+sélectionné (taguer un code `acc_*` automatiquement serait risqué — quel code ? et si décoché
+volontairement ? — le warn + la note guident sans écrire en douce).
+
 **Backend logged (not this pass):** destructive delete-all-then-reinsert savers (non-transactional,
 identity churn — new UUIDs each save, wipes `extra` + link positions) → needs an RPC reconcile, its
 own pass; **RLS `object_room_type` trio readable anon on own `is_published` (default TRUE) without

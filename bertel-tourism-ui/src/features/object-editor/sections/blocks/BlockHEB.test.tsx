@@ -125,10 +125,13 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     // Delete the FIRST room — items.length is back to 1, but 'unit-2' still exists.
     act(() => { fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0]); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    // Add now goes through the modal: open then save.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
 
     const codes = result.current.draft.rooms.items.map((item) => item.code);
+    expect(codes).toHaveLength(2);
     expect(new Set(codes).size).toBe(codes.length);
   });
 
@@ -161,6 +164,104 @@ describe('rooms-utils', () => {
     const { reindexRoomPositions } = await import('./rooms-utils');
     const items = [{ position: '2' }, { position: '1' }] as never[];
     expect(reindexRoomPositions(items).map((item: { position: string }) => item.position)).toEqual(['1', '2']);
+  });
+
+  it('computeRoomsCapacitySum cumulates couchages × unités (empty quantity = 1 unit)', async () => {
+    const { computeRoomsCapacitySum } = await import('./rooms-utils');
+    expect(computeRoomsCapacitySum([
+      { capacityTotal: '2', quantity: '12' },
+      { capacityTotal: '4', quantity: '' },
+      { capacityTotal: '', quantity: '3' },
+    ])).toBe(28);
+  });
+
+  it('syncCapacityWithRooms updates the §07 capacity_total metric while it tracks the cumul', async () => {
+    const { syncCapacityWithRooms } = await import('./rooms-utils');
+    const capacity = fullModulesFixture().capacityPolicies;
+    capacity.capacityItems[0].value = '24'; // = prev cumul (2 × 12)
+    const prev = [{ capacityTotal: '2', quantity: '12' }];
+    const next = [{ capacityTotal: '2', quantity: '10' }];
+
+    const synced = syncCapacityWithRooms(capacity, prev, next);
+    expect(synced?.capacityItems[0].value).toBe('20');
+  });
+
+  it('syncCapacityWithRooms never clobbers a manually diverged capacity', async () => {
+    const { syncCapacityWithRooms } = await import('./rooms-utils');
+    const capacity = fullModulesFixture().capacityPolicies;
+    capacity.capacityItems[0].value = '48'; // manual value ≠ prev cumul 24
+    const prev = [{ capacityTotal: '2', quantity: '12' }];
+    const next = [{ capacityTotal: '2', quantity: '10' }];
+
+    expect(syncCapacityWithRooms(capacity, prev, next)).toBeNull();
+  });
+});
+
+describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => {
+  it('adding a room opens the modal; Enregistrer appends, Annuler appends nothing', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    const before = result.current.draft.rooms.items.length;
+
+    // Annuler: no row added.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Annuler' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.rooms.items).toHaveLength(before);
+
+    // Enregistrer: the configured row is appended.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '2' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.rooms.items).toHaveLength(before + 1);
+    expect(result.current.draft.rooms.items[before].capacityTotal).toBe('2');
+  });
+
+  it('adding a salle opens the modal; Enregistrer appends', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    const before = result.current.draft.meetingRooms.items.length;
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une salle/i })); });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    act(() => { fireEvent.change(screen.getByLabelText('Capacité en U'), { target: { value: '18' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.meetingRooms.items).toHaveLength(before + 1);
+    expect(result.current.draft.meetingRooms.items[before].capacityU).toBe('18');
+  });
+});
+
+describe('BlockHEB — capacity auto-sync + PMR liaison', () => {
+  it('updates the §07 capacity metric when a room edit changes the cumul it was tracking', () => {
+    const modules = fullModulesFixture();
+    modules.capacityPolicies.capacityItems[0].value = '24'; // tracking the cumul 2 × 12
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '3' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    expect(result.current.draft.capacityPolicies.capacityItems[0].value).toBe('36');
+    expect(result.current.dirtySections['capacity-policies']).toBe(true);
+  });
+
+  it('shows the PMR liaison note when at least one room is accessible', () => {
+    const modules = fullModulesFixture();
+    modules.rooms.items[0].accessible = true;
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(screen.getByText(/chambre\(s\) PMR/i)).toBeInTheDocument();
+  });
+
+  it('shows no PMR note when no room is accessible', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(screen.queryByText(/chambre\(s\) PMR/i)).not.toBeInTheDocument();
   });
 });
 

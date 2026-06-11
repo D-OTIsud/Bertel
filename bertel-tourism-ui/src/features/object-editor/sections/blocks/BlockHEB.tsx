@@ -9,7 +9,7 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
-import { nextRoomCode, reindexRoomPositions } from './rooms-utils';
+import { computeRoomsCapacitySum, nextRoomCode, reindexRoomPositions, syncCapacityWithRooms } from './rooms-utils';
 
 const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
 // No handle column: meeting-room order is NOT persisted (object_meeting_room has no
@@ -108,11 +108,22 @@ export function BlockHEB({ editor, folded }: SectionProps) {
   // Index of the meeting room currently open in the per-meeting-room edit modal (null = closed)
   const [editingMeeting, setEditingMeeting] = useState<number | null>(null);
 
+  // Add-flow drafts: "Ajouter" opens the edit modal on a draft NOT yet in the list —
+  // Enregistrer appends it, Annuler leaves no ghost row.
+  const [creatingRoom, setCreatingRoom] = useState<ObjectWorkspaceRoomTypeItem | null>(null);
+  const [creatingMeeting, setCreatingMeeting] = useState<ObjectWorkspaceMeetingRoomItem | null>(null);
+
+  /** Write the rooms list + keep the §07 capacity_total metric in sync (derived-unless-overridden). */
+  function setRoomItems(nextItems: ObjectWorkspaceRoomTypeItem[]) {
+    editor.replaceModule('rooms', { ...rooms, items: nextItems });
+    const syncedCapacity = syncCapacityWithRooms(capacity, rooms.items, nextItems);
+    if (syncedCapacity) {
+      editor.replaceModule('capacityPolicies', syncedCapacity);
+    }
+  }
+
   function updateRoom(index: number, patch: Partial<ObjectWorkspaceRoomTypeItem>) {
-    editor.replaceModule('rooms', {
-      ...rooms,
-      items: rooms.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
-    });
+    setRoomItems(rooms.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
   }
 
   function updateMeetingRoom(index: number, patch: Partial<ObjectWorkspaceMeetingRoomItem>) {
@@ -121,6 +132,9 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       items: meetingRooms.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
     });
   }
+
+  const accessibleRoomsCount = rooms.items.filter((item) => item.accessible).length;
+  const roomsCapacitySum = computeRoomsCapacitySum(rooms.items);
 
   return (
     <Fs
@@ -143,9 +157,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             items={rooms.items}
             getId={(item) => item.recordId ?? item.code}
             columns={ROOM_COLS}
-            onReorder={(next) =>
-              editor.replaceModule('rooms', { ...rooms, items: reindexRoomPositions(next) })
-            }
+            onReorder={(next) => setRoomItems(reindexRoomPositions(next))}
             renderItem={(item, index) => (
               <>
                 {/* Compact summary — full editing is done inside RoomEditModal */}
@@ -176,10 +188,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
                     className="del"
                     aria-label="Supprimer"
                     onClick={() =>
-                      editor.replaceModule('rooms', {
-                        ...rooms,
-                        items: reindexRoomPositions(rooms.items.filter((_, itemIndex) => itemIndex !== index)),
-                      })
+                      setRoomItems(reindexRoomPositions(rooms.items.filter((_, itemIndex) => itemIndex !== index)))
                     }
                   >
                     <Trash2 size={15} aria-hidden />
@@ -191,15 +200,24 @@ export function BlockHEB({ editor, folded }: SectionProps) {
           <button
             type="button"
             className="rep-add"
-            onClick={() =>
-              editor.replaceModule('rooms', {
-                ...rooms,
-                items: [...rooms.items, createRoom(rooms.items)],
-              })
-            }
+            onClick={() => setCreatingRoom(createRoom(rooms.items))}
           >
             + Ajouter un type de chambre
           </button>
+
+          {rooms.items.length > 0 && (
+            <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+              Capacité cumulée : <strong>{roomsCapacitySum} personne(s)</strong> — reportée
+              automatiquement dans la capacité totale (§07) tant qu&apos;elle n&apos;y est pas saisie
+              manuellement.
+            </p>
+          )}
+          {accessibleRoomsCount > 0 && (
+            <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+              ♿ {accessibleRoomsCount} chambre(s) PMR déclarée(s) — les équipements
+              d&apos;accessibilité correspondants se gèrent en section 10 (Accessibilité).
+            </p>
+          )}
 
           {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
               not in the compact row, so every room (not just rooms.items[0]) can have its own amenities. */}
@@ -212,6 +230,20 @@ export function BlockHEB({ editor, folded }: SectionProps) {
               onSave={(updated) => {
                 updateRoom(editingRoom, updated);
                 setEditingRoom(null);
+              }}
+            />
+          )}
+
+          {/* Add-flow: the modal edits a draft NOT yet in the list — cancel leaves no ghost row. */}
+          {creatingRoom && (
+            <RoomEditModal
+              open
+              room={creatingRoom}
+              module={rooms}
+              onClose={() => setCreatingRoom(null)}
+              onSave={(created) => {
+                setRoomItems([...rooms.items, created]);
+                setCreatingRoom(null);
               }}
             />
           )}
@@ -277,12 +309,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             getKey={(item, index) => item.recordId ?? `meeting-${index}`}
             columns={MICE_COLS}
             addLabel="Ajouter une salle"
-            onAdd={() =>
-              editor.replaceModule('meetingRooms', {
-                ...meetingRooms,
-                items: [...meetingRooms.items, createMeetingRoom()],
-              })
-            }
+            onAdd={() => setCreatingMeeting(createMeetingRoom())}
             renderRow={(item, index) => (
               <>
                 {/* Compact summary — full editing is done inside MeetingRoomEditModal */}
@@ -329,6 +356,23 @@ export function BlockHEB({ editor, folded }: SectionProps) {
               onSave={(updated) => {
                 updateMeetingRoom(editingMeeting, updated);
                 setEditingMeeting(null);
+              }}
+            />
+          )}
+
+          {/* Add-flow: draft salle, appended only on save. */}
+          {creatingMeeting && (
+            <MeetingRoomEditModal
+              open
+              room={creatingMeeting}
+              equipmentOptions={meetingRooms.equipmentOptions}
+              onClose={() => setCreatingMeeting(null)}
+              onSave={(created) => {
+                editor.replaceModule('meetingRooms', {
+                  ...meetingRooms,
+                  items: [...meetingRooms.items, created],
+                });
+                setCreatingMeeting(null);
               }}
             />
           )}

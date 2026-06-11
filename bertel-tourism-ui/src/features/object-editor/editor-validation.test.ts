@@ -85,6 +85,30 @@ describe('editor publication validation', () => {
     });
   });
 
+  it('warns when a PMR room exists but no accessibility equipment is selected (§10)', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items[0].accessible = true;
+    draft.characteristics.selectedAmenityCodes = ['wifi']; // no accessibility-family code
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '10',
+      message: expect.stringContaining('PMR'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn about PMR rooms when an accessibility equipment is selected', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items[0].accessible = true;
+    draft.characteristics.selectedAmenityCodes = ['wifi', 'pmr_access'];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '10' && /PMR/.test(w.message))).toBe(false);
+  });
+
   it('does not warn about rooms when the rooms module is type-gated', () => {
     const draft = fullModulesFixture();
     draft.rooms.items = [];

@@ -114,6 +114,27 @@ const VALIDATION_RULES: ValidationRule[] = [
     archetype === 'HEB' && !draft.rooms.unavailableReason && draft.rooms.items.length === 0
       ? { section: '05', message: "Ajoutez au moins un type de chambre ou d'unité locative.", tone: 'warn' }
       : null,
+  ({ draft }) => {
+    // A PMR room declared in §05 should be reflected in the §10 accessibility equipment
+    // (the Explorer accessibility facet reads the amenity codes, not the room flag).
+    if (draft.rooms.unavailableReason || !draft.rooms.items.some((item) => item.accessible)) {
+      return null;
+    }
+    const accessibilityCodes = new Set(
+      draft.characteristics.amenityGroups
+        .filter((group) => group.familyCode === 'accessibility')
+        .flatMap((group) => group.options.map((option) => option.code)),
+    );
+    const hasAccessibilityEquipment = draft.characteristics.selectedAmenityCodes
+      .some((code) => accessibilityCodes.has(code));
+    return hasAccessibilityEquipment
+      ? null
+      : {
+          section: '10',
+          message: 'Une chambre PMR est déclarée (§05) — sélectionnez les équipements d’accessibilité correspondants.',
+          tone: 'warn',
+        };
+  },
   ({ draft }) =>
     hasLongDescription(draft)
       ? null

@@ -4,11 +4,26 @@ import { SectionCapacity } from './SectionCapacity';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
 describe('SectionCapacity', () => {
-  it('no longer renders the pet-policy field (moved to BlockHEB)', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionCapacity editor={result.current} permissions={allowAll} />);
-    expect(screen.queryByText('Animaux')).not.toBeInTheDocument();
-    // Group policy stays in §07.
+  // PO 2026-06-11 (reverses the earlier §06 move): the pet policy is an accueil
+  // concern for ANY establishment, not just HEB — §07 is its sole editing surface.
+  it('edits the pet policy here (animaux acceptés + conditions when accepted)', () => {
+    const modules = fullModulesFixture();
+    modules.capacityPolicies.petPolicy = { accepted: false, conditions: '' };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionCapacity editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByLabelText("Conditions d'accueil des animaux")).not.toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByLabelText('Animaux acceptés')); });
+    view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBe(true);
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Conditions d'accueil des animaux"), {
+        target: { value: 'Petits chiens tenus en laisse' },
+      });
+    });
+    expect(result.current.draft.capacityPolicies.petPolicy.conditions).toBe('Petits chiens tenus en laisse');
+    // Group policy stays in §07 too.
     expect(screen.getByText('Groupes')).toBeInTheDocument();
   });
 

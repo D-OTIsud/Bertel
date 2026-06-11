@@ -200,6 +200,42 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         />
       </Field>
       </div>
+
+      {/* Politique d'accueil — moved here from the §06 type block (PO 2026-06-11):
+          accepting animals is an accueil concern for ANY establishment type, and
+          §07 renders for every archetype. §06 keeps a pointer note (§48 pattern). */}
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Politique d'accueil
+      </div>
+      <div className="grid-3">
+        <div>
+          <Toggle
+            label="Animaux acceptés"
+            on={capacity.petPolicy.accepted}
+            onChange={(accepted) =>
+              editor.replaceModule('capacityPolicies', {
+                ...capacity,
+                petPolicy: { ...capacity.petPolicy, accepted },
+              })
+            }
+          />
+          {capacity.petPolicy.accepted && (
+            <Field label="Conditions d'accueil des animaux">
+              <Textarea
+                aria-label="Conditions d'accueil des animaux"
+                value={capacity.petPolicy.conditions}
+                rows={3}
+                onChange={(conditions) =>
+                  editor.replaceModule('capacityPolicies', {
+                    ...capacity,
+                    petPolicy: { ...capacity.petPolicy, conditions },
+                  })
+                }
+              />
+            </Field>
+          )}
+        </div>
+      </div>
     </Fs>
   );
 }

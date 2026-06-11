@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Field, Fs, Repeater, SortableList, Textarea, Toggle } from '../../primitives';
+import { Fs, Repeater, SortableList } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
@@ -253,46 +253,23 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 20 }}>
         Politiques d'accueil
       </div>
-      {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise).
-          petPolicy stays: this block is its SOLE editing surface (not duplicated in §07). */}
+      {/* §48 single-owner: group policy AND pet policy are edited in §07 only
+          (PO 2026-06-11 — accueil concerns belong to Capacité, for every type;
+          last-edit-wins trap otherwise). This note is the §06 pointer. */}
       <OwnedElsewhereNote
         num="07"
-        label="Capacité & cadre"
+        label="Capacité & contenance"
         summary={
-          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
-            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
-            : undefined
+          [
+            capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
+              ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
+              : null,
+            capacity.petPolicy.accepted ? 'Animaux acceptés' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined
         }
       />
-      <div className="grid-3">
-        <div>
-          <Toggle
-            label="Animaux acceptés"
-            on={capacity.petPolicy.accepted}
-            onChange={(accepted) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                petPolicy: { ...capacity.petPolicy, accepted },
-              })
-            }
-          />
-          {capacity.petPolicy.accepted && (
-            <Field label="Conditions d'accueil des animaux">
-              <Textarea
-                aria-label="Conditions d'accueil des animaux"
-                value={capacity.petPolicy.conditions}
-                rows={3}
-                onChange={(conditions) =>
-                  editor.replaceModule('capacityPolicies', {
-                    ...capacity,
-                    petPolicy: { ...capacity.petPolicy, conditions },
-                  })
-                }
-              />
-            </Field>
-          )}
-        </div>
-      </div>
 
       {/* §46 type-gated meetingRooms module — notice INSTEAD of controls when gated (independent of rooms) */}
       {meetingRooms.unavailableReason ? (

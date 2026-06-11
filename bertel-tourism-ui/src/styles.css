@@ -8543,10 +8543,11 @@ a {
 
 /* ==== CRM (§61, design v2 acteur-centré 2026-06-11) ====
    Porté du prototype crm.css (Temp/crm_design2) — UNIQUEMENT les classes
-   consommées par src/views/CrmPage.tsx et src/features/crm/*. Tout est scopé
-   sous .crm-app pour ne pas fuiter (.chip → .crm-chip, .btn → .crm-btn).
-   Tokens : réutilise --surface/--ink-*/--line*/--shadow-s du thème ; les
-   tokens absents du global (--r-md/--r-lg/--font-*) sont déclarés ici. */
+   consommées par src/views/CrmPage.tsx et src/features/crm.
+   Tout est scopé sous .crm-app pour ne pas fuiter (.chip → .crm-chip,
+   .btn → .crm-btn). Tokens : réutilise --surface, --ink-N, --line, --shadow-s
+   du thème ; les tokens absents du global (--r-md, --r-lg, --font-...)
+   sont déclarés ici. */
 
 .crm-app {
   /* Tokens absents de la feuille globale (même convention que .object-editor). */

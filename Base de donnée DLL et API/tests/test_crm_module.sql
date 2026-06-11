@@ -13,12 +13,13 @@
 BEGIN;
 DO $$
 DECLARE
-  v_orgA   text := 'ORGRUN9999990601';
-  v_orgB   text := 'ORGRUN9999990602';
-  v_objA   text := 'HOTRUN9999990611';
-  v_userA  uuid := '00000000-0000-4000-a000-0000000000f1'; -- membre ORG A, AVEC write_crm_notes
-  v_userB  uuid := '00000000-0000-4000-a000-0000000000f2'; -- membre ORG B (étranger à l'objet)
-  v_userC  uuid := '00000000-0000-4000-a000-0000000000f3'; -- membre ORG A, SANS permission
+  -- Plage de fixtures dédiée (08xx) : 06xx = test_object_review_read_gate, 07xx = test_media_visibility_gate.
+  v_orgA   text := 'ORGRUN9999990801';
+  v_orgB   text := 'ORGRUN9999990802';
+  v_objA   text := 'HOTRUN9999990811';
+  v_userA  uuid := '00000000-0000-4000-a000-000000000101'; -- membre ORG A, AVEC write_crm_notes
+  v_userB  uuid := '00000000-0000-4000-a000-000000000102'; -- membre ORG B (étranger à l'objet)
+  v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- membre ORG A, SANS permission
   v_pub_role uuid;
   v_perm uuid;
   v_payload jsonb;
@@ -102,17 +103,21 @@ BEGIN
     ASSERT v_task_id IS NOT NULL, 'save_crm_task: pas d''id retourné';
     v_payload := api.save_crm_task(jsonb_build_object('id', v_task_id, 'status', 'in_progress'));
     ASSERT (v_payload->>'id')::uuid = v_task_id, 'save_crm_task: move de lane échoué';
+    ASSERT (SELECT t->>'status' FROM jsonb_array_elements(api.list_crm_tasks()) AS t
+            WHERE (t->>'id')::uuid = v_task_id) = 'in_progress',
+           'save_crm_task: status non écrit (move de lane)';
 
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';
-    ASSERT jsonb_array_length(api.list_object_crm(v_objA)->'interactions') >= 1,
+    v_payload := api.list_object_crm(v_objA);
+    ASSERT jsonb_array_length(v_payload->'interactions') >= 1,
            'list_object_crm: interactions vides pour le membre';
-    ASSERT jsonb_array_length(api.list_object_crm(v_objA)->'topics') >= 1,
+    ASSERT jsonb_array_length(v_payload->'topics') >= 1,
            'list_object_crm: distribution sujets vide';
     -- topic/sentiment résolus par code (et pas perdus en route)
-    ASSERT api.list_object_crm(v_objA)->'interactions'->0->>'topic_code' = 'demande_de_visite',
+    ASSERT v_payload->'interactions'->0->>'topic_code' = 'demande_de_visite',
            'save_crm_interaction: topic_code non résolu/persisté';
-    ASSERT api.list_object_crm(v_objA)->'interactions'->0->>'sentiment_code' = 'positif',
+    ASSERT v_payload->'interactions'->0->>'sentiment_code' = 'positif',
            'save_crm_interaction: sentiment_code non résolu/persisté';
     -- Défense en profondeur : le PostgREST direct reste refusé même pour le membre.
     ASSERT (SELECT count(*) FROM crm_interaction WHERE object_id = v_objA) = 0,

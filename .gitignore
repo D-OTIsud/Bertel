@@ -80,3 +80,11 @@ db-graph-out/schema_tbls.json
 db-graph-out/catalog_extra.json
 db-graph-out/graph.html
 
+# tbls-generated per-table DB docs (16 MB, 678 files — fully regenerable from
+# tools/db-graph/.tbls.yml; the committed DB artifacts live in db-graph-out/)
+dbdoc/
+
+# Superpowers plan-session working notes (the durable outputs are the committed
+# plans + the decision log; these are per-session research scratch)
+docs/superpowers/plans/.research/
+

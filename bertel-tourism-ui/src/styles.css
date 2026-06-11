@@ -8484,8 +8484,8 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 0.625rem;
   min-height: 140px;
 }
-.dashboard-widget-state { color: var(--ink-3); font-size: 13px; }
-.dashboard-widget-state--error { color: #c85c48; }
+.dashboard-widget-state { color: var(--ink-3); font-size: 0.8rem; }
+.dashboard-widget-state--error { color: var(--destructive); }

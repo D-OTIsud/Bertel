@@ -3,7 +3,7 @@ import { WidgetFrame } from './WidgetFrame';
 
 describe('WidgetFrame', () => {
   it('affiche le chargement', () => {
-    render(<WidgetFrame isLoading error={null}><p>contenu</p></WidgetFrame>);
+    render(<WidgetFrame isPending error={null}><p>contenu</p></WidgetFrame>);
     expect(screen.getByRole('status')).toHaveTextContent('Chargement');
     expect(screen.queryByText('contenu')).not.toBeInTheDocument();
   });
@@ -11,7 +11,7 @@ describe('WidgetFrame', () => {
   it("affiche l'erreur avec bouton réessayer", () => {
     const onRetry = jest.fn();
     render(
-      <WidgetFrame isLoading={false} error={new Error('x')} onRetry={onRetry}>
+      <WidgetFrame isPending={false} error={new Error('x')} onRetry={onRetry}>
         <p>contenu</p>
       </WidgetFrame>,
     );
@@ -22,15 +22,25 @@ describe('WidgetFrame', () => {
 
   it("affiche l'état vide", () => {
     render(
-      <WidgetFrame isLoading={false} error={null} isEmpty emptyLabel="Rien ici.">
+      <WidgetFrame isPending={false} error={null} isEmpty emptyLabel="Rien ici.">
         <p>contenu</p>
       </WidgetFrame>,
     );
-    expect(screen.getByText('Rien ici.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Rien ici.');
   });
 
   it('affiche les enfants sinon', () => {
-    render(<WidgetFrame isLoading={false} error={null}><p>contenu</p></WidgetFrame>);
+    render(<WidgetFrame isPending={false} error={null}><p>contenu</p></WidgetFrame>);
     expect(screen.getByText('contenu')).toBeInTheDocument();
+  });
+
+  it("affiche l'erreur sans bouton quand onRetry absent", () => {
+    render(
+      <WidgetFrame isPending={false} error={new Error('x')}>
+        <p>contenu</p>
+      </WidgetFrame>,
+    );
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

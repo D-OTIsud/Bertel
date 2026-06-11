@@ -3,7 +3,11 @@
 import type { ReactNode } from 'react';
 
 interface WidgetFrameProps {
-  isLoading: boolean;
+  /**
+   * Pass q.isPending from useDashboardQuery — spinner on initial fetch only;
+   * background refetches intentionally keep showing stale data.
+   */
+  isPending: boolean;
   error: unknown;
   /** true quand la donnée est chargée mais vide pour les filtres courants. */
   isEmpty?: boolean;
@@ -17,14 +21,14 @@ interface WidgetFrameProps {
  * console.error — chaque widget montre explicitement chargement / erreur / vide.
  */
 export function WidgetFrame({
-  isLoading,
+  isPending,
   error,
   isEmpty = false,
   emptyLabel = 'Aucun objet ne correspond aux filtres.',
   onRetry,
   children,
 }: WidgetFrameProps) {
-  if (isLoading) {
+  if (isPending) {
     return (
       <article className="kpi-panel kpi-panel--state" role="status" aria-live="polite">
         <span className="dashboard-widget-state">Chargement…</span>
@@ -47,7 +51,7 @@ export function WidgetFrame({
   }
   if (isEmpty) {
     return (
-      <article className="kpi-panel kpi-panel--state">
+      <article className="kpi-panel kpi-panel--state" role="status" aria-live="polite">
         <span className="dashboard-widget-state">{emptyLabel}</span>
       </article>
     );

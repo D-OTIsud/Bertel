@@ -6,8 +6,9 @@ export interface UploadMediaInput {
 
 export interface UploadedMedia {
   url: string;
-  width: number;
-  height: number;
+  /** Pixel dimensions for images; null for videos (no server-side probe). */
+  width: number | null;
+  height: number | null;
   mimeType: string;
 }
 

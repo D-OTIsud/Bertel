@@ -4,12 +4,12 @@ import type {
 } from '../../../services/object-workspace-parser';
 
 /**
- * Types a user can CREATE from §05 Médias. Documents (brochure_pdf, plan, press_kit…)
- * are uploaded from their owning sections (menu → menus, certificats → labels…) and
- * only remain visible/metadata-editable here. 'video' joins once the upload pipeline
- * supports it.
+ * Types a user can CREATE from §05 Médias (priority order — new items default to
+ * the first available). Documents (brochure_pdf, plan, press_kit…) are uploaded
+ * from their owning sections (menu → menus, certificats → labels…) and only
+ * remain visible/metadata-editable here.
  */
-export const AUTHORABLE_MEDIA_TYPE_CODES: readonly string[] = ['photo'];
+export const AUTHORABLE_MEDIA_TYPE_CODES: readonly string[] = ['photo', 'video'];
 
 function draftId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -23,8 +23,11 @@ function reindexPositions(items: ObjectWorkspaceMediaItem[]): ObjectWorkspaceMed
 }
 
 export function createObjectMediaItem(media: ObjectWorkspaceMediaModule): ObjectWorkspaceMediaItem {
+  // Default by AUTHORABLE priority (photo first), not by catalog position.
   const firstType =
-    media.typeOptions.find((option) => AUTHORABLE_MEDIA_TYPE_CODES.includes(option.code)) ?? media.typeOptions[0];
+    AUTHORABLE_MEDIA_TYPE_CODES
+      .map((code) => media.typeOptions.find((option) => option.code === code))
+      .find(Boolean) ?? media.typeOptions[0];
   return {
     id: draftId('draft-media'),
     scope: 'object',

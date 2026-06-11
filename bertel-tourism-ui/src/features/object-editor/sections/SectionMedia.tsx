@@ -75,7 +75,7 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
     <Fs
       num="05"
       title="Médias"
-      sub="Photos (≥ 4 recommandées) — les documents (menus, certificats…) s'ajoutent depuis leurs sections"
+      sub="Photos (≥ 4 recommandées) et vidéos — les documents (menus, certificats…) s'ajoutent depuis leurs sections"
       folded={folded}
       pill={{ tone: pillTone, label: pillLabel }}
     >
@@ -109,7 +109,10 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
                 className={`cover-btn${item.isMain ? ' is-on' : ''}`}
                 aria-label={item.isMain ? 'Photo de couverture actuelle' : 'Définir comme photo de couverture'}
                 aria-pressed={item.isMain}
-                disabled={item.isMain}
+                // The cover feeds object.cached_main_image_url (the card image):
+                // a video can never be the cover (the cache pick is photo-shaped).
+                disabled={item.isMain || item.typeCode === 'video'}
+                title={item.typeCode === 'video' ? 'La photo de couverture doit être une photo' : undefined}
                 onClick={() => editor.replaceModule('media', patchObjectMediaItem(media, item.id, { isMain: true }))}
               >
                 <Star size={12} fill={item.isMain ? 'currentColor' : 'none'} />

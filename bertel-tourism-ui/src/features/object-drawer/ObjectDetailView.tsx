@@ -945,8 +945,12 @@ function HeroBlock({
           }}
         >
           {mainMedia?.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.description || mainMedia.title || data.name} />
+            mainMedia.typeCode === 'video' ? (
+              <video className="detail-hero__img" src={mainMedia.url} controls preload="metadata" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.description || mainMedia.title || data.name} />
+            )
           ) : (
             <div className="detail-hero__placeholder-art" aria-hidden="true" />
           )}
@@ -974,8 +978,12 @@ function HeroBlock({
                   aria-label={`Miniature ${slotIdx + 1} — ouvrir la photo ${slot.index + 1} dans la galerie`}
                 >
                   {slot.item.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={slot.item.url} alt="" className="detail-hero__thumb-img" />
+                    slot.item.typeCode === 'video' ? (
+                      <video src={slot.item.url} className="detail-hero__thumb-img" preload="metadata" muted />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={slot.item.url} alt="" className="detail-hero__thumb-img" />
+                    )
                   ) : null}
                   {showOverlay ? <span className="detail-hero__thumb-more">+{extrasOverlay}</span> : null}
                 </button>
@@ -1081,12 +1089,16 @@ function GalleryLightbox({
               goToNext();
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              className="detail-gallery-modal__image"
-              src={activeMedia.url}
-              alt={activeMedia.description || activeMedia.title || data.name}
-            />
+            {activeMedia.typeCode === 'video' ? (
+              <video className="detail-gallery-modal__image" src={activeMedia.url} controls preload="metadata" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="detail-gallery-modal__image"
+                src={activeMedia.url}
+                alt={activeMedia.description || activeMedia.title || data.name}
+              />
+            )}
             {total > 1 && (
               <>
                 <button
@@ -1123,8 +1135,12 @@ function GalleryLightbox({
                     onClick={() => onChange(index)}
                     aria-label={`Voir la photo ${index + 1} en grand`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.url} alt={item.description || item.title || `Photo ${index + 1}`} />
+                    {item.typeCode === 'video' ? (
+                      <video src={item.url} preload="metadata" muted />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.url} alt={item.description || item.title || `Photo ${index + 1}`} />
+                    )}
                   </button>
                 ))}
               </div>

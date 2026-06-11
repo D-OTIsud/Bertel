@@ -37,6 +37,18 @@ describe('MediaUploadField', () => {
     });
   });
 
+  it('restricts the file picker to video MIME types when kind is video', () => {
+    render(<MediaUploadField objectId="obj-1" accessToken="t" kind="video" onUploaded={jest.fn()} />);
+    const input = screen.getByLabelText(/Choisir un fichier/i) as HTMLInputElement;
+    expect(input.accept).toBe('video/mp4,video/webm,video/quicktime');
+  });
+
+  it('keeps the image MIME allow-list by default (photo)', () => {
+    render(<MediaUploadField objectId="obj-1" accessToken="t" onUploaded={jest.fn()} />);
+    const input = screen.getByLabelText(/Choisir un fichier/i) as HTMLInputElement;
+    expect(input.accept).toBe('image/jpeg,image/png,image/webp');
+  });
+
   it('shows an error message when the upload fails', async () => {
     (uploadMedia as jest.Mock).mockRejectedValueOnce(new Error('Unsupported MIME type: image/svg+xml'));
 

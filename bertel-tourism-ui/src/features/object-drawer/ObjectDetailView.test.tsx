@@ -681,6 +681,29 @@ describe('ObjectDetailView', () => {
     );
   });
 
+  it('renders a video media with a <video> element in the hero, never a broken <img>', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-video',
+      name: 'Hotel Horizon',
+      type: 'HOT',
+      raw: {
+        media: [
+          {
+            id: 'm-vid',
+            url: 'https://example.com/presentation.mp4',
+            title: 'Visite video',
+            type_code: 'video',
+            is_main: true,
+          },
+          { id: 'm-photo', url: 'https://example.com/second.jpg', title: 'Spa', type_code: 'photo' },
+        ],
+      },
+    };
+    renderDetail(data);
+    expect(document.querySelector('video.detail-hero__img')).not.toBeNull();
+    expect(document.querySelector('img.detail-hero__img')).toBeNull();
+  });
+
   it('uses the media description as the hero image alt text (fallback: title, then name)', () => {
     const data: ObjectDetail = {
       id: 'hotel-alt',

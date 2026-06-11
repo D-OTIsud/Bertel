@@ -75,6 +75,18 @@ describe('createObjectMediaItem', () => {
     expect(created.typeId).toBe('mt-photo');
     expect(AUTHORABLE_MEDIA_TYPE_CODES).toContain('photo');
   });
+
+  it('authorables include video, but photo stays the default even when video sits first in the catalog', () => {
+    expect(AUTHORABLE_MEDIA_TYPE_CODES).toContain('video');
+    const module: ObjectWorkspaceMediaModule = {
+      ...moduleWith([]),
+      typeOptions: [
+        { id: 'mt-video', code: 'video', label: 'Vidéo' },
+        { id: 'mt-photo', code: 'photo', label: 'Photo' },
+      ],
+    };
+    expect(createObjectMediaItem(module).typeCode).toBe('photo');
+  });
 });
 
 describe('removeObjectMediaItem', () => {

@@ -171,6 +171,22 @@ describe('MediaEditModal', () => {
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem).title).toBe('Menu du restaurant');
   });
 
+  it('previews a video item with a <video> element, never a broken <img>', () => {
+    const { container } = render(
+      <MediaEditModal
+        open
+        media={{ ...media, typeCode: 'video', typeLabel: 'Vidéo', url: 'https://x/presentation.mp4' }}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'video', label: 'Vidéo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={() => {}}
+      />,
+    );
+    expect(document.querySelector('video.ed-modal__preview')).not.toBeNull();
+    expect(document.querySelector('img.ed-modal__preview')).toBeNull();
+    void container;
+  });
+
   it('captures upload result (url, width, height) into the saved draft', async () => {
     const onSave = jest.fn();
     render(

@@ -65,6 +65,22 @@ describe('SectionMedia', () => {
     expect(items.find((m) => m.id === 'm1')?.isMain).toBe(false);
   });
 
+  it('disables the cover star on a video tile (the cover feeds the photo card image)', () => {
+    const modules = fullModulesFixture();
+    modules.media.objectItems = [
+      modules.media.objectItems[0],
+      {
+        ...modules.media.objectItems[0],
+        id: 'm-video', title: 'Visite vidéo', typeCode: 'video', typeLabel: 'Vidéo',
+        isMain: false, position: '1',
+      },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
+    const stars = screen.getAllByRole('button', { name: /photo de couverture/i });
+    expect(stars[1]).toBeDisabled();
+  });
+
   it('renders a drag handle per tile (position is a real public ordering)', () => {
     setup();
     expect(screen.getAllByRole('button', { name: /déplacer/i })).toHaveLength(1);

@@ -76,7 +76,9 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
       saveDisabled={!draft.url.trim()}
     >
       {typeIsAuthorable && draft.url && (
-        <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />
+        draft.typeCode === 'video'
+          ? <video className="ed-modal__preview" src={draft.url} controls preload="metadata" />
+          : <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />
       )}
       {typeIsAuthorable ? (
         <Field label="Type de média">
@@ -104,14 +106,16 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
         <MediaUploadField
           objectId={objectId}
           accessToken={accessToken}
+          kind={draft.typeCode === 'video' ? 'video' : 'photo'}
           onUploaded={(uploaded) => {
             // `uploaded.mimeType` is intentionally not persisted: the `media` table has no
-            // mime_type column today, and processImage always normalises to image/jpeg
-            // (which the bucket path's .jpg suffix already reflects).
+            // mime_type column today; the storage extension reflects the stored bytes.
+            // Videos come back without dimensions (null) — keep them empty, the DB
+            // dimension trigger only allows width/height on photo/video rows anyway.
             set({
               url: uploaded.url,
-              width: String(uploaded.width),
-              height: String(uploaded.height),
+              width: uploaded.width == null ? '' : String(uploaded.width),
+              height: uploaded.height == null ? '' : String(uploaded.height),
             });
           }}
         />

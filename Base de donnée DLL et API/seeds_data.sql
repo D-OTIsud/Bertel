@@ -318,20 +318,7 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('iti_practice','patrimoine', 'Découverte patrimoniale', 'Circuit patrimoine & culture')
 ON CONFLICT DO NOTHING;
 
--- Thématiques de demandes clients
-INSERT INTO ref_code (domain, code, name, description) VALUES
-('demand_topic','information','Information touristique','Demande d''information générale'),
-('demand_topic','reservation','Réservation','Demande de réservation ou disponibilité'),
-('demand_topic','groupe','Groupes','Organisation de groupes'),
-('demand_topic','evenement','Événementiel','Organisation ou participation à un événement'),
-('demand_topic','accessibilite','Accessibilité','Questions d''accessibilité et PMR'),
-('demand_topic','reclamation','Réclamation','Réclamation ou insatisfaction'),
-('demand_topic','presse','Presse / influence','Demande presse ou influenceurs'),
-('demand_topic','partenariat','Partenariat','Proposition de partenariat'),
-('demand_topic','marketing','Marketing','Campagnes marketing et promotion'),
-('demand_topic','logistique','Logistique','Transport, transferts, bagagerie'),
-('demand_topic','urgence','Urgence','Assistance urgente sur place')
-ON CONFLICT DO NOTHING;
+-- demand_topic : vocabulaire = les 20 sujets OTI (§58) ; les 11 codes génériques + 22 demand_subtopic ont été retirés (jamais référencés — voir migration_crm_module.sql).
 
 -- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
 
@@ -351,54 +338,29 @@ ON CONFLICT DO NOTHING;
 -- "Accompagnement Taxe de séjour" (casse canonique, 636 occ.).
 -- "Promotion  Explore" (double espace) normalisé sur "Promotion Explore".
 -- "Problème  juridique, Sirene" (double espace) normalisé sur "Problème juridique, Sirene".
--- Ce domaine est additif : demand_topic générique est conservé intact.
+-- Depuis §58 (migration_crm_module.sql, 8z) ces 20 sujets SONT le domaine demand_topic
+-- (partition ref_code_demand_topic, cible de la FK crm_interaction.demand_topic_id).
 INSERT INTO ref_code (domain, code, name, position) VALUES
- ('crm_demand_topic_oti','accompagnement_taxe_sejour',  'Accompagnement Taxe de séjour',      1),
- ('crm_demand_topic_oti','promotion_sit',               'Promotion SIT (reunion.fr)',           2),
- ('crm_demand_topic_oti','demande_signaletique',        'Demande signalétique',                3),
- ('crm_demand_topic_oti','promotion_explore',           'Promotion Explore',                   4),
- ('crm_demand_topic_oti','partenaire_b2c',              'Partenaire d''une action B To C',     5),
- ('crm_demand_topic_oti','promotion_facebook',          'Promotion Facebook',                  6),
- ('crm_demand_topic_oti','fermeture_definitive',        'Fermeture définitive',                7),
- ('crm_demand_topic_oti','labels_classements_etoiles',  'Labels et classements étoiles',       8),
- ('crm_demand_topic_oti','autres',                      'Autres',                              9),
- ('crm_demand_topic_oti','modification_infos_bdd',      'Modification infos BDD',              10),
- ('crm_demand_topic_oti','fermeture_provisoire',        'Fermeture provisoire',                11),
- ('crm_demand_topic_oti','porteur_de_projet',           'Porteur de projet(s)',                12),
- ('crm_demand_topic_oti','demande_de_visite',           'Demande de visite',                   13),
- ('crm_demand_topic_oti','participants_atelier_presta', 'Participants d''un atelier presta',   14),
- ('crm_demand_topic_oti','ousaile',                     'Ousailé',                             15),
- ('crm_demand_topic_oti','demande_attestation_oti',     'Demande d''attestation OTI',          16),
- ('crm_demand_topic_oti','probleme_juridique_sirene',   'Problème juridique, Sirene',          17),
- ('crm_demand_topic_oti','plainte_client',              'Plainte client',                      18),
- ('crm_demand_topic_oti','boutique',                    'Boutique',                            19),
- ('crm_demand_topic_oti','dispositifs_financiers',      'Dispositifs financiers',              20)
-ON CONFLICT DO NOTHING;
-
--- Sous-thématiques détaillées
-INSERT INTO ref_code (domain, code, name, description) VALUES
-('demand_subtopic','information_hebergement','Hébergement', 'Infos hébergement (topic information)'),
-('demand_subtopic','information_restaurants','Restauration', 'Infos restauration (topic information)'),
-('demand_subtopic','information_activites','Activités', 'Infos activités & loisirs (topic information)'),
-('demand_subtopic','reservation_directe','Réservation directe', 'Demande de réservation directe (topic reservation)'),
-('demand_subtopic','reservation_agence','Agence / OTA', 'Réservation via agence (topic reservation)'),
-('demand_subtopic','groupe_scolaire','Groupe scolaire', 'Accueil groupes scolaires (topic groupe)'),
-('demand_subtopic','groupe_affaires','Séminaire / affaires', 'Groupes affaires (topic groupe)'),
-('demand_subtopic','evenement_prive','Événement privé', 'Mariage, baptême... (topic evenement)'),
-('demand_subtopic','evenement_corporate','Événement corporate', 'Séminaire, incentive (topic evenement)'),
-('demand_subtopic','accessibilite_moteur','Mobilité réduite', 'Accessibilité PMR (topic accessibilite)'),
-('demand_subtopic','accessibilite_sensoriel','Handicap sensoriel', 'Accessibilité sensorielle (topic accessibilite)'),
-('demand_subtopic','reclamation_service','Service', 'Plainte sur la qualité de service (topic reclamation)'),
-('demand_subtopic','reclamation_facturation','Facturation', 'Problème de facturation (topic reclamation)'),
-('demand_subtopic','presse_reportage','Reportage', 'Demande de reportage presse (topic presse)'),
-('demand_subtopic','presse_influence','Influenceur', 'Collaboration influenceur (topic presse)'),
-('demand_subtopic','partenariat_office','Partenariat institutionnel', 'Partenariat office de tourisme (topic partenariat)'),
-('demand_subtopic','marketing_package','Package / offre', 'Création d''offre marketing (topic marketing)'),
-('demand_subtopic','marketing_contenu','Contenu', 'Demande de visuels, textes (topic marketing)'),
-('demand_subtopic','logistique_transport','Transport', 'Navette, transfert (topic logistique)'),
-('demand_subtopic','logistique_bagagerie','Bagagerie', 'Gestion des bagages (topic logistique)'),
-('demand_subtopic','urgence_perte','Objet perdu', 'Perte de document ou objet (topic urgence)'),
-('demand_subtopic','urgence_sante','Urgence santé', 'Assistance médicale (topic urgence)')
+ ('demand_topic','accompagnement_taxe_sejour',  'Accompagnement Taxe de séjour',      1),
+ ('demand_topic','promotion_sit',               'Promotion SIT (reunion.fr)',           2),
+ ('demand_topic','demande_signaletique',        'Demande signalétique',                3),
+ ('demand_topic','promotion_explore',           'Promotion Explore',                   4),
+ ('demand_topic','partenaire_b2c',              'Partenaire d''une action B To C',     5),
+ ('demand_topic','promotion_facebook',          'Promotion Facebook',                  6),
+ ('demand_topic','fermeture_definitive',        'Fermeture définitive',                7),
+ ('demand_topic','labels_classements_etoiles',  'Labels et classements étoiles',       8),
+ ('demand_topic','autres',                      'Autres',                              9),
+ ('demand_topic','modification_infos_bdd',      'Modification infos BDD',              10),
+ ('demand_topic','fermeture_provisoire',        'Fermeture provisoire',                11),
+ ('demand_topic','porteur_de_projet',           'Porteur de projet(s)',                12),
+ ('demand_topic','demande_de_visite',           'Demande de visite',                   13),
+ ('demand_topic','participants_atelier_presta', 'Participants d''un atelier presta',   14),
+ ('demand_topic','ousaile',                     'Ousailé',                             15),
+ ('demand_topic','demande_attestation_oti',     'Demande d''attestation OTI',          16),
+ ('demand_topic','probleme_juridique_sirene',   'Problème juridique, Sirene',          17),
+ ('demand_topic','plainte_client',              'Plainte client',                      18),
+ ('demand_topic','boutique',                    'Boutique',                            19),
+ ('demand_topic','dispositifs_financiers',      'Dispositifs financiers',              20)
 ON CONFLICT DO NOTHING;
 
 -- Ambiances recherchées (mood)
@@ -1423,42 +1385,12 @@ SET name_i18n = COALESCE(rc.name_i18n, '{}'::jsonb) || jsonb_build_object('en', 
 FROM ref_code_translations rct
 WHERE rc.domain = rct.domain AND rc.code = rct.code;
 
--- ref_code translations (CRM topics, moods, cuisines, menus)
+-- ref_code translations (moods, cuisines, menus)
+-- NOTE §58 : les traductions des 11 demand_topic génériques + 22 demand_subtopic ont été
+-- retirées avec leurs seeds (codes supprimés — voir migration_crm_module.sql) ; les 20
+-- sujets OTI du domaine demand_topic n'ont pas de traduction en/es (vocabulaire interne FR).
 WITH ref_code_translations(domain, code, name_en, name_es, description_en, description_es) AS (
   VALUES
-    ('demand_topic','information','Tourist information','Información turística','General information request','Solicitud de información general'),
-    ('demand_topic','reservation','Reservation','Reserva','Availability or booking request','Solicitud de reserva o disponibilidad'),
-    ('demand_topic','groupe','Groups','Grupos','Group organisation request','Solicitud para organización de grupos'),
-    ('demand_topic','evenement','Events','Eventos','Event organisation or participation','Organización o participación en un evento'),
-    ('demand_topic','accessibilite','Accessibility','Accesibilidad','Accessibility and reduced mobility questions','Preguntas sobre accesibilidad y PMR'),
-    ('demand_topic','reclamation','Complaint','Reclamación','Complaint or dissatisfaction','Reclamación o insatisfacción'),
-    ('demand_topic','presse','Press / influencer','Prensa / influencia','Press or influencer request','Solicitud de prensa o influencers'),
-    ('demand_topic','partenariat','Partnership','Colaboración','Partnership proposal','Propuesta de colaboración'),
-    ('demand_topic','marketing','Marketing','Marketing','Marketing and promotion campaigns','Campañas de marketing y promoción'),
-    ('demand_topic','logistique','Logistics','Logística','Transport, transfers, luggage','Transporte, traslados, equipaje'),
-    ('demand_topic','urgence','Emergency','Urgencia','On-site urgent assistance','Asistencia urgente in situ'),
-    ('demand_subtopic','information_hebergement','Accommodation information','Información de alojamiento','Accommodation details (topic information)','Información sobre alojamiento (tema información)'),
-    ('demand_subtopic','information_restaurants','Dining information','Información de restauración','Restaurant information (topic information)','Información sobre restauración (tema información)'),
-    ('demand_subtopic','information_activites','Activities information','Información de actividades','Activities & leisure information (topic information)','Información sobre actividades y ocio (tema información)'),
-    ('demand_subtopic','reservation_directe','Direct reservation','Reserva directa','Direct reservation request (topic reservation)','Solicitud de reserva directa (tema reserva)'),
-    ('demand_subtopic','reservation_agence','Agency / OTA','Agencia / OTA','Reservation via agency (topic reservation)','Reserva vía agencia (tema reserva)'),
-    ('demand_subtopic','groupe_scolaire','School group','Grupo escolar','School group request (topic group)','Solicitud de grupo escolar (tema grupo)'),
-    ('demand_subtopic','groupe_affaires','Business seminar','Seminario empresarial','Business group request (topic group)','Solicitud de grupo empresarial (tema grupo)'),
-    ('demand_subtopic','evenement_prive','Private event','Evento privado','Private event (topic event)','Evento privado (tema evento)'),
-    ('demand_subtopic','evenement_corporate','Corporate event','Evento corporativo','Corporate event (topic event)','Evento corporativo (tema evento)'),
-    ('demand_subtopic','accessibilite_moteur','Mobility','Movilidad reducida','Mobility accessibility (topic accessibility)','Accesibilidad motriz (tema accesibilidad)'),
-    ('demand_subtopic','accessibilite_sensoriel','Sensory','Sensorial','Sensory accessibility (topic accessibility)','Accesibilidad sensorial (tema accesibilidad)'),
-    ('demand_subtopic','reclamation_service','Service quality','Servicio','Service quality complaint (topic complaint)','Queja sobre el servicio (tema reclamación)'),
-    ('demand_subtopic','reclamation_facturation','Billing','Facturación','Billing issue (topic complaint)','Problema de facturación (tema reclamación)'),
-    ('demand_subtopic','presse_reportage','Press reportage','Reportaje de prensa','Press reportage request (topic press)','Solicitud de reportaje de prensa (tema prensa)'),
-    ('demand_subtopic','presse_influence','Influencer collaboration','Colaboración influencer','Influencer collaboration (topic press)','Colaboración con influencer (tema prensa)'),
-    ('demand_subtopic','partenariat_office','Institutional partnership','Partenariado institucional','Tourist office partnership (topic partnership)','Colaboración con oficina de turismo (tema colaboración)'),
-    ('demand_subtopic','marketing_package','Marketing package','Paquete de marketing','Marketing offer creation (topic marketing)','Creación de oferta de marketing (tema marketing)'),
-    ('demand_subtopic','marketing_contenu','Content request','Solicitud de contenido','Visuals or copy request (topic marketing)','Solicitud de recursos gráficos o textos (tema marketing)'),
-    ('demand_subtopic','logistique_transport','Transport','Transporte','Shuttle or transfer (topic logistics)','Transporte o traslado (tema logística)'),
-    ('demand_subtopic','logistique_bagagerie','Luggage','Equipaje','Luggage handling (topic logistics)','Gestión de equipaje (tema logística)'),
-    ('demand_subtopic','urgence_perte','Lost item','Objeto perdido','Lost item assistance (topic emergency)','Asistencia por objeto perdido (tema urgencia)'),
-    ('demand_subtopic','urgence_sante','Health emergency','Urgencia sanitaria','Medical assistance (topic emergency)','Asistencia médica (tema urgencia)'),
     ('mood','detente','Relaxation','Relajación','Relaxation and wellness ambiance','Ambiente de relajación y bienestar'),
     ('mood','aventure','Adventure','Aventura','Adventure and thrills ambiance','Ambiente de aventura y sensaciones'),
     ('mood','romantique','Romantic','Romántico','Romantic ambiance','Ambiente romántico'),

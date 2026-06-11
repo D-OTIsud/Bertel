@@ -8477,3 +8477,15 @@ a {
   font-size: 0.75rem;
   color: var(--ink-3);
 }
+
+/* ── Dashboard — états de widget (WidgetFrame) ─────────────────────────────── */
+.kpi-panel--state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 140px;
+}
+.dashboard-widget-state { color: var(--ink-3); font-size: 13px; }
+.dashboard-widget-state--error { color: #c85c48; }

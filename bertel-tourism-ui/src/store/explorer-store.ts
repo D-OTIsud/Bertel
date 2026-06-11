@@ -29,6 +29,7 @@ interface ExplorerState extends ExplorerFilters {
   toggleSustainabilityAction: (code: string) => void;
   setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
+  setRankedLabelScheme: (schemeCode: string | null) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
   /**
@@ -197,6 +198,13 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
     })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
   setOpenNow: (value) => set((state) => ({ common: { ...state.common, openNow: value } })),
+  setRankedLabelScheme: (schemeCode) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        rankedLabelSchemeCode: String(schemeCode ?? '').trim() || null,
+      },
+    })),
   toggleLabel: (label) =>
     set((state) => {
       const needle = String(label).trim();

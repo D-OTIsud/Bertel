@@ -1390,13 +1390,13 @@ The `api` schema exposes all data through PostgreSQL RPC functions, SECURITY DEF
 
 | Function | Purpose | Key parameters |
 |----------|---------|----------------|
-| `api.list_object_resources_filtered_page()` | Primary explorer endpoint. Paginated, filterable list of object cards with geo, media, and capacity data. Delegates candidate resolution to `api.get_filtered_object_ids()`. | `p_cursor`, `p_lang_prefs[]`, `p_page_size`, `p_filters` (JSONB), `p_types[]`, `p_status[]`, `p_search`, `p_track_format`, `p_include_stages`, `p_stage_color`, `p_view` |
+| `api.list_object_resources_filtered_page()` | Primary explorer/search endpoint. Paginated, filterable list of object cards with geo, media, capacity data, and ranked-label metadata when requested. Delegates candidate resolution to `api.get_filtered_object_ids()`. | `p_cursor`, `p_lang_prefs[]`, `p_page_size`, `p_filters` (JSONB), `p_types[]`, `p_status[]`, `p_search`, `p_track_format`, `p_include_stages`, `p_stage_color`, `p_view` |
 | `api.get_object_resource()` | Single object detail with block-composed payload sections (base, location, descriptions, contacts, media, pricing, legal, itinerary, render). | `p_object_id`, `p_lang_prefs[]`, `p_track_format`, `p_options` (JSONB: field/include shaping, org override, render/private toggles) |
 | `api.get_object_with_deep_data()` | Single object with relational graph: parent objects, actors (with contacts), organizations (with contacts). | `p_object_id`, `p_languages[]`, `p_options` |
 | `api.get_objects_with_deep_data()` | Batch version (up to 100 IDs). | `p_object_ids[]`, `p_languages[]`, `p_include_media`, `p_filters` |
 | `api.get_objects_by_type_with_deep_data()` | Paginated deep data by type. | `p_object_type`, `p_languages[]`, `p_include_media`, `p_filters`, `p_limit`, `p_offset` |
 | `api.search_objects_with_deep_data()` | Full-text search with deep data. | `p_search_term`, `p_object_types[]`, `p_languages[]`, `p_include_media`, `p_filters`, `p_limit`, `p_offset` |
-| `api.search_objects_by_label()` | Search by classification value UUID, optionally including partial evidence derived from linked sustainability actions. | `p_label_value_id`, `p_include_partial`, `p_lang_prefs[]`, `p_limit`, `p_offset` |
+| `api.search_objects_by_label()` | Compatibility/specialized search by classification value UUID. Prefer `api.list_object_resources_filtered_page()` with `p_filters.label_scheme_ranked` for Explorer/search. Partial matches are sustainability-only and derive from equivalence/action-label mappings. | `p_label_value_id`, `p_include_partial`, `p_lang_prefs[]`, `p_limit`, `p_offset` |
 | `api.list_objects_map_view()` | Map-optimized JSON surface returning `{ total, objects }`, where each object is built by `api.get_object_map_item()`. Spatial filters live inside `p_filters`, not top-level bbox args. | `p_types[]`, `p_status[]`, `p_filters`, `p_lang_prefs[]`, `p_limit`, `p_offset` |
 | `api.list_objects_with_validated_changes_since()` | Objects with applied pending changes since a date. | `p_since` |
 
@@ -1800,7 +1800,7 @@ The two layers are **not 1:1**: one section can drive several modules (notably t
 | `tags_any` | `TEXT[]` | Matches object tags by `ref_tag.slug`, not by a legacy tag code field. |
 | `pet_accepted` | `BOOLEAN` | Filters on `object_pet_policy.accepted`. |
 | `open_now` | `BOOLEAN` | Uses `object.cached_is_open_now`; current implementation only has meaningful effect for `true`. |
-| `label_scheme_ranked` | `TEXT` | Requested classification scheme code for ranked admission. Exact granted classification is rank 0; equivalent evidence can be admitted as rank 1. |
+| `label_scheme_ranked` | `TEXT` | Requested classification scheme code for ranked admission. Exact granted classification is rank 0; evidence-only matches are rank 1. Cards include `label_match` metadata when this filter is present. |
 | `disability_types_any` | `TEXT[]` | Amenity-derived accessibility match using canonical disability types such as `motor`, `hearing`, `visual`, `cognitive`. |
 | `label_disability_types_any` | `TEXT[]` | Label-derived accessibility match using `LBL_TOURISME_HANDICAP` `subvalue_ids`. |
 | `sustainability_any` | `BOOLEAN` | Requires at least one declared sustainability action or granted sustainability label. |
@@ -1813,6 +1813,8 @@ The two layers are **not 1:1**: one section can drive several modules (notably t
 | `bbox` | `[minLon, minLat, maxLon, maxLat]` | Main-location bounding-box filter. |
 
 > **Important:** `p_search`, `p_types`, and `p_status` remain first-class parameters of `api.get_filtered_object_ids()`. The table above covers only the JSON filter object.
+
+> **Ranked label search:** `api.list_object_resources_filtered_page()` is the preferred public surface. Send `p_filters.label_scheme_ranked = "LBL_TOURISME_HANDICAP"`, `"LBL_CLEF_VERTE"`, `"LBL_ECO_LABEL_UE"`, etc. Results are ordered with all rank 0 certified/granted labels first, then rank 1 evidence-only matches. Each returned card/resource carries `label_match: { scheme_code, rank, source, evidence_count }`; `source = "certified_label"` for rank 0, `"accessibility_amenity"` for Tourisme & Handicap amenity evidence, and `"sustainability_action"` for sustainability action/group evidence. For T&H family chips, send both `label_disability_types_any` and `disability_types_any`; the ranked predicate combines certified subfamilies OR compatible amenities.
 
 ---
 

@@ -131,6 +131,7 @@ export interface ExplorerCommonFilters {
   petsAccepted: boolean;
   openNow: boolean;
   labelsAny: string[];
+  rankedLabelSchemeCode: string | null;
   /**
    * Active publication-status filter sent to api.list_object_resources_filtered_page
    * as p_status. An empty array means "use the server default" (= published only),
@@ -182,6 +183,7 @@ export interface ObjectCard {
   open_now?: boolean | null;
   description?: string | null;
   labels?: string[];
+  label_match?: ObjectCardLabelMatch | null;
   tags?: ObjectCardTag[];
   badges?: ObjectCardBadge[];
   taxonomy?: ObjectCardTaxonomy[];
@@ -199,6 +201,13 @@ export interface ObjectCard {
 }
 
 export type MapObject = ObjectCard;
+
+export interface ObjectCardLabelMatch {
+  scheme_code: string;
+  rank: 0 | 1;
+  source: 'certified_label' | 'accessibility_amenity' | 'sustainability_action' | string;
+  evidence_count: number;
+}
 
 export interface ExplorerFilters {
   selectedBuckets: ExplorerBucketKey[];
@@ -236,6 +245,7 @@ export interface ExplorerReferences {
   accessibilityDisabilityTypes: ExplorerReferenceOption[];
   accessibilityAmenities: AccessibilityAmenityRef[];
   sustainabilityCategories: SustainabilityCategoryRef[];
+  rankedLabelSchemes: ExplorerReferenceOption[];
   hotTaxonomy: ExplorerTaxonomyDomain[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];

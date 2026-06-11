@@ -8,6 +8,7 @@ import {
   hasServerOnlyFilters,
   normalizeExplorerObjectType,
   normalizeExplorerFilters,
+  sortExplorerCards,
 } from './facets';
 
 describe('normalizeExplorerFilters', () => {
@@ -23,6 +24,7 @@ describe('normalizeExplorerFilters', () => {
     expect(normalized.common.accessibilityAmenityCodesAny).toEqual([]);
     expect(normalized.common.sustainabilityCategoryCodesAny).toEqual([]);
     expect(normalized.common.sustainabilityActionCodesAny).toEqual([]);
+    expect(normalized.common.rankedLabelSchemeCode).toBeNull();
   });
 });
 
@@ -228,6 +230,19 @@ describe('hasServerOnlyFilters', () => {
     ).toBe(true);
   });
 
+  it('detects ranked label search', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it('detects HOT taxonomy, capacity, and meeting room', () => {
     expect(
       hasServerOnlyFilters(
@@ -346,5 +361,56 @@ describe('buildBucketRpcFilters', () => {
       sustainability_categories_any: ['CAT_WASTE'],
       sustainability_actions_any: ['MA_SORTING_BINS'],
     });
+  });
+
+  it('sends ranked label scheme searches to the Explorer RPC', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_CLEF_VERTE',
+    });
+  });
+
+  it('sends both certified and equipment family filters for ranked Tourisme & Handicap', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        rankedLabelSchemeCode: 'LBL_TOURISME_HANDICAP',
+        accessibilityDisabilityTypesAny: ['motor', 'visual'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_TOURISME_HANDICAP',
+      label_disability_types_any: ['motor', 'visual'],
+      disability_types_any: ['motor', 'visual'],
+    });
+  });
+});
+
+describe('sortExplorerCards', () => {
+  it('keeps certified ranked label results ahead of evidence-only results', () => {
+    const cards = [
+      makeCard({
+        id: 'evidence',
+        type: 'HOT',
+        name: 'A evidence',
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 1, source: 'sustainability_action', evidence_count: 2 },
+      }),
+      makeCard({
+        id: 'certified',
+        type: 'HOT',
+        name: 'Z certified',
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 },
+      }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['certified', 'evidence']);
   });
 });

@@ -901,6 +901,7 @@ $$;
 --   0 = exact granted classification match on label_scheme_ranked scheme
 --   1 = equivalent evidence (sustainability action link or accessibility amenity)
 --   Always 0 when label_scheme_ranked filter is absent.
+--   label_match carries the per-card proof metadata when label_scheme_ranked is present.
 -- =====================================================
 DROP FUNCTION IF EXISTS api.get_filtered_object_ids(jsonb, object_type[], object_status[], text);
 CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
@@ -909,7 +910,7 @@ CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
   p_status object_status[],
   p_search TEXT DEFAULT NULL
 )
-RETURNS TABLE(object_id TEXT, label_rank INTEGER)
+RETURNS TABLE(object_id TEXT, label_rank INTEGER, label_match JSONB)
 LANGUAGE sql
 STABLE
 -- SECURITY DEFINER: required because this function accesses internal.mv_filtered_objects
@@ -1163,17 +1164,104 @@ AS $$
     -- Only meaningful when label_scheme_ranked filter is present; always 0 otherwise.
     CASE
       WHEN NOT (params.filters ? 'label_scheme_ranked') THEN 0
-      WHEN EXISTS (
-        SELECT 1 FROM object_classification oc
-        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
-        WHERE oc.object_id = src.object_id
-          AND cs.code = params.filters->>'label_scheme_ranked'
-          AND oc.status = 'granted'
-      ) THEN 0
+      WHEN exact_label.evidence_count > 0 THEN 0
       ELSE 1
-    END AS label_rank
+    END AS label_rank,
+    CASE
+      WHEN NOT (params.filters ? 'label_scheme_ranked') THEN NULL::jsonb
+      WHEN exact_label.evidence_count > 0 THEN jsonb_build_object(
+        'scheme_code', params.filters->>'label_scheme_ranked',
+        'rank', 0,
+        'source', 'certified_label',
+        'evidence_count', exact_label.evidence_count
+      )
+      WHEN accessibility_evidence.evidence_count > 0 THEN jsonb_build_object(
+        'scheme_code', params.filters->>'label_scheme_ranked',
+        'rank', 1,
+        'source', 'accessibility_amenity',
+        'evidence_count', accessibility_evidence.evidence_count
+      )
+      WHEN sustainability_evidence.evidence_count > 0 THEN jsonb_build_object(
+        'scheme_code', params.filters->>'label_scheme_ranked',
+        'rank', 1,
+        'source', 'sustainability_action',
+        'evidence_count', sustainability_evidence.evidence_count
+      )
+      ELSE NULL::jsonb
+    END AS label_match
   FROM source_rows src
   CROSS JOIN params
+  LEFT JOIN LATERAL (
+    SELECT COUNT(DISTINCT oc.id)::integer AS evidence_count
+    FROM object_classification oc
+    JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+    WHERE (params.filters ? 'label_scheme_ranked')
+      AND oc.object_id = src.object_id
+      AND cs.code = params.filters->>'label_scheme_ranked'
+      AND oc.status = 'granted'
+      AND (
+        (params.filters->>'label_scheme_ranked') <> 'LBL_TOURISME_HANDICAP'
+        OR COALESCE(params.label_disability_types_any, params.disability_types_any) IS NULL
+        OR cardinality(COALESCE(params.label_disability_types_any, params.disability_types_any)) = 0
+        OR EXISTS (
+          SELECT 1
+          FROM unnest(COALESCE(oc.subvalue_ids, ARRAY[]::uuid[])) AS sv(uid)
+          JOIN ref_classification_value cv ON cv.id = sv.uid
+          WHERE cv.metadata->>'disability_type' = ANY(COALESCE(params.label_disability_types_any, params.disability_types_any))
+        )
+      )
+  ) exact_label ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT COUNT(DISTINCT osa.action_id)::integer AS evidence_count
+    FROM object_sustainability_action osa
+    JOIN ref_sustainability_action rsa ON rsa.id = osa.action_id
+    JOIN ref_classification_scheme cs ON cs.code = params.filters->>'label_scheme_ranked'
+    WHERE (params.filters ? 'label_scheme_ranked')
+      AND params.filters->>'label_scheme_ranked' <> 'LBL_TOURISME_HANDICAP'
+      AND osa.object_id = src.object_id
+      AND (
+        EXISTS (
+          SELECT 1
+          FROM ref_classification_equivalent_action rcea
+          WHERE rcea.scheme_id = cs.id
+            AND rcea.action_id = osa.action_id
+            AND rcea.match_scope IN ('search_expansion', 'both')
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM ref_classification_equivalent_group rceg
+          WHERE rceg.scheme_id = cs.id
+            AND rceg.group_id = rsa.group_id
+            AND rceg.match_scope IN ('search_expansion', 'both')
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM object_sustainability_action_label osal
+          JOIN object_classification oc2 ON oc2.id = osal.object_classification_id
+          WHERE osal.object_sustainability_action_id = osa.id
+            AND oc2.scheme_id = cs.id
+        )
+      )
+  ) sustainability_evidence ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT COUNT(DISTINCT oa.amenity_id)::integer AS evidence_count
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+    WHERE (params.filters ? 'label_scheme_ranked')
+      AND params.filters->>'label_scheme_ranked' = 'LBL_TOURISME_HANDICAP'
+      AND oa.object_id = src.object_id
+      AND fam.code = 'accessibility'
+      AND (
+        COALESCE(params.disability_types_any, params.label_disability_types_any) IS NULL
+        OR cardinality(COALESCE(params.disability_types_any, params.label_disability_types_any)) = 0
+        OR EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements_text(COALESCE(ra.extra->'disability_types', '[]'::jsonb)) AS dt(val)
+          WHERE dt.val = ANY(COALESCE(params.disability_types_any, params.label_disability_types_any))
+        )
+      )
+  ) accessibility_evidence ON TRUE
   WHERE (p_types IS NULL OR src.object_type = ANY(p_types))
     AND (p_status IS NULL OR src.status = ANY(p_status))
     AND (NOT (params.filters ? 'commercial_visibility') OR src.commercial_visibility = (params.filters->>'commercial_visibility'))
@@ -1206,32 +1294,42 @@ AS $$
     -- disability_types_any: retourne les objets avec ≥1 amenity acc_* dont extra.disability_types
     -- contient au moins une des valeurs demandées. Tableau vide → aucun effet (cardinality guard).
     -- Bypasse le MV (use_mv = FALSE) car ref_amenity.extra n'est pas dans cached_amenity_codes.
-    AND (params.disability_types_any IS NULL OR cardinality(params.disability_types_any) = 0 OR EXISTS (
-      SELECT 1
-      FROM object_amenity oa
-      JOIN ref_amenity ra ON ra.id = oa.amenity_id
-      CROSS JOIN LATERAL jsonb_array_elements_text(
-        COALESCE(ra.extra->'disability_types', '[]'::jsonb)
-      ) AS dt(val)
-      WHERE oa.object_id = src.object_id
-        AND ra.code LIKE 'acc_%'
-        AND dt.val = ANY(params.disability_types_any)
-    ))
+    AND (
+      params.disability_types_any IS NULL
+      OR cardinality(params.disability_types_any) = 0
+      OR params.filters->>'label_scheme_ranked' = 'LBL_TOURISME_HANDICAP'
+      OR EXISTS (
+        SELECT 1
+        FROM object_amenity oa
+        JOIN ref_amenity ra ON ra.id = oa.amenity_id
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+          COALESCE(ra.extra->'disability_types', '[]'::jsonb)
+        ) AS dt(val)
+        WHERE oa.object_id = src.object_id
+          AND ra.code LIKE 'acc_%'
+          AND dt.val = ANY(params.disability_types_any)
+      )
+    )
     -- label_disability_types_any: retourne les objets avec un grant LBL_TOURISME_HANDICAP explicite
     -- dont les subvalue_ids contiennent ≥1 type demandé (via ref_classification_value.metadata->>'disability_type').
     -- Ne déduit pas depuis les amenities — requiert uniquement le label certifié avec subvalue_ids renseignés.
     -- Tableau vide → aucun effet. Bypasse le MV (use_mv = FALSE).
-    AND (params.label_disability_types_any IS NULL OR cardinality(params.label_disability_types_any) = 0 OR EXISTS (
-      SELECT 1
-      FROM object_classification oc
-      JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
-      CROSS JOIN LATERAL unnest(oc.subvalue_ids) AS sv(uid)
-      JOIN ref_classification_value cv ON cv.id = sv.uid
-      WHERE oc.object_id = src.object_id
-        AND cs.code = 'LBL_TOURISME_HANDICAP'
-        AND oc.status = 'granted'
-        AND cv.metadata->>'disability_type' = ANY(params.label_disability_types_any)
-    ))
+    AND (
+      params.label_disability_types_any IS NULL
+      OR cardinality(params.label_disability_types_any) = 0
+      OR params.filters->>'label_scheme_ranked' = 'LBL_TOURISME_HANDICAP'
+      OR EXISTS (
+        SELECT 1
+        FROM object_classification oc
+        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+        CROSS JOIN LATERAL unnest(oc.subvalue_ids) AS sv(uid)
+        JOIN ref_classification_value cv ON cv.id = sv.uid
+        WHERE oc.object_id = src.object_id
+          AND cs.code = 'LBL_TOURISME_HANDICAP'
+          AND oc.status = 'granted'
+          AND cv.metadata->>'disability_type' = ANY(params.label_disability_types_any)
+      )
+    )
     AND (NOT COALESCE((params.filters->>'sustainability_any')::boolean, FALSE) OR (
       EXISTS (
         SELECT 1
@@ -1388,33 +1486,12 @@ AS $$
     ))
     AND (NOT (params.filters ? 'open_now') OR src.cached_is_open_now = TRUE)
     -- label_scheme_ranked: admit rank-0 (exact granted classification) and rank-1 (equivalent evidence).
-    -- rank-1a: any sustainability action whose label bridges to the requested scheme.
+    -- rank-1a: sustainability actions/groups mapped through ref_classification_equivalent_*.
     -- rank-1b: accessibility amenity family evidence (LBL_TOURISME_HANDICAP only).
     AND (NOT (params.filters ? 'label_scheme_ranked') OR (
-      EXISTS (
-        SELECT 1 FROM object_classification oc
-        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
-        WHERE oc.object_id = src.object_id
-          AND cs.code = params.filters->>'label_scheme_ranked'
-          AND oc.status = 'granted'
-      )
-      OR EXISTS (
-        SELECT 1 FROM object_sustainability_action osa
-        JOIN object_sustainability_action_label osal ON osal.object_sustainability_action_id = osa.id
-        JOIN object_classification oc2 ON oc2.id = osal.object_classification_id
-        JOIN ref_classification_scheme cs2 ON cs2.id = oc2.scheme_id
-        WHERE osa.object_id = src.object_id
-          AND cs2.code = params.filters->>'label_scheme_ranked'
-      )
-      OR (
-        (params.filters->>'label_scheme_ranked') = 'LBL_TOURISME_HANDICAP'
-        AND EXISTS (
-          SELECT 1 FROM object_amenity oa
-          JOIN ref_amenity ra ON ra.id = oa.amenity_id
-          JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
-          WHERE oa.object_id = src.object_id AND fam.code = 'accessibility' -- canonical amenity family code
-        )
-      )
+      exact_label.evidence_count > 0
+      OR sustainability_evidence.evidence_count > 0
+      OR accessibility_evidence.evidence_count > 0
     ));
 $$;
 
@@ -5337,7 +5414,8 @@ BEGIN
       o.updated_at,
       o.updated_at_source,
       -- label_rank: 0 = exact label, 1 = equivalent evidence; always 0 when no label_scheme_ranked filter
-      fids.label_rank
+      fids.label_rank,
+      fids.label_match
     FROM api.get_filtered_object_ids(v_filters, v_types, v_status, v_search) fids
     JOIN object o ON o.id = fids.object_id
   ),
@@ -5346,30 +5424,53 @@ BEGIN
     FROM filt f
     ORDER BY f.label_rank, f.name_normalized NULLS LAST, f.id
     OFFSET v_offset LIMIT v_limit
+  ),
+  raw_data AS (
+    SELECT
+      CASE
+        WHEN v_view = 'full' THEN
+          api.get_object_resources_batch(
+            (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+            v_lang_prefs,
+            v_track,
+            jsonb_build_object(
+              'include_stages', v_inc,
+              'stage_color', v_color,
+              'render', v_render_enabled,
+              'render_locale', v_render_locale,
+              'render_tz', v_render_tz,
+              'render_version', v_render_version
+            )
+          )::jsonb
+        ELSE
+          api.get_object_cards_batch(
+            (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+            v_lang_prefs
+          )::jsonb
+      END AS data
+  ),
+  decorated_data AS (
+    -- Attach per-card label_match by array position. Sound because this function is
+    -- SECURITY INVOKER (paged ids are already RLS-filtered to the caller's readable set,
+    -- the same set the batch functions authorize) and both batch functions return items
+    -- in input order (ORDER BY input ordinality).
+    SELECT COALESCE(
+      jsonb_agg(
+        CASE
+          WHEN p.label_match IS NULL THEN item.value
+          ELSE item.value || jsonb_build_object('label_match', p.label_match)
+        END
+        ORDER BY item.ordinality
+      ) FILTER (WHERE item.value IS NOT NULL),
+      '[]'::jsonb
+    ) AS data
+    FROM raw_data rd
+    LEFT JOIN LATERAL jsonb_array_elements(COALESCE(rd.data, '[]'::jsonb)) WITH ORDINALITY AS item(value, ordinality) ON TRUE
+    LEFT JOIN paged p ON p.ord = item.ordinality
   )
   SELECT
     (SELECT COUNT(*) FROM filt) AS total,
-    CASE
-      WHEN v_view = 'full' THEN
-        api.get_object_resources_batch(
-          (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
-          v_lang_prefs,
-          v_track,
-          jsonb_build_object(
-            'include_stages', v_inc,
-            'stage_color', v_color,
-            'render', v_render_enabled,
-            'render_locale', v_render_locale,
-            'render_tz', v_render_tz,
-            'render_version', v_render_version
-          )
-        )
-      ELSE
-        api.get_object_cards_batch(
-          (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
-          v_lang_prefs
-        )
-    END AS data
+    (SELECT data FROM decorated_data) AS data
   INTO v_total, v_data;
 
   v_cursor := jsonb_build_object(
@@ -6899,20 +7000,42 @@ BEGIN
     FROM ref_classification_value cv
     JOIN label_hierarchy lh ON cv.parent_id = lh.id
   ),
+  label_scheme AS (
+    SELECT DISTINCT cs.id AS scheme_id, cs.code AS scheme_code, cs.display_group
+    FROM ref_classification_scheme cs
+    JOIN label_hierarchy lh ON lh.scheme_id = cs.id
+  ),
   label_actions AS (
-    -- Get all actions linked to this label hierarchy
-    -- derived dynamically from existing object links as requested
-    SELECT DISTINCT sal.object_sustainability_action_id as action_id
+    -- Preferred partial-match source: explicit scheme-to-action/group equivalence tables.
+    SELECT DISTINCT rcea.action_id
+    FROM ref_classification_equivalent_action rcea
+    JOIN label_scheme ls ON ls.scheme_id = rcea.scheme_id
+    WHERE rcea.match_scope IN ('search_expansion', 'both')
+      AND COALESCE(ls.display_group, '') = 'sustainability_labels'
+    UNION
+    SELECT DISTINCT rsa.id AS action_id
+    FROM ref_classification_equivalent_group rceg
+    JOIN label_scheme ls ON ls.scheme_id = rceg.scheme_id
+    JOIN ref_sustainability_action rsa ON rsa.group_id = rceg.group_id
+    WHERE rceg.match_scope IN ('search_expansion', 'both')
+      AND COALESCE(ls.display_group, '') = 'sustainability_labels'
+    UNION
+    -- Compatibility fallback: derive equivalent ref actions from existing action-label links.
+    SELECT DISTINCT source_osa.action_id
     FROM object_sustainability_action_label sal
+    JOIN object_sustainability_action source_osa ON source_osa.id = sal.object_sustainability_action_id
     JOIN object_classification oc ON oc.id = sal.object_classification_id
+    JOIN label_scheme ls ON ls.scheme_id = oc.scheme_id
     WHERE oc.value_id IN (SELECT id FROM label_hierarchy)
+      AND COALESCE(ls.display_group, '') = 'sustainability_labels'
   ),
   full_label_objects AS (
     -- Objects with the full label
     SELECT o.id, TRUE as has_full_label, NULL::bigint as action_count
     FROM object o
     JOIN object_classification oc ON oc.object_id = o.id
-    WHERE oc.value_id = p_label_value_id 
+    WHERE oc.value_id IN (SELECT id FROM label_hierarchy)
+      AND oc.status = 'granted'
       AND o.status = 'published'
   ),
   partial_label_objects AS (

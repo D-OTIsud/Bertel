@@ -59,4 +59,34 @@ describe('normalizeExplorerCard', () => {
       'Accessibilite',
     ]);
   });
+
+  it('preserves ranked label metadata and surfaces match distinction pills', () => {
+    const certified = normalizeExplorerCard({
+      id: 'obj-certified',
+      name: 'Hotel certifie',
+      type: 'HOT',
+      label_match: {
+        scheme_code: 'LBL_TOURISME_HANDICAP',
+        rank: 0,
+        source: 'certified_label',
+        evidence_count: 1,
+      },
+    });
+    const evidenceOnly = normalizeExplorerCard({
+      id: 'obj-evidence',
+      name: 'Hotel accessible',
+      type: 'HOT',
+      label_match: {
+        scheme_code: 'LBL_TOURISME_HANDICAP',
+        rank: 1,
+        source: 'accessibility_amenity',
+        evidence_count: 2,
+      },
+    });
+
+    expect(certified.label_match?.rank).toBe(0);
+    expect(certified.labels).toContain('Label certifié');
+    expect(evidenceOnly.label_match?.rank).toBe(1);
+    expect(evidenceOnly.labels).toContain('Équipements compatibles');
+  });
 });

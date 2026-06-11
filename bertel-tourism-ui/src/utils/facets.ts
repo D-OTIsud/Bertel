@@ -64,6 +64,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   petsAccepted: false,
   openNow: false,
   labelsAny: [],
+  rankedLabelSchemeCode: null,
   // Empty = "use the server default" (published only). Editors get the default
   // broadened in `useExplorerFilters` once their canEditObjects flag is known.
   statuses: [],
@@ -118,6 +119,7 @@ export function normalizeExplorerFilters(
       sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
       labelsAny: common.labelsAny ?? [],
+      rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
       statuses: common.statuses ?? [],
     },
     hot: {
@@ -210,7 +212,7 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     common.sustainable ||
     common.sustainabilityCategoryCodesAny.length > 0 ||
     common.sustainabilityActionCodesAny.length > 0;
-  if (hasAccessibilityFilter || hasSustainabilityFilter || common.petsAccepted) {
+  if (hasAccessibilityFilter || hasSustainabilityFilter || common.petsAccepted || Boolean(common.rankedLabelSchemeCode)) {
     return true;
   }
   if (hot.taxonomy.length > 0) {
@@ -302,6 +304,11 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const accessibilityAmenityCodes = common.accessibilityAmenityCodesAny.map(cleanString).filter(Boolean);
   const accessibilityDisabilityTypes = common.accessibilityDisabilityTypesAny.map(cleanString).filter(Boolean);
   const hasAccessibilityFilter = common.pmr || accessibilityAmenityCodes.length > 0 || accessibilityDisabilityTypes.length > 0;
+  const rankedLabelSchemeCode = cleanString(common.rankedLabelSchemeCode);
+
+  if (rankedLabelSchemeCode) {
+    payload.label_scheme_ranked = rankedLabelSchemeCode;
+  }
 
   if (hasAccessibilityFilter) {
     if (accessibilityAmenityCodes.length > 0) {
@@ -313,6 +320,11 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     if (accessibilityDisabilityTypes.length > 0) {
       payload.disability_types_any = accessibilityDisabilityTypes;
     }
+  }
+
+  if (rankedLabelSchemeCode === 'LBL_TOURISME_HANDICAP' && accessibilityDisabilityTypes.length > 0) {
+    payload.disability_types_any = accessibilityDisabilityTypes;
+    payload.label_disability_types_any = accessibilityDisabilityTypes;
   }
 
   const sustainabilityCategoryCodes = common.sustainabilityCategoryCodesAny.map(cleanString).filter(Boolean);
@@ -500,6 +512,13 @@ export function dedupeExplorerCards(cards: ObjectCard[]): ObjectCard[] {
 
 export function sortExplorerCards(cards: ObjectCard[]): ObjectCard[] {
   return [...cards].sort((left, right) => {
+    if (left.label_match || right.label_match) {
+      const leftRank = typeof left.label_match?.rank === 'number' ? left.label_match.rank : Number.MAX_SAFE_INTEGER;
+      const rightRank = typeof right.label_match?.rank === 'number' ? right.label_match.rank : Number.MAX_SAFE_INTEGER;
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
+    }
     const nameCompare = left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' });
     if (nameCompare !== 0) {
       return nameCompare;

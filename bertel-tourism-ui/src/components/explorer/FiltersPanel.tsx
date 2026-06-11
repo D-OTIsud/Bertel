@@ -156,6 +156,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const common = useExplorerStore((state) => state.common);
   const cities = common.cities ?? [];
   const labelsAny = common.labelsAny ?? [];
+  const rankedLabelSchemeCode = common.rankedLabelSchemeCode ?? null;
   const statuses = common.statuses ?? [];
   const pmr = common.pmr === true;
   const accessibilityDisabilityTypesAny = common.accessibilityDisabilityTypesAny ?? [];
@@ -177,6 +178,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const toggleSustainabilityAction = useExplorerStore((state) => state.toggleSustainabilityAction);
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
+  const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
   const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
@@ -211,6 +213,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if ((s.common.sustainabilityActionCodesAny ?? []).length) n += 1;
     if (s.common.petsAccepted) n += 1;
     if (s.common.openNow) n += 1;
+    if (s.common.rankedLabelSchemeCode) n += 1;
     if ((s.common.labelsAny ?? []).length) n += 1;
     if ((s.common.statuses ?? []).length > 0) n += 1;
     if (s.common.polygon) n += 1;
@@ -251,6 +254,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   );
   const accessibilityDetailCount = accessibilityDisabilityTypesAny.length + accessibilityAmenityCodesAny.length;
   const sustainabilityDetailCount = sustainabilityCategoryCodesAny.length + sustainabilityActionCodesAny.length;
+  const rankedLabelOptions = references?.rankedLabelSchemes ?? [];
+  const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
 
   const bucketChipClass = (active: boolean) =>
     cn(
@@ -478,26 +483,40 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
             </div>
           </FilterColumnGroup>
 
-          <FilterColumnGroup label="Labels & certifications" count={labelsAny.length > 0 ? labelsAny.length : undefined}>
-            {labelsAny.length > 0 ? (
-              <div className="space-y-2">
-                <ul className="grid gap-2">
-                  {labelsAny.map((label) => (
-                    <li key={label}>
-                      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
-                        <input type="checkbox" className="accent-teal" checked onChange={() => toggleLabel(label)} />
-                        <span className="font-medium">{label}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearLabels}>
-                  Effacer les labels
-                </button>
+          <FilterColumnGroup label="Labels & certifications" count={labelFilterCount > 0 ? labelFilterCount : undefined}>
+            <div className="space-y-3">
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Label recherche</span>
+                <FilterDropdown<string>
+                  mode="single"
+                  placeholder="Tous les labels"
+                  allLabel="Tous les labels"
+                  options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name }))}
+                  selected={rankedLabelSchemeCode ? [rankedLabelSchemeCode] : []}
+                  onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
+                />
               </div>
-            ) : (
-              <p className="text-[12px] leading-snug text-ink-3">Cliquez une etiquette dans la liste des resultats pour filtrer.</p>
-            )}
+
+              {labelsAny.length > 0 ? (
+                <div className="space-y-2">
+                  <ul className="grid gap-2">
+                    {labelsAny.map((label) => (
+                      <li key={label}>
+                        <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+                          <input type="checkbox" className="accent-teal" checked onChange={() => toggleLabel(label)} />
+                          <span className="font-medium">{label}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearLabels}>
+                    Effacer les labels
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[12px] leading-snug text-ink-3">Cliquez une etiquette dans la liste des resultats pour filtrer.</p>
+              )}
+            </div>
           </FilterColumnGroup>
 
           <FilterColumnGroup
@@ -893,17 +912,29 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               </FiltersSubsection>
             ) : null}
 
-            {labelsAny.length > 0 ? (
+            {rankedLabelOptions.length > 0 || rankedLabelSchemeCode || labelsAny.length > 0 ? (
               <FiltersSubsection title="Labels">
-                <div className="chip-grid">
-                  {labelsAny.map((label) => (
-                    <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
-                      {label}
-                    </button>
-                  ))}
-                  <button type="button" className="chip" onClick={clearLabels}>
-                    Effacer
-                  </button>
+                <div className="space-y-3">
+                  <FilterDropdown<string>
+                    mode="single"
+                    placeholder="Tous les labels"
+                    allLabel="Tous les labels"
+                    options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name }))}
+                    selected={rankedLabelSchemeCode ? [rankedLabelSchemeCode] : []}
+                    onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
+                  />
+                  {labelsAny.length > 0 ? (
+                    <div className="chip-grid">
+                      {labelsAny.map((label) => (
+                        <button key={label} type="button" className="chip chip--active" onClick={() => toggleLabel(label)}>
+                          {label}
+                        </button>
+                      ))}
+                      <button type="button" className="chip" onClick={clearLabels}>
+                        Effacer
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </FiltersSubsection>
             ) : null}

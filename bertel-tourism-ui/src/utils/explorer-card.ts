@@ -132,6 +132,22 @@ function hasAccessibilitySignal(card: ObjectCard): boolean {
   return readObjectList(card.badges).some((badge) => normalizeCode(cleanText(badge.kind)).includes('accessibility'));
 }
 
+function readLabelMatchLabel(card: ObjectCard): string {
+  if (!card.label_match) {
+    return '';
+  }
+  if (card.label_match.rank === 0) {
+    return 'Label certifié';
+  }
+  if (card.label_match.source === 'accessibility_amenity') {
+    return 'Équipements compatibles';
+  }
+  if (card.label_match.source === 'sustainability_action') {
+    return 'Actions compatibles';
+  }
+  return 'Preuves compatibles';
+}
+
 function buildCityLine(location: LocationSummary): string {
   return [cleanText(location.postcode), cleanText(location.city)].filter(Boolean).join(' ');
 }
@@ -199,6 +215,7 @@ export function formatExplorerCardAddress(location?: LocationSummary): string | 
 
 export function normalizeExplorerCard(card: ObjectCard): ObjectCard {
   const labels = dedupeLabels([
+    readLabelMatchLabel(card),
     ...readClassificationLabels(card),
     ...readLabels(card.labels),
     ...readBadgeLabels(card),

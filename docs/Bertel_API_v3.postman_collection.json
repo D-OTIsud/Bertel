@@ -371,6 +371,36 @@
           ]
         },
         {
+          "name": "List Ranked Label Search (Explorer Preferred)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "apikey",
+                "value": "{{apikey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_cursor\": null,\n  \"p_page_size\": 20,\n  \"p_types\": [\"HOT\"],\n  \"p_status\": [\"published\"],\n  \"p_lang_prefs\": [\"fr\"],\n  \"p_view\": \"card\",\n  \"p_filters\": {\n    \"label_scheme_ranked\": \"LBL_TOURISME_HANDICAP\",\n    \"label_disability_types_any\": [\"motor\"],\n    \"disability_types_any\": [\"motor\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rpc/list_object_resources_filtered_page",
+              "host": ["{{base_url}}"],
+              "path": ["rpc", "list_object_resources_filtered_page"]
+            },
+            "description": "Recherche label classee via l'endpoint Explorer prefere. Les objets certifies arrivent d'abord (`label_match.rank = 0`), puis les objets avec preuves compatibles (`rank = 1`). Pour Tourisme & Handicap, la preuve rank 1 vient des amenagements d'accessibilite; pour les labels durables, elle vient des actions/groupes equivalents."
+          }
+        },
+        {
           "name": "List with Rich Filters (Since)",
           "request": {
             "method": "POST",
@@ -732,7 +762,7 @@
               "host": ["{{base_url}}"],
               "path": ["rpc", "search_objects_by_label"]
             },
-            "description": "Rechercher des objets par label de durabilité avec correspondances partielles"
+            "description": "Compatibilite/specialise: rechercher des objets par valeur de label avec correspondances partielles de durabilite. Pour l'Explorer, preferer list_object_resources_filtered_page avec p_filters.label_scheme_ranked afin de recevoir label_match et l'ordre certifie puis preuves compatibles."
           }
         },
         {

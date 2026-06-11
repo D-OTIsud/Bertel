@@ -74,6 +74,12 @@ type SustainabilityActionRow = {
   position: number | null;
 };
 
+type LabelSchemeRow = {
+  code: string;
+  name: string;
+  position: number | null;
+};
+
 const ACCESSIBILITY_DISABILITY_CODES = new Set(ACCESSIBILITY_DISABILITY_TYPE_OPTIONS.map((option) => option.code));
 const ACCESSIBILITY_DISABILITY_REFERENCES: ExplorerReferenceOption[] = ACCESSIBILITY_DISABILITY_TYPE_OPTIONS.map((option) => ({
   code: option.code,
@@ -250,6 +256,11 @@ const DEMO_CITIES = ['Le Tampon', 'Saint-Benoît', 'Saint-Denis', 'Saint-Paul', 
 function buildDemoReferences(): ExplorerReferences {
   return {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
+    rankedLabelSchemes: [
+      { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap' },
+      { code: 'LBL_CLEF_VERTE', name: 'Clef Verte' },
+      { code: 'LBL_ECO_LABEL_UE', name: 'Ecolabel europeen' },
+    ],
     accessibilityAmenities: [
       { code: 'acc_pmr_parking', name: 'Places PMR', disabilityTypes: ['motor'] },
       { code: 'acc_step_removal', name: 'Acces sans ressaut', disabilityTypes: ['motor'] },
@@ -338,6 +349,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     accessibilityAmenitiesResult,
     sustainabilityCategoriesResult,
     sustainabilityActionsResult,
+    rankedLabelSchemesResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
@@ -361,6 +373,12 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client
       .from('ref_sustainability_action')
       .select('code,label,description,category_id,position')
+      .order('position', { ascending: true }),
+    client
+      .from('ref_classification_scheme')
+      .select('code,name,position')
+      .eq('is_distinction', true)
+      .in('display_group', ['accessibility_labels', 'sustainability_labels'])
       .order('position', { ascending: true }),
   ]);
 
@@ -388,6 +406,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (sustainabilityActionsResult.error) {
     throw sustainabilityActionsResult.error;
   }
+  if (rankedLabelSchemesResult.error) {
+    throw rankedLabelSchemesResult.error;
+  }
 
   const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
   const domainCodes = taxonomyDomains.map((domain) => domain.domain);
@@ -412,11 +433,13 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const accessibilityAmenities = (accessibilityAmenitiesResult.data ?? []) as AmenityRow[];
   const sustainabilityCategories = (sustainabilityCategoriesResult.data ?? []) as SustainabilityCategoryRow[];
   const sustainabilityActions = (sustainabilityActionsResult.data ?? []) as SustainabilityActionRow[];
+  const rankedLabelSchemes = (rankedLabelSchemesResult.data ?? []) as LabelSchemeRow[];
 
   return {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
+    rankedLabelSchemes: toReferenceOptions(rankedLabelSchemes),
     hotTaxonomy: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),

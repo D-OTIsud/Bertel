@@ -1,7 +1,7 @@
-import { filterMockCards, mockAuditQuestions, mockCrmTasks, mockObjectDetails, mockPendingChanges, mockPublicationCards, mockTimeline } from '../data/mock';
+import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPendingChanges, mockPublicationCards } from '../data/mock';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import type { AuditQuestion, ExplorerBucketKey, CrmTask, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
+import type { AuditQuestion, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
 import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
@@ -449,17 +449,8 @@ export async function listPendingChanges(): Promise<PendingChangeItem[]> {
   return [];
 }
 
-// TODO: wire to real backend RPC when available
-export async function listCrmTasks(): Promise<CrmTask[]> {
-  if (useSessionStore.getState().demoMode) return mockCrmTasks;
-  return [];
-}
-
-// TODO: wire to real backend RPC when available
-export async function listCrmTimeline(): Promise<typeof mockTimeline> {
-  if (useSessionStore.getState().demoMode) return mockTimeline;
-  return [];
-}
+// CRM (§58) : implémentations réelles dans services/crm.ts (RPC-only — voir la spec).
+export { listCrmTasks, listCrmTimeline } from './crm';
 
 // TODO: wire to real backend RPC when available
 export async function listAuditTemplate(): Promise<AuditQuestion[]> {

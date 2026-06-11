@@ -1,5 +1,8 @@
 import type { BackendObjectTypeCode } from './domain';
 
+/** Onglets du dashboard — un par vocation (spec 2026-06-11 §3). */
+export type DashboardTabKey = 'quality' | 'offer' | 'activity';
+
 // ─── Shared filter input ──────────────────────────────────────────────────────
 // Serialised from dashboard-filter-store to every RPC call.
 // Mirrors the p_filters JSONB shape already understood by api.get_filtered_object_ids,

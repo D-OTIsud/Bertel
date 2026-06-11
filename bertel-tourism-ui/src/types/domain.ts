@@ -292,13 +292,46 @@ export interface FieldLock {
   name: string;
 }
 
+// CRM (§58) — types alignés sur les enums DB (crm_task_status / crm_task_priority)
+// et sur les clés des RPCs api.list_crm_tasks / api.list_crm_timeline.
+export type CrmTaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled' | 'blocked';
+export type CrmTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface CrmTask {
   id: string;
+  objectId: string;
+  objectName: string;
   title: string;
-  actor: string;
-  assignee: string;
-  status: 'todo' | 'doing' | 'done';
-  dueLabel: string;
+  description: string | null;
+  status: CrmTaskStatus;
+  priority: CrmTaskPriority;
+  dueAt: string | null;
+  ownerName: string | null;
+  relatedInteractionSubject: string | null;
+}
+
+export interface CrmInteraction {
+  id: string;
+  objectId: string;
+  objectName: string;
+  interactionType: string;
+  direction: string;
+  status: string;
+  subject: string;
+  body: string | null;
+  occurredAt: string | null;
+  actorName: string | null;
+  topicCode: string | null;
+  topicName: string | null;
+  sentimentCode: string | null;
+  sentimentName: string | null;
+  ownerName: string | null;
+  source: string | null;
+}
+
+export interface CrmTimelinePage {
+  items: CrmInteraction[];
+  hasMore: boolean;
 }
 
 export interface PendingChangeItem {

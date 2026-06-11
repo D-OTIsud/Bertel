@@ -9,6 +9,7 @@ import type {
   PresenceMember,
   PublicationCard,
   CrmTask,
+  CrmTimelinePage,
 } from '../types/domain';
 import { applyFrontendOnlyExplorerFilters, getBackendTypesForBucket, getEffectiveSelectedBuckets, normalizeExplorerFilters, sortExplorerCards } from '../utils/facets';
 
@@ -371,15 +372,19 @@ export const mockPendingChanges: PendingChangeItem[] = [
 ];
 
 export const mockCrmTasks: CrmTask[] = [
-  { id: 'task-1', title: 'Rappeler le directeur', actor: 'Hotel Basalte & Lagon', assignee: 'Marie', status: 'todo', dueLabel: 'Aujourd hui' },
-  { id: 'task-2', title: 'Valider le contrat photo', actor: 'Le Comptoir des Epices', assignee: 'Jean', status: 'doing', dueLabel: 'Demain' },
-  { id: 'task-3', title: 'Confirmer les horaires d hiver', actor: 'Sentier des Trois Cascades', assignee: 'Luc', status: 'done', dueLabel: 'Termine' },
+  { id: 'task-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', title: 'Rappeler le directeur', description: null, status: 'todo', priority: 'high', dueAt: '2026-06-11T09:00:00Z', ownerName: 'Marie', relatedInteractionSubject: null },
+  { id: 'task-2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: '2026-06-12T09:00:00Z', ownerName: 'Jean', relatedInteractionSubject: null },
+  { id: 'task-3', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', title: 'Confirmer les horaires d hiver', description: null, status: 'done', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionSubject: null },
 ];
 
-export const mockTimeline = [
-  { id: 'evt-1', author: 'Marie', text: 'Appel de suivi avec le proprietaire, besoin d une nouvelle photo facade.', at: '11:12' },
-  { id: 'evt-2', author: 'Luc', text: 'Mail envoye pour validation des tarifs 2026.', at: '09:40' },
-];
+// Timeline CRM mock — topicCodes = vrais codes seedés (ref_crm_topic) : demande_de_visite, modification_infos_bdd.
+export const mockCrmTimeline: CrmTimelinePage = {
+  items: [
+    { id: 'evt-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call', direction: 'outbound', status: 'done', subject: 'Appel de suivi', body: 'Besoin d une nouvelle photo facade.', occurredAt: '2026-06-11T11:12:00Z', actorName: 'M. Payet', topicCode: 'demande_de_visite', topicName: 'Demande de visite', sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui' },
+    { id: 'evt-2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', interactionType: 'email', direction: 'outbound', status: 'done', subject: 'Validation tarifs 2026', body: 'Mail envoye pour validation des tarifs 2026.', occurredAt: '2026-06-11T09:40:00Z', actorName: null, topicCode: 'modification_infos_bdd', topicName: 'Modification infos BDD', sentimentCode: null, sentimentName: null, ownerName: 'Luc', source: 'bertel_ui' },
+  ],
+  hasMore: false,
+};
 
 export const mockAuditQuestions: AuditQuestion[] = [
   { id: 'q-1', label: 'Signaletique visible depuis la route', score: 4 },

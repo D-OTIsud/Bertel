@@ -596,14 +596,17 @@ DROP POLICY IF EXISTS "pub_opening_time_period_weekday_read" ON opening_time_per
 DROP POLICY IF EXISTS "pub_opening_time_frame_read" ON opening_time_frame;
 DROP POLICY IF EXISTS "Lecture publique des types de chambre" ON object_room_type;
 DROP POLICY IF EXISTS "Lecture étendue des types de chambre" ON object_room_type;
+DROP POLICY IF EXISTS "read_object_room_type" ON object_room_type;
 DROP POLICY IF EXISTS "Écriture types de chambre par propriétaire" ON object_room_type;
 DROP POLICY IF EXISTS "Lecture publique amenities chambre" ON object_room_type_amenity;
+DROP POLICY IF EXISTS "read_object_room_type_amenity" ON object_room_type_amenity;
 DROP POLICY IF EXISTS "Écriture amenities chambre par propriétaire" ON object_room_type_amenity;
 DROP POLICY IF EXISTS "Lecture de son profil utilisateur" ON app_user_profile;
 DROP POLICY IF EXISTS "Insertion de son profil utilisateur" ON app_user_profile;
 DROP POLICY IF EXISTS "Mise à jour de son profil utilisateur" ON app_user_profile;
 DROP POLICY IF EXISTS "Administration des profils utilisateur" ON app_user_profile;
 DROP POLICY IF EXISTS "Lecture publique médias chambre" ON object_room_type_media;
+DROP POLICY IF EXISTS "read_object_room_type_media" ON object_room_type_media;
 DROP POLICY IF EXISTS "Écriture médias chambre par propriétaire" ON object_room_type_media;
 DROP POLICY IF EXISTS "Lecture publique des promotions" ON promotion;
 DROP POLICY IF EXISTS "Écriture admin des promotions" ON promotion;
@@ -1209,11 +1212,16 @@ CREATE POLICY "pub_opening_time_period_weekday_read" ON opening_time_period_week
 CREATE POLICY "pub_opening_time_frame_read" ON opening_time_frame
   FOR SELECT USING (true);
 
--- Types de chambres: lecture publique si publié, accès étendu, écriture propriétaire/admin
-CREATE POLICY "Lecture publique des types de chambre" ON object_room_type
-  FOR SELECT USING (is_published = TRUE);
-CREATE POLICY "Lecture étendue des types de chambre" ON object_room_type
-  FOR SELECT USING (api.can_read_extended(object_id));
+-- Types de chambres (§54 / 8v — migration_room_type_read_gate.sql, folded here per the 8s/8t
+-- precedent): ONE §38 split-form SELECT policy per table. The published arm COMPOSES the row's
+-- is_published flag with the parent-object publication gate (the old bare-flag pair let anon
+-- read room types of DRAFT objects); the extended arm is set-based (§35, one InitPlan).
+CREATE POLICY "read_object_room_type" ON object_room_type FOR SELECT USING (
+  (is_published IS TRUE AND EXISTS (
+    SELECT 1 FROM object o
+    WHERE o.id = object_room_type.object_id AND o.status = 'published'))
+  OR object_id IN (SELECT api.current_user_extended_object_ids())
+);
 CREATE POLICY "Écriture types de chambre par propriétaire" ON object_room_type
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
@@ -1224,13 +1232,16 @@ CREATE POLICY "Écriture types de chambre par propriétaire" ON object_room_type
     )
   );
 
-CREATE POLICY "Lecture publique amenities chambre" ON object_room_type_amenity
+CREATE POLICY "read_object_room_type_amenity" ON object_room_type_amenity
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM object_room_type rt
+      JOIN object o ON o.id = rt.object_id
       WHERE rt.id = object_room_type_amenity.room_type_id
-        AND rt.is_published = TRUE
-    )
+        AND rt.is_published IS TRUE AND o.status = 'published')
+    OR room_type_id IN (
+      SELECT rt.id FROM object_room_type rt
+      WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
   );
 CREATE POLICY "Écriture amenities chambre par propriétaire" ON object_room_type_amenity
   FOR ALL USING (
@@ -1243,13 +1254,16 @@ CREATE POLICY "Écriture amenities chambre par propriétaire" ON object_room_typ
     )
   );
 
-CREATE POLICY "Lecture publique médias chambre" ON object_room_type_media
+CREATE POLICY "read_object_room_type_media" ON object_room_type_media
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM object_room_type rt
+      JOIN object o ON o.id = rt.object_id
       WHERE rt.id = object_room_type_media.room_type_id
-        AND rt.is_published = TRUE
-    )
+        AND rt.is_published IS TRUE AND o.status = 'published')
+    OR room_type_id IN (
+      SELECT rt.id FROM object_room_type rt
+      WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
   );
 CREATE POLICY "Écriture médias chambre par propriétaire" ON object_room_type_media
   FOR ALL USING (

@@ -196,6 +196,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_spu.sql"
 
+      - name: room-type trio read gate test (§54 8v — anon draft room-type leak closed, link ext arm + repaired link writes)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_read_gate.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

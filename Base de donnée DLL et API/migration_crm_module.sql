@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS ref_code_crm_sentiment
 -- FK-cible : même mécanisme d'unicité que ref_code_demand_topic / ref_code_mood.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_crm_sentiment_id ON ref_code_crm_sentiment(id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_crm_sentiment_code ON ref_code_crm_sentiment(code);
+-- RLS comme les partitions sœurs (les policies du parent ne couvrent PAS les accès directs à
+-- une partition) : paire FOR ALL maison des ref_* — l'exception documentée CLAUDE.md, le
+-- USING(true) de lecture court-circuite. Flag advisor rls_disabled_in_public sinon.
+ALTER TABLE ref_code_crm_sentiment ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "pub_ref_code_read" ON ref_code_crm_sentiment;
+DROP POLICY IF EXISTS "admin_ref_code_write" ON ref_code_crm_sentiment;
+CREATE POLICY "pub_ref_code_read" ON ref_code_crm_sentiment FOR SELECT USING (true);
+CREATE POLICY "admin_ref_code_write" ON ref_code_crm_sentiment FOR ALL
+  USING (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]));
 
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
  ('crm_sentiment','tres_positif',  'Très positif',  'Source import : 😃', 1),

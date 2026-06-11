@@ -2731,6 +2731,9 @@ BEGIN
                 'type_description', COALESCE(api.i18n_pick_strict(mt.description_i18n, lang, 'fr'), mt.description),
                  'icon_url',  mt.icon_url,
                  'title',     COALESCE(api.i18n_pick_strict(m.title_i18n, lang, 'fr'), m.title),
+                 -- description = the editor's "texte alternatif" — without it the drawer
+                 -- can only fall back to the title for the <img> alt (a11y gap, §05 review).
+                 'description', COALESCE(api.i18n_pick_strict(m.description_i18n, lang, 'fr'), m.description),
                  'credit',    m.credit,
                  'url',       m.url,
                  'is_main',   m.is_main,
@@ -2751,7 +2754,7 @@ BEGIN
              )
       FROM (
         SELECT DISTINCT ON (m.id)
-          m.id, m.media_type_id, m.title, m.title_i18n, m.credit, m.url,
+          m.id, m.media_type_id, m.title, m.title_i18n, m.description, m.description_i18n, m.credit, m.url,
           m.is_main, m.visibility, m.position, m.width, m.height, m.created_at
         FROM media m
         WHERE m.object_id = obj.id
@@ -6620,7 +6623,9 @@ BEGIN
       LIMIT p_limit
     ) m
     JOIN ref_code_media_type mt ON mt.id = m.media_type_id
-  ), '[]'::json);
+  -- COALESCE arms must share a type: jsonb_agg is jsonb, so the fallback is jsonb too
+  -- (a '[]'::json fallback was SQLSTATE 42846 on EVERY call); cast once for RETURNS JSON.
+  ), '[]'::jsonb)::json;
 END;
 $$;
 

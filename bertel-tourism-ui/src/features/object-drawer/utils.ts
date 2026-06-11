@@ -49,6 +49,8 @@ export interface MediaItem {
   id: string;
   url: string;
   title: string;
+  /** Editor's "texte alternatif" (media.description) — preferred alt text for <img>. */
+  description: string;
   tags: string[];
   isMain: boolean;
   credit: string;
@@ -1071,6 +1073,7 @@ export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
     id: readString(item.id, `media-${index}`),
     url: readString(item.url, readString(item.secure_url)),
     title: readString(item.title, readString(item.name, readString(item.alt_text, 'Media'))),
+    description: readString(item.description, readString(item.alt_text)),
     tags: Array.isArray(item.tags)
       ? item.tags.map((tag) => readNamedValue(tag, String(tag))).filter(Boolean)
       : readArray(item.media_tags).map((tag) => readNamedValue(tag.tag ?? tag, 'tag a definir')).filter(Boolean),

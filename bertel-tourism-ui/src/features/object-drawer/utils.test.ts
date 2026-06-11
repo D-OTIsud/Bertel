@@ -243,6 +243,13 @@ describe('object drawer utils', () => {
     expect(petPolicy?.details).toContain('Supplement menage');
   });
 
+  it('parses the media description (texte alternatif) for the gallery alt', () => {
+    const media = parseMedia({
+      media: [{ id: 'm1', url: 'https://x/a.jpg', title: 'Facade', description: 'Vue de la facade cote ocean' }],
+    } as Record<string, unknown>);
+    expect(media[0].description).toBe('Vue de la facade cote ocean');
+  });
+
   it('keeps public contacts only and builds usable href metadata', () => {
     const raw = {
       contacts: [

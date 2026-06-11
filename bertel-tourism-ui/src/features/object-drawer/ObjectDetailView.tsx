@@ -946,7 +946,7 @@ function HeroBlock({
         >
           {mainMedia?.url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.title || data.name} />
+            <img className="detail-hero__img" src={mainMedia.url} alt={mainMedia.description || mainMedia.title || data.name} />
           ) : (
             <div className="detail-hero__placeholder-art" aria-hidden="true" />
           )}
@@ -1085,7 +1085,7 @@ function GalleryLightbox({
             <img
               className="detail-gallery-modal__image"
               src={activeMedia.url}
-              alt={activeMedia.title || data.name}
+              alt={activeMedia.description || activeMedia.title || data.name}
             />
             {total > 1 && (
               <>
@@ -1124,7 +1124,7 @@ function GalleryLightbox({
                     aria-label={`Voir la photo ${index + 1} en grand`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.url} alt={item.title || `Photo ${index + 1}`} />
+                    <img src={item.url} alt={item.description || item.title || `Photo ${index + 1}`} />
                   </button>
                 ))}
               </div>

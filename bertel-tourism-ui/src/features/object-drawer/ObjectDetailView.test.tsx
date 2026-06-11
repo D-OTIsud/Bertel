@@ -681,6 +681,28 @@ describe('ObjectDetailView', () => {
     );
   });
 
+  it('uses the media description as the hero image alt text (fallback: title, then name)', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-alt',
+      name: 'Hotel Horizon',
+      type: 'HOT',
+      raw: {
+        media: [
+          {
+            id: 'm-1',
+            url: 'https://example.com/main.jpg',
+            title: 'Facade',
+            description: 'Vue de la facade cote ocean',
+            is_main: true,
+          },
+          { id: 'm-2', url: 'https://example.com/second.jpg', title: 'Spa' },
+        ],
+      },
+    };
+    renderDetail(data);
+    expect(screen.getByAltText('Vue de la facade cote ocean')).toBeInTheDocument();
+  });
+
   it('renders a reservation-platform contact as its platform name with a favicon link', () => {
     const data: ObjectDetail = {
       id: 'hotel-booking',

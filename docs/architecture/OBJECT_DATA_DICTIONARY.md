@@ -35,7 +35,8 @@ Every Object has a `object_type` that determines which conditional data modules 
 | `COM` | Commerce / retail |
 | `PSV` | Service provider (transport, vehicle/equipment rental — NOT public services, see `SPU`) |
 | `ASC` | Sports & cultural activity structure (school, club, centre) — shares the `object_act` facet with `ACT` |
-| `SPU` | Public service facility (public toilets, drinking water point, EV charging station) — §53, manifest 8u |
+| `SPU` | Public service & facility (free, non-commercial: toilets, drinking water, EV charging, picnic areas/kiosques, tourist info offices, free sports facilities, tourist parkings) — §53/§57, manifest 8u |
+| `PRD` | Producer open to the public (agritourism, tasting, direct sale — plantations, distilleries, apiaries). Arbitration: production+welcome → PRD · meals → RES · resale only → COM · guided service → ACT — §57, manifest 8x |
 | `ORG` | Organizational entity (tourism office, publisher) |
 
 The `secondary_types` column (transitional, added Lot 1 2026-03-20) allows multi-belonging for pilot objects. It is non-canonical and opt-in only—no API filters it automatically. Replacement condition: if multi-belonging exceeds 50 objects with confirmed UI need, migrate to a junction table.
@@ -1337,7 +1338,7 @@ All custom PostgreSQL ENUM types used in the schema.
 
 | Enum | Values | Used by |
 |------|--------|---------|
-| `object_type` | `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU` | `object.object_type`, `ref_capacity_applicability.object_type` |
+| `object_type` | `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU`, `PRD` | `object.object_type`, `ref_capacity_applicability.object_type` |
 | `object_status` | `draft`, `published`, `archived`, `hidden` | `object.status` |
 | `crm_interaction_type` | `call`, `email`, `meeting`, `visit`, `whatsapp`, `sms`, `note`, `other` | `crm_interaction.interaction_type` |
 | `crm_direction` | `inbound`, `outbound`, `internal` | `crm_interaction.direction` |
@@ -1690,7 +1691,7 @@ Key database triggers and their business effects.
 
 ## Appendix A — Explorer Bucket ↔ Backend Type Mapping
 
-The frontend groups the 18 backend `object_type` codes into 7 explorer "buckets" for user-facing navigation. This mapping is canonical in `bertel-tourism-ui/src/utils/facets.ts`.
+The frontend groups the 19 backend `object_type` codes into 7 explorer "buckets" for user-facing navigation. This mapping is canonical in `bertel-tourism-ui/src/utils/facets.ts`.
 
 | Explorer bucket | UI label | Backend `object_type` codes |
 |----------------|----------|----------------------------|
@@ -1699,7 +1700,7 @@ The frontend groups the 18 backend `object_type` codes into 7 explorer "buckets"
 | `ACT` | Activités | `ACT`, `LOI` |
 | `ITI` | Itinéraires | `ITI` |
 | `EVT` | Événements | `FMA` |
-| `VIS` | Visites | `PCU`, `PNA`, `VIL` |
+| `VIS` | Visites | `PCU`, `PNA`, `VIL`, `PRD` |
 | `SRV` | Services | `COM`, `PSV`, `ASC`, `SPU` |
 
 > **Note:** `ORG` is not exposed in the explorer. It is an internal entity type for institutional publishers and is accessed only through the relationships and membership system.

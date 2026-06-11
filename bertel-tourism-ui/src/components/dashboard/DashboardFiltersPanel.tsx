@@ -27,6 +27,7 @@ const OBJECT_TYPE_OPTIONS: { code: BackendObjectTypeCode; label: string }[] = [
   { code: 'PSV',  label: 'Prestataires' },
   { code: 'ASC',  label: 'Activités' },
   { code: 'SPU',  label: 'Services publics' },
+  { code: 'PRD',  label: 'Producteurs' },
 ];
 
 const STATUS_OPTIONS: { code: NonNullable<DashboardFilters['status']>[number]; label: string }[] = [

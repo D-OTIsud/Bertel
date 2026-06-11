@@ -46,6 +46,7 @@ export const TYPE_LABEL: Record<string, string> = {
   PNA: 'Site naturel',
   PSV: 'Prestataire',
   SPU: 'Service public',
+  PRD: 'Producteur',
   VIL: 'Ville',
   COM: 'Commerce',
   ACT: 'Activite encadree',
@@ -96,8 +97,8 @@ const VIS_ARCHETYPE: ArchetypeMeta = {
   archetype: 'VIS',
   accent: 'acc-plum',
   codeName: 'Site & visite',
-  family: 'Patrimoine · Loisir · Site naturel',
-  covers: 'LOI · PCU · PNA',
+  family: 'Patrimoine · Loisir · Site naturel · Producteur',
+  covers: 'LOI · PCU · PNA · PRD',
 };
 
 const SRV_ARCHETYPE: ArchetypeMeta = {
@@ -125,6 +126,7 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   LOI: VIS_ARCHETYPE,
   PCU: VIS_ARCHETYPE,
   PNA: VIS_ARCHETYPE,
+  PRD: VIS_ARCHETYPE, // §57: Producteur (agritourisme/dégustation) — visite + vente directe, modules génériques
   PSV: SRV_ARCHETYPE,
   VIL: SRV_ARCHETYPE,
   COM: SRV_ARCHETYPE,

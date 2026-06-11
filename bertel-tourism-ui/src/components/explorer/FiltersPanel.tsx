@@ -46,6 +46,7 @@ const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   PSV: 'Prestataires',
   ASC: 'Activites',
   SPU: 'Services publics',
+  PRD: 'Producteurs',
 };
 
 interface FiltersPanelProps {

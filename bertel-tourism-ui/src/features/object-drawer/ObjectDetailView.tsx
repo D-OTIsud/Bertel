@@ -84,7 +84,7 @@ const RESTAURANT_TYPES = new Set(['RES']);
 // (no trail/GPX panels); the editor gives them BlockFMA (object_fma dates/occurrences).
 const ITINERARY_TYPES = new Set(['ITI']);
 const ACTIVITY_TYPES = new Set(['ASC']);
-const VISITABLE_TYPES = new Set(['LOI', 'PCU']);
+const VISITABLE_TYPES = new Set(['LOI', 'PCU', 'PRD']);
 const NATURAL_TYPES = new Set(['PNA']);
 const SERVICE_TYPES = new Set(['PSV', 'SRV', 'VIL', 'COM', 'SPU']);
 

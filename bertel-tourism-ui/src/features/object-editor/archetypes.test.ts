@@ -2,9 +2,9 @@ import { getArchetypeMeta, TYPE_ARCHETYPES, TYPE_LABEL } from './archetypes';
 
 // = object_type enum (schema_unified.sql:174 + upgrade ALTER block) minus ORG (deliberately unmapped:
 // the editor renders an explicit unsupported-type panel for ORG — managed via /team).
-// Verified against live pg_enum 2026-06-11: 18 values incl. ACT + SPU + ORG.
+// Verified against live pg_enum 2026-06-11: 19 values incl. ACT + SPU + PRD + ORG.
 const DB_OBJECT_TYPES_MINUS_ORG = [
-  'RES', 'PCU', 'PNA', 'ITI', 'VIL', 'HPA', 'ASC', 'COM', 'HOT', 'HLO', 'LOI', 'FMA', 'CAMP', 'PSV', 'RVA', 'ACT', 'SPU',
+  'RES', 'PCU', 'PNA', 'ITI', 'VIL', 'HPA', 'ASC', 'COM', 'HOT', 'HLO', 'LOI', 'FMA', 'CAMP', 'PSV', 'RVA', 'ACT', 'SPU', 'PRD',
 ];
 
 describe('getArchetypeMeta', () => {

@@ -201,6 +201,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_read_gate.sql"
 
+      - name: object_review read gate test (§56 8w — anon draft review leak closed, extended arm added, admin writes intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_review_read_gate.sql"
+
+      - name: object type PRD + taxonomy seeds test (§57 8x/8y — enum, taxonomy_prd tree, 8 seeded domains, SPU/COM/LOI extensions, MICE applicability)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_prd.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

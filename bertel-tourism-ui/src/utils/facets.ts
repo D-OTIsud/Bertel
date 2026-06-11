@@ -27,7 +27,7 @@ export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTy
   ACT: ['ACT', 'LOI'],
   ITI: ['ITI'],
   EVT: ['FMA'],
-  VIS: ['PCU', 'PNA', 'VIL'],
+  VIS: ['PCU', 'PNA', 'VIL', 'PRD'],
   SRV: ['COM', 'PSV', 'ASC', 'SPU'],
 };
 

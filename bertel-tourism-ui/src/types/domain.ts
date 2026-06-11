@@ -20,7 +20,8 @@ export type BackendObjectTypeCode =
   | 'COM'
   | 'PSV'
   | 'ASC'
-  | 'SPU';
+  | 'SPU'
+  | 'PRD';
 
 export interface GeoPolygon {
   type: 'Polygon';

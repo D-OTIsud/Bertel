@@ -25,8 +25,9 @@
 - values: `draft`, `published`, `archived`, `hidden`
 
 ## `public.object_type`
-- values: `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU`
-  <!-- SPU appended 2026-06-11 (§53, manifest 8u) — hand-patched pending the next full db-graph pipeline run -->.
+- values: `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU`, `PRD`
+  <!-- SPU (§53, 8u) + PRD (§57, 8x) appended 2026-06-11 — hand-patched pending the next full db-graph pipeline run.
+       §57 also added ref_facet_applicability (object_meeting_room, LOI) — not yet reflected in the applicability list below. -->.
 
 ## Type → facet applicability (`ref_facet_applicability`)
 

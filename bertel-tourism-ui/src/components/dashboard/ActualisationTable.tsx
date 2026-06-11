@@ -61,6 +61,7 @@ export function ActualisationTable({ data }: Props) {
                     className={`actualisation-table__type-btn${activeTypes.includes(row.type) ? ' actualisation-table__type-btn--active' : ''}`}
                     title={`Filtrer : ${row.type}`}
                     onClick={() => handleType(row.type)}
+                    aria-pressed={activeTypes.includes(row.type)}
                   >
                     {row.type}
                   </button>

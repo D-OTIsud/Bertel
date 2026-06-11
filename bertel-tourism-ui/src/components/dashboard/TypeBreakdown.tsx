@@ -39,6 +39,7 @@ export function TypeBreakdown({ data }: Props) {
               title={`Filtrer : ${row.type}`}
               className={`type-breakdown__row type-breakdown__row--clickable${isActive ? ' type-breakdown__row--active' : ''}`}
               onClick={() => handleType(row.type)}
+              aria-pressed={isActive}
             >
               <span className="type-breakdown__label">{row.type}</span>
               <div className="type-breakdown__bar-wrap">

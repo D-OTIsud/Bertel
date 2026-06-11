@@ -8535,6 +8535,7 @@ a {
   border: 0;
   cursor: pointer;
   text-align: left;
+  padding: 0;
 }
 .type-breakdown__row--clickable:hover { background: var(--surface-2); }
 .type-breakdown__row--active .type-breakdown__label { color: var(--teal); font-weight: 700; }

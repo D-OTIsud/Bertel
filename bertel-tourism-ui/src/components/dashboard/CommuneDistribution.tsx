@@ -51,6 +51,7 @@ export function CommuneDistribution({ data }: Props) {
                 className="commune-list__btn"
                 onClick={() => handleCommune(name)}
                 disabled={isOthers}
+                aria-pressed={isActive}
               >
                 <span className="commune-list__name">{name}</span>
                 <div className="commune-list__bar-wrap">

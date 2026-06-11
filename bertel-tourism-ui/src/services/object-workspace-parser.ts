@@ -278,7 +278,9 @@ export interface ObjectWorkspaceGroupPolicyForm {
 }
 
 export interface ObjectWorkspacePetPolicyForm {
-  accepted: boolean;
+  /** Tri-state: null = « non renseigné » (no DB row) — an absent statement must
+   *  never silently become a public « Animaux non acceptés » (accepted=false). */
+  accepted: boolean | null;
   conditions: string;
 }
 
@@ -1589,7 +1591,8 @@ function parseWorkspaceCapacityPoliciesModule(raw: Record<string, unknown>): Obj
       notes: readString(groupPolicyRecord.notes),
     },
     petPolicy: {
-      accepted: petPolicyRecord.accepted == null ? false : readBoolean(petPolicyRecord.accepted),
+      // No row (or no accepted key) = « non renseigné » — tri-state, never false.
+      accepted: petPolicyRecord.accepted == null ? null : readBoolean(petPolicyRecord.accepted),
       conditions: readString(petPolicyRecord.conditions),
     },
     unavailableReason: null,

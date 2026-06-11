@@ -754,7 +754,9 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
       notes: readString(groupPolicy.notes),
     },
     petPolicy: {
-      accepted: petPolicy.accepted == null ? false : readBoolean(petPolicy.accepted),
+      // Absent row = « non renseigné » (tri-state) — coercing to false would publish
+      // « Animaux non acceptés » on the first save of an untouched §07.
+      accepted: petPolicy.accepted == null ? null : readBoolean(petPolicy.accepted),
       conditions: readString(petPolicy.conditions),
     },
     unavailableReason: null,
@@ -3935,6 +3937,13 @@ export async function saveObjectWorkspaceCharacteristics(objectId: string, input
     return;
   }
 
+  // §07 review no-clobber guard: saving the degraded parser-fallback module would
+  // rewrite object_language with the parser's empty level_ids (language levels
+  // wiped) and reset the other three legs from partial data.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
   await callObjectWorkspaceRpc('save_object_commercial', objectId, {
     languages: input.selectedLanguages.map((item) => ({
       language_id: toRpcUuid(item.languageId),
@@ -3960,6 +3969,13 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
     return;
   }
 
+  // §07 review no-clobber guard (§28/§40/§05 precedent): the capacities leg is a
+  // delete-reinsert — saving the degraded fallback module (no recordIds, no
+  // effective dates) would silently wipe effective_from/to on every row.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
   await callObjectWorkspaceRpc('save_object_commercial', objectId, {
     capacities: input.capacityItems.map((item) => ({
       id: toRpcUuid(item.recordId),
@@ -3975,10 +3991,14 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
       group_only: input.groupPolicy.groupOnly,
       notes: toNullableText(input.groupPolicy.notes),
     },
-    pet_policy: {
-      accepted: input.petPolicy.accepted,
-      conditions: toNullableText(input.petPolicy.conditions),
-    },
+    // Tri-state: « non renseigné » sends null — the RPC deletes the row instead of
+    // materialising a public « Animaux non acceptés » from an untouched form.
+    pet_policy: input.petPolicy.accepted === null
+      ? null
+      : {
+          accepted: input.petPolicy.accepted,
+          conditions: toNullableText(input.petPolicy.conditions),
+        },
   }, 'Impossible d enregistrer capacites et politiques.');
 }
 

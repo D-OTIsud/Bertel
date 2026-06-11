@@ -45,7 +45,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
         // rooms/equipment inventory sits right before the Capacité it feeds (§07).
         { num: '05', label: 'Médias' },
         { num: '06', label: TYPE_BLOCK_LABEL[archetype] },
-        { num: '07', label: 'Capacité & cadre' },
+        { num: '07', label: 'Capacité & accueil' },
         { num: '08', label: 'Classifications' },
         { num: '09', label: 'Tags & étiquettes' },
         { num: '10', label: 'Accessibilité' },

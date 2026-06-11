@@ -53,7 +53,7 @@ export function BlockRES({ editor, folded }: SectionProps) {
       {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise) */}
       <OwnedElsewhereNote
         num="07"
-        label="Capacité & cadre"
+        label="Capacité & accueil"
         summary={
           capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
             ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`

@@ -4,18 +4,20 @@ import { SectionCapacity } from './SectionCapacity';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
 describe('SectionCapacity', () => {
-  // PO 2026-06-11 (reverses the earlier §06 move): the pet policy is an accueil
-  // concern for ANY establishment, not just HEB — §07 is its sole editing surface.
-  it('edits the pet policy here (animaux acceptés + conditions when accepted)', () => {
+  // PO 2026-06-11: tri-state pet policy — « non renseigné » (no DB row) must never
+  // silently become a public « Animaux non acceptés » on first save.
+  it('edits the pet policy as a tri-state (non renseigné / acceptés / non acceptés)', () => {
     const modules = fullModulesFixture();
-    modules.capacityPolicies.petPolicy = { accepted: false, conditions: '' };
+    modules.capacityPolicies.petPolicy = { accepted: null, conditions: '' };
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<SectionCapacity editor={result.current} permissions={allowAll} />);
 
+    // Unset state renders honestly and hides the conditions field.
+    expect(screen.getByDisplayValue('— Non renseigné —')).toBeInTheDocument();
     expect(screen.queryByLabelText("Conditions d'accueil des animaux")).not.toBeInTheDocument();
-    act(() => { fireEvent.click(screen.getByLabelText('Animaux acceptés')); });
-    view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.change(screen.getByLabelText('Animaux'), { target: { value: 'accepted' } }); });
+    view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
     expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBe(true);
     act(() => {
       fireEvent.change(screen.getByLabelText("Conditions d'accueil des animaux"), {
@@ -23,8 +25,49 @@ describe('SectionCapacity', () => {
       });
     });
     expect(result.current.draft.capacityPolicies.petPolicy.conditions).toBe('Petits chiens tenus en laisse');
+
+    // A stated refusal can carry conditions too (e.g. « chiens guides uniquement »).
+    act(() => { fireEvent.change(screen.getByLabelText('Animaux'), { target: { value: 'refused' } }); });
+    view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBe(false);
+    expect(screen.getByLabelText("Conditions d'accueil des animaux")).toBeInTheDocument();
+
     // Group policy stays in §07 too.
     expect(screen.getByText('Groupes')).toBeInTheDocument();
+  });
+
+  it('renders the unavailable notice instead of the metric repeater on a degraded load', () => {
+    const modules = fullModulesFixture();
+    modules.capacityPolicies.unavailableReason = 'Le live actuel ne fournit pas encore un module C4 complet pour ce profil.';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText(/Module indisponible/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ajouter une capacité/ })).not.toBeInTheDocument();
+  });
+
+  it('renders a notice instead of the environment chips when characteristics failed to load', () => {
+    const modules = fullModulesFixture();
+    modules.characteristics.unavailableReason = 'Connexion backend indisponible pour charger les caracteristiques.';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(screen.queryByRole('button', { name: 'Jardin' })).not.toBeInTheDocument();
+    expect(screen.getByText(/caracteristiques/)).toBeInTheDocument();
+  });
+
+  it('titles the section « Capacité & accueil » with an honest sub (prix d\'appel → renvoi §13)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText('Capacité & accueil')).toBeInTheDocument();
+    // The old sub claimed Explorer DISPLAY of capacity/contenance/prix d'appel —
+    // none true here; the new sub only points price editing to §13.
+    expect(screen.queryByText(/Numéros clés affichés/)).not.toBeInTheDocument();
+    expect(screen.getByText(/prix d'appel se gère dans Tarifs/)).toBeInTheDocument();
+  });
+
+  it('renders no fake stepper buttons on the stat cards', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const { container } = render(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(container.querySelector('.stat-card button')).toBeNull();
   });
 
   // T1a "honest controls": the per-row unit is metric-derived (a trigger fills it

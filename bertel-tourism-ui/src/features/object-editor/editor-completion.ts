@@ -92,7 +92,8 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
   },
   '07': {
     fields: [
-      (draft) => draft.capacityPolicies.capacityItems.length > 0,
+      // Aligned with the section pill: a metric row with an EMPTY value is not progress.
+      (draft) => draft.capacityPolicies.capacityItems.some((item) => hasText(item.value)),
       (draft) => hasText(draft.capacityPolicies.groupPolicy.minSize) || hasText(draft.capacityPolicies.groupPolicy.maxSize),
     ],
   },

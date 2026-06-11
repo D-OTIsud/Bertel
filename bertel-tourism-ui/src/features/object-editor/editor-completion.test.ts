@@ -30,6 +30,14 @@ describe('editor completion scoring', () => {
     expect(computeSectionCompletion('06', draft)).toBe(100);
   });
 
+  it('§07 — a metric row with an EMPTY value does not count as complete (rail = pill)', () => {
+    const draft = fullModulesFixture();
+    draft.capacityPolicies.capacityItems[0].value = '';
+    draft.capacityPolicies.groupPolicy = { minSize: '', maxSize: '', groupOnly: false, notes: '' };
+
+    expect(computeSectionCompletion('07', draft)).toBe(0);
+  });
+
   it('averages known completion sections and returns nav-ready rows', () => {
     const draft = fullModulesFixture();
     const rows = computeSectionCompletions(draft, [{ num: '01', label: 'Identité' }]);

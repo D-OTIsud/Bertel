@@ -1,14 +1,19 @@
-import type { ObjectWorkspaceCapacityPoliciesModule } from './object-workspace-parser';
+import type { ObjectWorkspaceCapacityPoliciesModule, ObjectWorkspaceCharacteristicsModule } from './object-workspace-parser';
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 jest.mock('../store/session-store', () => ({
   useSessionStore: { getState: () => ({ demoMode: false }) },
 }));
 
-import { getSupabaseClient } from '../lib/supabase';
-import { getObjectWorkspaceCapacityPoliciesModule } from './object-workspace';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import {
+  getObjectWorkspaceCapacityPoliciesModule,
+  saveObjectWorkspaceCapacityPolicies,
+  saveObjectWorkspaceCharacteristics,
+} from './object-workspace';
 
 const mockGetClient = getSupabaseClient as jest.Mock;
+const mockGetApiClient = getApiClient as jest.Mock;
 
 const METRICS = [
   { id: 'm-max', code: 'max_capacity', name: 'Capacité max.', position: 3 },
@@ -74,7 +79,30 @@ function makeMockClient(opts: {
 
 afterEach(() => {
   mockGetClient.mockReset();
+  mockGetApiClient.mockReset();
 });
+
+function characteristicsModule(over: Partial<ObjectWorkspaceCharacteristicsModule> = {}): ObjectWorkspaceCharacteristicsModule {
+  return {
+    languageOptions: [],
+    languageLevelOptions: [],
+    selectedLanguages: [],
+    paymentOptions: [],
+    selectedPaymentCodes: [],
+    environmentOptions: [],
+    selectedEnvironmentCodes: [],
+    amenityGroups: [],
+    selectedAmenityCodes: [],
+    unavailableReason: null,
+    ...over,
+  };
+}
+
+function apiClientCapturingRpc() {
+  const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+  mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
+  return rpc;
+}
 
 /**
  * §07 review: metricOptions are filtered by ref_capacity_applicability for the
@@ -123,5 +151,77 @@ describe('capacity metric options filtered by type applicability', () => {
     const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), '');
 
     expect(moduleResult.metricOptions).toHaveLength(METRICS.length);
+  });
+});
+
+/**
+ * §07 review — pet policy tri-state: an ABSENT object_pet_policy row means
+ * « non renseigné » (accepted = null), never a public « Animaux non acceptés ».
+ * The saver sends pet_policy: null in that state (the RPC deletes the row).
+ */
+describe('pet policy tri-state (null = non renseigné)', () => {
+  it('loader keeps an absent pet row as accepted=null (not false)', async () => {
+    const { client } = makeMockClient({ applicableMetricIds: ['m-max'] });
+    mockGetClient.mockReturnValue(client);
+
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES');
+
+    expect(moduleResult.petPolicy.accepted).toBeNull();
+  });
+
+  it('saver sends pet_policy null when not stated (RPC deletes the row)', async () => {
+    const rpc = apiClientCapturingRpc();
+
+    await saveObjectWorkspaceCapacityPolicies('o1', {
+      ...baseModule(),
+      petPolicy: { accepted: null, conditions: '' },
+    });
+
+    const payload = rpc.mock.calls[0][1].p_payload as Record<string, unknown>;
+    expect(payload.pet_policy).toBeNull();
+  });
+
+  it('saver sends an explicit refusal as accepted=false (a stated « non »)', async () => {
+    const rpc = apiClientCapturingRpc();
+
+    await saveObjectWorkspaceCapacityPolicies('o1', {
+      ...baseModule(),
+      petPolicy: { accepted: false, conditions: 'Chiens guides uniquement' },
+    });
+
+    const payload = rpc.mock.calls[0][1].p_payload as Record<string, unknown>;
+    expect(payload.pet_policy).toEqual({ accepted: false, conditions: 'Chiens guides uniquement' });
+  });
+});
+
+/**
+ * §07 review — degraded-load no-clobber guards (§28/§40/§05 precedent): a module
+ * whose enrichment failed must never be saved (the §07 delete-reinsert would wipe
+ * effective dates; a degraded characteristics save would wipe language levels).
+ */
+describe('degraded-load save guards', () => {
+  it('saveObjectWorkspaceCapacityPolicies throws the unavailableReason before any RPC call', async () => {
+    const rpc = apiClientCapturingRpc();
+
+    await expect(
+      saveObjectWorkspaceCapacityPolicies('o1', {
+        ...baseModule(),
+        unavailableReason: 'Le live actuel ne fournit pas encore un module C4 complet pour ce profil.',
+      }),
+    ).rejects.toThrow(/module C4/);
+
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('saveObjectWorkspaceCharacteristics throws the unavailableReason before any RPC call', async () => {
+    const rpc = apiClientCapturingRpc();
+
+    await expect(
+      saveObjectWorkspaceCharacteristics('o1', characteristicsModule({
+        unavailableReason: 'Connexion backend indisponible pour charger les caracteristiques.',
+      })),
+    ).rejects.toThrow(/caracteristiques/);
+
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

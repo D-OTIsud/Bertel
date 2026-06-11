@@ -1,6 +1,7 @@
 import { Chip, ChipSet, Field, Fs, Input, Repeater, Select, StatCard, Textarea, Toggle } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCapacityItem } from '../../../services/object-workspace-parser';
+import { ModuleUnavailableNotice } from './blocks/block-notes';
 
 function createCapacityItem(
   items: ObjectWorkspaceCapacityItem[],
@@ -90,18 +91,25 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="07"
-      title="Capacité & contenance"
-      sub="Numéros clés affichés dans l'Explorer (capacité, contenance, prix d'appel). Les labels officiels vivent dans la section Classifications."
+      title="Capacité & accueil"
+      sub="Capacité d'accueil, groupes et animaux — alimente les filtres Explorer et la fiche publique. Le prix d'appel se gère dans Tarifs (§13)."
       folded={folded}
       pill={{
         tone: filledMetrics > 0 ? 'ok' : 'warn',
         label: filledMetrics > 0 ? `${filledMetrics} métrique(s)` : 'À compléter',
       }}
     >
+      {/* §07 review no-clobber: a degraded load renders the notice INSTEAD of the
+          module's controls — the saver also throws on this reason (defense-in-depth;
+          the capacities delete-reinsert would wipe effective dates otherwise). */}
+      {capacity.unavailableReason ? (
+        <ModuleUnavailableNotice reason={capacity.unavailableReason} />
+      ) : (
+      <>
       {statCards.length > 0 && (
         <div className="grid-4" style={{ marginBottom: 14 }}>
           {statCards.map((stat) => (
-            <StatCard key={stat.label} label={stat.label} value={stat.value} suffix={stat.suffix} hasStep />
+            <StatCard key={stat.label} label={stat.label} value={stat.value} suffix={stat.suffix} />
           ))}
         </div>
       )}
@@ -148,10 +156,18 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
           </>
         )}
       />
+      <p style={{ fontSize: 11, color: 'var(--ink-4)', margin: '4px 0 0' }}>
+        Les dates de validité sont internes (non publiées) — utiles pour préparer une saison.
+      </p>
 
       <div className="chip-group__label" style={{ marginTop: 16 }}>
         Cadre / environnement
       </div>
+      {/* The chips ride the shared `characteristics` module (also §12): its own
+          degraded-load guard applies — never render editable chips from a fallback. */}
+      {characteristics.unavailableReason ? (
+        <ModuleUnavailableNotice reason={characteristics.unavailableReason} />
+      ) : (
       <ChipSet>
         {characteristics.environmentOptions.map((option) => (
           <Chip
@@ -167,6 +183,7 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
           />
         ))}
       </ChipSet>
+      )}
 
       <div style={{ marginTop: 16 }}>
       <Field label="Groupes">
@@ -219,23 +236,34 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
 
       {/* Politique d'accueil — moved here from the §06 type block (PO 2026-06-11):
           accepting animals is an accueil concern for ANY establishment type, and
-          §07 renders for every archetype. §06 keeps a pointer note (§48 pattern). */}
+          §07 renders for every archetype. Tri-state: « non renseigné » keeps NO DB
+          row — it must never publish « Animaux non acceptés » from an untouched form. */}
       <div className="chip-group__label" style={{ marginTop: 16 }}>
         Politique d'accueil
       </div>
       <div className="grid-3">
         <div>
-          <Toggle
-            label="Animaux acceptés"
-            on={capacity.petPolicy.accepted}
-            onChange={(accepted) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                petPolicy: { ...capacity.petPolicy, accepted },
-              })
-            }
-          />
-          {capacity.petPolicy.accepted && (
+          <Field label="Animaux">
+            <Select
+              value={capacity.petPolicy.accepted === null ? '' : capacity.petPolicy.accepted ? 'accepted' : 'refused'}
+              options={[
+                { v: '', l: '— Non renseigné —' },
+                { v: 'accepted', l: 'Acceptés' },
+                { v: 'refused', l: 'Non acceptés' },
+              ]}
+              aria-label="Animaux"
+              onChange={(next) =>
+                editor.replaceModule('capacityPolicies', {
+                  ...capacity,
+                  petPolicy: {
+                    ...capacity.petPolicy,
+                    accepted: next === '' ? null : next === 'accepted',
+                  },
+                })
+              }
+            />
+          </Field>
+          {capacity.petPolicy.accepted !== null && (
             <Field label="Conditions d'accueil des animaux">
               <Textarea
                 aria-label="Conditions d'accueil des animaux"
@@ -252,6 +280,8 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
           )}
         </div>
       </div>
+      </>
+      )}
     </Fs>
   );
 }

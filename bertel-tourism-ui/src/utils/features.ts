@@ -1,3 +1,3 @@
 export function isDemoOnlyModule(path: string): boolean {
-  return ['/crm', '/moderation', '/audits', '/publications'].includes(path);
+  return ['/moderation', '/audits', '/publications'].includes(path);
 }

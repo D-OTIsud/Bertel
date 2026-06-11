@@ -151,7 +151,11 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (error) {
     throw error;
   }
-  return readString((data as GenericRecord | null)?.id);
+  const id = readString((data as GenericRecord | null)?.id);
+  if (!id) {
+    throw new Error('Réponse RPC sans id');
+  }
+  return id;
 }
 
 export interface SaveCrmInteractionInput {
@@ -189,7 +193,11 @@ export async function saveCrmInteraction(input: SaveCrmInteractionInput): Promis
   if (error) {
     throw error;
   }
-  return readString((data as GenericRecord | null)?.id);
+  const id = readString((data as GenericRecord | null)?.id);
+  if (!id) {
+    throw new Error('Réponse RPC sans id');
+  }
+  return id;
 }
 
 export async function deleteCrmInteraction(id: string): Promise<void> {
@@ -216,6 +224,8 @@ export async function userCanWriteCrmNotes(): Promise<boolean> {
     p_permission_code: 'write_crm_notes',
   });
   if (error) {
+    // Fail-closed (lecture seule) mais loggué : un échec RPC ne doit pas passer inaperçu.
+    console.warn('userCanWriteCrmNotes:', error.message);
     return false;
   }
   return data === true;

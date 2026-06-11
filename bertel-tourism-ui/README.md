@@ -47,7 +47,7 @@ docker compose up --build
 - Les listes et la carte s'appuient sur `api.list_object_resources_filtered_page` et `api.list_objects_map_view`.
 - Le tiroir d'edition s'appuie sur `api.get_object_resource`.
 - En mode normal, le role UI est attendu depuis la session Supabase, pas depuis un switch local.
-- Les modules CRM, moderation, audits et publications affichent maintenant une erreur explicite tant que leurs RPC dedies ne sont pas branches.
+- Le module CRM est branche sur ses RPC dedies (api.list_crm_timeline / list_crm_tasks / save_crm_*). Les modules moderation, audits et publications affichent une erreur explicite tant que leurs RPC dedies ne sont pas branches.
 - Les formats d'affichage doivent idealement reutiliser les blocs `render` emis par l'API.
 
 ## Supabase et schema `api`

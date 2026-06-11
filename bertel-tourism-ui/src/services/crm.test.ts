@@ -1,4 +1,4 @@
-import { parseCrmTask, parseCrmInteraction, parseCrmTimelinePage } from './crm';
+import { parseCrmTask, parseCrmTimelinePage } from './crm';
 
 describe('crm parsers', () => {
   it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB)', () => {

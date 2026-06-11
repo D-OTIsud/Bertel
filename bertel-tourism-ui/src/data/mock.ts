@@ -377,7 +377,7 @@ export const mockCrmTasks: CrmTask[] = [
   { id: 'task-3', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', title: 'Confirmer les horaires d hiver', description: null, status: 'done', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionSubject: null },
 ];
 
-// Timeline CRM mock — topicCodes = vrais codes seedés (ref_crm_topic) : demande_de_visite, modification_infos_bdd.
+// Timeline CRM mock — topicCodes = vrais codes seedés (ref_code, domaine demand_topic) : demande_de_visite, modification_infos_bdd.
 export const mockCrmTimeline: CrmTimelinePage = {
   items: [
     { id: 'evt-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call', direction: 'outbound', status: 'done', subject: 'Appel de suivi', body: 'Besoin d une nouvelle photo facade.', occurredAt: '2026-06-11T11:12:00Z', actorName: 'M. Payet', topicCode: 'demande_de_visite', topicName: 'Demande de visite', sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui' },

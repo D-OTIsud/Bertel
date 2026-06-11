@@ -21,7 +21,10 @@ function without<T>(list: T[] | undefined, predicate: (v: T) => boolean): T[] | 
 export function ActiveFilterStrip() {
   const { filters, setFilters, resetFilters } = useDashboardFilterStore();
 
-  const chips: { label: string; onRemove: () => void }[] = [];
+  // Les closures onRemove lisent le snapshot `filters` du rendu courant : deux retraits
+  // dans le même batch React peuvent en perdre un. Connu/accepté (interaction improbable) ;
+  // le correctif propre est la forme fonctionnelle de setFilters — différé (cf. plan lots 0+1, T12).
+  const chips: { label: string; key?: string; onRemove: () => void }[] = [];
 
   // ── Types ────────────────────────────────────────────────────────────────
   (filters.types ?? []).forEach((t) =>
@@ -78,6 +81,7 @@ export function ActiveFilterStrip() {
   (filters.taxonomyAny ?? []).forEach((t) =>
     chips.push({
       label: `Catégorie : ${t.code}`,
+      key: `tax:${t.domain}:${t.code}`,
       onRemove: () =>
         setFilters({
           taxonomyAny: without(
@@ -91,7 +95,7 @@ export function ActiveFilterStrip() {
   // ── Classifications / distinctions ────────────────────────────────────────
   (filters.classificationsAny ?? []).forEach((c) =>
     chips.push({
-      label: `${c.schemeCode} : ${c.valueCode}`,
+      label: `Distinction : ${c.schemeCode} ${c.valueCode}`,
       onRemove: () =>
         setFilters({
           classificationsAny: without(
@@ -137,7 +141,7 @@ export function ActiveFilterStrip() {
     <div className="active-filter-strip">
       {chips.map((chip) => (
         <button
-          key={chip.label}
+          key={chip.key ?? chip.label}
           type="button"
           className="active-filter-chip"
           onClick={chip.onRemove}

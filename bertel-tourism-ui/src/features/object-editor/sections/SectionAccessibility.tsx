@@ -18,12 +18,19 @@ const DISABILITY_TYPES = [
 
 const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
 
-export function SectionAccessibility({ editor, folded }: SectionProps) {
+export function SectionAccessibility({ editor, permissions, folded }: SectionProps) {
   const distinctions = editor.draft.distinctions;
   const characteristics = editor.draft.characteristics;
   const descriptions = editor.draft.descriptions;
   const active = descriptions.activeLanguage;
   const objectScope = descriptions.object;
+  // description_adapted is a CANONICAL object_description column: mirror §04's gate
+  // (the saver skips the canonical leg without it). canDirectWrite fallback keeps
+  // legacy permission shapes (and the allowAll test proxy) editable.
+  const canEditAdapted =
+    permissions.descriptions?.canEditCanonical
+    ?? permissions.descriptions?.canDirectWrite
+    ?? false;
 
   // Accessibility amenity family — identified by its familyCode (set in seeds / ref_amenity_family).
   // Each option carries a `disabilityTypes` array so we can group by panel.
@@ -116,9 +123,14 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
             onSelect={(code) => editor.replaceModule('descriptions', { ...descriptions, activeLanguage: code })}
           />
         )}
+        {/* Single owner of description_adapted since the §04 hand-off. Gated like §04's
+            canonical scope — the descriptions saver skips the canonical leg without
+            canEditCanonical, so an ungated textarea would silently drop the edit. */}
         <Textarea
           value={readTranslatableField(objectScope.adaptedDescription, active, descriptions.localLanguage)}
           rows={5}
+          disabled={!canEditAdapted}
+          data-testid="adapted-description-textarea"
           onChange={(value) => {
             const updated = updateTranslatableField(
               objectScope.adaptedDescription,
@@ -132,6 +144,11 @@ export function SectionAccessibility({ editor, folded }: SectionProps) {
             });
           }}
         />
+        {!canEditAdapted && (
+          <p className="muted" style={{ marginTop: 6 }}>
+            Lecture seule : vos droits ne permettent pas d&apos;éditer la version par défaut (canonique).
+          </p>
+        )}
       </Field>
 
       {/* ── Tourisme & Handicap label block ───────────────────────────────────── */}

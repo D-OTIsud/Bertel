@@ -15,6 +15,28 @@ describe('editor publication validation', () => {
     });
   });
 
+  it('blocks publication when the canonical description is empty in every language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.description = { baseValue: '', values: {} };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('descriptif'),
+      tone: 'req',
+    });
+  });
+
+  it('does not block when the description exists in any language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.description = { baseValue: '', values: { en: 'Some text' } };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '04')).toBe(false);
+  });
+
   it('returns a warning when descriptions are thin', () => {
     const draft = fullModulesFixture();
     draft.descriptions.object.description = { baseValue: 'Trop court', values: {} };

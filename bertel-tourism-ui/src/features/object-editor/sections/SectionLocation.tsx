@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQueries';
-import { Fs, Field, Input, ReferenceSelect } from '../primitives';
+import { Fs, Field, Input, ReferenceSelect, Textarea } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceLocationForm } from '../../../services/object-workspace-parser';
 import { geocodeAddress, type GeocodeHit } from '../widgets/geocode-address';
@@ -161,6 +161,20 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
           )}
         </Field>
       </div>
+
+      {/* Plan d'accès — object_location.direction (moved from §04, where it wrongly
+          wrote the accessibility column description_adapted; see review 2026-06-11). */}
+      <Field
+        label="Descriptif du plan d'accès"
+        hint="Itinéraire textuel pour trouver le lieu ; complète les coordonnées GPS"
+      >
+        <Textarea
+          value={main.direction}
+          onChange={(v) => patch({ direction: v })}
+          rows={3}
+          data-testid="direction-textarea"
+        />
+      </Field>
 
       <div className="map-shell-block">
         <div className="map-shell">

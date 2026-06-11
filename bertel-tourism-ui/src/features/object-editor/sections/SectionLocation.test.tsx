@@ -216,6 +216,18 @@ describe('SectionLocation', () => {
     expect(result.current.draft.location.main.city).toBe('Le Tampon');
   });
 
+  it('edits the plan d’accès text into object_location.direction (moved from §04)', () => {
+    const base = modules();
+    base.location.main.direction = 'Suivre la D27 jusqu’au village';
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionLocation editor={result.current} permissions={perms} />);
+
+    const direction = screen.getByTestId('direction-textarea') as HTMLTextAreaElement;
+    expect(direction.value).toBe('Suivre la D27 jusqu’au village');
+    fireEvent.change(direction, { target: { value: 'Au rond-point, 2e sortie' } });
+    expect(result.current.draft.location.main.direction).toBe('Au rond-point, 2e sortie');
+  });
+
   it('geocodes AND standardizes the address on a confident BAN match', async () => {
     geocodeAddressMock.mockResolvedValue(BAN_HIT);
     const { result } = renderHook(() => useObjectEditorState('o1', modules()));

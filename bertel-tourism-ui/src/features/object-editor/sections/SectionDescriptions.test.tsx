@@ -43,6 +43,18 @@ describe('SectionDescriptions', () => {
     expect(screen.queryByText('Descriptif OTI')).not.toBeInTheDocument();
   });
 
+  it('no longer renders the plan d’accès field (moved to §02 → object_location.direction)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionDescriptions editor={result.current} permissions={bothLayers} />);
+    expect(screen.queryByText(/plan d'accès/i)).not.toBeInTheDocument();
+  });
+
+  it('does not claim the accroche appears in the Explorer (drawer-only)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionDescriptions editor={result.current} permissions={bothLayers} />);
+    expect(screen.queryByTitle(/Explorer/)).not.toBeInTheDocument();
+  });
+
   it('hides the org scope tab without enrichment rights', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules()));
     render(<SectionDescriptions editor={result.current} permissions={canonicalOnly} />);

@@ -2,6 +2,27 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionAccessibility } from './SectionAccessibility';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
+
+describe('SectionAccessibility — description adaptée (single owner since the §04 hand-off)', () => {
+  it('disables the adapted-description textarea without canonical rights (no silent drop)', () => {
+    const noCanonical = {
+      descriptions: { canEditCanonical: false, canDirectWrite: false, canEditOrgEnrichment: true },
+    } as unknown as ObjectWorkspacePermissions;
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionAccessibility editor={result.current} permissions={noCanonical} />);
+
+    const textarea = screen.getByTestId('adapted-description-textarea');
+    expect(textarea).toBeDisabled();
+    expect(screen.getByText(/droits ne permettent pas/i)).toBeInTheDocument();
+  });
+
+  it('keeps the adapted-description textarea editable with canonical rights', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    expect(screen.getByTestId('adapted-description-textarea')).toBeEnabled();
+  });
+});
 
 describe('SectionAccessibility — Tourisme & Handicap label', () => {
   it('shows disability-type toggles for a held label, no free-text value input', () => {

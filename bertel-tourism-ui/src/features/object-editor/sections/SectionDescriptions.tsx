@@ -36,7 +36,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
     editor.replaceModule('descriptions', { ...descriptions, activeLanguage: code });
   }
 
-  function patchField(field: 'chapo' | 'description' | 'adaptedDescription', value: string) {
+  function patchField(field: 'chapo' | 'description', value: string) {
     const updated = updateTranslatableField(activeScopeData[field], active, descriptions.localLanguage, value);
     const nextScope = { ...activeScopeData, [field]: updated };
     editor.replaceModule('descriptions', onOrg
@@ -61,9 +61,9 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
   ];
 
   // In the personalised scope, show the default value as a greyed fallback hint when the overlay field is empty.
-  const fallback = (field: 'chapo' | 'description' | 'adaptedDescription') =>
+  const fallback = (field: 'chapo' | 'description') =>
     onOrg ? readTranslatableField(descriptions.object[field], active, descriptions.localLanguage) : '';
-  const hint = (base: string, field: 'chapo' | 'description' | 'adaptedDescription') => {
+  const hint = (base: string, field: 'chapo' | 'description') => {
     const fb = fallback(field);
     const current = readTranslatableField(activeScopeData[field], active, descriptions.localLanguage).trim();
     // Only surface the "inherited from default" hint while the overlay field is
@@ -80,7 +80,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
     <Fs
       num="04"
       title="Descriptions"
-      sub="Accroche, descriptif, plan d'accès — par langue, version par défaut ou personnalisée"
+      sub="Accroche et descriptif — par langue, version par défaut ou personnalisée"
       folded={folded}
       pill={{ tone: 'ok', label: onOrg ? 'Personnalisée' : 'Par défaut' }}
     >
@@ -93,7 +93,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
         {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
       </div>
 
-      <Field label="Accroche" hint={hint("≤ 160 caractères — apparaît sous le titre dans l'Explorer", 'chapo')}>
+      <Field label="Accroche" hint={hint('≤ 160 caractères — accroche courte affichée en tête de la fiche', 'chapo')}>
         <Textarea
           value={readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage)}
           onChange={(v) => patchField('chapo', v)}
@@ -114,15 +114,8 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
         />
       </Field>
 
-      <Field label="Descriptif du plan d'accès" hint={hint("Itinéraire textuel ; complète les coordonnées GPS", 'adaptedDescription')}>
-        <Textarea
-          value={readTranslatableField(activeScopeData.adaptedDescription, active, descriptions.localLanguage)}
-          onChange={(v) => patchField('adaptedDescription', v)}
-          placeholder={fallback('adaptedDescription')}
-          disabled={readOnly}
-          rows={4}
-        />
-      </Field>
+      {/* « Descriptif du plan d'accès » moved to §02 Localisation (object_location.direction);
+          description_adapted is single-owned by §10 Accessibilité since the §04 hand-off. */}
 
       {readOnly && (
         <p className="muted" style={{ marginTop: 8 }}>

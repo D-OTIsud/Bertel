@@ -83,6 +83,13 @@ const VALIDATION_RULES: ValidationRule[] = [
     hasText(draft.location.main.city) || hasText(draft.location.main.codeInsee)
       ? null
       : { section: '02', message: 'La commune de localisation est obligatoire avant publication.', tone: 'req' },
+  ({ draft }) => {
+    // §04 marks the canonical descriptif as required — back the star with a real gate.
+    const description = draft.descriptions.object.description;
+    return [description.baseValue, ...Object.values(description.values)].some(hasText)
+      ? null
+      : { section: '04', message: 'Le descriptif principal est obligatoire avant publication.', tone: 'req' };
+  },
   ({ archetype, draft }) =>
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
       ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }

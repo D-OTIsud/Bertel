@@ -629,6 +629,14 @@ DROP POLICY IF EXISTS "own_actor_consent_read" ON actor_consent;
 DROP POLICY IF EXISTS "own_actor_consent_write" ON actor_consent;
 DROP POLICY IF EXISTS "admin_crm_interaction" ON crm_interaction;
 DROP POLICY IF EXISTS "admin_crm_task" ON crm_task;
+DROP POLICY IF EXISTS "admin_read_crm_interaction" ON crm_interaction;
+DROP POLICY IF EXISTS "admin_ins_crm_interaction" ON crm_interaction;
+DROP POLICY IF EXISTS "admin_upd_crm_interaction" ON crm_interaction;
+DROP POLICY IF EXISTS "admin_del_crm_interaction" ON crm_interaction;
+DROP POLICY IF EXISTS "admin_read_crm_task" ON crm_task;
+DROP POLICY IF EXISTS "admin_ins_crm_task" ON crm_task;
+DROP POLICY IF EXISTS "admin_upd_crm_task" ON crm_task;
+DROP POLICY IF EXISTS "admin_del_crm_task" ON crm_task;
 DROP POLICY IF EXISTS "admin_pending_change" ON pending_change;
 DROP POLICY IF EXISTS "admin_object_version" ON object_version;
 DROP POLICY IF EXISTS "pub_membership_tier_read" ON ref_code_membership_tier;
@@ -1399,14 +1407,29 @@ CREATE POLICY "own_actor_consent_read" ON actor_consent
 CREATE POLICY "own_actor_consent_write" ON actor_consent
   FOR ALL USING (actor_id = auth.uid());
 
--- CRM tables: admin only
+-- CRM tables: admin only, par commande (§47/§58) — accès agent via RPCs DEFINER (migration_crm_module.sql)
 ALTER TABLE crm_interaction ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm_task ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admin_crm_interaction" ON crm_interaction
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
-CREATE POLICY "admin_crm_task" ON crm_task
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
+CREATE POLICY "admin_read_crm_interaction" ON crm_interaction FOR SELECT
+  USING ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_ins_crm_interaction" ON crm_interaction FOR INSERT
+  WITH CHECK ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_upd_crm_interaction" ON crm_interaction FOR UPDATE
+  USING ((select auth.role()) IN ('service_role','admin'))
+  WITH CHECK ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_del_crm_interaction" ON crm_interaction FOR DELETE
+  USING ((select auth.role()) IN ('service_role','admin'));
+
+CREATE POLICY "admin_read_crm_task" ON crm_task FOR SELECT
+  USING ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_ins_crm_task" ON crm_task FOR INSERT
+  WITH CHECK ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_upd_crm_task" ON crm_task FOR UPDATE
+  USING ((select auth.role()) IN ('service_role','admin'))
+  WITH CHECK ((select auth.role()) IN ('service_role','admin'));
+CREATE POLICY "admin_del_crm_task" ON crm_task FOR DELETE
+  USING ((select auth.role()) IN ('service_role','admin'));
 
 -- Versioning/changes: admin only
 ALTER TABLE pending_change ENABLE ROW LEVEL SECURITY;

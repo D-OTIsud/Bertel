@@ -258,7 +258,7 @@ import { WidgetFrame } from './WidgetFrame';
 
 describe('WidgetFrame', () => {
   it('affiche le chargement', () => {
-    render(<WidgetFrame isLoading error={null}><p>contenu</p></WidgetFrame>);
+    render(<WidgetFrame isPending error={null}><p>contenu</p></WidgetFrame>);
     expect(screen.getByRole('status')).toHaveTextContent('Chargement');
     expect(screen.queryByText('contenu')).not.toBeInTheDocument();
   });
@@ -266,7 +266,7 @@ describe('WidgetFrame', () => {
   it("affiche l'erreur avec bouton réessayer", () => {
     const onRetry = jest.fn();
     render(
-      <WidgetFrame isLoading={false} error={new Error('x')} onRetry={onRetry}>
+      <WidgetFrame isPending={false} error={new Error('x')} onRetry={onRetry}>
         <p>contenu</p>
       </WidgetFrame>,
     );
@@ -277,7 +277,7 @@ describe('WidgetFrame', () => {
 
   it("affiche l'état vide", () => {
     render(
-      <WidgetFrame isLoading={false} error={null} isEmpty emptyLabel="Rien ici.">
+      <WidgetFrame isPending={false} error={null} isEmpty emptyLabel="Rien ici.">
         <p>contenu</p>
       </WidgetFrame>,
     );
@@ -285,7 +285,7 @@ describe('WidgetFrame', () => {
   });
 
   it('affiche les enfants sinon', () => {
-    render(<WidgetFrame isLoading={false} error={null}><p>contenu</p></WidgetFrame>);
+    render(<WidgetFrame isPending={false} error={null}><p>contenu</p></WidgetFrame>);
     expect(screen.getByText('contenu')).toBeInTheDocument();
   });
 });
@@ -305,7 +305,8 @@ Expected: FAIL — module introuvable.
 import type { ReactNode } from 'react';
 
 interface WidgetFrameProps {
-  isLoading: boolean;
+  /** Pass q.isPending from useDashboardQuery — spinner au premier fetch seulement. */
+  isPending: boolean;
   error: unknown;
   /** true quand la donnée est chargée mais vide pour les filtres courants. */
   isEmpty?: boolean;
@@ -319,14 +320,14 @@ interface WidgetFrameProps {
  * console.error — chaque widget montre explicitement chargement / erreur / vide.
  */
 export function WidgetFrame({
-  isLoading,
+  isPending,
   error,
   isEmpty = false,
   emptyLabel = 'Aucun objet ne correspond aux filtres.',
   onRetry,
   children,
 }: WidgetFrameProps) {
-  if (isLoading) {
+  if (isPending) {
     return (
       <article className="kpi-panel kpi-panel--state" role="status" aria-live="polite">
         <span className="dashboard-widget-state">Chargement…</span>
@@ -652,7 +653,7 @@ export default function DashboardPage() {
         <main className="dashboard-main">
           <ActiveFilterStrip />
 
-          <WidgetFrame isLoading={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
+          <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
             {scorecards.data && <ScorecardStrip data={scorecards.data} />}
           </WidgetFrame>
 
@@ -662,7 +663,7 @@ export default function DashboardPage() {
             <>
               <div className="dashboard-kpi__row">
                 <WidgetFrame
-                  isLoading={typeBreakdown.isPending}
+                  isPending={typeBreakdown.isPending}
                   error={typeBreakdown.error}
                   isEmpty={typeBreakdown.data?.rows.length === 0}
                   onRetry={() => typeBreakdown.refetch()}
@@ -671,7 +672,7 @@ export default function DashboardPage() {
                 </WidgetFrame>
               </div>
               <WidgetFrame
-                isLoading={actualisation.isPending}
+                isPending={actualisation.isPending}
                 error={actualisation.error}
                 isEmpty={actualisation.data?.rows.length === 0}
                 onRetry={() => actualisation.refetch()}
@@ -684,7 +685,7 @@ export default function DashboardPage() {
           {activeTab === 'offer' && (
             <div className="dashboard-kpi__row">
               <WidgetFrame
-                isLoading={cityDistribution.isPending}
+                isPending={cityDistribution.isPending}
                 error={cityDistribution.error}
                 isEmpty={cityDistribution.data?.rows.length === 0}
                 onRetry={() => cityDistribution.refetch()}
@@ -692,7 +693,7 @@ export default function DashboardPage() {
                 {cityDistribution.data && <CommuneDistribution data={cityDistribution.data} />}
               </WidgetFrame>
               <WidgetFrame
-                isLoading={distinctions.isPending}
+                isPending={distinctions.isPending}
                 error={distinctions.error}
                 onRetry={() => distinctions.refetch()}
               >

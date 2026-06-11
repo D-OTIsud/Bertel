@@ -70,6 +70,7 @@ import {
   getOpeningYearTimelineSegment,
   type OrganizationItem,
   type PetPolicyItem,
+  type GroupPolicyItem,
   type PriceItem,
   type RelatedObjectItem,
   type RoomTypeItem,
@@ -119,6 +120,7 @@ interface PreviewData {
   meetingRooms: MeetingRoomItem[];
   taxonomyGroups: TaxonomyGroup[];
   petPolicy: PetPolicyItem | null;
+  groupPolicy: GroupPolicyItem | null;
   relatedObjects: RelatedObjectItem[];
   itinerary: ItinerarySummary | null;
   privateNotes: PrivateNoteEntry[];
@@ -300,6 +302,7 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
     meetingRooms: parsed.operations.meetingRooms,
     taxonomyGroups: parsed.taxonomy.groups,
     petPolicy: parsed.operations.petPolicy,
+    groupPolicy: parsed.operations.groupPolicy,
     relatedObjects: parsed.relations.all,
     itinerary: parsed.itinerary.summary,
     privateNotes: parsed.text.privateNotes,
@@ -489,6 +492,23 @@ function buildPracticalFacts(preview: PreviewData): PracticalFact[] {
       ? {
           label: 'Animaux',
           items: [preview.petPolicy.label, ...preview.petPolicy.details].filter(Boolean),
+        }
+      : null,
+    // §07 review: object_group_policy was emitted then dropped — surface it here.
+    preview.groupPolicy
+      ? {
+          label: 'Groupes',
+          items: [
+            preview.groupPolicy.minSize && preview.groupPolicy.maxSize
+              ? `${preview.groupPolicy.minSize}–${preview.groupPolicy.maxSize} pers.`
+              : preview.groupPolicy.minSize
+                ? `À partir de ${preview.groupPolicy.minSize} pers.`
+                : preview.groupPolicy.maxSize
+                  ? `Jusqu'à ${preview.groupPolicy.maxSize} pers.`
+                  : '',
+            preview.groupPolicy.groupOnly ? 'Réservé aux groupes' : '',
+            preview.groupPolicy.notes,
+          ].filter(Boolean),
         }
       : null,
     childLine ? { label: 'Enfants', value: childLine } : null,

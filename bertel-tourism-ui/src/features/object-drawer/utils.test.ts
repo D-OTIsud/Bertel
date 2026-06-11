@@ -7,6 +7,7 @@ import {
   parseCapacities,
   parseContacts,
   parseExternalSyncs,
+  parseGroupPolicy,
   parseItinerarySummary,
   parseMedia,
   parseMemberships,
@@ -241,6 +242,30 @@ describe('object drawer utils', () => {
       label: 'Animaux acceptes',
     });
     expect(petPolicy?.details).toContain('Supplement menage');
+  });
+
+  it('parses live capacity rows with their real metric name and unit (not the generic « Capacite »)', () => {
+    // Live get_object_resource shape: metric_code/metric_name/value/unit — the old
+    // parser read pre-live keys (code/metric/label) and rendered every row « Capacite ».
+    const capacities = parseCapacities({
+      capacity: [
+        { metric_code: 'max_capacity', metric_name: 'Capacité max.', value: 12, unit: 'pax' },
+        { metric_code: 'seats', metric_name: 'Places assises', value: 12, unit: 'seat' },
+      ],
+    } as Record<string, unknown>);
+    expect(capacities).toHaveLength(2);
+    expect(capacities[0].label).toBe('Capacité max.');
+    expect(capacities[0].value).toBe('12 pax');
+    // Equal values across DIFFERENT metrics must not collapse (dedupe by metric, not value).
+    expect(capacities[1].label).toBe('Places assises');
+  });
+
+  it('parses the group policy (min/max/groupOnly/notes) — the table was write-and-forget', () => {
+    const policy = parseGroupPolicy({
+      group_policies: [{ min_size: 8, max_size: 40, group_only: true, notes: 'Sur réservation' }],
+    } as Record<string, unknown>);
+    expect(policy).toEqual({ minSize: '8', maxSize: '40', groupOnly: true, notes: 'Sur réservation' });
+    expect(parseGroupPolicy({} as Record<string, unknown>)).toBeNull();
   });
 
   it('parses the media description (texte alternatif) for the gallery alt', () => {

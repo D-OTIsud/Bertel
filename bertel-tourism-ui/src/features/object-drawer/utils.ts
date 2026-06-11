@@ -1202,10 +1202,17 @@ export function parseCapacities(raw: Record<string, unknown>): CapacityItem[] {
       }
 
       const record = readRecord(item);
-      const label = readNamedValue(record.code ?? record.metric ?? record.label, readString(record.label, 'Capacite'));
-      const value = formatCapacityValue(record);
+      // Live get_object_resource emits metric_code/metric_name/unit — read those first;
+      // the legacy keys (code/metric/label) made every live row render « Capacite ».
+      const label = readString(
+        record.metric_name,
+        readNamedValue(record.code ?? record.metric ?? record.label, readString(record.label, 'Capacite')),
+      );
+      const rawValue = formatCapacityValue(record);
+      const unit = readString(record.unit);
+      const value = rawValue && unit ? `${rawValue} ${unit}` : rawValue;
 
-      if (!value || value === '0') {
+      if (!rawValue || rawValue === '0') {
         return null;
       }
 
@@ -1213,12 +1220,14 @@ export function parseCapacities(raw: Record<string, unknown>): CapacityItem[] {
         id: makeItemId('capacity', record, index, label),
         label: label || 'Capacite',
         value,
+        dedupeKey: readString(record.metric_code) || label.toLowerCase(),
       };
     })
-    .filter((item): item is CapacityItem => item !== null);
+    .filter((item): item is CapacityItem & { dedupeKey: string } => item !== null);
 
   if (parsed.length > 0) {
-    return dedupeByKey(parsed, (item) => `${item.label.toLowerCase()}-${item.value}`);
+    // Dedupe by METRIC, never by value — two metrics with equal values are distinct.
+    return dedupeByKey(parsed, (item) => item.dedupeKey).map(({ dedupeKey: _key, ...item }) => item);
   }
 
   const fallbackValue = readString(raw.capacity, readString(raw.total_capacity));
@@ -1257,6 +1266,27 @@ export function parseTaxonomyGroups(raw: Record<string, unknown>): TaxonomyGroup
   ];
 
   return groups.filter((group): group is TaxonomyGroup => group !== null);
+}
+
+export interface GroupPolicyItem {
+  minSize: string;
+  maxSize: string;
+  groupOnly: boolean;
+  notes: string;
+}
+
+/** §07 review: object_group_policy was emitted by the resource then parsed-and-dropped —
+ *  the whole table was publicly write-and-forget. One row per object (PK = object_id). */
+export function parseGroupPolicy(raw: Record<string, unknown>): GroupPolicyItem | null {
+  const record = readRecord(readArray(raw.group_policies)[0]);
+  const minSize = readString(record.min_size);
+  const maxSize = readString(record.max_size);
+  const groupOnly = readBoolean(record.group_only) === true;
+  const notes = readString(record.notes);
+  if (!minSize && !maxSize && !groupOnly && !notes) {
+    return null;
+  }
+  return { minSize, maxSize, groupOnly, notes };
 }
 
 export function parsePetPolicy(raw: Record<string, unknown>): PetPolicyItem | null {

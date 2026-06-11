@@ -681,6 +681,22 @@ describe('ObjectDetailView', () => {
     );
   });
 
+  it('renders the group policy as a practical fact (the table was parsed then dropped)', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-groups',
+      name: 'Hotel Horizon',
+      type: 'HOT',
+      raw: {
+        group_policies: [{ min_size: 8, max_size: 40, group_only: true, notes: 'Sur réservation' }],
+      },
+    };
+    renderDetail(data);
+    expect(screen.getByText('Groupes')).toBeInTheDocument();
+    expect(screen.getByText(/8–40 pers\./)).toBeInTheDocument();
+    expect(screen.getByText(/Réservé aux groupes/)).toBeInTheDocument();
+    expect(screen.getByText(/Sur réservation/)).toBeInTheDocument();
+  });
+
   it('renders a video media with a <video> element in the hero, never a broken <img>', () => {
     const data: ObjectDetail = {
       id: 'hotel-video',

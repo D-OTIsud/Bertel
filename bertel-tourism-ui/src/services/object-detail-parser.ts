@@ -29,6 +29,8 @@ import {
   type OpeningItem,
   type OrganizationItem,
   type PetPolicyItem,
+  type GroupPolicyItem,
+  parseGroupPolicy,
   type PriceItem,
   type RelatedObjectItem,
   type RoomTypeItem,
@@ -167,6 +169,8 @@ export interface ParsedOperationsSection {
   openings: OpeningItem[];
   discounts: Array<Record<string, unknown>>;
   groupPolicies: Array<Record<string, unknown>>;
+  /** §07 review: the parsed one-row group policy (the raw array above only feeds the section-presence check). */
+  groupPolicy: GroupPolicyItem | null;
   petPolicy: PetPolicyItem | null;
 }
 
@@ -1072,6 +1076,7 @@ function buildOperations(raw: Record<string, unknown>): ParsedOperationsSection 
     openings: parseOpenings(raw),
     discounts: readArray(raw.discounts),
     groupPolicies: readArray(raw.group_policies),
+    groupPolicy: parseGroupPolicy(raw),
     petPolicy: parsePetPolicy(raw),
   };
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from 'next/navigation';
+import { mapDashboardFiltersToExplorerUrl } from '../../lib/dashboard-to-explorer';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,6 +22,8 @@ function without<T>(list: T[] | undefined, predicate: (v: T) => boolean): T[] | 
 
 export function ActiveFilterStrip() {
   const { filters, setFilters, resetFilters } = useDashboardFilterStore();
+  const router = useRouter();
+  const bridge = mapDashboardFiltersToExplorerUrl(filters);
 
   // Les closures onRemove lisent le snapshot `filters` du rendu courant : deux retraits
   // dans le même batch React peuvent en perdre un. Connu/accepté (interaction improbable) ;
@@ -158,6 +162,18 @@ export function ActiveFilterStrip() {
           Tout effacer
         </button>
       )}
+      <button
+        type="button"
+        className="ghost-button active-filter-strip__explorer"
+        title={
+          bridge.dropped.length > 0
+            ? `Non transposés : ${bridge.dropped.join(', ')}`
+            : undefined
+        }
+        onClick={() => router.push(bridge.url)}
+      >
+        Ouvrir dans l'Explorer
+      </button>
     </div>
   );
 }

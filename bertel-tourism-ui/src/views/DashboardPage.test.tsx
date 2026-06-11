@@ -3,6 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 
+// ActiveFilterStrip appelle useRouter() — mock neutre requis dans tout test qui le rend.
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
 jest.mock('../services/dashboard-reference', () => ({
   getDashboardAdvancedFilterOptions: jest.fn().mockResolvedValue({
     taxonomyDomains: [], taxonomyCodes: [], distinctionValues: [],

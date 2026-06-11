@@ -2,11 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ActiveFilterStrip } from './ActiveFilterStrip';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
 
-// le bouton "Ouvrir dans l'Explorer" (tâche 11) importera next/navigation — mock neutre posé d'avance, à conserver.
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+// Hissage de push pour permettre l'assertion dans le test Explorer.
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 describe('ActiveFilterStrip — chips', () => {
   beforeEach(() => {
+    push.mockClear();
     useDashboardFilterStore.setState({
       filters: {
         status: ['published'],
@@ -44,5 +46,16 @@ describe('ActiveFilterStrip — chips', () => {
     render(<ActiveFilterStrip />);
     fireEvent.click(screen.getByText(/Langue : en/));
     expect(useDashboardFilterStore.getState().filters.languagesAny).toEqual(['fr']);
+  });
+
+  it("le bouton Explorer pousse l'URL transposée", () => {
+    useDashboardFilterStore.setState({
+      filters: { status: ['published'], cities: ['Saint-Pierre'] },
+      activeTab: 'quality',
+      sidebarCollapsed: false,
+    });
+    render(<ActiveFilterStrip />);
+    fireEvent.click(screen.getByRole('button', { name: "Ouvrir dans l'Explorer" }));
+    expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/explorer/));
   });
 });

@@ -25,7 +25,8 @@
 - values: `draft`, `published`, `archived`, `hidden`
 
 ## `public.object_type`
-- values: `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`
+- values: `RES`, `PCU`, `PNA`, `ORG`, `ITI`, `VIL`, `HPA`, `ASC`, `COM`, `HOT`, `HLO`, `LOI`, `FMA`, `CAMP`, `PSV`, `RVA`, `ACT`, `SPU`
+  <!-- SPU appended 2026-06-11 (§53, manifest 8u) — hand-patched pending the next full db-graph pipeline run -->.
 
 ## Type → facet applicability (`ref_facet_applicability`)
 

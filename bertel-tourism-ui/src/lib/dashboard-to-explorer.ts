@@ -29,7 +29,8 @@ export interface ExplorerBridgeResult {
  *   lieuDits[0]        → common.lieuDit   (mono-valué côté Explorer — [1..] → dropped)
  *   pmr                → common.pmr
  *   petsAccepted       → common.petsAccepted
- *   labelsAny[]        → common.labelsAny
+ *   labelsAny[]        → DROP ('tags') — labelsAny Explorer est frontend-only sur labels
+ *                         d'affichage ; les slugs ref_tag (tags_any serveur) n'ont pas de cible
  *   taxonomyAny[taxonomy_hot] → hot.taxonomy
  *   taxonomyAny[autre] → dropped ('catégories hors hébergement')
  *   updatedAtFrom/To   → dropped ('période de mise à jour')
@@ -102,6 +103,11 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
   if (filters.amenityFamiliesAny?.length) {
     dropped.push("familles d'équipements");
   }
+  // Tags dashboard = slugs ref_tag (serveur tags_any) ; le labelsAny de l'Explorer est un
+  // filtre frontend-only sur les labels d'AFFICHAGE — aucune cible fidèle ⇒ drop signalé.
+  if (filters.labelsAny?.length) {
+    dropped.push('tags');
+  }
 
   // ── Construction des filtres Explorer ────────────────────────────────────
   const explorerFilters = normalizeExplorerFilters({
@@ -113,7 +119,6 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
       lieuDit: firstLieuDit ?? '',
       pmr: !!filters.pmr,
       petsAccepted: !!filters.petsAccepted,
-      labelsAny: filters.labelsAny ?? [],
       statuses,
     },
     hot: {

@@ -1,14 +1,13 @@
 import { mapDashboardFiltersToExplorerUrl } from './dashboard-to-explorer';
 
 describe('mapDashboardFiltersToExplorerUrl', () => {
-  it('mappe types → buckets (+ hotSubtypes), cities, pmr, pets, labels, statuses', () => {
+  it('mappe types → buckets (+ hotSubtypes), cities, pmr, pets, statuses', () => {
     const { url, dropped } = mapDashboardFiltersToExplorerUrl({
       types: ['HOT', 'CAMP', 'RES'],
       status: ['published', 'draft'],
       cities: ['Le Tampon'],
       pmr: true,
       petsAccepted: true,
-      labelsAny: ['famille-plus'],
     });
     const params = new URLSearchParams(url.split('?')[1]);
     expect(url.startsWith('/explorer?')).toBe(true);
@@ -21,7 +20,6 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
     expect(params.get('pmr')).toBe('true');
     // petsAccepted=true → pets='true'
     expect(params.get('pets')).toBe('true');
-    expect(params.get('labels')).toBe('famille-plus');
     // statuses non-empty → serialized
     expect(params.get('status')).toBe('published,draft');
     expect(dropped).toEqual([]);
@@ -33,6 +31,7 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
       classificationsAny: [{ schemeCode: 'hot_stars', valueCode: '4' }],
       languagesAny: ['en'],
       amenityFamiliesAny: ['wellness'],
+      labelsAny: ['famille-plus'],
       lieuDits: ['A', 'B'],
       status: ['archived'],
       taxonomyAny: [{ domain: 'taxonomy_res', code: 'creole' }],
@@ -43,6 +42,7 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
         'distinctions',
         'langues',
         "familles d'équipements",
+        'tags',
         'lieux-dits supplémentaires',
         'statut archivé/masqué',
         'catégories hors hébergement',
@@ -78,5 +78,11 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
       types: ['COM', 'PSV', 'ASC', 'SPU'],
     });
     expect(dropped).toEqual([]);
+  });
+
+  it("droppe les tags (aucun équivalent serveur côté Explorer) sans les sérialiser", () => {
+    const { url, dropped } = mapDashboardFiltersToExplorerUrl({ labelsAny: ['famille-plus'] });
+    expect(dropped).toEqual(['tags']);
+    expect(url).toBe('/explorer');
   });
 });

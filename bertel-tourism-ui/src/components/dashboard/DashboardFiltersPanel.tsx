@@ -24,8 +24,9 @@ const OBJECT_TYPE_OPTIONS: { code: BackendObjectTypeCode; label: string }[] = [
   { code: 'PNA',  label: 'Nature' },
   { code: 'VIL',  label: 'Villages' },
   { code: 'COM',  label: 'Commerces' },
-  { code: 'PSV',  label: 'Services' },
-  { code: 'ASC',  label: 'Ascenseurs' },
+  { code: 'PSV',  label: 'Prestataires' },
+  { code: 'ASC',  label: 'Activités' },
+  { code: 'SPU',  label: 'Services publics' },
 ];
 
 const STATUS_OPTIONS: { code: NonNullable<DashboardFilters['status']>[number]; label: string }[] = [

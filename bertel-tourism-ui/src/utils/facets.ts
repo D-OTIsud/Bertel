@@ -28,7 +28,7 @@ export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTy
   ITI: ['ITI'],
   EVT: ['FMA'],
   VIS: ['PCU', 'PNA', 'VIL'],
-  SRV: ['COM', 'PSV', 'ASC'],
+  SRV: ['COM', 'PSV', 'ASC', 'SPU'],
 };
 
 export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];

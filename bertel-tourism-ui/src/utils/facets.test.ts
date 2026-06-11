@@ -31,7 +31,7 @@ describe('explorer type families', () => {
     expect(EXPLORER_TYPE_CODE_FAMILIES.HOT).toEqual(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
     expect(EXPLORER_TYPE_CODE_FAMILIES.ACT).toEqual(['ACT', 'LOI']);
     expect(EXPLORER_TYPE_CODE_FAMILIES.VIS).toEqual(['PCU', 'PNA', 'VIL']);
-    expect(EXPLORER_TYPE_CODE_FAMILIES.SRV).toEqual(['COM', 'PSV', 'ASC']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.SRV).toEqual(['COM', 'PSV', 'ASC', 'SPU']);
   });
 
   it('maps backend codes to the right explorer family', () => {

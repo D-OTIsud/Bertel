@@ -174,6 +174,8 @@ BEGIN
     CREATE TYPE object_type AS ENUM (
       'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP','PSV','RVA'
     );
+    -- 'ACT' et 'SPU' sont ajoutés par le bloc d'upgrade « Ensure new enum labels exist » plus bas
+    -- (ALTER TYPE ... ADD VALUE IF NOT EXISTS) — même chemin sur fresh et sur live.
   END IF;
 END $$;
 
@@ -1257,6 +1259,10 @@ DO $$ BEGIN
   -- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
   BEGIN
     ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'ACT';
+  EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot SPU « Service public » — 2026-06-11 (§53 ; taxonomie : migration_object_type_spu.sql, 8u)
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'SPU';
   EXCEPTION WHEN others THEN NULL; END;
 END $$;
 

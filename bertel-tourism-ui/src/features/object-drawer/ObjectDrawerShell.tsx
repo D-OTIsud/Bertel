@@ -30,6 +30,7 @@ const DRAWER_TYPE_LABELS: Record<string, string> = {
   PCU: 'Patrimoine',
   PNA: 'Site naturel',
   PSV: 'Prestataire',
+  SPU: 'Service public',
   SRV: 'Service',
   VIL: 'Ville',
   COM: 'Commerce',

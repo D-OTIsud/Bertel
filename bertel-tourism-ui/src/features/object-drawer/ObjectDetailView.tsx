@@ -86,7 +86,7 @@ const ITINERARY_TYPES = new Set(['ITI']);
 const ACTIVITY_TYPES = new Set(['ASC']);
 const VISITABLE_TYPES = new Set(['LOI', 'PCU']);
 const NATURAL_TYPES = new Set(['PNA']);
-const SERVICE_TYPES = new Set(['PSV', 'SRV', 'VIL', 'COM']);
+const SERVICE_TYPES = new Set(['PSV', 'SRV', 'VIL', 'COM', 'SPU']);
 
 interface DetailViewProps {
   data: ObjectDetail;

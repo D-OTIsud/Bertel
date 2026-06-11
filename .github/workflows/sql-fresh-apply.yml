@@ -191,6 +191,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_media_description_read_gate.sql"
 
+      - name: object type SPU test (§53 8u — enum value + taxonomy_spu tree + SPU insert passes facet guard)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_spu.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

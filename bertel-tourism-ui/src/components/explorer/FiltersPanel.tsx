@@ -37,14 +37,15 @@ const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
   RES: 'Restaurants',
   ITI: 'Itineraires',
   FMA: 'Evenements',
-  ACT: 'Activites',
+  ACT: 'Activites encadrees',
   LOI: 'Loisirs',
   PCU: 'Culture',
   PNA: 'Nature',
   VIL: 'Villages',
   COM: 'Commerces',
-  PSV: 'Services',
-  ASC: 'Ascenseurs',
+  PSV: 'Prestataires',
+  ASC: 'Activites',
+  SPU: 'Services publics',
 };
 
 interface FiltersPanelProps {

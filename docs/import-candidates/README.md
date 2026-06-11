@@ -4,11 +4,11 @@
 
 ## But
 
-Au 2026-06-11, 8 des 17 types d'objets de la base live sont à **0 objet** : PCU, PNA, ITI, VIL, HPA, ASC, FMA, RVA. Ces fiches documentent 3 objets touristiques **réels** par type (quand ils existent), situés strictement dans le périmètre OTI du Sud / CASUD — Le Tampon (INSEE 97422), Saint-Joseph (97412), Saint-Philippe (97417), Entre-Deux (97403) — afin qu'après import, un utilisateur externe puisse comprendre tout le périmètre du modèle.
+Au 2026-06-11, 8 des 17 types d'objets de la base live étaient à **0 objet** : PCU, PNA, ITI, VIL, HPA, ASC, FMA, RVA. (Un 18ᵉ type, **SPU « Service public »**, a été créé le même jour — décision §53 — et est couvert par la passe 3.) Ces fiches documentent 3 objets touristiques **réels** par type (quand ils existent), situés strictement dans le périmètre OTI du Sud / CASUD — Le Tampon (INSEE 97422), Saint-Joseph (97412), Saint-Philippe (97417), Entre-Deux (97403) — afin qu'après import, un utilisateur externe puisse comprendre tout le périmètre du modèle.
 
 Règle appliquée : **aucune donnée inventée**. Tout téléphone/GPS/horaire/tarif non confirmé par une source consultée est marqué « Non trouvé — à compléter ». Chaque fiche liste ses sources datées et ses lacunes.
 
-## Couverture (28 fiches — 23 de la passe de couverture + 5 ajouts demandés par l'OTI, marqués ²)
+## Couverture (31 fiches — 23 de la passe de couverture + 5 ajouts demandés par l'OTI, marqués ² + 3 SPU, marqués ³)
 
 | Type | Fiche | Objet | Commune | Confiance | Alerte |
 |---|---|---|---|---|---|
@@ -40,6 +40,9 @@ Règle appliquée : **aucune donnée inventée**. Tout téléphone/GPS/horaire/t
 | RVA | [RVA-01](RVA-01-run-vacances-bleu-vert-plaine-des-cafres.md) | Run Vacances Bleu & Vert (village de vacances) | Le Tampon | haute | |
 | RVA | [RVA-02](RVA-02-residence-touristique-des-thes-grand-coude.md) | Résidence Touristique des Thés | Saint-Joseph | moyenne | ⚠ DOUBLON CONFIRMÉ en base (HLO, published) — fiche d'**arbitrage de requalification** HLO→RVA, PAS une création ; défaut = maintien HLO tant que les services para-hôteliers ne sont pas documentés |
 | RVA | [RVA-03](RVA-03-village-vacances-ilet-creole-entre-deux.md) | Village Vacances L'Îlet Créole | Entre-Deux | moyenne | ⚠ indices d'inactivité (fax, tarifs non millésimés, absent des plateformes) — vérifier mairie/OTI avant import |
+| SPU | [SPU-01](SPU-01-borne-recharge-electrique.md) | Borne de recharge — Station TotalEnergies La Châtoire (Freshmile, 50 kW, 24/7) ³ | Le Tampon | haute | tarif €/kWh non publié ; ne pas confondre avec la borne Hyper U du même quartier |
+| SPU | [SPU-02](SPU-02-toilettes-publiques.md) | Toilettes publiques de la rue Maury ³ | Saint-Joseph | moyenne | sources 2016/2024 — état actuel à confirmer sur le terrain avant publication |
+| SPU | [SPU-03](SPU-03-point-eau-potable.md) | Point d'eau potable — Belvédère de Bois Court ³ | Le Tampon | moyenne | ⚠ robinets attestés en 2021, AVANT le réaménagement du site (plateforme 2025) — persistance + potabilité à vérifier terrain |
 
 ## Déficit HPA : 2 fiches au lieu de 3 (justifié)
 
@@ -62,3 +65,4 @@ Après recherche approfondie (OTI du Sud, IRT, Randopitons, Sous les Étoiles 97
 
 - **Passe 1 — couverture des 8 types vides** (2026-06-11, run `wf_3559d351-b77`) : 8 agents de recherche (un par type) → 23 vérifications adversariales indépendantes (web + SQL live) → 0 rejet, 16 fiches corrigées en place, 1 tour de remplacement (non nécessaire sauf HPA, déficit documenté ci-dessus) → contrôle final de complétude OK (14 sections du gabarit présentes dans chaque fiche, INSEE corrects, sources datées non vides).
 - **Passe 2 — 5 objets demandés par l'OTI** (2026-06-11, run `wf_a05e837a-e78`) : Marine de Vincendo, Cap Jaune, boucle des Trous Blancs, Vieux Tamarin, point de vue du Nez de Bœuf — même protocole (1 chercheur + 1 vérificateur adversarial par objet) → 3 confirmées, 2 corrigées, 0 rejet. Arbitrage communal du Nez de Bœuf tranché par point-dans-polygone geo.api.gouv.fr (contours Admin Express IGN/INSEE) ; déracinement du Vieux Tamarin (cyclone Garance, 28/02/2025) découvert et documenté en alerte majeure.
+- **Passe 3 — couverture du nouveau type SPU « Service public »** (2026-06-11, run `wf_eccb94c3-40b`, après la création du type — décision §53, migration 8u) : une fiche par sous-catégorie `taxonomy_spu` (electric_charging / public_toilets / drinking_water) — même protocole → 2 confirmées, 1 corrigée, 0 rejet. La borne s'appuie sur le jeu IRVE consolidé Etalab (enregistrement FRFR1EAFTQ1) recoupé avec Chargemap et TotalEnergies Réunion.

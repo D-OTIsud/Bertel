@@ -45,6 +45,7 @@ export const TYPE_LABEL: Record<string, string> = {
   PCU: 'Patrimoine',
   PNA: 'Site naturel',
   PSV: 'Prestataire',
+  SPU: 'Service public',
   VIL: 'Ville',
   COM: 'Commerce',
   ACT: 'Activite encadree',
@@ -103,8 +104,8 @@ const SRV_ARCHETYPE: ArchetypeMeta = {
   archetype: 'SRV',
   accent: 'acc-rust',
   codeName: 'Service & commerce',
-  family: 'OT · Commerce · Service',
-  covers: 'PSV · VIL · COM',
+  family: 'OT · Commerce · Service · Service public',
+  covers: 'PSV · VIL · COM · SPU',
 };
 
 // Keys = DB object_type enum minus ORG (ORG is deliberately unmapped: the editor renders an
@@ -127,6 +128,7 @@ export const TYPE_ARCHETYPES: Record<string, ArchetypeMeta> = {
   PSV: SRV_ARCHETYPE,
   VIL: SRV_ARCHETYPE,
   COM: SRV_ARCHETYPE,
+  SPU: SRV_ARCHETYPE, // §53: Service public (toilettes publiques / eau potable / borne EV) — modules génériques, pas de facette
 };
 
 export function getArchetypeMeta(typeCode: string | null | undefined): ArchetypeMeta | null {

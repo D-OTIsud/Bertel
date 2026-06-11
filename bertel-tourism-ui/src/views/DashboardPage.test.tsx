@@ -3,6 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 
+jest.mock('../services/dashboard-reference', () => ({
+  getDashboardAdvancedFilterOptions: jest.fn().mockResolvedValue({
+    taxonomyDomains: [], taxonomyCodes: [], distinctionValues: [],
+    languages: [], amenityFamilies: [], tags: [],
+  }),
+}));
+
 jest.mock('../services/dashboard-rpc', () => ({
   getDashboardScorecards: jest.fn().mockResolvedValue({
     total: 10, published: 8, published_pct: 80, avg_completeness: null,

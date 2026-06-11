@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
@@ -7,6 +8,7 @@ import type { BackendObjectTypeCode } from '../../types/domain';
 import type { DashboardFilters } from '../../types/dashboard';
 import { FilterDropdown } from './FilterDropdown';
 import { FilterColumnGroup } from '../common/FilterColumnGroup';
+import type { DashboardAdvancedFilterOptions } from '../../services/dashboard-reference';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -79,6 +81,9 @@ interface DashboardFiltersPanelProps {
   availableLieuDits: string[];
   /** Non-null when the lieu-dit options RPC failed — shown inline below the dropdown. */
   lieuDitLoadError?: string | null;
+  /** Catalogues des filtres avancés — undefined tant que la query charge. */
+  advancedOptions?: DashboardAdvancedFilterOptions;
+  advancedLoadError?: string | null;
 }
 
 export function DashboardFiltersPanel({
@@ -86,6 +91,8 @@ export function DashboardFiltersPanel({
   cityLoadError,
   availableLieuDits,
   lieuDitLoadError,
+  advancedOptions,
+  advancedLoadError,
 }: DashboardFiltersPanelProps) {
   const { filters, setFilters, resetFilters, sidebarCollapsed, toggleSidebar } =
     useDashboardFilterStore();
@@ -98,7 +105,48 @@ export function DashboardFiltersPanel({
     filters.updatedAtTo ||
     filters.pmr ||
     filters.petsAccepted ||
+    (filters.taxonomyAny && filters.taxonomyAny.length > 0) ||
+    (filters.classificationsAny && filters.classificationsAny.length > 0) ||
+    (filters.languagesAny && filters.languagesAny.length > 0) ||
+    (filters.amenityFamiliesAny && filters.amenityFamiliesAny.length > 0) ||
+    (filters.labelsAny && filters.labelsAny.length > 0) ||
     JSON.stringify(filters.status) !== JSON.stringify(['published']);
+
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [taxonomyDomain, setTaxonomyDomain] = useState<string>('');
+
+  const taxonomyCodeOptions = useMemo(
+    () =>
+      (advancedOptions?.taxonomyCodes ?? [])
+        .filter((c) => c.domain === taxonomyDomain)
+        .map((c) => ({ code: c.code, label: c.name })),
+    [advancedOptions, taxonomyDomain],
+  );
+  // Sélection affichée pour le domaine courant — les codes des AUTRES domaines restent dans le filtre.
+  const selectedTaxonomyCodes = (filters.taxonomyAny ?? [])
+    .filter((t) => t.domain === taxonomyDomain)
+    .map((t) => t.code);
+
+  function setTaxonomyCodes(codes: string[]) {
+    const others = (filters.taxonomyAny ?? []).filter((t) => t.domain !== taxonomyDomain);
+    const next = [...others, ...codes.map((code) => ({ domain: taxonomyDomain, code }))];
+    setFilters({ taxonomyAny: next.length > 0 ? next : undefined });
+  }
+
+  const distinctionOptions = (advancedOptions?.distinctionValues ?? []).map((v) => ({
+    code: `${v.schemeCode}:${v.valueCode}`,
+    label: `${v.schemeName} — ${v.valueName}`,
+  }));
+  const selectedDistinctions = (filters.classificationsAny ?? []).map(
+    (c) => `${c.schemeCode}:${c.valueCode}`,
+  );
+  function setDistinctions(codes: string[]) {
+    const next = codes.map((pair) => {
+      const [schemeCode, ...rest] = pair.split(':');
+      return { schemeCode, valueCode: rest.join(':') };
+    });
+    setFilters({ classificationsAny: next.length > 0 ? next : undefined });
+  }
 
   function applyDatePreset(days: number) {
     setFilters({ updatedAtFrom: isoNDaysAgo(days), updatedAtTo: isoToday() });
@@ -270,6 +318,80 @@ export function DashboardFiltersPanel({
             </label>
           </div>
         </FilterColumnGroup>
+
+        <section className="border-b border-line py-3.5 last:border-0">
+          <button
+            type="button"
+            className="dashboard-advanced-toggle"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            Filtres avancés {advancedOpen ? '▾' : '▸'}
+          </button>
+          {advancedLoadError && advancedOpen && (
+            <p className="dashboard-filter-error">{advancedLoadError}</p>
+          )}
+          {advancedOpen && advancedOptions && (
+            <div className="mt-3 space-y-3">
+              <FilterField label="Domaine de catégorie">
+                <FilterDropdown<string>
+                  mode="single"
+                  placeholder="Choisir un domaine"
+                  options={advancedOptions.taxonomyDomains.map((d) => ({ code: d.domain, label: d.name }))}
+                  selected={taxonomyDomain ? [taxonomyDomain] : []}
+                  onChange={(vals) => setTaxonomyDomain(vals[0] ?? '')}
+                />
+              </FilterField>
+              {taxonomyDomain && (
+                <FilterField label="Sous-catégories">
+                  <FilterDropdown<string>
+                    mode="multi"
+                    placeholder="Toutes"
+                    options={taxonomyCodeOptions}
+                    selected={selectedTaxonomyCodes}
+                    onChange={setTaxonomyCodes}
+                  />
+                </FilterField>
+              )}
+              <FilterField label="Distinctions (classements & labels)">
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Toutes"
+                  options={distinctionOptions}
+                  selected={selectedDistinctions}
+                  onChange={setDistinctions}
+                />
+              </FilterField>
+              <FilterField label="Langues parlées">
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Toutes"
+                  options={advancedOptions.languages}
+                  selected={filters.languagesAny ?? []}
+                  onChange={(vals) => setFilters({ languagesAny: vals.length > 0 ? vals : undefined })}
+                />
+              </FilterField>
+              <FilterField label="Familles d'équipements">
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Toutes"
+                  options={advancedOptions.amenityFamilies}
+                  selected={filters.amenityFamiliesAny ?? []}
+                  onChange={(vals) => setFilters({ amenityFamiliesAny: vals.length > 0 ? vals : undefined })}
+                />
+              </FilterField>
+              <FilterField label="Tags">
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="Tous"
+                  options={advancedOptions.tags}
+                  selected={filters.labelsAny ?? []}
+                  onChange={(vals) => setFilters({ labelsAny: vals.length > 0 ? vals : undefined })}
+                />
+              </FilterField>
+            </div>
+          )}
+        </section>
 
       </div>
     </aside>

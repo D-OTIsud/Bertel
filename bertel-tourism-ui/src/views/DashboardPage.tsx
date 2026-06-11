@@ -10,6 +10,7 @@ import {
   getDashboardDistinctionOverview,
   getDashboardFilterOptions,
 } from '../services/dashboard-rpc';
+import { getDashboardAdvancedFilterOptions } from '../services/dashboard-reference';
 import { useDashboardQuery, DASHBOARD_STALE_TIME_MS } from '../hooks/useDashboardQuery';
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
@@ -35,6 +36,12 @@ export default function DashboardPage() {
     ? 'Impossible de charger les options de filtre'
     : null;
 
+  const advancedOptions = useQuery({
+    queryKey: ['dashboard', 'advanced-filter-options'],
+    queryFn: getDashboardAdvancedFilterOptions,
+    staleTime: DASHBOARD_STALE_TIME_MS,
+  });
+
   // Héro permanent ; les widgets d'onglet ne fetchent que quand leur onglet est visible.
   const scorecards = useDashboardQuery('scorecards', filters, getDashboardScorecards);
   const typeBreakdown = useDashboardQuery('type-breakdown', filters, getDashboardTypeBreakdown, activeTab === 'quality');
@@ -50,6 +57,8 @@ export default function DashboardPage() {
           cityLoadError={filterOptionsError}
           availableLieuDits={filterOptions.data?.lieuDits ?? []}
           lieuDitLoadError={filterOptionsError}
+          advancedOptions={advancedOptions.data}
+          advancedLoadError={advancedOptions.error ? 'Impossible de charger les filtres avancés' : null}
         />
 
         <main className="dashboard-main">

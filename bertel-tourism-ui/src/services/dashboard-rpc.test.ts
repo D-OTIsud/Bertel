@@ -41,9 +41,21 @@ describe('buildRpcParams', () => {
       amenity_families_any: ['wellness'],
       languages_any: ['en', 'de'],
     });
+    expect(params.p_types).toBeNull();
+    expect(params.p_status).toBeNull();
   });
 
   it('omet les clés vides', () => {
     expect(buildRpcParams({}).p_filters).toEqual({});
+  });
+
+  it('omet les tableaux vides pour les nouvelles clés', () => {
+    expect(
+      buildRpcParams({
+        classificationsAny: [],
+        amenityFamiliesAny: [],
+        languagesAny: [],
+      }).p_filters,
+    ).toEqual({});
   });
 });

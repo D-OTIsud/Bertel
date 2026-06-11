@@ -52,8 +52,8 @@ export function buildRpcParams(filters: DashboardFilters): RpcParams {
   if (filters.petsAccepted) {
     p_filters.pet_accepted = true;
   }
-  // NOTE: p_filters.amenities_any est réservé au mapping PMR — pas de champ
-  // « équipement individuel » côté dashboard (conflit sinon) ; le niveau famille suffit (spec §5.1).
+  // NOTE: p_filters.amenities_any est réservé au mapping PMR ci-dessous — ne pas ajouter
+  // de champ « équipement individuel » (il écraserait cette clé) ; utiliser amenityFamiliesAny (spec §5.1).
   if (filters.pmr) {
     p_filters.amenities_any = ['wheelchair_access'];
   }

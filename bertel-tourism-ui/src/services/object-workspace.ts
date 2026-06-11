@@ -64,6 +64,7 @@ import {
   resolveTagColor,
 } from './object-workspace-parser';
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
+import { listObjectCrm } from './crm';
 
 // Re-export resolveTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
@@ -2298,7 +2299,8 @@ function normalizeMediaOption(row: Record<string, unknown>): WorkspaceReferenceO
 // §19 CRM enrichment — fills the providerFollowUp module's interactions/topics from
 // api.list_object_crm (RPC-only DEFINER; crm_* tables are NOT PostgREST-readable).
 // Same post-parse placement as the rooms module: the parser leaves the empty defaults
-// + "not loaded" reasons, this enrichment clears them on success.
+// + "not loaded" reasons, this enrichment clears them on success. Parsing is shared
+// with SectionCrm's post-save refresh via services/crm.listObjectCrm (one source of truth).
 async function getObjectWorkspaceCrmModule(
   objectId: string,
   baseModule: ObjectWorkspaceProviderFollowUpModule,
@@ -2307,20 +2309,14 @@ async function getObjectWorkspaceCrmModule(
   if (session.demoMode) {
     return baseModule;
   }
-  const client = getApiClient();
-  if (!client) {
+  if (!getApiClient()) {
     return baseModule; // raisons par défaut déjà posées par le parser
   }
 
-  let result: { data: unknown; error: unknown };
   try {
-    result = await client.schema('api').rpc('list_object_crm', { p_object_id: objectId });
+    const snapshot = await listObjectCrm(objectId);
+    return { ...baseModule, ...snapshot, interactionsUnavailableReason: null, tasksUnavailableReason: null };
   } catch {
-    // Infra/network failure (the builder rejected before reaching Postgres): keep the
-    // parser's "not loaded" defaults rather than claiming a permission problem.
-    return baseModule;
-  }
-  if (result.error) {
     // 42501 attendu pour un lecteur hors ORG publisher : module indisponible avec raison, jamais un throw.
     return {
       ...baseModule,
@@ -2328,34 +2324,6 @@ async function getObjectWorkspaceCrmModule(
       tasksUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
     };
   }
-
-  const payload = (result.data ?? {}) as Record<string, unknown>;
-  const interactions = Array.isArray(payload.interactions)
-    ? payload.interactions.map((row) => {
-        const record = row as Record<string, unknown>;
-        return {
-          id: String(record.id ?? ''),
-          interactionType: String(record.interaction_type ?? 'note'),
-          subject: String(record.subject ?? ''),
-          body: typeof record.body === 'string' ? record.body : null,
-          occurredAt: typeof record.occurred_at === 'string' ? record.occurred_at : null,
-          actorName: typeof record.actor_name === 'string' ? record.actor_name : null,
-          topicCode: typeof record.topic_code === 'string' ? record.topic_code : null,
-          topicName: typeof record.topic_name === 'string' ? record.topic_name : null,
-          sentimentCode: typeof record.sentiment_code === 'string' ? record.sentiment_code : null,
-          sentimentName: typeof record.sentiment_name === 'string' ? record.sentiment_name : null,
-          ownerName: typeof record.owner_name === 'string' ? record.owner_name : null,
-          source: typeof record.source === 'string' ? record.source : null,
-        };
-      })
-    : [];
-  const topics = Array.isArray(payload.topics)
-    ? payload.topics.map((row) => {
-        const record = row as Record<string, unknown>;
-        return { code: String(record.code ?? ''), name: String(record.name ?? ''), count: Number(record.count ?? 0) };
-      })
-    : [];
-  return { ...baseModule, interactions, topics, interactionsUnavailableReason: null, tasksUnavailableReason: null };
 }
 
 async function getObjectWorkspaceRoomsModule(

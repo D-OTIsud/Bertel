@@ -5,6 +5,11 @@ import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmTasks, mockCrmTimeline } from '../data/mock';
 import type { CrmInteraction, CrmTask, CrmTaskPriority, CrmTaskStatus, CrmTimelinePage } from '../types/domain';
+// Type-only import (no cycle): object-workspace-parser does not import this module.
+import type {
+  ObjectWorkspaceCrmInteractionItem,
+  ObjectWorkspaceCrmTopicCount,
+} from './object-workspace-parser';
 
 const TASK_STATUSES: CrmTaskStatus[] = ['todo', 'in_progress', 'done', 'canceled', 'blocked'];
 const TASK_PRIORITIES: CrmTaskPriority[] = ['low', 'medium', 'high', 'urgent'];
@@ -214,6 +219,60 @@ export async function deleteCrmInteraction(id: string): Promise<void> {
   if (error) {
     throw error;
   }
+}
+
+/**
+ * Snapshot CRM d'un objet (journal §19) — la forme workspace de `api.list_object_crm`.
+ * Source de vérité UNIQUE du parsing : l'enrichissement workspace (object-workspace.ts)
+ * et le refresh post-save de SectionCrm consomment tous deux `listObjectCrm`.
+ */
+export interface ObjectCrmSnapshot {
+  interactions: ObjectWorkspaceCrmInteractionItem[];
+  topics: ObjectWorkspaceCrmTopicCount[];
+}
+
+export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
+  if (!payload || typeof payload !== 'object') {
+    return { interactions: [], topics: [] };
+  }
+  const record = payload as GenericRecord;
+  const interactions = Array.isArray(record.interactions)
+    ? record.interactions
+        .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+        .map((row) => ({
+          id: readString(row.id),
+          interactionType: readString(row.interaction_type) || 'note',
+          subject: readString(row.subject),
+          body: readNullableString(row.body),
+          occurredAt: readNullableString(row.occurred_at),
+          actorName: readNullableString(row.actor_name),
+          topicCode: readNullableString(row.topic_code),
+          topicName: readNullableString(row.topic_name),
+          sentimentCode: readNullableString(row.sentiment_code),
+          sentimentName: readNullableString(row.sentiment_name),
+          ownerName: readNullableString(row.owner_name),
+          source: readNullableString(row.source),
+        }))
+    : [];
+  const topics = Array.isArray(record.topics)
+    ? record.topics
+        .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+        .map((row) => ({ code: readString(row.code), name: readString(row.name), count: Number(row.count ?? 0) }))
+    : [];
+  return { interactions, topics };
+}
+
+/** RPC `api.list_object_crm` + parse. Throws on error (42501 = lecteur hors ORG publisher). */
+export async function listObjectCrm(objectId: string): Promise<ObjectCrmSnapshot> {
+  const client = requireCrmClient();
+  if (!client) {
+    return { interactions: [], topics: [] }; // mode démo : pas de journal CRM réel
+  }
+  const { data, error } = await client.schema('api').rpc('list_object_crm', { p_object_id: objectId });
+  if (error) {
+    throw error;
+  }
+  return parseObjectCrmSnapshot(data);
 }
 
 export async function userCanWriteCrmNotes(): Promise<boolean> {

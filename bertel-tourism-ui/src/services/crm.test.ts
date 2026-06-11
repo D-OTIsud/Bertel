@@ -1,4 +1,4 @@
-import { parseCrmTask, parseCrmTimelinePage } from './crm';
+import { parseCrmTask, parseCrmTimelinePage, parseObjectCrmSnapshot } from './crm';
 
 describe('crm parsers', () => {
   it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB)', () => {
@@ -34,5 +34,34 @@ describe('crm parsers', () => {
 
   it('rend une page vide sur payload nul/malformé', () => {
     expect(parseCrmTimelinePage(null)).toEqual({ items: [], hasMore: false });
+  });
+
+  // §19 — snapshot objet (list_object_crm) : la forme workspace consommée par
+  // l'enrichissement object-workspace ET le refresh post-save de SectionCrm.
+  it('parse le payload list_object_crm en snapshot workspace (interactions + topics)', () => {
+    const snapshot = parseObjectCrmSnapshot({
+      interactions: [{
+        id: 'i1', interaction_type: 'call', direction: 'outbound', status: 'done',
+        subject: 'Demande de visite', body: 'RDV fixé au 12.',
+        occurred_at: '2026-06-01T08:00:00Z', created_at: '2026-06-01T08:05:00Z',
+        actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
+        sentiment_code: 'positif', sentiment_name: 'Positif', owner_name: 'Marie', source: 'bertel_ui',
+      }],
+      tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: null }],
+      topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }],
+    });
+    expect(snapshot.interactions).toHaveLength(1);
+    expect(snapshot.interactions[0]).toEqual({
+      id: 'i1', interactionType: 'call', subject: 'Demande de visite', body: 'RDV fixé au 12.',
+      occurredAt: '2026-06-01T08:00:00Z', actorName: 'M. Payet',
+      topicCode: 'demande_de_visite', topicName: 'Demande de visite',
+      sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
+    });
+    expect(snapshot.topics).toEqual([{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }]);
+  });
+
+  it('rend un snapshot vide sur payload nul/malformé', () => {
+    expect(parseObjectCrmSnapshot(null)).toEqual({ interactions: [], topics: [] });
+    expect(parseObjectCrmSnapshot({ interactions: 'oops', topics: 42 })).toEqual({ interactions: [], topics: [] });
   });
 });

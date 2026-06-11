@@ -36,7 +36,23 @@ function stripGeneralInfoManagedOutsideObject(value: ObjectWorkspaceGeneralInfo)
   return rest;
 }
 
+/** UI-navigation state carried inside the descriptions module; never persisted.
+ *  Tolerates partial fixtures where the module is absent. */
+function stripDescriptionsNavState(value: ObjectWorkspaceModules['descriptions'] | undefined) {
+  if (!value) {
+    return value;
+  }
+  const { activeLanguage, ...rest } = value;
+  return rest;
+}
+
 export function isModuleDirty(snapshot: EditorSnapshot, key: keyof ObjectWorkspaceModules): boolean {
+  if (key === 'descriptions') {
+    // Switching the §04/§10 language tabs writes `activeLanguage` through replaceModule —
+    // pure navigation must not light the save bar (nor trigger a no-op canonical rewrite).
+    return serialize(stripDescriptionsNavState(snapshot.draft.descriptions))
+      !== serialize(stripDescriptionsNavState(snapshot.baseline.descriptions));
+  }
   return serialize(snapshot.draft[key]) !== serialize(snapshot.baseline[key]);
 }
 

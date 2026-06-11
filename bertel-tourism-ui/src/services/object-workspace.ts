@@ -5403,7 +5403,8 @@ export async function saveObjectWorkspaceContacts(objectId: string, input: Objec
   }
 }
 
-function buildDescriptionPayload(scope: ObjectWorkspaceDescriptionsModule['object']) {
+/** Pure (exported for tests): the object/place description write payload. */
+export function buildDescriptionPayload(scope: ObjectWorkspaceDescriptionsModule['object']) {
   return {
     description: toNullableText(scope.description.baseValue),
     description_i18n: Object.keys(scope.description.values).length > 0 ? scope.description.values : null,
@@ -5415,7 +5416,10 @@ function buildDescriptionPayload(scope: ObjectWorkspaceDescriptionsModule['objec
     description_mobile_i18n: Object.keys(scope.mobileDescription.values).length > 0 ? scope.mobileDescription.values : null,
     description_edition: toNullableText(scope.editorialDescription.baseValue),
     description_edition_i18n: Object.keys(scope.editorialDescription.values).length > 0 ? scope.editorialDescription.values : null,
-    visibility: toNullableText(scope.visibility) ?? 'public',
+    // No 'public' default: a NULL-visibility row is extended-scope-only under the 8t
+    // read gate — blindly coercing it on save would widen it to anon once published.
+    // New rows still default to 'public' at the INSERT call sites.
+    visibility: toNullableText(scope.visibility),
   };
 }
 
@@ -5475,7 +5479,11 @@ async function upsertObjectDescription(
     return;
   }
 
-  const { error } = await client.from('object_description').insert(payload);
+  // A brand-new editor-authored canonical description is public by default;
+  // updates above preserve whatever visibility the row already carries.
+  const { error } = await client
+    .from('object_description')
+    .insert({ ...payload, visibility: payload.visibility ?? 'public' });
   if (error) {
     throw mapMutationError(error, "Impossible de creer la description principale.");
   }
@@ -5520,7 +5528,9 @@ async function upsertPlaceDescription(scope: ObjectWorkspaceDescriptionsModule['
     return;
   }
 
-  const { error } = await client.from('object_place_description').insert(payload);
+  const { error } = await client
+    .from('object_place_description')
+    .insert({ ...payload, visibility: payload.visibility ?? 'public' });
   if (error) {
     throw mapMutationError(error, "Impossible de creer la description du sous-lieu.");
   }

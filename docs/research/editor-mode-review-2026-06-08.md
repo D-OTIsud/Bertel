@@ -39,7 +39,7 @@ Main walk (HEB / HLO):
 - [x] §01 Identité & taxonomie
 - [x] §02 Localisation
 - [x] §03 Contacts
-- [ ] §04 Descriptions
+- [x] §04 Descriptions
 - [ ] §05 Chambres & séminaire (BlockHEB)
 - [ ] §06 Médias
 - [ ] §07 Capacité & cadre
@@ -214,7 +214,38 @@ non-atomic, a mid-loop constraint failure leaves partial state; inserts run befo
 delete-primary + add-new-primary same-kind in one save can hit `uq_contact_primary` (loud abort);
 (c) **`pub_contacts_public` exposes public contacts of DRAFT objects to anon direct PostgREST**
 (`USING (is_public IS TRUE)` only — diverges from the `can_read_object` read-gate doctrine; predates
-the §38/§47 sweeps). (c) is the one worth a backend pass.
+the §38/§47 sweeps). (c) was **fixed by the user** (manifest 8s, then the whole field-flag class via 8t).
+
+---
+
+## §04 — Descriptions
+
+Component: `sections/SectionDescriptions.tsx`. Strong design (scope tabs Par défaut/Personnalisée
+with inherited-fallback hints, honest read-only + reason, scope-aware pill, full per-language jsonb
+persisted, org overlay via the §20 `rpc_write_org_description` sole-writer). The review (2-agent map)
+found one data-semantics bug, two sneaky bugs, and honesty gaps — all fixed.
+
+| Element | ⑤ | Decision |
+|---------|----|----------|
+| Scope tabs + inherited hints + read-only reasons + org-overlay delete-on-empty | ✅ | Keep — reference pattern. |
+| Accroche (chapo, 160) / Descriptif (description, 2000) | ✅ | Keep. Hint no longer claims Explorer display (drawer-only). |
+| **« Descriptif du plan d'accès » (3rd textarea)** | ⛔ sémantique | **FIXED (commit 1, `d78c088`)** — it wrote `description_adapted` (the *accessibility* column, also edited by §10 with opposite semantics; last save won) while the model's real plan-d'accès field `object_location.direction` (Lot 1 mapping) was editable nowhere. **Moved to §02** (writes `direction`); §04 dropped the field; `description_adapted` is **single-owned by §10**, which gains the same canonical-permission gate (its ungated textarea was a latent silent-drop for enrichment-only users) + read-only reason. |
+| Descriptif `required` star | ④ menteur | **FIXED** — backed by a real publication blocker (empty-in-every-language canonical description blocks). |
+| Language tabs | 🐛 | **FIXED (commit 2)** — switching tabs wrote `activeLanguage` through `replaceModule` → phantom dirty + a no-op canonical rewrite on save. `isModuleDirty` now strips the nav state. |
+| `visibility` (no UI) | 🐛 privacy | **FIXED (commit 2)** — parser defaulted NULL→'public' and the saver persisted it: any §04/§10/§16 save silently widened a NULL-visibility row to anon-readable (8t gate). Now: parser keeps NULL as `''`, updates preserve, INSERTs default 'public' (editor-authored rows are public by design). Same fix class deferred for **media** (§06 territory; media parser still defaults — see §51 deferral). |
+| `mobileDescription` / `editorialDescription` | 🔇 | No surface (deliberate for `description_edition` per §20); round-tripped blind. Left as-is; revisit post-MVP if mobile text becomes a product need. |
+
+**Found in orbit — §16 visibility select was lying twice (FIXED, commit 2):** it labeled
+`object_place_description.visibility` (a READ-AUDIENCE field — the 8t gate publishes only
+`'public'` rows to anon) as **PMR accessibility** (« ♿ Accessible / ◐ Partiellement / ✕ Non
+accessible ») — marking a sub-place "non accessible" silently hid its description from the public.
+Relabeled to Publique / Partenaires / Interne + an explicit « — Visibilité non définie — » option
+for NULL rows (no more fake-public display). If a real per-sub-place PMR marker is wanted, that is
+a separate feature (new field), not this column.
+
+**Dead weight logged (drawer scope, not §04):** the drawer's « Voir versions · FR/EN » button is
+permanently disabled ("Bientôt disponible") while per-language descriptions are parsed and never
+rendered; `parseContacts`-style dead panels remain (§23). For the drawer review pass.
 | Pin map (drag + confirm) | ✅ | Keep. |
 
 **Found while reviewing:** `editor-validation.ts` had NO §02 rules at all — the Adresse/CP/GPS

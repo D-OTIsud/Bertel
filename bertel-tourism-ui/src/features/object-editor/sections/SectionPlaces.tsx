@@ -3,10 +3,16 @@ import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
 
-const ACCESSIBILITY_OPTIONS = [
-  { v: 'public', l: '♿ Accessible' },
-  { v: 'partner', l: '◐ Partiellement' },
-  { v: 'internal', l: '✕ Non accessible' },
+/**
+ * object_place_description.visibility — a READ-AUDIENCE field (the 8t gate publishes
+ * only 'public' rows to anon), NOT physical accessibility. The previous labels
+ * (« ♿ Accessible / ✕ Non accessible ») misrepresented it: marking a sub-place
+ * "non accessible" silently hid its description from the public.
+ */
+const PLACE_VISIBILITY_OPTIONS = [
+  { v: 'public', l: 'Publique' },
+  { v: 'partner', l: 'Partenaires' },
+  { v: 'internal', l: 'Interne' },
 ];
 
 // §48 §46 gate: extracted to avoid SWC ternary-in-JSX parse issues with `??` in deeply
@@ -139,7 +145,9 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
             />
             <Select
               value={place.visibility}
-              options={ACCESSIBILITY_OPTIONS}
+              options={place.visibility === ''
+                ? [{ v: '', l: '— Visibilité non définie —' }, ...PLACE_VISIBILITY_OPTIONS]
+                : PLACE_VISIBILITY_OPTIONS}
               onChange={(visibility) => updatePlace(index, { visibility })}
             />
             <button type="button" className="del" onClick={() => removePlace(index)}>

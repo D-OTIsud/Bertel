@@ -18,10 +18,21 @@ describe('SectionPlaces — honest controls (T1b)', () => {
     expect(screen.queryAllByDisplayValue('Départ / Entrée')).toHaveLength(0);
   });
 
-  it('keeps the sub-place visibility select', () => {
+  it('labels the sub-place visibility select as read audience, not PMR accessibility', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(screen.getByDisplayValue('♿ Accessible')).toBeInTheDocument();
+    // visibility drives WHO CAN READ the description (8t gate) — the old
+    // « ♿ Accessible / ✕ Non accessible » labels misrepresented it.
+    expect(screen.getByDisplayValue('Publique')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('♿ Accessible')).not.toBeInTheDocument();
+  });
+
+  it('offers an explicit option for an undefined visibility instead of faking public', () => {
+    const modules = fullModulesFixture();
+    modules.descriptions.places[0].visibility = '';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    expect(screen.getByDisplayValue('— Visibilité non définie —')).toBeInTheDocument();
   });
 
   it('keeps the sub-place label editable and marks descriptions dirty', () => {

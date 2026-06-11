@@ -61,6 +61,20 @@ describe('SectionDescriptions', () => {
     expect(screen.queryByText(/Personnalis/)).not.toBeInTheDocument();
   });
 
+  it('does not mark the module dirty when only the language tab changes (navigation, not edit)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    const view = render(<SectionDescriptions editor={result.current} permissions={canonicalOnly} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    view.rerender(<SectionDescriptions editor={result.current} permissions={canonicalOnly} />);
+    expect(result.current.draft.descriptions.activeLanguage).toBe('en');
+    expect(result.current.dirtySections.descriptions).toBe(false);
+
+    // A real edit still dirties the module.
+    fireEvent.change(screen.getByTestId('chapo-textarea'), { target: { value: 'Nouvelle accroche' } });
+    expect(result.current.dirtySections.descriptions).toBe(true);
+  });
+
   it('shows the org scope tab and edits the overlay when enrichment is allowed', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules(scope())));
     render(<SectionDescriptions editor={result.current} permissions={bothLayers} />);

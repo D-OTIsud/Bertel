@@ -1186,7 +1186,9 @@ function parseDescriptionScope(params: {
     scope: params.scope,
     placeId: params.placeId ?? null,
     label: params.label,
-    visibility: readString(params.record.visibility, 'public'),
+    // No 'public' default — keep a NULL DB visibility as '' so saves don't widen it
+    // (the 8t read gate treats NULL as extended-scope-only). INSERTs default at the call site.
+    visibility: readString(params.record.visibility),
     description: toTranslatableField(params.record.description, params.record.description_i18n),
     chapo: toTranslatableField(params.record.description_chapo, params.record.description_chapo_i18n),
     adaptedDescription: toTranslatableField(params.record.description_adapted, params.record.description_adapted_i18n),

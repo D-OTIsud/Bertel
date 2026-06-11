@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { handleMediaUpload, type StorageUploader } from './handle-upload';
 import { MediaProcessingError } from './process-image';
@@ -27,10 +28,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (userErr || !userData?.user) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   }
-  // TODO(security): also verify the authenticated user can edit `object_id` before allowing the upload.
-  // Currently any logged-in user can write to any object's storage path because the service-role key
-  // bypasses RLS at upload time. Once the canonical permission RPC stabilises (api.current_user_can_edit_objects
-  // or similar), call it here and return 403 if forbidden.
 
   let form: FormData;
   try {
@@ -45,6 +42,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   if (!OBJECT_ID_SHAPE.test(objectId)) {
     return NextResponse.json({ error: 'invalid_object_id', detail: 'object_id does not match the canonical shape' }, { status: 400 });
+  }
+
+  // Authorize AS THE CALLER (admin/invite pattern): the storage write below runs
+  // with the service-role key (bypasses RLS), so this probe is the per-object
+  // boundary — without it any logged-in user could fill any object's storage
+  // prefix. Same predicate as every canonical write policy (CLAUDE.md
+  // write-path invariant). Fail-closed on probe errors.
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+  const asCaller = createClient(url, anon, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: canWrite, error: canWriteErr } = await asCaller
+    .schema('api')
+    .rpc('user_can_write_object_canonical', { p_object_id: objectId });
+  if (canWriteErr || canWrite !== true) {
+    return NextResponse.json(
+      { error: 'forbidden', detail: 'caller cannot edit this object' },
+      { status: 403 },
+    );
   }
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());

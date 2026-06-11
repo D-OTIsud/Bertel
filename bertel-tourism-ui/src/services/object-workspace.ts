@@ -51,6 +51,7 @@ import {
   type ObjectWorkspacePriceItem,
   type ObjectWorkspacePricePeriod,
   type ObjectWorkspacePromotionSummary,
+  type ObjectWorkspaceProviderFollowUpModule,
   type ObjectWorkspaceDiscountItem,
   type ObjectWorkspaceRoomsModule,
   type ObjectWorkspaceTaxonomyAssignment,
@@ -107,6 +108,8 @@ export interface ObjectWorkspacePermissions {
   itinerary: ObjectWorkspaceModuleAccess;
   openings: ObjectWorkspaceModuleAccess;
   providerFollowUp: ObjectWorkspaceModuleAccess;
+  /** §19 CRM authoring — per-object gate (api.user_can_write_crm), NOT the global write_crm_notes helper. */
+  crm: ObjectWorkspaceModuleAccess;
   relationships: ObjectWorkspaceModuleAccess;
   memberships: ObjectWorkspaceModuleAccess;
   legal: ObjectWorkspaceModuleAccess;
@@ -2292,6 +2295,69 @@ function normalizeMediaOption(row: Record<string, unknown>): WorkspaceReferenceO
   };
 }
 
+// §19 CRM enrichment — fills the providerFollowUp module's interactions/topics from
+// api.list_object_crm (RPC-only DEFINER; crm_* tables are NOT PostgREST-readable).
+// Same post-parse placement as the rooms module: the parser leaves the empty defaults
+// + "not loaded" reasons, this enrichment clears them on success.
+async function getObjectWorkspaceCrmModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceProviderFollowUpModule,
+): Promise<ObjectWorkspaceProviderFollowUpModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  const client = getApiClient();
+  if (!client) {
+    return baseModule; // raisons par défaut déjà posées par le parser
+  }
+
+  let result: { data: unknown; error: unknown };
+  try {
+    result = await client.schema('api').rpc('list_object_crm', { p_object_id: objectId });
+  } catch {
+    // Infra/network failure (the builder rejected before reaching Postgres): keep the
+    // parser's "not loaded" defaults rather than claiming a permission problem.
+    return baseModule;
+  }
+  if (result.error) {
+    // 42501 attendu pour un lecteur hors ORG publisher : module indisponible avec raison, jamais un throw.
+    return {
+      ...baseModule,
+      interactionsUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+      tasksUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+    };
+  }
+
+  const payload = (result.data ?? {}) as Record<string, unknown>;
+  const interactions = Array.isArray(payload.interactions)
+    ? payload.interactions.map((row) => {
+        const record = row as Record<string, unknown>;
+        return {
+          id: String(record.id ?? ''),
+          interactionType: String(record.interaction_type ?? 'note'),
+          subject: String(record.subject ?? ''),
+          body: typeof record.body === 'string' ? record.body : null,
+          occurredAt: typeof record.occurred_at === 'string' ? record.occurred_at : null,
+          actorName: typeof record.actor_name === 'string' ? record.actor_name : null,
+          topicCode: typeof record.topic_code === 'string' ? record.topic_code : null,
+          topicName: typeof record.topic_name === 'string' ? record.topic_name : null,
+          sentimentCode: typeof record.sentiment_code === 'string' ? record.sentiment_code : null,
+          sentimentName: typeof record.sentiment_name === 'string' ? record.sentiment_name : null,
+          ownerName: typeof record.owner_name === 'string' ? record.owner_name : null,
+          source: typeof record.source === 'string' ? record.source : null,
+        };
+      })
+    : [];
+  const topics = Array.isArray(payload.topics)
+    ? payload.topics.map((row) => {
+        const record = row as Record<string, unknown>;
+        return { code: String(record.code ?? ''), name: String(record.name ?? ''), count: Number(record.count ?? 0) };
+      })
+    : [];
+  return { ...baseModule, interactions, topics, interactionsUnavailableReason: null, tasksUnavailableReason: null };
+}
+
 async function getObjectWorkspaceRoomsModule(
   objectId: string,
   baseModule: ObjectWorkspaceRoomsModule,
@@ -3190,17 +3256,21 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let canWriteSafeWorkspaceRpc = directWrite;
   let canPublishObject = directWrite || session.demoMode;
   let canWriteProviderFollowUp = session.demoMode;
+  let crmWrite = false;
   let canonical = false;
   let enrichment = false;
   let objectOwner = false;
   if (!session.demoMode && apiClient) {
     try {
-      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult] = await Promise.allSettled([
+      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult] = await Promise.allSettled([
         apiClient.schema('api').rpc('user_can_write_canonical', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_write_enrichment', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_publish_object', { p_object_id: objectId }),
         apiClient.schema('api').rpc('can_write_object_private_notes', { p_object_id: objectId }),
         apiClient.schema('api').rpc('is_object_owner', { p_object_id: objectId }),
+        // §19 CRM: per-object write gate (publisher-ORG membership + write_crm_notes) — the
+        // global userCanWriteCrmNotes() helper is NOT object-scoped and must not be used here.
+        apiClient.schema('api').rpc('user_can_write_crm', { p_object_id: objectId }),
       ]);
 
       canonical =
@@ -3214,6 +3284,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         || (publishResult.status === 'fulfilled' && publishResult.value.error == null && publishResult.value.data === true);
       canWriteProviderFollowUp =
         providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
+      crmWrite = crmResult.status === 'fulfilled' && crmResult.value.error == null && crmResult.value.data === true;
 
       canPrepareProposal = directWrite || canonical || enrichment;
       canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
@@ -3222,6 +3293,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canWriteSafeWorkspaceRpc = directWrite;
       canPublishObject = directWrite;
       canWriteProviderFollowUp = directWrite;
+      crmWrite = false;
     }
   }
 
@@ -3315,6 +3387,16 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         directWrite || canWriteProviderFollowUp
           ? null
           : "Vos droits actuels ne permettent pas de gerer le suivi relation prestataire sur cette fiche.",
+    },
+    // §19 CRM authoring (interactions/tâches) — gated by the PER-OBJECT api.user_can_write_crm
+    // (publisher-ORG member with write_crm_notes), with the superuser/demo directWrite arm kept.
+    crm: {
+      canDirectWrite: directWrite || crmWrite,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: (directWrite || crmWrite)
+        ? null
+        : 'Permission « Écrire des notes CRM » requise (administration d’équipe).',
     },
     // §48: the relationships save path goes through api.save_object_relations, which enforces
     // workspace_assert_can_write_object server-side — same gate as the other save_object_* RPCs.
@@ -3497,6 +3579,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     eventModule,
     itineraryModule,
     membershipsModule,
+    crmFollowUpModule,
     facetRows,
   ] = await Promise.all([
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
@@ -3509,6 +3592,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
+    getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
     getFacetApplicabilityRows(),
   ]);
 
@@ -3523,6 +3607,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     event: eventModule,
     itinerary: itineraryModule,
     memberships: membershipsModule,
+    providerFollowUp: crmFollowUpModule,
   });
 
   // §46: registry-driven type gating for the 6 type-specific modules. A non-applicable type

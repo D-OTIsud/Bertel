@@ -606,8 +606,34 @@ export interface ObjectWorkspaceFollowUpNote {
   createdByAvatarUrl: string;
 }
 
+/** One CRM interaction row from `api.list_object_crm` (§19 — CRM module, RPC-only DEFINER). */
+export interface ObjectWorkspaceCrmInteractionItem {
+  id: string;
+  interactionType: string;
+  subject: string;
+  body: string | null;
+  occurredAt: string | null;
+  actorName: string | null;
+  topicCode: string | null;
+  topicName: string | null;
+  sentimentCode: string | null;
+  sentimentName: string | null;
+  ownerName: string | null;
+  source: string | null;
+}
+
+/** Per-topic interaction count from `api.list_object_crm` (`demand_topic` distribution). */
+export interface ObjectWorkspaceCrmTopicCount {
+  code: string;
+  name: string;
+  count: number;
+}
+
 export interface ObjectWorkspaceProviderFollowUpModule {
   notes: ObjectWorkspaceFollowUpNote[];
+  /** Real CRM journal — filled post-parse by the `list_object_crm` enrichment, never by the parser. */
+  interactions: ObjectWorkspaceCrmInteractionItem[];
+  topics: ObjectWorkspaceCrmTopicCount[];
   interactionsUnavailableReason: string | null;
   tasksUnavailableReason: string | null;
 }
@@ -2237,6 +2263,11 @@ function parseWorkspaceProviderFollowUpModule(raw: Record<string, unknown>): Obj
       || right.createdAt.localeCompare(left.createdAt, 'fr')
       || right.updatedAt.localeCompare(left.updatedAt, 'fr'),
     ),
+    // CRM interactions/topics are a post-parse enrichment (api.list_object_crm — same pattern as
+    // the rooms module): the parser only sets the empty default + the "not loaded" reasons,
+    // which the enrichment clears on success.
+    interactions: [],
+    topics: [],
     interactionsUnavailableReason: "Le live actuel n'expose pas encore les interactions CRM prestataire dans le workspace objet.",
     tasksUnavailableReason: "Le live actuel n'expose pas encore les taches CRM prestataire dans le workspace objet.",
   };

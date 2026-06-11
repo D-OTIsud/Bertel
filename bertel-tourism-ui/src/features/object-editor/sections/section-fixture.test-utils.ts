@@ -250,7 +250,16 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       periods: [{ recordId: 'op1', order: '1', bucket: 'current', label: 'Standard', startDate: '', endDate: '', allYears: true, closedDays: [], weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '17:00' }] }] }],
       unavailableReason: null,
     },
-    providerFollowUp: { notes: [{ id: 'n1', body: 'Relance qualité', audience: 'private', category: 'followup', isPinned: false, isArchived: false, canEdit: false, canDelete: false, language: 'fr', createdAt: '2026-01-01T08:00:00Z', updatedAt: '2026-01-02T08:00:00Z', createdById: 'u1', createdByName: 'OTI', createdByAvatarUrl: '' }], interactionsUnavailableReason: null, tasksUnavailableReason: null },
+    // Mirrors the parser's UNLOADED output (§19): empty interactions/topics + the default
+    // "not loaded" reasons — the list_object_crm enrichment is what clears them. Tests that
+    // need the loaded state override interactions/topics and null the reasons.
+    providerFollowUp: {
+      notes: [{ id: 'n1', body: 'Relance qualité', audience: 'private', category: 'followup', isPinned: false, isArchived: false, canEdit: false, canDelete: false, language: 'fr', createdAt: '2026-01-01T08:00:00Z', updatedAt: '2026-01-02T08:00:00Z', createdById: 'u1', createdByName: 'OTI', createdByAvatarUrl: '' }],
+      interactions: [],
+      topics: [],
+      interactionsUnavailableReason: "Le live actuel n'expose pas encore les interactions CRM prestataire dans le workspace objet.",
+      tasksUnavailableReason: "Le live actuel n'expose pas encore les taches CRM prestataire dans le workspace objet.",
+    },
     relationships: {
       organizationLinks: [{ id: 'org1', source: 'org_link', type: 'ORG', name: 'OTI du Sud', status: 'active', roleId: 'publisher', roleCode: 'publisher', roleLabel: 'Publisher', isPrimary: true, note: '', contacts: [] }],
       actors: [{ id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '', roleId: 'operator', roleCode: 'operator', roleLabel: 'Opérateur', visibility: 'public', isPrimary: true, validFrom: '', validTo: '', note: '', contacts: [] }],

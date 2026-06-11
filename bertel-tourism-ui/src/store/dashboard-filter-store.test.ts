@@ -2,7 +2,11 @@ import { useDashboardFilterStore } from './dashboard-filter-store';
 
 describe('dashboard-filter-store — onglets', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality' });
+    useDashboardFilterStore.setState({
+      filters: { status: ['published'] },
+      activeTab: 'quality',
+      sidebarCollapsed: false,
+    });
   });
 
   it("démarre sur l'onglet Qualité", () => {

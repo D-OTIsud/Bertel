@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Chip, ChipSet, Fs, Input, Select, StatCard, Textarea } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCrmInteractionItem } from '../../../services/object-workspace-parser';
-import { deleteCrmInteraction, listObjectCrm, saveCrmInteraction, saveCrmTask } from '../../../services/crm';
+import { deleteCrmInteraction, listDemandTopics, listObjectCrm, saveCrmInteraction, saveCrmTask } from '../../../services/crm';
 
 // Types d'interaction (enum DB crm_interaction_type, module CRM §58).
 const INTERACTION_TYPE_OPTIONS = [
@@ -81,6 +81,18 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
   const [taskConfirmation, setTaskConfirmation] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Vocabulaire complet demand_topic (ref_code) — chargé paresseusement à la première
+  // ouverture du formulaire. La distribution de l'objet (followUp.topics) ne suffit pas :
+  // la PREMIÈRE interaction d'un objet ne pourrait jamais porter de sujet (cold-start).
+  // null = pas encore chargé ; [] = fetch vide/échoué ⇒ fallback sur la distribution.
+  const [topicOptions, setTopicOptions] = useState<Array<{ code: string; name: string }> | null>(null);
+
+  function ensureTopicVocabulary() {
+    if (topicOptions !== null) return;
+    void listDemandTopics().then(setTopicOptions);
+  }
+
+  const topicSelectSource = topicOptions && topicOptions.length > 0 ? topicOptions : topics;
 
   const now = Date.now();
   const occurredTimestamps = interactions
@@ -117,10 +129,18 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
         ...(form.topicCode ? { topicCode: form.topicCode } : {}),
         ...(form.sentimentCode ? { sentimentCode: form.sentimentCode } : {}),
       });
-      await refreshCrm();
-      setForm(null);
     } catch (error) {
-      setActionError(toErrorMessage(error)); // erreur visible, formulaire conservé
+      setActionError(toErrorMessage(error)); // erreur visible, formulaire conservé pour retenter
+      setBusy(false);
+      return;
+    }
+    // Écriture confirmée : fermer le formulaire AVANT le refresh. Sinon un échec de
+    // rechargement se lit comme un échec de save et un re-submit crée un doublon.
+    setForm(null);
+    try {
+      await refreshCrm();
+    } catch {
+      setActionError('Enregistré, mais le rechargement a échoué — rouvrez la fiche pour voir la mise à jour.');
     } finally {
       setBusy(false);
     }
@@ -158,6 +178,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
 
   function startEdit(item: ObjectWorkspaceCrmInteractionItem) {
     setActionError(null);
+    ensureTopicVocabulary();
     setForm({
       editingId: item.id,
       interactionType: item.interactionType,
@@ -289,7 +310,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
             <Select
               aria-label="Sujet normalisé"
               value={form.topicCode}
-              options={[{ v: '', l: '— Sujet —' }, ...topics.map((topic) => ({ v: topic.code, l: topic.name }))]}
+              options={[{ v: '', l: '— Sujet —' }, ...topicSelectSource.map((topic) => ({ v: topic.code, l: topic.name }))]}
               onChange={(topicCode) => setForm({ ...form, topicCode })}
             />
             <Select
@@ -351,6 +372,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
           title={readOnly ? readOnlyReason ?? 'Lecture seule' : undefined}
           onClick={() => {
             setTaskConfirmation(null);
+            ensureTopicVocabulary();
             setForm({ ...EMPTY_FORM });
           }}
         >

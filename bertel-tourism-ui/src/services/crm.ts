@@ -1,7 +1,7 @@
 // Service CRM (§58) — toutes les lectures/écritures passent par les RPCs api.* DEFINER
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
-import { getApiClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmTasks, mockCrmTimeline } from '../data/mock';
 import type { CrmInteraction, CrmTask, CrmTaskPriority, CrmTaskStatus, CrmTimelinePage } from '../types/domain';
@@ -273,6 +273,36 @@ export async function listObjectCrm(objectId: string): Promise<ObjectCrmSnapshot
     throw error;
   }
   return parseObjectCrmSnapshot(data);
+}
+
+// Vocabulaire complet des sujets (ref_code, domaine demand_topic — lisible publiquement).
+// Lecture PostgREST directe : ref_code n'est PAS une table crm_* (pattern maison des
+// vocabulaires ref, policy pub_ref_code_read) — l'interdiction du header ne s'applique pas.
+// Nécessaire au formulaire §19 : la distribution de l'objet (list_object_crm.topics) ne
+// couvre pas une première interaction (cold-start).
+export async function listDemandTopics(): Promise<Array<{ code: string; name: string }>> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return [
+      { code: 'demande_de_visite', name: 'Demande de visite' },
+      { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+    ];
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return [];
+  }
+  const { data, error } = await client
+    .from('ref_code')
+    .select('code, name, position')
+    .eq('domain', 'demand_topic')
+    .order('position', { ascending: true });
+  if (error) {
+    // Fail-soft : le select retombe sur la distribution de l'objet (followUp.topics).
+    console.warn('listDemandTopics:', error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => ({ code: String(row.code), name: String(row.name) }));
 }
 
 export async function userCanWriteCrmNotes(): Promise<boolean> {

@@ -2316,13 +2316,20 @@ async function getObjectWorkspaceCrmModule(
   try {
     const snapshot = await listObjectCrm(objectId);
     return { ...baseModule, ...snapshot, interactionsUnavailableReason: null, tasksUnavailableReason: null };
-  } catch {
-    // 42501 attendu pour un lecteur hors ORG publisher : module indisponible avec raison, jamais un throw.
-    return {
-      ...baseModule,
-      interactionsUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
-      tasksUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
-    };
+  } catch (error) {
+    // listObjectCrm rethrow l'erreur PostgREST brute (jamais un Error enveloppé) : .code
+    // survit. 42501 = assert publisher-org du RPC DEFINER (migration_crm_module.sql) →
+    // raison « réservé ». Toute AUTRE erreur (réseau, RPC absent…) garde les raisons
+    // « non chargé » par défaut du parser — ne pas déguiser une panne en interdiction.
+    const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+    if (code === '42501') {
+      return {
+        ...baseModule,
+        interactionsUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+        tasksUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+      };
+    }
+    return baseModule;
   }
 }
 

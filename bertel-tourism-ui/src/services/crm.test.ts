@@ -1,4 +1,5 @@
-import { parseCrmTask, parseCrmTimelinePage, parseObjectCrmSnapshot } from './crm';
+import { listDemandTopics, parseCrmTask, parseCrmTimelinePage, parseObjectCrmSnapshot } from './crm';
+import { useSessionStore } from '../store/session-store';
 
 describe('crm parsers', () => {
   it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB)', () => {
@@ -63,5 +64,28 @@ describe('crm parsers', () => {
   it('rend un snapshot vide sur payload nul/malformé', () => {
     expect(parseObjectCrmSnapshot(null)).toEqual({ interactions: [], topics: [] });
     expect(parseObjectCrmSnapshot({ interactions: 'oops', topics: 42 })).toEqual({ interactions: [], topics: [] });
+  });
+});
+
+// Vocabulaire complet demand_topic (fix cold-start §19) — lecture PostgREST directe de
+// ref_code (pub_ref_code_read), PAS une table crm_* : le pattern maison des vocabulaires ref.
+describe('listDemandTopics', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+  });
+
+  it('mode démo : renvoie le vocabulaire mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listDemandTopics()).resolves.toEqual([
+      { code: 'demande_de_visite', name: 'Demande de visite' },
+      { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+    ]);
+  });
+
+  it('hors démo sans client Supabase configuré : renvoie [] (le select retombe sur la distribution objet)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    await expect(listDemandTopics()).resolves.toEqual([]);
   });
 });

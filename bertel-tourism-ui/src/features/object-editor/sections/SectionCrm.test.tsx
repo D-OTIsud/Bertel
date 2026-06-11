@@ -1,7 +1,17 @@
-import { render, screen, renderHook } from '@testing-library/react';
+import { render, screen, renderHook, fireEvent } from '@testing-library/react';
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionCrm } from './SectionCrm';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import { listDemandTopics } from '../../../services/crm';
+
+// Mock partiel : seules les fonctions réseau dont les specs contrôlent la valeur sont
+// remplacées ; les parsers et les autres services restent réels (non invoqués au render).
+jest.mock('../../../services/crm', () => ({
+  ...jest.requireActual<typeof import('../../../services/crm')>('../../../services/crm'),
+  listDemandTopics: jest.fn().mockResolvedValue([]),
+}));
+
+const listDemandTopicsMock = listDemandTopics as jest.MockedFunction<typeof listDemandTopics>;
 
 /**
  * §19 CRM (Tâche 11) — le journal et la distribution des sujets viennent des
@@ -50,6 +60,20 @@ describe('SectionCrm — §19 données réelles', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionCrm editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(screen.getByText(/n'expose pas encore les interactions CRM/)).toBeInTheDocument();
+  });
+
+  // Fix cold-start : le select « Sujet » du formulaire doit proposer le vocabulaire
+  // complet demand_topic (listDemandTopics), pas seulement la distribution de l'objet —
+  // sinon la PREMIÈRE interaction d'un objet ne peut jamais porter de sujet.
+  it('propose le vocabulaire complet des sujets dans le formulaire (pas seulement la distribution de l objet)', async () => {
+    listDemandTopicsMock.mockResolvedValue([
+      { code: 'boutique', name: 'Boutique' },
+      { code: 'demande_de_visite', name: 'Demande de visite' },
+    ]);
+    const { result } = renderHook(() => useObjectEditorState('o1', fixtureWithCrm()));
+    render(<SectionCrm editor={result.current} permissions={allowAll} objectId="o1" />);
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
+    expect(await screen.findByRole('option', { name: /Boutique/ })).toBeInTheDocument();
   });
 
   it('ne rend plus la liste de sujets mockée ni le faux select humeur', () => {

@@ -223,7 +223,7 @@ export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpe
         {visibleTasks.length === 0 && <div className="crm-list__empty">Aucune tâche à afficher.</div>}
 
         <div className="crm-foot-hint">
-          Chaque tâche est rattachée à un acteur ; l&apos;établissement n&apos;est que le contexte de la relance.
+          Les tâches sont rattachées à un établissement ; le rattachement acteur viendra avec le module demandes.
         </div>
       </div>
     </div>

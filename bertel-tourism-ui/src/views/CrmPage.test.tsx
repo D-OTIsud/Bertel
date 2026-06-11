@@ -78,6 +78,19 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
   });
 
+  it('vue établissement ouverte depuis un onglet : le libellé du retour nomme cet onglet', async () => {
+    renderPage();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
+    await screen.findByText('Rappeler le directeur');
+    // Drill-in établissement depuis la ligne de tâche (pas de fiche acteur d'origine).
+    fireEvent.click(screen.getByRole('button', { name: /hotel basalte & lagon/i }));
+    await screen.findByRole('link', { name: /ouvrir dans l.éditeur/i });
+    // Le retour est libellé d'après l'onglet d'origine, pas « Annuaire des acteurs ».
+    expect(screen.getByRole('button', { name: 'Tâches & relances' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Annuaire des acteurs' })).not.toBeInTheDocument();
+  });
+
   it('persiste la navigation dans localStorage bertel-crm-nav-v2 et la restaure', async () => {
     renderPage();
     await screen.findByText('Mme Marie Hoarau');

@@ -37,6 +37,14 @@ interface CrmNav {
 
 const DEFAULT_NAV: CrmNav = { view: 'annuaire' };
 
+// Libellé du retour de la vue établissement quand on n'arrive PAS d'une fiche
+// acteur : il nomme l'onglet d'origine (le retour, lui, y revient déjà — backFromObject).
+const TAB_BACK_LABELS: Record<CrmView, string> = {
+  annuaire: 'Annuaire des acteurs',
+  taches: 'Tâches & relances',
+  timeline: 'Timeline',
+};
+
 function loadNav(): CrmNav {
   try {
     const raw = localStorage.getItem(NAV_KEY);
@@ -116,7 +124,7 @@ export default function CrmPage() {
     body = (
       <CrmObjectView
         objectId={nav.objectId}
-        backLabel={originActorName ?? (nav.originActorId ? 'Fiche acteur' : 'Annuaire des acteurs')}
+        backLabel={originActorName ?? (nav.originActorId ? 'Fiche acteur' : TAB_BACK_LABELS[nav.view])}
         onBack={backFromObject}
         onOpenActor={openActor}
       />

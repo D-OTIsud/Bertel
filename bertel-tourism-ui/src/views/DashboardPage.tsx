@@ -10,7 +10,7 @@ import {
   getDashboardDistinctionOverview,
   getDashboardFilterOptions,
 } from '../services/dashboard-rpc';
-import { useDashboardQuery } from '../hooks/useDashboardQuery';
+import { useDashboardQuery, DASHBOARD_STALE_TIME_MS } from '../hooks/useDashboardQuery';
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
 import { CommuneDistribution } from '../components/dashboard/CommuneDistribution';
@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const filterOptions = useQuery({
     queryKey: ['dashboard', 'filter-options'],
     queryFn: getDashboardFilterOptions,
+    staleTime: DASHBOARD_STALE_TIME_MS,
   });
   const filterOptionsError = filterOptions.error
     ? 'Impossible de charger les options de filtre'
@@ -61,7 +62,7 @@ export default function DashboardPage() {
           <DashboardTabs />
 
           {activeTab === 'quality' && (
-            <>
+            <section role="tabpanel" id="dashboard-panel-quality" aria-labelledby="dashboard-tab-quality">
               <div className="dashboard-kpi__row">
                 <WidgetFrame
                   isPending={typeBreakdown.isPending}
@@ -80,10 +81,11 @@ export default function DashboardPage() {
               >
                 {actualisation.data && <ActualisationTable data={actualisation.data} />}
               </WidgetFrame>
-            </>
+            </section>
           )}
 
           {activeTab === 'offer' && (
+            <section role="tabpanel" id="dashboard-panel-offer" aria-labelledby="dashboard-tab-offer">
             <div className="dashboard-kpi__row">
               <WidgetFrame
                 isPending={cityDistribution.isPending}
@@ -101,9 +103,11 @@ export default function DashboardPage() {
                 {distinctions.data && <DistinctionOverview data={distinctions.data} />}
               </WidgetFrame>
             </div>
+            </section>
           )}
 
           {activeTab === 'activity' && (
+            <section role="tabpanel" id="dashboard-panel-activity" aria-labelledby="dashboard-tab-activity">
             <article className="kpi-panel">
               <div className="panel-heading">
                 <div>
@@ -112,10 +116,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="dashboard-widget-state">
-                Vélocité, contributeurs et modération arrivent au lot 4
-                (spec 2026-06-11-dashboard-statistics-design).
+                Vélocité, contributeurs et modération arrivent dans un prochain lot (lot 4).
               </p>
             </article>
+            </section>
           )}
         </main>
       </div>

@@ -18,6 +18,8 @@ export function DashboardTabs() {
       {TABS.map((tab) => (
         <button
           key={tab.key}
+          id={`dashboard-tab-${tab.key}`}
+          aria-controls={`dashboard-panel-${tab.key}`}
           type="button"
           role="tab"
           aria-selected={activeTab === tab.key}

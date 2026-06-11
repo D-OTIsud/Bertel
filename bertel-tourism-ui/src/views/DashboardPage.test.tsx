@@ -53,6 +53,7 @@ describe('DashboardPage — onglets', () => {
     await waitFor(() => expect(screen.getByText('Par commune')).toBeInTheDocument());
     expect(screen.getByText('Distinctions')).toBeInTheDocument();
     expect(screen.queryByText("Taux d'actualisation")).not.toBeInTheDocument();
+    expect(screen.queryByText("Par type d'objet")).not.toBeInTheDocument();
   });
 
   it("l'onglet Activité affiche le panneau « à venir » explicite", async () => {

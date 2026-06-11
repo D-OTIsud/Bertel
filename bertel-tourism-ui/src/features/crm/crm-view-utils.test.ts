@@ -1,0 +1,127 @@
+import {
+  PAV_TINTS,
+  formatRelative,
+  formatShort,
+  initialsOf,
+  interactionTypeLabelOf,
+  monthLabelOf,
+  moodClassOf,
+  pavTintOf,
+  taskGroupOf,
+  tlIcoClassOf,
+} from './crm-view-utils';
+
+// Réf. stable pour tous les calculs relatifs : jeudi 11 juin 2026, 12:00 locale.
+const NOW = new Date(2026, 5, 11, 12, 0, 0);
+
+describe('taskGroupOf — groupes d échéance (late/today/week/later)', () => {
+  it('échéance passée (hier) → late', () => {
+    expect(taskGroupOf('2026-06-10T09:00:00', NOW)).toBe('late');
+  });
+
+  it('échéance le jour même → today (peu importe l heure, même 23:59)', () => {
+    expect(taskGroupOf('2026-06-11T00:05:00', NOW)).toBe('today');
+    expect(taskGroupOf('2026-06-11T23:59:00', NOW)).toBe('today');
+  });
+
+  it('demain et J+7 inclus → week ; J+8 → later (borne exclue)', () => {
+    expect(taskGroupOf('2026-06-12T08:00:00', NOW)).toBe('week');
+    expect(taskGroupOf('2026-06-18T08:00:00', NOW)).toBe('week'); // J+7
+    expect(taskGroupOf('2026-06-19T08:00:00', NOW)).toBe('later'); // J+8
+  });
+
+  it('sans échéance (null) ou date invalide → later', () => {
+    expect(taskGroupOf(null, NOW)).toBe('later');
+    expect(taskGroupOf('pas-une-date', NOW)).toBe('later');
+  });
+});
+
+describe('moodClassOf — 6 codes sentiment → 3 classes visuelles', () => {
+  it('tres_positif et positif → positif', () => {
+    expect(moodClassOf('tres_positif')).toBe('positif');
+    expect(moodClassOf('positif')).toBe('positif');
+  });
+
+  it('interrogatif et inquiet → neutre', () => {
+    expect(moodClassOf('interrogatif')).toBe('neutre');
+    expect(moodClassOf('inquiet')).toBe('neutre');
+  });
+
+  it('mecontent et tres_mecontent → tendu', () => {
+    expect(moodClassOf('mecontent')).toBe('tendu');
+    expect(moodClassOf('tres_mecontent')).toBe('tendu');
+  });
+
+  it('null / inconnu → null (pas de pastille)', () => {
+    expect(moodClassOf(null)).toBeNull();
+    expect(moodClassOf('autre_code')).toBeNull();
+  });
+});
+
+describe('initialsOf', () => {
+  it('prend les initiales des 2 premiers mots', () => {
+    expect(initialsOf('Franck Versluys')).toBe('FV');
+    expect(initialsOf('Mme Jocelyne Lebon')).toBe('MJ');
+  });
+
+  it('ignore le préfixe de forme juridique (SARL, SAS…)', () => {
+    expect(initialsOf('SARL Domaine du Bel Air')).toBe('DD');
+  });
+
+  it('chaîne vide → tiret (jamais un avatar vide)', () => {
+    expect(initialsOf('')).toBe('—');
+  });
+});
+
+describe('pavTintOf — teinte stable par hash', () => {
+  it('même clé → même teinte (stable), et la teinte vient de la palette', () => {
+    const tint = pavTintOf('0d97221f-6351-4426-a5f7-c2eaecc842db');
+    expect(pavTintOf('0d97221f-6351-4426-a5f7-c2eaecc842db')).toBe(tint);
+    expect(PAV_TINTS).toContain(tint);
+  });
+
+  it('couvre plusieurs teintes selon la clé (pas une constante)', () => {
+    const keys = ['HOT', 'RES', 'HLO', 'ASC', 'PCU', 'FMA', 'LOI', 'ITI', 'COM'];
+    const distinct = new Set(keys.map((k) => pavTintOf(k)));
+    expect(distinct.size).toBeGreaterThan(1);
+  });
+});
+
+describe('formats date', () => {
+  it('formatShort → JJ/MM/AAAA, null → —', () => {
+    expect(formatShort('2026-06-01T08:00:00Z')).toBe('01/06/2026');
+    expect(formatShort(null)).toBe('—');
+  });
+
+  it('formatRelative — minutes, heures, jours, semaines, mois', () => {
+    expect(formatRelative('2026-06-11T11:30:00', NOW)).toBe('il y a 30 min');
+    expect(formatRelative('2026-06-11T07:00:00', NOW)).toBe('il y a 5 h');
+    expect(formatRelative('2026-06-08T12:00:00', NOW)).toBe('il y a 3 j');
+    expect(formatRelative('2026-05-14T12:00:00', NOW)).toBe('il y a 4 sem.');
+    expect(formatRelative('2026-01-11T12:00:00', NOW)).toBe('il y a 5 mois');
+    expect(formatRelative(null, NOW)).toBe('—');
+  });
+
+  it('monthLabelOf — libellé de mois capitalisé, null → Sans date', () => {
+    expect(monthLabelOf('2026-06-02T10:00:00Z')).toBe('Juin 2026');
+    expect(monthLabelOf(null)).toBe('Sans date');
+  });
+});
+
+describe('mappings interaction', () => {
+  it('interactionTypeLabelOf — libellés FR du design v2', () => {
+    expect(interactionTypeLabelOf('call')).toBe('Appel');
+    expect(interactionTypeLabelOf('email')).toBe('E-mail');
+    expect(interactionTypeLabelOf('visit')).toBe('Visite terrain');
+    expect(interactionTypeLabelOf('note')).toBe('Note interne');
+    expect(interactionTypeLabelOf('inconnu')).toBe('inconnu'); // fallback brut, jamais vide
+  });
+
+  it('tlIcoClassOf — call/mail/field, tout le reste → sys', () => {
+    expect(tlIcoClassOf('call')).toBe('call');
+    expect(tlIcoClassOf('email')).toBe('mail');
+    expect(tlIcoClassOf('visit')).toBe('field');
+    expect(tlIcoClassOf('note')).toBe('sys');
+    expect(tlIcoClassOf('import')).toBe('sys');
+  });
+});

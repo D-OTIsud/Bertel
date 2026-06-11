@@ -312,8 +312,9 @@ export interface CrmTask {
 
 export interface CrmInteraction {
   id: string;
-  objectId: string;
-  objectName: string;
+  /** Contexte objet OPTIONNEL (§61, modèle acteur-centré) : null = interaction « générale ». */
+  objectId: string | null;
+  objectName: string | null;
   interactionType: string;
   direction: string;
   status: string;

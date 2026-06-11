@@ -11,6 +11,9 @@ import type {
   CrmTask,
   CrmTimelinePage,
 } from '../types/domain';
+// Type-only import (no runtime cycle): services/crm importe mock.ts pour les données,
+// mock.ts n'importe que la FORME CrmDirectoryEntry (effacée à la compilation).
+import type { CrmDirectoryEntry } from '../services/crm';
 import { applyFrontendOnlyExplorerFilters, getBackendTypesForBucket, getEffectiveSelectedBuckets, normalizeExplorerFilters, sortExplorerCards } from '../utils/facets';
 
 export const mockCards: ObjectCard[] = [
@@ -385,6 +388,57 @@ export const mockCrmTimeline: CrmTimelinePage = {
   ],
   hasMore: false,
 };
+
+// Annuaire CRM acteur-centré mock (§61) — 3 acteurs liés aux objets des mocks tasks/timeline
+// (obj-1/obj-2/obj-3). actor-1 couvre le cas multi-établissements + rôle principal.
+export const mockCrmDirectory: CrmDirectoryEntry[] = [
+  {
+    actorId: 'actor-1',
+    displayName: 'Mme Marie Hoarau',
+    objects: [
+      { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleName: 'Gérante', isPrimary: true },
+      { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleName: 'Propriétaire', isPrimary: false },
+    ],
+    objectCount: 2,
+    interactionCount: 9,
+    interactions12m: 4,
+    lastInteractionAt: '2026-06-11T11:12:00Z',
+    lastInteractionType: 'call',
+    lastInteractionSubject: 'Appel de suivi',
+    lastInteractionObjectName: 'Hotel Basalte & Lagon',
+    topTopics: ['Demande de visite', 'Modification infos BDD'],
+  },
+  {
+    actorId: 'actor-2',
+    displayName: 'SARL Basalte & Lagon',
+    objects: [
+      { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleName: 'Exploitant', isPrimary: false },
+    ],
+    objectCount: 1,
+    interactionCount: 3,
+    interactions12m: 1,
+    lastInteractionAt: '2026-03-24T09:00:00Z',
+    lastInteractionType: 'email',
+    lastInteractionSubject: 'Renouvellement adhésion',
+    lastInteractionObjectName: null,
+    topTopics: ['Modification infos BDD'],
+  },
+  {
+    actorId: 'actor-3',
+    displayName: 'M. Paul Técher',
+    objects: [
+      { objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', objectType: 'ITI', roleName: 'Référent', isPrimary: true },
+    ],
+    objectCount: 1,
+    interactionCount: 1,
+    interactions12m: 1,
+    lastInteractionAt: '2026-06-02T10:00:00Z',
+    lastInteractionType: 'visit',
+    lastInteractionSubject: 'Visite terrain',
+    lastInteractionObjectName: 'Sentier des Trois Cascades',
+    topTopics: [],
+  },
+];
 
 export const mockAuditQuestions: AuditQuestion[] = [
   { id: 'q-1', label: 'Signaletique visible depuis la route', score: 4 },

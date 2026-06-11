@@ -37,7 +37,10 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
           onChange={(code, opt) => set({ viewTypeCode: code, viewTypeId: opt?.id ?? '', viewTypeLabel: opt?.label ?? '' })}
         />
       </Field>
-      <Field label="Couchages"><Input value={draft.capacityTotal} mono onChange={(capacityTotal) => set({ capacityTotal })} /></Field>
+      <Field label="Couchages (total)"><Input value={draft.capacityTotal} mono aria-label="Couchages (total)" onChange={(capacityTotal) => set({ capacityTotal })} /></Field>
+      {/* The public room card leads with "X adultes" — adults/children must be authorable, not import-frozen. */}
+      <Field label="Adultes"><Input value={draft.capacityAdults} mono aria-label="Adultes" onChange={(capacityAdults) => set({ capacityAdults })} /></Field>
+      <Field label="Enfants"><Input value={draft.capacityChildren} mono aria-label="Enfants" onChange={(capacityChildren) => set({ capacityChildren })} /></Field>
       <Field label="Surface (m²)"><Input value={draft.sizeSqm} mono onChange={(sizeSqm) => set({ sizeSqm })} /></Field>
       <Field label="Configuration lits"><Input value={draft.bedConfig} onChange={(bedConfig) => set({ bedConfig })} /></Field>
       <Field label="Unités"><Input value={draft.quantity} mono onChange={(quantity) => set({ quantity })} /></Field>

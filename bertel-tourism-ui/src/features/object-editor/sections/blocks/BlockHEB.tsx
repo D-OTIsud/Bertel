@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Field, Fs, Repeater, Textarea, Toggle } from '../../primitives';
+import { Trash2 } from 'lucide-react';
+import { Field, Fs, Repeater, SortableList, Textarea, Toggle } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
@@ -8,9 +9,12 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
+import { nextRoomCode, reindexRoomPositions } from './rooms-utils';
 
 const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
-const MICE_COLS = '14px 1.4fr 70px 70px 70px 70px auto';
+// No handle column: meeting-room order is NOT persisted (object_meeting_room has no
+// position column), so a drag affordance would lie.
+const MICE_COLS = '1.4fr 70px 70px 70px 70px auto';
 
 function repHeader(columns: string, labels: string[]) {
   return (
@@ -34,10 +38,12 @@ function repHeader(columns: string, labels: string[]) {
   );
 }
 
-function createRoom(index: number): ObjectWorkspaceRoomTypeItem {
+function createRoom(items: ObjectWorkspaceRoomTypeItem[]): ObjectWorkspaceRoomTypeItem {
+  const index = items.length;
   return {
     recordId: null,
-    code: `unit-${index + 1}`,
+    // UNIQUE(object_id, code) + delete-reinsert saver: a collision aborts mid-rewrite.
+    code: nextRoomCode(items),
     name: '',
     nameTranslations: {},
     description: '',
@@ -85,10 +91,16 @@ export function BlockHEB({ editor, folded }: SectionProps) {
   const meetingRooms = editor.draft.meetingRooms;
   const capacity = editor.draft.capacityPolicies;
   const totalUnits = rooms.items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 0), 0);
-  const pillLabel =
-    totalUnits > 0
-      ? `${rooms.items.length} type(s) · ${totalUnits} unité(s)`
-      : `${rooms.items.length} type(s)`;
+  // When the rooms module is §46-gated, "0 type(s)" would read as missing data — say why instead.
+  const pill = rooms.unavailableReason
+    ? { tone: 'warn' as const, label: 'Non applicable' }
+    : {
+        tone: rooms.items.length > 0 ? ('ok' as const) : ('warn' as const),
+        label:
+          totalUnits > 0
+            ? `${rooms.items.length} type(s) · ${totalUnits} unité(s)`
+            : `${rooms.items.length} type(s)`,
+      };
 
   // Index of the room currently open in the per-room edit modal (null = closed)
   const [editingRoom, setEditingRoom] = useState<number | null>(null);
@@ -116,7 +128,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
       title="Chambres, équipements & séminaire"
       sub="Inventaire de l'offre hébergement : unités locatives, capacités, tarifs, équipements, salles MICE"
       folded={folded}
-      pill={{ tone: rooms.items.length > 0 ? 'ok' : 'warn', label: pillLabel }}
+      pill={pill}
     >
       {/* §46 type-gated rooms module — notice INSTEAD of controls when gated */}
       {rooms.unavailableReason ? (
@@ -127,20 +139,15 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             Chambres / unités locatives
           </div>
           {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
-          <Repeater
+          <SortableList
             items={rooms.items}
-            getKey={(item, index) => item.recordId ?? item.code ?? `room-${index}`}
+            getId={(item) => item.recordId ?? item.code}
             columns={ROOM_COLS}
-            addLabel="Ajouter un type de chambre"
-            onAdd={() =>
-              editor.replaceModule('rooms', {
-                ...rooms,
-                items: [...rooms.items, createRoom(rooms.items.length)],
-              })
+            onReorder={(next) =>
+              editor.replaceModule('rooms', { ...rooms, items: reindexRoomPositions(next) })
             }
-            renderRow={(item, index) => (
+            renderItem={(item, index) => (
               <>
-                <span className="rep-row__handle" aria-hidden />
                 {/* Compact summary — full editing is done inside RoomEditModal */}
                 <div>
                   <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
@@ -167,19 +174,32 @@ export function BlockHEB({ editor, folded }: SectionProps) {
                   <button
                     type="button"
                     className="del"
+                    aria-label="Supprimer"
                     onClick={() =>
                       editor.replaceModule('rooms', {
                         ...rooms,
-                        items: rooms.items.filter((_, itemIndex) => itemIndex !== index),
+                        items: reindexRoomPositions(rooms.items.filter((_, itemIndex) => itemIndex !== index)),
                       })
                     }
                   >
-                    ×
+                    <Trash2 size={15} aria-hidden />
                   </button>
                 </div>
               </>
             )}
           />
+          <button
+            type="button"
+            className="rep-add"
+            onClick={() =>
+              editor.replaceModule('rooms', {
+                ...rooms,
+                items: [...rooms.items, createRoom(rooms.items)],
+              })
+            }
+          >
+            + Ajouter un type de chambre
+          </button>
 
           {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
               not in the compact row, so every room (not just rooms.items[0]) can have its own amenities. */}
@@ -250,7 +270,8 @@ export function BlockHEB({ editor, folded }: SectionProps) {
           <div className="chip-group__label" style={{ marginTop: 20 }}>
             Salles séminaire & événementiel
           </div>
-          {repHeader(MICE_COLS, ['', 'Salle', 'Surface m²', 'Théâtre', 'Classe', 'Banquet'])}
+          {/* cap_boardroom = salle de CONSEIL (boardroom), pas banquet — le drawer dit « Conseil ». */}
+          {repHeader(MICE_COLS, ['Salle', 'Surface m²', 'Théâtre', 'Classe', 'Conseil'])}
           <Repeater
             items={meetingRooms.items}
             getKey={(item, index) => item.recordId ?? `meeting-${index}`}
@@ -264,7 +285,6 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             }
             renderRow={(item, index) => (
               <>
-                <span className="rep-row__handle" aria-hidden />
                 {/* Compact summary — full editing is done inside MeetingRoomEditModal */}
                 <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
                 <span>{item.areaM2 ? `${item.areaM2} m²` : '—'}</span>
@@ -283,6 +303,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
                   <button
                     type="button"
                     className="del"
+                    aria-label="Supprimer"
                     onClick={() =>
                       editor.replaceModule('meetingRooms', {
                         ...meetingRooms,
@@ -290,7 +311,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
                       })
                     }
                   >
-                    ×
+                    <Trash2 size={15} aria-hidden />
                   </button>
                 </div>
               </>

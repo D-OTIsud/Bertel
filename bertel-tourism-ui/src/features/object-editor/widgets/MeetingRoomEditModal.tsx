@@ -18,8 +18,11 @@ export function MeetingRoomEditModal({ open, room, equipmentOptions, onClose, on
       <Field label="Nom de la salle"><Input value={draft.name} onChange={(name) => set({ name })} /></Field>
       <Field label="Surface (m²)"><Input value={draft.areaM2} mono onChange={(areaM2) => set({ areaM2 })} /></Field>
       <Field label="Capacité théâtre"><Input value={draft.capacityTheatre} mono onChange={(v) => set({ capacityTheatre: v })} /></Field>
+      <Field label="Capacité en U"><Input value={draft.capacityU} mono aria-label="Capacité en U" onChange={(v) => set({ capacityU: v })} /></Field>
       <Field label="Capacité classe"><Input value={draft.capacityClassroom} mono onChange={(v) => set({ capacityClassroom: v })} /></Field>
-      <Field label="Capacité banquet"><Input value={draft.capacityBoardroom} mono onChange={(v) => set({ capacityBoardroom: v })} /></Field>
+      {/* cap_boardroom = configuration CONSEIL (boardroom) — l'ancien libellé « banquet » faisait
+          saisir les chiffres banquet dans la mauvaise colonne. */}
+      <Field label="Capacité conseil"><Input value={draft.capacityBoardroom} mono aria-label="Capacité conseil" onChange={(v) => set({ capacityBoardroom: v })} /></Field>
       <Field label="Équipements">
         <ChipMultiSelect
           options={equipmentOptions}

@@ -22,6 +22,7 @@ const SCORE_SECTION_NUMS = [
   '02',
   '03',
   '04',
+  '05',
   '06',
   '07',
   '08',
@@ -73,6 +74,13 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
     fields: [
       (draft) => hasTranslatableText(draft.descriptions.object.chapo),
       (draft) => hasTranslatableText(draft.descriptions.object.description),
+    ],
+  },
+  '05': {
+    fields: [
+      // Rooms inventory — counts as complete when the module is §46-gated for the type
+      // (the §05 block then shows other content, e.g. RES menus, scored by their own use).
+      (draft) => Boolean(draft.rooms?.unavailableReason) || (draft.rooms?.items.length ?? 0) > 0,
     ],
   },
   '06': {

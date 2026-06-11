@@ -72,6 +72,29 @@ describe('editor publication validation', () => {
     });
   });
 
+  it('warns when a HEB object has no room types', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '05',
+      message: expect.stringContaining('chambre'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn about rooms when the rooms module is type-gated', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+    draft.rooms.unavailableReason = 'Module non applicable au type RES.';
+
+    const result = validateForPublication(draft, allowAll, 'RES');
+
+    expect(result.warnings.some((w) => w.section === '05')).toBe(false);
+  });
+
   it('requires an itinerary trace for ITI objects', () => {
     const draft = fullModulesFixture();
     draft.itinerary.geometrySummary = '';

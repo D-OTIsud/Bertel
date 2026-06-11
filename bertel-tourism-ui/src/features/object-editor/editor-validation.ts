@@ -108,6 +108,12 @@ const VALIDATION_RULES: ValidationRule[] = [
     !draft.event.occurrences.some((occurrence) => hasText(occurrence.startAt) || hasText(occurrence.endAt))
       ? { section: '05', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
       : null,
+  ({ archetype, draft }) =>
+    // §05 HEB: an accommodation with no room inventory publishes silently otherwise.
+    // Skipped when the rooms module is §46-gated (non-HEB types reaching this archetype).
+    archetype === 'HEB' && !draft.rooms.unavailableReason && draft.rooms.items.length === 0
+      ? { section: '05', message: "Ajoutez au moins un type de chambre ou d'unité locative.", tone: 'warn' }
+      : null,
   ({ draft }) =>
     hasLongDescription(draft)
       ? null

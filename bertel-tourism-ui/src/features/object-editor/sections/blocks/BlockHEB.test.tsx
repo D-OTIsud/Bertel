@@ -75,6 +75,95 @@ describe('BlockHEB — single-owner surfaces (§48)', () => {
   });
 });
 
+describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
+  it('labels the boardroom capacity Conseil, never Banquet', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(screen.getByText('Conseil')).toBeInTheDocument();
+    expect(screen.queryByText(/banquet/i)).not.toBeInTheDocument();
+  });
+
+  it('lets the meeting modal edit the capacité en U', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la salle/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Capacité en U'), { target: { value: '24' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.meetingRooms.items[0].capacityU).toBe('24');
+  });
+
+  it('lets the room modal edit adults and children capacities', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Adultes'), { target: { value: '3' } }); });
+    act(() => { fireEvent.change(screen.getByLabelText('Enfants'), { target: { value: '1' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.rooms.items[0].capacityAdults).toBe('3');
+    expect(result.current.draft.rooms.items[0].capacityChildren).toBe('1');
+  });
+
+  it('renders accessible delete buttons, not bare ×', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    const dels = screen.getAllByRole('button', { name: 'Supprimer' });
+    expect(dels.length).toBeGreaterThanOrEqual(2);
+    dels.forEach((del) => expect(del.textContent?.trim()).not.toBe('×'));
+  });
+
+  it('generates non-colliding room codes when adding after a delete', () => {
+    const modules = fullModulesFixture();
+    modules.rooms.items = [
+      { ...modules.rooms.items[0], code: 'unit-1' },
+      { ...modules.rooms.items[0], recordId: 'r2', code: 'unit-2' },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    // Delete the FIRST room — items.length is back to 1, but 'unit-2' still exists.
+    act(() => { fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0]); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    const codes = result.current.draft.rooms.items.map((item) => item.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it('gives rooms a real drag handle; meeting rooms none (order not persisted)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    // Fixture: 1 room, 1 meeting room — exactly ONE real handle (the room's).
+    expect(screen.getAllByRole('button', { name: 'Déplacer' })).toHaveLength(1);
+  });
+
+  it('shows a Non applicable pill instead of "0 type(s)" when rooms are gated', () => {
+    const modules = fullModulesFixture();
+    modules.rooms.items = [];
+    modules.rooms.unavailableReason = 'Module non applicable au type RES.';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(screen.getByText('Non applicable')).toBeInTheDocument();
+    expect(screen.queryByText(/0 type/)).not.toBeInTheDocument();
+  });
+});
+
+describe('rooms-utils', () => {
+  it('nextRoomCode skips existing unit-N codes', async () => {
+    const { nextRoomCode } = await import('./rooms-utils');
+    expect(nextRoomCode([{ code: 'unit-1' }, { code: 'unit-3' }, { code: 'std' }])).toBe('unit-4');
+    expect(nextRoomCode([])).toBe('unit-1');
+  });
+
+  it('reindexRoomPositions rewrites 1-based positions in array order', async () => {
+    const { reindexRoomPositions } = await import('./rooms-utils');
+    const items = [{ position: '2' }, { position: '1' }] as never[];
+    expect(reindexRoomPositions(items).map((item: { position: string }) => item.position)).toEqual(['1', '2']);
+  });
+});
+
 describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)', () => {
   it('renders the rooms unavailable notice instead of the rooms repeater when gated', () => {
     const modules = fullModulesFixture();

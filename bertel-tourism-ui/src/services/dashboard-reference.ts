@@ -63,7 +63,7 @@ export function dedupeAmenityFamilies(rows: RawAmenityFamilyRow[]): SimpleOption
   }
   return [...byCode.entries()]
     .map(([code, label]) => ({ code, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
 }
 
 // ─── Chargeur ────────────────────────────────────────────────────────────────
@@ -101,15 +101,18 @@ export async function getDashboardAdvancedFilterOptions(): Promise<DashboardAdva
     client.from('ref_amenity').select('family:family_id(code,name)').in('scope', ['object', 'both']),
     client.from('ref_tag').select('slug,name').order('position', { ascending: true }),
   ]);
+  // First-error-wins : les cinq selects ont tous couru ; on jette le premier échec
+  // trouvé (chargement tout-ou-rien — React Query affichera l'erreur du groupe).
   const firstError = codesRes.error ?? valuesRes.error ?? languagesRes.error ?? amenitiesRes.error ?? tagsRes.error;
   if (firstError) throw firstError;
 
   return {
     taxonomyDomains,
-    taxonomyCodes: (codesRes.data ?? []).map((c) => ({ domain: c.domain, code: c.code, name: c.name })),
+    taxonomyCodes: (codesRes.data ?? []).map((c) => ({ domain: c.domain, code: c.code, name: c.name ?? c.code })),
     distinctionValues: shapeDistinctionValues((valuesRes.data ?? []) as unknown as RawClassificationValue[]),
     languages: (languagesRes.data ?? []).map((l) => ({ code: l.code, label: l.name })),
     amenityFamilies: dedupeAmenityFamilies((amenitiesRes.data ?? []) as unknown as RawAmenityFamilyRow[]),
+    // slug = clé de filtre (tags_any matche ref_tag.slug via tag_link)
     tags: (tagsRes.data ?? []).map((t) => ({ code: t.slug, label: t.name })),
   };
 }

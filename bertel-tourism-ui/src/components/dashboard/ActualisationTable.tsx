@@ -1,6 +1,7 @@
 "use client";
 
 import type { DashboardActualisation } from '../../types/dashboard';
+import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
 
 interface Props {
   data: DashboardActualisation;
@@ -18,6 +19,17 @@ function RateBar({ rate }: { rate: number }) {
 }
 
 export function ActualisationTable({ data }: Props) {
+  const setFilters = useDashboardFilterStore((s) => s.setFilters);
+  const activeTypes = useDashboardFilterStore((s) => s.filters.types) ?? [];
+
+  // Drill-down en toggle — même pattern que CommuneDistribution (communes).
+  function handleType(type: Props['data']['rows'][number]['type']) {
+    const next = activeTypes.includes(type)
+      ? activeTypes.filter((t) => t !== type)
+      : [...activeTypes, type];
+    setFilters({ types: next.length > 0 ? next : undefined });
+  }
+
   return (
     <article className="kpi-panel kpi-panel--wide">
       <div className="panel-heading">
@@ -43,7 +55,16 @@ export function ActualisationTable({ data }: Props) {
           <tbody>
             {data.rows.map((row) => (
               <tr key={row.type}>
-                <td className="actualisation-table__type">{row.type}</td>
+                <td className="actualisation-table__type">
+                  <button
+                    type="button"
+                    className={`actualisation-table__type-btn${activeTypes.includes(row.type) ? ' actualisation-table__type-btn--active' : ''}`}
+                    title={`Filtrer : ${row.type}`}
+                    onClick={() => handleType(row.type)}
+                  >
+                    {row.type}
+                  </button>
+                </td>
                 <td>{row.total}</td>
                 <td className="actualisation-table__ok">{row.up_to_date}</td>
                 <td className="actualisation-table__warn">{row.to_review}</td>

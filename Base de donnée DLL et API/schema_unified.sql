@@ -4319,6 +4319,8 @@ BEGIN
         AND is_published = TRUE
         AND is_main = TRUE
         AND (kind IS NULL OR kind = 'illustration')
+        -- §59 (14a): a 'private'/'partners' cover must never become the public card image
+        AND (visibility IS NULL OR visibility = 'public')
       ORDER BY position NULLS LAST
       LIMIT 1
     )
@@ -4330,6 +4332,7 @@ BEGIN
           AND is_published = TRUE
           AND is_main = TRUE
           AND (kind IS NULL OR kind = 'illustration')
+          AND (visibility IS NULL OR visibility = 'public')
         ORDER BY position NULLS LAST
         LIMIT 1
       );
@@ -4344,6 +4347,8 @@ BEGIN
         AND is_published = TRUE
         AND is_main = TRUE
         AND (kind IS NULL OR kind = 'illustration')
+        -- §59 (14a): a 'private'/'partners' cover must never become the public card image
+        AND (visibility IS NULL OR visibility = 'public')
       ORDER BY position NULLS LAST
       LIMIT 1
     )
@@ -4355,6 +4360,7 @@ BEGIN
           AND is_published = TRUE
           AND is_main = TRUE
           AND (kind IS NULL OR kind = 'illustration')
+          AND (visibility IS NULL OR visibility = 'public')
         ORDER BY position NULLS LAST
         LIMIT 1
       );

@@ -211,6 +211,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_prd.sql"
 
+      - name: media visibility gate test (§59 14a — anon private/partners leak closed, cover cache gated, extended arm intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_media_visibility_gate.sql"
+
+      - name: ranked label search test (label_scheme_ranked + label_match — exact rank 0 before evidence rank 1; T&H amenity vs sustainability equivalence kept separate)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ranked_label_search.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

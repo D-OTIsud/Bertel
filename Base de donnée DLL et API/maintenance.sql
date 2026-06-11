@@ -84,6 +84,8 @@ FROM (
   WHERE is_published = TRUE
     AND is_main = TRUE
     AND (kind IS NULL OR kind = 'illustration')
+    -- §59 (14a): the public cover pick excludes private/partners media
+    AND (visibility IS NULL OR visibility = 'public')
   ORDER BY object_id, position NULLS LAST
 ) subq
 WHERE o.id = subq.object_id

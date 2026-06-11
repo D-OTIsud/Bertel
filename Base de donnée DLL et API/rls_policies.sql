@@ -909,19 +909,23 @@ CREATE POLICY "read_contact_channel" ON contact_channel
     OR object_id IN (SELECT api.current_user_extended_object_ids())
   );
 
--- Médias: §38/§51 split read gate (migration_media_description_read_gate.sql, manifest 8t).
--- is_published rows of PUBLISHED parents for everyone; the caller's extended scope
--- (set-based, one InitPlan — §35) reads all rows. media is object-XOR-place keyed
+-- Médias: §38/§51 split read gate (migration_media_description_read_gate.sql, manifest 8t)
+-- + §59 visibility compose (migration_media_visibility_gate.sql, manifest 14a).
+-- Published arm = is_published AND (NULL-or-public) visibility AND published parent —
+-- the §49 doctrine: a field flag composes INSIDE the published arm, never substitutes.
+-- NULL visibility ≈ public for MEDIA (matches get_object_resource/get_media_for_web and
+-- the 4014 NULL live rows = the public galleries) — unlike object_description where NULL
+-- is extended-only. The caller's extended scope (set-based, one InitPlan — §35) reads all
+-- rows incl. private/partners/unpublished. media is object-XOR-place keyed
 -- (chk_media_target_present), so both arms carry a place leg probed through
--- object_place (its own §38 gate resolves the parent). The retired pub_media_published's
--- bare `is_published` leaked draft/hidden/archived media to anon direct PostgREST, and
--- the retired ext arm was NULL-dead on place-keyed rows.
+-- object_place (its own §38 gate resolves the parent).
 DO $$ BEGIN
   BEGIN DROP POLICY IF EXISTS "Lecture publique des médias" ON media; EXCEPTION WHEN others THEN NULL; END;
 END $$;
 CREATE POLICY "read_media" ON media FOR SELECT USING (
   (
     is_published IS TRUE
+    AND (visibility IS NULL OR visibility = 'public')
     AND (
       (object_id IS NOT NULL AND EXISTS (
         SELECT 1 FROM object o WHERE o.id = media.object_id AND o.status = 'published'))

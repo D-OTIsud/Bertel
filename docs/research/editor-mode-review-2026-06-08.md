@@ -228,7 +228,7 @@ found one data-semantics bug, two sneaky bugs, and honesty gaps — all fixed.
 | Element | ⑤ | Decision |
 |---------|----|----------|
 | Scope tabs + inherited hints + read-only reasons + org-overlay delete-on-empty | ✅ | Keep — reference pattern. |
-| Accroche (chapo, 160) / Descriptif (description, 2000) | ✅ | Keep. Hint no longer claims Explorer display (drawer-only). |
+| Accroche (chapo, 160) / Descriptif (description, 2000) | ✅ | Keep. Hint no longer claims Explorer display (drawer-only). **Round 2 (user-decided):** the accroche is now ALSO a publication blocker (same contract as the descriptif: blocks « Publier » only, never draft saves) + gets the `required` star on the canonical scope. |
 | **« Descriptif du plan d'accès » (3rd textarea)** | ⛔ sémantique | **FIXED (commit 1, `d78c088`)** — it wrote `description_adapted` (the *accessibility* column, also edited by §10 with opposite semantics; last save won) while the model's real plan-d'accès field `object_location.direction` (Lot 1 mapping) was editable nowhere. **Moved to §02** (writes `direction`); §04 dropped the field; `description_adapted` is **single-owned by §10**, which gains the same canonical-permission gate (its ungated textarea was a latent silent-drop for enrichment-only users) + read-only reason. |
 | Descriptif `required` star | ④ menteur | **FIXED** — backed by a real publication blocker (empty-in-every-language canonical description blocks). |
 | Language tabs | 🐛 | **FIXED (commit 2)** — switching tabs wrote `activeLanguage` through `replaceModule` → phantom dirty + a no-op canonical rewrite on save. `isModuleDirty` now strips the nav state. |

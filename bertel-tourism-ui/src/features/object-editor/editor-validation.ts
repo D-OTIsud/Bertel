@@ -90,6 +90,13 @@ const VALIDATION_RULES: ValidationRule[] = [
       ? null
       : { section: '04', message: 'Le descriptif principal est obligatoire avant publication.', tone: 'req' };
   },
+  ({ draft }) => {
+    // Same contract for the accroche: the public card/drawer leads with it.
+    const chapo = draft.descriptions.object.chapo;
+    return [chapo.baseValue, ...Object.values(chapo.values)].some(hasText)
+      ? null
+      : { section: '04', message: "L'accroche est obligatoire avant publication.", tone: 'req' };
+  },
   ({ archetype, draft }) =>
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
       ? { section: '05', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }

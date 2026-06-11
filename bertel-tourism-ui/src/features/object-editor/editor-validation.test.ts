@@ -37,6 +37,28 @@ describe('editor publication validation', () => {
     expect(result.blockers.some((b) => b.section === '04')).toBe(false);
   });
 
+  it('blocks publication when the canonical accroche is empty in every language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: {} };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('accroche'),
+      tone: 'req',
+    });
+  });
+
+  it('does not block when the accroche exists in any language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: { en: 'Short teaser' } };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '04' && /accroche/i.test(b.message))).toBe(false);
+  });
+
   it('returns a warning when descriptions are thin', () => {
     const draft = fullModulesFixture();
     draft.descriptions.object.description = { baseValue: 'Trop court', values: {} };

@@ -93,7 +93,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
         {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
       </div>
 
-      <Field label="Accroche" hint={hint('≤ 160 caractères — accroche courte affichée en tête de la fiche', 'chapo')}>
+      <Field label="Accroche" required={!onOrg} hint={hint('≤ 160 caractères — accroche courte affichée en tête de la fiche', 'chapo')}>
         <Textarea
           value={readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage)}
           onChange={(v) => patchField('chapo', v)}

@@ -530,6 +530,93 @@ BEGIN
 END;
 $$;
 
+-- Annuaire relationnel (design CRM 2026-06-11) : un agrégat par objet AYANT une activité CRM
+-- (interaction OU tâche) du périmètre — nom, type, commune, dernière interaction, volumes,
+-- tâches ouvertes, top sujets. Volume borné (~520 objets) ⇒ retour intégral, filtres côté UI.
+CREATE OR REPLACE FUNCTION api.list_crm_directory()
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_scope text[];
+  v_items jsonb;
+BEGIN
+  IF NOT api.is_platform_superuser() THEN
+    v_scope := ARRAY(SELECT api.current_user_crm_object_ids());
+    IF COALESCE(array_length(v_scope, 1), 0) = 0 THEN
+      RETURN '[]'::jsonb;
+    END IF;
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(item ORDER BY last_at DESC NULLS LAST), '[]'::jsonb) INTO v_items
+  FROM (
+    SELECT agg.last_at,
+      jsonb_build_object(
+        'object_id', o.id, 'object_name', o.name, 'object_type', o.object_type,
+        'city', loc.city,
+        'interaction_count', COALESCE(agg.n_total, 0),
+        'interactions_12m', COALESCE(agg.n_12m, 0),
+        'last_interaction_at', agg.last_at,
+        'last_interaction_type', last_i.itype,
+        'last_interaction_subject', last_i.subject,
+        'open_tasks', COALESCE(t.n_open, 0),
+        'top_topics', COALESCE(topics.names, '[]'::jsonb)
+      ) AS item
+    FROM (
+      -- périmètre = objets avec activité CRM (interactions OU tâches)
+      SELECT DISTINCT obj.object_id FROM (
+        SELECT ci.object_id FROM crm_interaction ci
+        UNION
+        SELECT ct.object_id FROM crm_task ct
+      ) obj
+      WHERE (v_scope IS NULL OR obj.object_id = ANY(v_scope))
+    ) base
+    JOIN object o ON o.id = base.object_id
+    LEFT JOIN (
+      SELECT ci.object_id,
+             count(*) AS n_total,
+             count(*) FILTER (WHERE ci.occurred_at >= NOW() - interval '12 months') AS n_12m,
+             max(ci.occurred_at) AS last_at
+      FROM crm_interaction ci
+      GROUP BY ci.object_id
+    ) agg ON agg.object_id = base.object_id
+    LEFT JOIN LATERAL (
+      SELECT l.city FROM object_location l
+      WHERE l.object_id = o.id AND l.city IS NOT NULL
+      ORDER BY l.created_at ASC LIMIT 1
+    ) loc ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT ci2.interaction_type::text AS itype, ci2.subject
+      FROM crm_interaction ci2
+      WHERE ci2.object_id = base.object_id
+      ORDER BY ci2.occurred_at DESC NULLS LAST, ci2.id DESC
+      LIMIT 1
+    ) last_i ON TRUE
+    LEFT JOIN (
+      SELECT ct.object_id, count(*) AS n_open
+      FROM crm_task ct
+      WHERE ct.status IN ('todo','in_progress','blocked')
+      GROUP BY ct.object_id
+    ) t ON t.object_id = base.object_id
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(x.name ORDER BY x.n DESC) AS names
+      FROM (
+        SELECT rt.name, count(*) AS n
+        FROM crm_interaction ci3
+        JOIN ref_code_demand_topic rt ON rt.id = ci3.demand_topic_id
+        WHERE ci3.object_id = base.object_id
+        GROUP BY rt.name
+        ORDER BY count(*) DESC
+        LIMIT 2
+      ) x
+    ) topics ON TRUE
+  ) q;
+
+  RETURN v_items;
+END;
+$$;
+
 -- Suppression d'une interaction (même gate d'écriture).
 CREATE OR REPLACE FUNCTION api.delete_crm_interaction(p_id uuid)
 RETURNS jsonb
@@ -563,6 +650,8 @@ REVOKE ALL ON FUNCTION api.save_crm_interaction(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.save_crm_interaction(jsonb) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.delete_crm_interaction(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.delete_crm_interaction(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.list_crm_directory() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_directory() TO authenticated, service_role;
 -- Le front interroge user_has_permission('write_crm_notes') pour le gating UI global
 -- (ré-affirme un grant déjà posé par rls_policies.sql — idempotent).
 GRANT EXECUTE ON FUNCTION api.user_has_permission(text) TO authenticated, service_role;

@@ -17,6 +17,9 @@
 --    consommateur), FK re-pointées. Mapping : 😃 tres_positif · 🙂/ok positif ·
 --    🤔 interrogatif · 😡 mecontent · 😭 tres_mecontent · 😨 inquiet. extra.humeur_raw
 --    conservé (source préservée).
+--    Conservés volontairement (vides) : la partition ref_code_demand_subtopic, la colonne
+--    crm_interaction.demand_subtopic_id et sa FK — emplacement d'un futur vocabulaire de
+--    sous-sujets OTI (décision §58 ; ref_code_mood garde ses consommateurs object_taxonomy/closure).
 -- 4) ACCÈS (décisions spec 2026-06-11) : RPC-only authorize-once+DEFINER (§36) ; lecture =
 --    membres ORG publisher (api.current_user_crm_object_ids, set-based §35) ; écriture =
 --    write_crm_notes OU admin ORG OU superuser. Tables verrouillées : famille admin par
@@ -24,12 +27,14 @@
 --    direct ⇒ flags advisor security_definer attendus (même classe que get_object_cards_batch).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
--- is_platform_superuser, current_user_admin_rank), seeds_data.sql ÉDITÉ dans la même passe
--- (topics OTI seedés sous 'demand_topic' ; blocs génériques retirés) — sur un build fresh les
--- UPDATE/DELETE/backfills sont des no-op et l'état final est identique (gate fresh-apply).
+-- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
+-- passe (Task 4 — topics OTI seedés sous 'demand_topic', blocs génériques retirés) : sur un
+-- build fresh post-passe, les UPDATE/DELETE/backfills convergent vers le même état final
+-- (gate fresh-apply).
 -- Manifest step 8z. IDEMPOTENT (IF NOT EXISTS / IF EXISTS / ON CONFLICT / WHERE-guarded).
--- REVERSIBLE : renommages inverses + ré-INSERT des codes retirés (archivés dans ce fichier).
--- Couvert par tests/test_crm_module.sql.
+-- REVERSIBLE : renommages inverses + ré-INSERT des 33 codes retirés depuis l'historique git
+-- de seeds_data.sql (état pré-8z).
+-- Couvert par tests/test_crm_module.sql (Task 5 de la même passe).
 BEGIN;
 
 -- ---------- 1. Partition + seeds 'crm_sentiment' ----------
@@ -49,6 +54,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ---------- 2. Retrait fail-closed des 11 demand_topic génériques + 22 demand_subtopic ----------
+-- Legs 1-2 valident aussi les codes DÉPLACÉS (object_taxonomy/closure n'ont pas ON UPDATE CASCADE) ; leg 3 ne probe que les codes supprimés — les interactions backfillées référencent légitimement les codes déplacés.
 DO $$
 DECLARE
   v_refs bigint;
@@ -58,13 +64,13 @@ BEGIN
   SELECT count(*) INTO v_refs FROM (
     SELECT 1 FROM object_taxonomy ot
       WHERE ot.ref_code_id IN (SELECT id FROM ref_code
-        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic')
+        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic' OR domain='crm_demand_topic_oti')
     UNION ALL
     SELECT 1 FROM ref_code_taxonomy_closure c
       WHERE c.ancestor_id IN (SELECT id FROM ref_code
-        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic')
+        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic' OR domain='crm_demand_topic_oti')
          OR c.descendant_id IN (SELECT id FROM ref_code
-        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic')
+        WHERE (domain='demand_topic' AND code = ANY(c_generic_topics)) OR domain='demand_subtopic' OR domain='crm_demand_topic_oti')
     UNION ALL
     SELECT 1 FROM crm_interaction ci
       WHERE ci.demand_topic_id IN (SELECT id FROM ref_code
@@ -185,13 +191,18 @@ GRANT EXECUTE ON FUNCTION api.user_can_write_crm(text) TO authenticated, service
 -- RLS-free. Les écritures utilisent gen_random_uuid() (JAMAIS uuid_generate_v4 — §29 :
 -- search_path restreint sans 'extensions').
 
--- Timeline org-wide (ou par objet), keyset par occurred_at, filtres topic/type/sentiment.
+-- Timeline org-wide (ou par objet), keyset composite (occurred_at, id) — les ex æquo de
+-- timestamp ne sont plus perdus en bord de page —, filtres topic/type/sentiment.
+-- La signature change (p_before_id ajouté) : DROP de l'ancienne pour éviter une surcharge
+-- résiduelle ambiguë côté PostgREST sur une base ayant appliqué la révision précédente.
+DROP FUNCTION IF EXISTS api.list_crm_timeline(text, text, text, text, timestamptz, integer);
 CREATE OR REPLACE FUNCTION api.list_crm_timeline(
   p_object_id text DEFAULT NULL,
   p_topic_code text DEFAULT NULL,
   p_interaction_type text DEFAULT NULL,
   p_sentiment_code text DEFAULT NULL,
   p_before timestamptz DEFAULT NULL,
+  p_before_id uuid DEFAULT NULL,
   p_limit integer DEFAULT 50
 ) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -214,6 +225,8 @@ BEGIN
     END IF;
   END IF;
 
+  -- Une seule requête (pas de second probe à dériver) : v_limit + 1 lignes, la ligne
+  -- excédentaire signale has_more puis est retranchée.
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_items
   FROM (
     SELECT jsonb_build_object(
@@ -237,26 +250,22 @@ BEGIN
       AND (p_topic_code IS NULL OR t.code = p_topic_code)
       AND (p_interaction_type IS NULL OR ci.interaction_type::text = p_interaction_type)
       AND (p_sentiment_code IS NULL OR s.code = p_sentiment_code)
-      AND (p_before IS NULL OR ci.occurred_at < p_before)
+      -- Curseur row-wise (aligné sur idx_crm_interaction_occurred) ; sans p_before_id le
+      -- fallback uuid-zéro dégrade vers l'ancien occurred_at < p_before (id < zéro jamais vrai).
+      AND (p_before IS NULL
+           OR (ci.occurred_at, ci.id) < (p_before, COALESCE(p_before_id, '00000000-0000-0000-0000-000000000000'::uuid)))
     ORDER BY ci.occurred_at DESC NULLS LAST, ci.id DESC
-    LIMIT v_limit
+    LIMIT v_limit + 1
   ) q;
 
-  -- has_more : même WHERE, une ligne au-delà de la page.
-  SELECT EXISTS (
-    SELECT 1
-    FROM crm_interaction ci
-    LEFT JOIN ref_code_demand_topic t ON t.id = ci.demand_topic_id
-    LEFT JOIN ref_code_crm_sentiment s ON s.id = ci.request_sentiment_id
-    WHERE (v_scope IS NULL OR ci.object_id = ANY(v_scope))
-      AND (p_object_id IS NULL OR ci.object_id = p_object_id)
-      AND (p_topic_code IS NULL OR t.code = p_topic_code)
-      AND (p_interaction_type IS NULL OR ci.interaction_type::text = p_interaction_type)
-      AND (p_sentiment_code IS NULL OR s.code = p_sentiment_code)
-      AND (p_before IS NULL OR ci.occurred_at < p_before)
-    ORDER BY ci.occurred_at DESC NULLS LAST, ci.id DESC
-    OFFSET v_limit LIMIT 1
-  ) INTO v_has_more;
+  v_has_more := jsonb_array_length(v_items) > v_limit;
+  IF v_has_more THEN
+    v_items := (
+      SELECT COALESCE(jsonb_agg(value ORDER BY ord), '[]'::jsonb)
+      FROM jsonb_array_elements(v_items) WITH ORDINALITY AS t(value, ord)
+      WHERE ord <= v_limit
+    );
+  END IF;
 
   RETURN jsonb_build_object('items', v_items, 'has_more', v_has_more);
 END;
@@ -311,8 +320,10 @@ DECLARE
   v_id uuid := NULLIF(p_payload->>'id','')::uuid;
   v_object_id text := NULLIF(btrim(COALESCE(p_payload->>'object_id','')),'');
   v_existing_object text;
-  v_status crm_task_status := COALESCE(NULLIF(p_payload->>'status',''),'todo')::crm_task_status;
-  v_priority crm_task_priority := COALESCE(NULLIF(p_payload->>'priority',''),'medium')::crm_task_priority;
+  -- Défauts 'todo'/'medium' appliqués au seul INSERT ; sur UPDATE la valeur brute est castée
+  -- (vide/invalide ⇒ 22P02, cohérent avec save_crm_interaction — pas de reset silencieux).
+  v_status crm_task_status;
+  v_priority crm_task_priority;
   v_title text := NULLIF(btrim(COALESCE(p_payload->>'title','')),'');
 BEGIN
   IF v_id IS NOT NULL THEN
@@ -333,8 +344,8 @@ BEGIN
       object_id   = COALESCE(v_object_id, object_id),
       title       = COALESCE(v_title, title),
       description = CASE WHEN p_payload ? 'description' THEN NULLIF(p_payload->>'description','') ELSE description END,
-      status      = CASE WHEN p_payload ? 'status' THEN v_status ELSE status END,
-      priority    = CASE WHEN p_payload ? 'priority' THEN v_priority ELSE priority END,
+      status      = CASE WHEN p_payload ? 'status' THEN (p_payload->>'status')::crm_task_status ELSE status END,
+      priority    = CASE WHEN p_payload ? 'priority' THEN (p_payload->>'priority')::crm_task_priority ELSE priority END,
       due_at      = CASE WHEN p_payload ? 'due_at' THEN NULLIF(p_payload->>'due_at','')::timestamptz ELSE due_at END,
       updated_at  = NOW()
     WHERE id = v_id;
@@ -352,6 +363,8 @@ BEGIN
   END IF;
 
   v_id := gen_random_uuid();
+  v_status := COALESCE(NULLIF(p_payload->>'status',''),'todo')::crm_task_status;
+  v_priority := COALESCE(NULLIF(p_payload->>'priority',''),'medium')::crm_task_priority;
   INSERT INTO crm_task (id, object_id, title, description, status, priority, due_at, owner)
   VALUES (v_id, v_object_id, v_title,
           NULLIF(p_payload->>'description',''),
@@ -462,6 +475,11 @@ BEGIN
     IF NOT api.user_can_write_crm(v_existing_object) THEN
       RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
     END IF;
+    -- Refus explicite plutôt qu'object_id accepté-puis-ignoré (contrairement à save_crm_task,
+    -- le déplacement d'une interaction n'est pas un cas métier supporté).
+    IF v_object_id IS NOT NULL AND v_object_id <> v_existing_object THEN
+      RAISE EXCEPTION 'Re-parentage d''une interaction non supporté' USING ERRCODE = '22023';
+    END IF;
 
     UPDATE crm_interaction SET
       interaction_type     = CASE WHEN p_payload ? 'interaction_type' THEN (p_payload->>'interaction_type')::crm_interaction_type ELSE interaction_type END,
@@ -524,8 +542,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, integer) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, integer) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_crm_tasks() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_crm_tasks() TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.save_crm_task(jsonb) FROM PUBLIC, anon;
@@ -536,7 +554,8 @@ REVOKE ALL ON FUNCTION api.save_crm_interaction(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.save_crm_interaction(jsonb) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.delete_crm_interaction(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.delete_crm_interaction(uuid) TO authenticated, service_role;
--- Le front interroge user_has_permission('write_crm_notes') pour le gating UI global.
+-- Le front interroge user_has_permission('write_crm_notes') pour le gating UI global
+-- (ré-affirme un grant déjà posé par rls_policies.sql — idempotent).
 GRANT EXECUTE ON FUNCTION api.user_has_permission(text) TO authenticated, service_role;
 
 -- ---------- 9. RLS : FOR ALL admin → famille par commande (§47), prédicat wrappé (§39) ----------

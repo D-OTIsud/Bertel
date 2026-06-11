@@ -10,6 +10,11 @@
 --   had 0 rows. Explorer buckets that surface capacity facets: HOT (HOT/HPA/HLO/CAMP/RVA) and RES.
 --   Step-1 extension vs the plan's proposed matrix: standing_places->RES added so the RES bucket
 --   surfaces "Places debout" (its static fallback expects it; RES family = {RES} only).
+-- AMENDED 2026-06-11 (§07 review): PRD/SPU extras added below. The max_capacity cross-join
+--   self-heals for enum values added later on a FRESH build (8u/8x run before 13c), but LIVE ran
+--   13c before PRD/SPU existed -> re-run this file on live (idempotent) to backfill them.
+--   PRD (producteur ouvert au public): seats (degustation assise), standing_places (visite).
+--   SPU (equipement public): vehicles (parkings/aires/bornes), seats (aires de pique-nique).
 BEGIN;
 
 -- max_capacity applies to every object type (cross join with the enum -- 17 types incl. ORG/ACT).
@@ -33,6 +38,8 @@ JOIN (VALUES
   ('tents','HPA'),('tents','CAMP'),
   ('vehicles','HPA'),('vehicles','CAMP'),('vehicles','PSV'),
   ('bikes','PSV'),('bikes','ITI'),('bikes','LOI'),
+  ('seats','PRD'),('standing_places','PRD'),
+  ('seats','SPU'),('vehicles','SPU'),
   ('meeting_rooms','HOT'),('meeting_rooms','HPA'),('meeting_rooms','HLO'),('meeting_rooms','CAMP'),('meeting_rooms','RVA'),
   ('floor_area_m2','HOT'),('floor_area_m2','COM'),('floor_area_m2','LOI')
 ) AS v(code, object_type) ON v.code = m.code

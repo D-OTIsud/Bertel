@@ -18,6 +18,16 @@ BEGIN
                  WHERE m.code='seats' AND a.object_type='RES'), 'seats must apply to RES (RES bucket facet)';
   ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability a JOIN ref_capacity_metric m ON m.id=a.metric_id
                  WHERE m.code='standing_places' AND a.object_type='RES'), 'standing_places must apply to RES (RES bucket fallback)';
+  -- §07 review (2026-06-11): the post-13c types PRD/SPU must be covered too — max_capacity via
+  -- the cross-join (order 8u/8x < 13c on fresh; live backfilled by re-running 13c) + their extras.
+  ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability a JOIN ref_capacity_metric m ON m.id=a.metric_id
+                 WHERE m.code='max_capacity' AND a.object_type='PRD'), 'max_capacity must apply to PRD';
+  ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability a JOIN ref_capacity_metric m ON m.id=a.metric_id
+                 WHERE m.code='max_capacity' AND a.object_type='SPU'), 'max_capacity must apply to SPU';
+  ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability a JOIN ref_capacity_metric m ON m.id=a.metric_id
+                 WHERE m.code='seats' AND a.object_type='PRD'), 'seats must apply to PRD (degustation)';
+  ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability a JOIN ref_capacity_metric m ON m.id=a.metric_id
+                 WHERE m.code='vehicles' AND a.object_type='SPU'), 'vehicles must apply to SPU (parkings/aires)';
   RAISE NOTICE 'capacity applicability seed assertions passed.';
 END$$;
 ROLLBACK;

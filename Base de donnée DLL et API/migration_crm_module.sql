@@ -47,6 +47,12 @@
 --    par demande PO — l'item différé « contrat PII » reste pour actor_consent (jamais exposé
 --    ici) ; mêmes armes d'autorisation (user_can_write_crm à la création via le lien objet,
 --    user_can_write_crm_actor ensuite).
+-- 6b) ASSIGNATION DE TÂCHE (demande PO 2026-06-12) : le référent d'une tâche n'est pas
+--    forcément son créateur ⇒ save_crm_task accepte un `owner` sélectionnable (membre actif
+--    d'une ORG du caller, validé par api.user_can_assign_crm — même ensemble que
+--    api.list_crm_assignees qui peuple le select). INSERT : owner = COALESCE(owner, auth.uid())
+--    (défaut = soi, comme avant, mais surchargeable) ; UPDATE partiel : clé présente + NULL =
+--    désassignation. Superuser : tout app_user_profile existant (sinon membre d'ORG partagée).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -278,6 +284,33 @@ GRANT EXECUTE ON FUNCTION api.user_can_read_crm_actor(uuid) TO authenticated, se
 REVOKE ALL ON FUNCTION api.user_can_write_crm_actor(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.user_can_write_crm_actor(uuid) TO authenticated, service_role;
 
+-- Assignabilité d'une tâche (demande PO 2026-06-12) : p_user est assignable ssi il partage
+-- une ORG (membership actif) avec le caller — MÊME ensemble que api.list_crm_assignees, qui
+-- peuple le select côté UI (une seule source de vérité). Superuser : tout app_user_profile
+-- existant (un superuser sans membership renvoie [] depuis list_crm_assignees mais peut
+-- assigner n'importe quel utilisateur connu — cohérent avec son périmètre non restreint).
+CREATE OR REPLACE FUNCTION api.user_can_assign_crm(p_user uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT p_user IS NOT NULL
+     AND (
+       EXISTS (
+         SELECT 1
+         FROM user_org_membership me
+         JOIN user_org_membership m
+           ON m.org_object_id = me.org_object_id AND m.is_active
+         WHERE me.user_id = auth.uid() AND me.is_active
+           AND m.user_id = p_user
+       )
+       OR (api.is_platform_superuser()
+           AND EXISTS (SELECT 1 FROM app_user_profile p WHERE p.id = p_user))
+     );
+$$;
+REVOKE ALL ON FUNCTION api.user_can_assign_crm(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.user_can_assign_crm(uuid) TO authenticated, service_role;
+
 -- ---------- 8. RPCs DEFINER authorize-once (§36) ----------
 -- Chaque RPC s'auto-autorise UNE fois (jamais confiance aux ids du caller), puis lit/écrit
 -- RLS-free. Les écritures utilisent gen_random_uuid() (JAMAIS uuid_generate_v4 — §29 :
@@ -369,6 +402,30 @@ BEGIN
 END;
 $$;
 
+-- Assignataires possibles d'une tâche (demande PO 2026-06-12) : membres ACTIFS DISTINCTS des
+-- ORG du caller (eux-mêmes inclus). Peuple le select « attribuer à » de l'UI. display_name
+-- peut être NULL (profil non renseigné) ⇒ COALESCE vers un libellé court dérivé de l'uuid
+-- (jamais de ligne sans étiquette). Superuser sans membership : [] (assignation par
+-- user_can_assign_crm reste possible — documenté). Trié par display_name.
+CREATE OR REPLACE FUNCTION api.list_crm_assignees()
+RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'user_id', s.user_id,
+           'display_name', COALESCE(p.display_name, 'Utilisateur ' || left(s.user_id::text, 8)))
+         ORDER BY COALESCE(p.display_name, 'Utilisateur ' || left(s.user_id::text, 8))), '[]'::jsonb)
+  FROM (
+    SELECT DISTINCT m.user_id
+    FROM user_org_membership me
+    JOIN user_org_membership m
+      ON m.org_object_id = me.org_object_id AND m.is_active
+    WHERE me.user_id = auth.uid() AND me.is_active
+  ) s
+  LEFT JOIN app_user_profile p ON p.id = s.user_id;
+$$;
+
 -- Tâches CRM du périmètre (échéance croissante, NULLS LAST).
 CREATE OR REPLACE FUNCTION api.list_crm_tasks()
 RETURNS jsonb
@@ -421,6 +478,8 @@ DECLARE
   v_object_id text := NULLIF(btrim(COALESCE(p_payload->>'object_id','')),'');
   -- Rattachement acteur (rectif PO 2026-06-11) : crm_task.actor_id (ON DELETE SET NULL).
   v_actor_id uuid := NULLIF(p_payload->>'actor_id','')::uuid;
+  -- Assignation (demande PO 2026-06-12) : owner sélectionnable → auth.users (ON DELETE SET NULL).
+  v_owner uuid := NULLIF(p_payload->>'owner','')::uuid;
   v_existing_object text;
   -- Défauts 'todo'/'medium' appliqués au seul INSERT ; sur UPDATE la valeur brute est castée
   -- (vide/invalide ⇒ 22P02, cohérent avec save_crm_interaction — pas de reset silencieux).
@@ -452,10 +511,17 @@ BEGIN
         RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
       END IF;
     END IF;
+    -- Assignation (demande PO 2026-06-12) : clé présente + NULL = désassignation (pas de
+    -- validation) ; non-NULL = doit être un membre d'une ORG du caller (user_can_assign_crm).
+    IF p_payload ? 'owner' AND v_owner IS NOT NULL
+       AND NOT api.user_can_assign_crm(v_owner) THEN
+      RAISE EXCEPTION 'Assignataire hors de votre organisation' USING ERRCODE = '22023';
+    END IF;
 
     UPDATE crm_task SET
       object_id   = COALESCE(v_object_id, object_id),
       actor_id    = CASE WHEN p_payload ? 'actor_id' THEN v_actor_id ELSE actor_id END,
+      owner       = CASE WHEN p_payload ? 'owner' THEN v_owner ELSE owner END,
       title       = COALESCE(v_title, title),
       description = CASE WHEN p_payload ? 'description' THEN NULLIF(p_payload->>'description','') ELSE description END,
       status      = CASE WHEN p_payload ? 'status' THEN (p_payload->>'status')::crm_task_status ELSE status END,
@@ -485,6 +551,11 @@ BEGIN
       RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
     END IF;
   END IF;
+  -- Assignation (demande PO 2026-06-12) : owner optionnel ; défaut = soi (comme avant), mais
+  -- surchargeable par un membre d'une ORG du caller (user_can_assign_crm).
+  IF v_owner IS NOT NULL AND NOT api.user_can_assign_crm(v_owner) THEN
+    RAISE EXCEPTION 'Assignataire hors de votre organisation' USING ERRCODE = '22023';
+  END IF;
 
   v_id := gen_random_uuid();
   v_status := COALESCE(NULLIF(p_payload->>'status',''),'todo')::crm_task_status;
@@ -494,7 +565,7 @@ BEGIN
           NULLIF(p_payload->>'description',''),
           v_status, v_priority,
           NULLIF(p_payload->>'due_at','')::timestamptz,
-          auth.uid());
+          COALESCE(v_owner, auth.uid()));
   RETURN jsonb_build_object('id', v_id);
 END;
 $$;
@@ -1147,6 +1218,8 @@ REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz
 GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_crm_tasks() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_crm_tasks() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.list_crm_assignees() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_assignees() TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.save_crm_task(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.save_crm_task(jsonb) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_object_crm(text) FROM PUBLIC, anon;

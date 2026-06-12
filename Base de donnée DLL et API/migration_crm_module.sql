@@ -53,6 +53,17 @@
 --    api.list_crm_assignees qui peuple le select). INSERT : owner = COALESCE(owner, auth.uid())
 --    (défaut = soi, comme avant, mais surchargeable) ; UPDATE partiel : clé présente + NULL =
 --    désassignation. Superuser : tout app_user_profile existant (sinon membre d'ORG partagée).
+-- 6c) PHOTO ACTEUR + SUGGESTIONS DE CONTACTS + TIMELINE FILTRÉE (demande PO 2026-06-12) :
+--    a) actor.photo_url (colonne TEXT ; l'URL est posée APRÈS création par la route d'upload —
+--    save_crm_actor l'accepte en partiel « clé présente ⇒ écrite », clé+vide = effacement ;
+--    exposée par list_crm_directory / list_actor_crm / list_object_crm) ; b) nouvelle RPC
+--    api.list_object_contact_suggestions(object_id) : pré-remplissage de l'authoring acteur à
+--    partir des contacts de l'ÉTABLISSEMENT (contact_channel §03) + des canaux des acteurs DÉJÀ
+--    liés (actor_channel via actor_object_role), dédupliqués (kind_code, value) source
+--    'établissement' prioritaire ; gate = arme objet user_can_write_crm (le caller AUTHOR un
+--    acteur sous cet objet) ; c) list_crm_timeline gagne p_status (active=planned / done) +
+--    p_from — mêmes filtres que list_crm_directory pour l'onglet Timeline (signature 7→9 args,
+--    DROP de l'ancienne pour éviter une surcharge PostgREST ambiguë — même leçon que 6b).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -191,6 +202,11 @@ END$$;
 CREATE INDEX IF NOT EXISTS idx_crm_interaction_actor_occurred
   ON crm_interaction(actor_id, occurred_at DESC) WHERE actor_id IS NOT NULL;
 
+-- ---------- 6c. Photo acteur (demande PO 2026-06-12) ----------
+-- Colonne TEXT (l'URL est posée par la route d'upload APRÈS la création de l'acteur). No-op
+-- sur un build fresh où schema_unified.sql porte déjà la colonne.
+ALTER TABLE actor ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
 -- ---------- 7. Helpers d'autorisation (style current_user_extended_object_ids, §35) ----------
 -- Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
 -- Volontairement plus étroit que extended (pas d'arme acteur, pas d'arme all_published) :
@@ -318,14 +334,18 @@ GRANT EXECUTE ON FUNCTION api.user_can_assign_crm(uuid) TO authenticated, servic
 
 -- Timeline org-wide (ou par objet), keyset composite (occurred_at, id) — les ex æquo de
 -- timestamp ne sont plus perdus en bord de page —, filtres topic/type/sentiment.
--- La signature change (p_before_id ajouté) : DROP de l'ancienne pour éviter une surcharge
--- résiduelle ambiguë côté PostgREST sur une base ayant appliqué la révision précédente.
-DROP FUNCTION IF EXISTS api.list_crm_timeline(text, text, text, text, timestamptz, integer);
+-- Filtres sujet/statut/période alignés sur list_crm_directory (onglet Timeline) — p_status
+-- (active=planned / done) + p_from ajoutés (demande PO 2026-06-12). La signature change
+-- (7→9 args) : DROP de l'ancienne 7-arg pour éviter une surcharge résiduelle ambiguë côté
+-- PostgREST sur une base ayant appliqué la révision précédente.
+DROP FUNCTION IF EXISTS api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer);
 CREATE OR REPLACE FUNCTION api.list_crm_timeline(
   p_object_id text DEFAULT NULL,
   p_topic_code text DEFAULT NULL,
   p_interaction_type text DEFAULT NULL,
   p_sentiment_code text DEFAULT NULL,
+  p_status text DEFAULT NULL,
+  p_from timestamptz DEFAULT NULL,
   p_before timestamptz DEFAULT NULL,
   p_before_id uuid DEFAULT NULL,
   p_limit integer DEFAULT 50
@@ -337,9 +357,20 @@ DECLARE
   v_limit int := LEAST(GREATEST(COALESCE(p_limit, 50), 1), 200);
   v_scope text[];
   v_actor_scope uuid[];
+  v_status crm_status;
   v_items jsonb;
   v_has_more boolean;
 BEGIN
+  -- Statut (vocabulaire PO, identique à list_crm_directory) : active=planned (à traiter),
+  -- done=done. Validé AVANT le périmètre (le contrat 22023 vaut même à périmètre vide).
+  IF p_status IS NOT NULL THEN
+    IF p_status = 'active' THEN v_status := 'planned';
+    ELSIF p_status = 'done' THEN v_status := 'done';
+    ELSE
+      RAISE EXCEPTION 'p_status invalide: % (attendu: active | done)', p_status USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
   -- Authorize once : superuser ⇒ pas de restriction (v_scope/v_actor_scope restent NULL).
   -- Les interactions SANS contexte objet (acteur-seul) passent par l'arme acteur.
   IF NOT api.is_platform_superuser() THEN
@@ -381,6 +412,9 @@ BEGIN
       AND (p_topic_code IS NULL OR t.code = p_topic_code)
       AND (p_interaction_type IS NULL OR ci.interaction_type::text = p_interaction_type)
       AND (p_sentiment_code IS NULL OR s.code = p_sentiment_code)
+      -- Filtres sujet/statut/période (onglet Timeline, alignés sur list_crm_directory).
+      AND (v_status IS NULL OR ci.status = v_status)
+      AND (p_from IS NULL OR ci.occurred_at >= p_from)
       -- Curseur row-wise (aligné sur idx_crm_interaction_occurred) ; sans p_before_id le
       -- fallback uuid-zéro dégrade vers l'ancien occurred_at < p_before (id < zéro jamais vrai).
       AND (p_before IS NULL
@@ -635,7 +669,7 @@ BEGIN
 
   -- Acteurs liés à l'objet (actor_object_role), primaire d'abord puis alphabétique.
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
-           'actor_id', ar.actor_id, 'display_name', a.display_name,
+           'actor_id', ar.actor_id, 'display_name', a.display_name, 'photo_url', a.photo_url,
            'role_code', r.code, 'role_name', r.name, 'is_primary', ar.is_primary)
          ORDER BY ar.is_primary DESC NULLS LAST, a.display_name), '[]'::jsonb)
   INTO v_actors
@@ -820,7 +854,7 @@ BEGIN
   FROM (
     SELECT agg.last_at,
       jsonb_build_object(
-        'actor_id', a.id, 'display_name', a.display_name,
+        'actor_id', a.id, 'display_name', a.display_name, 'photo_url', a.photo_url,
         'objects', COALESCE(links.objects, '[]'::jsonb),
         'object_count', COALESCE(links.n, 0),
         'interaction_count', COALESCE(agg.n_total, 0),
@@ -941,7 +975,8 @@ BEGIN
   END IF;
 
   SELECT jsonb_build_object('id', a.id, 'display_name', a.display_name,
-                            'first_name', a.first_name, 'last_name', a.last_name)
+                            'first_name', a.first_name, 'last_name', a.last_name,
+                            'photo_url', a.photo_url)
   INTO v_actor
   FROM actor a WHERE a.id = p_actor_id;
   IF v_actor IS NULL THEN
@@ -1083,6 +1118,8 @@ BEGIN
       display_name = CASE WHEN p_payload ? 'display_name' THEN v_display_name ELSE display_name END,
       first_name   = CASE WHEN p_payload ? 'first_name' THEN NULLIF(p_payload->>'first_name','') ELSE first_name END,
       last_name    = CASE WHEN p_payload ? 'last_name' THEN NULLIF(p_payload->>'last_name','') ELSE last_name END,
+      -- photo_url (demande PO 2026-06-12) : clé présente + vide = effacement explicite.
+      photo_url    = CASE WHEN p_payload ? 'photo_url' THEN NULLIF(p_payload->>'photo_url','') ELSE photo_url END,
       updated_at   = NOW()
     WHERE id = v_id;
     RETURN jsonb_build_object('id', v_id);
@@ -1105,10 +1142,12 @@ BEGIN
   END IF;
 
   v_id := gen_random_uuid();
-  INSERT INTO actor (id, display_name, first_name, last_name, created_by)
+  -- photo_url généralement NULL à la création (la route d'upload la pose après) ; acceptée.
+  INSERT INTO actor (id, display_name, first_name, last_name, photo_url, created_by)
   VALUES (v_id, v_display_name,
           NULLIF(p_payload->>'first_name',''),
           NULLIF(p_payload->>'last_name',''),
+          NULLIF(p_payload->>'photo_url',''),
           auth.uid());
   -- Primaire seulement si la place est libre : uq_actor_object_role_primary est UNIQUE
   -- (object_id, role_id) WHERE is_primary — un INSERT is_primary inconditionnel casserait
@@ -1214,8 +1253,67 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) TO authenticated, service_role;
+-- Suggestions de contacts pour l'authoring d'un acteur (demande PO 2026-06-12). Le caller
+-- crée/édite un acteur SOUS cet objet ⇒ gate = arme objet user_can_write_crm (même prédicat
+-- que save_crm_actor à la création). Combine les contacts de l'ÉTABLISSEMENT (contact_channel
+-- §03, source 'établissement') + les canaux des acteurs DÉJÀ liés (actor_channel via
+-- actor_object_role, source 'acteur lié'), dédupliqués par (kind_code, lower(btrim(value)))
+-- en préférant la source 'établissement' puis is_primary. ORDER final : e-mails d'abord,
+-- primaires, puis valeur. PII réservée au périmètre publisher (jamais en PostgREST direct).
+CREATE OR REPLACE FUNCTION api.list_object_contact_suggestions(p_object_id text)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_items jsonb;
+BEGIN
+  IF p_object_id IS NULL OR NOT api.user_can_write_crm(p_object_id) THEN
+    RAISE EXCEPTION 'CRM non autorisé pour cet objet' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'kind_code', d.kind_code, 'kind_name', d.kind_name,
+           'value', d.value, 'is_primary', d.is_primary, 'source', d.source)
+         -- ORDER d'affichage : e-mails d'abord, primaires, puis valeur.
+         ORDER BY (d.kind_code = 'email') DESC, d.is_primary DESC NULLS LAST, d.value), '[]'::jsonb)
+  INTO v_items
+  FROM (
+    -- DISTINCT ON dédup par (kind_code, value normalisée) ; prio source établissement puis is_primary.
+    SELECT DISTINCT ON (u.kind_code, lower(btrim(u.value)))
+           u.kind_code, u.kind_name, u.value, u.is_primary, u.source
+    FROM (
+      -- Contacts de l'établissement (§03).
+      SELECT k.code AS kind_code, k.name AS kind_name, cc.value,
+             COALESCE(cc.is_primary, FALSE) AS is_primary, 'établissement' AS source,
+             0 AS source_rank
+      FROM contact_channel cc
+      JOIN ref_code_contact_kind k ON k.id = cc.kind_id
+      WHERE cc.object_id = p_object_id
+        AND NULLIF(btrim(cc.value),'') IS NOT NULL
+      UNION ALL
+      -- Canaux des acteurs déjà liés à l'objet.
+      SELECT k.code AS kind_code, k.name AS kind_name, ach.value,
+             COALESCE(ach.is_primary, FALSE) AS is_primary, 'acteur lié' AS source,
+             1 AS source_rank
+      FROM actor_object_role aor
+      JOIN actor_channel ach ON ach.actor_id = aor.actor_id
+      JOIN ref_code_contact_kind k ON k.id = ach.kind_id
+      WHERE aor.object_id = p_object_id
+        AND NULLIF(btrim(ach.value),'') IS NOT NULL
+    ) u
+    ORDER BY u.kind_code, lower(btrim(u.value)),
+             u.source_rank, u.is_primary DESC NULLS LAST
+  ) d;
+
+  RETURN v_items;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, text, timestamptz, timestamptz, uuid, integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, text, timestamptz, timestamptz, uuid, integer) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.list_object_contact_suggestions(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_object_contact_suggestions(text) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_crm_tasks() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_crm_tasks() TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_crm_assignees() FROM PUBLIC, anon;

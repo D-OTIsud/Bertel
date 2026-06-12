@@ -2037,6 +2037,7 @@ CREATE TABLE IF NOT EXISTS actor (
   first_name TEXT,
   last_name TEXT,
   gender TEXT,
+  photo_url TEXT,
   extra JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

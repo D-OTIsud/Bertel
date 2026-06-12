@@ -13,6 +13,13 @@
 --    ajout de contexte objet NULL→valeur permis, re-parentage objet→objet refusé (22023) ;
 --    cross-ORG acteur : list_actor_crm refuse l'étranger (42501), l'annuaire de B contient
 --    son acteur lié mais jamais celui de A.
+-- E) RECTIFS PO (2026-06-11) : authoring acteur (save_crm_actor INSERT lié à un objet +
+--    UPDATE partiel) ; canaux (save_actor_channel / delete_actor_channel + clé 'channels'
+--    de list_actor_crm) ; tâche rattachée à un acteur (actor_id accepté par save_crm_task,
+--    actor_name exposé par list_crm_tasks) ; annuaire list_crm_directory filtrable
+--    (sujet/statut/période) avec KPI recalculés sur l'ensemble FILTRÉ — les acteurs
+--    « lien seul » disparaissent sous filtre ; p_status hors contrat → 22023 ; refus 42501
+--    membre sans permission (C) et cross-ORG (B).
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
 -- Mécanique de fixture calquée sur test_room_type_read_gate.sql / test_sp2_permission_behavior.sql.
@@ -39,6 +46,12 @@ DECLARE
   v_ctx_id uuid;       -- interaction acteur-seul contextualisée ensuite (NULL → objA)
   v_task_id uuid;
   v_denied boolean;
+  -- Rectifs PO (2026-06-11) :
+  v_kind_code text;    -- code contact_kind réel (fixture-guard ; 'email' préféré)
+  v_new_actor uuid;    -- acteur créé via save_crm_actor
+  v_chan_id uuid;      -- canal créé via save_actor_channel
+  v_task2_id uuid;     -- tâche rattachée à l'acteur
+  v_po_int_id uuid;    -- interaction topique de l'acteur PO (filtres annuaire)
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -83,6 +96,11 @@ BEGIN
   IF v_pub_role IS NULL THEN RAISE EXCEPTION 'fixture: ref_org_role[publisher] manquant (seeds non appliqués)'; END IF;
   SELECT id INTO v_perm FROM ref_permission WHERE code = 'write_crm_notes' LIMIT 1;
   IF v_perm IS NULL THEN RAISE EXCEPTION 'fixture: ref_permission[write_crm_notes] manquant (seeds non appliqués)'; END IF;
+  -- Canal de contact : code réel fixture-guardé. 'email' préféré (la value de test est un
+  -- e-mail valide pour les triggers de forme/anti-doublon) ; sinon premier code actif.
+  SELECT code INTO v_kind_code FROM ref_code_contact_kind
+  WHERE is_active ORDER BY (code = 'email') DESC, position NULLS LAST, code LIMIT 1;
+  IF v_kind_code IS NULL THEN RAISE EXCEPTION 'fixture: aucun ref_code_contact_kind actif (seeds non appliqués)'; END IF;
 
   -- users d'abord : le trigger on_auth_user_created_app_user_profile auto-crée le profil ;
   -- l'UPSERT absorbe les lignes créées par le trigger ('tourism_agent' = rôle non-superuser).
@@ -291,6 +309,127 @@ BEGIN
            'fiche acteur: plus aucune interaction après suppression';
   RESET ROLE;
 
-  RAISE NOTICE 'CRM module §61 + acteur-centré v2 : vocabulaires, ancrages, accès/écriture/cross-ORG — assertions passées.';
+  -- ---------- E. Rectifs PO (2026-06-11) — USER A : authoring acteur/canaux, tâche-acteur, annuaire filtré ----------
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userA, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- save_crm_actor INSERT : l'acteur entre dans le périmètre PAR son lien objet (rôle
+    -- 'operator' par défaut ; non-primaire ici — actorA tient déjà la place primaire).
+    v_payload := api.save_crm_actor(jsonb_build_object(
+      'display_name', 'Acteur Test PO', 'object_id', v_objA));
+    v_new_actor := (v_payload->>'id')::uuid;
+    ASSERT v_new_actor IS NOT NULL, 'save_crm_actor: pas d''id retourné';
+    -- save_actor_channel INSERT (kind réel fixture-guardé).
+    v_payload := api.save_actor_channel(jsonb_build_object(
+      'actor_id', v_new_actor, 'kind_code', v_kind_code, 'value', 'test@po.local', 'is_primary', true));
+    v_chan_id := (v_payload->>'id')::uuid;
+    ASSERT v_chan_id IS NOT NULL, 'save_actor_channel: pas d''id retourné';
+    -- Fiche acteur : 5e clé channels + le lien objet créé par save_crm_actor.
+    v_payload := api.list_actor_crm(v_new_actor);
+    ASSERT jsonb_array_length(v_payload->'channels') >= 1
+           AND v_payload->'channels'->0->>'kind_code' = v_kind_code
+           AND v_payload->'channels'->0->>'value' = 'test@po.local',
+           'list_actor_crm: la clé channels doit lister le canal créé';
+    ASSERT jsonb_array_length(v_payload->'objects') >= 1
+           AND v_payload->'objects'->0->>'object_id' = v_objA,
+           'save_crm_actor: le lien actor_object_role vers objA doit remonter dans objects';
+    -- save_crm_actor UPDATE partiel (first_name seul ; display_name intact).
+    PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'first_name', 'Paul'));
+    v_payload := api.list_actor_crm(v_new_actor);
+    ASSERT v_payload->'actor'->>'first_name' = 'Paul'
+           AND v_payload->'actor'->>'display_name' = 'Acteur Test PO',
+           'save_crm_actor: update partiel first_name non persisté (ou display_name écrasé)';
+    -- Tâche rattachée à un acteur : actor_id accepté, actor_name exposé par list_crm_tasks.
+    v_payload := api.save_crm_task(jsonb_build_object(
+      'object_id', v_objA, 'title', 'Tâche acteur PO', 'actor_id', v_new_actor));
+    v_task2_id := (v_payload->>'id')::uuid;
+    ASSERT (SELECT t->>'actor_name' FROM jsonb_array_elements(api.list_crm_tasks()) AS t
+            WHERE (t->>'id')::uuid = v_task2_id) = 'Acteur Test PO',
+           'save_crm_task: actor_name absent de list_crm_tasks (rattachement acteur)';
+    -- Annuaire filtré : 1 interaction topique + 1 générale sans sujet → KPI réactifs.
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'actor_id', v_new_actor, 'object_id', v_objA, 'body', 'Visite guidée',
+      'topic_code', 'demande_de_visite'));
+    v_po_int_id := (v_payload->>'id')::uuid;
+    ASSERT v_po_int_id IS NOT NULL, 'fixture E: interaction topique non créée';
+    PERFORM api.save_crm_interaction(jsonb_build_object(
+      'actor_id', v_new_actor, 'body', 'Sans sujet'));
+    -- Sans filtre : les 2 interactions comptent (comportement inchangé).
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_crm_directory()) d
+                   WHERE (d->>'actor_id')::uuid = v_new_actor
+                     AND (d->>'interaction_count')::int = 2),
+           'annuaire sans filtre: interaction_count=2 attendu pour l''acteur PO';
+    -- Filtre sujet correspondant : l'acteur reste, les KPI suivent l'ensemble FILTRÉ.
+    v_payload := api.list_crm_directory(p_topic_code := 'demande_de_visite');
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
+                   WHERE (d->>'actor_id')::uuid = v_new_actor
+                     AND (d->>'interaction_count')::int = 1),
+           'annuaire filtré (sujet): acteur PO attendu avec interaction_count=1 (KPI réactifs)';
+    -- Les acteurs « lien seul » disparaissent sous filtre (actorA n'a plus d'interaction).
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
+                       WHERE (d->>'actor_id')::uuid = v_actorA),
+           'annuaire filtré: les acteurs lien-seul doivent disparaître sous filtre';
+    -- Filtre sujet non correspondant : l'acteur disparaît.
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                         api.list_crm_directory(p_topic_code := 'boutique')) d
+                       WHERE (d->>'actor_id')::uuid = v_new_actor),
+           'annuaire filtré (autre sujet): l''acteur PO ne doit pas apparaître';
+    -- Filtre période sans correspondance : l'acteur disparaît aussi.
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                         api.list_crm_directory(p_from := NOW() + interval '1 day')) d
+                       WHERE (d->>'actor_id')::uuid = v_new_actor),
+           'annuaire filtré (période future): l''acteur PO ne doit pas apparaître';
+    -- Statuts : Actives = planned, Traitées = done (les interactions de test sont 'done').
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                         api.list_crm_directory(p_status := 'active')) d
+                       WHERE (d->>'actor_id')::uuid = v_new_actor),
+           'annuaire filtré (active=planned): interactions done → acteur absent';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(
+                     api.list_crm_directory(p_status := 'done')) d
+                   WHERE (d->>'actor_id')::uuid = v_new_actor),
+           'annuaire filtré (done): acteur PO présent attendu';
+    -- p_status hors contrat (NULL | active | done) → 22023.
+    v_denied := false;
+    BEGIN
+      PERFORM api.list_crm_directory(p_status := 'bidon');
+    EXCEPTION WHEN invalid_parameter_value THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'annuaire filtré: p_status invalide doit lever 22023';
+    -- delete_actor_channel : {deleted} + channels redescend à 0.
+    v_payload := api.delete_actor_channel(v_chan_id);
+    ASSERT (v_payload->>'deleted')::boolean, 'delete_actor_channel: deleted=true attendu';
+    ASSERT jsonb_array_length(api.list_actor_crm(v_new_actor)->'channels') = 0,
+           'delete_actor_channel: channels doit redescendre à 0';
+  RESET ROLE;
+
+  -- ---------- E2. USER C (membre SANS permission) : authoring acteur/canaux refusé ----------
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userC, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_actor(jsonb_build_object('display_name', 'Refusé', 'object_id', v_objA));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'save_crm_actor: le membre sans write_crm_notes doit être refusé (42501)';
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_actor_channel(jsonb_build_object(
+        'actor_id', v_new_actor, 'kind_code', v_kind_code, 'value', 'refus@po.local'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'save_actor_channel: le membre sans write_crm_notes doit être refusé (42501)';
+  RESET ROLE;
+
+  -- ---------- E3. USER B (autre ORG) : édition de l'acteur de A refusée ----------
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userB, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'first_name', 'Intrus'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'cross-ORG: save_crm_actor UPDATE sur l''acteur de A doit être refusé (42501)';
+  RESET ROLE;
+
+  RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO : vocabulaires, ancrages, accès/écriture/cross-ORG, authoring acteur/canaux, annuaire filtré — assertions passées.';
 END$$;
 ROLLBACK;

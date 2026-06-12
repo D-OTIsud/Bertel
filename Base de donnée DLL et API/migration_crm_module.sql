@@ -37,6 +37,16 @@
 --    (api.list_actor_crm + annuaire list_crm_directory ré-écrit PAR ACTEUR). Autorisation
 --    d'écriture : arme objet (user_can_write_crm) quand un contexte objet existe, sinon arme
 --    acteur (user_can_write_crm_actor) — mêmes ingrédients (publisher + write_crm_notes/admin).
+-- 6) RECTIFS PO (2026-06-11) : a) tâches rattachables à un acteur (save_crm_task accepte
+--    actor_id — la colonne crm_task.actor_id existait, le RPC ne l'acceptait pas ; actor_id/
+--    actor_name exposés par list_crm_tasks et la branche tâches de list_object_crm) ;
+--    b) annuaire list_crm_directory filtrable côté serveur (sujet / statut / période) avec
+--    KPI recalculés sur l'ensemble FILTRÉ — Actives = planned (à traiter), Traitées = done,
+--    vocabulaire PO ; c) authoring acteur + canaux de contact (save_crm_actor /
+--    save_actor_channel / delete_actor_channel + clé 'channels' de list_actor_crm) débloqué
+--    par demande PO — l'item différé « contrat PII » reste pour actor_consent (jamais exposé
+--    ici) ; mêmes armes d'autorisation (user_can_write_crm à la création via le lien objet,
+--    user_can_write_crm_actor ensuite).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -380,6 +390,7 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'id', ct.id, 'object_id', ct.object_id, 'object_name', o.name,
+      'actor_id', ct.actor_id, 'actor_name', act.display_name, -- rattachement acteur (rectif PO)
       'title', ct.title, 'description', ct.description,
       'status', ct.status, 'priority', ct.priority,
       'due_at', ct.due_at, 'created_at', ct.created_at,
@@ -388,6 +399,7 @@ BEGIN
     ) AS item
     FROM crm_task ct
     JOIN object o ON o.id = ct.object_id
+    LEFT JOIN actor act ON act.id = ct.actor_id
     LEFT JOIN app_user_profile p ON p.id = ct.owner
     LEFT JOIN crm_interaction ri ON ri.id = ct.related_interaction_id
     WHERE (v_scope IS NULL OR ct.object_id = ANY(v_scope))
@@ -407,6 +419,8 @@ AS $$
 DECLARE
   v_id uuid := NULLIF(p_payload->>'id','')::uuid;
   v_object_id text := NULLIF(btrim(COALESCE(p_payload->>'object_id','')),'');
+  -- Rattachement acteur (rectif PO 2026-06-11) : crm_task.actor_id (ON DELETE SET NULL).
+  v_actor_id uuid := NULLIF(p_payload->>'actor_id','')::uuid;
   v_existing_object text;
   -- Défauts 'todo'/'medium' appliqués au seul INSERT ; sur UPDATE la valeur brute est castée
   -- (vide/invalide ⇒ 22P02, cohérent avec save_crm_interaction — pas de reset silencieux).
@@ -427,9 +441,21 @@ BEGIN
        AND NOT api.user_can_write_crm(v_object_id) THEN
       RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
     END IF;
+    -- Rattachement acteur : l'acteur doit exister et être écrivable (arme acteur) ; le gate
+    -- objet reste premier (object_id reste requis sur les tâches). Clé présente + NULL/vide
+    -- ⇒ détachement explicite (pas de validation à faire).
+    IF p_payload ? 'actor_id' AND v_actor_id IS NOT NULL THEN
+      IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor_id) THEN
+        RAISE EXCEPTION 'acteur inconnu: %', v_actor_id USING ERRCODE = 'P0002';
+      END IF;
+      IF NOT api.user_can_write_crm_actor(v_actor_id) THEN
+        RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+      END IF;
+    END IF;
 
     UPDATE crm_task SET
       object_id   = COALESCE(v_object_id, object_id),
+      actor_id    = CASE WHEN p_payload ? 'actor_id' THEN v_actor_id ELSE actor_id END,
       title       = COALESCE(v_title, title),
       description = CASE WHEN p_payload ? 'description' THEN NULLIF(p_payload->>'description','') ELSE description END,
       status      = CASE WHEN p_payload ? 'status' THEN (p_payload->>'status')::crm_task_status ELSE status END,
@@ -449,12 +475,22 @@ BEGIN
   IF NOT api.user_can_write_crm(v_object_id) THEN
     RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
   END IF;
+  -- Rattachement acteur optionnel (« ajouter une tâche depuis la fiche acteur ») : mêmes
+  -- validations qu'à l'UPDATE — le gate objet ci-dessus reste premier.
+  IF v_actor_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor_id) THEN
+      RAISE EXCEPTION 'acteur inconnu: %', v_actor_id USING ERRCODE = 'P0002';
+    END IF;
+    IF NOT api.user_can_write_crm_actor(v_actor_id) THEN
+      RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+    END IF;
+  END IF;
 
   v_id := gen_random_uuid();
   v_status := COALESCE(NULLIF(p_payload->>'status',''),'todo')::crm_task_status;
   v_priority := COALESCE(NULLIF(p_payload->>'priority',''),'medium')::crm_task_priority;
-  INSERT INTO crm_task (id, object_id, title, description, status, priority, due_at, owner)
-  VALUES (v_id, v_object_id, v_title,
+  INSERT INTO crm_task (id, object_id, actor_id, title, description, status, priority, due_at, owner)
+  VALUES (v_id, v_object_id, v_actor_id, v_title,
           NULLIF(p_payload->>'description',''),
           v_status, v_priority,
           NULLIF(p_payload->>'due_at','')::timestamptz,
@@ -504,9 +540,11 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'id', ct.id, 'title', ct.title, 'status', ct.status,
-      'priority', ct.priority, 'due_at', ct.due_at
+      'priority', ct.priority, 'due_at', ct.due_at,
+      'actor_id', ct.actor_id, 'actor_name', act.display_name -- rattachement acteur (rectif PO)
     ) AS item
     FROM crm_task ct
+    LEFT JOIN actor act ON act.id = ct.actor_id
     WHERE ct.object_id = p_object_id
     ORDER BY ct.due_at ASC NULLS LAST
   ) qt;
@@ -655,10 +693,22 @@ $$;
 -- ACTEUR du périmètre — lié (actor_object_role) à un objet du périmètre OU portant ≥1
 -- interaction du périmètre — avec ses objets liés, volumes, dernière interaction, top sujets.
 -- Les agrégats couvrent TOUTES les interactions de l'acteur dont l'objet est dans le périmètre
--- OU sans contexte objet (acteur-seul). Volume borné (~700 acteurs) ⇒ retour intégral,
--- filtres côté UI.
-CREATE OR REPLACE FUNCTION api.list_crm_directory()
-RETURNS jsonb
+-- OU sans contexte objet (acteur-seul). Volume borné (~700 acteurs) ⇒ retour intégral.
+-- Filtres SERVEUR (rectif PO 2026-06-11) : sujet / statut / période s'appliquent au MÊME
+-- ensemble d'interactions pour TOUS les agrégats (interaction_count, interactions_12m,
+-- last_*, top_topics) — les KPI de l'UI suivent le filtre. Règle d'inclusion : dès qu'un
+-- filtre est posé, seuls les acteurs avec ≥1 interaction correspondante restent (les acteurs
+-- « lien seul » disparaissent) ; sans filtre, comportement inchangé (liens ∪ interagissants).
+-- La signature change (filtres ajoutés) : DROP de l'ancienne zéro-arg pour éviter une
+-- surcharge résiduelle ambiguë côté PostgREST sur une base ayant appliqué la révision
+-- précédente (même leçon que list_crm_timeline).
+DROP FUNCTION IF EXISTS api.list_crm_directory();
+CREATE OR REPLACE FUNCTION api.list_crm_directory(
+  p_topic_code text DEFAULT NULL,
+  p_status text DEFAULT NULL,
+  p_from timestamptz DEFAULT NULL,
+  p_to timestamptz DEFAULT NULL
+) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, api, auth
 AS $$
@@ -666,7 +716,27 @@ DECLARE
   v_scope text[];        -- objets du périmètre (NULL = superuser, sans restriction)
   v_actor_scope uuid[];  -- acteurs du périmètre (NULL = superuser)
   v_items jsonb;
+  v_topic_id uuid;
+  v_status crm_status;
+  v_filtered boolean := (p_topic_code IS NOT NULL OR p_status IS NOT NULL
+                         OR p_from IS NOT NULL OR p_to IS NOT NULL);
 BEGIN
+  -- Validation des filtres AVANT le périmètre (le contrat 22023 vaut même à périmètre vide).
+  IF p_topic_code IS NOT NULL THEN
+    SELECT id INTO v_topic_id FROM ref_code_demand_topic WHERE code = p_topic_code;
+    IF v_topic_id IS NULL THEN
+      RAISE EXCEPTION 'topic_code inconnu: %', p_topic_code USING ERRCODE = '22023';
+    END IF;
+  END IF;
+  -- Actives = planned (à traiter), Traitées = done — vocabulaire PO.
+  IF p_status IS NOT NULL THEN
+    IF p_status = 'active' THEN v_status := 'planned';
+    ELSIF p_status = 'done' THEN v_status := 'done';
+    ELSE
+      RAISE EXCEPTION 'p_status invalide: % (attendu: active | done)', p_status USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
   IF NOT api.is_platform_superuser() THEN
     v_scope := ARRAY(SELECT api.current_user_crm_object_ids());
     v_actor_scope := ARRAY(SELECT api.current_user_crm_actor_ids());
@@ -693,12 +763,22 @@ BEGIN
     FROM (
       -- base = acteurs du périmètre : non-superuser ⇒ v_actor_scope (déjà « lié OU
       -- interagissant ») ; superuser ⇒ tous les acteurs ayant ≥1 lien OU ≥1 interaction.
+      -- Sous filtre (v_filtered) : ≥1 interaction CORRESPONDANTE exigée en plus — les
+      -- acteurs « lien seul » disparaissent (règle d'inclusion PO, cf. en-tête fonction).
       SELECT a0.id AS actor_id
       FROM actor a0
-      WHERE a0.id = ANY(v_actor_scope)
-         OR (v_actor_scope IS NULL
-             AND (EXISTS (SELECT 1 FROM actor_object_role ar0 WHERE ar0.actor_id = a0.id)
-                  OR EXISTS (SELECT 1 FROM crm_interaction ci0 WHERE ci0.actor_id = a0.id)))
+      WHERE (a0.id = ANY(v_actor_scope)
+             OR (v_actor_scope IS NULL
+                 AND (EXISTS (SELECT 1 FROM actor_object_role ar0 WHERE ar0.actor_id = a0.id)
+                      OR EXISTS (SELECT 1 FROM crm_interaction ci0 WHERE ci0.actor_id = a0.id))))
+        AND (NOT v_filtered
+             OR EXISTS (SELECT 1 FROM crm_interaction cf
+                        WHERE cf.actor_id = a0.id
+                          AND (v_scope IS NULL OR cf.object_id IS NULL OR cf.object_id = ANY(v_scope))
+                          AND (v_topic_id IS NULL OR cf.demand_topic_id = v_topic_id)
+                          AND (v_status IS NULL OR cf.status = v_status)
+                          AND (p_from IS NULL OR cf.occurred_at >= p_from)
+                          AND (p_to IS NULL OR cf.occurred_at < p_to)))
     ) base
     JOIN actor a ON a.id = base.actor_id
     -- Objets liés du périmètre (TOUS les liens vers des objets en périmètre, primaire d'abord).
@@ -714,8 +794,9 @@ BEGIN
       WHERE ar.actor_id = base.actor_id
         AND (v_scope IS NULL OR ar.object_id = ANY(v_scope))
     ) links ON TRUE
-    -- Volumes sur TOUTES les interactions de l'acteur en périmètre (contexte objet du
-    -- périmètre OU interaction générale sans contexte).
+    -- Volumes sur les interactions FILTRÉES de l'acteur en périmètre (contexte objet du
+    -- périmètre OU interaction générale sans contexte) — interactions_12m = fenêtre 12 mois
+    -- intersectée avec la période demandée.
     LEFT JOIN LATERAL (
       SELECT count(*) AS n_total,
              count(*) FILTER (WHERE ci.occurred_at >= NOW() - interval '12 months') AS n_12m,
@@ -723,6 +804,10 @@ BEGIN
       FROM crm_interaction ci
       WHERE ci.actor_id = base.actor_id
         AND (v_scope IS NULL OR ci.object_id IS NULL OR ci.object_id = ANY(v_scope))
+        AND (v_topic_id IS NULL OR ci.demand_topic_id = v_topic_id)
+        AND (v_status IS NULL OR ci.status = v_status)
+        AND (p_from IS NULL OR ci.occurred_at >= p_from)
+        AND (p_to IS NULL OR ci.occurred_at < p_to)
     ) agg ON TRUE
     LEFT JOIN LATERAL (
       SELECT ci2.interaction_type::text AS itype, ci2.subject, o2.name AS object_name
@@ -730,6 +815,10 @@ BEGIN
       LEFT JOIN object o2 ON o2.id = ci2.object_id
       WHERE ci2.actor_id = base.actor_id
         AND (v_scope IS NULL OR ci2.object_id IS NULL OR ci2.object_id = ANY(v_scope))
+        AND (v_topic_id IS NULL OR ci2.demand_topic_id = v_topic_id)
+        AND (v_status IS NULL OR ci2.status = v_status)
+        AND (p_from IS NULL OR ci2.occurred_at >= p_from)
+        AND (p_to IS NULL OR ci2.occurred_at < p_to)
       ORDER BY ci2.occurred_at DESC NULLS LAST, ci2.id DESC
       LIMIT 1
     ) last_i ON TRUE
@@ -741,6 +830,10 @@ BEGIN
         JOIN ref_code_demand_topic rt ON rt.id = ci3.demand_topic_id
         WHERE ci3.actor_id = base.actor_id
           AND (v_scope IS NULL OR ci3.object_id IS NULL OR ci3.object_id = ANY(v_scope))
+          AND (v_topic_id IS NULL OR ci3.demand_topic_id = v_topic_id)
+          AND (v_status IS NULL OR ci3.status = v_status)
+          AND (p_from IS NULL OR ci3.occurred_at >= p_from)
+          AND (p_to IS NULL OR ci3.occurred_at < p_to)
         GROUP BY rt.name
         ORDER BY count(*) DESC
         LIMIT 2
@@ -753,8 +846,9 @@ END;
 $$;
 
 -- Fiche acteur (navigation acteur → objets → interactions tous contextes) : identité, objets
--- liés du périmètre, TOUTES les interactions de l'acteur (contexte objet du périmètre OU
--- générale), répartition des sujets. Superuser : sans restriction de périmètre.
+-- liés du périmètre, canaux de contact (rectif PO 2026-06-11), TOUTES les interactions de
+-- l'acteur (contexte objet du périmètre OU générale), répartition des sujets.
+-- Superuser : sans restriction de périmètre.
 CREATE OR REPLACE FUNCTION api.list_actor_crm(p_actor_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -764,6 +858,7 @@ DECLARE
   v_scope text[];
   v_actor jsonb;
   v_objects jsonb;
+  v_channels jsonb;
   v_interactions jsonb;
   v_topics jsonb;
 BEGIN
@@ -796,6 +891,20 @@ BEGIN
       AND (v_scope IS NULL OR ar.object_id = ANY(v_scope))
     ORDER BY ar.is_primary DESC NULLS LAST, o.name
   ) qo;
+
+  -- Canaux de contact de l'acteur (rectif PO 2026-06-11) : la lecture est couverte par le
+  -- gate acteur déjà passé (user_can_read_crm_actor) — PII réservée au périmètre publisher.
+  SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_channels
+  FROM (
+    SELECT jsonb_build_object(
+      'id', ch.id, 'kind_code', k.code, 'kind_name', k.name,
+      'value', ch.value, 'is_primary', ch.is_primary
+    ) AS item
+    FROM actor_channel ch
+    JOIN ref_code_contact_kind k ON k.id = ch.kind_id
+    WHERE ch.actor_id = p_actor_id
+    ORDER BY ch.is_primary DESC NULLS LAST, k.code
+  ) qc;
 
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_interactions
   FROM (
@@ -832,7 +941,7 @@ BEGIN
     ORDER BY g.n DESC
   ) qg;
 
-  RETURN jsonb_build_object('actor', v_actor, 'objects', v_objects,
+  RETURN jsonb_build_object('actor', v_actor, 'objects', v_objects, 'channels', v_channels,
                             'interactions', v_interactions, 'topics', v_topics);
 END;
 $$;
@@ -865,6 +974,175 @@ BEGIN
 END;
 $$;
 
+-- ---------- 8b. Authoring acteur + canaux de contact (rectifs PO 2026-06-11) ----------
+-- « il manque les contacts et information… et la possibilité d'edition ! » + « il manque
+-- l'ajout de nouveaux acteur ». Mêmes conventions que les RPCs ci-dessus (DEFINER,
+-- authorize-once, gen_random_uuid, update partiel « clé présente ⇒ écrite »).
+-- actor_consent reste HORS périmètre (item différé « contrat PII », décision §61).
+
+-- Upsert acteur. INSERT : display_name + object_id requis — l'acteur ENTRE dans le périmètre
+-- CRM PAR son lien actor_object_role (gate = arme objet user_can_write_crm) ; role_code
+-- optionnel (défaut 'operator'). UPDATE : partiel display_name/first_name/last_name, gate =
+-- arme acteur user_can_write_crm_actor (l'acteur est déjà dans le périmètre).
+CREATE OR REPLACE FUNCTION api.save_crm_actor(p_payload jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_id uuid := NULLIF(p_payload->>'id','')::uuid;
+  v_display_name text := NULLIF(btrim(COALESCE(p_payload->>'display_name','')),'');
+  v_object_id text := NULLIF(btrim(COALESCE(p_payload->>'object_id','')),'');
+  v_role_code text := COALESCE(NULLIF(btrim(COALESCE(p_payload->>'role_code','')),''), 'operator');
+  v_role_id uuid;
+BEGIN
+  IF v_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_id) THEN
+      RAISE EXCEPTION 'actor inconnu: %', v_id USING ERRCODE = 'P0002';
+    END IF;
+    IF NOT api.user_can_write_crm_actor(v_id) THEN
+      RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+    END IF;
+    -- display_name est NOT NULL : clé présente + valeur vide = erreur explicite, pas un
+    -- 23502 cryptique ni un reset silencieux.
+    IF p_payload ? 'display_name' AND v_display_name IS NULL THEN
+      RAISE EXCEPTION 'display_name requis' USING ERRCODE = '22023';
+    END IF;
+    UPDATE actor SET
+      display_name = CASE WHEN p_payload ? 'display_name' THEN v_display_name ELSE display_name END,
+      first_name   = CASE WHEN p_payload ? 'first_name' THEN NULLIF(p_payload->>'first_name','') ELSE first_name END,
+      last_name    = CASE WHEN p_payload ? 'last_name' THEN NULLIF(p_payload->>'last_name','') ELSE last_name END,
+      updated_at   = NOW()
+    WHERE id = v_id;
+    RETURN jsonb_build_object('id', v_id);
+  END IF;
+
+  -- INSERT : le lien objet est ce qui place l'acteur dans le périmètre — sans lui, l'acteur
+  -- créé serait invisible/inéditable par son propre créateur (arme acteur dérivée des liens).
+  IF v_display_name IS NULL THEN
+    RAISE EXCEPTION 'display_name requis' USING ERRCODE = '22023';
+  END IF;
+  IF v_object_id IS NULL THEN
+    RAISE EXCEPTION 'object_id requis (l''acteur entre dans le périmètre par son lien objet)' USING ERRCODE = '22023';
+  END IF;
+  SELECT id INTO v_role_id FROM ref_actor_role WHERE code = v_role_code;
+  IF v_role_id IS NULL THEN
+    RAISE EXCEPTION 'role_code inconnu: %', v_role_code USING ERRCODE = '22023';
+  END IF;
+  IF NOT api.user_can_write_crm(v_object_id) THEN
+    RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+  END IF;
+
+  v_id := gen_random_uuid();
+  INSERT INTO actor (id, display_name, first_name, last_name, created_by)
+  VALUES (v_id, v_display_name,
+          NULLIF(p_payload->>'first_name',''),
+          NULLIF(p_payload->>'last_name',''),
+          auth.uid());
+  -- Primaire seulement si la place est libre : uq_actor_object_role_primary est UNIQUE
+  -- (object_id, role_id) WHERE is_primary — un INSERT is_primary inconditionnel casserait
+  -- (23505) dès qu'un primaire existe pour ce (objet, rôle).
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary)
+  VALUES (v_id, v_object_id, v_role_id,
+          NOT EXISTS (SELECT 1 FROM actor_object_role x
+                      WHERE x.object_id = v_object_id AND x.role_id = v_role_id
+                        AND x.is_primary));
+  RETURN jsonb_build_object('id', v_id);
+END;
+$$;
+
+-- Upsert canal de contact. INSERT : actor_id + kind_code + value requis ; UPDATE partiel
+-- value/kind_code/is_primary. Gate = arme acteur (l'acteur de la ligne pour l'update).
+-- Les triggers de la table s'appliquent et leurs erreurs remontent TELLES QUELLES :
+-- trg_prevent_duplicate_actor_email (e-mail déjà porté par un autre acteur),
+-- trg_actor_channel_email (forme d'e-mail), uq_actor_channel_primary (un primaire par
+-- (acteur, kind)), uq_actor_channel_unique (doublon exact).
+CREATE OR REPLACE FUNCTION api.save_actor_channel(p_payload jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_id uuid := NULLIF(p_payload->>'id','')::uuid;
+  v_actor_id uuid := NULLIF(p_payload->>'actor_id','')::uuid;
+  v_existing_actor uuid;
+  v_kind_id uuid;
+  v_value text := NULLIF(btrim(COALESCE(p_payload->>'value','')),'');
+BEGIN
+  IF NULLIF(p_payload->>'kind_code','') IS NOT NULL THEN
+    SELECT id INTO v_kind_id FROM ref_code_contact_kind
+    WHERE code = p_payload->>'kind_code' AND is_active;
+    IF v_kind_id IS NULL THEN
+      RAISE EXCEPTION 'kind_code inconnu: %', p_payload->>'kind_code' USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
+  IF v_id IS NOT NULL THEN
+    SELECT actor_id INTO v_existing_actor FROM actor_channel WHERE id = v_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'actor_channel inconnu: %', v_id USING ERRCODE = 'P0002';
+    END IF;
+    IF NOT api.user_can_write_crm_actor(v_existing_actor) THEN
+      RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+    END IF;
+    -- value (NOT NULL) et kind_id (NOT NULL) : clé présente + vide = erreur explicite.
+    IF p_payload ? 'value' AND v_value IS NULL THEN
+      RAISE EXCEPTION 'value requis' USING ERRCODE = '22023';
+    END IF;
+    IF p_payload ? 'kind_code' AND v_kind_id IS NULL THEN
+      RAISE EXCEPTION 'kind_code requis' USING ERRCODE = '22023';
+    END IF;
+    UPDATE actor_channel SET
+      value      = CASE WHEN p_payload ? 'value' THEN v_value ELSE value END,
+      kind_id    = CASE WHEN p_payload ? 'kind_code' THEN v_kind_id ELSE kind_id END,
+      is_primary = CASE WHEN p_payload ? 'is_primary' THEN COALESCE((p_payload->>'is_primary')::boolean, FALSE) ELSE is_primary END,
+      updated_at = NOW()
+    WHERE id = v_id;
+    RETURN jsonb_build_object('id', v_id);
+  END IF;
+
+  IF v_actor_id IS NULL THEN
+    RAISE EXCEPTION 'actor_id requis' USING ERRCODE = '22023';
+  END IF;
+  IF v_kind_id IS NULL THEN
+    RAISE EXCEPTION 'kind_code requis' USING ERRCODE = '22023';
+  END IF;
+  IF v_value IS NULL THEN
+    RAISE EXCEPTION 'value requis' USING ERRCODE = '22023';
+  END IF;
+  IF NOT api.user_can_write_crm_actor(v_actor_id) THEN
+    RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+  END IF;
+
+  v_id := gen_random_uuid();
+  INSERT INTO actor_channel (id, actor_id, kind_id, value, is_primary)
+  VALUES (v_id, v_actor_id, v_kind_id, v_value,
+          COALESCE((p_payload->>'is_primary')::boolean, FALSE));
+  RETURN jsonb_build_object('id', v_id);
+END;
+$$;
+
+-- Suppression d'un canal (gate par l'acteur de la ligne, mêmes erreurs P0002/42501).
+CREATE OR REPLACE FUNCTION api.delete_actor_channel(p_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_actor_id uuid;
+BEGIN
+  SELECT actor_id INTO v_actor_id FROM actor_channel WHERE id = p_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'actor_channel inconnu: %', p_id USING ERRCODE = 'P0002';
+  END IF;
+  IF NOT api.user_can_write_crm_actor(v_actor_id) THEN
+    RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+  END IF;
+  DELETE FROM actor_channel WHERE id = p_id;
+  RETURN jsonb_build_object('id', p_id, 'deleted', true);
+END;
+$$;
+
 REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, timestamptz, uuid, integer) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_crm_tasks() FROM PUBLIC, anon;
@@ -877,10 +1155,16 @@ REVOKE ALL ON FUNCTION api.save_crm_interaction(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.save_crm_interaction(jsonb) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.delete_crm_interaction(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.delete_crm_interaction(uuid) TO authenticated, service_role;
-REVOKE ALL ON FUNCTION api.list_crm_directory() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION api.list_crm_directory() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.list_crm_directory(text, text, timestamptz, timestamptz) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_directory(text, text, timestamptz, timestamptz) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_actor_crm(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_actor_crm(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.save_crm_actor(jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.save_crm_actor(jsonb) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.save_actor_channel(jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.save_actor_channel(jsonb) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.delete_actor_channel(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.delete_actor_channel(uuid) TO authenticated, service_role;
 -- Le front interroge user_has_permission('write_crm_notes') pour le gating UI global
 -- (ré-affirme un grant déjà posé par rls_policies.sql — idempotent).
 GRANT EXECUTE ON FUNCTION api.user_has_permission(text) TO authenticated, service_role;

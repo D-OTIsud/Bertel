@@ -44,12 +44,26 @@ export function CrmTaches({
   // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
   // datalist conservée, erreurs visibles dans le modal.
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  // DnD (PO point 5) : colonne actuellement survolée par une carte (surbrillance de dépôt).
+  const [dropCol, setDropCol] = useState<CrmTaskStatus | null>(null);
 
   // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
+  // Utilisé à la fois par les boutons Avancer/Reprendre (clavier) ET le drag & drop (souris).
   const moveMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
   });
+
+  // Dépôt d'une carte dans une colonne : si le statut cible diffère, on persiste (sinon no-op).
+  function handleDropOnColumn(targetStatus: CrmTaskStatus, event: React.DragEvent) {
+    event.preventDefault();
+    setDropCol(null);
+    const id = event.dataTransfer.getData('text/plain');
+    if (!id) return;
+    const task = tasks.find((candidate) => candidate.id === id);
+    if (!task || task.status === targetStatus) return; // même colonne ⇒ rien à écrire
+    moveMutation.mutate({ id, status: targetStatus });
+  }
 
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
@@ -92,7 +106,18 @@ export function CrmTaches({
   function renderTicket(task: CrmTask) {
     const dueCls = dueBadgeClassOf(task.dueAt, task.status);
     return (
-      <div key={task.id} className={'ticket' + (task.status === 'done' ? ' is-done' : '')}>
+      <div
+        key={task.id}
+        className={'ticket' + (task.status === 'done' ? ' is-done' : '')}
+        // DnD (PO point 5) : carte déplaçable seulement avec permission (le drop persiste).
+        // Les boutons Avancer/Reprendre restent l'alternative clavier (le DnD est souris-only).
+        draggable={canWrite || undefined}
+        onDragStart={(event) => {
+          if (!canWrite) return;
+          event.dataTransfer.setData('text/plain', task.id);
+          event.dataTransfer.effectAllowed = 'move';
+        }}
+      >
         <div className="ticket__title">
           {task.title}
           {task.description && <small>{task.description}</small>}
@@ -185,7 +210,22 @@ export function CrmTaches({
         {KANBAN_COLUMNS.map((column) => {
           const list = visibleTasks.filter((task) => task.status === column.key);
           return (
-            <section key={column.key} className={'bcol bcol--' + column.cls} aria-label={column.label}>
+            <section
+              key={column.key}
+              className={'bcol bcol--' + column.cls + (dropCol === column.key ? ' bcol--drop' : '')}
+              aria-label={column.label}
+              onDragOver={(event) => {
+                if (!canWrite) return;
+                event.preventDefault(); // autorise le drop
+                event.dataTransfer.dropEffect = 'move';
+                if (dropCol !== column.key) setDropCol(column.key);
+              }}
+              onDragLeave={(event) => {
+                // Ne retirer la surbrillance que si on quitte réellement la colonne (pas un enfant).
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropCol(null);
+              }}
+              onDrop={(event) => handleDropOnColumn(column.key, event)}
+            >
               <div className="bcol__head">
                 <span className="dot" aria-hidden></span>
                 {column.label}

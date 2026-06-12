@@ -64,6 +64,42 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-doing', status: 'done' }));
   });
 
+  // PO point 5 : déplacer une carte en drag & drop persiste le statut de la colonne cible
+  // via saveCrmTask (jamais optimiste muet). Les boutons Avancer/Reprendre RESTENT (clavier).
+  it('drag & drop : déposer une carte « À faire » dans « Terminées » → saveCrmTask({status: done})', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(card).toHaveAttribute('draggable', 'true');
+    const doneCol = screen.getByRole('region', { name: 'Terminées' });
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (k: string, v: string) => data.set(k, v),
+      getData: (k: string) => data.get(k) ?? '',
+      dropEffect: 'move',
+    };
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.dragOver(doneCol, { dataTransfer });
+    fireEvent.drop(doneCol, { dataTransfer });
+    await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-late', status: 'done' }));
+  });
+
+  it('drag & drop : déposer dans la MÊME colonne (statut inchangé) → aucun saveCrmTask', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    const todoCol = screen.getByRole('region', { name: 'À faire' });
+    const data = new Map<string, string>();
+    const dataTransfer = { setData: (k: string, v: string) => data.set(k, v), getData: (k: string) => data.get(k) ?? '' };
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.drop(todoCol, { dataTransfer });
+    expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
+  });
+
+  it('drag & drop : sans permission, la carte n est pas draggable (gating lecture seule)', async () => {
+    renderTaches({ canWrite: false });
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(card).not.toHaveAttribute('draggable', 'true');
+  });
+
   it('Reprendre (in_progress → todo) et Rouvrir (done → todo)', async () => {
     renderTaches();
     await screen.findByText('Valider le contrat photo');

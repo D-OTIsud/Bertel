@@ -9,6 +9,10 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { processImage, MediaProcessingError } from '../../media/upload/process-image';
 
 const BUCKET = 'media';
+// Defense-in-depth (revue) : `actorId` est interpolé dans la clé storage `actors/${actorId}/…`.
+// La traversée est déjà bloquée par la sonde RPC uuid-typée (rejette les non-uuid), mais on
+// valide la FORME ici, AVANT toute sonde — mirror du OBJECT_ID_SHAPE de la route média.
+const ACTOR_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const runtime = 'nodejs'; // sharp requires Node, not Edge
 
@@ -44,6 +48,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const actorId = form.get('actorId');
   if (!(file instanceof File) || typeof actorId !== 'string' || actorId.length === 0) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
+  }
+  if (!ACTOR_ID_SHAPE.test(actorId)) {
+    return NextResponse.json({ error: 'invalid_actor_id', detail: 'actor_id is not a UUID' }, { status: 400 });
   }
 
   // Authorize AS THE CALLER (media-pipeline invariant): the storage write + actor UPDATE

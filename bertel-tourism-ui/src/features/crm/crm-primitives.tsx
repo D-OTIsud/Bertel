@@ -6,7 +6,7 @@
 // CtxTag = tag de contexte objet d'une interaction (« Général » si null) ;
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Mail, MapPin, Phone, StickyNote } from 'lucide-react';
 import {
   formatShort,
@@ -22,14 +22,19 @@ import {
  * Avatar carré arrondi teinté (acteur via actor_id, objet via object_type).
  * Portrait acteur (PO point 4) : quand `photoUrl` est fourni, on rend la photo (object-fit
  * cover, même rayon/taille que la tuile d'initiales) ; sinon on garde les initiales teintées.
+ * Repli (revue) : une photo cassée/404 (le GC des orphelins storage est différé ⇒ ça arrivera)
+ * retombe sur les initiales via `onError` — jamais de tuile vide. L'état d'erreur est remis à
+ * zéro quand `photoUrl` change pour qu'un acteur cassé ne « colle » pas au suivant.
  */
 export function Pav({ name, tintKey, lg, photoUrl }: { name: string; tintKey: string; lg?: boolean; photoUrl?: string | null }) {
   const tint = pavTintOf(tintKey);
-  if (photoUrl) {
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [photoUrl]);
+  if (photoUrl && !imgFailed) {
     return (
       <span className={'pav pav--photo' + (lg ? ' lg' : '')} aria-hidden>
         {/* alt vide : décoratif (le nom est rendu à côté) ; cover = jamais déformé. */}
-        <img src={photoUrl} alt="" />
+        <img src={photoUrl} alt="" onError={() => setImgFailed(true)} />
       </span>
     );
   }

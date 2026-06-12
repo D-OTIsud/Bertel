@@ -25,7 +25,10 @@ const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
 const mockedProcess = jest.mocked(processImage);
 
-function makeForm(actorId = 'actor-1'): FormData {
+// UUID valide : la route valide désormais la FORME de actorId (revue) avant toute sonde.
+const ACTOR_UUID = '11111111-2222-4333-8444-555555555555';
+
+function makeForm(actorId: string = ACTOR_UUID): FormData {
   const form = new FormData();
   form.append('file', new File([new Uint8Array([1, 2, 3])], 'portrait.jpg', { type: 'image/jpeg' }));
   form.append('actorId', actorId);
@@ -68,6 +71,16 @@ describe('POST /api/actor-photo/upload — gate as-the-caller + pipeline', () =>
     expect(res.status).toBe(401);
   });
 
+  // Revue (defense-in-depth) : un actorId non-uuid est rejeté en 400 AVANT toute sonde de
+  // permission (pas de createClient) — la traversée `actors/${actorId}/…` n'a pas lieu.
+  it('400 quand actorId n est pas un uuid (avant toute sonde de permission)', async () => {
+    mockedServer.mockReturnValue(serverOk());
+    const res = await POST(req({ authorization: 'Bearer t' }, makeForm('../../evil')));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_actor_id');
+    expect(mockedCreate).not.toHaveBeenCalled();
+  });
+
   it('403 quand le caller ne peut pas écrire l acteur (storage-spam hole fermé)', async () => {
     mockedServer.mockReturnValue(serverOk());
     const rpc = jest.fn().mockResolvedValue({ data: false, error: null });
@@ -75,7 +88,7 @@ describe('POST /api/actor-photo/upload — gate as-the-caller + pipeline', () =>
 
     const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
     expect(res.status).toBe(403);
-    expect(rpc).toHaveBeenCalledWith('user_can_write_crm_actor', { p_actor_id: 'actor-1' });
+    expect(rpc).toHaveBeenCalledWith('user_can_write_crm_actor', { p_actor_id: ACTOR_UUID });
   });
 
   it('403 (fail-closed) quand la sonde de permission erre', async () => {
@@ -96,7 +109,7 @@ describe('POST /api/actor-photo/upload — gate as-the-caller + pipeline', () =>
 
     const form = new FormData();
     form.append('file', new File([new Uint8Array([1])], 'doc.pdf', { type: 'application/pdf' }));
-    form.append('actorId', 'actor-1');
+    form.append('actorId', ACTOR_UUID);
     const res = await POST(req({ authorization: 'Bearer t' }, form));
     expect(res.status).toBe(415);
   });

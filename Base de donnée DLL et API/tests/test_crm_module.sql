@@ -20,6 +20,10 @@
 --    (sujet/statut/période) avec KPI recalculés sur l'ensemble FILTRÉ — les acteurs
 --    « lien seul » disparaissent sous filtre ; p_status hors contrat → 22023 ; refus 42501
 --    membre sans permission (C) et cross-ORG (B).
+-- F) ASSIGNATION DE TÂCHE (demande PO 2026-06-12) : list_crm_assignees liste les membres
+--    actifs de l'ORG du caller (userA + userC, jamais userB) avec un display_name garanti ;
+--    save_crm_task accepte owner = membre de la MÊME ORG (userC) et refuse 22023 un owner
+--    d'une autre ORG (userB).
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
 -- Mécanique de fixture calquée sur test_room_type_read_gate.sql / test_sp2_permission_behavior.sql.
@@ -52,6 +56,9 @@ DECLARE
   v_chan_id uuid;      -- canal créé via save_actor_channel
   v_task2_id uuid;     -- tâche rattachée à l'acteur
   v_po_int_id uuid;    -- interaction topique de l'acteur PO (filtres annuaire)
+  -- Assignation de tâche (demande PO 2026-06-12) :
+  v_assignees jsonb;   -- retour de api.list_crm_assignees()
+  v_task3_id uuid;     -- tâche assignée à un autre membre de l'ORG A
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -161,6 +168,43 @@ BEGIN
     ASSERT (SELECT t->>'status' FROM jsonb_array_elements(api.list_crm_tasks()) AS t
             WHERE (t->>'id')::uuid = v_task_id) = 'in_progress',
            'save_crm_task: status non écrit (move de lane)';
+
+    -- ----- Assignation de tâche (demande PO 2026-06-12) -----
+    -- list_crm_assignees : le membre se voit lui-même (et userC, même ORG A) dans le select.
+    v_assignees := api.list_crm_assignees();
+    ASSERT jsonb_array_length(v_assignees) >= 1,
+           'list_crm_assignees: au moins un assignataire (le membre lui-même) attendu';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_assignees) e
+                   WHERE (e->>'user_id')::uuid = v_userA),
+           'list_crm_assignees: le membre courant (userA) doit être assignable';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_assignees) e
+                   WHERE (e->>'user_id')::uuid = v_userC),
+           'list_crm_assignees: userC (même ORG A) doit être assignable';
+    -- Toute entrée porte une étiquette (display_name NULL ⇒ fallback dérivé de l'uuid).
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_assignees) e
+                       WHERE NULLIF(e->>'display_name','') IS NULL),
+           'list_crm_assignees: chaque assignataire doit porter un display_name (fallback inclus)';
+    -- userB (ORG B) n'est PAS assignable depuis A.
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_assignees) e
+                       WHERE (e->>'user_id')::uuid = v_userB),
+           'list_crm_assignees: userB (ORG B) ne doit PAS être assignable depuis A';
+
+    -- save_crm_task avec owner = userC (autre membre de l'ORG A) : accepté.
+    v_payload := api.save_crm_task(jsonb_build_object(
+      'object_id', v_objA, 'title', 'Tâche assignée PO', 'owner', v_userC));
+    v_task3_id := (v_payload->>'id')::uuid;
+    ASSERT v_task3_id IS NOT NULL, 'save_crm_task: assignation à un membre de l''ORG A doit réussir';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_crm_tasks()) AS t
+                   WHERE (t->>'id')::uuid = v_task3_id AND t->>'title' = 'Tâche assignée PO'),
+           'save_crm_task: la tâche assignée doit apparaître dans list_crm_tasks';
+    -- save_crm_task avec owner = userB (membre de l'ORG B, hors ORG A) : refusé 22023.
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_task(jsonb_build_object(
+        'object_id', v_objA, 'title', 'Tâche hors-ORG', 'owner', v_userB));
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'save_crm_task: owner hors de l''ORG du caller doit lever 22023';
 
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';

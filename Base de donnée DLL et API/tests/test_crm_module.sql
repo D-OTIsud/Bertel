@@ -24,6 +24,11 @@
 --    actifs de l'ORG du caller (userA + userC, jamais userB) avec un display_name garanti ;
 --    save_crm_task accepte owner = membre de la MÊME ORG (userC) et refuse 22023 un owner
 --    d'une autre ORG (userB).
+-- G) PHOTO ACTEUR + SUGGESTIONS CONTACTS + TIMELINE FILTRÉE (demande PO 2026-06-12) :
+--    save_crm_actor accepte photo_url (set puis effacement clé+vide), re-lu par list_actor_crm ;
+--    list_object_contact_suggestions(objA) renvoie un tableau JSON, contient le contact email
+--    de l'établissement (fixture contact_channel), refuse l'étranger (42501) ;
+--    list_crm_timeline gagne p_status (active/done, 'bidon'→22023) + p_from.
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
 -- Mécanique de fixture calquée sur test_room_type_read_gate.sql / test_sp2_permission_behavior.sql.
@@ -59,6 +64,9 @@ DECLARE
   -- Assignation de tâche (demande PO 2026-06-12) :
   v_assignees jsonb;   -- retour de api.list_crm_assignees()
   v_task3_id uuid;     -- tâche assignée à un autre membre de l'ORG A
+  -- Photo acteur + suggestions de contacts (demande PO 2026-06-12) :
+  v_email_kind uuid;   -- kind_id 'email' réel (fixture contact_channel établissement)
+  v_suggestions jsonb; -- retour de api.list_object_contact_suggestions(objA)
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -149,6 +157,15 @@ BEGIN
   INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at) VALUES
     (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
     ON CONFLICT DO NOTHING;
+  -- Contact d'établissement (§03) pour prouver list_object_contact_suggestions (demande PO
+  -- 2026-06-12) : 'email' fixture-guardé (sinon premier kind actif, mais l'assertion email est
+  -- alors sautée — voir bloc G). value e-mail valide pour les triggers de forme.
+  SELECT id INTO v_email_kind FROM ref_code_contact_kind WHERE code = 'email' AND is_active LIMIT 1;
+  IF v_email_kind IS NOT NULL THEN
+    INSERT INTO contact_channel (object_id, kind_id, value, is_public, is_primary)
+    VALUES (v_objA, v_email_kind, 'contact@objA.local', TRUE, TRUE)
+    ON CONFLICT DO NOTHING;
+  END IF;
 
   -- ---------- B/C. USER A (membre + permission) : écrit puis lit ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userA, 'role','authenticated')::text, true);
@@ -208,6 +225,24 @@ BEGIN
 
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';
+    -- ----- Timeline filtrée (demande PO 2026-06-12) : statut + période (vocabulaire PO) -----
+    -- L'interaction ci-dessus est 'done' (défaut save_crm_interaction) ⇒ done renvoie ≥1.
+    ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'done')->'items') >= 1,
+           'list_crm_timeline (done): l''interaction done doit remonter';
+    ASSERT jsonb_typeof(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 'array',
+           'list_crm_timeline (active=planned): items doit être un tableau (≥0)';
+    -- p_from futur ⇒ aucune interaction passée ne remonte.
+    ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_from := NOW() + interval '1 day')->'items') = 0,
+           'list_crm_timeline (p_from futur): aucune interaction passée ne doit remonter';
+    ASSERT jsonb_typeof(api.list_crm_timeline(p_object_id := v_objA, p_from := NOW() - interval '1 day')->'items') = 'array',
+           'list_crm_timeline (p_from passé): items doit être un tableau';
+    -- p_status hors contrat (NULL | active | done) → 22023.
+    v_denied := false;
+    BEGIN
+      PERFORM api.list_crm_timeline(p_object_id := v_objA, p_status := 'bidon');
+    EXCEPTION WHEN invalid_parameter_value THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'list_crm_timeline: p_status invalide doit lever 22023';
     v_payload := api.list_object_crm(v_objA);
     ASSERT jsonb_array_length(v_payload->'interactions') >= 1,
            'list_object_crm: interactions vides pour le membre';
@@ -313,6 +348,13 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'cross-ORG: list_actor_crm doit refuser l''étranger (42501)';
+    -- Suggestions de contacts : l'étranger ne doit pas pré-remplir l'authoring sous objA.
+    v_denied := false;
+    BEGIN
+      PERFORM api.list_object_contact_suggestions(v_objA);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'cross-ORG: list_object_contact_suggestions doit refuser l''étranger (42501)';
     v_payload := api.list_crm_directory();
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
                    WHERE (d->>'actor_id')::uuid = v_actorB),
@@ -382,6 +424,26 @@ BEGIN
     ASSERT v_payload->'actor'->>'first_name' = 'Paul'
            AND v_payload->'actor'->>'display_name' = 'Acteur Test PO',
            'save_crm_actor: update partiel first_name non persisté (ou display_name écrasé)';
+    -- ----- Photo acteur (demande PO 2026-06-12) : set puis effacement clé+vide -----
+    PERFORM api.save_crm_actor(jsonb_build_object(
+      'id', v_new_actor, 'photo_url', 'https://cdn.local/acteur-po.jpg'));
+    ASSERT api.list_actor_crm(v_new_actor)->'actor'->>'photo_url' = 'https://cdn.local/acteur-po.jpg',
+           'save_crm_actor: photo_url non persisté';
+    PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'photo_url', ''));
+    ASSERT NULLIF(api.list_actor_crm(v_new_actor)->'actor'->>'photo_url','') IS NULL,
+           'save_crm_actor: photo_url vide doit effacer (NULL/absent)';
+    -- ----- Suggestions de contacts (demande PO 2026-06-12) : établissement + acteurs liés -----
+    v_suggestions := api.list_object_contact_suggestions(v_objA);
+    ASSERT jsonb_typeof(v_suggestions) = 'array',
+           'list_object_contact_suggestions: doit renvoyer un tableau JSON';
+    -- Le contact email de l'établissement (fixture) doit apparaître quand 'email' est seedé.
+    IF v_email_kind IS NOT NULL THEN
+      ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_suggestions) s
+                     WHERE s->>'kind_code' = 'email'
+                       AND s->>'value' = 'contact@objA.local'
+                       AND s->>'source' = 'établissement'),
+             'list_object_contact_suggestions: le contact email de l''établissement doit apparaître';
+    END IF;
     -- Tâche rattachée à un acteur : actor_id accepté, actor_name exposé par list_crm_tasks.
     v_payload := api.save_crm_task(jsonb_build_object(
       'object_id', v_objA, 'title', 'Tâche acteur PO', 'actor_id', v_new_actor));
@@ -474,6 +536,6 @@ BEGIN
     ASSERT v_denied, 'cross-ORG: save_crm_actor UPDATE sur l''acteur de A doit être refusé (42501)';
   RESET ROLE;
 
-  RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO : vocabulaires, ancrages, accès/écriture/cross-ORG, authoring acteur/canaux, annuaire filtré — assertions passées.';
+  RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO (photo acteur, suggestions contacts, timeline filtrée) : vocabulaires, ancrages, accès/écriture/cross-ORG, authoring acteur/canaux, annuaire filtré — assertions passées.';
 END$$;
 ROLLBACK;

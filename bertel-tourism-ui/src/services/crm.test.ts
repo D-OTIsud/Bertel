@@ -4,8 +4,11 @@ import {
   listContactKinds,
   listCrmAssignees,
   listCrmDirectory,
+  listCrmTimeline,
   listDemandTopics,
+  listObjectContactSuggestions,
   parseActorCrmSnapshot,
+  parseContactSuggestion,
   parseCrmAssignee,
   parseCrmDirectoryEntry,
   parseCrmInteraction,
@@ -15,8 +18,9 @@ import {
   saveActorChannel,
   saveCrmActor,
   saveCrmTask,
+  uploadActorPhoto,
 } from './crm';
-import { getApiClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { mockCrmDirectory } from '../data/mock';
 import { useSessionStore } from '../store/session-store';
 
@@ -30,6 +34,7 @@ jest.mock('../lib/supabase', () => ({
 }));
 
 const mockedGetApiClient = jest.mocked(getApiClient);
+const mockedGetSupabaseClient = jest.mocked(getSupabaseClient);
 
 /** Client API factice : capture les appels .schema('api').rpc(fn, args). */
 function fakeRpcClient(result: unknown = null) {
@@ -112,13 +117,13 @@ describe('crm parsers', () => {
       interactions: [],
       topics: [],
       actors: [{
-        actor_id: 'a1', display_name: 'Mme Jocelyne Lebon',
+        actor_id: 'a1', display_name: 'Mme Jocelyne Lebon', photo_url: 'https://cdn/jl.jpg',
         role_code: 'operator', role_name: 'Exploitant', is_primary: true,
       }],
       tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: '2026-06-15T00:00:00Z' }],
     });
     expect(snapshot.actors).toEqual([{
-      actorId: 'a1', displayName: 'Mme Jocelyne Lebon',
+      actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: 'https://cdn/jl.jpg',
       roleCode: 'operator', roleName: 'Exploitant', isPrimary: true,
     }]);
     expect(snapshot.tasks).toEqual([{
@@ -144,7 +149,7 @@ describe('parseCrmDirectoryEntry', () => {
       top_topics: ['Accompagnement Taxe de séjour', 'Fermeture provisoire'],
     });
     expect(entry).toEqual({
-      actorId: 'a1', displayName: 'Mme Jocelyne Lebon',
+      actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: null,
       objects: [{ objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes', objectType: 'HLO', roleName: 'Exploitant', isPrimary: false }],
       objectCount: 1, interactionCount: 10, interactions12m: 2,
       lastInteractionAt: '2026-04-16T00:00:00+00:00', lastInteractionType: 'note',
@@ -159,6 +164,14 @@ describe('parseCrmDirectoryEntry', () => {
     expect(entry.topTopics).toEqual([]);
     expect(entry.objectCount).toBe(0);
     expect(entry.lastInteractionAt).toBeNull();
+  });
+
+  // Photo acteur (PO point 4) : additive photo_url → photoUrl, null quand absent.
+  it('lit photo_url → photoUrl (null quand absent)', () => {
+    expect(parseCrmDirectoryEntry({ actor_id: 'a1', display_name: 'X', photo_url: 'https://cdn/p.jpg' }).photoUrl).toBe(
+      'https://cdn/p.jpg',
+    );
+    expect(parseCrmDirectoryEntry({ actor_id: 'a1', display_name: 'X' }).photoUrl).toBeNull();
   });
 });
 
@@ -185,7 +198,13 @@ describe('parseActorCrmSnapshot', () => {
       ],
       topics: [{ code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour', count: 2 }],
     });
-    expect(snapshot.actor).toEqual({ id: 'a1', displayName: 'Mme Jocelyne Lebon', firstName: 'Jocelyne', lastName: 'Lebon' });
+    expect(snapshot.actor).toEqual({
+      id: 'a1',
+      displayName: 'Mme Jocelyne Lebon',
+      firstName: 'Jocelyne',
+      lastName: 'Lebon',
+      photoUrl: null,
+    });
     // Canaux de contact (rectif PO point 4) — PII du périmètre publisher, déjà gated par le RPC.
     expect(snapshot.channels).toEqual([
       { id: 'c1', kindCode: 'email', kindName: 'Email', value: 'jocelyne@palmistes.re', isPrimary: true },
@@ -201,9 +220,17 @@ describe('parseActorCrmSnapshot', () => {
     expect(snapshot.topics).toEqual([{ code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour', count: 2 }]);
   });
 
+  // Photo acteur (PO point 4) : actor.photo_url → actor.photoUrl.
+  it('lit actor.photo_url → actor.photoUrl', () => {
+    const snapshot = parseActorCrmSnapshot({
+      actor: { id: 'a1', display_name: 'X', photo_url: 'https://cdn/portrait.jpg' },
+    });
+    expect(snapshot.actor.photoUrl).toBe('https://cdn/portrait.jpg');
+  });
+
   it('rend un snapshot vide sur payload nul/malformé', () => {
     expect(parseActorCrmSnapshot(null)).toEqual({
-      actor: { id: '', displayName: '', firstName: null, lastName: null },
+      actor: { id: '', displayName: '', firstName: null, lastName: null, photoUrl: null },
       objects: [], channels: [], interactions: [], topics: [],
     });
   });
@@ -349,10 +376,119 @@ describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO point
     expect(rpc).toHaveBeenCalledWith('delete_actor_channel', { p_id: 'c1' });
   });
 
+  // Photo acteur (PO point 4) : photo_url partiel — clé présente écrite, '' = effacement.
+  it('UPDATE acteur avec photoUrl : photo_url passé en payload (URL posée par la route d upload)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', photoUrl: 'https://cdn/portrait.jpg' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', { p_payload: { id: 'a1', photo_url: 'https://cdn/portrait.jpg' } });
+  });
+
+  it('UPDATE acteur avec photoUrl vide : photo_url = "" (effacement explicite)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', photoUrl: '' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', { p_payload: { id: 'a1', photo_url: '' } });
+  });
+
   it('échec RPC → throw (l erreur PostgREST brute survit, .code 42501 compris)', async () => {
     const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
     mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
     await expect(saveCrmActor({ displayName: 'X', objectId: 'o1' })).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
+// Suggestions de contacts (PO point 2) — pré-remplissage de l'authoring acteur depuis les
+// contacts de l'établissement de rattachement (api.list_object_contact_suggestions).
+describe('parseContactSuggestion / listObjectContactSuggestions', () => {
+  it('parse une suggestion (snake_case → camelCase, is_primary booléen)', () => {
+    expect(
+      parseContactSuggestion({
+        kind_code: 'email', kind_name: 'Email', value: 'contact@hotel.re', is_primary: true, source: 'établissement',
+      }),
+    ).toEqual({ kindCode: 'email', kindName: 'Email', value: 'contact@hotel.re', isPrimary: true, source: 'établissement' });
+  });
+
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('hors démo : appelle list_object_contact_suggestions(p_object_id) et parse le tableau', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([
+      { kind_code: 'email', kind_name: 'Email', value: 'contact@hotel.re', is_primary: true, source: 'établissement' },
+      { kind_code: 'phone', kind_name: 'Téléphone', value: '0262 00 00 00', is_primary: false, source: 'acteur lié' },
+    ]);
+    await expect(listObjectContactSuggestions('HOT123')).resolves.toEqual([
+      { kindCode: 'email', kindName: 'Email', value: 'contact@hotel.re', isPrimary: true, source: 'établissement' },
+      { kindCode: 'phone', kindName: 'Téléphone', value: '0262 00 00 00', isPrimary: false, source: 'acteur lié' },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('list_object_contact_suggestions', { p_object_id: 'HOT123' });
+  });
+
+  it('42501 (hors périmètre / non autorisé) → [] (le bloc se masque, le modal ne casse pas)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(listObjectContactSuggestions('HOT123')).resolves.toEqual([]);
+  });
+
+  it('mode démo : renvoie quelques suggestions mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const suggestions = await listObjectContactSuggestions('obj-1');
+    expect(suggestions.length).toBeGreaterThanOrEqual(1);
+    expect(suggestions[0]).toHaveProperty('kindCode');
+    expect(suggestions[0]).toHaveProperty('value');
+  });
+});
+
+// Timeline filtrable (PO points 6+7) — signature 7→9 args : p_status (active=planned/done) +
+// p_from en ARGUMENTS NOMMÉS. Toutes + Tout (status/from absents) = timeline complète.
+describe('listCrmTimeline — filtres statut/période (args nommés)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('sans filtre : status/from null (Toutes + Tout = ensemble complet, PAS de borne période)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ items: [], has_more: false });
+    await listCrmTimeline();
+    expect(rpc).toHaveBeenCalledWith('list_crm_timeline', {
+      p_object_id: null,
+      p_topic_code: null,
+      p_interaction_type: null,
+      p_sentiment_code: null,
+      p_status: null,
+      p_from: null,
+      p_before: null,
+      p_before_id: null,
+      p_limit: 50,
+    });
+  });
+
+  it('passe topicCode/status/from + le curseur keyset (before/before_id)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ items: [], has_more: false });
+    await listCrmTimeline({
+      topicCode: 'boutique',
+      status: 'active',
+      from: '2026-03-14T00:00:00.000Z',
+      before: '2026-06-01T00:00:00Z',
+      beforeId: 'evt-9',
+    });
+    expect(rpc).toHaveBeenCalledWith('list_crm_timeline', {
+      p_object_id: null,
+      p_topic_code: 'boutique',
+      p_interaction_type: null,
+      p_sentiment_code: null,
+      p_status: 'active',
+      p_from: '2026-03-14T00:00:00.000Z',
+      p_before: '2026-06-01T00:00:00Z',
+      p_before_id: 'evt-9',
+      p_limit: 50,
+    });
   });
 });
 
@@ -438,5 +574,65 @@ describe('listContactKinds', () => {
   it('hors démo sans client Supabase configuré : renvoie [] (fail-soft)', async () => {
     useSessionStore.setState({ demoMode: false });
     await expect(listContactKinds()).resolves.toEqual([]);
+  });
+});
+
+// Upload portrait acteur (PO point 4) — POST /api/actor-photo/upload (FormData + bearer de
+// session). La route autorise AS THE CALLER, strippe l'EXIF et écrit en service-role ;
+// le helper client ne fait QUE poster et lire { url }. Démo : pas d'appel réseau.
+describe('uploadActorPhoto', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  const realFetch = global.fetch;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetSupabaseClient.mockReset();
+    global.fetch = realFetch;
+  });
+
+  function makeFile(): File {
+    return new File([new Uint8Array([1, 2, 3])], 'portrait.jpg', { type: 'image/jpeg' });
+  }
+
+  it('poste FormData (actorId + file) avec le bearer de session et renvoie l URL', async () => {
+    useSessionStore.setState({ demoMode: false });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-123' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    const fetchMock = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ url: 'https://cdn/actors/a1/x.jpg' }),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(uploadActorPhoto('a1', makeFile())).resolves.toBe('https://cdn/actors/a1/x.jpg');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/actor-photo/upload');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt-123');
+    const body = init.body as FormData;
+    expect(body.get('actorId')).toBe('a1');
+    expect(body.get('file')).toBeInstanceOf(File);
+  });
+
+  it('non-2xx → throw avec le détail serveur (pas d échec silencieux)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-123' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    global.fetch = (async () => ({
+      ok: false,
+      status: 403,
+      json: async () => ({ detail: 'caller cannot edit this actor' }),
+    })) as unknown as typeof fetch;
+    await expect(uploadActorPhoto('a1', makeFile())).rejects.toThrow(/caller cannot edit this actor/);
+  });
+
+  it('mode démo : renvoie une URL locale sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(uploadActorPhoto('a1', makeFile())).resolves.toEqual(expect.any(String));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

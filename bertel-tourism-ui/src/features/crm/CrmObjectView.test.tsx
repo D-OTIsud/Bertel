@@ -26,8 +26,8 @@ const snapshot: ObjectCrmSnapshot = {
   ],
   topics: [{ code: 'modification_infos_bdd', name: 'Modification infos BDD', count: 1 }],
   actors: [
-    { actorId: 'actor-1', displayName: 'Mme Marie Hoarau', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
-    { actorId: 'actor-2', displayName: 'SARL Basalte & Lagon', roleCode: 'operator', roleName: 'Exploitant', isPrimary: false },
+    { actorId: 'actor-1', displayName: 'Mme Marie Hoarau', photoUrl: 'https://cdn/actors/actor-1/p.jpg', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
+    { actorId: 'actor-2', displayName: 'SARL Basalte & Lagon', photoUrl: null, roleCode: 'operator', roleName: 'Exploitant', isPrimary: false },
   ],
   tasks: [],
 };

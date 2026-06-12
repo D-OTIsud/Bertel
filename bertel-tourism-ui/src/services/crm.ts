@@ -94,11 +94,24 @@ export interface CrmTimelineFilters {
   topicCode?: string;
   interactionType?: string;
   sentimentCode?: string;
+  /**
+   * Statut PO (rectifs points 6+7) : 'active' = interactions `planned` (à traiter),
+   * 'done' = traitées ; absent = toutes. Validé serveur (22023 sinon).
+   */
+  status?: 'active' | 'done';
+  /** Borne basse ISO (`occurred_at >= from`) ; absent = pas de borne (« Tout »). */
+  from?: string;
   before?: string;
   beforeId?: string;
   limit?: number;
 }
 
+/**
+ * RPC `api.list_crm_timeline` — signature 9 args (§63 v4) en arguments NOMMÉS. Les filtres
+ * sujet/statut/période (p_status, p_from) sont alignés sur list_crm_directory pour l'onglet
+ * Timeline (rectifs PO points 6+7). Toutes + Tout (status/from absents) = la timeline org
+ * complète, sans borne de période — corrige le bug « Toutes + Tout ne rendait que 2 mois ».
+ */
 export async function listCrmTimeline(filters: CrmTimelineFilters = {}): Promise<CrmTimelinePage> {
   const client = requireCrmClient();
   if (!client) {
@@ -109,6 +122,8 @@ export async function listCrmTimeline(filters: CrmTimelineFilters = {}): Promise
     p_topic_code: filters.topicCode ?? null,
     p_interaction_type: filters.interactionType ?? null,
     p_sentiment_code: filters.sentimentCode ?? null,
+    p_status: filters.status ?? null,
+    p_from: filters.from ?? null,
     p_before: filters.before ?? null,
     p_before_id: filters.beforeId ?? null,
     p_limit: filters.limit ?? 50,
@@ -151,6 +166,8 @@ export interface CrmDirectoryObjectLink {
 export interface CrmDirectoryEntry {
   actorId: string;
   displayName: string;
+  /** Portrait acteur (PO point 4) — null tant qu'aucune photo n'est posée. */
+  photoUrl: string | null;
   objects: CrmDirectoryObjectLink[];
   objectCount: number;
   interactionCount: number;
@@ -181,6 +198,7 @@ export function parseCrmDirectoryEntry(record: GenericRecord): CrmDirectoryEntry
   return {
     actorId: readString(record.actor_id),
     displayName: readString(record.display_name),
+    photoUrl: readNullableString(record.photo_url),
     objects: Array.isArray(record.objects)
       ? record.objects.filter((row): row is GenericRecord => !!row && typeof row === 'object').map(parseDirectoryObjectLink)
       : [],
@@ -249,7 +267,7 @@ export interface ActorCrmChannel {
 }
 
 export interface ActorCrmSnapshot {
-  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null };
+  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null; photoUrl: string | null };
   objects: ActorCrmObjectLink[];
   /** Coordonnées réelles de la personne (rectif PO point 4). */
   channels: ActorCrmChannel[];
@@ -259,7 +277,7 @@ export interface ActorCrmSnapshot {
 }
 
 const EMPTY_ACTOR_SNAPSHOT: ActorCrmSnapshot = {
-  actor: { id: '', displayName: '', firstName: null, lastName: null },
+  actor: { id: '', displayName: '', firstName: null, lastName: null, photoUrl: null },
   objects: [],
   channels: [],
   interactions: [],
@@ -286,6 +304,7 @@ export function parseActorCrmSnapshot(payload: unknown): ActorCrmSnapshot {
       displayName: readString(actorRecord.display_name),
       firstName: readNullableString(actorRecord.first_name),
       lastName: readNullableString(actorRecord.last_name),
+      photoUrl: readNullableString(actorRecord.photo_url),
     },
     objects: Array.isArray(record.objects)
       ? record.objects
@@ -327,7 +346,7 @@ function demoActorCrm(actorId: string): ActorCrmSnapshot {
     else topicCounts.set(item.topicCode, { code: item.topicCode, name: item.topicName ?? item.topicCode, count: 1 });
   }
   return {
-    actor: { id: entry.actorId, displayName: entry.displayName, firstName: null, lastName: null },
+    actor: { id: entry.actorId, displayName: entry.displayName, firstName: null, lastName: null, photoUrl: entry.photoUrl },
     objects: entry.objects.map((object) => ({ ...object, roleCode: null })),
     channels: [], // pas de PII fabriquée en démo
     interactions,
@@ -505,6 +524,12 @@ export interface SaveCrmActorInput {
   objectId?: string;
   /** INSERT seulement — défaut serveur 'operator'. */
   roleCode?: string;
+  /**
+   * Portrait acteur (PO point 4) — l'URL est normalement posée par la route d'upload
+   * /api/actor-photo/upload. Clé présente = écrite ; chaîne vide = effacement explicite
+   * (le serveur fait `NULLIF(photo_url,'')`). Ne PAS envoyer la clé pour ne pas toucher.
+   */
+  photoUrl?: string;
 }
 
 export async function saveCrmActor(input: SaveCrmActorInput): Promise<string> {
@@ -519,6 +544,8 @@ export async function saveCrmActor(input: SaveCrmActorInput): Promise<string> {
   if (input.lastName !== undefined) payload.last_name = input.lastName;
   if (input.objectId !== undefined) payload.object_id = input.objectId;
   if (input.roleCode !== undefined) payload.role_code = input.roleCode;
+  // photo_url partiel : clé présente (y compris '') = écrite ; '' = effacement serveur.
+  if (input.photoUrl !== undefined) payload.photo_url = input.photoUrl;
   const { data, error } = await client.schema('api').rpc('save_crm_actor', { p_payload: payload });
   if (error) {
     throw error;
@@ -581,6 +608,8 @@ export async function deleteActorChannel(id: string): Promise<void> {
 export interface ObjectCrmLinkedActor {
   actorId: string;
   displayName: string;
+  /** Portrait acteur (PO point 4) — rendu dans le rail « Acteurs liés » de la vue objet. */
+  photoUrl: string | null;
   roleCode: string | null;
   roleName: string | null;
   isPrimary: boolean;
@@ -636,6 +665,7 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
         .map((row) => ({
           actorId: readString(row.actor_id),
           displayName: readString(row.display_name),
+          photoUrl: readNullableString(row.photo_url),
           roleCode: readNullableString(row.role_code),
           roleName: readNullableString(row.role_name),
           isPrimary: row.is_primary === true,
@@ -726,6 +756,100 @@ export async function listContactKinds(): Promise<Array<{ code: string; name: st
     return [];
   }
   return (data ?? []).map((row) => ({ code: String(row.code), name: String(row.name) }));
+}
+
+/* ===== Suggestions de contacts (PO point 2) =====================================
+   À la création d'un acteur, une fois l'établissement de rattachement choisi, on propose
+   en un clic les contacts DÉJÀ connus de cet établissement (contact_channel §03) + des
+   acteurs déjà liés (actor_channel). RPC `api.list_object_contact_suggestions(object_id)`
+   gated `user_can_write_crm` (le caller AUTHOR un acteur sous cet objet) — 42501 si non
+   autorisé ⇒ on renvoie [] (le bloc se masque, le modal ne casse pas). */
+
+export interface ObjectContactSuggestion {
+  kindCode: string;
+  kindName: string;
+  value: string;
+  isPrimary: boolean;
+  /** 'établissement' (contact_channel §03) ou 'acteur lié' (actor_channel) — affiché en sourdine. */
+  source: string;
+}
+
+export function parseContactSuggestion(record: GenericRecord): ObjectContactSuggestion {
+  return {
+    kindCode: readString(record.kind_code),
+    kindName: readString(record.kind_name),
+    value: readString(record.value),
+    isPrimary: record.is_primary === true,
+    source: readString(record.source),
+  };
+}
+
+// Démo : quelques suggestions plausibles (pas d'appel réseau, pas de fabrication serveur).
+const MOCK_CONTACT_SUGGESTIONS: ObjectContactSuggestion[] = [
+  { kindCode: 'email', kindName: 'Email', value: 'contact@etablissement.re', isPrimary: true, source: 'établissement' },
+  { kindCode: 'phone', kindName: 'Téléphone', value: '0262 00 00 00', isPrimary: false, source: 'établissement' },
+];
+
+/**
+ * RPC `api.list_object_contact_suggestions` — contacts connus de l'établissement, à ajouter
+ * en un clic à un nouvel acteur. 42501 (gate user_can_write_crm) ⇒ [] (silencieux : le
+ * caller peut ne pas avoir le droit CRM sur cet objet, ou l'objet n'a aucun contact).
+ */
+export async function listObjectContactSuggestions(objectId: string): Promise<ObjectContactSuggestion[]> {
+  const client = requireCrmClient();
+  if (!client) {
+    return MOCK_CONTACT_SUGGESTIONS;
+  }
+  const { data, error } = await client
+    .schema('api')
+    .rpc('list_object_contact_suggestions', { p_object_id: objectId });
+  if (error) {
+    // Fail-soft : un refus de gate (42501) ou un objet sans contact ne doit pas casser le modal.
+    return [];
+  }
+  return Array.isArray(data)
+    ? data.filter((row): row is GenericRecord => !!row && typeof row === 'object').map(parseContactSuggestion)
+    : [];
+}
+
+/* ===== Upload portrait acteur (PO point 4) ======================================
+   Mêmes invariants que le pipeline média (CLAUDE.md) : la route /api/actor-photo/upload
+   est le SEUL écrivain (autorise as-the-caller via user_can_write_crm_actor, strippe l'EXIF,
+   écrit en service-role, pose actor.photo_url). Le helper client ne fait QUE poster le
+   FormData avec le bearer de session et lire { url }. Démo : URL locale, pas de réseau. */
+export async function uploadActorPhoto(actorId: string, file: File): Promise<string> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    // Mode démo : aperçu local (object URL) — aucun appel réseau, aucune photo réelle.
+    return typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(file)
+      : 'demo://actor-photo';
+  }
+  const client = getSupabaseClient();
+  const accessToken = client ? (await client.auth.getSession()).data.session?.access_token ?? '' : '';
+  const body = new FormData();
+  body.append('actorId', actorId);
+  body.append('file', file);
+  const response = await fetch('/api/actor-photo/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body,
+  });
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const payload = (await response.json()) as { detail?: string; error?: string };
+      detail = payload.detail ?? payload.error ?? detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(detail);
+  }
+  const payload = (await response.json()) as { url?: string };
+  if (!payload.url) {
+    throw new Error('Réponse upload sans url');
+  }
+  return payload.url;
 }
 
 export async function userCanWriteCrmNotes(): Promise<boolean> {

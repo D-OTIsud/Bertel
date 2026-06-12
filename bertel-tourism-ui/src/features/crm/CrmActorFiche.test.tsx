@@ -9,7 +9,7 @@ jest.mock('../../services/crm');
 const crmMock = crm as jest.Mocked<typeof crm>;
 
 const snapshot: ActorCrmSnapshot = {
-  actor: { id: 'actor-1', displayName: 'Mme Marie Hoarau', firstName: 'Marie', lastName: 'Hoarau' },
+  actor: { id: 'actor-1', displayName: 'Mme Marie Hoarau', firstName: 'Marie', lastName: 'Hoarau', photoUrl: null },
   objects: [
     { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
     { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleCode: 'owner', roleName: 'Propriétaire', isPrimary: false },

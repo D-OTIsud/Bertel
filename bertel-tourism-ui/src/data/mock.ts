@@ -395,6 +395,7 @@ export const mockCrmDirectory: CrmDirectoryEntry[] = [
   {
     actorId: 'actor-1',
     displayName: 'Mme Marie Hoarau',
+    photoUrl: null,
     objects: [
       { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleName: 'Gérante', isPrimary: true },
       { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleName: 'Propriétaire', isPrimary: false },
@@ -411,6 +412,7 @@ export const mockCrmDirectory: CrmDirectoryEntry[] = [
   {
     actorId: 'actor-2',
     displayName: 'SARL Basalte & Lagon',
+    photoUrl: null,
     objects: [
       { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleName: 'Exploitant', isPrimary: false },
     ],
@@ -426,6 +428,7 @@ export const mockCrmDirectory: CrmDirectoryEntry[] = [
   {
     actorId: 'actor-3',
     displayName: 'M. Paul Técher',
+    photoUrl: null,
     objects: [
       { objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', objectType: 'ITI', roleName: 'Référent', isPrimary: true },
     ],

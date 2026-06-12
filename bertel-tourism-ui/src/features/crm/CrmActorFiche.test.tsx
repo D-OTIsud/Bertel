@@ -265,6 +265,79 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(await within(dialog).findByText(/refus RLS/)).toBeInTheDocument();
   });
 
+  // Revue (fix 1) : chaque opération appliquée est committée dans l'état local dès son succès —
+  // un retry après échec partiel ne rejoue QUE les opérations restantes (sinon re-delete → P0002,
+  // ré-insert → doublon 23505 : le retry ne pouvait jamais aboutir).
+  it('un échec partiel puis retry n applique que les opérations restantes', async () => {
+    crmMock.deleteActorChannel.mockRejectedValueOnce(new Error('réseau indisponible'));
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
+    // Identité modifiée (UPDATE) + canal 1 modifié (UPDATE) + canal 2 supprimé (DELETE, échoue
+    // au 1er submit) + nouvelle ligne (INSERT, jamais atteinte au 1er submit).
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'Mme Marie Hoarau-Payet' } });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'marie@lagon.re' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer le canal 2' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /ajouter un canal/i }));
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 3'), { target: { value: '0692 11 22 33' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    // 1er submit : identité + update canal 1 passent, le DELETE échoue → erreur inline, modal ouvert.
+    expect(await within(dialog).findByText(/réseau indisponible/)).toBeInTheDocument();
+    expect(crmMock.saveCrmActor).toHaveBeenCalledTimes(1);
+    expect(crmMock.saveActorChannel).toHaveBeenCalledTimes(1); // update canal 1 seulement
+    expect(crmMock.deleteActorChannel).toHaveBeenCalledTimes(1);
+    // Retry : seules les opérations restantes partent (DELETE rejoué + INSERT) — ni l'identité
+    // ni l'update du canal 1 déjà appliqués ne sont re-soumis.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(crmMock.saveCrmActor).toHaveBeenCalledTimes(1);
+    expect(crmMock.deleteActorChannel).toHaveBeenCalledTimes(2);
+    expect(crmMock.saveActorChannel).toHaveBeenCalledTimes(2);
+    expect(crmMock.saveActorChannel.mock.calls[1][0]).toEqual({
+      actorId: 'actor-1',
+      kindCode: 'phone',
+      value: '0692 11 22 33',
+      isPrimary: false,
+    });
+  });
+
+  // Revue (fix 2) : déplacement du badge principal entre deux canaux de même kind — l'op qui
+  // LIBÈRE le principal doit partir AVANT celle qui le POSE, sinon l'index unique partiel
+  // « un principal par kind » rejette en 23505 quand le poseur précède dans l'ordre des lignes.
+  it('déplacer le badge principal : l unset part avant le set', async () => {
+    crmMock.listActorCrm.mockResolvedValue({
+      ...snapshot,
+      channels: [
+        { id: 'ch-1', kindCode: 'phone', kindName: 'Téléphone', value: '0262 11 11 11', isPrimary: false },
+        { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0692 22 22 22', isPrimary: true },
+      ],
+    });
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
+    // Swap : le canal 1 (plus HAUT dans la liste) gagne le principal, le canal 2 le perd.
+    fireEvent.click(within(dialog).getByLabelText('Canal 1 principal'));
+    fireEvent.click(within(dialog).getByLabelText('Canal 2 principal'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(crmMock.saveActorChannel).toHaveBeenCalledTimes(2));
+    expect(crmMock.saveCrmActor).not.toHaveBeenCalled(); // identité inchangée
+    // Ordre : l'UPDATE qui retire is_primary (ch-2) part AVANT celui qui le pose (ch-1).
+    expect(crmMock.saveActorChannel.mock.calls[0][0]).toEqual({
+      id: 'ch-2',
+      kindCode: 'phone',
+      value: '0692 22 22 22',
+      isPrimary: false,
+    });
+    expect(crmMock.saveActorChannel.mock.calls[1][0]).toEqual({
+      id: 'ch-1',
+      kindCode: 'phone',
+      value: '0262 11 11 11',
+      isPrimary: true,
+    });
+  });
+
   // Assertion verrouillée par revue : gating lecture seule (no-write-trap).
   it('sans permission : actions désactivées avec raison (interaction, tâche, modifier)', async () => {
     renderFiche({ canWrite: false });

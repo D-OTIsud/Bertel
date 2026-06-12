@@ -5,7 +5,13 @@
 //   sur le vocabulaire contact_kind, valeur, principal, suppression, ajout de ligne).
 //   KISS assumé : les opérations canal sont appliquées UNE PAR UNE au submit
 //   (saveActorChannel / deleteActorChannel), arrêt et erreur inline au premier échec —
-//   le modal reste ouvert, rien n'est silencieux.
+//   le modal reste ouvert, rien n'est silencieux. Deux garanties de la revue :
+//   1. retry idempotent — chaque op réussie est committée dans l'état local immédiatement
+//      (delete → ligne retirée, insert → id posé, update → snapshot initial rafraîchi,
+//      identité → baseline rafraîchie), un re-submit ne rejoue que les ops restantes ;
+//   2. ordre des ops — celles qui POSENT un principal partent APRÈS celles qui le libèrent
+//      (l'index unique partiel « un principal par kind » rejetterait sinon le déplacement
+//      du badge vers une ligne plus haute dans la liste, 23505 brut).
 // - CrmActorNewModal : création (display_name + établissement de rattachement REQUIS —
 //   l'acteur entre dans le périmètre CRM par ce lien actor_object_role ; rôle serveur
 //   par défaut 'operator', pas de sélecteur en v1) + canaux email/téléphone optionnels.
@@ -25,6 +31,8 @@ import {
 import { CrmModal } from './CrmModal';
 
 interface ChannelRow {
+  /** Identité CLIENT stable (id serveur ou `new-N`) — clé React + cible des commits per-op. */
+  key: string;
   /** null = nouvelle ligne (INSERT au submit si valeur non vide). */
   id: string | null;
   kindCode: string;
@@ -35,8 +43,12 @@ interface ChannelRow {
   initial?: { kindCode: string; value: string; isPrimary: boolean };
 }
 
+/** Séquence des clés client des nouvelles lignes (unicité intra-modal suffisante). */
+let newChannelRowSeq = 0;
+
 function rowsFromChannels(channels: ActorCrmChannel[]): ChannelRow[] {
   return channels.map((channel) => ({
+    key: channel.id,
     id: channel.id,
     kindCode: channel.kindCode,
     value: channel.value,
@@ -63,37 +75,89 @@ export function CrmActorEditModal({
   const [lastName, setLastName] = useState(actor.lastName ?? '');
   const [rows, setRows] = useState<ChannelRow[]>(() => rowsFromChannels(channels));
 
+  // Idempotence du retry (identité) : après un saveCrmActor réussi, la baseline de
+  // comparaison devient l'état SAUVÉ (les props `actor` ne sont rafraîchies qu'à la
+  // fermeture) — un re-submit après échec partiel sur les canaux ne re-soumet pas l'UPDATE.
+  const savedIdentityRef = useRef<{ displayName: string; firstName: string | null; lastName: string | null } | null>(null);
+
   const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
   const kinds = kindsQuery.data ?? [];
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // 1. Identité (un seul UPDATE, seulement si modifiée).
+      // 1. Identité (un seul UPDATE, seulement si modifiée depuis la dernière baseline confirmée).
+      const baseline = savedIdentityRef.current ?? {
+        displayName: actor.displayName,
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+      };
+      const identity = {
+        displayName: displayName.trim(),
+        firstName: firstName.trim() || null,
+        lastName: lastName.trim() || null,
+      };
       const identityChanged =
-        displayName.trim() !== actor.displayName ||
-        (firstName.trim() || null) !== actor.firstName ||
-        (lastName.trim() || null) !== actor.lastName;
+        identity.displayName !== baseline.displayName ||
+        identity.firstName !== baseline.firstName ||
+        identity.lastName !== baseline.lastName;
       if (identityChanged) {
-        await saveCrmActor({
-          id: actor.id,
-          displayName: displayName.trim(),
-          firstName: firstName.trim() || null,
-          lastName: lastName.trim() || null,
-        });
+        await saveCrmActor({ id: actor.id, ...identity });
+        savedIdentityRef.current = identity;
       }
+
       // 2. Canaux, un par un (suppression / update si modifié / insert si nouvelle ligne).
+      //    Chaque op réussie est committée dans l'état local IMMÉDIATEMENT (visuellement
+      //    inerte : la ligne supprimée était déjà masquée, l'id/initial posés ne changent
+      //    pas le rendu) — un retry après échec partiel ne rejoue que les ops restantes
+      //    (sinon re-delete → P0002, ré-insert → doublon 23505 : retry impossible).
+      interface ChannelOp {
+        /** TRUE quand l'op POSE un principal (nouveau, gagné, ou déplacé vers un autre kind). */
+        acquiresPrimary: boolean;
+        run: () => Promise<void>;
+      }
+      const ops: ChannelOp[] = [];
       for (const row of rows) {
         if (row.id && row.deleted) {
-          await deleteActorChannel(row.id);
+          const channelId = row.id;
+          ops.push({
+            acquiresPrimary: false,
+            run: async () => {
+              await deleteActorChannel(channelId);
+              setRows((current) => current.filter((r) => r.key !== row.key));
+            },
+          });
         } else if (
           row.id &&
           row.initial &&
           (row.value.trim() !== row.initial.value || row.kindCode !== row.initial.kindCode || row.isPrimary !== row.initial.isPrimary)
         ) {
-          await saveActorChannel({ id: row.id, kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary });
+          const channelId = row.id;
+          const initial = row.initial;
+          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary };
+          ops.push({
+            acquiresPrimary: saved.isPrimary && (!initial.isPrimary || initial.kindCode !== saved.kindCode),
+            run: async () => {
+              await saveActorChannel({ id: channelId, ...saved });
+              setRows((current) => current.map((r) => (r.key === row.key ? { ...r, initial: saved } : r)));
+            },
+          });
         } else if (!row.id && !row.deleted && row.value.trim()) {
-          await saveActorChannel({ actorId: actor.id, kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary });
+          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary };
+          ops.push({
+            acquiresPrimary: saved.isPrimary,
+            run: async () => {
+              const newId = await saveActorChannel({ actorId: actor.id, ...saved });
+              setRows((current) => current.map((r) => (r.key === row.key ? { ...r, id: newId, initial: saved } : r)));
+            },
+          });
         }
+      }
+      // Ordre : les ops qui POSENT un principal partent APRÈS celles qui le libèrent
+      // (delete / unset / update neutre) — sinon déplacer le badge vers une ligne plus
+      // haute violerait l'index unique partiel « un principal par kind » (23505 brut).
+      const ordered = [...ops.filter((op) => !op.acquiresPrimary), ...ops.filter((op) => op.acquiresPrimary)];
+      for (const op of ordered) {
+        await op.run();
       }
     },
     onSuccess: () => {
@@ -151,7 +215,7 @@ export function CrmActorEditModal({
         Canaux de contact
         {rows.map((row, index) =>
           row.deleted ? null : (
-            <div key={row.id ?? `new-${index}`} className="chan-row">
+            <div key={row.key} className="chan-row">
               <select
                 className="crm-select"
                 aria-label={`Type du canal ${index + 1}`}
@@ -203,7 +267,7 @@ export function CrmActorEditModal({
           onClick={() =>
             setRows((current) => [
               ...current,
-              { id: null, kindCode: kinds[0]?.code ?? '', value: '', isPrimary: false, deleted: false },
+              { key: `new-${newChannelRowSeq++}`, id: null, kindCode: kinds[0]?.code ?? '', value: '', isPrimary: false, deleted: false },
             ])
           }
         >

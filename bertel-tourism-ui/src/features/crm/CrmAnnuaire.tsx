@@ -11,7 +11,16 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, CircleHelp, Search, UserPlus } from 'lucide-react';
 import { listCrmDirectory, listDemandTopics, type CrmDirectoryEntry, type CrmDirectoryFilters } from '../../services/crm';
-import { Kpi, Pav, Seg } from './crm-primitives';
+import { Kpi, Pav } from './crm-primitives';
+import {
+  CrmFilterBar,
+  PERIOD_DEFAULT,
+  STATUS_DEFAULT,
+  periodFromOf,
+  statusValueOf,
+  type PeriodItem,
+  type StatusItem,
+} from './CrmFilterBar';
 import { CrmActorNewModal } from './CrmActorModals';
 import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf } from './crm-view-utils';
 
@@ -22,42 +31,22 @@ function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
   return haystack.includes(query);
 }
 
-// Seg statut — vocabulaire PO : Actives = interactions `planned` (à traiter),
-// Traitées = `done`, Toutes = pas de filtre.
-const STATUS_ITEMS = ['Actives', 'Traitées', 'Toutes'];
-const STATUS_VALUES: Record<string, 'active' | 'done' | undefined> = {
-  Actives: 'active',
-  Traitées: 'done',
-  Toutes: undefined,
-};
-
-// Seg période — borne basse `from` calculée en jours glissants (Tout = sans borne).
-const PERIOD_ITEMS = ['30 j', '90 j', '12 mois', 'Tout'];
-const PERIOD_DAYS: Record<string, number | null> = { '30 j': 30, '90 j': 90, '12 mois': 365, Tout: null };
-
-const DAY_MS = 86_400_000;
-
 export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOpenActor: (actorId: string) => void }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  // Filtres partagés (PO points 6+7) — défaut Toutes + Tout = ensemble complet (fix point 7).
   const [topicCode, setTopicCode] = useState('');
-  const [statusItem, setStatusItem] = useState('Toutes');
-  const [periodItem, setPeriodItem] = useState('Tout');
+  const [statusItem, setStatusItem] = useState<StatusItem>(STATUS_DEFAULT);
+  const [periodItem, setPeriodItem] = useState<PeriodItem>(PERIOD_DEFAULT);
   const [newActorOpen, setNewActorOpen] = useState(false);
 
   const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
 
   // Borne `from` STABLE par sélection (minuit local, précision jour) : un Date.now() brut
-  // par render changerait la queryKey en boucle et relancerait la requête.
-  const from = useMemo(() => {
-    const days = PERIOD_DAYS[periodItem];
-    if (!days) return undefined;
-    const date = new Date(Date.now() - days * DAY_MS);
-    date.setHours(0, 0, 0, 0);
-    return date.toISOString();
-  }, [periodItem]);
+  // par render changerait la queryKey en boucle et relancerait la requête. « Tout » = undefined.
+  const from = useMemo(() => periodFromOf(periodItem), [periodItem]);
 
-  const status = STATUS_VALUES[statusItem];
+  const status = statusValueOf(statusItem);
   const hasFilters = Boolean(topicCode) || status !== undefined || from !== undefined;
   const filters = useMemo<CrmDirectoryFilters>(
     () => ({
@@ -97,14 +86,13 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
     return entries.filter((entry) => !query || matchesSearch(entry, query));
   }, [entries, search]);
 
-  // KPI réactifs : sous filtre, interaction_count = total FILTRÉ par le serveur (sujet/
-  // statut/période appliqués à tous les agrégats) — interactions_12m resterait la fenêtre
-  // 12 mois intersectée et mentirait sur « 30 j ». Sans filtre, on garde la lecture
-  // « activité récente » (12 mois) du design d'origine.
-  const totalInteractions = hasFilters
-    ? entries.reduce((sum, entry) => sum + entry.interactionCount, 0)
-    : entries.reduce((sum, entry) => sum + entry.interactions12m, 0);
-  const interactionsKpiLabel = from ? 'Interactions (période)' : hasFilters ? 'Interactions (filtrées)' : 'Interactions · 12 mois';
+  // KPI Interactions réactif (PO point 7) : le SERVEUR filtre tous les agrégats (sujet/statut/
+  // période appliqués à interaction_count). Quand une période est bornée (`from`), le KPI lit
+  // ce total filtré (« Interactions (période) »). Sinon — période = Tout, défaut — on lit le
+  // total all-time `interaction_count` (« Interactions (toutes) ») : c'est le fix du bug
+  // « Toutes + Tout n'affichait que 2 mois » (l'ancien KPI montrait la fenêtre 12 mois).
+  const totalInteractions = entries.reduce((sum, entry) => sum + entry.interactionCount, 0);
+  const interactionsKpiLabel = from ? 'Interactions (période)' : 'Interactions (toutes)';
   const totalObjects = entries.reduce((sum, entry) => sum + entry.objectCount, 0);
 
   if (directoryQuery.isLoading) {
@@ -132,21 +120,17 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
-        <select
-          className="crm-select"
-          aria-label="Sujet"
-          value={topicCode}
-          onChange={(event) => setTopicCode(event.target.value)}
-        >
-          <option value="">Tous les sujets</option>
-          {(topicsQuery.data ?? []).map((topic) => (
-            <option key={topic.code} value={topic.code}>
-              {topic.name}
-            </option>
-          ))}
-        </select>
-        <Seg items={STATUS_ITEMS} value={statusItem} onChange={setStatusItem} />
-        <Seg items={PERIOD_ITEMS} value={periodItem} onChange={setPeriodItem} />
+        <CrmFilterBar
+          topicCode={topicCode}
+          status={statusItem}
+          period={periodItem}
+          topics={topicsQuery.data ?? []}
+          onChange={(next) => {
+            setTopicCode(next.topicCode);
+            setStatusItem(next.status);
+            setPeriodItem(next.period);
+          }}
+        />
         <div className="crm-toolbar__right">
           <span>
             {rows.length} acteur{rows.length > 1 ? 's' : ''}

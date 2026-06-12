@@ -52,13 +52,16 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.getAllByText('Demande de visite').some((el) => el.classList.contains('topic-chip'))).toBe(true);
   });
 
-  it('affiche les KPI réels : acteurs suivis, interactions 12 mois, établissements liés', async () => {
+  // PO point 7 : par défaut (Toutes + Tout) le KPI Interactions lit le total ALL-TIME
+  // (interaction_count) sous le libellé « Interactions (toutes) » — fini la fenêtre 12 mois
+  // qui faisait croire à « seulement 2 mois ».
+  it('affiche les KPI réels : acteurs suivis, interactions (toutes), établissements liés', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
     expect(screen.getByText('Acteurs suivis')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument(); // 3 acteurs
-    expect(screen.getByText('Interactions · 12 mois')).toBeInTheDocument();
-    expect(screen.getByText('6')).toBeInTheDocument(); // 4 + 1 + 1
+    expect(screen.getByText('Interactions (toutes)')).toBeInTheDocument();
+    expect(screen.getByText('13')).toBeInTheDocument(); // interaction_count all-time : 9 + 3 + 1
     expect(screen.getByText('Établissements liés')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument(); // 2 + 1 + 1
   });
@@ -111,7 +114,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     );
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    expect(screen.getByText('Interactions · 12 mois')).toBeInTheDocument();
+    expect(screen.getByText('Interactions (toutes)')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '30 j' }));
     await waitFor(() =>
       expect(crmMock.listCrmDirectory).toHaveBeenLastCalledWith({ from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) }),

@@ -166,15 +166,17 @@ export function CrmActorFiche({
       </div>
       {!canWrite && <p className="crm-readonly-note">{CRM_READ_ONLY_REASON}</p>}
 
+      {/* Peps PO point 1 : 4 accents cyclés teal / orange / bleu / prune (KPI_ACCENTS). */}
       <div className="crm-stats">
-        <Kpi label="Interactions · 12 mois" value={String(last12Months)} hint="tous contextes confondus" />
+        <Kpi label="Interactions · 12 mois" value={String(last12Months)} hint="tous contextes confondus" accent="teal" />
         <Kpi
           label="Dernier contact"
           value={lastContactAt ? formatShort(lastContactAt) : '—'}
           hint={lastContactAt ? formatRelative(lastContactAt) : 'aucune interaction'}
+          accent="orange"
         />
-        <Kpi label="Sujets distincts" value={String(snapshot.topics.length)} hint="sujets normalisés demand_topic" />
-        <Kpi label="Établissements" value={String(objects.length)} hint="contextes de la relation" />
+        <Kpi label="Sujets distincts" value={String(snapshot.topics.length)} hint="sujets normalisés demand_topic" accent="blue" />
+        <Kpi label="Établissements" value={String(objects.length)} hint="contextes de la relation" accent="plum" />
       </div>
 
       <div className="crm-fgrid">

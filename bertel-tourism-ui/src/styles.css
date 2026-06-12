@@ -8559,6 +8559,30 @@ a {
   --accent: var(--teal);
   --accent-deep: #0d4f4e;
   --accent-tint: var(--teal-tint);
+  /* ---- Peps PO point 1 : gamme d'accents CRM-locale (hors thème) ----
+     Garde-fou org-theme : on ne touche JAMAIS --bg/--surface/le canvas. Ces hues ne
+     pilotent que des ACCENTS (liserés, valeurs KPI, tons sentiment, pastilles) sur des
+     surfaces calmes. --teal/--orange-strong/--green/--red existent déjà au global ; on
+     déclare ici l'ambre (clé du fix : interrogatif n'est plus gris), le prune et le bleu
+     (ce dernier était posé en dur #1e7491 dans la timeline — token unifié). Chaque hue a
+     son tint (fond pastel ~14-16 %) ET un ton de texte foncé lisible (AA sur blanc). */
+  --crm-orange: #c96d3b;          /* = --accent-brand-strong */
+  --crm-orange-ink: #93501f;
+  --crm-orange-tint: rgba(201, 109, 59, 0.16);
+  --crm-blue: #1e7491;
+  --crm-blue-ink: #0e5872;
+  --crm-blue-tint: rgba(30, 116, 145, 0.15);
+  --crm-plum: #6c4f8a;
+  --crm-plum-ink: #4d3866;
+  --crm-plum-tint: rgba(108, 79, 138, 0.16);
+  --crm-amber: #c98a1f;
+  --crm-amber-ink: #8a5c10;
+  --crm-amber-tint: rgba(214, 160, 45, 0.18);
+  --crm-green-ink: #1a6b48;
+  --crm-red-ink: #93392a;
+  --crm-red-tint: rgba(200, 92, 72, 0.14);
+  --crm-green-vivid: #1f9d63;       /* très positif : vert plus vif que --green */
+  --crm-green-vivid-tint: rgba(31, 157, 99, 0.18);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -8687,12 +8711,15 @@ a {
   gap: 14px;
   margin-bottom: 18px;
 }
-/* Contraste (rectif PO point 2) : barre d'accent à gauche + valeur en accent profond —
-   les KPI portent la gamme d'accent au lieu du tout-monochrome. */
+/* Peps PO point 1 : KPI multi-accents. Chaque carte porte un accent DISTINCT (barre
+   gauche épaissie à 4px + valeur colorée) cyclé teal / orange / bleu / prune par les vues
+   (KPI_ACCENTS). Surface calme inchangée — seul l'accent claque. */
 .crm-app .crm-kpi {
+  --kpi-accent: var(--accent);
+  --kpi-value: var(--accent-deep);
   background: var(--surface);
   border: 1px solid var(--line-soft);
-  border-left: 3px solid var(--accent);
+  border-left: 4px solid var(--kpi-accent);
   border-radius: var(--r-lg);
   padding: 16px 18px 14px;
   display: flex;
@@ -8700,6 +8727,10 @@ a {
   gap: 2px;
   box-shadow: var(--shadow-s);
 }
+.crm-app .crm-kpi--teal { --kpi-accent: var(--teal); --kpi-value: var(--accent-deep); }
+.crm-app .crm-kpi--orange { --kpi-accent: var(--crm-orange); --kpi-value: var(--crm-orange-ink); }
+.crm-app .crm-kpi--blue { --kpi-accent: var(--crm-blue); --kpi-value: var(--crm-blue-ink); }
+.crm-app .crm-kpi--plum { --kpi-accent: var(--crm-plum); --kpi-value: var(--crm-plum-ink); }
 .crm-app .crm-kpi__label {
   font-size: 11px;
   font-weight: 700;
@@ -8712,7 +8743,7 @@ a {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--accent-deep);
+  color: var(--kpi-value);
   line-height: 1.15;
 }
 .crm-app .crm-kpi__hint {
@@ -8780,7 +8811,10 @@ a {
   transition: all 0.12s ease;
   font-family: inherit;
 }
-.crm-app .crm-chip:hover { border-color: var(--line-strong); color: var(--ink); }
+.crm-app .crm-chip:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
+/* Peps PO point 1 : chips inactives à fin liseré d'accent + texte teinté (plus de gris mort) ;
+   active = pleine accent (déjà). */
+.crm-app .crm-chip { border-color: var(--teal-tint); color: var(--accent-deep); }
 .crm-app .crm-chip.is-on {
   background: var(--accent);
   border-color: var(--accent);
@@ -9186,18 +9220,46 @@ a {
   place-items: center;
   color: var(--ink-3);
 }
+/* Glyphe d'icône = TYPE d'interaction (call/mail/field/sys) — la couleur du glyphe reste
+   typée pour quand de vrais appels/e-mails arriveront. */
 .crm-app .tl-item__ico.call { color: var(--teal); }
-.crm-app .tl-item__ico.mail { color: var(--accent-brand-strong); }
-.crm-app .tl-item__ico.field { color: #1e7491; }
+.crm-app .tl-item__ico.mail { color: var(--crm-orange); }
+.crm-app .tl-item__ico.field { color: var(--crm-blue); }
 .crm-app .tl-item__ico.sys { color: var(--ink-4); }
+
+/* Peps PO point 1 : anneau de l'icône + liseré gauche de la carte teintés par le SENTIMENT
+   (tone--*). --tone-c (trait) + --tone-bg (voile) sont posés par ton ; la timeline varie
+   ainsi ligne à ligne même quand chaque interaction est une note (glyphe = type, couleur =
+   sentiment). neutre = pas de teinte (reste sur la ligne/surface par défaut). */
+.crm-app .tl-item__ico {
+  --tone-c: var(--line);
+  --tone-bg: var(--surface);
+}
+.crm-app .tl-item__ico.tone--tres_positif { --tone-c: var(--crm-green-vivid); --tone-bg: var(--crm-green-vivid-tint); }
+.crm-app .tl-item__ico.tone--positif { --tone-c: var(--green); --tone-bg: var(--green-soft); }
+.crm-app .tl-item__ico.tone--interrogatif { --tone-c: var(--crm-amber); --tone-bg: var(--crm-amber-tint); }
+.crm-app .tl-item__ico.tone--inquiet { --tone-c: var(--crm-blue); --tone-bg: var(--crm-blue-tint); }
+.crm-app .tl-item__ico.tone--mecontent { --tone-c: var(--crm-orange); --tone-bg: var(--crm-orange-tint); }
+.crm-app .tl-item__ico.tone--tres_mecontent { --tone-c: #c85c48; --tone-bg: var(--crm-red-tint); }
+.crm-app .tl-item__ico:not(.tone--neutre) { border-color: var(--tone-c); background: var(--tone-bg); }
+
 .crm-app .tl-card {
+  --card-tone: var(--line-soft);
   background: var(--surface);
   border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--card-tone);
   border-radius: var(--r-md);
   padding: 12px 14px;
   transition: border-color 0.12s ease;
 }
+.crm-app .tl-card.tone--tres_positif { --card-tone: var(--crm-green-vivid); }
+.crm-app .tl-card.tone--positif { --card-tone: var(--green); }
+.crm-app .tl-card.tone--interrogatif { --card-tone: var(--crm-amber); }
+.crm-app .tl-card.tone--inquiet { --card-tone: var(--crm-blue); }
+.crm-app .tl-card.tone--mecontent { --card-tone: var(--crm-orange); }
+.crm-app .tl-card.tone--tres_mecontent { --card-tone: #c85c48; }
 .crm-app .tl-card:hover { border-color: var(--line-strong); }
+.crm-app .tl-card:hover { border-left-color: var(--card-tone); }
 .crm-app .tl-card__top {
   display: flex;
   align-items: center;
@@ -9224,7 +9286,10 @@ a {
 .crm-app .tl-card__actor { font-weight: 600; color: var(--ink-3); }
 .crm-app .tl-empty { color: var(--ink-4); font-size: 13px; margin: 4px 0 0 48px; }
 
-/* Humeur / tonalité — 6 codes sentiment → 3 classes */
+/* Humeur / tonalité — système 6 TONS sentiment (peps PO point 1, signal couleur dominant).
+   Pastille : point plein (currentColor) + fond pastel + texte coloré GRAS. Les 6 tons sont
+   visiblement distincts (interrogatif = ambre, plus jamais gris) ; `neutre` = gris doux pour
+   l'absence de sentiment. C'est ce qui donne de la variété sur des données 100 % « note ». */
 .crm-app .mood {
   display: inline-flex;
   align-items: center;
@@ -9233,14 +9298,18 @@ a {
   padding: 0 8px;
   border-radius: 999px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .crm-app .mood::before { content: ''; width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
-.crm-app .mood.positif { background: var(--green-soft); color: #1a6b48; }
-.crm-app .mood.neutre { background: var(--surface-2); color: var(--ink-3); }
-.crm-app .mood.tendu { background: rgba(200, 92, 72, 0.12); color: #93392a; }
+.crm-app .mood--tres_positif { background: var(--crm-green-vivid-tint); color: var(--crm-green-vivid); }
+.crm-app .mood--positif { background: var(--green-soft); color: var(--crm-green-ink); }
+.crm-app .mood--interrogatif { background: var(--crm-amber-tint); color: var(--crm-amber-ink); }
+.crm-app .mood--inquiet { background: var(--crm-blue-tint); color: var(--crm-blue-ink); }
+.crm-app .mood--mecontent { background: var(--crm-orange-tint); color: var(--crm-orange-ink); }
+.crm-app .mood--tres_mecontent { background: var(--crm-red-tint); color: var(--crm-red-ink); }
+.crm-app .mood--neutre { background: var(--surface-2); color: var(--ink-3); }
 
 /* Avatar agent (owner) */
 .crm-app .agav {

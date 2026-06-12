@@ -117,9 +117,10 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   return (
     <div className="crm-body">
       <div className="crm-kpis">
-        <Kpi label="Acteurs suivis" value={String(entries.length)} hint="personnes & organisations" />
-        <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} hint="appels, e-mails, visites terrain, notes" />
-        <Kpi label="Établissements liés" value={String(totalObjects)} hint="contextes de la relation" />
+        {/* Peps PO point 1 : accents KPI distincts (teal / orange / bleu) — fini le tout-teal. */}
+        <Kpi label="Acteurs suivis" value={String(entries.length)} hint="personnes & organisations" accent="teal" />
+        <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} hint="appels, e-mails, visites terrain, notes" accent="orange" />
+        <Kpi label="Établissements liés" value={String(totalObjects)} hint="contextes de la relation" accent="blue" />
       </div>
 
       <div className="crm-toolbar">

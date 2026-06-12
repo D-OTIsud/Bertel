@@ -10,15 +10,17 @@ export interface PavTint {
   fg: string;
 }
 
-// Alphas relevés (0.10/0.12 → 0.16/0.18) au rectif PO point 2 (contraste) — les fonds
-// teintés des avatars/type-tags suivent la saturation du prototype v2.
+// Peps PO point 1 : 6 teintes pleinement colorées (alphas relevés 0.16/0.18 → 0.22/0.24)
+// pour que les avatars/type-tags se lisent comme de la COULEUR, pas un gris-wash. La même
+// gamme que les accents KPI/sentiment (teal/orange/blue/green/plum/rust) — l'annuaire et
+// les fiches cessent d'être tout-teal. Texte foncé AA sur blanc.
 export const PAV_TINTS: PavTint[] = [
-  { bg: 'rgba(23, 107, 106, 0.16)', fg: '#0d4f4e' }, // teal
-  { bg: 'rgba(201, 109, 59, 0.18)', fg: '#93501f' }, // orange
-  { bg: 'rgba(30, 116, 145, 0.18)', fg: '#0e5872' }, // blue
-  { bg: 'rgba(42, 122, 69, 0.18)', fg: '#1a5a30' }, // green
-  { bg: 'rgba(108, 79, 138, 0.18)', fg: '#4d3866' }, // plum
-  { bg: 'rgba(164, 83, 48, 0.18)', fg: '#7a3b20' }, // rust
+  { bg: 'rgba(23, 107, 106, 0.22)', fg: '#0d4f4e' }, // teal
+  { bg: 'rgba(201, 109, 59, 0.24)', fg: '#93501f' }, // orange
+  { bg: 'rgba(30, 116, 145, 0.24)', fg: '#0e5872' }, // blue
+  { bg: 'rgba(31, 157, 99, 0.22)', fg: '#1a5a30' }, // green
+  { bg: 'rgba(108, 79, 138, 0.24)', fg: '#4d3866' }, // plum
+  { bg: 'rgba(202, 138, 31, 0.24)', fg: '#8a5c10' }, // amber
 ];
 
 /**

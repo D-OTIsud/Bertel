@@ -13,7 +13,7 @@ import {
   initialsOf,
   interactionTypeLabelOf,
   monthLabelOf,
-  moodClassOf,
+  moodToneOf,
   pavTintOf,
   tlIcoClassOf,
 } from './crm-view-utils';
@@ -74,11 +74,15 @@ export function CtxTag({
   );
 }
 
-/** Pastille humeur — classe dérivée du code sentiment, libellé = sentimentName réel. */
+/**
+ * Pastille humeur — ton 6 couleurs dérivé du code sentiment (peps PO point 1), libellé =
+ * sentimentName réel. Pas de pastille quand l'interaction n'a NI code NI libellé sentiment
+ * (ne pas afficher un « neutre » fantôme sur les notes sans sentiment).
+ */
 export function Mood({ sentimentCode, sentimentName }: { sentimentCode: string | null; sentimentName: string | null }) {
-  const mood = moodClassOf(sentimentCode);
-  if (!mood) return null;
-  return <span className={'mood ' + mood}>{sentimentName ?? mood}</span>;
+  if (!sentimentCode && !sentimentName) return null;
+  const tone = moodToneOf(sentimentCode);
+  return <span className={'mood mood--' + tone}>{sentimentName ?? tone}</span>;
 }
 
 /** Avatar agent (owner) — initiales teintées par nom. */
@@ -98,10 +102,28 @@ export function AgAv({ name, md }: { name: string | null; md?: boolean }) {
   );
 }
 
-/** Carte indicateur (bandeau KPI / stats fiche). */
-export function Kpi({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+/** Les 4 accents KPI cyclés (peps PO point 1) — barre + valeur colorées, surface calme. */
+export type KpiAccent = 'teal' | 'orange' | 'blue' | 'plum';
+export const KPI_ACCENTS: KpiAccent[] = ['teal', 'orange', 'blue', 'plum'];
+
+/**
+ * Carte indicateur (bandeau KPI / stats fiche). `accent` colore la barre de gauche et la
+ * valeur ; non fourni = teal (compat). Les vues passent KPI_ACCENTS[i % 4] pour répartir
+ * la gamme au lieu du tout-teal monochrome.
+ */
+export function Kpi({
+  label,
+  value,
+  hint,
+  accent = 'teal',
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  accent?: KpiAccent;
+}) {
   return (
-    <div className="crm-kpi">
+    <div className={'crm-kpi crm-kpi--' + accent}>
       <span className="crm-kpi__label">{label}</span>
       <span className="crm-kpi__value">{value}</span>
       {hint ? <span className="crm-kpi__hint">{hint}</span> : null}
@@ -166,12 +188,16 @@ function TlCard({
   const icoClass = tlIcoClassOf(item.interactionType);
   const Icon = TL_ICONS[icoClass];
   const title = item.subject || item.topicName || interactionTypeLabelOf(item.interactionType);
+  // Peps PO point 1 : la COULEUR de la ligne vient du SENTIMENT (le type pilote le glyphe).
+  // Liseré gauche de la carte + anneau de l'icône teintés par le ton — la timeline varie
+  // ligne à ligne même quand chaque interaction est une « note ».
+  const tone = moodToneOf(item.sentimentCode);
   return (
     <div className="tl-item">
-      <span className={'tl-item__ico ' + icoClass} aria-hidden>
+      <span className={'tl-item__ico ' + icoClass + ' tone--' + tone} aria-hidden>
         <Icon size={14} />
       </span>
-      <div className="tl-card">
+      <div className={'tl-card tone--' + tone}>
         <div className="tl-card__top">
           <strong>{title}</strong>
           <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>

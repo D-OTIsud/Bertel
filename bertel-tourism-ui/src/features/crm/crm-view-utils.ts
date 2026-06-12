@@ -83,6 +83,20 @@ export function taskGroupOf(dueAt: string | null, now: Date = new Date()): TaskG
   return 'later';
 }
 
+/**
+ * Badge d'échéance d'une carte kanban (rectif PO point 1) : 'late' (rouge) si le jour
+ * calendaire est passé ET la tâche non terminée ; 'today' (orange) le jour même ; ''
+ * sinon. Réutilise taskGroupOf — la proximité d'échéance des anciens groupes temporels
+ * vit désormais DANS les cartes.
+ */
+export function dueBadgeClassOf(dueAt: string | null, status: string, now: Date = new Date()): '' | 'late' | 'today' {
+  if (status === 'done') return '';
+  const group = taskGroupOf(dueAt, now);
+  if (group === 'late') return 'late';
+  if (group === 'today') return 'today';
+  return '';
+}
+
 /** JJ/MM/AAAA (fr-FR) ; null/invalide → '—' / valeur brute. */
 export function formatShort(value: string | null): string {
   if (!value) return '—';

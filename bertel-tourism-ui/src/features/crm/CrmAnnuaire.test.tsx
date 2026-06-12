@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmAnnuaire } from './CrmAnnuaire';
 import * as crm from '../../services/crm';
@@ -21,6 +21,10 @@ function renderAnnuaire(onOpenActor = jest.fn()) {
 beforeEach(() => {
   jest.clearAllMocks();
   crmMock.listCrmDirectory.mockResolvedValue(mockCrmDirectory);
+  crmMock.listDemandTopics.mockResolvedValue([
+    { code: 'demande_de_visite', name: 'Demande de visite' },
+    { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+  ]);
 });
 
 describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
@@ -34,8 +38,9 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.getByText('+1')).toBeInTheDocument();
     // Compteur interactions : 12 mois + total.
     expect(screen.getByText('9 au total')).toBeInTheDocument();
-    // Top sujets (max 2 chips).
-    expect(screen.getByText('Demande de visite')).toBeInTheDocument();
+    // Top sujets (max 2 chips) — « Demande de visite » existe AUSSI en option du select
+    // Sujet : on cible la chip de ligne.
+    expect(screen.getAllByText('Demande de visite').some((el) => el.classList.contains('topic-chip'))).toBe(true);
   });
 
   it('affiche les KPI réels : acteurs suivis, interactions 12 mois, établissements liés', async () => {
@@ -60,15 +65,53 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.queryByText('Mme Marie Hoarau')).not.toBeInTheDocument();
   });
 
-  it('filtre par chip de type d objet (types présents dans l annuaire)', async () => {
+  // Rectif PO point 6 : les chips de type d'objet (jugées inutiles) sont supprimées.
+  it('ne rend plus les chips de type d objet', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: 'ITI' }));
-    expect(screen.getByText('M. Paul Técher')).toBeInTheDocument();
-    expect(screen.queryByText('Mme Marie Hoarau')).not.toBeInTheDocument();
-    // Toggle off → tout revient.
-    fireEvent.click(screen.getByRole('button', { name: 'ITI' }));
-    expect(screen.getByText('Mme Marie Hoarau')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ITI' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'HOT' })).not.toBeInTheDocument();
+  });
+
+  // Rectif PO point 7 : sujet / statut / période pilotent le RPC (filtrage SERVEUR) et
+  // les KPI se recalculent depuis le résultat filtré.
+  it('le filtre sujet relance listCrmDirectory avec topicCode (vocabulaire complet)', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    expect(crmMock.listCrmDirectory).toHaveBeenCalledWith(undefined);
+    fireEvent.change(screen.getByLabelText('Sujet'), { target: { value: 'demande_de_visite' } });
+    await waitFor(() => expect(crmMock.listCrmDirectory).toHaveBeenCalledWith({ topicCode: 'demande_de_visite' }));
+  });
+
+  it('le seg statut Actives → status active ; Traitées → done ; Toutes → sans filtre', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: 'Actives' }));
+    await waitFor(() => expect(crmMock.listCrmDirectory).toHaveBeenCalledWith({ status: 'active' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Traitées' }));
+    await waitFor(() => expect(crmMock.listCrmDirectory).toHaveBeenCalledWith({ status: 'done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Toutes' }));
+    await waitFor(() => expect(crmMock.listCrmDirectory).toHaveBeenLastCalledWith(undefined));
+  });
+
+  it('le seg période borne from (ISO) et bascule le libellé KPI sur « Interactions (période) »', async () => {
+    // Le serveur renvoie un agrégat filtré → le KPI doit refléter interaction_count (2), pas
+    // la somme 12 mois de l'annuaire complet.
+    crmMock.listCrmDirectory.mockImplementation(async (filters) =>
+      filters ? [{ ...mockCrmDirectory[0], interactionCount: 2, interactions12m: 99 }] : mockCrmDirectory,
+    );
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    expect(screen.getByText('Interactions · 12 mois')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '30 j' }));
+    await waitFor(() =>
+      expect(crmMock.listCrmDirectory).toHaveBeenLastCalledWith({ from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) }),
+    );
+    const kpiLabel = await screen.findByText('Interactions (période)');
+    const kpiCard = kpiLabel.closest('.crm-kpi') as HTMLElement;
+    // interaction_count filtré (2), PAS la fenêtre 12 mois (99) ni la somme de l'annuaire complet.
+    await waitFor(() => expect(within(kpiCard).getByText('2')).toBeInTheDocument());
+    expect(screen.getByText(/filtres appliqués aux compteurs/i)).toBeInTheDocument();
   });
 
   it('clic sur une ligne → onOpenActor(actorId)', async () => {

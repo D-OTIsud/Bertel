@@ -132,7 +132,7 @@ export default function CrmPage() {
   } else if (nav.actorId) {
     body = <CrmActorFiche actorId={nav.actorId} canWrite={canWrite} onBack={backFromActor} onOpenObject={openObject} />;
   } else if (nav.view === 'taches') {
-    body = <CrmTaches canWrite={canWrite} onOpenObject={openObject} />;
+    body = <CrmTaches canWrite={canWrite} onOpenObject={openObject} onOpenActor={openActor} />;
   } else if (nav.view === 'timeline') {
     body = <CrmTimelineView onOpenObject={openObject} />;
   } else {

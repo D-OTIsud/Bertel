@@ -1,15 +1,17 @@
 "use client";
 
-// Annuaire des ACTEURS (§61, design v2) — l'entité CRM principale. Les
-// établissements n'apparaissent que comme contextes liés à chaque acteur.
-// Données réelles : api.list_crm_directory via services/crm (cache partagé
-// sur la clé 'crm-directory' avec le shell et les autres vues).
+// Annuaire des ACTEURS (§61, design v2 + rectifs PO points 6+7) — l'entité CRM
+// principale. Les filtres UTILES (sujet normalisé / statut actif-traité / période)
+// sont appliqués CÔTÉ SERVEUR par api.list_crm_directory : tous les agrégats
+// (compteurs, dernière interaction, top sujets) reviennent filtrés, donc les KPI
+// du bandeau se recalculent d'eux-mêmes. Les ex-chips « type d'objet » (jugées
+// inutiles par le PO) sont supprimées. La recherche par nom reste client-side.
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronRight, CircleHelp, Search } from 'lucide-react';
-import { listCrmDirectory, type CrmDirectoryEntry } from '../../services/crm';
-import { Kpi, Pav } from './crm-primitives';
+import { listCrmDirectory, listDemandTopics, type CrmDirectoryEntry, type CrmDirectoryFilters } from '../../services/crm';
+import { Kpi, Pav, Seg } from './crm-primitives';
 import { formatRelative, interactionTypeLabelOf } from './crm-view-utils';
 
 function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
@@ -19,34 +21,74 @@ function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
   return haystack.includes(query);
 }
 
+// Seg statut — vocabulaire PO : Actives = interactions `planned` (à traiter),
+// Traitées = `done`, Toutes = pas de filtre.
+const STATUS_ITEMS = ['Actives', 'Traitées', 'Toutes'];
+const STATUS_VALUES: Record<string, 'active' | 'done' | undefined> = {
+  Actives: 'active',
+  Traitées: 'done',
+  Toutes: undefined,
+};
+
+// Seg période — borne basse `from` calculée en jours glissants (Tout = sans borne).
+const PERIOD_ITEMS = ['30 j', '90 j', '12 mois', 'Tout'];
+const PERIOD_DAYS: Record<string, number | null> = { '30 j': 30, '90 j': 90, '12 mois': 365, Tout: null };
+
+const DAY_MS = 86_400_000;
+
 export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) => void }) {
   const [search, setSearch] = useState('');
-  const [typeFilters, setTypeFilters] = useState<string[]>([]);
+  const [topicCode, setTopicCode] = useState('');
+  const [statusItem, setStatusItem] = useState('Toutes');
+  const [periodItem, setPeriodItem] = useState('Tout');
 
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+
+  // Borne `from` STABLE par sélection (minuit local, précision jour) : un Date.now() brut
+  // par render changerait la queryKey en boucle et relancerait la requête.
+  const from = useMemo(() => {
+    const days = PERIOD_DAYS[periodItem];
+    if (!days) return undefined;
+    const date = new Date(Date.now() - days * DAY_MS);
+    date.setHours(0, 0, 0, 0);
+    return date.toISOString();
+  }, [periodItem]);
+
+  const status = STATUS_VALUES[statusItem];
+  const hasFilters = Boolean(topicCode) || status !== undefined || from !== undefined;
+  const filters = useMemo<CrmDirectoryFilters>(
+    () => ({
+      ...(topicCode ? { topicCode } : {}),
+      ...(status ? { status } : {}),
+      ...(from ? { from } : {}),
+    }),
+    [topicCode, status, from],
+  );
+
+  // Sans filtre : MÊME clé que le shell (['crm-directory']) → cache réseau partagé.
+  // Avec filtres : clé dédiée — les consommateurs partagés du shell (résolution de noms
+  // de la vue établissement, datalists des tâches) restent sur la liste NON filtrée.
+  const directoryQuery = useQuery({
+    queryKey: hasFilters ? ['crm-directory', filters] : ['crm-directory'],
+    queryFn: () => listCrmDirectory(hasFilters ? filters : undefined),
+    // Changer un filtre garde la liste précédente affichée pendant le fetch (pas de collapse).
+    placeholderData: keepPreviousData,
+  });
   const entries = useMemo(() => directoryQuery.data ?? [], [directoryQuery.data]);
-
-  // Chips de filtre = types d'objets réellement présents dans l'annuaire.
-  const objectTypes = useMemo(() => {
-    const types = new Set<string>();
-    for (const entry of entries) {
-      for (const object of entry.objects) {
-        if (object.objectType) types.add(object.objectType);
-      }
-    }
-    return [...types].sort();
-  }, [entries]);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return entries.filter((entry) => {
-      if (query && !matchesSearch(entry, query)) return false;
-      if (typeFilters.length > 0 && !entry.objects.some((object) => typeFilters.includes(object.objectType))) return false;
-      return true;
-    });
-  }, [entries, search, typeFilters]);
+    return entries.filter((entry) => !query || matchesSearch(entry, query));
+  }, [entries, search]);
 
-  const totalInteractions12m = entries.reduce((sum, entry) => sum + entry.interactions12m, 0);
+  // KPI réactifs : sous filtre, interaction_count = total FILTRÉ par le serveur (sujet/
+  // statut/période appliqués à tous les agrégats) — interactions_12m resterait la fenêtre
+  // 12 mois intersectée et mentirait sur « 30 j ». Sans filtre, on garde la lecture
+  // « activité récente » (12 mois) du design d'origine.
+  const totalInteractions = hasFilters
+    ? entries.reduce((sum, entry) => sum + entry.interactionCount, 0)
+    : entries.reduce((sum, entry) => sum + entry.interactions12m, 0);
+  const interactionsKpiLabel = from ? 'Interactions (période)' : hasFilters ? 'Interactions (filtrées)' : 'Interactions · 12 mois';
   const totalObjects = entries.reduce((sum, entry) => sum + entry.objectCount, 0);
 
   if (directoryQuery.isLoading) {
@@ -60,7 +102,7 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
     <div className="crm-body">
       <div className="crm-kpis">
         <Kpi label="Acteurs suivis" value={String(entries.length)} hint="personnes & organisations" />
-        <Kpi label="Interactions · 12 mois" value={String(totalInteractions12m)} hint="appels, e-mails, visites terrain, notes" />
+        <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} hint="appels, e-mails, visites terrain, notes" />
         <Kpi label="Établissements liés" value={String(totalObjects)} hint="contextes de la relation" />
       </div>
 
@@ -73,31 +115,32 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
-        {objectTypes.length > 0 && <span className="crm-toolbar__sep" aria-hidden></span>}
-        <div className="chip-row">
-          {objectTypes.map((type) => {
-            const active = typeFilters.includes(type);
-            return (
-              <button
-                key={type}
-                type="button"
-                className={'crm-chip' + (active ? ' is-on' : '')}
-                aria-pressed={active}
-                onClick={() =>
-                  setTypeFilters((current) => (current.includes(type) ? current.filter((t) => t !== type) : [...current, type]))
-                }
-              >
-                {type}
-              </button>
-            );
-          })}
-        </div>
+        <select
+          className="crm-select"
+          aria-label="Sujet"
+          value={topicCode}
+          onChange={(event) => setTopicCode(event.target.value)}
+        >
+          <option value="">Tous les sujets</option>
+          {(topicsQuery.data ?? []).map((topic) => (
+            <option key={topic.code} value={topic.code}>
+              {topic.name}
+            </option>
+          ))}
+        </select>
+        <Seg items={STATUS_ITEMS} value={statusItem} onChange={setStatusItem} />
+        <Seg items={PERIOD_ITEMS} value={periodItem} onChange={setPeriodItem} />
         <div className="crm-toolbar__right">
           <span>
             {rows.length} acteur{rows.length > 1 ? 's' : ''}
           </span>
         </div>
       </div>
+      {hasFilters && (
+        <div className="crm-filter-note">
+          Filtres appliqués aux compteurs — les acteurs sans interaction correspondante sont masqués.
+        </div>
+      )}
 
       <div className="crm-list">
         <div className="crm-list__head">
@@ -138,8 +181,17 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
                 </small>
               </span>
               <span className="crm-cell">
-                {entry.interactions12m} · 12 mois
-                <small>{entry.interactionCount} au total</small>
+                {hasFilters ? (
+                  <>
+                    {entry.interactionCount} sur la sélection
+                    <small>dernière : {formatRelative(entry.lastInteractionAt)}</small>
+                  </>
+                ) : (
+                  <>
+                    {entry.interactions12m} · 12 mois
+                    <small>{entry.interactionCount} au total</small>
+                  </>
+                )}
               </span>
               <span className="chip-row col-topics">
                 {entry.topTopics.slice(0, 2).map((topic) => (
@@ -156,7 +208,9 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
         })}
         {rows.length === 0 && (
           <div className="crm-list__empty">
-            {entries.length === 0 ? 'Aucun acteur dans l’annuaire CRM.' : 'Aucun acteur ne correspond à ces filtres.'}
+            {entries.length === 0 && !hasFilters && !search.trim()
+              ? 'Aucun acteur dans l’annuaire CRM.'
+              : 'Aucun acteur ne correspond à ces filtres.'}
           </div>
         )}
       </div>

@@ -110,13 +110,13 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
 
   // ── Assertions verrouillées par revue (§61) — conservées sur le nouveau shell ──
 
-  it('persiste un changement d état de tâche via saveCrmTask (vue tâches)', async () => {
+  it('persiste un move kanban via saveCrmTask (vue tâches)', async () => {
     renderPage();
     await screen.findByText('Mme Marie Hoarau');
     fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
     await screen.findByText('Rappeler le directeur');
-    fireEvent.click(screen.getByRole('button', { name: 'Basculer la tâche « Rappeler le directeur »' }));
-    await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-1', status: 'done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Avancer « Rappeler le directeur »' }));
+    await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-1', status: 'in_progress' }));
   });
 
   it('affiche une erreur quand l écriture échoue (pas d échec silencieux)', async () => {
@@ -125,7 +125,7 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     await screen.findByText('Mme Marie Hoarau');
     fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
     await screen.findByText('Rappeler le directeur');
-    fireEvent.click(screen.getByRole('button', { name: 'Basculer la tâche « Rappeler le directeur »' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Avancer « Rappeler le directeur »' }));
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     expect(screen.getAllByText(/lecture seule/i).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
     await screen.findByText('Rappeler le directeur');
-    expect(screen.getByRole('button', { name: 'Basculer la tâche « Rappeler le directeur »' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Avancer « Rappeler le directeur »' })).toBeDisabled();
     expect(screen.getByRole('button', { name: /nouvelle tâche/i })).toBeDisabled();
   });
 

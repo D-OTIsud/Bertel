@@ -1,23 +1,26 @@
 "use client";
 
-// Tâches & relances (§61, design v2) — groupes par échéance RÉELLE (crm_task.due_at)
-// late / today / week / later via taskGroupOf. Chaque tâche est rattachée à un
-// établissement (contexte) cliquable → vue établissement. Écritures via
-// api.save_crm_task ; gating page-wide write_crm_notes (no-write-trap).
+// Tâches & relances (§61, rectif PO point 1) — tableau KANBAN 3 colonnes sur les
+// statuts RÉELS (todo / in_progress / done). La proximité d'échéance (ex-groupes
+// late/today) est portée par un badge coloré DANS chaque carte (dueBadgeClassOf).
+// Chaque tâche est rattachée à un établissement (contexte) cliquable → vue
+// établissement, et optionnellement à un acteur cliquable → fiche acteur.
+// Écritures via api.save_crm_task ; gating page-wide write_crm_notes (no-write-trap).
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Check, Plus } from 'lucide-react';
+import { Bell, Plus } from 'lucide-react';
 import { listCrmDirectory, listCrmTasks, saveCrmTask } from '../../services/crm';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv, Seg } from './crm-primitives';
-import { CRM_READ_ONLY_REASON, formatShort, taskGroupOf, type TaskGroup } from './crm-view-utils';
+import { CRM_READ_ONLY_REASON, dueBadgeClassOf, formatShort } from './crm-view-utils';
 
-const TASK_GROUPS: Array<{ key: TaskGroup; label: string; cls: string }> = [
-  { key: 'late', label: 'En retard', cls: 'late' },
-  { key: 'today', label: "Aujourd'hui", cls: 'today' },
-  { key: 'week', label: 'Cette semaine', cls: 'week' },
-  { key: 'later', label: 'Plus tard', cls: '' },
+// 3 colonnes = les 3 statuts actifs du cycle de vie (canceled/blocked restent signalés
+// par le chip, jamais masqués en silence). cls pilote la couleur du dot + du liseré.
+const KANBAN_COLUMNS: Array<{ key: CrmTaskStatus; label: string; cls: string }> = [
+  { key: 'todo', label: 'À faire', cls: 'todo' },
+  { key: 'in_progress', label: 'En cours', cls: 'doing' },
+  { key: 'done', label: 'Terminées', cls: 'done' },
 ];
 
 const ALL_OWNERS = 'Toutes';
@@ -28,16 +31,25 @@ interface NewTaskForm {
   dueAt: string;
 }
 
-export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpenObject: (objectId: string) => void }) {
+export function CrmTaches({
+  canWrite,
+  onOpenObject,
+  onOpenActor,
+}: {
+  canWrite: boolean;
+  onOpenObject: (objectId: string) => void;
+  onOpenActor: (actorId: string) => void;
+}) {
   const queryClient = useQueryClient();
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
-  // Annuaire (cache partagé) — fournit la datalist établissements du formulaire.
+  // Annuaire (cache partagé, NON filtré) — fournit la datalist établissements du formulaire.
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
 
   const [owner, setOwner] = useState<string>(ALL_OWNERS);
   const [form, setForm] = useState<NewTaskForm | null>(null);
 
-  const toggleMutation = useMutation({
+  // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
+  const moveMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
   });
@@ -52,7 +64,7 @@ export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpe
   });
 
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
-  // canceled/blocked hors groupes : signalés par un chip, jamais masqués en silence.
+  // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
   const hiddenCount = tasks.filter((task) => task.status === 'canceled' || task.status === 'blocked').length;
   const owners = useMemo(
     () => [...new Set(tasks.map((task) => task.ownerName).filter((name): name is string => Boolean(name)))].sort(),
@@ -93,35 +105,69 @@ export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpe
 
   const remaining = visibleTasks.filter((task) => task.status !== 'done').length;
 
-  function renderRow(task: CrmTask, group: TaskGroup) {
-    const done = task.status === 'done';
+  function renderTicket(task: CrmTask) {
+    const dueCls = dueBadgeClassOf(task.dueAt, task.status);
     return (
-      <div key={task.id} className={'task-row' + (done ? ' is-done' : '')}>
-        <button
-          type="button"
-          className={'task-check' + (done ? ' is-on' : '')}
-          aria-label={`Basculer la tâche « ${task.title} »`}
-          aria-pressed={done}
-          disabled={!canWrite || toggleMutation.isPending}
-          title={canWrite ? undefined : CRM_READ_ONLY_REASON}
-          onClick={() => toggleMutation.mutate({ id: task.id, status: done ? 'todo' : 'done' })}
-        >
-          <Check size={10} aria-hidden />
-        </button>
-        <div className="task-row__title">
+      <div key={task.id} className={'ticket' + (task.status === 'done' ? ' is-done' : '')}>
+        <div className="ticket__title">
           {task.title}
           {task.description && <small>{task.description}</small>}
         </div>
-        <button type="button" className="task-row__presta" onClick={() => onOpenObject(task.objectId)}>
-          <span>{task.objectName}</span>
-        </button>
-        <span className={'due ' + (group === 'late' ? 'late' : group === 'today' ? 'today' : '')}>
-          {group === 'late' && <Bell size={11} aria-hidden />}
-          {task.dueAt ? formatShort(task.dueAt) : '—'}
-        </span>
-        <div className="task-row__who">
-          <AgAv name={task.ownerName} />
-          {task.ownerName ?? '—'}
+        <div className="ticket__meta">
+          <button type="button" className="presta" onClick={() => onOpenObject(task.objectId)}>
+            {task.objectName}
+          </button>
+          {task.actorId && task.actorName && (
+            <button type="button" className="ticket__actor" onClick={() => onOpenActor(task.actorId as string)}>
+              {task.actorName}
+            </button>
+          )}
+        </div>
+        <div className="ticket__foot">
+          <span className={'due ' + dueCls}>
+            {dueCls === 'late' && <Bell size={11} aria-hidden />}
+            {task.dueAt ? formatShort(task.dueAt) : '—'}
+          </span>
+          <span className="ticket__who" title={task.ownerName ?? undefined}>
+            <AgAv name={task.ownerName} />
+          </span>
+          <span className="ticket__actions">
+            {task.status === 'in_progress' && (
+              <button
+                type="button"
+                className="crm-btn sm"
+                aria-label={`Reprendre « ${task.title} »`}
+                disabled={!canWrite || moveMutation.isPending}
+                title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+                onClick={() => moveMutation.mutate({ id: task.id, status: 'todo' })}
+              >
+                Reprendre
+              </button>
+            )}
+            {task.status === 'done' ? (
+              <button
+                type="button"
+                className="crm-btn sm"
+                aria-label={`Rouvrir « ${task.title} »`}
+                disabled={!canWrite || moveMutation.isPending}
+                title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+                onClick={() => moveMutation.mutate({ id: task.id, status: 'todo' })}
+              >
+                Rouvrir
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="crm-btn sm primary"
+                aria-label={`Avancer « ${task.title} »`}
+                disabled={!canWrite || moveMutation.isPending}
+                title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+                onClick={() => moveMutation.mutate({ id: task.id, status: task.status === 'todo' ? 'in_progress' : 'done' })}
+              >
+                Avancer
+              </button>
+            )}
+          </span>
         </div>
       </div>
     );
@@ -129,102 +175,102 @@ export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpe
 
   return (
     <div className="crm-body">
-      <div className="tasks-wrap">
-        <div className="crm-toolbar">
-          <Seg items={[ALL_OWNERS, ...owners]} value={owner} onChange={setOwner} />
-          <div className="crm-toolbar__right">
-            {!canWrite && <span>{CRM_READ_ONLY_REASON}</span>}
-            {hiddenCount > 0 && <span className="pill-mini">{hiddenCount} annulée(s)/bloquée(s)</span>}
-            <span>{remaining} à traiter</span>
-            <button
-              type="button"
-              className="crm-btn primary"
-              disabled={!canWrite}
-              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
-              onClick={() => setForm({ title: '', objectName: '', dueAt: '' })}
-            >
-              <Plus size={12} aria-hidden /> Nouvelle tâche
-            </button>
-          </div>
+      <div className="crm-toolbar">
+        <Seg items={[ALL_OWNERS, ...owners]} value={owner} onChange={setOwner} />
+        <div className="crm-toolbar__right">
+          {!canWrite && <span>{CRM_READ_ONLY_REASON}</span>}
+          {hiddenCount > 0 && <span className="pill-mini">{hiddenCount} annulée(s)/bloquée(s)</span>}
+          <span>{remaining} à traiter</span>
+          <button
+            type="button"
+            className="crm-btn primary"
+            disabled={!canWrite}
+            title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+            onClick={() => setForm({ title: '', objectName: '', dueAt: '' })}
+          >
+            <Plus size={12} aria-hidden /> Nouvelle tâche
+          </button>
         </div>
+      </div>
 
-        {form && canWrite && (
-          <div className="task-new">
-            <input
-              aria-label="Titre de la tâche"
-              placeholder="Titre de la tâche"
-              value={form.title}
-              onChange={(event) => setForm({ ...form, title: event.target.value })}
-            />
-            <input
-              aria-label="Établissement"
-              placeholder="Établissement (nom exact)"
-              list="crm-taches-objects"
-              value={form.objectName}
-              onChange={(event) => setForm({ ...form, objectName: event.target.value })}
-            />
-            <datalist id="crm-taches-objects">
-              {directoryObjects.map((object) => (
-                <option key={object.objectId} value={object.objectName} />
-              ))}
-            </datalist>
-            <input
-              aria-label="Échéance"
-              type="date"
-              value={form.dueAt}
-              onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
-            />
-            <button
-              type="button"
-              className="crm-btn primary"
-              disabled={!form.title.trim() || !resolvedObject || createMutation.isPending}
-              onClick={() => {
-                if (!resolvedObject) return;
-                createMutation.mutate({
-                  objectId: resolvedObject.objectId,
-                  title: form.title.trim(),
-                  dueAt: form.dueAt || null,
-                });
-              }}
-            >
-              Créer
-            </button>
-            <button type="button" className="crm-btn" onClick={() => setForm(null)}>
-              Annuler
-            </button>
-            {form.objectName.trim() !== '' && !resolvedObject && (
-              <p className="task-new__hint">Établissement introuvable dans l&apos;annuaire — choisissez un nom de la liste.</p>
-            )}
-          </div>
-        )}
+      {form && canWrite && (
+        <div className="task-new">
+          <input
+            aria-label="Titre de la tâche"
+            placeholder="Titre de la tâche"
+            value={form.title}
+            onChange={(event) => setForm({ ...form, title: event.target.value })}
+          />
+          <input
+            aria-label="Établissement"
+            placeholder="Établissement (nom exact)"
+            list="crm-taches-objects"
+            value={form.objectName}
+            onChange={(event) => setForm({ ...form, objectName: event.target.value })}
+          />
+          <datalist id="crm-taches-objects">
+            {directoryObjects.map((object) => (
+              <option key={object.objectId} value={object.objectName} />
+            ))}
+          </datalist>
+          <input
+            aria-label="Échéance"
+            type="date"
+            value={form.dueAt}
+            onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
+          />
+          <button
+            type="button"
+            className="crm-btn primary"
+            disabled={!form.title.trim() || !resolvedObject || createMutation.isPending}
+            onClick={() => {
+              if (!resolvedObject) return;
+              createMutation.mutate({
+                objectId: resolvedObject.objectId,
+                title: form.title.trim(),
+                dueAt: form.dueAt || null,
+              });
+            }}
+          >
+            Créer
+          </button>
+          <button type="button" className="crm-btn" onClick={() => setForm(null)}>
+            Annuler
+          </button>
+          {form.objectName.trim() !== '' && !resolvedObject && (
+            <p className="task-new__hint">Établissement introuvable dans l&apos;annuaire — choisissez un nom de la liste.</p>
+          )}
+        </div>
+      )}
 
-        {toggleMutation.isError && (
-          <div className="inline-alert">Échec de la mise à jour : {(toggleMutation.error as Error).message}</div>
-        )}
-        {createMutation.isError && (
-          <div className="inline-alert">Échec de la création : {(createMutation.error as Error).message}</div>
-        )}
+      {moveMutation.isError && (
+        <div className="inline-alert">Échec de la mise à jour : {(moveMutation.error as Error).message}</div>
+      )}
+      {createMutation.isError && (
+        <div className="inline-alert">Échec de la création : {(createMutation.error as Error).message}</div>
+      )}
 
-        {TASK_GROUPS.map((group) => {
-          const list = visibleTasks.filter((task) => taskGroupOf(task.dueAt) === group.key);
-          if (list.length === 0) return null;
+      <div className="board">
+        {KANBAN_COLUMNS.map((column) => {
+          const list = visibleTasks.filter((task) => task.status === column.key);
           return (
-            <section key={group.key} className="task-group" aria-label={group.label}>
-              <div className={'task-group__head ' + group.cls}>
+            <section key={column.key} className={'bcol bcol--' + column.cls} aria-label={column.label}>
+              <div className="bcol__head">
                 <span className="dot" aria-hidden></span>
-                {group.label}
-                <span className="n">{list.filter((task) => task.status !== 'done').length}</span>
+                {column.label}
+                <span className="n">{list.length}</span>
               </div>
-              <div className="task-list">{list.map((task) => renderRow(task, group.key))}</div>
+              <div className="bcol__list">
+                {list.map(renderTicket)}
+                {list.length === 0 && <div className="bcol__empty">Aucune tâche.</div>}
+              </div>
             </section>
           );
         })}
+      </div>
 
-        {visibleTasks.length === 0 && <div className="crm-list__empty">Aucune tâche à afficher.</div>}
-
-        <div className="crm-foot-hint">
-          Les tâches sont rattachées à un établissement ; le rattachement acteur viendra avec le module demandes.
-        </div>
+      <div className="crm-foot-hint">
+        Chaque tâche est rattachée à un établissement, et optionnellement à un acteur (créée depuis sa fiche).
       </div>
     </div>
   );

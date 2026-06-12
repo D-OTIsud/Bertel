@@ -1,5 +1,6 @@
 import {
   PAV_TINTS,
+  dueBadgeClassOf,
   formatRelative,
   formatShort,
   initialsOf,
@@ -33,6 +34,28 @@ describe('taskGroupOf — groupes d échéance (late/today/week/later)', () => {
   it('sans échéance (null) ou date invalide → later', () => {
     expect(taskGroupOf(null, NOW)).toBe('later');
     expect(taskGroupOf('pas-une-date', NOW)).toBe('later');
+  });
+});
+
+// Kanban (rectif PO point 1) : la proximité d'échéance reste portée par un badge DANS
+// la carte — l'information des anciens groupes temporels n'est pas perdue.
+describe('dueBadgeClassOf — badge d échéance des cartes kanban', () => {
+  it('échéance passée et tâche non terminée → late (rouge)', () => {
+    expect(dueBadgeClassOf('2026-06-10T09:00:00', 'todo', NOW)).toBe('late');
+    expect(dueBadgeClassOf('2026-06-10T09:00:00', 'in_progress', NOW)).toBe('late');
+  });
+
+  it('échéance le jour même → today (orange)', () => {
+    expect(dueBadgeClassOf('2026-06-11T18:00:00', 'todo', NOW)).toBe('today');
+  });
+
+  it('tâche done → jamais de badge (même en retard)', () => {
+    expect(dueBadgeClassOf('2026-06-10T09:00:00', 'done', NOW)).toBe('');
+  });
+
+  it('échéance future ou absente → pas de badge', () => {
+    expect(dueBadgeClassOf('2026-06-18T09:00:00', 'todo', NOW)).toBe('');
+    expect(dueBadgeClassOf(null, 'todo', NOW)).toBe('');
   });
 });
 

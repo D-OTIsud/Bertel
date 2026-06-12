@@ -8,11 +8,11 @@ jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
-function renderAnnuaire(onOpenActor = jest.fn()) {
+function renderAnnuaire(onOpenActor = jest.fn(), canWrite = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <CrmAnnuaire onOpenActor={onOpenActor} />
+      <CrmAnnuaire canWrite={canWrite} onOpenActor={onOpenActor} />
     </QueryClientProvider>,
   );
   return onOpenActor;
@@ -131,5 +131,52 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     crmMock.listCrmDirectory.mockRejectedValue(new Error('refus RLS'));
     renderAnnuaire();
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  // Rectif PO point 5 : création d'un acteur depuis l'annuaire (modal), avec établissement
+  // de rattachement REQUIS (il met l'acteur dans le périmètre) + canaux optionnels.
+  it('Nouvel acteur : saveCrmActor (object_id résolu) + canal email puis ouverture de la fiche', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('new-actor');
+    crmMock.saveActorChannel.mockResolvedValue('new-channel');
+    const onOpenActor = renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Test Nouveau' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Hotel Basalte & Lagon' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('E-mail'), { target: { value: 'test@nouveau.re' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmActor).toHaveBeenCalledWith({ displayName: 'M. Test Nouveau', objectId: 'obj-1' }),
+    );
+    expect(crmMock.saveActorChannel).toHaveBeenCalledWith({
+      actorId: 'new-actor',
+      kindCode: 'email',
+      value: 'test@nouveau.re',
+      isPrimary: true,
+    });
+    // La fiche du nouvel acteur s'ouvre après refresh.
+    await waitFor(() => expect(onOpenActor).toHaveBeenCalledWith('new-actor'));
+  });
+
+  it('Nouvel acteur : Créer bloqué tant que nom affiché + établissement résolu manquent', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Test' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), { target: { value: 'Inconnu' } });
+    expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeDisabled();
+    expect(within(dialog).getByText(/introuvable dans l.annuaire/i)).toBeInTheDocument();
+  });
+
+  it('sans permission : Nouvel acteur désactivé avec raison (no-write-trap)', async () => {
+    renderAnnuaire(jest.fn(), false);
+    await screen.findByText('Mme Marie Hoarau');
+    const button = screen.getByRole('button', { name: /nouvel acteur/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 });

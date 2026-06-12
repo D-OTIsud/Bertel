@@ -1,32 +1,41 @@
 "use client";
 
-// Vue ÉTABLISSEMENT / OBJET (§61, design v2) — le CONTEXTE de la relation.
-// Montre les acteurs liés (avec leur rôle, actor_object_role) et tout
+// Vue ÉTABLISSEMENT / OBJET (§61, design v2 + rectif PO point 3) — le CONTEXTE de la
+// relation. Montre les acteurs liés (avec leur rôle, actor_object_role) et tout
 // l'historique CRM de l'objet, tous acteurs confondus (le QUI par carte).
-// Données réelles : api.list_object_crm ; le nom/type de l'objet est résolu
-// depuis l'annuaire (le RPC objet ne porte pas ces champs).
+// « Nouvelle interaction » ouvre le modal partagé avec contexte FIXÉ (cet objet) et
+// acteur optionnel parmi les acteurs liés. Données réelles : api.list_object_crm ;
+// le nom/type de l'objet est résolu depuis l'annuaire (le RPC objet ne porte pas ces
+// champs). Gating page-wide write_crm_notes (no-write-trap).
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { listCrmDirectory, listObjectCrm } from '../../services/crm';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
+import { listCrmDirectory, listDemandTopics, listObjectCrm } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
+import { CrmInteractionModal } from './CrmInteractionModal';
+import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 
 export function CrmObjectView({
   objectId,
   backLabel,
+  canWrite,
   onBack,
   onOpenActor,
 }: {
   objectId: string;
   backLabel: string;
+  canWrite: boolean;
   onBack: () => void;
   onOpenActor: (actorId: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const objectQuery = useQuery({ queryKey: ['crm-object', objectId], queryFn: () => listObjectCrm(objectId) });
   // Cache partagé avec l'annuaire — sert uniquement à résoudre nom + type de l'objet.
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const resolved = useMemo(() => {
     for (const entry of directoryQuery.data ?? []) {
@@ -106,6 +115,15 @@ export function CrmObjectView({
           <Link className="crm-btn" href={`/objects/${objectId}/edit`}>
             <ExternalLink size={13} aria-hidden /> Ouvrir dans l&apos;éditeur
           </Link>
+          <button
+            type="button"
+            className="crm-btn primary"
+            disabled={!canWrite}
+            title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+            onClick={() => setComposerOpen(true)}
+          >
+            <Plus size={13} aria-hidden /> Nouvelle interaction
+          </button>
         </div>
       </div>
 
@@ -147,6 +165,16 @@ export function CrmObjectView({
           </div>
         </div>
       </div>
+
+      {composerOpen && canWrite && (
+        <CrmInteractionModal
+          fixedContext={{ objectId, objectName }}
+          actorOptions={actors.map((actor) => ({ actorId: actor.actorId, displayName: actor.displayName }))}
+          topics={topicsQuery.data ?? []}
+          onClose={() => setComposerOpen(false)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-object', objectId] })}
+        />
+      )}
     </div>
   );
 }

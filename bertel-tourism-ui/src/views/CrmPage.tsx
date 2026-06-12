@@ -125,6 +125,7 @@ export default function CrmPage() {
       <CrmObjectView
         objectId={nav.objectId}
         backLabel={originActorName ?? (nav.originActorId ? 'Fiche acteur' : TAB_BACK_LABELS[nav.view])}
+        canWrite={canWrite}
         onBack={backFromObject}
         onOpenActor={openActor}
       />
@@ -136,7 +137,7 @@ export default function CrmPage() {
   } else if (nav.view === 'timeline') {
     body = <CrmTimelineView onOpenObject={openObject} />;
   } else {
-    body = <CrmAnnuaire onOpenActor={openActor} />;
+    body = <CrmAnnuaire canWrite={canWrite} onOpenActor={openActor} />;
   }
 
   return (

@@ -10,13 +10,15 @@ export interface PavTint {
   fg: string;
 }
 
+// Alphas relevés (0.10/0.12 → 0.16/0.18) au rectif PO point 2 (contraste) — les fonds
+// teintés des avatars/type-tags suivent la saturation du prototype v2.
 export const PAV_TINTS: PavTint[] = [
-  { bg: 'rgba(23, 107, 106, 0.10)', fg: '#0d4f4e' }, // teal
-  { bg: 'rgba(201, 109, 59, 0.12)', fg: '#93501f' }, // orange
-  { bg: 'rgba(30, 116, 145, 0.12)', fg: '#0e5872' }, // blue
-  { bg: 'rgba(42, 122, 69, 0.12)', fg: '#1a5a30' }, // green
-  { bg: 'rgba(108, 79, 138, 0.12)', fg: '#4d3866' }, // plum
-  { bg: 'rgba(164, 83, 48, 0.12)', fg: '#7a3b20' }, // rust
+  { bg: 'rgba(23, 107, 106, 0.16)', fg: '#0d4f4e' }, // teal
+  { bg: 'rgba(201, 109, 59, 0.18)', fg: '#93501f' }, // orange
+  { bg: 'rgba(30, 116, 145, 0.18)', fg: '#0e5872' }, // blue
+  { bg: 'rgba(42, 122, 69, 0.18)', fg: '#1a5a30' }, // green
+  { bg: 'rgba(108, 79, 138, 0.18)', fg: '#4d3866' }, // plum
+  { bg: 'rgba(164, 83, 48, 0.18)', fg: '#7a3b20' }, // rust
 ];
 
 /**

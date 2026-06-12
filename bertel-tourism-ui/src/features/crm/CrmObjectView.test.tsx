@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmObjectView } from './CrmObjectView';
 import * as crm from '../../services/crm';
@@ -36,6 +36,7 @@ function renderView(overrides: Partial<Parameters<typeof CrmObjectView>[0]> = {}
   const props = {
     objectId: 'obj-1',
     backLabel: 'Annuaire des acteurs',
+    canWrite: true,
     onBack: jest.fn(),
     onOpenActor: jest.fn(),
     ...overrides,
@@ -53,6 +54,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   crmMock.listObjectCrm.mockResolvedValue(snapshot);
   crmMock.listCrmDirectory.mockResolvedValue(mockCrmDirectory);
+  crmMock.listDemandTopics.mockResolvedValue([{ code: 'demande_de_visite', name: 'Demande de visite' }]);
+  crmMock.saveCrmInteraction.mockResolvedValue('new-interaction');
 });
 
 describe('CrmObjectView (§61 — vue établissement)', () => {
@@ -94,5 +97,39 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     crmMock.listObjectCrm.mockRejectedValue(new Error('refus RLS'));
     renderView();
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  // Rectif PO point 3 : consigner une interaction depuis la vue établissement, via modal
+  // (contexte FIXÉ sur l'objet, acteur optionnel parmi les acteurs liés).
+  it('Nouvelle interaction (modal, contexte fixé) → saveCrmInteraction({objectId, actorId?}) + refresh', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
+    // Contexte non éditable : l'objet courant est affiché en statique.
+    expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Contexte')).not.toBeInTheDocument();
+    // Acteur optionnel parmi les acteurs liés.
+    fireEvent.change(within(dialog).getByLabelText('Acteur'), { target: { value: 'actor-2' } });
+    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point annuel.' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({
+        actorId: 'actor-2',
+        objectId: 'obj-1',
+        interactionType: 'call',
+        body: 'Point annuel.',
+      }),
+    );
+    // Refresh de la vue objet après écriture confirmée.
+    await waitFor(() => expect(crmMock.listObjectCrm).toHaveBeenCalledTimes(2));
+  });
+
+  it('sans permission : Nouvelle interaction désactivée avec raison (no-write-trap)', async () => {
+    renderView({ canWrite: false });
+    await screen.findByText('Appel tarifs');
+    const button = screen.getByRole('button', { name: /nouvelle interaction/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 });

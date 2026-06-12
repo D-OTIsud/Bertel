@@ -8,11 +8,12 @@
 // inutiles par le PO) sont supprimées. La recherche par nom reste client-side.
 
 import { useMemo, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronRight, CircleHelp, Search } from 'lucide-react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronRight, CircleHelp, Search, UserPlus } from 'lucide-react';
 import { listCrmDirectory, listDemandTopics, type CrmDirectoryEntry, type CrmDirectoryFilters } from '../../services/crm';
 import { Kpi, Pav, Seg } from './crm-primitives';
-import { formatRelative, interactionTypeLabelOf } from './crm-view-utils';
+import { CrmActorNewModal } from './CrmActorModals';
+import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf } from './crm-view-utils';
 
 function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
   const haystack = [entry.displayName, ...entry.objects.map((object) => `${object.objectName} ${object.roleName ?? ''}`)]
@@ -36,11 +37,13 @@ const PERIOD_DAYS: Record<string, number | null> = { '30 j': 30, '90 j': 90, '12
 
 const DAY_MS = 86_400_000;
 
-export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) => void }) {
+export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOpenActor: (actorId: string) => void }) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [topicCode, setTopicCode] = useState('');
   const [statusItem, setStatusItem] = useState('Toutes');
   const [periodItem, setPeriodItem] = useState('Tout');
+  const [newActorOpen, setNewActorOpen] = useState(false);
 
   const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
 
@@ -75,6 +78,19 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
     placeholderData: keepPreviousData,
   });
   const entries = useMemo(() => directoryQuery.data ?? [], [directoryQuery.data]);
+
+  // Datalist du modal « Nouvel acteur » : toujours la liste NON filtrée (clé partagée
+  // avec le shell → déjà en cache ; sans filtre actif c'est la même query que ci-dessus).
+  const baseDirectoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const newActorObjects = useMemo(() => {
+    const byId = new Map<string, { objectId: string; objectName: string }>();
+    for (const entry of baseDirectoryQuery.data ?? []) {
+      for (const object of entry.objects) {
+        if (!byId.has(object.objectId)) byId.set(object.objectId, { objectId: object.objectId, objectName: object.objectName });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
+  }, [baseDirectoryQuery.data]);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -134,6 +150,15 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
           <span>
             {rows.length} acteur{rows.length > 1 ? 's' : ''}
           </span>
+          <button
+            type="button"
+            className="crm-btn primary"
+            disabled={!canWrite}
+            title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+            onClick={() => setNewActorOpen(true)}
+          >
+            <UserPlus size={13} aria-hidden /> Nouvel acteur
+          </button>
         </div>
       </div>
       {hasFilters && (
@@ -220,6 +245,19 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
         Un acteur (personne ou organisation) peut être lié à plusieurs établissements avec des rôles différents — les
         interactions le suivent à travers tous ses contextes.
       </div>
+
+      {newActorOpen && canWrite && (
+        <CrmActorNewModal
+          objectOptions={newActorObjects}
+          onClose={() => setNewActorOpen(false)}
+          onCreated={(actorId) => {
+            setNewActorOpen(false);
+            // Préfixe ['crm-directory'] : couvre la clé de base ET les clés filtrées.
+            void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
+            onOpenActor(actorId);
+          }}
+        />
+      )}
     </div>
   );
 }

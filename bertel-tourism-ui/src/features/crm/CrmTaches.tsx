@@ -13,6 +13,7 @@ import { Bell, Plus } from 'lucide-react';
 import { listCrmDirectory, listCrmTasks, saveCrmTask } from '../../services/crm';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv, Seg } from './crm-primitives';
+import { CrmTaskModal } from './CrmTaskModal';
 import { CRM_READ_ONLY_REASON, dueBadgeClassOf, formatShort } from './crm-view-utils';
 
 // 3 colonnes = les 3 statuts actifs du cycle de vie (canceled/blocked restent signalés
@@ -24,12 +25,6 @@ const KANBAN_COLUMNS: Array<{ key: CrmTaskStatus; label: string; cls: string }> 
 ];
 
 const ALL_OWNERS = 'Toutes';
-
-interface NewTaskForm {
-  title: string;
-  objectName: string;
-  dueAt: string;
-}
 
 export function CrmTaches({
   canWrite,
@@ -46,21 +41,14 @@ export function CrmTaches({
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
 
   const [owner, setOwner] = useState<string>(ALL_OWNERS);
-  const [form, setForm] = useState<NewTaskForm | null>(null);
+  // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
+  // datalist conservée, erreurs visibles dans le modal.
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
 
   // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
   const moveMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (input: { objectId: string; title: string; dueAt: string | null }) => saveCrmTask(input),
-    onSuccess: () => {
-      // Création confirmée : fermer le formulaire AVANT le refetch (pattern §19).
-      setForm(null);
-      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
-    },
   });
 
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
@@ -91,10 +79,6 @@ export function CrmTaches({
     }
     return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
   }, [directoryQuery.data]);
-
-  const resolvedObject = form
-    ? directoryObjects.find((object) => object.objectName.trim().toLowerCase() === form.objectName.trim().toLowerCase()) ?? null
-    : null;
 
   if (tasksQuery.isLoading) {
     return <div className="crm-loading">Chargement des tâches…</div>;
@@ -186,68 +170,15 @@ export function CrmTaches({
             className="crm-btn primary"
             disabled={!canWrite}
             title={canWrite ? undefined : CRM_READ_ONLY_REASON}
-            onClick={() => setForm({ title: '', objectName: '', dueAt: '' })}
+            onClick={() => setTaskModalOpen(true)}
           >
             <Plus size={12} aria-hidden /> Nouvelle tâche
           </button>
         </div>
       </div>
 
-      {form && canWrite && (
-        <div className="task-new">
-          <input
-            aria-label="Titre de la tâche"
-            placeholder="Titre de la tâche"
-            value={form.title}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
-          />
-          <input
-            aria-label="Établissement"
-            placeholder="Établissement (nom exact)"
-            list="crm-taches-objects"
-            value={form.objectName}
-            onChange={(event) => setForm({ ...form, objectName: event.target.value })}
-          />
-          <datalist id="crm-taches-objects">
-            {directoryObjects.map((object) => (
-              <option key={object.objectId} value={object.objectName} />
-            ))}
-          </datalist>
-          <input
-            aria-label="Échéance"
-            type="date"
-            value={form.dueAt}
-            onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
-          />
-          <button
-            type="button"
-            className="crm-btn primary"
-            disabled={!form.title.trim() || !resolvedObject || createMutation.isPending}
-            onClick={() => {
-              if (!resolvedObject) return;
-              createMutation.mutate({
-                objectId: resolvedObject.objectId,
-                title: form.title.trim(),
-                dueAt: form.dueAt || null,
-              });
-            }}
-          >
-            Créer
-          </button>
-          <button type="button" className="crm-btn" onClick={() => setForm(null)}>
-            Annuler
-          </button>
-          {form.objectName.trim() !== '' && !resolvedObject && (
-            <p className="task-new__hint">Établissement introuvable dans l&apos;annuaire — choisissez un nom de la liste.</p>
-          )}
-        </div>
-      )}
-
       {moveMutation.isError && (
         <div className="inline-alert">Échec de la mise à jour : {(moveMutation.error as Error).message}</div>
-      )}
-      {createMutation.isError && (
-        <div className="inline-alert">Échec de la création : {(createMutation.error as Error).message}</div>
       )}
 
       <div className="board">
@@ -272,6 +203,15 @@ export function CrmTaches({
       <div className="crm-foot-hint">
         Chaque tâche est rattachée à un établissement, et optionnellement à un acteur (créée depuis sa fiche).
       </div>
+
+      {taskModalOpen && canWrite && (
+        <CrmTaskModal
+          picker="datalist"
+          objectOptions={directoryObjects}
+          onClose={() => setTaskModalOpen(false)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   initialsOf,
   interactionTypeLabelOf,
   monthLabelOf,
-  moodClassOf,
+  moodToneOf,
   pavTintOf,
   taskGroupOf,
   tlIcoClassOf,
@@ -59,25 +59,27 @@ describe('dueBadgeClassOf — badge d échéance des cartes kanban', () => {
   });
 });
 
-describe('moodClassOf — 6 codes sentiment → 3 classes visuelles', () => {
-  it('tres_positif et positif → positif', () => {
-    expect(moodClassOf('tres_positif')).toBe('positif');
-    expect(moodClassOf('positif')).toBe('positif');
+// Peps PO point 1 : sur des données 100 % « note », la couleur vient du SENTIMENT —
+// 6 tons distincts (et non plus 3 classes ternes dont interrogatif tombait en gris).
+describe('moodToneOf — 6 codes sentiment → 6 tons distincts (+ neutre)', () => {
+  it('chaque code sentiment a son propre ton (1 pour 1)', () => {
+    expect(moodToneOf('tres_positif')).toBe('tres_positif');
+    expect(moodToneOf('positif')).toBe('positif');
+    expect(moodToneOf('interrogatif')).toBe('interrogatif'); // ambre, plus jamais gris
+    expect(moodToneOf('inquiet')).toBe('inquiet');
+    expect(moodToneOf('mecontent')).toBe('mecontent');
+    expect(moodToneOf('tres_mecontent')).toBe('tres_mecontent');
   });
 
-  it('interrogatif et inquiet → neutre', () => {
-    expect(moodClassOf('interrogatif')).toBe('neutre');
-    expect(moodClassOf('inquiet')).toBe('neutre');
+  it('les 6 tons connus sont tous distincts (variété sur les données réelles)', () => {
+    const codes = ['tres_positif', 'positif', 'interrogatif', 'inquiet', 'mecontent', 'tres_mecontent'];
+    expect(new Set(codes.map((code) => moodToneOf(code))).size).toBe(6);
   });
 
-  it('mecontent et tres_mecontent → tendu', () => {
-    expect(moodClassOf('mecontent')).toBe('tendu');
-    expect(moodClassOf('tres_mecontent')).toBe('tendu');
-  });
-
-  it('null / inconnu → null (pas de pastille)', () => {
-    expect(moodClassOf(null)).toBeNull();
-    expect(moodClassOf('autre_code')).toBeNull();
+  it('null / inconnu → neutre (gris doux), jamais null (la pastille reste rendue)', () => {
+    expect(moodToneOf(null)).toBe('neutre');
+    expect(moodToneOf(undefined)).toBe('neutre');
+    expect(moodToneOf('autre_code')).toBe('neutre');
   });
 });
 

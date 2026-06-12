@@ -361,6 +361,11 @@ export interface SaveCrmTaskInput {
   status?: CrmTaskStatus;
   priority?: CrmTaskPriority;
   dueAt?: string | null;
+  /**
+   * Assignation (PO point 4) — référent de la tâche. UUID d'un membre de l'ORG du caller ;
+   * le serveur valide l'appartenance (sinon 22023). Omis = défaut serveur (le saisisseur).
+   */
+  owner?: string;
 }
 
 export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
@@ -382,6 +387,7 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (input.status !== undefined) payload.status = input.status;
   if (input.priority !== undefined) payload.priority = input.priority;
   if (input.dueAt !== undefined) payload.due_at = input.dueAt;
+  if (input.owner !== undefined) payload.owner = input.owner;
   const { data, error } = await client.schema('api').rpc('save_crm_task', { p_payload: payload });
   if (error) {
     throw error;
@@ -391,6 +397,43 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
     throw new Error('Réponse RPC sans id');
   }
   return id;
+}
+
+/* ===== Assignables (PO point 4 — api.list_crm_assignees) ========================
+   Membres actifs de(s) l'ORG du caller, candidats au référent d'une tâche. Aujourd'hui
+   1 seul utilisateur seedé — la liste à 1 entrée doit fonctionner (le sélecteur la
+   pré-coche). `save_crm_task.owner` valide que l'id choisi est bien un membre. */
+export interface CrmAssignee {
+  userId: string;
+  displayName: string;
+}
+
+export function parseCrmAssignee(record: GenericRecord): CrmAssignee {
+  return {
+    userId: readString(record.user_id),
+    displayName: readString(record.display_name),
+  };
+}
+
+// Démo : 2 personnes mock (le sélecteur d'assignation a de quoi varier sans backend).
+const MOCK_CRM_ASSIGNEES: CrmAssignee[] = [
+  { userId: 'usr-local-marie', displayName: 'Marie D.' },
+  { userId: 'usr-local-jean', displayName: 'Jean P.' },
+];
+
+/** RPC `api.list_crm_assignees` — membres assignables de l'ORG du caller. */
+export async function listCrmAssignees(): Promise<CrmAssignee[]> {
+  const client = requireCrmClient();
+  if (!client) {
+    return MOCK_CRM_ASSIGNEES;
+  }
+  const { data, error } = await client.schema('api').rpc('list_crm_assignees', {});
+  if (error) {
+    throw error;
+  }
+  return Array.isArray(data)
+    ? data.filter((row): row is GenericRecord => !!row && typeof row === 'object').map(parseCrmAssignee)
+    : [];
 }
 
 export interface SaveCrmInteractionInput {

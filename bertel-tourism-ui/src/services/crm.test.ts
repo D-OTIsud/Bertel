@@ -2,9 +2,11 @@ import {
   deleteActorChannel,
   listActorCrm,
   listContactKinds,
+  listCrmAssignees,
   listCrmDirectory,
   listDemandTopics,
   parseActorCrmSnapshot,
+  parseCrmAssignee,
   parseCrmDirectoryEntry,
   parseCrmInteraction,
   parseCrmTask,
@@ -369,6 +371,48 @@ describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
     expect(rpc).toHaveBeenCalledWith('save_crm_task', {
       p_payload: { object_id: 'HOT123', actor_id: 'a1', title: 'Rappeler', due_at: '2026-06-20' },
     });
+  });
+
+  // Assignation (PO point 4) : `owner` passe en clé payload (validé serveur — membre de
+  // l'ORG du caller, sinon 22023). Omis = défaut serveur (self).
+  it('passe owner quand fourni (assignation explicite à un membre de l ORG)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', title: 'Rappeler', dueAt: '2026-06-20', owner: 'usr-jean' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', title: 'Rappeler', due_at: '2026-06-20', owner: 'usr-jean' },
+    });
+  });
+});
+
+// Assignation (PO point 4) — annuaire des assignables : membres actifs de l'ORG du caller.
+describe('parseCrmAssignee / listCrmAssignees', () => {
+  it('parse un assignable (user_id → userId, display_name → displayName)', () => {
+    expect(parseCrmAssignee({ user_id: 'usr-jean', display_name: 'Jean P.' })).toEqual({
+      userId: 'usr-jean',
+      displayName: 'Jean P.',
+    });
+  });
+
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('mode démo : renvoie une liste mock non vide (au moins 1 personne)', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const assignees = await listCrmAssignees();
+    expect(assignees.length).toBeGreaterThanOrEqual(1);
+    expect(assignees[0]).toHaveProperty('userId');
+    expect(assignees[0]).toHaveProperty('displayName');
+  });
+
+  it('hors démo : appelle list_crm_assignees et parse le tableau (1 entrée fonctionne)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([{ user_id: 'usr-marie', display_name: 'Marie D.' }]);
+    await expect(listCrmAssignees()).resolves.toEqual([{ userId: 'usr-marie', displayName: 'Marie D.' }]);
+    expect(rpc).toHaveBeenCalledWith('list_crm_assignees', {});
   });
 });
 

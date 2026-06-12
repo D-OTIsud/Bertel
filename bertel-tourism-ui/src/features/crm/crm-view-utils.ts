@@ -47,22 +47,37 @@ export function initialsOf(name: string): string {
   return initials || '—';
 }
 
-export type MoodClass = 'positif' | 'neutre' | 'tendu';
+// Système 6 tons sentiment (peps PO point 1) — les 6 codes du domaine `crm_sentiment`
+// gardent CHACUN leur propre teinte (.mood--<ton>), + un ton `neutre` (gris doux) pour
+// le code absent/inconnu. C'est le signal couleur DOMINANT du module : sur les données
+// réelles, 100 % des interactions importées sont `note`, donc colorer par TYPE n'apporte
+// aucune variété — le sentiment, lui, varie réellement. L'ancien mapping 3 classes
+// faisait tomber interrogatif/inquiet en gris ; ici interrogatif passe en AMBRE.
+// Le libellé affiché reste le sentimentName réel ; le ton ne pilote que la couleur.
+export type MoodTone =
+  | 'tres_positif'
+  | 'positif'
+  | 'interrogatif'
+  | 'inquiet'
+  | 'mecontent'
+  | 'tres_mecontent'
+  | 'neutre';
 
-// 6 codes sentiment (ref_code, domaine sentiment) → 3 classes visuelles .mood.*
-// Le libellé affiché reste le sentimentName réel ; la classe ne pilote que la couleur.
-const MOOD_BY_SENTIMENT: Record<string, MoodClass> = {
-  tres_positif: 'positif',
-  positif: 'positif',
-  interrogatif: 'neutre',
-  inquiet: 'neutre',
-  mecontent: 'tendu',
-  tres_mecontent: 'tendu',
-};
+const KNOWN_MOOD_TONES: ReadonlySet<string> = new Set([
+  'tres_positif',
+  'positif',
+  'interrogatif',
+  'inquiet',
+  'mecontent',
+  'tres_mecontent',
+]);
 
-export function moodClassOf(sentimentCode: string | null | undefined): MoodClass | null {
-  if (!sentimentCode) return null;
-  return MOOD_BY_SENTIMENT[sentimentCode] ?? null;
+/** Ton couleur d'un code sentiment — 1 pour 1 sur les 6 codes connus, `neutre` sinon. */
+export function moodToneOf(sentimentCode: string | null | undefined): MoodTone {
+  if (sentimentCode && KNOWN_MOOD_TONES.has(sentimentCode)) {
+    return sentimentCode as MoodTone;
+  }
+  return 'neutre';
 }
 
 export type TaskGroup = 'late' | 'today' | 'week' | 'later';

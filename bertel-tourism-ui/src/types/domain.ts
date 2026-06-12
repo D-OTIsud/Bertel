@@ -301,6 +301,9 @@ export interface CrmTask {
   id: string;
   objectId: string;
   objectName: string;
+  /** Rattachement acteur OPTIONNEL (rectif PO §61) : tâche créée depuis la fiche acteur. */
+  actorId: string | null;
+  actorName: string | null;
   title: string;
   description: string | null;
   status: CrmTaskStatus;

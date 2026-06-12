@@ -13,10 +13,10 @@ const DAY_MS = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).toISOString();
 
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), ownerName: 'Marie', relatedInteractionSubject: null },
-  { id: 'task-today', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', title: 'Valider le contrat photo', description: null, status: 'todo', priority: 'medium', dueAt: iso(0), ownerName: 'Jean', relatedInteractionSubject: null },
-  { id: 'task-week', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), ownerName: 'Marie', relatedInteractionSubject: null },
-  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionSubject: null },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), ownerName: 'Marie', relatedInteractionSubject: null },
+  { id: 'task-today', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'todo', priority: 'medium', dueAt: iso(0), ownerName: 'Jean', relatedInteractionSubject: null },
+  { id: 'task-week', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), ownerName: 'Marie', relatedInteractionSubject: null },
+  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionSubject: null },
 ];
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {

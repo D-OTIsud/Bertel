@@ -26,7 +26,7 @@ export function CrmObjectView({
 }) {
   const objectQuery = useQuery({ queryKey: ['crm-object', objectId], queryFn: () => listObjectCrm(objectId) });
   // Cache partagé avec l'annuaire — sert uniquement à résoudre nom + type de l'objet.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: listCrmDirectory });
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
 
   const resolved = useMemo(() => {
     for (const entry of directoryQuery.data ?? []) {

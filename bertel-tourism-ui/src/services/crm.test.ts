@@ -1,5 +1,7 @@
 import {
+  deleteActorChannel,
   listActorCrm,
+  listContactKinds,
   listCrmDirectory,
   listDemandTopics,
   parseActorCrmSnapshot,
@@ -8,22 +10,52 @@ import {
   parseCrmTask,
   parseCrmTimelinePage,
   parseObjectCrmSnapshot,
+  saveActorChannel,
+  saveCrmActor,
+  saveCrmTask,
 } from './crm';
+import { getApiClient } from '../lib/supabase';
 import { mockCrmDirectory } from '../data/mock';
 import { useSessionStore } from '../store/session-store';
 
+// Rectifs PO §61 : les tests de contrat RPC (paramètres réellement envoyés) mockent le
+// client API ; les chemins démo/parse n'y touchent pas (getApiClient → undefined = le
+// comportement « non configuré » d'origine).
+jest.mock('../lib/supabase', () => ({
+  ...jest.requireActual('../lib/supabase'),
+  getApiClient: jest.fn(),
+  getSupabaseClient: jest.fn(),
+}));
+
+const mockedGetApiClient = jest.mocked(getApiClient);
+
+/** Client API factice : capture les appels .schema('api').rpc(fn, args). */
+function fakeRpcClient(result: unknown = null) {
+  const rpc = jest.fn(async () => ({ data: result, error: null }));
+  mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+  return rpc;
+}
+
 describe('crm parsers', () => {
-  it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB)', () => {
+  it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB, rattachement acteur)', () => {
     const task = parseCrmTask({
       id: 't1', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
       due_at: '2026-06-12T09:00:00Z', owner_name: 'Marie', related_interaction_subject: null,
+      actor_id: 'a1', actor_name: 'Mme Marie Hoarau',
     });
     expect(task).toEqual({
       id: 't1', objectId: 'HOT123', objectName: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
       dueAt: '2026-06-12T09:00:00Z', ownerName: 'Marie', relatedInteractionSubject: null,
+      actorId: 'a1', actorName: 'Mme Marie Hoarau',
     });
+  });
+
+  it('rattachement acteur optionnel : actor_id/actor_name absents → null', () => {
+    const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+    expect(task.actorId).toBeNull();
+    expect(task.actorName).toBeNull();
   });
 
   it('borne un status inconnu sur todo (défense contre la dérive d enum)', () => {
@@ -145,9 +177,18 @@ describe('parseActorCrmSnapshot', () => {
           object_id: null, object_name: null, topic_code: null, topic_name: null,
           sentiment_code: null, sentiment_name: null, owner_name: 'Florence', source: 'bertel_ui' },
       ],
+      channels: [
+        { id: 'c1', kind_code: 'email', kind_name: 'Email', value: 'jocelyne@palmistes.re', is_primary: true },
+        { id: 'c2', kind_code: 'phone', kind_name: 'Téléphone', value: '0262 12 34 56', is_primary: false },
+      ],
       topics: [{ code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour', count: 2 }],
     });
     expect(snapshot.actor).toEqual({ id: 'a1', displayName: 'Mme Jocelyne Lebon', firstName: 'Jocelyne', lastName: 'Lebon' });
+    // Canaux de contact (rectif PO point 4) — PII du périmètre publisher, déjà gated par le RPC.
+    expect(snapshot.channels).toEqual([
+      { id: 'c1', kindCode: 'email', kindName: 'Email', value: 'jocelyne@palmistes.re', isPrimary: true },
+      { id: 'c2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false },
+    ]);
     expect(snapshot.objects).toEqual([{
       objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes', objectType: 'HLO',
       roleCode: 'operator', roleName: 'Exploitant', isPrimary: true,
@@ -161,7 +202,7 @@ describe('parseActorCrmSnapshot', () => {
   it('rend un snapshot vide sur payload nul/malformé', () => {
     expect(parseActorCrmSnapshot(null)).toEqual({
       actor: { id: '', displayName: '', firstName: null, lastName: null },
-      objects: [], interactions: [], topics: [],
+      objects: [], channels: [], interactions: [], topics: [],
     });
   });
 });
@@ -220,5 +261,138 @@ describe('listDemandTopics', () => {
   it('hors démo sans client Supabase configuré : renvoie [] (le select retombe sur la distribution objet)', async () => {
     useSessionStore.setState({ demoMode: false });
     await expect(listDemandTopics()).resolves.toEqual([]);
+  });
+});
+
+/* ===== Rectifs PO §61 — contrats RPC (paramètres réellement envoyés) ============= */
+
+describe('listCrmDirectory — filtres serveur (sujet / statut / période, KPIs réactifs)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('passe topicCode/status/from en paramètres RPC (le serveur filtre TOUS les agrégats)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory({ topicCode: 'boutique', status: 'active', from: '2026-03-14T00:00:00.000Z' });
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: 'boutique',
+      p_status: 'active',
+      p_from: '2026-03-14T00:00:00.000Z',
+      p_to: null,
+    });
+  });
+
+  it('sans filtre : tous les paramètres RPC sont null (annuaire complet)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory();
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: null, p_status: null, p_from: null, p_to: null,
+    });
+  });
+});
+
+describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO points 4+5)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  beforeEach(() => {
+    useSessionStore.setState({ demoMode: false });
+  });
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('INSERT acteur : display_name + object_id (requis — le lien objet le met en périmètre) + identité', async () => {
+    const rpc = fakeRpcClient({ id: 'new-actor' });
+    await expect(
+      saveCrmActor({ displayName: 'M. Jean Payet', firstName: 'Jean', lastName: 'Payet', objectId: 'HOT123' }),
+    ).resolves.toBe('new-actor');
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { display_name: 'M. Jean Payet', first_name: 'Jean', last_name: 'Payet', object_id: 'HOT123' },
+    });
+  });
+
+  it('UPDATE acteur : id + identité seulement (pas de clés objet/role parasites)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', displayName: 'Mme Marie Hoarau', firstName: 'Marie' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { id: 'a1', display_name: 'Mme Marie Hoarau', first_name: 'Marie' },
+    });
+  });
+
+  it('INSERT canal : actor_id + kind_code + value (+ is_primary)', async () => {
+    const rpc = fakeRpcClient({ id: 'c1' });
+    await expect(
+      saveActorChannel({ actorId: 'a1', kindCode: 'email', value: 'jean@payet.re', isPrimary: true }),
+    ).resolves.toBe('c1');
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { actor_id: 'a1', kind_code: 'email', value: 'jean@payet.re', is_primary: true },
+    });
+  });
+
+  it('UPDATE canal : id + champs modifiés seulement', async () => {
+    const rpc = fakeRpcClient({ id: 'c1' });
+    await saveActorChannel({ id: 'c1', value: '0692 11 22 33' });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', { p_payload: { id: 'c1', value: '0692 11 22 33' } });
+  });
+
+  it('deleteActorChannel passe p_id', async () => {
+    const rpc = fakeRpcClient(null);
+    await deleteActorChannel('c1');
+    expect(rpc).toHaveBeenCalledWith('delete_actor_channel', { p_id: 'c1' });
+  });
+
+  it('échec RPC → throw (l erreur PostgREST brute survit, .code 42501 compris)', async () => {
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(saveCrmActor({ displayName: 'X', objectId: 'o1' })).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
+describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('passe actor_id quand actorId est fourni (tâche créée depuis la fiche acteur)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', actorId: 'a1', title: 'Rappeler', dueAt: '2026-06-20' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', actor_id: 'a1', title: 'Rappeler', due_at: '2026-06-20' },
+    });
+  });
+});
+
+// Vocabulaire des canaux de contact (ref_code, domaine contact_kind) — même pattern de
+// lecture PostgREST directe que listDemandTopics (pas une table crm_*).
+describe('listContactKinds', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+  });
+
+  it('mode démo : renvoie le vocabulaire mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listContactKinds()).resolves.toEqual([
+      { code: 'phone', name: 'Téléphone' },
+      { code: 'mobile', name: 'Mobile' },
+      { code: 'email', name: 'Email' },
+      { code: 'website', name: 'Site web' },
+    ]);
+  });
+
+  it('hors démo sans client Supabase configuré : renvoie [] (fail-soft)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    await expect(listContactKinds()).resolves.toEqual([]);
   });
 });

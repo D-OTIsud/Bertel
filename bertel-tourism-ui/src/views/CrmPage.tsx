@@ -86,7 +86,7 @@ export default function CrmPage() {
 
   // Requêtes partagées (mêmes clés que les vues → une seule charge réseau) :
   // compteurs d'onglets + résolution du libellé de retour de la vue établissement.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: listCrmDirectory });
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   const canWriteQuery = useQuery({ queryKey: ['crm-can-write'], queryFn: userCanWriteCrmNotes });
   const { peers, typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });

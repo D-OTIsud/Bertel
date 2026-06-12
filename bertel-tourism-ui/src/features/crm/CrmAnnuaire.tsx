@@ -23,7 +23,7 @@ export function CrmAnnuaire({ onOpenActor }: { onOpenActor: (actorId: string) =>
   const [search, setSearch] = useState('');
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: listCrmDirectory });
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const entries = useMemo(() => directoryQuery.data ?? [], [directoryQuery.data]);
 
   // Chips de filtre = types d'objets réellement présents dans l'annuaire.

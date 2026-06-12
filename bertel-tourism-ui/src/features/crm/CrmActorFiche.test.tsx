@@ -14,6 +14,10 @@ const snapshot: ActorCrmSnapshot = {
     { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
     { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleCode: 'owner', roleName: 'Propriétaire', isPrimary: false },
   ],
+  channels: [
+    { id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'marie@basalte.re', isPrimary: true },
+    { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false },
+  ],
   interactions: [
     {
       id: 'i1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',

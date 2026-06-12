@@ -17,6 +17,7 @@ const actorSnapshot: ActorCrmSnapshot = {
   objects: [
     { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
   ],
+  channels: [],
   interactions: [
     {
       id: 'i1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',

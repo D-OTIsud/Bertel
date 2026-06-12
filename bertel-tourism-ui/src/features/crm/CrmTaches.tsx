@@ -32,7 +32,7 @@ export function CrmTaches({ canWrite, onOpenObject }: { canWrite: boolean; onOpe
   const queryClient = useQueryClient();
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   // Annuaire (cache partagé) — fournit la datalist établissements du formulaire.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: listCrmDirectory });
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
 
   const [owner, setOwner] = useState<string>(ALL_OWNERS);
   const [form, setForm] = useState<NewTaskForm | null>(null);

@@ -31,6 +31,9 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     id: readString(record.id),
     objectId: readString(record.object_id),
     objectName: readString(record.object_name),
+    // Rattachement acteur optionnel (rectif PO) — list_crm_tasks joint actor.display_name.
+    actorId: readNullableString(record.actor_id),
+    actorName: readNullableString(record.actor_name),
     title: readString(record.title),
     description: readNullableString(record.description),
     status: TASK_STATUSES.includes(status) ? status : 'todo',
@@ -194,13 +197,33 @@ export function parseCrmDirectoryEntry(record: GenericRecord): CrmDirectoryEntry
   };
 }
 
-/** RPC `api.list_crm_directory` — l'annuaire acteurs complet (696 lignes live). */
-export async function listCrmDirectory(): Promise<CrmDirectoryEntry[]> {
+/**
+ * Filtres serveur de l'annuaire (rectifs PO points 6+7) : le RPC applique sujet / statut /
+ * période à TOUS les agrégats (compteurs, dernière interaction, top sujets) — les KPIs de
+ * l'annuaire sont donc réactifs sans recalcul client. `status`: 'active' = interactions
+ * `planned` (à traiter), 'done' = traitées ; absent = toutes. Sous filtre, les acteurs
+ * « lien seul » (0 interaction correspondante) sont exclus par le serveur.
+ */
+export interface CrmDirectoryFilters {
+  topicCode?: string;
+  status?: 'active' | 'done';
+  /** Bornes ISO — `occurred_at >= from` et `< to`. */
+  from?: string;
+  to?: string;
+}
+
+/** RPC `api.list_crm_directory` — l'annuaire acteurs (filtres serveur optionnels). */
+export async function listCrmDirectory(filters: CrmDirectoryFilters = {}): Promise<CrmDirectoryEntry[]> {
   const client = requireCrmClient();
   if (!client) {
-    return mockCrmDirectory;
+    return mockCrmDirectory; // mode démo : fixtures non filtrées (pas de simulation serveur)
   }
-  const { data, error } = await client.schema('api').rpc('list_crm_directory');
+  const { data, error } = await client.schema('api').rpc('list_crm_directory', {
+    p_topic_code: filters.topicCode ?? null,
+    p_status: filters.status ?? null,
+    p_from: filters.from ?? null,
+    p_to: filters.to ?? null,
+  });
   if (error) {
     throw error;
   }
@@ -216,9 +239,20 @@ export interface ActorCrmObjectLink extends CrmDirectoryObjectLink {
   roleCode: string | null;
 }
 
+/** Canal de contact de l'acteur (actor_channel) — PII gated par le RPC (périmètre publisher). */
+export interface ActorCrmChannel {
+  id: string;
+  kindCode: string;
+  kindName: string;
+  value: string;
+  isPrimary: boolean;
+}
+
 export interface ActorCrmSnapshot {
   actor: { id: string; displayName: string; firstName: string | null; lastName: string | null };
   objects: ActorCrmObjectLink[];
+  /** Coordonnées réelles de la personne (rectif PO point 4). */
+  channels: ActorCrmChannel[];
   /** Interactions de l'acteur, tous contextes — objectId/objectName null = « Général ». */
   interactions: CrmInteraction[];
   topics: Array<{ code: string; name: string; count: number }>;
@@ -227,6 +261,7 @@ export interface ActorCrmSnapshot {
 const EMPTY_ACTOR_SNAPSHOT: ActorCrmSnapshot = {
   actor: { id: '', displayName: '', firstName: null, lastName: null },
   objects: [],
+  channels: [],
   interactions: [],
   topics: [],
 };
@@ -257,6 +292,17 @@ export function parseActorCrmSnapshot(payload: unknown): ActorCrmSnapshot {
           .filter((row): row is GenericRecord => !!row && typeof row === 'object')
           .map((row) => ({ ...parseDirectoryObjectLink(row), roleCode: readNullableString(row.role_code) }))
       : [],
+    channels: Array.isArray(record.channels)
+      ? record.channels
+          .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+          .map((row) => ({
+            id: readString(row.id),
+            kindCode: readString(row.kind_code),
+            kindName: readString(row.kind_name),
+            value: readString(row.value),
+            isPrimary: row.is_primary === true,
+          }))
+      : [],
     interactions: Array.isArray(record.interactions)
       ? record.interactions.filter((row): row is GenericRecord => !!row && typeof row === 'object').map(parseCrmInteraction)
       : [],
@@ -283,6 +329,7 @@ function demoActorCrm(actorId: string): ActorCrmSnapshot {
   return {
     actor: { id: entry.actorId, displayName: entry.displayName, firstName: null, lastName: null },
     objects: entry.objects.map((object) => ({ ...object, roleCode: null })),
+    channels: [], // pas de PII fabriquée en démo
     interactions,
     topics: [...topicCounts.values()],
   };
@@ -307,6 +354,8 @@ export async function listActorCrm(actorId: string): Promise<ActorCrmSnapshot> {
 export interface SaveCrmTaskInput {
   id?: string;
   objectId?: string;
+  /** Rattachement acteur optionnel (rectif PO) — validé côté serveur. */
+  actorId?: string;
   title?: string;
   description?: string | null;
   status?: CrmTaskStatus;
@@ -327,6 +376,7 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   const payload: GenericRecord = {};
   if (input.id !== undefined) payload.id = input.id;
   if (input.objectId !== undefined) payload.object_id = input.objectId;
+  if (input.actorId !== undefined) payload.actor_id = input.actorId;
   if (input.title !== undefined) payload.title = input.title;
   if (input.description !== undefined) payload.description = input.description;
   if (input.status !== undefined) payload.status = input.status;
@@ -391,6 +441,90 @@ export async function deleteCrmInteraction(id: string): Promise<void> {
     return;
   }
   const { error } = await client.schema('api').rpc('delete_crm_interaction', { p_id: id });
+  if (error) {
+    throw error;
+  }
+}
+
+/* ===== Authoring acteur + canaux (§61 rectifs PO points 4+5) =====================
+   INSERT acteur : object_id REQUIS — l'acteur entre dans le périmètre CRM par son lien
+   actor_object_role (sans lui, le créateur ne pourrait ni le relire ni l'éditer).
+   role_code par défaut 'operator' côté serveur ; PAS de sélecteur de rôle en v1
+   (ref_actor_role est une table simple non-ref_code et les seeds ne portent
+   qu'operator — proposer un choix serait une fausse affordance). */
+
+export interface SaveCrmActorInput {
+  id?: string;
+  displayName?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  /** INSERT seulement. */
+  objectId?: string;
+  /** INSERT seulement — défaut serveur 'operator'. */
+  roleCode?: string;
+}
+
+export async function saveCrmActor(input: SaveCrmActorInput): Promise<string> {
+  const client = requireCrmClient();
+  if (!client) {
+    return input.id ?? 'demo-actor';
+  }
+  const payload: GenericRecord = {};
+  if (input.id !== undefined) payload.id = input.id;
+  if (input.displayName !== undefined) payload.display_name = input.displayName;
+  if (input.firstName !== undefined) payload.first_name = input.firstName;
+  if (input.lastName !== undefined) payload.last_name = input.lastName;
+  if (input.objectId !== undefined) payload.object_id = input.objectId;
+  if (input.roleCode !== undefined) payload.role_code = input.roleCode;
+  const { data, error } = await client.schema('api').rpc('save_crm_actor', { p_payload: payload });
+  if (error) {
+    throw error;
+  }
+  const id = readString((data as GenericRecord | null)?.id);
+  if (!id) {
+    throw new Error('Réponse RPC sans id');
+  }
+  return id;
+}
+
+export interface SaveActorChannelInput {
+  /** UPDATE quand présent. */
+  id?: string;
+  /** INSERT : requis. */
+  actorId?: string;
+  kindCode?: string;
+  value?: string;
+  isPrimary?: boolean;
+}
+
+export async function saveActorChannel(input: SaveActorChannelInput): Promise<string> {
+  const client = requireCrmClient();
+  if (!client) {
+    return input.id ?? 'demo-channel';
+  }
+  const payload: GenericRecord = {};
+  if (input.id !== undefined) payload.id = input.id;
+  if (input.actorId !== undefined) payload.actor_id = input.actorId;
+  if (input.kindCode !== undefined) payload.kind_code = input.kindCode;
+  if (input.value !== undefined) payload.value = input.value;
+  if (input.isPrimary !== undefined) payload.is_primary = input.isPrimary;
+  const { data, error } = await client.schema('api').rpc('save_actor_channel', { p_payload: payload });
+  if (error) {
+    throw error;
+  }
+  const id = readString((data as GenericRecord | null)?.id);
+  if (!id) {
+    throw new Error('Réponse RPC sans id');
+  }
+  return id;
+}
+
+export async function deleteActorChannel(id: string): Promise<void> {
+  const client = requireCrmClient();
+  if (!client) {
+    return;
+  }
+  const { error } = await client.schema('api').rpc('delete_actor_channel', { p_id: id });
   if (error) {
     throw error;
   }
@@ -516,6 +650,36 @@ export async function listDemandTopics(): Promise<Array<{ code: string; name: st
   if (error) {
     // Fail-soft : le select retombe sur la distribution de l'objet (followUp.topics).
     console.warn('listDemandTopics:', error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => ({ code: String(row.code), name: String(row.name) }));
+}
+
+// Vocabulaire des canaux de contact (ref_code, domaine contact_kind — lisible publiquement).
+// Même pattern de lecture PostgREST directe que listDemandTopics : ref_code n'est PAS une
+// table crm_* (policy pub_ref_code_read). Sert au modal d'édition des coordonnées acteur.
+export async function listContactKinds(): Promise<Array<{ code: string; name: string }>> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return [
+      { code: 'phone', name: 'Téléphone' },
+      { code: 'mobile', name: 'Mobile' },
+      { code: 'email', name: 'Email' },
+      { code: 'website', name: 'Site web' },
+    ];
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return [];
+  }
+  const { data, error } = await client
+    .from('ref_code')
+    .select('code, name, position')
+    .eq('domain', 'contact_kind')
+    .order('position', { ascending: true });
+  if (error) {
+    // Fail-soft : sans vocabulaire, le modal d'édition désactive l'ajout de canal.
+    console.warn('listContactKinds:', error.message);
     return [];
   }
   return (data ?? []).map((row) => ({ code: String(row.code), name: String(row.name) }));

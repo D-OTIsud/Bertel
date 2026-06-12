@@ -125,6 +125,17 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     await waitFor(() => expect(crmMock.listObjectCrm).toHaveBeenCalledTimes(2));
   });
 
+  // PO point 2 : champ multi-lignes dans le modal interaction de la vue établissement aussi.
+  it('le champ texte de l interaction (vue établissement) est un textarea ≥ 4 lignes', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
+    const field = within(dialog).getByPlaceholderText(/consigner une interaction/i);
+    expect(field.tagName).toBe('TEXTAREA');
+    expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(4);
+  });
+
   it('sans permission : Nouvelle interaction désactivée avec raison (no-write-trap)', async () => {
     renderView({ canWrite: false });
     await screen.findByText('Appel tarifs');

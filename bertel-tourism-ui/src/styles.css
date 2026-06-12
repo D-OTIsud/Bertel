@@ -9158,6 +9158,17 @@ a {
 .crm-app input.note:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .crm-app input.note::placeholder { color: var(--ink-4); }
 .crm-app input.note:disabled { opacity: 0.6; cursor: not-allowed; }
+/* PO point 2 : champ de saisie de l'interaction en textarea multi-lignes (≥ 5 lignes) —
+   pleine largeur, redimensionnable verticalement, padding confortable (on est dans un modal). */
+.crm-app textarea.note--area {
+  width: 100%;
+  min-height: 120px;
+  height: auto;
+  resize: vertical;
+  padding: 10px 12px;
+  line-height: 1.5;
+}
+.crm-app .composer__row--end { justify-content: flex-end; }
 .crm-app .crm-select {
   height: 28px;
   border: 1px solid var(--line);

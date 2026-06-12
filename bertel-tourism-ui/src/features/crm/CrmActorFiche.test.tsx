@@ -75,6 +75,11 @@ beforeEach(() => {
   crmMock.saveCrmActor.mockResolvedValue('actor-1');
   crmMock.saveActorChannel.mockResolvedValue('new-channel');
   crmMock.deleteActorChannel.mockResolvedValue(undefined);
+  // Assignation (PO point 4) : 2 membres ; le 1er = utilisateur courant démo (usr-local-marie).
+  crmMock.listCrmAssignees.mockResolvedValue([
+    { userId: 'usr-local-marie', displayName: 'Marie D.' },
+    { userId: 'usr-local-jean', displayName: 'Jean P.' },
+  ]);
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
@@ -164,6 +169,17 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  // PO point 2 : le champ de saisie de l'interaction est multi-lignes (≥ 4 lignes).
+  it('le champ texte de l interaction est un textarea d au moins 4 lignes', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
+    const field = within(dialog).getByPlaceholderText(/consigner une interaction/i);
+    expect(field.tagName).toBe('TEXTAREA');
+    expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(4);
+  });
+
   it('sans contexte choisi, consigne au seul acteur (pas d objectId)', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
@@ -191,8 +207,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(within(dialog).getByPlaceholderText(/consigner une interaction/i)).toHaveValue('Texte conservé');
   });
 
-  // Rectif PO point 3 : nouvelle tâche DEPUIS la fiche, ancrée objet + rattachée acteur.
-  it('Nouvelle tâche depuis la fiche → saveCrmTask({objectId, actorId, title, dueAt})', async () => {
+  // Rectif PO point 3 + assignation PO point 4 : nouvelle tâche DEPUIS la fiche, ancrée
+  // objet + rattachée acteur + assignée (défaut = utilisateur courant, ici Marie).
+  it('Nouvelle tâche depuis la fiche → saveCrmTask({objectId, actorId, title, dueAt, owner})', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
@@ -200,6 +217,8 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer les photos' } });
     fireEvent.change(within(dialog).getByLabelText('Établissement'), { target: { value: 'obj-2' } });
     fireEvent.change(within(dialog).getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
+    // Assignation par défaut = utilisateur courant (usr-local-marie) ; attendre la liste chargée.
+    await within(dialog).findByLabelText('Attribuer à');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
@@ -207,7 +226,42 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         actorId: 'actor-1',
         title: 'Relancer les photos',
         dueAt: '2026-06-20',
+        owner: 'usr-local-marie',
       }),
+    );
+  });
+
+  // Assignation PO point 4 : le sélecteur « Attribuer à » change le owner envoyé.
+  it('Assigner à un autre membre → saveCrmTask owner = membre choisi', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement'), { target: { value: 'obj-1' } });
+    fireEvent.change(await within(dialog).findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ owner: 'usr-local-jean' })),
+    );
+  });
+
+  // Auto-sélection PO point 3 : un acteur à UN SEUL établissement → établissement pré-coché.
+  it('un acteur mono-établissement : le select établissement est pré-sélectionné', async () => {
+    crmMock.listActorCrm.mockResolvedValue({
+      ...snapshot,
+      objects: [snapshot.objects[0]], // un seul établissement (obj-1)
+    });
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
+    // Pré-coché : pas besoin de choisir l'établissement, juste le titre.
+    expect(within(dialog).getByLabelText('Établissement')).toHaveValue('obj-1');
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ objectId: 'obj-1' })),
     );
   });
 

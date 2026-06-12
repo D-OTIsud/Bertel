@@ -45,7 +45,9 @@ export function CrmInteractionModal({
   onSaved: () => void;
 }) {
   const [kind, setKind] = useState<string>('call');
-  const [ctx, setCtx] = useState<string>('');
+  // PO point 3 (nicety) : sur la fiche, si l'acteur n'a QU'UN établissement, le contexte
+  // est pré-réglé dessus (au lieu de « Général ») — « Général » reste sélectionnable.
+  const [ctx, setCtx] = useState<string>(() => (contexts && contexts.length === 1 ? contexts[0].objectId : ''));
   const [pickedActor, setPickedActor] = useState<string>('');
   const [topicCode, setTopicCode] = useState<string>('');
   const [sentimentCode, setSentimentCode] = useState<string>('');
@@ -164,16 +166,20 @@ export function CrmInteractionModal({
         </label>
       </div>
 
-      <div className="composer__row">
-        <input
-          className="note"
-          placeholder="Consigner une interaction… (résumé)"
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && canSubmit) consignMutation.mutate();
-          }}
-        />
+      {/* PO point 2 : champ multi-lignes (5 lignes — c'est un modal, autant utiliser la
+          place). Ctrl/Cmd+Entrée consigne (Entrée seul = retour à la ligne, normal pour un
+          textarea) ; le bouton Consigner reste la voie principale. */}
+      <textarea
+        className="note note--area"
+        rows={5}
+        placeholder="Consigner une interaction… (résumé)"
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && canSubmit) consignMutation.mutate();
+        }}
+      />
+      <div className="composer__row composer__row--end">
         <button type="button" className="crm-btn primary" disabled={!canSubmit} onClick={() => consignMutation.mutate()}>
           <Plus size={12} aria-hidden /> Consigner
         </button>

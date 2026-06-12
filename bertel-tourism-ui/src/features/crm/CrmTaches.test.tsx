@@ -36,6 +36,11 @@ beforeEach(() => {
   crmMock.listCrmTasks.mockResolvedValue(tasks);
   crmMock.listCrmDirectory.mockResolvedValue(mockCrmDirectory);
   crmMock.saveCrmTask.mockResolvedValue('task-1');
+  // Assignation (PO point 4) : le 1er = utilisateur courant démo (usr-local-marie).
+  crmMock.listCrmAssignees.mockResolvedValue([
+    { userId: 'usr-local-marie', displayName: 'Marie D.' },
+    { userId: 'usr-local-jean', displayName: 'Jean P.' },
+  ]);
 });
 
 describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
@@ -104,20 +109,39 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(props.onOpenActor).toHaveBeenCalledWith('actor-1');
   });
 
-  it('crée une tâche : titre + établissement résolu par nom (datalist annuaire) + échéance', async () => {
+  it('crée une tâche : titre + établissement résolu par nom (datalist annuaire) + échéance + owner', async () => {
     renderTaches();
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer les photos' } });
     fireEvent.change(screen.getByLabelText('Établissement'), { target: { value: 'Hotel Basalte & Lagon' } });
     fireEvent.change(screen.getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
+    // Attendre le chargement des assignables (le owner par défaut en dépend).
+    await screen.findByLabelText('Attribuer à');
     fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
+      // Assignation PO point 4 : owner par défaut = utilisateur courant (usr-local-marie).
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
         objectId: 'obj-1',
         title: 'Relancer les photos',
         dueAt: '2026-06-20',
+        owner: 'usr-local-marie',
       }),
+    );
+  });
+
+  // Assignation PO point 4 : le sélecteur « Attribuer à » est présent et change le owner.
+  it('onglet Tâches : « Attribuer à » change le owner envoyé', async () => {
+    renderTaches();
+    await screen.findByText('Rappeler le directeur');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
+    fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    fireEvent.change(screen.getByLabelText('Établissement'), { target: { value: 'Hotel Basalte & Lagon' } });
+    // Le select n'apparaît qu'une fois la liste des assignables chargée (async).
+    fireEvent.change(await screen.findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ owner: 'usr-local-jean' })),
     );
   });
 

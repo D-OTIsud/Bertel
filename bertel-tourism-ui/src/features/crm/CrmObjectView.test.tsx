@@ -77,6 +77,19 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     expect(props.onOpenActor).toHaveBeenCalledWith('actor-2');
   });
 
+  // PO point 4 : le Pav rend le PORTRAIT (img) quand photoUrl est présent (actor-1), et garde
+  // les initiales sinon (actor-2, photoUrl null) — pas d'image fantôme. L'img porte alt=""
+  // (décoratif, le nom est rendu à côté) ⇒ requête par balise, pas par rôle.
+  it('rail acteurs : Pav rend une img pour la photo, des initiales sans', async () => {
+    renderView();
+    const rail = await screen.findByRole('group', { name: /acteurs liés/i });
+    const imgs = rail.querySelectorAll('.pav--photo img');
+    expect(imgs).toHaveLength(1); // seul actor-1 a une photo
+    expect(imgs[0]).toHaveAttribute('src', 'https://cdn/actors/actor-1/p.jpg');
+    // actor-2 (sans photo) garde des initiales teintées (pas de .pav--photo).
+    expect(rail.querySelectorAll('.pav:not(.pav--photo)').length).toBeGreaterThan(0);
+  });
+
   it('historique tous acteurs confondus : chaque carte porte le QUI (actorName)', async () => {
     renderView();
     await screen.findByText('Appel tarifs');

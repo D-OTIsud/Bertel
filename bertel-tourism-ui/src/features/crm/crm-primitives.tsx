@@ -18,9 +18,21 @@ import {
   tlIcoClassOf,
 } from './crm-view-utils';
 
-/** Avatar carré arrondi teinté (acteur via actor_id, objet via object_type). */
-export function Pav({ name, tintKey, lg }: { name: string; tintKey: string; lg?: boolean }) {
+/**
+ * Avatar carré arrondi teinté (acteur via actor_id, objet via object_type).
+ * Portrait acteur (PO point 4) : quand `photoUrl` est fourni, on rend la photo (object-fit
+ * cover, même rayon/taille que la tuile d'initiales) ; sinon on garde les initiales teintées.
+ */
+export function Pav({ name, tintKey, lg, photoUrl }: { name: string; tintKey: string; lg?: boolean; photoUrl?: string | null }) {
   const tint = pavTintOf(tintKey);
+  if (photoUrl) {
+    return (
+      <span className={'pav pav--photo' + (lg ? ' lg' : '')} aria-hidden>
+        {/* alt vide : décoratif (le nom est rendu à côté) ; cover = jamais déformé. */}
+        <img src={photoUrl} alt="" />
+      </span>
+    );
+  }
   return (
     <span className={'pav' + (lg ? ' lg' : '')} style={{ background: tint.bg, color: tint.fg }} aria-hidden>
       {initialsOf(name)}

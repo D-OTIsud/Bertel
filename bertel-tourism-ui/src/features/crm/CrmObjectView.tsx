@@ -147,7 +147,7 @@ export function CrmObjectView({
             <h4>Acteurs liés</h4>
             {actors.map((actor) => (
               <button key={actor.actorId} type="button" className="rel-row" onClick={() => onOpenActor(actor.actorId)}>
-                <Pav name={actor.displayName} tintKey={actor.actorId} />
+                <Pav name={actor.displayName} tintKey={actor.actorId} photoUrl={actor.photoUrl} />
                 <span className="who">
                   <strong>{actor.displayName}</strong>
                   <small>{actor.roleName ?? '—'}</small>

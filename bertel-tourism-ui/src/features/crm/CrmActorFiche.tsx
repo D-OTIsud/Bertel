@@ -126,7 +126,7 @@ export function CrmActorFiche({
       </button>
 
       <div className="crm-hero">
-        <Pav name={snapshot.actor.displayName} tintKey={snapshot.actor.id} lg />
+        <Pav name={snapshot.actor.displayName} tintKey={snapshot.actor.id} photoUrl={snapshot.actor.photoUrl} lg />
         <div className="crm-hero__main">
           <div className="crm-hero__name">{snapshot.actor.displayName}</div>
           {identitySubline && identitySubline !== snapshot.actor.displayName && (

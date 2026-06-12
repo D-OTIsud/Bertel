@@ -25,6 +25,15 @@ beforeEach(() => {
     { code: 'demande_de_visite', name: 'Demande de visite' },
     { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
   ]);
+  // Repeater de canaux (PO point 3) : vocabulaire contact_kind pour le <select> du modal.
+  crmMock.listContactKinds.mockResolvedValue([
+    { code: 'email', name: 'Email' },
+    { code: 'phone', name: 'Téléphone' },
+    { code: 'mobile', name: 'Mobile' },
+  ]);
+  // Suggestions de contacts (PO point 2) — vide par défaut (les tests dédiés surchargent).
+  crmMock.listObjectContactSuggestions.mockResolvedValue([]);
+  crmMock.uploadActorPhoto.mockResolvedValue('https://cdn/actors/new-actor/x.jpg');
 });
 
 describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
@@ -135,7 +144,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
 
   // Rectif PO point 5 : création d'un acteur depuis l'annuaire (modal), avec établissement
   // de rattachement REQUIS (il met l'acteur dans le périmètre) + canaux optionnels.
-  it('Nouvel acteur : saveCrmActor (object_id résolu) + canal email puis ouverture de la fiche', async () => {
+  it('Nouvel acteur : saveCrmActor (object_id résolu) + canal email (repeater) puis ouverture de la fiche', async () => {
     crmMock.saveCrmActor.mockResolvedValue('new-actor');
     crmMock.saveActorChannel.mockResolvedValue('new-channel');
     const onOpenActor = renderAnnuaire();
@@ -146,7 +155,8 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
       target: { value: 'Hotel Basalte & Lagon' },
     });
-    fireEvent.change(within(dialog).getByLabelText('E-mail'), { target: { value: 'test@nouveau.re' } });
+    // Repeater (PO point 3) : la 1re ligne par défaut est un e-mail (PO point 1 : requis).
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'test@nouveau.re' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
       expect(crmMock.saveCrmActor).toHaveBeenCalledWith({ displayName: 'M. Test Nouveau', objectId: 'obj-1' }),
@@ -157,6 +167,8 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
       value: 'test@nouveau.re',
       isPrimary: true,
     });
+    // Pas de photo choisie → uploadActorPhoto n'est PAS appelé.
+    expect(crmMock.uploadActorPhoto).not.toHaveBeenCalled();
     // La fiche du nouvel acteur s'ouvre après refresh.
     await waitFor(() => expect(onOpenActor).toHaveBeenCalledWith('new-actor'));
   });
@@ -170,6 +182,97 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), { target: { value: 'Inconnu' } });
     expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeDisabled();
     expect(within(dialog).getByText(/introuvable dans l.annuaire/i)).toBeInTheDocument();
+  });
+
+  // PO point 1 : l'e-mail est OBLIGATOIRE — Créer bloqué + raison visible tant qu'aucune
+  // ligne e-mail non vide n'existe, même si nom + établissement sont remplis.
+  it('Nouvel acteur : e-mail obligatoire (Créer bloqué + raison) tant qu aucun e-mail saisi', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Test' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Hotel Basalte & Lagon' },
+    });
+    // E-mail (ligne 1) encore vide → bloqué + raison.
+    expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeDisabled();
+    expect(within(dialog).getByText(/un e-mail est obligatoire/i)).toBeInTheDocument();
+    // Saisie de l'e-mail → débloqué.
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'test@nouveau.re' } });
+    expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeEnabled();
+  });
+
+  // PO point 3 : « + Ajouter un contact » ajoute une ligne canal (deux téléphones par ex.).
+  it('Nouvel acteur : « + Ajouter un contact » ajoute une ligne et les deux canaux partent', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('new-actor');
+    crmMock.saveActorChannel.mockResolvedValue('new-channel');
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Deux Tels' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Hotel Basalte & Lagon' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'deux@tels.re' } });
+    // Ajoute une 2e ligne, kind = phone, valeur = un numéro.
+    fireEvent.click(within(dialog).getByRole('button', { name: /ajouter un contact/i }));
+    fireEvent.change(within(dialog).getByLabelText('Type du canal 2'), { target: { value: 'phone' } });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 2'), { target: { value: '0692 11 22 33' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() => expect(crmMock.saveActorChannel).toHaveBeenCalledTimes(2));
+    expect(crmMock.saveActorChannel).toHaveBeenCalledWith({ actorId: 'new-actor', kindCode: 'email', value: 'deux@tels.re', isPrimary: true });
+    expect(crmMock.saveActorChannel).toHaveBeenCalledWith({ actorId: 'new-actor', kindCode: 'phone', value: '0692 11 22 33', isPrimary: false });
+  });
+
+  // PO point 2 : une fois l'établissement résolu, ses contacts connus sont proposés en un
+  // clic ; le clic ajoute une ligne pré-remplie, dédupliquée contre les lignes existantes.
+  it('Nouvel acteur : suggestion établissement → clic ajoute une ligne dédupliquée', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('new-actor');
+    crmMock.saveActorChannel.mockResolvedValue('new-channel');
+    crmMock.listObjectContactSuggestions.mockResolvedValue([
+      { kindCode: 'phone', kindName: 'Téléphone', value: '0262 99 88 77', isPrimary: true, source: 'établissement' },
+    ]);
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Suggéré' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Hotel Basalte & Lagon' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'sugg@ere.re' } });
+    // Le bloc « Contacts de l'établissement » apparaît avec la suggestion cliquable.
+    const suggBtn = await within(dialog).findByRole('button', { name: /0262 99 88 77/i });
+    expect(suggBtn).toBeInTheDocument();
+    fireEvent.click(suggBtn);
+    // Un 2e canal (téléphone pré-rempli) a été ajouté.
+    expect(within(dialog).getByLabelText('Valeur du canal 2')).toHaveValue('0262 99 88 77');
+    // Re-cliquer ne duplique pas (déjà présent) — toujours 2 lignes.
+    fireEvent.click(suggBtn);
+    expect(within(dialog).queryByLabelText('Valeur du canal 3')).not.toBeInTheDocument();
+  });
+
+  // PO point 4 : champ de portrait + upload après création (ref-guarded), n'empêche pas
+  // la création de l'acteur si l'upload échoue.
+  it('Nouvel acteur : photo choisie → uploadActorPhoto(actorId, file) après création', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('new-actor');
+    crmMock.saveActorChannel.mockResolvedValue('new-channel');
+    const onOpenActor = renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'M. Photo' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Hotel Basalte & Lagon' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'photo@acteur.re' } });
+    const file = new File([new Uint8Array([1, 2, 3])], 'portrait.jpg', { type: 'image/jpeg' });
+    fireEvent.change(within(dialog).getByLabelText(/portrait/i), { target: { files: [file] } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() => expect(crmMock.uploadActorPhoto).toHaveBeenCalledWith('new-actor', file));
+    await waitFor(() => expect(onOpenActor).toHaveBeenCalledWith('new-actor'));
   });
 
   it('sans permission : Nouvel acteur désactivé avec raison (no-write-trap)', async () => {

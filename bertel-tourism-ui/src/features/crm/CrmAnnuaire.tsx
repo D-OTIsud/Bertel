@@ -183,7 +183,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
           return (
             <button key={entry.actorId} type="button" className="crm-row" onClick={() => onOpenActor(entry.actorId)}>
               <span className="crm-row__id">
-                <Pav name={entry.displayName} tintKey={entry.actorId} />
+                <Pav name={entry.displayName} tintKey={entry.actorId} photoUrl={entry.photoUrl} />
                 <span className="crm-row__name">
                   <strong>{entry.displayName}</strong>
                 </span>

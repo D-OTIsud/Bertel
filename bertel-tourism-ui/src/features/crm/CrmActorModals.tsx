@@ -20,15 +20,35 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { ImagePlus, Plus, Trash2, UserRound } from 'lucide-react';
 import {
   deleteActorChannel,
   listContactKinds,
+  listObjectContactSuggestions,
   saveActorChannel,
   saveCrmActor,
+  uploadActorPhoto,
   type ActorCrmChannel,
 } from '../../services/crm';
 import { CrmModal } from './CrmModal';
+
+/** Normalise une valeur de canal pour la déduplication (suggestions ⇄ lignes saisies). */
+function normChannelValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Aperçu local d'un fichier image — object URL si l'API est dispo (navigateur), sinon null
+ * (jsdom/SSR n'implémente pas createObjectURL : l'aperçu est purement cosmétique, son absence
+ * ne bloque rien). Révoque l'URL précédente pour ne pas fuiter de blob.
+ */
+function makePhotoPreview(file: File | null, previous: string | null): string | null {
+  if (previous && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(previous);
+  }
+  if (!file) return null;
+  return typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(file) : null;
+}
 
 interface ChannelRow {
   /** Identité CLIENT stable (id serveur ou `new-N`) — clé React + cible des commits per-op. */
@@ -64,7 +84,7 @@ export function CrmActorEditModal({
   onClose,
   onSaved,
 }: {
-  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null };
+  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null; photoUrl: string | null };
   channels: ActorCrmChannel[];
   onClose: () => void;
   /** Appelé APRÈS écriture confirmée — la vue invalide fiche + annuaire. */
@@ -74,6 +94,12 @@ export function CrmActorEditModal({
   const [firstName, setFirstName] = useState(actor.firstName ?? '');
   const [lastName, setLastName] = useState(actor.lastName ?? '');
   const [rows, setRows] = useState<ChannelRow[]>(() => rowsFromChannels(channels));
+  // Portrait (PO point 4) : nouveau fichier (uploadé au submit) OU retrait explicite.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoCleared, setPhotoCleared] = useState(false);
+  // Idempotence du retry : ne pas ré-uploader/re-effacer la photo si une op canal échoue ensuite.
+  const sentPhotoRef = useRef(false);
 
   // Idempotence du retry (identité) : après un saveCrmActor réussi, la baseline de
   // comparaison devient l'état SAUVÉ (les props `actor` ne sont rafraîchies qu'à la
@@ -159,12 +185,35 @@ export function CrmActorEditModal({
       for (const op of ordered) {
         await op.run();
       }
+
+      // 3. Portrait (PO point 4) — ref-guarded : nouveau fichier ⇒ upload (pose photo_url) ;
+      //    retrait explicite ⇒ saveCrmActor({photoUrl:''}). Un retry après échec partiel ne
+      //    rejoue pas la photo déjà traitée.
+      if (!sentPhotoRef.current) {
+        if (photoFile) {
+          await uploadActorPhoto(actor.id, photoFile);
+          sentPhotoRef.current = true;
+        } else if (photoCleared && actor.photoUrl) {
+          await saveCrmActor({ id: actor.id, photoUrl: '' });
+          sentPhotoRef.current = true;
+        }
+      }
     },
     onSuccess: () => {
       onSaved();
       onClose();
     },
   });
+
+  function onPickPhoto(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setPhotoCleared(false);
+    setPhotoFile(file);
+    setPhotoPreview((previous) => makePhotoPreview(file, previous));
+  }
+
+  // Aperçu affiché : nouvelle photo > photo existante (sauf retrait) > rien.
+  const shownPhoto = photoPreview ?? (photoCleared ? null : actor.photoUrl);
 
   function patchRow(index: number, patch: Partial<ChannelRow>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -209,6 +258,38 @@ export function CrmActorEditModal({
           Nom
           <input aria-label="Nom" value={lastName} onChange={(event) => setLastName(event.target.value)} />
         </label>
+      </div>
+
+      {/* Portrait (PO point 4) : aperçu + choisir/changer + retirer (saveCrmActor photoUrl:''). */}
+      <div className="crm-field">
+        Portrait
+        <div className="crm-photo-pick">
+          <span className="crm-photo-pick__thumb" aria-hidden>
+            {shownPhoto ? <img src={shownPhoto} alt="" /> : <UserRound size={20} />}
+          </span>
+          <label className="crm-btn sm crm-photo-pick__btn">
+            <ImagePlus size={13} aria-hidden /> {shownPhoto ? 'Changer la photo' : 'Choisir une photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-label="Portrait de l'acteur"
+              onChange={onPickPhoto}
+            />
+          </label>
+          {shownPhoto && (
+            <button
+              type="button"
+              className="crm-btn sm"
+              onClick={() => {
+                setPhotoFile(null);
+                setPhotoPreview((previous) => makePhotoPreview(null, previous));
+                setPhotoCleared(true);
+              }}
+            >
+              Retirer la photo
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="crm-field">
@@ -299,17 +380,65 @@ export function CrmActorNewModal({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [objectName, setObjectName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  // Repeater de canaux (PO point 3) : 1re ligne par défaut = e-mail (PO point 1 : requis).
+  const [rows, setRows] = useState<ChannelRow[]>(() => [
+    { key: `new-${newChannelRowSeq++}`, id: null, kindCode: 'email', value: '', isPrimary: true, deleted: false },
+  ]);
+  // Portrait (PO point 4) — fichier optionnel uploadé APRÈS la création de l'acteur.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
-  // Idempotence du retry : si l'acteur est créé mais qu'un canal échoue, re-soumettre ne
-  // recrée ni l'acteur ni les canaux déjà posés.
+  // Idempotence du retry : si l'acteur est créé mais qu'un canal/la photo échoue, re-soumettre
+  // ne recrée ni l'acteur, ni les canaux déjà posés, ni la photo déjà uploadée.
   const createdActorRef = useRef<string | null>(null);
-  const sentEmailRef = useRef(false);
-  const sentPhoneRef = useRef(false);
+  const sentChannelKeysRef = useRef<Set<string>>(new Set());
+  const sentPhotoRef = useRef(false);
+
+  const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
+  const kinds = kindsQuery.data ?? [];
 
   const resolvedObject =
     objectOptions.find((object) => object.objectName.trim().toLowerCase() === objectName.trim().toLowerCase()) ?? null;
+
+  // Suggestions de contacts (PO point 2) : dès que l'établissement résout, on propose ses
+  // contacts connus. Clé par objectId ; 42501/vide → [] (le bloc se masque, pas d'erreur).
+  const suggestionsQuery = useQuery({
+    queryKey: ['crm-contact-suggestions', resolvedObject?.objectId],
+    queryFn: () => listObjectContactSuggestions(resolvedObject!.objectId),
+    enabled: Boolean(resolvedObject),
+  });
+  const suggestions = suggestionsQuery.data ?? [];
+
+  function patchRow(index: number, patch: Partial<ChannelRow>) {
+    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function addRow(kindCode: string, value = '') {
+    setRows((current) => [
+      ...current,
+      { key: `new-${newChannelRowSeq++}`, id: null, kindCode, value, isPrimary: false, deleted: false },
+    ]);
+  }
+
+  // Clic sur une suggestion : ajoute une ligne pré-remplie SAUF si (kind, valeur) déjà présent.
+  function applySuggestion(kindCode: string, value: string) {
+    const exists = rows.some(
+      (row) => !row.deleted && row.kindCode === kindCode && normChannelValue(row.value) === normChannelValue(value),
+    );
+    if (exists) return;
+    addRow(kindCode, value);
+  }
+
+  const liveRows = rows.filter((row) => !row.deleted);
+  const hasEmail = liveRows.some((row) => row.kindCode === 'email' && row.value.trim() !== '');
+
+  function onPickPhoto(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setPhotoError(null);
+    setPhotoFile(file);
+    setPhotoPreview((previous) => makePhotoPreview(file, previous));
+  }
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -323,13 +452,29 @@ export function CrmActorNewModal({
           objectId: resolvedObject.objectId,
         }));
       createdActorRef.current = actorId;
-      if (email.trim() && !sentEmailRef.current) {
-        await saveActorChannel({ actorId, kindCode: 'email', value: email.trim(), isPrimary: true });
-        sentEmailRef.current = true;
+
+      // Canaux : chaque ligne non vide → un INSERT (idempotent via sentChannelKeysRef).
+      for (const row of rows) {
+        if (row.deleted || row.value.trim() === '') continue;
+        if (sentChannelKeysRef.current.has(row.key)) continue;
+        await saveActorChannel({
+          actorId,
+          kindCode: row.kindCode,
+          value: row.value.trim(),
+          isPrimary: row.isPrimary,
+        });
+        sentChannelKeysRef.current.add(row.key);
       }
-      if (phone.trim() && !sentPhoneRef.current) {
-        await saveActorChannel({ actorId, kindCode: 'phone', value: phone.trim(), isPrimary: !email.trim() });
-        sentPhoneRef.current = true;
+
+      // Photo (ref-guarded) : un échec d'upload ne perd pas l'acteur/les canaux déjà créés —
+      // erreur inline, mais on rouvre quand même la fiche (l'acteur existe).
+      if (photoFile && !sentPhotoRef.current) {
+        try {
+          await uploadActorPhoto(actorId, photoFile);
+          sentPhotoRef.current = true;
+        } catch (err) {
+          setPhotoError(err instanceof Error ? err.message : 'Échec du téléversement du portrait.');
+        }
       }
       return actorId;
     },
@@ -338,7 +483,15 @@ export function CrmActorNewModal({
     },
   });
 
-  const canSubmit = displayName.trim().length > 0 && Boolean(resolvedObject) && !createMutation.isPending;
+  // PO point 1 : e-mail OBLIGATOIRE — au moins une ligne e-mail non vide en plus du nom + objet.
+  const canSubmit = displayName.trim().length > 0 && Boolean(resolvedObject) && hasEmail && !createMutation.isPending;
+
+  function kindOptionsFor(row: ChannelRow) {
+    if (row.kindCode && !kinds.some((kind) => kind.code === row.kindCode)) {
+      return [{ code: row.kindCode, name: row.kindCode }, ...kinds];
+    }
+    return kinds;
+  }
 
   return (
     <CrmModal
@@ -375,6 +528,28 @@ export function CrmActorNewModal({
         </label>
       </div>
 
+      {/* Portrait (PO point 4) : aperçu + bouton de choix de fichier (optionnel). */}
+      <div className="crm-field">
+        Portrait (optionnel)
+        <div className="crm-photo-pick">
+          <span className="crm-photo-pick__thumb" aria-hidden>
+            {photoPreview ? <img src={photoPreview} alt="" /> : <UserRound size={20} />}
+          </span>
+          <label className="crm-btn sm crm-photo-pick__btn">
+            <ImagePlus size={13} aria-hidden /> {photoFile ? 'Changer la photo' : 'Choisir une photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-label="Portrait de l'acteur"
+              onChange={onPickPhoto}
+            />
+          </label>
+        </div>
+        <p className="crm-field__hint">
+          La photo est redimensionnée et ses métadonnées EXIF supprimées avant stockage.
+        </p>
+      </div>
+
       <label className="crm-field">
         Établissement de rattachement (requis)
         <input
@@ -395,17 +570,94 @@ export function CrmActorNewModal({
       )}
       <p className="crm-field__hint">L&apos;acteur entre dans votre périmètre CRM par ce lien (rôle : exploitant).</p>
 
-      <div className="crm-row2">
-        <label className="crm-field">
-          E-mail (optionnel)
-          <input aria-label="E-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-        </label>
-        <label className="crm-field">
-          Téléphone (optionnel)
-          <input aria-label="Téléphone" value={phone} onChange={(event) => setPhone(event.target.value)} />
-        </label>
+      {/* Suggestions de contacts de l'établissement (PO point 2) — ajout en un clic. */}
+      {resolvedObject && suggestions.length > 0 && (
+        <div className="crm-field">
+          Contacts de l&apos;établissement
+          <div className="chip-row crm-contact-suggestions">
+            {suggestions.map((suggestion) => {
+              const already = liveRows.some(
+                (row) =>
+                  row.kindCode === suggestion.kindCode &&
+                  normChannelValue(row.value) === normChannelValue(suggestion.value),
+              );
+              return (
+                <button
+                  key={`${suggestion.kindCode}:${suggestion.value}`}
+                  type="button"
+                  className="crm-chip crm-suggestion-chip"
+                  disabled={already}
+                  title={already ? 'Déjà ajouté' : `Ajouter (${suggestion.source})`}
+                  onClick={() => applySuggestion(suggestion.kindCode, suggestion.value)}
+                >
+                  <Plus size={11} aria-hidden /> {suggestion.kindName} {suggestion.value}
+                  <small className="crm-suggestion-chip__src">{suggestion.source}</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Repeater de canaux (PO points 1+3) : kind + valeur + principal + supprimer. */}
+      <div className="crm-field">
+        Contacts
+        {rows.map((row, index) =>
+          row.deleted ? null : (
+            <div key={row.key} className="chan-row">
+              <select
+                className="crm-select"
+                aria-label={`Type du canal ${index + 1}`}
+                value={row.kindCode}
+                onChange={(event) => patchRow(index, { kindCode: event.target.value })}
+              >
+                {kindOptionsFor(row).map((kind) => (
+                  <option key={kind.code} value={kind.code}>
+                    {kind.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                aria-label={`Valeur du canal ${index + 1}`}
+                placeholder={row.kindCode === 'email' ? 'adresse e-mail' : 'valeur (numéro, adresse…)'}
+                value={row.value}
+                onChange={(event) => patchRow(index, { value: event.target.value })}
+              />
+              <label className="chan-row__primary">
+                <input
+                  type="checkbox"
+                  aria-label={`Canal ${index + 1} principal`}
+                  checked={row.isPrimary}
+                  onChange={(event) => patchRow(index, { isPrimary: event.target.checked })}
+                />
+                principal
+              </label>
+              <button
+                type="button"
+                className="crm-btn sm"
+                aria-label={`Supprimer le canal ${index + 1}`}
+                onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
+              >
+                <Trash2 size={12} aria-hidden />
+              </button>
+            </div>
+          ),
+        )}
+        <button type="button" className="crm-btn sm" onClick={() => addRow(kinds[0]?.code ?? 'phone')}>
+          <Plus size={12} aria-hidden /> Ajouter un contact
+        </button>
+        {!hasEmail && (
+          <p className="crm-field__hint" role="status">
+            Un e-mail est obligatoire.
+          </p>
+        )}
       </div>
 
+      {photoError && (
+        <div className="inline-alert" role="alert">
+          {photoError}
+        </div>
+      )}
       {createMutation.isError && (
         <div className="inline-alert" role="alert">
           Échec de la création : {(createMutation.error as Error).message}

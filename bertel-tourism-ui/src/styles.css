@@ -8914,6 +8914,10 @@ a {
   font-weight: 700;
 }
 .crm-app .pav.lg { width: 56px; height: 56px; border-radius: 16px; font-size: 18px; }
+/* Portrait acteur (PO point 4) : la photo remplit la tuile (même rayon/taille que les
+   initiales) ; object-fit cover évite toute déformation quel que soit le ratio source. */
+.crm-app .pav--photo { padding: 0; overflow: hidden; background: var(--surface-2); }
+.crm-app .pav--photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Pastille type d'objet */
 .crm-app .type-tag {
@@ -9577,6 +9581,44 @@ a {
   font-weight: 600;
   color: var(--ink-3);
   white-space: nowrap;
+}
+
+/* Choix de portrait (PO point 4) : vignette + bouton fichier masqué dans un label-bouton. */
+.crm-app .crm-photo-pick { display: flex; align-items: center; gap: 10px; }
+.crm-app .crm-photo-pick__thumb {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-4);
+}
+.crm-app .crm-photo-pick__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.crm-app .crm-photo-pick__btn { position: relative; overflow: hidden; cursor: pointer; }
+/* Le vrai input file est superposé invisible sur le label-bouton (accessible via aria-label). */
+.crm-app .crm-photo-pick__btn input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+/* Suggestions de contacts de l'établissement (PO point 2) : chips d'ajout en un clic. */
+.crm-app .crm-contact-suggestions { margin-top: 2px; }
+.crm-app .crm-suggestion-chip { gap: 5px; }
+.crm-app .crm-suggestion-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.crm-app .crm-suggestion-chip__src {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+  margin-left: 2px;
 }
 
 /* Coordonnées de l'acteur (rail fiche, rectif PO point 4) */

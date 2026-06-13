@@ -100,6 +100,41 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(card).not.toHaveAttribute('draggable', 'true');
   });
 
+  // PO : poignée de glissement = affordance visuelle du DnD (présente seulement si déplaçable).
+  it('poignée de glissement présente avec permission, absente en lecture seule', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(card.querySelector('.ticket__grip')).toBeTruthy();
+  });
+
+  it('lecture seule : pas de poignée', async () => {
+    renderTaches({ canWrite: false });
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(card.querySelector('.ticket__grip')).toBeFalsy();
+  });
+
+  // PO : à la saisie d'une carte, les colonnes voisines (≠ source) matérialisent une zone de dépôt.
+  it('dragStart : les colonnes cibles affichent « Déposer ici », pas la colonne source', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement; // todo
+    const data = new Map<string, string>();
+    const dataTransfer = { setData: (k: string, v: string) => data.set(k, v), getData: (k: string) => data.get(k) ?? '', effectAllowed: 'move' };
+    fireEvent.dragStart(card, { dataTransfer });
+    const todoCol = screen.getByRole('region', { name: 'À faire' });
+    const doingCol = screen.getByRole('region', { name: 'En cours' });
+    const doneCol = screen.getByRole('region', { name: 'Terminées' });
+    expect(doingCol).toHaveClass('bcol--target');
+    expect(doneCol).toHaveClass('bcol--target');
+    expect(within(doingCol).getByText('Déposer ici')).toBeInTheDocument();
+    expect(within(doneCol).getByText('Déposer ici')).toBeInTheDocument();
+    // Colonne source : aucune zone (déposer là = no-op).
+    expect(todoCol).not.toHaveClass('bcol--target');
+    expect(within(todoCol).queryByText('Déposer ici')).not.toBeInTheDocument();
+    // dragEnd efface les zones.
+    fireEvent.dragEnd(card, { dataTransfer });
+    expect(doneCol).not.toHaveClass('bcol--target');
+  });
+
   it('Reprendre (in_progress → todo) et Rouvrir (done → todo)', async () => {
     renderTaches();
     await screen.findByText('Valider le contrat photo');

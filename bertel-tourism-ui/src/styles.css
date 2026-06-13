@@ -9587,6 +9587,23 @@ a {
 /* Surbrillance de dépôt (PO point 5) : la colonne survolée par une carte en cours de drag.
    Accent only (teinte d'accent translucide) — ne touche pas le canevas thémé. */
 .crm-app .bcol--drop { background: var(--accent-tint); box-shadow: inset 0 0 0 1px var(--accent); }
+/* Zone de dépôt valide pendant un glissement (colonnes ≠ source) : liseré pointillé discret. */
+.crm-app .bcol--target { box-shadow: inset 0 0 0 1px var(--line-strong); }
+/* Placeholder « Déposer ici » matérialisé dans chaque colonne cible. */
+.crm-app .bcol__dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.crm-app .bcol--drop .bcol__dropzone { background: var(--surface); }
 .crm-app .bcol--todo { border-top-color: var(--accent-brand-strong); }
 .crm-app .bcol--doing { border-top-color: var(--teal); }
 .crm-app .bcol--done { border-top-color: var(--green); }
@@ -9626,6 +9643,10 @@ a {
 .crm-app .ticket:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-m); }
 .crm-app .ticket.is-done { opacity: 0.62; }
 .crm-app .ticket.is-done .ticket__title { text-decoration: line-through; }
+/* Carte déplaçable : curseur de préhension (l'affordance visuelle = la poignée ci-dessous). */
+.crm-app .ticket[draggable="true"] { cursor: grab; }
+.crm-app .ticket[draggable="true"]:active { cursor: grabbing; }
+.crm-app .ticket__grip { color: var(--ink-4); vertical-align: -2px; margin-right: 3px; cursor: grab; }
 .crm-app .ticket__title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; }
 .crm-app .ticket__title small { display: block; font-size: 11px; font-weight: 500; color: var(--ink-4); margin-top: 1px; text-decoration: none; }
 .crm-app .ticket__meta {

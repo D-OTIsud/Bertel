@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Plus } from 'lucide-react';
+import { Bell, GripVertical, Plus } from 'lucide-react';
 import { listCrmDirectory, listCrmTasks, saveCrmTask } from '../../services/crm';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv, Seg } from './crm-primitives';
@@ -46,6 +46,9 @@ export function CrmTaches({
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   // DnD (PO point 5) : colonne actuellement survolée par une carte (surbrillance de dépôt).
   const [dropCol, setDropCol] = useState<CrmTaskStatus | null>(null);
+  // Statut de la carte en cours de glissement (sa colonne source) — sert à MATÉRIALISER les
+  // zones de dépôt valides : toutes les colonnes ≠ source affichent un placeholder « Déposer ici ».
+  const [draggingStatus, setDraggingStatus] = useState<CrmTaskStatus | null>(null);
 
   // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
   // Utilisé à la fois par les boutons Avancer/Reprendre (clavier) ET le drag & drop (souris).
@@ -58,6 +61,7 @@ export function CrmTaches({
   function handleDropOnColumn(targetStatus: CrmTaskStatus, event: React.DragEvent) {
     event.preventDefault();
     setDropCol(null);
+    setDraggingStatus(null);
     const id = event.dataTransfer.getData('text/plain');
     if (!id) return;
     const task = tasks.find((candidate) => candidate.id === id);
@@ -116,12 +120,18 @@ export function CrmTaches({
           if (!canWrite) return;
           event.dataTransfer.setData('text/plain', task.id);
           event.dataTransfer.effectAllowed = 'move';
+          setDraggingStatus(task.status); // matérialise les zones de dépôt voisines
         }}
-        // Drag abandonné hors d'une colonne : on efface la surbrillance de dépôt (pas d'état figé).
-        onDragEnd={() => setDropCol(null)}
+        // Drag abandonné hors d'une colonne : on efface la surbrillance + les zones (pas d'état figé).
+        onDragEnd={() => {
+          setDropCol(null);
+          setDraggingStatus(null);
+        }}
       >
         <div className="ticket__title">
-          {task.title}
+          {/* Poignée : signale que la carte est déplaçable (DnD souris ; clavier = Avancer/Reprendre). */}
+          {canWrite && <GripVertical className="ticket__grip" size={14} aria-hidden />}
+          <span className="ticket__titletext">{task.title}</span>
           {task.description && <small>{task.description}</small>}
         </div>
         <div className="ticket__meta">
@@ -211,10 +221,16 @@ export function CrmTaches({
       <div className="board">
         {KANBAN_COLUMNS.map((column) => {
           const list = visibleTasks.filter((task) => task.status === column.key);
+          // Zone de dépôt valide = une carte est saisie ET cette colonne n'est pas sa source.
+          const isTarget = draggingStatus !== null && draggingStatus !== column.key;
           return (
             <section
               key={column.key}
-              className={'bcol bcol--' + column.cls + (dropCol === column.key ? ' bcol--drop' : '')}
+              className={
+                'bcol bcol--' + column.cls +
+                (dropCol === column.key ? ' bcol--drop' : '') +
+                (isTarget ? ' bcol--target' : '')
+              }
               aria-label={column.label}
               onDragOver={(event) => {
                 if (!canWrite) return;
@@ -234,8 +250,10 @@ export function CrmTaches({
                 <span className="n">{list.length}</span>
               </div>
               <div className="bcol__list">
+                {/* Pendant un glissement, les colonnes cibles matérialisent une zone « Déposer ici ». */}
+                {isTarget && <div className="bcol__dropzone" aria-hidden>Déposer ici</div>}
                 {list.map(renderTicket)}
-                {list.length === 0 && <div className="bcol__empty">Aucune tâche.</div>}
+                {list.length === 0 && !isTarget && <div className="bcol__empty">Aucune tâche.</div>}
               </div>
             </section>
           );

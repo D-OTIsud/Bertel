@@ -9048,6 +9048,33 @@ a {
 }
 .crm-app .crm-hero__pills { display: flex; align-items: center; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
 .crm-app .crm-hero__actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* Rectif PO v5 point 6 : nom + bouton « Modifier » sur une même ligne, dans le bloc principal. */
+.crm-app .crm-hero__id { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Rectif PO v5 point 6 : Coordonnées inline (canaux) sous l'identité — s'enroulent (point 7). */
+.crm-app .crm-hero__coords {
+  display: flex;
+  align-items: center;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.crm-app .coord-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--accent-deep);
+  min-width: 0;
+}
+.crm-app .coord-inline .val {
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.crm-app .crm-hero__coords-empty { font-size: 12.5px; color: var(--ink-4); }
 
 .crm-app .crm-stats {
   display: grid;
@@ -9731,4 +9758,31 @@ a {
   .crm-app .crm-cell.col-last { display: none; }
   .crm-app .crm-rail { grid-template-columns: 1fr; }
   .crm-app .crm-row2 { grid-template-columns: 1fr; }
+}
+/* ---------- Responsive fiche acteur (rectif PO v5 point 7) ----------
+   Symptôme : sur petit écran les actions du hero (« Nouvelle tâche » / « Nouvelle interaction »)
+   chevauchaient le nom de l'acteur. Correctif : sous ~720px le hero s'empile — avatar +
+   identité/coordonnées d'abord, puis la rangée d'actions EN-DESSOUS, pleine largeur (les
+   boutons ne recouvrent plus jamais le nom). Les KPI passent à 1 colonne, les pills/coordonnées
+   s'enroulent déjà. Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
+@media (max-width: 720px) {
+  .crm-app .crm-hero {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  /* Le bloc principal prend toute la largeur restante à côté de l'avatar (jamais comprimé). */
+  .crm-app .crm-hero__main { flex: 1 1 calc(100% - 80px); }
+  /* La rangée d'actions descend sur sa propre ligne, pleine largeur, et s'enroule au besoin. */
+  .crm-app .crm-hero__actions {
+    flex: 1 0 100%;
+    width: 100%;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .crm-app .crm-hero__actions .crm-btn { flex: 1 1 auto; justify-content: center; }
+  /* KPI fiche : 2 → 1 colonne (les KPI annuaire sont déjà à 1 col dès 1100px). */
+  .crm-app .crm-stats { grid-template-columns: 1fr; }
+  /* Coordonnées inline : la valeur peut prendre toute la largeur disponible avant d'ellipser. */
+  .crm-app .coord-inline .val { max-width: 100%; }
 }

@@ -102,18 +102,39 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getByText('Sujets distincts')).toBeInTheDocument();
   });
 
-  // Rectif PO point 4 : les coordonnées réelles de la personne, en premier dans le rail.
-  it('rail Coordonnées : canaux réels (valeur + badge principal) et bouton Modifier', async () => {
+  // Rectif PO v5 point 6 : les coordonnées réelles + l'édition vivent dans le bloc principal
+  // du hero (div.crm-hero__main), plus dans le rail droit.
+  it('hero Coordonnées : canaux réels (valeur + badge principal) dans le hero__main', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     const coords = screen.getByRole('group', { name: 'Coordonnées' });
+    // Les coordonnées sont dans le bloc principal du hero (point 6).
+    expect(coords.closest('.crm-hero__main')).not.toBeNull();
     expect(within(coords).getByText('marie@basalte.re')).toBeInTheDocument();
     expect(within(coords).getByText('0262 12 34 56')).toBeInTheDocument();
     expect(within(coords).getByText('principal')).toBeInTheDocument();
-    expect(within(coords).getByRole('button', { name: /modifier/i })).toBeEnabled();
   });
 
-  it('rail Coordonnées : état vide explicite sans canal', async () => {
+  // Rectif PO v5 point 6 : le bouton « Modifier » est dans le hero__main (à côté du nom).
+  it('hero : le bouton Modifier est dans le hero__main et actif avec permission', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const editBtn = screen.getByRole('button', { name: /^modifier$/i });
+    expect(editBtn).toBeEnabled();
+    expect(editBtn.closest('.crm-hero__main')).not.toBeNull();
+  });
+
+  // Rectif PO v5 point 6 : le rail droit ne contient plus la carte Coordonnées.
+  it('le rail droit ne contient plus de carte Coordonnées', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    expect(screen.queryByRole('group', { name: /établissements & rôles/i })).toBeInTheDocument();
+    // Aucune carte rail (.rcard) n'est libellée « Coordonnées ».
+    const railCards = Array.from(document.querySelectorAll('.crm-rail .rcard'));
+    expect(railCards.some((card) => card.getAttribute('aria-label') === 'Coordonnées')).toBe(false);
+  });
+
+  it('hero Coordonnées : état vide explicite sans canal', async () => {
     crmMock.listActorCrm.mockResolvedValue({ ...snapshot, channels: [] });
     renderFiche();
     await screen.findByText('Appel tarifs');

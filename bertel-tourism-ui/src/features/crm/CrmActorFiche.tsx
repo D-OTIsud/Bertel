@@ -128,12 +128,39 @@ export function CrmActorFiche({
       <div className="crm-hero">
         <Pav name={snapshot.actor.displayName} tintKey={snapshot.actor.id} photoUrl={snapshot.actor.photoUrl} lg />
         <div className="crm-hero__main">
-          <div className="crm-hero__name">{snapshot.actor.displayName}</div>
+          {/* Rectif PO v5 point 6 : nom + édition côte à côte dans le bloc principal du hero. */}
+          <div className="crm-hero__id">
+            <div className="crm-hero__name">{snapshot.actor.displayName}</div>
+            <button
+              type="button"
+              className="crm-btn sm"
+              disabled={!canWrite}
+              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+              onClick={() => setModal('edit')}
+            >
+              <Pencil size={11} aria-hidden /> Modifier
+            </button>
+          </div>
           {identitySubline && identitySubline !== snapshot.actor.displayName && (
             <div className="crm-hero__meta">
               <span>{identitySubline}</span>
             </div>
           )}
+          {/* Rectif PO v5 point 6 : les Coordonnées réelles (canaux) déménagent ici, inline,
+              hors du rail droit. Elles s'enroulent sur petit écran (point 7). */}
+          <div className="crm-hero__coords" role="group" aria-label="Coordonnées">
+            {channels.map((channel) => {
+              const Icon = CHANNEL_ICONS[channel.kindCode] ?? Link2;
+              return (
+                <span key={channel.id} className="coord-inline" title={channel.kindName}>
+                  <Icon size={13} aria-hidden />
+                  <span className="val">{channel.value}</span>
+                  {channel.isPrimary && <span className="pill-mini principal">principal</span>}
+                </span>
+              );
+            })}
+            {channels.length === 0 && <span className="crm-hero__coords-empty">Aucun canal renseigné.</span>}
+          </div>
           <div className="crm-hero__pills">
             <span className="pill-mini">
               {objects.length} établissement{objects.length > 1 ? 's' : ''}
@@ -217,33 +244,8 @@ export function CrmActorFiche({
         </div>
 
         <div className="crm-rail">
-          {/* Coordonnées EN PREMIER (rectif PO point 4) : ce qu'on sait de la personne. */}
-          <div className="rcard" role="group" aria-label="Coordonnées">
-            <h4>
-              Coordonnées
-              <button
-                type="button"
-                className="crm-btn sm"
-                disabled={!canWrite}
-                title={canWrite ? undefined : CRM_READ_ONLY_REASON}
-                onClick={() => setModal('edit')}
-              >
-                <Pencil size={11} aria-hidden /> Modifier
-              </button>
-            </h4>
-            {channels.map((channel) => {
-              const Icon = CHANNEL_ICONS[channel.kindCode] ?? Link2;
-              return (
-                <div key={channel.id} className="coord-row" title={channel.kindName}>
-                  <Icon size={13} aria-hidden />
-                  <span className="val">{channel.value}</span>
-                  {channel.isPrimary && <span className="pill-mini principal">principal</span>}
-                </div>
-              );
-            })}
-            {channels.length === 0 && <p className="crm-rail__empty">Aucun canal renseigné.</p>}
-          </div>
-
+          {/* Rectif PO v5 point 6 : les Coordonnées + « Modifier » ont déménagé dans le hero ;
+              le rail ne garde que « Établissements & rôles » et « Sujets récurrents ». */}
           <div className="rcard" role="group" aria-label="Établissements & rôles">
             <h4>Établissements &amp; rôles</h4>
             {objects.map((object) => (

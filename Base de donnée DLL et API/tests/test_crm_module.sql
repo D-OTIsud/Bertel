@@ -29,6 +29,11 @@
 --    list_object_contact_suggestions(objA) renvoie un tableau JSON, contient le contact email
 --    de l'établissement (fixture contact_channel), refuse l'étranger (42501) ;
 --    list_crm_timeline gagne p_status (active/done, 'bidon'→22023) + p_from.
+-- G2) GENRE ACTEUR + LIAISON ÉTABLISSEMENT (demande PO 2026-06-14) : save_crm_actor accepte
+--    gender (civilité ; set 'Mme' re-lu par list_actor_crm.actor->>'gender', puis effacement
+--    clé+vide) ; link_actor_to_object affecte v_objA2 à l'acteur (linked=true puis idempotent
+--    linked=false ON CONFLICT, lien remonté par list_actor_crm.objects) ; refus 42501 du membre
+--    sans permission (C) et cross-ORG (B) — gate = arme objet write_crm sur l'établissement.
 -- H) FIL DE RÉPONSES §66 (demande PO 2026-06-12) : self-FK parent_interaction_id (CASCADE) ;
 --    save_crm_interaction accepte parent_interaction_id (réponse), NORMALISE la réponse-à-réponse
 --    vers la racine, hérite acteur+contexte, owner=auteur ; les 3 RPC de lecture ne renvoient que
@@ -46,6 +51,7 @@ DECLARE
   v_orgA   text := 'ORGRUN9999990801';
   v_orgB   text := 'ORGRUN9999990802';
   v_objA   text := 'HOTRUN9999990811';
+  v_objA2  text := 'HOTRUN9999990813'; -- 2e objet de l'ORG A (probe link_actor_to_object §66 6e)
   v_objB   text := 'HOTRUN9999990812'; -- objet de l'ORG B (probes cross-ORG acteur-centrées)
   v_userA  uuid := '00000000-0000-4000-a000-000000000101'; -- membre ORG A, AVEC write_crm_notes
   v_userB  uuid := '00000000-0000-4000-a000-000000000102'; -- membre ORG B (étranger à l'objet)
@@ -152,10 +158,12 @@ BEGIN
     (v_orgA, 'ORG', 'ORG A CRM test', 'published'),
     (v_orgB, 'ORG', 'ORG B CRM test', 'published'),
     (v_objA, 'HOT', 'Hôtel CRM test', 'draft'),
+    (v_objA2, 'HOT', 'Hôtel CRM test A2', 'draft'),
     (v_objB, 'HOT', 'Hôtel CRM test B', 'draft')
     ON CONFLICT (id) DO NOTHING;
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
     (v_objA, v_orgA, v_pub_role),
+    (v_objA2, v_orgA, v_pub_role),
     (v_objB, v_orgB, v_pub_role)
     ON CONFLICT DO NOTHING;
   -- Acteurs (modèle acteur-centré) : rôle 'operator' fixture-guardé (normalement seedé par
@@ -574,6 +582,28 @@ BEGIN
     PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'photo_url', ''));
     ASSERT NULLIF(api.list_actor_crm(v_new_actor)->'actor'->>'photo_url','') IS NULL,
            'save_crm_actor: photo_url vide doit effacer (NULL/absent)';
+    -- ----- Genre / civilité (demande PO 2026-06-14) : set puis effacement clé+vide -----
+    PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'gender', 'Mme'));
+    ASSERT api.list_actor_crm(v_new_actor)->'actor'->>'gender' = 'Mme',
+           'save_crm_actor: gender (civilité) non persisté / non exposé par list_actor_crm';
+    PERFORM api.save_crm_actor(jsonb_build_object('id', v_new_actor, 'gender', ''));
+    ASSERT NULLIF(api.list_actor_crm(v_new_actor)->'actor'->>'gender','') IS NULL,
+           'save_crm_actor: gender vide doit effacer (NULL/absent)';
+    -- ----- link_actor_to_object (demande PO 2026-06-14) : affecter un établissement -----
+    -- v_new_actor est DÉJÀ lié à v_objA (créé par save_crm_actor) ⇒ on l'affecte à v_objA2
+    -- (2e objet de l'ORG A). 1er appel = insertion (linked=true) ; 2e = idempotent (linked=false).
+    v_payload := api.link_actor_to_object(jsonb_build_object(
+      'actor_id', v_new_actor, 'object_id', v_objA2, 'role_code', 'operator'));
+    ASSERT (v_payload->>'linked')::boolean,
+           'link_actor_to_object: le 1er rattachement doit retourner linked=true';
+    v_payload := api.link_actor_to_object(jsonb_build_object(
+      'actor_id', v_new_actor, 'object_id', v_objA2, 'role_code', 'operator'));
+    ASSERT NOT (v_payload->>'linked')::boolean,
+           'link_actor_to_object: le 2e rattachement (idempotent ON CONFLICT) doit retourner linked=false';
+    -- Le nouveau lien doit remonter dans la fiche acteur.
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_actor_crm(v_new_actor)->'objects') o
+                   WHERE o->>'object_id' = v_objA2),
+           'link_actor_to_object: le lien vers v_objA2 doit apparaître dans list_actor_crm.objects';
     -- ----- Suggestions de contacts (demande PO 2026-06-12) : établissement + acteurs liés -----
     v_suggestions := api.list_object_contact_suggestions(v_objA);
     ASSERT jsonb_typeof(v_suggestions) = 'array',
@@ -674,6 +704,13 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'save_actor_channel: le membre sans write_crm_notes doit être refusé (42501)';
+    -- link_actor_to_object : gate = arme objet (write_crm sur l'établissement) — refusé sans permission.
+    v_denied := false;
+    BEGIN
+      PERFORM api.link_actor_to_object(jsonb_build_object('actor_id', v_actorA, 'object_id', v_objA));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'link_actor_to_object: le membre sans write_crm_notes doit être refusé (42501)';
   RESET ROLE;
 
   -- ---------- E3. USER B (autre ORG) : édition de l'acteur de A refusée ----------
@@ -685,6 +722,13 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'cross-ORG: save_crm_actor UPDATE sur l''acteur de A doit être refusé (42501)';
+    -- link_actor_to_object cross-ORG : B ne gère pas le CRM de v_objA (hors périmètre) → 42501.
+    v_denied := false;
+    BEGIN
+      PERFORM api.link_actor_to_object(jsonb_build_object('actor_id', v_actorB, 'object_id', v_objA));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, 'cross-ORG: link_actor_to_object vers un objet de A doit être refusé (42501)';
   RESET ROLE;
 
   RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO (photo acteur, suggestions contacts, timeline filtrée) + §66 fil de réponses (parent_interaction_id, normalisation racine, replies imbriquées, marquer traitée/rouvrir, interlocuteur d''origine, auth réponse, CASCADE) : assertions passées.';

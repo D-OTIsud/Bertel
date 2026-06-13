@@ -81,6 +81,18 @@
 --    imbriquée (triées occurred_at ASC) + 'interlocutor_email' (extra->>'interlocuteur_email', le
 --    « par {owner ?? interlocuteur ?? Import Berta 2} » côté UI) + 'resolved_at' sur chaque racine.
 --    Ajouts JSON additifs (pas de changement de signature, pas de DROP/REVOKE/GRANT).
+-- 6e) GENRE ACTEUR + LIAISON ÉTABLISSEMENT (demande PO 2026-06-14) : a) civilité = la colonne
+--    actor.gender (TEXT, jusque-là inutilisée par save_crm_actor). save_crm_actor l'écrit en
+--    partiel « clé présente ⇒ écrite » (clé+vide = effacement) à l'INSERT comme à l'UPDATE ; le
+--    display_name reste composé CÔTÉ CLIENT (civilité + prénom + nom) — aucune composition
+--    serveur, on ne fait que stocker la civilité à côté. list_actor_crm.actor expose 'gender'
+--    (prefill du sélecteur de civilité dans le modal d'édition). Ajout additif (aucune
+--    signature changée). b) NOUVELLE RPC api.link_actor_to_object(p_payload jsonb) : affecte un
+--    établissement à un acteur EXISTANT (ajoute UNIQUEMENT le lien actor_object_role — symétrique
+--    de la création d'acteur de save_crm_actor mais sans créer d'acteur). Payload
+--    {actor_id, object_id, role_code? (défaut 'operator')} ; gate = arme objet user_can_write_crm
+--    (gérer le CRM de l'établissement) ; is_primary dérivé (uq_actor_object_role_primary) ;
+--    idempotent ON CONFLICT (actor_id, object_id, role_id) DO NOTHING ⇒ retour {linked=FOUND}.
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -1123,6 +1135,9 @@ BEGIN
 
   SELECT jsonb_build_object('id', a.id, 'display_name', a.display_name,
                             'first_name', a.first_name, 'last_name', a.last_name,
+                            -- gender = civilité (demande PO 2026-06-14) : prefill du sélecteur
+                            -- de civilité dans le modal d'édition.
+                            'gender', a.gender,
                             'photo_url', a.photo_url)
   INTO v_actor
   FROM actor a WHERE a.id = p_actor_id;
@@ -1282,6 +1297,9 @@ BEGIN
       display_name = CASE WHEN p_payload ? 'display_name' THEN v_display_name ELSE display_name END,
       first_name   = CASE WHEN p_payload ? 'first_name' THEN NULLIF(p_payload->>'first_name','') ELSE first_name END,
       last_name    = CASE WHEN p_payload ? 'last_name' THEN NULLIF(p_payload->>'last_name','') ELSE last_name END,
+      -- gender = civilité (demande PO 2026-06-14) : display_name est composé côté client
+      -- (civilité + prénom + nom) ; on stocke juste la civilité. Clé présente + vide = effacement.
+      gender       = CASE WHEN p_payload ? 'gender' THEN NULLIF(p_payload->>'gender','') ELSE gender END,
       -- photo_url (demande PO 2026-06-12) : clé présente + vide = effacement explicite.
       photo_url    = CASE WHEN p_payload ? 'photo_url' THEN NULLIF(p_payload->>'photo_url','') ELSE photo_url END,
       updated_at   = NOW()
@@ -1307,10 +1325,13 @@ BEGIN
 
   v_id := gen_random_uuid();
   -- photo_url généralement NULL à la création (la route d'upload la pose après) ; acceptée.
-  INSERT INTO actor (id, display_name, first_name, last_name, photo_url, created_by)
+  -- gender (civilité, demande PO 2026-06-14) : stockée telle quelle ; le display_name reste
+  -- la chaîne composée côté client (aucune composition serveur).
+  INSERT INTO actor (id, display_name, first_name, last_name, gender, photo_url, created_by)
   VALUES (v_id, v_display_name,
           NULLIF(p_payload->>'first_name',''),
           NULLIF(p_payload->>'last_name',''),
+          NULLIF(p_payload->>'gender',''),
           NULLIF(p_payload->>'photo_url',''),
           auth.uid());
   -- Primaire seulement si la place est libre : uq_actor_object_role_primary est UNIQUE
@@ -1474,6 +1495,58 @@ BEGIN
 END;
 $$;
 
+-- Affecter un établissement à un acteur EXISTANT (demande PO 2026-06-14). Symétrique de la
+-- création d'acteur de save_crm_actor (qui crée acteur + lien), mais ici l'acteur existe déjà
+-- et on ajoute UNIQUEMENT le lien actor_object_role vers un objet. Gate = arme objet
+-- user_can_write_crm (il faut gérer le CRM de l'établissement pour y rattacher un acteur ;
+-- superuser bypasse via le helper). is_primary DÉRIVÉ comme save_crm_actor (uq_actor_object_role_primary
+-- est UNIQUE (object_id, role_id) WHERE is_primary). Idempotent : ON CONFLICT DO NOTHING ⇒
+-- linked=FOUND (true si une ligne a été insérée, false si le lien existait déjà).
+CREATE OR REPLACE FUNCTION api.link_actor_to_object(p_payload jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_actor_id uuid := NULLIF(p_payload->>'actor_id','')::uuid;
+  v_object_id text := NULLIF(btrim(COALESCE(p_payload->>'object_id','')),'');
+  v_role_code text := COALESCE(NULLIF(btrim(COALESCE(p_payload->>'role_code','')),''), 'operator');
+  v_role_id uuid;
+BEGIN
+  IF v_actor_id IS NULL THEN
+    RAISE EXCEPTION 'actor_id requis' USING ERRCODE = '22023';
+  END IF;
+  IF v_object_id IS NULL THEN
+    RAISE EXCEPTION 'object_id requis' USING ERRCODE = '22023';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor_id) THEN
+    RAISE EXCEPTION 'actor inconnu: %', v_actor_id USING ERRCODE = 'P0002';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM object WHERE id = v_object_id) THEN
+    RAISE EXCEPTION 'objet inconnu: %', v_object_id USING ERRCODE = 'P0002';
+  END IF;
+  SELECT id INTO v_role_id FROM ref_actor_role WHERE code = v_role_code;
+  IF v_role_id IS NULL THEN
+    RAISE EXCEPTION 'role_code inconnu: %', v_role_code USING ERRCODE = '22023';
+  END IF;
+  IF NOT api.user_can_write_crm(v_object_id) THEN
+    RAISE EXCEPTION 'Écriture CRM non autorisée sur cet établissement' USING ERRCODE = '42501';
+  END IF;
+
+  -- Primaire seulement si la place est libre (même dérivation que save_crm_actor pour éviter
+  -- le 23505 sur uq_actor_object_role_primary).
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary)
+  VALUES (v_actor_id, v_object_id, v_role_id,
+          NOT EXISTS (SELECT 1 FROM actor_object_role x
+                      WHERE x.object_id = v_object_id AND x.role_id = v_role_id
+                        AND x.is_primary))
+  ON CONFLICT (actor_id, object_id, role_id) DO NOTHING;
+
+  RETURN jsonb_build_object('actor_id', v_actor_id, 'object_id', v_object_id,
+                            'role_code', v_role_code, 'linked', FOUND);
+END;
+$$;
+
 REVOKE ALL ON FUNCTION api.list_crm_timeline(text, text, text, text, text, timestamptz, timestamptz, uuid, integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_crm_timeline(text, text, text, text, text, timestamptz, timestamptz, uuid, integer) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.list_object_contact_suggestions(text) FROM PUBLIC, anon;
@@ -1500,6 +1573,8 @@ REVOKE ALL ON FUNCTION api.save_actor_channel(jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.save_actor_channel(jsonb) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION api.delete_actor_channel(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.delete_actor_channel(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION api.link_actor_to_object(jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.link_actor_to_object(jsonb) TO authenticated, service_role;
 -- Le front interroge user_has_permission('write_crm_notes') pour le gating UI global
 -- (ré-affirme un grant déjà posé par rls_policies.sql — idempotent).
 GRANT EXECUTE ON FUNCTION api.user_has_permission(text) TO authenticated, service_role;

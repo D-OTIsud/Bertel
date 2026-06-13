@@ -107,3 +107,100 @@ export function syncCapacityWithRooms<M extends CapacityModuleSlice>(
     ],
   };
 }
+
+type RoomUnitSlice = { quantity: string };
+
+/** Σ unités (quantity vide = 1 unité) — base de la métrique bedrooms/pitches dérivée. */
+export function computeUnitCount(items: RoomUnitSlice[]): number {
+  return items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 1), 0);
+}
+
+/**
+ * Métrique de comptage d'unités selon le sous-type HEB. Pas de défaut « bedrooms » :
+ * HPA/CAMP utilisent `pitches` (bedrooms n'y est pas applicable → injection gardée-out).
+ */
+export function unitCountMetricCode(typeCode: string): 'bedrooms' | 'pitches' {
+  const t = (typeCode ?? '').toUpperCase();
+  return t === 'HPA' || t === 'CAMP' ? 'pitches' : 'bedrooms';
+}
+
+/**
+ * Crée OU met à jour en place la ligne max_capacity (préserve recordId/metricId).
+ * No-op si max_capacity n'est pas applicable au type (absent de metricOptions).
+ * Source unique du champ « Capacité max » de §06 (HEB) — y compris la création
+ * from-scratch sur un objet sans capacité (sinon write-trap silencieux).
+ */
+export function upsertMaxCapacity<M extends CapacityModuleSlice>(capacity: M, value: string): M {
+  const existing = capacity.capacityItems.find((item) => item.metricCode === 'max_capacity');
+  if (existing) {
+    return {
+      ...capacity,
+      capacityItems: capacity.capacityItems.map((item) => (item === existing ? { ...item, value } : item)),
+    };
+  }
+  const metric = capacity.metricOptions.find((option) => option.code === 'max_capacity');
+  if (!metric) {
+    return capacity;
+  }
+  return {
+    ...capacity,
+    capacityItems: [
+      ...capacity.capacityItems,
+      {
+        recordId: null,
+        metricId: metric.id,
+        metricCode: 'max_capacity',
+        metricLabel: metric.label,
+        unit: 'pax',
+        value,
+        effectiveFrom: '',
+        effectiveTo: '',
+      },
+    ],
+  };
+}
+
+/** Upsert (count>0) ou retrait (count<=0) d'une ligne dérivée lecture seule. Gardé par metricOptions. */
+function upsertDerivedRow<M extends CapacityModuleSlice>(capacity: M, code: string, count: number): M {
+  if (count <= 0) {
+    if (!capacity.capacityItems.some((item) => item.metricCode === code)) {
+      return capacity;
+    }
+    return { ...capacity, capacityItems: capacity.capacityItems.filter((item) => item.metricCode !== code) };
+  }
+  const metric = capacity.metricOptions.find((option) => option.code === code);
+  if (!metric) {
+    return capacity;
+  }
+  const value = String(count);
+  const existing = capacity.capacityItems.find((item) => item.metricCode === code);
+  if (existing) {
+    return {
+      ...capacity,
+      capacityItems: capacity.capacityItems.map((item) => (item === existing ? { ...item, value } : item)),
+    };
+  }
+  return {
+    ...capacity,
+    capacityItems: [
+      ...capacity.capacityItems,
+      { recordId: null, metricId: metric.id, metricCode: code, metricLabel: metric.label, unit: '', value, effectiveFrom: '', effectiveTo: '' },
+    ],
+  };
+}
+
+/**
+ * Recalcule les métriques structurelles dérivées (bedrooms|pitches + meeting_rooms) depuis le §06.
+ * Lecture seule (pas d'override). N'agit que sur les métriques applicables au type ; ne touche
+ * jamais la ligne max_capacity chargée.
+ */
+export function syncDerivedStructural<M extends CapacityModuleSlice>(
+  capacity: M,
+  rooms: RoomUnitSlice[],
+  meetingRoomsCount: number,
+  typeCode: string,
+): M {
+  let next = upsertDerivedRow(capacity, unitCountMetricCode(typeCode), computeUnitCount(rooms));
+  next = upsertDerivedRow(next, 'meeting_rooms', meetingRoomsCount);
+  return next;
+}

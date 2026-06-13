@@ -19,13 +19,22 @@ const snapshot: ObjectCrmSnapshot = {
       occurredAt: '2026-06-04T10:00:00Z', actorId: 'actor-1', actorName: 'Mme Marie Hoarau',
       topicCode: 'modification_infos_bdd', topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
+      interlocutorEmail: null, resolvedAt: null,
+      replies: [{
+        id: 'i1-r1', interactionType: 'note', body: 'Tarifs intégrés dans la fiche.',
+        occurredAt: '2026-06-05T08:00:00Z', createdAt: '2026-06-05T08:01:00Z',
+        sentimentCode: null, sentimentName: null, ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui',
+      }],
     },
     {
       // actorId null : interaction ancrée au seul objet ⇒ carte non cliquable (pas de faux lien).
+      // owner_name null + source import + interlocutor_email ⇒ l'auteur affiché = l'interlocuteur
+      // (fix « par Système » : plus jamais « par Système » quand une demande entrante est connue).
       id: 'i2', interactionType: 'email', subject: 'Adhésion 2026', body: null,
       occurredAt: '2026-03-24T09:00:00Z', actorId: null, actorName: 'SARL Basalte & Lagon',
       topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
-      ownerName: 'Awa', source: 'bertel_ui',
+      ownerName: null, source: 'import_berta2_crm', interlocutorEmail: 'contact@basalte.re',
+      resolvedAt: '2026-03-25T09:00:00Z', replies: [],
     },
   ],
   topics: [{ code: 'modification_infos_bdd', name: 'Modification infos BDD', count: 1 }],

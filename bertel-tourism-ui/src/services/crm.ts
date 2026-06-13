@@ -4,7 +4,14 @@
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
-import type { CrmInteraction, CrmTask, CrmTaskPriority, CrmTaskStatus, CrmTimelinePage } from '../types/domain';
+import type {
+  CrmInteraction,
+  CrmInteractionReply,
+  CrmTask,
+  CrmTaskPriority,
+  CrmTaskStatus,
+  CrmTimelinePage,
+} from '../types/domain';
 // Type-only import (no cycle): object-workspace-parser does not import this module.
 import type {
   ObjectWorkspaceCrmInteractionItem,
@@ -44,6 +51,33 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
   };
 }
 
+/**
+ * Réponse nichée d'un fil de discussion (§65/§66). Forme allégée renvoyée par les 3 read RPCs
+ * dans `replies[]` sous chaque racine. Source de parsing UNIQUE (réutilisée par
+ * parseCrmInteraction ET parseObjectCrmSnapshot).
+ */
+export function parseCrmReply(record: GenericRecord): CrmInteractionReply {
+  return {
+    id: readString(record.id),
+    interactionType: readString(record.interaction_type) || 'note',
+    body: readNullableString(record.body),
+    occurredAt: readNullableString(record.occurred_at),
+    createdAt: readNullableString(record.created_at),
+    sentimentCode: readNullableString(record.sentiment_code),
+    sentimentName: readNullableString(record.sentiment_name),
+    ownerName: readNullableString(record.owner_name),
+    interlocutorEmail: readNullableString(record.interlocutor_email),
+    source: readNullableString(record.source),
+  };
+}
+
+/** `replies` (array → CrmInteractionReply[]) — défensif : manquant/null/malformé → []. */
+function parseReplies(value: unknown): CrmInteractionReply[] {
+  return Array.isArray(value)
+    ? value.filter((row): row is GenericRecord => !!row && typeof row === 'object').map(parseCrmReply)
+    : [];
+}
+
 export function parseCrmInteraction(record: GenericRecord): CrmInteraction {
   return {
     id: readString(record.id),
@@ -66,6 +100,10 @@ export function parseCrmInteraction(record: GenericRecord): CrmInteraction {
     sentimentName: readNullableString(record.sentiment_name),
     ownerName: readNullableString(record.owner_name),
     source: readNullableString(record.source),
+    // §65/§66 — fil de discussion : interlocuteur connu (fix « par Système »), résolution, réponses.
+    interlocutorEmail: readNullableString(record.interlocutor_email),
+    resolvedAt: readNullableString(record.resolved_at),
+    replies: parseReplies(record.replies),
   };
 }
 
@@ -488,6 +526,12 @@ export interface SaveCrmInteractionInput {
   topicCode?: string | null;
   sentimentCode?: string | null;
   actorId?: string | null;
+  /**
+   * Réponse (§65/§66) — id de l'interaction RACINE. Le backend hérite alors le contexte
+   * acteur/objet de la racine : NE PAS passer actorId/objectId sur une réponse (une réponse
+   * d'une réponse se rattache automatiquement à la racine côté serveur).
+   */
+  parentInteractionId?: string;
 }
 
 export async function saveCrmInteraction(input: SaveCrmInteractionInput): Promise<string> {
@@ -507,6 +551,7 @@ export async function saveCrmInteraction(input: SaveCrmInteractionInput): Promis
   if (input.topicCode !== undefined) payload.topic_code = input.topicCode;
   if (input.sentimentCode !== undefined) payload.sentiment_code = input.sentimentCode;
   if (input.actorId !== undefined) payload.actor_id = input.actorId;
+  if (input.parentInteractionId !== undefined) payload.parent_interaction_id = input.parentInteractionId;
   const { data, error } = await client.schema('api').rpc('save_crm_interaction', { p_payload: payload });
   if (error) {
     throw error;
@@ -676,6 +721,10 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           sentimentName: readNullableString(row.sentiment_name),
           ownerName: readNullableString(row.owner_name),
           source: readNullableString(row.source),
+          // §65/§66 — fil de discussion (même contrat que parseCrmInteraction).
+          interlocutorEmail: readNullableString(row.interlocutor_email),
+          resolvedAt: readNullableString(row.resolved_at),
+          replies: parseReplies(row.replies),
         }))
     : [];
   const topics = Array.isArray(record.topics)

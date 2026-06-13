@@ -313,6 +313,26 @@ export interface CrmTask {
   relatedInteractionSubject: string | null;
 }
 
+/**
+ * Réponse à une interaction racine (§65/§66 — fil de discussion). Le backend renvoie les
+ * réponses NICHÉES sous leur racine (`replies[]`) ; une réponse hérite du contexte
+ * acteur/objet de la racine (pas de re-modélisation). Forme allégée : pas de subject/topic
+ * (la racine porte le sujet du fil), pas de status/actor (hérités).
+ */
+export interface CrmInteractionReply {
+  id: string;
+  interactionType: string;
+  body: string | null;
+  occurredAt: string | null;
+  createdAt: string | null;
+  sentimentCode: string | null;
+  sentimentName: string | null;
+  ownerName: string | null;
+  /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
+  interlocutorEmail: string | null;
+  source: string | null;
+}
+
 export interface CrmInteraction {
   id: string;
   /**
@@ -337,6 +357,12 @@ export interface CrmInteraction {
   sentimentName: string | null;
   ownerName: string | null;
   source: string | null;
+  /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
+  interlocutorEmail: string | null;
+  /** Demande traitée (§65/§66) : timestamp de résolution, null = en attente (statut 'planned'). */
+  resolvedAt: string | null;
+  /** Fil de discussion (§65/§66) — réponses NICHÉES sous la racine ; [] si aucune. */
+  replies: CrmInteractionReply[];
 }
 
 export interface CrmTimelinePage {

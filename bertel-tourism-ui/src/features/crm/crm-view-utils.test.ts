@@ -4,6 +4,7 @@ import {
   formatRelative,
   formatShort,
   initialsOf,
+  interactionAuthorOf,
   interactionTypeLabelOf,
   monthLabelOf,
   moodToneOf,
@@ -184,5 +185,32 @@ describe('mappings interaction', () => {
     expect(tlIcoClassOf('visit')).toBe('field');
     expect(tlIcoClassOf('note')).toBe('sys');
     expect(tlIcoClassOf('import')).toBe('sys');
+  });
+});
+
+// Auteur affiché d'une interaction (fix « par Système ») — l'agent qui a consigné prime ;
+// à défaut, l'interlocuteur (interlocutor_email) ; à défaut, une étiquette dérivée de la
+// source (« Import Berta 2 » pour les lignes importées), et seulement en dernier recours
+// le fallback générique « Système ». Tué le « par Système » dès qu'un auteur réel existe.
+describe('interactionAuthorOf — fix « par Système »', () => {
+  it('owner présent → ownerName', () => {
+    expect(interactionAuthorOf({ ownerName: 'Florence', interlocutorEmail: 'x@y.re', source: 'bertel_ui' })).toBe('Florence');
+  });
+
+  it('owner null + interlocuteur → interlocutorEmail', () => {
+    expect(
+      interactionAuthorOf({ ownerName: null, interlocutorEmail: 'marie@basalte.re', source: 'bertel_ui' }),
+    ).toBe('marie@basalte.re');
+  });
+
+  it('owner null + interlocuteur null + source import → « Import Berta 2 »', () => {
+    expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: 'import_berta2_crm' })).toBe(
+      'Import Berta 2',
+    );
+  });
+
+  it('owner null + interlocuteur null + source non-import → « Système »', () => {
+    expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: 'bertel_ui' })).toBe('Système');
+    expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: null })).toBe('Système');
   });
 });

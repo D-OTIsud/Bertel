@@ -1,5 +1,5 @@
 import { formatOpeningTime, isOpeningPeriodAllYears } from '../features/object-drawer/utils';
-import type { ObjectDetail } from '../types/domain';
+import type { CrmInteractionReply, ObjectDetail } from '../types/domain';
 
 interface GenericRecord {
   [key: string]: unknown;
@@ -624,6 +624,12 @@ export interface ObjectWorkspaceCrmInteractionItem {
   sentimentName: string | null;
   ownerName: string | null;
   source: string | null;
+  /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
+  interlocutorEmail: string | null;
+  /** Demande traitée (§65/§66) : timestamp de résolution, null = en attente. */
+  resolvedAt: string | null;
+  /** Fil de discussion (§65/§66) — réponses NICHÉES ; [] si aucune. */
+  replies: CrmInteractionReply[];
 }
 
 /** Per-topic interaction count from `api.list_object_crm` (`demand_topic` distribution). */

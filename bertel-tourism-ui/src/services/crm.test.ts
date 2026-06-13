@@ -17,6 +17,7 @@ import {
   parseObjectCrmSnapshot,
   saveActorChannel,
   saveCrmActor,
+  saveCrmInteraction,
   saveCrmTask,
   uploadActorPhoto,
 } from './crm';
@@ -97,17 +98,30 @@ describe('crm parsers', () => {
         occurred_at: '2026-06-01T08:00:00Z', created_at: '2026-06-01T08:05:00Z',
         actor_id: 'a1', actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
         sentiment_code: 'positif', sentiment_name: 'Positif', owner_name: 'Marie', source: 'bertel_ui',
+        interlocutor_email: 'contact@palmistes.re', resolved_at: '2026-06-02T08:00:00Z',
+        replies: [{
+          id: 'r1', interaction_type: 'note', body: 'Réponse interne.', occurred_at: '2026-06-01T09:00:00Z',
+          created_at: '2026-06-01T09:01:00Z', sentiment_code: null, sentiment_name: null,
+          owner_name: 'Florence', interlocutor_email: null, source: 'bertel_ui',
+        }],
       }],
       tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: null }],
       topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }],
     });
     expect(snapshot.interactions).toHaveLength(1);
-    // Contrat backend : list_object_crm porte désormais actor_id par interaction (clic carte → fiche).
+    // Contrat backend : list_object_crm porte désormais actor_id + interlocutor_email +
+    // resolved_at + replies[] par interaction (fil de discussion §65/§66, fix « par Système »).
     expect(snapshot.interactions[0]).toEqual({
       id: 'i1', interactionType: 'call', subject: 'Demande de visite', body: 'RDV fixé au 12.',
       occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
+      interlocutorEmail: 'contact@palmistes.re', resolvedAt: '2026-06-02T08:00:00Z',
+      replies: [{
+        id: 'r1', interactionType: 'note', body: 'Réponse interne.', occurredAt: '2026-06-01T09:00:00Z',
+        createdAt: '2026-06-01T09:01:00Z', sentimentCode: null, sentimentName: null,
+        ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui',
+      }],
     });
     expect(snapshot.topics).toEqual([{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }]);
   });
@@ -275,6 +289,35 @@ describe('parseCrmInteraction — contexte objet nullable (§61)', () => {
     expect(withActor.actorId).toBe('a1');
     const withoutActor = parseCrmInteraction({ id: 'i2', interaction_type: 'note', subject: 'Note' });
     expect(withoutActor.actorId).toBeNull();
+  });
+
+  // §65/§66 — fil de discussion : interlocutor_email + resolved_at + replies[] nichées.
+  it('lit interlocutor_email / resolved_at + niche les réponses (replies[])', () => {
+    const root = parseCrmInteraction({
+      id: 'i1', interaction_type: 'email', subject: 'Demande', body: 'corps',
+      occurred_at: '2026-06-01T08:00:00Z', interlocutor_email: 'demande@etab.re', resolved_at: '2026-06-03T00:00:00Z',
+      replies: [
+        { id: 'r1', interaction_type: 'note', body: 'Réponse 1', occurred_at: '2026-06-02T08:00:00Z',
+          created_at: '2026-06-02T08:01:00Z', sentiment_code: 'positif', sentiment_name: 'Positif',
+          owner_name: 'Florence', interlocutor_email: null, source: 'bertel_ui' },
+      ],
+    });
+    expect(root.interlocutorEmail).toBe('demande@etab.re');
+    expect(root.resolvedAt).toBe('2026-06-03T00:00:00Z');
+    expect(root.replies).toEqual([
+      { id: 'r1', interactionType: 'note', body: 'Réponse 1', occurredAt: '2026-06-02T08:00:00Z',
+        createdAt: '2026-06-02T08:01:00Z', sentimentCode: 'positif', sentimentName: 'Positif',
+        ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui' },
+    ]);
+  });
+
+  it('replies absentes/malformées → [] (défensif), interlocutor/resolved absents → null', () => {
+    const a = parseCrmInteraction({ id: 'i1', interaction_type: 'note', subject: 'Note' });
+    expect(a.replies).toEqual([]);
+    expect(a.interlocutorEmail).toBeNull();
+    expect(a.resolvedAt).toBeNull();
+    const b = parseCrmInteraction({ id: 'i2', interaction_type: 'note', subject: 'Note', replies: 'oops' });
+    expect(b.replies).toEqual([]);
   });
 });
 
@@ -548,6 +591,43 @@ describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
     expect(rpc).toHaveBeenCalledWith('save_crm_task', {
       p_payload: { object_id: 'HOT123', title: 'Rappeler', due_at: '2026-06-20', owner: 'usr-jean' },
     });
+  });
+});
+
+// §65/§66 — réponses + bascule traité/rouvert (le composer de fil + le bouton « Marquer traitée »).
+describe('saveCrmInteraction — réponse (parentInteractionId) + bascule de statut', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  // Une RÉPONSE : on passe parent_interaction_id + body (+ sentiment optionnel) ; PAS d'actorId
+  // ni d'objectId (le backend hérite le contexte de la racine — ne pas le re-passer).
+  it('passe parent_interaction_id (réponse) sans ré-ancrer actor/object', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'r1' });
+    await saveCrmInteraction({ parentInteractionId: 'root-1', body: 'Ma réponse', sentimentCode: 'positif' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', {
+      p_payload: { parent_interaction_id: 'root-1', body: 'Ma réponse', sentiment_code: 'positif' },
+    });
+  });
+
+  // « Marquer traitée » : save({id, status:'done'}) — le serveur pose resolved_at.
+  it('bascule « traitée » → { id, status: done }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'root-1' });
+    await saveCrmInteraction({ id: 'root-1', status: 'done' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'done' } });
+  });
+
+  // « Rouvrir » : save({id, status:'planned'}) — le serveur efface resolved_at.
+  it('bascule « rouvrir » → { id, status: planned }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'root-1' });
+    await saveCrmInteraction({ id: 'root-1', status: 'planned' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'planned' } });
   });
 });
 

@@ -248,6 +248,11 @@ BEGIN
            'list_object_crm: interactions vides pour le membre';
     ASSERT jsonb_array_length(v_payload->'topics') >= 1,
            'list_object_crm: distribution sujets vide';
+    -- §65 Fix B : la clé actor_id est PRÉSENTE dans chaque interaction (clic carte→acteur sans
+    -- name-matching côté UI). La valeur peut être NULL (cette interaction-ci est sans contexte
+    -- acteur) mais la CLÉ doit exister — additif, miroir de list_crm_timeline.
+    ASSERT (v_payload->'interactions'->0) ? 'actor_id',
+           'list_object_crm: la clé actor_id doit être présente dans chaque interaction (§65)';
     -- topic/sentiment résolus par code (et pas perdus en route)
     ASSERT v_payload->'interactions'->0->>'topic_code' = 'demande_de_visite',
            'save_crm_interaction: topic_code non résolu/persisté';
@@ -470,6 +475,15 @@ BEGIN
                    WHERE (d->>'actor_id')::uuid = v_new_actor
                      AND (d->>'interaction_count')::int = 1),
            'annuaire filtré (sujet): acteur PO attendu avec interaction_count=1 (KPI réactifs)';
+    -- §65 Fix A : top_topics porte désormais des objets {code, name} (et non plus de simples
+    -- noms) — la teinte des pastilles sujet (hash de la valeur) doit être cohérente entre la
+    -- fiche acteur (clé par code) et l'annuaire. L'acteur PO filtré sur 'demande_de_visite'
+    -- a exactement ce sujet ⇒ son premier top_topic doit exposer code='demande_de_visite' + name.
+    ASSERT (SELECT (d->'top_topics'->0->>'code') = 'demande_de_visite'
+                   AND NULLIF(d->'top_topics'->0->>'name','') IS NOT NULL
+            FROM jsonb_array_elements(v_payload) d
+            WHERE (d->>'actor_id')::uuid = v_new_actor),
+           'annuaire: top_topics[0] doit exposer {code, name} (code=demande_de_visite, name non nul) — §65';
     -- Les acteurs « lien seul » disparaissent sous filtre (actorA n'a plus d'interaction).
     ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
                        WHERE (d->>'actor_id')::uuid = v_actorA),

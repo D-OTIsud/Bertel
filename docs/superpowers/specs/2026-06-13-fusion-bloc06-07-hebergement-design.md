@@ -67,16 +67,17 @@ Le plan v1 supposait « §06 (chambres) fait foi, on dérive la capacité depuis
 `BlockHEB` (déjà HEB-only). Ordre **capacité-first** (le cas réel = un nombre) :
 
 1. **Capacité d'accueil** *(en tête, toujours visible)* :
-   - **Capacité max (pax)** — champ éditable de plein droit. **Chargé depuis `object_capacity` existant** (sécurité données : c'est lui qui sera réinséré au save). Quand des chambres existent : suggéré = Σ(couchages × unités), **dérivé-sauf-override** (`syncCapacityWithRooms`). Quand 0 chambre : simple saisie libre (le sync est inerte, `nextSum = 0` → ne touche jamais la valeur chargée). Aide : « Capacité d'accueil totale. Si vous détaillez les chambres ci-dessous, elle se calcule automatiquement — ajustez au besoin (lit d'appoint). »
+   - **Capacité max (pax)** — champ éditable de plein droit. **Bound DIRECTEMENT sur l'item `capacityPolicies.capacityItems[metricCode==='max_capacity']`** (mutation en place via `replaceModule`, en préservant `recordId` + `metricId`), **jamais** un state local découplé — sinon le delete-reinsert efface les 496 fiches *(audit Angle 1/5, sévérité high)*. **`onChange` doit CRÉER l'item s'il n'existe pas** (objet vide / 0 ligne de capacité) via un helper type `createCapacityItem` ciblé sur `metricOptions.find(code==='max_capacity')` — sinon la saisie sur un nouvel objet est un no-op silencieux (write-trap) *(audit Angle 4, high : `syncCapacityWithRooms` ne crée jamais la ligne à 0 chambre)*. Quand des chambres existent : suggéré = Σ(couchages × unités), **dérivé-sauf-override** (`syncCapacityWithRooms`). Quand 0 chambre : saisie libre (le sync est inerte, `nextSum = 0` → ne touche jamais la valeur chargée). Aide : « Capacité d'accueil totale. Si vous détaillez les chambres ci-dessous, elle se calcule automatiquement — ajustez au besoin (lit d'appoint). »
    - **Chambres** / **Salles de réunion** — tuiles **dérivées lecture seule**, affichées **seulement si** des chambres/salles existent (sinon masquées — pas de tuile vide pour les 485 gîtes).
-   - **Groupes** (min/max, groupes uniquement, notes) — déplacé du §07.
-   - **Animaux** (tri-état + conditions) — déplacé du §07.
-   - **Cadre / environnement** (chips, module `characteristics`) — déplacé du §07.
-2. **Détailler les chambres / unités** *(disclosure repliable, replié par défaut quand vide)* :
+   - **Groupes** (min/max, groupes uniquement, notes) — rendu **aussi** en §06.
+   - **Animaux** (tri-état + conditions) — rendu **aussi** en §06.
+   - **Cadre / environnement** (chips, module `characteristics`) — rendu **aussi** en §06.
+2. **Détailler les chambres / unités** *(disclosure repliable)* :
+   - Pas de primitive accordion existant (`Fs.folded` est un repli niveau-section). → **`<details>` natif ou `useState` + `aria-expanded` inline** dans `BlockHEB` (pattern `SectionAccessibility`). Ouvert si des chambres/salles existent, replié sinon : `useState(rooms.items.length > 0 || meetingRooms.items.length > 0)`.
    - Tableau types de chambres (alignement corrigé) + « Ajouter un type de chambre ».
    - Tableau salles séminaire & événementiel (alignement corrigé) + « Ajouter une salle ».
 
-Modules `capacityPolicies` + `characteristics` restent **chargés et sauvegardés** (`save_object_commercial`) pour HEB ; juste **montés en §06**. Gardes `unavailableReason` conservées. Le module `characteristics` étant partagé avec §12, n'y déplacer que **l'affichage** des chips environnement — §12 reste fonctionnel.
+**Précision « rendu aussi » (audit Angle 3, medium) :** Groupes / Animaux / chips environnement sont **DUPLIQUÉS** dans `BlockHEB`, **PAS retirés** de `SectionCapacity` — celle-ci reste le composant `'07'` des 6 autres archétypes. La source d'état est unique (`editor.draft.capacityPolicies` / `.characteristics`), donc aucune désynchro même si les deux composants existent ; §07 étant masqué pour HEB, un seul rendu est monté à la fois. Reporter les gardes `unavailableReason` (→ `ModuleUnavailableNotice`) autour des contrôles dupliqués. §12 (`SectionPayLangs`) ne consomme jamais l'environnement → intact. Modules `capacityPolicies` + `characteristics` restent **chargés et sauvegardés par module dirty** (`save_object_commercial` / `saveObjectWorkspaceCharacteristics`), indépendamment de la visibilité des sections *(audit Angle 1/2/3, ok)*.
 
 ### C. Suppression du repeater « Métriques détaillées » pour HEB
 Plus de saisie libre de métriques en HEB. La seule métrique éditable = **Capacité max** (champ dédié ci-dessus). Les métriques structurelles (`bedrooms`/`pitches`/`meeting_rooms`) ne sont saisissables nulle part : elles sont **dérivées** des tables §06 quand elles existent. *(Live : 100 % des HEB n'ont que `max_capacity` → aucune perte.)*
@@ -90,10 +91,14 @@ Plus de saisie libre de métriques en HEB. La seule métrique éditable = **Capa
 | Chambres / emplacements | `bedrooms` (HOT/HLO/RVA) **ou** `pitches` (HPA/CAMP) | Σ(unités) | dérivé, lecture seule |
 | Salles de réunion | `meeting_rooms` | nb de salles | dérivé, lecture seule |
 
-Mapping unités→métrique selon `typeCode` (dispo dans `SectionProps`, défaut `bedrooms`). N'injecter que si la métrique est applicable au type (présente dans `metricOptions`, déjà filtré par `ref_capacity_applicability`). Persistance par `save_object_commercial` (delete-reinsert). **Pas de trigger DB** : front-orchestrateur unique, réversible. Avec 0 chambre (cas actuel), ces lignes ne sont jamais créées → comportement identique à aujourd'hui.
+Mapping unités→métrique **explicite** selon `typeCode` : `HOT/HLO/RVA → bedrooms`, `HPA/CAMP → pitches`. **Pas de « défaut bedrooms »** : il serait gardé-out pour les campings (bedrooms non applicable à HPA/CAMP) → perte silencieuse de la dérivation `pitches` *(audit Angle 5, medium)*. `meeting_rooms` universel. **`typeCode` est à AJOUTER à la déstructuration de `BlockHEB`** (aujourd'hui `{ editor, folded }`) — il est bien plombé jusqu'au composant (`ObjectEditPage` → `TypeBlockSection` → spread). N'injecter une métrique que si elle est présente dans **`capacity.metricOptions` du module CHARGÉ** (`getObjectWorkspaceCapacityPoliciesModule`, filtré par `ref_capacity_applicability`), **jamais** la dérivation basée sur le `metricOptions` du parser fixture (qui ne liste que les métriques déjà présentes → un test sur fixture pauvre passerait en vert sur un no-op, exactement le piège §54 `capacity_total`) *(audit Angle 5, ok)*. Persistance par `save_object_commercial` (delete-reinsert). **Pas de trigger DB** : front-orchestrateur unique, réversible. Avec 0 chambre (cas actuel), ces lignes ne sont jamais créées → comportement identique à aujourd'hui.
 
 ### E. Bug d'alignement
-Dernière piste `auto` (actions) → **largeur fixe** dans `ROOM_COLS` et `MICE_COLS` ; l'en-tête (`repHeader`) déclare le **même nombre de pistes** que les lignes (cellule d'en-tête vide pour les actions). En-tête et lignes partagent des pistes identiques → alignement exact. *(Option propreté : faire dériver l'en-tête des mêmes `columns` dans le primitive.)*
+Cause racine confirmée *(audit Angle 5, ok)* : la dernière piste `auto` (actions) vaut **0 px en en-tête** (cellule vide) et **~90 px en ligne** (boutons) → la piste partagée `1.4fr` reçoit plus d'espace en en-tête qu'en ligne → toutes les pistes fixes dérivent. Corrections **cumulées** (les deux nécessaires) :
+1. Dernière piste `auto` → **largeur fixe** dans `ROOM_COLS` et `MICE_COLS`, dimensionnée pour la cellule la plus large : **ROOM ≈ 120 px** (badge PMR + Modifier + suppression), **MICE ≈ 96 px** (pas de PMR). + cellule d'en-tête vide pour la colonne actions dans **chacun** des deux `repHeader`.
+2. **Aligner le `gap`** : `repHeader` impose `gap: 8` inline, `.rep-row` impose `gap: 10px` (CSS) → résidu de ~1-2 px/colonne même après le fix #1 *(audit Angle 5, medium — non vu en v2)*. Passer `repHeader` à `gap: 10`.
+
+Note décompte (audit Angle 5, ok) : ROOM (`SortableList` injecte le handle) = 7 pistes / 6 labels ; MICE (`Repeater` n'injecte PAS de handle) = 6 pistes / 5 labels — les deux en-têtes sont courts d'**exactement** la colonne actions, symétrie cohérente, pas de piège « MICE sans handle ». *(Option propreté : faire dériver l'en-tête des mêmes `columns` dans le primitive.)*
 
 ### F. Textes parasites
 - **Supprimer** « Capacité cumulée… reportée dans §07 » (la valeur EST le champ Capacité max juste au-dessus).
@@ -116,10 +121,11 @@ Les 496 HEB live portent leur capacité dans `object_capacity`. Comme `save_obje
 ## 7. Vérification
 
 **Tests automatisés (TDD) :**
-- `rooms-utils` : dérivation `bedrooms`/`pitches` (mapping type) + `meeting_rooms` ; `max_capacity` dérivé-sauf-override ; **inertie à 0 chambre** (ne touche pas la valeur chargée).
-- `BlockHEB` : capacité max éditable **sans chambres** + override tient ; tuiles dérivées masquées si 0 chambre ; disclosure chambres repliée par défaut ; groupes/animaux/environnement présents ; alignement DOM (mêmes `gridTemplateColumns` en-tête vs lignes, dernière piste fixe).
-- `section-config` : `'07'` **omis** pour HEB, **présent** ailleurs.
-- `SectionCapacity` : **inchangé** non-HEB ; `SectionPayLangs` (§12) : chips intactes (module partagé).
+- `rooms-utils` : dérivation `bedrooms` (branche HOT/HLO/RVA) **ET** `pitches` (branche HPA/CAMP) — fixture dont `metricOptions` contient ces codes (sinon no-op vert, piège §54) ; `meeting_rooms` (count) ; `max_capacity` dérivé-sauf-override ; **inertie à 0 chambre** (`sync([],[]) ⇒ null`, valeur chargée intacte).
+- `BlockHEB` : **création from-scratch** (objet 0 capacité → saisir N → `capacityItems` contient 1 item `max_capacity` `recordId:null value:N`) ; capacité max éditable **sans chambres** + override tient ; **non-régression roomless** (HEB `max_capacity=N`, ouverture → save sans modif ⇒ module **non dirty**, aucun appel `save_object_commercial` ; puis édition ⇒ payload `capacities` = 1 ligne `{id:recordId, value:N'}`, pas `[]`) ; tuiles dérivées masquées si 0 chambre ; disclosure repliée par défaut quand vide ; groupes/animaux/environnement présents ; alignement DOM (mêmes pistes en-tête vs lignes, dernière piste fixe, `gap` aligné).
+- `section-config` : HEB **20** sections, `'07'` **omis** pour HEB / **présent** pour RES/ASC/ITI/VIS/SRV/FMA ; `section-registry.test` (HEB 20, plus d'adjacence `'06'==='07'-1`).
+- `editor-completion` : §06 crédité de la capacité `max_capacity` pour un HLO roomless ; `'07'` non compté pour HEB.
+- `SectionCapacity` : **inchangé** non-HEB ; `SectionPayLangs` (§12) : contrôles paiements/langues intacts (module partagé).
 - Suite FE verte + `tsc`.
 
 **Manuel (app réelle, données live) :**
@@ -127,9 +133,16 @@ Les 496 HEB live portent leur capacité dans `object_capacity`. Comme `save_obje
 - Éditer le HOT avec 1 salle MICE : la salle apparaît dans le détail ; tuile « Salles de réunion : 1 » dérivée ; `meeting_rooms` en base après save.
 - Éditer un RES (non-HEB) : §07 présent et fonctionnel ; §12 intact.
 
-## 8. Impacts transverses à vérifier
+## 8. Impacts transverses à TRAITER (issus de l'audit — pas seulement « à vérifier »)
 
-- **`editor-completion.ts`** : ne plus compter §07 pour HEB (sinon score faussé) ; capacité comptée via §06.
-- **`editor-validation.ts`** : aucun bloqueur publication ne référence §07 pour HEB.
-- **Drawer / fiche publique** (`object-drawer/utils.ts` `parseCapacities`) : lit `object_capacity` — inchangé ; vérifier l'absence de doublon d'affichage.
+- **`editor-completion.ts` (high, deux corrections)** : (a) `computeOverallCompletion` utilise la liste **codée en dur** `SCORE_SECTION_NUMS` qui inclut `'07'` et est appelée **sans nums filtrés** (`ObjectEditPage.tsx:151`) → §07 reste compté pour HEB même masqué. Passer une liste de nums **dérivée de l'archétype** (intersection avec `getRegisteredSections(archetype)`). (b) La règle `'06'` ne score **que** `rooms.items.length > 0` → les 485 HLO roomless afficheraient §06 à **0 %** alors qu'ils portent la capacité. **Étendre la règle `'06'`** pour créditer la présence d'une valeur `max_capacity` (`capacityItems.some(max_capacity && value)`).
+- **`editor-validation.ts` (high)** : la règle `editor-validation.ts:111-116` émet pour HEB `0` chambre le warn « Ajoutez au moins un type de chambre ou d'unité locative » → **nag permanent sur 485/485 HLO** (loués en entier), en contradiction directe avec « chambres = optionnel ». **Restreindre ce warn à `HOT`** (modèle hôtelier) ou le retirer. Aucun bloqueur ne référence `'07'`/capacité (confirmé) → masquer §07 ne casse aucune publication.
+- **Tests à mettre à jour (high)** : `section-config.test.ts` (HEB **20** sections, plus 21), `section-registry.test.tsx` (HEB **20** + retirer l'assertion d'adjacence `'06' === '07'-1`), `editor-completion.test.ts`. Ajouter le test ciblé « `'07'` omis pour HEB, présent pour RES/ASC/ITI/VIS/SRV/FMA ».
+- **Drawer / fiche publique** (`object-drawer/utils.ts` `parseCapacities`, `ObjectDetailView`) : lit `object_capacity`, découplé de l'éditeur — **inchangé, OK** (audit Angle 4). Redondance **future** seulement : quand la dérivation §4.D produira des lignes `bedrooms`/`meeting_rooms` réelles, la fiche montrerait le nb de chambres en stat capacité **et** dans `RoomList` → filtre d'affichage à prévoir (cosmétique, hors MVP, 0 chambre live).
 - **Documentation** : entrée décision log `lot1_mapping_decisions.md` (§64) + mise à jour de la ligne différée « Editor §07 capacity-metric filtering » + mémoire MCP.
+
+## 9. Watch-items (hors-scope de cette passe, documentés)
+
+- **Lignes `object_group_policy` fantômes (medium, pré-existant)** : le saver envoie toujours la clé `group_policy` → la RPC UPSERT une ligne même si l'utilisateur n'a touché que la capacité (les 496 HEB ont 0 group_policy aujourd'hui → matérialisation silencieuse `group_only=false`). Déjà vrai via §07, **pas un bloqueur**. Option future : garde tri-état « tout vide ⇒ `group_policy: null` » comme `pet_policy`.
+- **`beds` / `floor_area_m2` / `seats` non saisissables pour HEB** : retirés avec le repeater ; applicables côté `ref_capacity_applicability` mais **0 ligne live**. Décision PO assumée ; réintroduire comme **champ dédié** (pas repeater) si un besoin métier émerge.
+- **WARN « ajoutez une chambre » → modèle inventaire par sous-type** : le débat HLO-sans-chambre rejoint le hors-scope §6 (refonte inventaire hôtel/locatif/camping).

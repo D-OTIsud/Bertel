@@ -7,7 +7,7 @@
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, CornerDownRight, Mail, MapPin, Phone, RotateCcw, StickyNote } from 'lucide-react';
+import { Check, CornerDownRight, Mail, MapPin, Pencil, Phone, RotateCcw, StickyNote, Trash2 } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
 import {
   CRM_SENTIMENT_OPTIONS,
@@ -33,6 +33,20 @@ export interface CrmThreadActions {
   readOnlyReason?: string;
   onReply?: (rootId: string, body: string, sentimentCode?: string) => Promise<void> | void;
   onResolve?: (rootId: string, done: boolean) => Promise<void> | void;
+  /**
+   * Édition d'un commentaire (§66, PO « l'auteur peut modifier… comme le super admin ») —
+   * `id` est l'interaction RACINE *ou* une réponse ; `body`/`sentimentCode` sont l'écriture
+   * PARTIELLE (UPDATE arm de save_crm_interaction). `sentimentCode` null = on n'écrit pas le
+   * sentiment (le composant passe la valeur courante ou null s'il n'y en a pas). Absent ⇒
+   * pas de contrôle « Modifier » rendu (lecture seule du fil).
+   */
+  onEditInteraction?: (id: string, body: string, sentimentCode: string | null) => Promise<void> | void;
+  /**
+   * Suppression d'un commentaire (§66, PO « …ou l'effacer ») — `id` racine *ou* réponse.
+   * ATTENTION : supprimer une RACINE cascade ses réponses (FK ON DELETE CASCADE) — la
+   * confirmation l'avertit. Absent ⇒ pas de contrôle « Supprimer » rendu.
+   */
+  onDeleteInteraction?: (id: string) => Promise<void> | void;
 }
 
 /**
@@ -323,17 +337,256 @@ function TlReplyComposer({
   );
 }
 
-/** Boutons « Répondre » + « Marquer traitée / Rouvrir » (§65/§66) — gatés, stopPropagation. */
+/**
+ * Éditeur inline d'un commentaire (§66) — textarea préremplie avec le corps courant + select
+ * sentiment prérempli + Enregistrer / Annuler. Sert AUSSI BIEN une racine qu'une réponse (le
+ * back save_crm_interaction écrit en partiel : seules les clés passées sont touchées). Appelle
+ * `onSave(body, sentimentCode|null)` — sentimentCode null = ne pas écrire le sentiment (valeur
+ * vide non choisie). `Enregistrer` désactivé tant que le corps est vide ou pendant l'envoi
+ * (anti double-submit) ; erreur inline, saisie conservée ; fermeture au succès. stopPropagation
+ * sur tous les contrôles (le commentaire peut être dans une carte cliquable).
+ */
+function TlCommentEditor({
+  initialBody,
+  initialSentimentCode,
+  onSave,
+  onClose,
+}: {
+  initialBody: string;
+  initialSentimentCode: string | null;
+  onSave: (body: string, sentimentCode: string | null) => Promise<void> | void;
+  onClose: () => void;
+}) {
+  const [body, setBody] = useState(initialBody);
+  const [sentimentCode, setSentimentCode] = useState(initialSentimentCode ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canSave = body.trim().length > 0 && !busy;
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  // Focus au montage (l'éditeur n'est monté qu'à l'ouverture ⇒ ne vole jamais le focus inactif).
+  useEffect(() => {
+    areaRef.current?.focus();
+  }, []);
+
+  async function save() {
+    if (!canSave) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // sentimentCode '' → null : « pas de sentiment » plutôt qu'une chaîne vide écrite.
+      await onSave(body.trim(), sentimentCode || null);
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Échec de l'enregistrement.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="tl-comment-editor" onClick={(event) => event.stopPropagation()}>
+      <textarea
+        ref={areaRef}
+        className="tl-comment-editor__area"
+        rows={3}
+        aria-label="Modifier le commentaire"
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        onClick={(event) => event.stopPropagation()}
+      />
+      <div className="tl-comment-editor__row">
+        <select
+          className="crm-select"
+          aria-label="Sentiment du commentaire"
+          value={sentimentCode}
+          onChange={(event) => setSentimentCode(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <option value="">— Sentiment —</option>
+          {CRM_SENTIMENT_OPTIONS.map((sentiment) => (
+            <option key={sentiment.code} value={sentiment.code}>
+              {sentiment.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="crm-btn primary sm"
+          disabled={!canSave}
+          onClick={(event) => {
+            event.stopPropagation();
+            void save();
+          }}
+        >
+          Enregistrer
+        </button>
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={busy}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+        >
+          Annuler
+        </button>
+      </div>
+      {error ? (
+        <div className="inline-alert" role="alert">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Confirmation de suppression inline (§66) — « Supprimer [cette demande et ses N réponse(s)] ? »
+ * + Oui / Non. `replyCount > 0` (racine avec un fil) avertit de la CASCADE (FK ON DELETE CASCADE).
+ * Oui appelle `onConfirm()` ; double-submit gardé ; erreur inline ; stopPropagation.
+ */
+function TlDeleteConfirm({
+  replyCount,
+  onConfirm,
+  onCancel,
+}: {
+  replyCount: number;
+  onConfirm: () => Promise<void> | void;
+  onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const prompt =
+    replyCount > 0
+      ? `Supprimer cette demande et ses ${replyCount} réponse${replyCount > 1 ? 's' : ''} ?`
+      : 'Supprimer ce commentaire ?';
+
+  async function confirm() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Échec de la suppression.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="tl-delete-confirm" onClick={(event) => event.stopPropagation()}>
+      <span className="tl-delete-confirm__prompt">{prompt}</span>
+      <button
+        type="button"
+        className="crm-btn danger sm"
+        disabled={busy}
+        onClick={(event) => {
+          event.stopPropagation();
+          void confirm();
+        }}
+      >
+        Oui
+      </button>
+      <button
+        type="button"
+        className="crm-btn sm"
+        disabled={busy}
+        onClick={(event) => {
+          event.stopPropagation();
+          onCancel();
+        }}
+      >
+        Non
+      </button>
+      {error ? (
+        <span className="inline-alert" role="alert">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Boutons « Modifier » + « Supprimer » d'un commentaire (§66) — gatés `canWrite` (rendus
+ * désactivés AVEC raison, no-write-trap), stopPropagation (peuvent vivre dans une carte
+ * cliquable). Servent racine ET réponse ; l'ouverture de l'éditeur / de la confirmation est
+ * pilotée par le parent (état isolé par id de commentaire).
+ */
+function TlEditDeleteButtons({
+  canWrite,
+  readOnlyReason,
+  hasEdit,
+  hasDelete,
+  onEdit,
+  onDelete,
+}: {
+  canWrite?: boolean;
+  readOnlyReason?: string;
+  hasEdit: boolean;
+  hasDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const gateTitle = canWrite === false ? readOnlyReason : undefined;
+  return (
+    <>
+      {hasEdit ? (
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={canWrite === false}
+          title={gateTitle}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
+        >
+          <Pencil size={11} aria-hidden /> Modifier
+        </button>
+      ) : null}
+      {hasDelete ? (
+        <button
+          type="button"
+          className="crm-btn sm crm-btn--danger-ghost"
+          disabled={canWrite === false}
+          title={gateTitle}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 size={11} aria-hidden /> Supprimer
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Boutons d'actions d'une RACINE (§65/§66 + §66 édition) — « Répondre » + « Marquer traitée /
+ * Rouvrir » PUIS « Modifier » + « Supprimer ». Tous gatés, stopPropagation, hors role=button.
+ * L'ouverture de l'éditeur / de la confirmation de suppression est portée par le parent (TlCard)
+ * pour l'isolation d'état par commentaire.
+ */
 function TlThreadActions({
   rootId,
   isResolved,
   actions,
   onOpenComposer,
+  onOpenEditor,
+  onOpenDelete,
 }: {
   rootId: string;
   isResolved: boolean;
   actions: CrmThreadActions;
   onOpenComposer: () => void;
+  /** Ouvre l'éditeur inline de CE commentaire racine (état dans TlCard). Absent ⇒ pas de « Modifier ». */
+  onOpenEditor?: () => void;
+  /** Ouvre la confirmation de suppression de CE commentaire racine. Absent ⇒ pas de « Supprimer ». */
+  onOpenDelete?: () => void;
 }) {
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
@@ -391,6 +644,15 @@ function TlThreadActions({
           )}
         </button>
       ) : null}
+      {/* Édition / suppression du commentaire racine (§66) — « comme le super admin ». */}
+      <TlEditDeleteButtons
+        canWrite={canWrite}
+        readOnlyReason={readOnlyReason}
+        hasEdit={Boolean(onOpenEditor)}
+        hasDelete={Boolean(onOpenDelete)}
+        onEdit={() => onOpenEditor?.()}
+        onDelete={() => onOpenDelete?.()}
+      />
       {resolveError ? (
         <span className="inline-alert" role="alert">
           {resolveError}
@@ -452,6 +714,25 @@ function TlCard({
   // rendues que si un consommateur passe des callbacks (onReply/onResolve).
   const [composerOpen, setComposerOpen] = useState(false);
   const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve));
+  // Édition / suppression d'un commentaire (§66) — un SEUL éditeur et une SEULE confirmation
+  // ouverts à la fois DANS cette carte, identifiés par l'id (racine OU réponse). L'isolation
+  // inter-cartes est naturelle (état local à chaque TlCard) ; l'id distingue racine vs réponse.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const onEditInteraction = actions?.onEditInteraction;
+  const onDeleteInteraction = actions?.onDeleteInteraction;
+  const canEdit = Boolean(onEditInteraction);
+  const canDelete = Boolean(onDeleteInteraction);
+  const canWrite = actions?.canWrite;
+  const readOnlyReason = actions?.readOnlyReason;
+  // Quand l'éditeur de CE commentaire est ouvert, on masque son corps en lecture (remplacé par
+  // l'éditeur, rendu hors region role=button pour l'invariant a11y). Idem pour une réponse.
+  const editingRoot = editingId === item.id;
+  const deletingRoot = deletingId === item.id;
+  // Les contrôles édition/suppression vivent dans la zone d'actions (hors role=button) ⇒ on rend
+  // cette zone dès qu'une de ces affordances OU une action de fil existe.
+  const hasActionsRow = hasThreadActions || canEdit || canDelete;
+  const saveEdit = (id: string) => (body: string, sentimentCode: string | null) => onEditInteraction!(id, body, sentimentCode);
   // A11y (§66, revue) : la carte est un conteneur NEUTRE. Seule la région de navigation
   // (.tl-card__nav) porte role="button" quand la carte est cliquable — et elle n'englobe QUE
   // le contenu affiché (titre/meta/corps/réponses/pied). Les contrôles interactifs du fil
@@ -495,31 +776,9 @@ function TlCard({
             ) : null}
             <span className="tl-card__when">{formatShort(item.occurredAt)}</span>
           </div>
-          {item.body ? <p className="tl-card__sum">{item.body}</p> : null}
-
-          {/* Fil de discussion (§65/§66) : réponses NICHÉES sous le corps (affichage lecture
-              seule ⇒ reste DANS la région navigable). */}
-          {replies.length > 0 ? (
-            <div className="tl-replies">
-              {replies.map((reply) => {
-                const replyAuthor = interactionAuthorOf({
-                  ownerName: reply.ownerName,
-                  interlocutorEmail: reply.interlocutorEmail,
-                  source: reply.source,
-                });
-                return (
-                  <div key={reply.id} className="tl-reply">
-                    <div className="tl-reply__head">
-                      <span className="tl-reply__author">{replyAuthor}</span>
-                      <span className="tl-reply__when">· {formatShort(reply.occurredAt)}</span>
-                      <Mood sentimentCode={reply.sentimentCode} sentimentName={reply.sentimentName} />
-                    </div>
-                    {reply.body ? <p className="tl-reply__body">{reply.body}</p> : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
+          {/* Corps de la racine — masqué pendant l'édition (l'éditeur le remplace, rendu hors
+              region role=button en frère de .tl-card__nav pour l'invariant a11y §66). */}
+          {item.body && !editingRoot ? <p className="tl-card__sum">{item.body}</p> : null}
 
           <div className="tl-card__foot">
             {/* WHO : acteur de l'interaction (affichage). */}
@@ -539,15 +798,119 @@ function TlCard({
           </div>
         </div>
 
+        {/* Éditeur inline de la RACINE (§66) — FRÈRE de .tl-card__nav, hors role=button (a11y).
+            Prérempli avec le corps + le sentiment courants ; remplace visuellement le corps. */}
+        {editingRoot && onEditInteraction ? (
+          <TlCommentEditor
+            initialBody={item.body ?? ''}
+            initialSentimentCode={item.sentimentCode}
+            onSave={saveEdit(item.id)}
+            onClose={() => setEditingId(null)}
+          />
+        ) : null}
+
+        {/* Fil de discussion (§65/§66) : réponses NICHÉES sous le corps. Rendu hors de la région
+            navigable (§66) car chaque réponse porte désormais ses propres contrôles Modifier /
+            Supprimer (interactifs) — interdits sous un role=button. L'affichage reste le même. */}
+        {replies.length > 0 ? (
+          <div className="tl-replies" onClick={(event) => event.stopPropagation()}>
+            {replies.map((reply) => {
+              const replyAuthor = interactionAuthorOf({
+                ownerName: reply.ownerName,
+                interlocutorEmail: reply.interlocutorEmail,
+                source: reply.source,
+              });
+              const editingReply = editingId === reply.id;
+              const deletingReply = deletingId === reply.id;
+              return (
+                <div key={reply.id} className="tl-reply">
+                  <div className="tl-reply__head">
+                    <span className="tl-reply__author">{replyAuthor}</span>
+                    <span className="tl-reply__when">· {formatShort(reply.occurredAt)}</span>
+                    <Mood sentimentCode={reply.sentimentCode} sentimentName={reply.sentimentName} />
+                  </div>
+                  {/* Corps de la réponse — masqué pendant son édition. */}
+                  {reply.body && !editingReply ? <p className="tl-reply__body">{reply.body}</p> : null}
+                  {editingReply && onEditInteraction ? (
+                    <TlCommentEditor
+                      initialBody={reply.body ?? ''}
+                      initialSentimentCode={reply.sentimentCode}
+                      onSave={saveEdit(reply.id)}
+                      onClose={() => setEditingId(null)}
+                    />
+                  ) : null}
+                  {deletingReply && onDeleteInteraction ? (
+                    // Une réponse n'a pas de fil ⇒ pas d'avertissement de cascade (replyCount 0).
+                    <TlDeleteConfirm
+                      replyCount={0}
+                      onConfirm={async () => {
+                        await onDeleteInteraction(reply.id);
+                        setDeletingId(null);
+                      }}
+                      onCancel={() => setDeletingId(null)}
+                    />
+                  ) : null}
+                  {/* Édition / suppression de la réponse (§66) — compact, gaté, stopPropagation. */}
+                  {(canEdit || canDelete) && !editingReply && !deletingReply ? (
+                    <div className="tl-reply__actions">
+                      <TlEditDeleteButtons
+                        canWrite={canWrite}
+                        readOnlyReason={readOnlyReason}
+                        hasEdit={canEdit}
+                        hasDelete={canDelete}
+                        onEdit={() => {
+                          setDeletingId(null);
+                          setEditingId(reply.id);
+                        }}
+                        onDelete={() => {
+                          setEditingId(null);
+                          setDeletingId(reply.id);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
         {/* Contrôles interactifs du fil — FRÈRES de .tl-card__nav, HORS du role=button (§66) :
-            boutons Répondre / Marquer traitée / Rouvrir + composer inline. Plus de
-            stopPropagation requis pour éviter la nav (ils sont hors de la zone cliquable). */}
-        {hasThreadActions && actions ? (
+            boutons Répondre / Marquer traitée / Rouvrir + Modifier / Supprimer + composer inline.
+            Plus de stopPropagation requis pour éviter la nav (ils sont hors de la zone cliquable). */}
+        {hasActionsRow && actions ? (
           <TlThreadActions
             rootId={item.id}
             isResolved={isResolved}
             actions={actions}
             onOpenComposer={() => setComposerOpen(true)}
+            onOpenEditor={
+              canEdit
+                ? () => {
+                    setDeletingId(null);
+                    setEditingId(item.id);
+                  }
+                : undefined
+            }
+            onOpenDelete={
+              canDelete
+                ? () => {
+                    setEditingId(null);
+                    setDeletingId(item.id);
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+        {/* Confirmation de suppression de la RACINE (§66) — avertit de la cascade des réponses. */}
+        {deletingRoot && onDeleteInteraction ? (
+          <TlDeleteConfirm
+            replyCount={replies.length}
+            onConfirm={async () => {
+              await onDeleteInteraction(item.id);
+              setDeletingId(null);
+            }}
+            onCancel={() => setDeletingId(null)}
           />
         ) : null}
         {composerOpen && actions?.onReply ? (
@@ -570,6 +933,8 @@ export function CrmTimeline({
   readOnlyReason,
   onReply,
   onResolve,
+  onEditInteraction,
+  onDeleteInteraction,
 }: {
   items: CrmTimelineCardItem[];
   showActor?: boolean;
@@ -579,10 +944,13 @@ export function CrmTimeline({
   onOpenActor?: (actorId: string) => void;
   emptyLabel?: string;
 } & CrmThreadActions) {
-  // Les callbacks d'écriture du fil (§65/§66) sont passés à chaque carte racine. Absents ⇒
-  // chaque carte reste en lecture seule (pas de contrôle Répondre / Marquer traitée).
+  // Les callbacks d'écriture du fil (§65/§66 + §66 édition) sont passés à chaque carte racine.
+  // Absents ⇒ chaque carte reste en lecture seule (aucun contrôle Répondre / Marquer traitée /
+  // Modifier / Supprimer rendu). Édition/suppression couvrent racine ET réponses (même callback).
   const threadActions: CrmThreadActions | undefined =
-    onReply || onResolve ? { canWrite, readOnlyReason, onReply, onResolve } : undefined;
+    onReply || onResolve || onEditInteraction || onDeleteInteraction
+      ? { canWrite, readOnlyReason, onReply, onResolve, onEditInteraction, onDeleteInteraction }
+      : undefined;
   let lastMonth: string | null = null;
   return (
     <div className="tl">

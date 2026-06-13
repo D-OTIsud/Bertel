@@ -9530,6 +9530,63 @@ a {
 .crm-app .tl-reply-composer__area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); outline: none; }
 .crm-app .tl-reply-composer__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+/* Éditeur inline d'un commentaire (§66) — même grammaire visuelle que le composer de réponse
+   (textarea + sentiment + Enregistrer/Annuler), encadré discret. Accents only (hors thème ORG).
+   Réutilisé pour une racine OU une réponse (rendu en frère de .tl-card__nav / dans .tl-reply). */
+.crm-app .tl-comment-editor {
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.crm-app .tl-comment-editor__area {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface);
+  resize: vertical;
+}
+.crm-app .tl-comment-editor__area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); outline: none; }
+.crm-app .tl-comment-editor__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Confirmation de suppression inline (§66) — invite + Oui / Non, sur une ligne sous la carte
+   (ou sous la réponse). L'invite avertit de la cascade des réponses sur une racine. */
+.crm-app .tl-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.crm-app .tl-delete-confirm__prompt { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+
+/* Bouton « Supprimer » — variante ghost teintée en rouge (token --red, déjà global) : signal
+   destructif clair sans casser le thème ORG (accent only). État plein au survol. */
+.crm-app .crm-btn--danger-ghost { color: var(--red); }
+.crm-app .crm-btn--danger-ghost:hover { border-color: var(--red); color: var(--red); background: color-mix(in srgb, var(--red) 8%, transparent); }
+.crm-app .crm-btn.danger {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.crm-app .crm-btn.danger:hover { filter: brightness(1.06); }
+
+/* Actions compactes d'une réponse (§66) — « Modifier » / « Supprimer », alignées à droite,
+   discrètes sous le corps de la réponse. */
+.crm-app .tl-reply__actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+
 /* Humeur / tonalité — système 6 TONS sentiment (peps PO point 1, signal couleur dominant).
    Pastille : point plein (currentColor) + fond pastel + texte coloré GRAS. Les 6 tons sont
    visiblement distincts (interrogatif = ambre, plus jamais gris) ; `neutre` = gris doux pour

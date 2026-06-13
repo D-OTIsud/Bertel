@@ -127,6 +127,15 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
   const [creatingRoom, setCreatingRoom] = useState<ObjectWorkspaceRoomTypeItem | null>(null);
   const [creatingMeeting, setCreatingMeeting] = useState<ObjectWorkspaceMeetingRoomItem | null>(null);
 
+  // §64 — le détail chambres/MICE est optionnel (485 HLO loués en entier n'ont pas de chambres) :
+  // disclosure ouvert seulement s'il y a déjà du contenu (ou une notice §46 à montrer).
+  const [detailOpen, setDetailOpen] = useState<boolean>(
+    rooms.items.length > 0 ||
+      meetingRooms.items.length > 0 ||
+      Boolean(rooms.unavailableReason) ||
+      Boolean(meetingRooms.unavailableReason),
+  );
+
   /**
    * Write the rooms list + keep capacity in sync : max_capacity (derived-unless-overridden)
    * ET les métriques structurelles dérivées (bedrooms/pitches/meeting_rooms) pour l'Explorer.
@@ -189,6 +198,19 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
       <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
       <AccueilPolicies capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
 
+      {/* §64 — détail optionnel : tableaux chambres + salles MICE repliés par défaut quand vides. */}
+      <button
+        type="button"
+        className="rep-add"
+        aria-expanded={detailOpen}
+        onClick={() => setDetailOpen((open) => !open)}
+        style={{ marginTop: 16 }}
+      >
+        {detailOpen ? '▾' : '▸'} Détailler les chambres / unités & salles
+      </button>
+
+      {detailOpen && (
+      <div style={{ marginTop: 8 }}>
       {/* §46 type-gated rooms module — notice INSTEAD of controls when gated */}
       {rooms.unavailableReason ? (
         <ModuleUnavailableNotice reason={rooms.unavailableReason} />
@@ -362,6 +384,8 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
             />
           )}
         </>
+      )}
+      </div>
       )}
     </Fs>
   );

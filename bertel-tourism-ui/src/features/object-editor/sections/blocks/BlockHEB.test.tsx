@@ -81,6 +81,21 @@ describe('BlockHEB — encart Capacité d’accueil (§64)', () => {
   });
 });
 
+describe('BlockHEB — disclosure repliable des tables (§64)', () => {
+  it('collapses the room/MICE detail by default when there are no rooms', () => {
+    mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = []; });
+    const toggle = screen.getByRole('button', { name: /Détailler les chambres/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Chambres / unités locatives')).toBeNull();
+  });
+
+  it('expands the detail by default when rooms already exist', () => {
+    mountHEB(); // le fixture par défaut a une chambre
+    expect(screen.getByRole('button', { name: /Détailler les chambres/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Chambres / unités locatives')).toBeInTheDocument();
+  });
+});
+
 describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)', () => {
   it('hosts the pet policy (Animaux) in §06', () => {
     mountHEB((m) => { m.capacityPolicies.petPolicy.accepted = true; });

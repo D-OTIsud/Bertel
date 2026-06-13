@@ -1,5 +1,6 @@
 import {
   PAV_TINTS,
+  channelHrefOf,
   dueBadgeClassOf,
   formatRelative,
   formatShort,
@@ -212,5 +213,35 @@ describe('interactionAuthorOf — fix « par Système »', () => {
   it('owner null + interlocuteur null + source non-import → « Système »', () => {
     expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: 'bertel_ui' })).toBe('Système');
     expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: null })).toBe('Système');
+  });
+});
+
+// Coordonnées cliquables (rectif PO §66+) — chaque canal devient un lien actionnable selon son
+// kind_code : e-mail → mailto:, téléphones (phone/mobile/fax/whatsapp/sms) → tel: (espaces
+// retirés du href, jamais du libellé affiché), site web → href http(s) externe ; tout le reste
+// (ou un site sans schéma reconnaissable) → pas de lien (href null) ⇒ texte brut.
+describe('channelHrefOf — coordonnées cliquables', () => {
+  it('email → mailto:', () => {
+    expect(channelHrefOf('email', 'marie@basalte.re')).toEqual({ href: 'mailto:marie@basalte.re', external: false });
+  });
+
+  it('téléphones (phone/mobile/fax/whatsapp/sms) → tel: sans les espaces', () => {
+    expect(channelHrefOf('phone', '0262 12 34 56')).toEqual({ href: 'tel:0262123456', external: false });
+    expect(channelHrefOf('mobile', '0692 11 22 33')).toEqual({ href: 'tel:0692112233', external: false });
+    expect(channelHrefOf('fax', '0262 00 00 00')).toEqual({ href: 'tel:0262000000', external: false });
+    expect(channelHrefOf('whatsapp', '+262 692 00 00 00')).toEqual({ href: 'tel:+262692000000', external: false });
+    expect(channelHrefOf('sms', '0692 99 88 77')).toEqual({ href: 'tel:0692998877', external: false });
+  });
+
+  it('site web avec schéma → href externe ; sans schéma → préfixe https://', () => {
+    expect(channelHrefOf('website', 'https://basalte.re')).toEqual({ href: 'https://basalte.re', external: true });
+    expect(channelHrefOf('website', 'basalte.re')).toEqual({ href: 'https://basalte.re', external: true });
+  });
+
+  it('kind inconnu / valeur non reconnaissable → pas de lien (href null) ⇒ texte brut', () => {
+    expect(channelHrefOf('messenger', 'un-pseudo-quelconque')).toEqual({ href: null, external: false });
+    // Un website sans rien qui ressemble à un domaine ne devient pas un lien cassé.
+    expect(channelHrefOf('website', 'à compléter')).toEqual({ href: null, external: false });
+    expect(channelHrefOf('email', '')).toEqual({ href: null, external: false });
   });
 });

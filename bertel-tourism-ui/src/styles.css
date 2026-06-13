@@ -9086,6 +9086,98 @@ a {
   margin-bottom: 14px;
 }
 
+/* ---------- Fiche acteur deux colonnes (rectif PO §66+) ----------
+   Desktop (≥ 961px) : la colonne main (actions + timeline) à GAUCHE, le rail (carte acteur +
+   KPI + listes) à DROITE dans une colonne fixe. Sous 960px la grille s'effondre en 1 colonne et
+   le rail remonte AVANT la colonne main (order) ⇒ sur mobile la carte acteur arrive en premier.
+   Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
+.crm-app .crm-actor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.crm-app .crm-actor-grid__side { min-width: 0; }
+
+/* Rangée d'actions en tête de la colonne principale (« Nouvelle tâche » / « Nouvelle interaction »). */
+.crm-app .crm-actor-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Carte acteur (rail droit, toujours visible) — avatar + identité + coordonnées verticales + Modifier. */
+.crm-app .crm-actor-card {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-s);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.crm-app .crm-actor-card__head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.crm-app .crm-actor-card__id { min-width: 0; }
+.crm-app .crm-actor-card__name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.crm-app .crm-actor-card__sub { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+.crm-app .crm-actor-card__edit { align-self: flex-start; }
+
+/* Coordonnées EN VERTICAL — un canal par ligne, lien cliquable (mailto/tel/externe). */
+.crm-app .crm-actor-coords {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.crm-app .coord-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--accent-deep);
+  min-width: 0;
+}
+.crm-app .coord-row .val {
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* Les valeurs cliquables (a.val) gardent la couleur d'encre + soulignent au survol (affordance). */
+.crm-app a.coord-row .val,
+.crm-app .coord-row a.val { text-decoration: none; }
+.crm-app .coord-row a.val:hover { text-decoration: underline; color: var(--accent-deep); }
+.crm-app .coord-row a.val:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.crm-app .crm-actor-coords__empty { font-size: 12.5px; color: var(--ink-4); }
+
+/* KPI compacts dans la colonne étroite : 2×2. Réutilise .crm-kpi (accent + valeur). */
+.crm-app .crm-actor-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* Densité réduite des KPI quand ils vivent dans le rail (valeur plus petite, padding resserré). */
+.crm-app .crm-actor-kpis .crm-kpi { padding: 13px 14px 12px; }
+.crm-app .crm-actor-kpis .crm-kpi__value { font-size: 22px; }
+
+/* Région repliable (KPI + listes) + toggle mobile-only — masqués/forcés par media query plus bas. */
+.crm-app .crm-actor-collapsible { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.crm-app .crm-actor-side-toggle { display: none; }
+
 /* Grille fiche : colonne principale + rail */
 .crm-app .crm-fgrid {
   display: grid;
@@ -9888,3 +9980,5 @@ a {
   /* Coordonnées inline : la valeur peut prendre toute la largeur disponible avant d'ellipser. */
   .crm-app .coord-inline .val { max-width: 100%; }
 }
+
+/* RESPONSIVE_ACTOR_GRID_PLACEHOLDER */

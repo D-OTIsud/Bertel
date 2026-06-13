@@ -88,59 +88,120 @@ beforeEach(() => {
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
-  it('rend le hero (identité réelle en sous-ligne), les établissements liés et le badge principal', async () => {
+  it('rend la carte acteur (identité réelle en sous-ligne), les établissements liés et le badge principal', async () => {
     renderFiche();
     expect(await screen.findByText('Mme Marie Hoarau')).toBeInTheDocument();
     // Rectif PO point 4 : prénom/nom réels sous le nom affiché.
     expect(screen.getByText('Marie Hoarau')).toBeInTheDocument();
-    expect(screen.getByText('2 établissements')).toBeInTheDocument();
-    expect(screen.getByText('3 interactions')).toBeInTheDocument();
     // Cartes établissements : nom + rôle + badge principal sur le lien primaire.
     expect(screen.getByText('Gérante')).toBeInTheDocument();
     expect(screen.getByText('Propriétaire')).toBeInTheDocument();
     expect(screen.getAllByText('principal').length).toBeGreaterThan(0);
-    // Stats réelles.
+    // KPI réels (rail droit).
     expect(screen.getByText('Interactions · 12 mois')).toBeInTheDocument();
     expect(screen.getByText('Sujets distincts')).toBeInTheDocument();
   });
 
-  // Rectif PO v5 point 6 : les coordonnées réelles + l'édition vivent dans le bloc principal
-  // du hero (div.crm-hero__main), plus dans le rail droit.
-  it('hero Coordonnées : canaux réels (valeur + badge principal) dans le hero__main', async () => {
+  // Rectif PO §66+ point 3 : les pills redondantes « N établissements » / « N interactions »
+  // sous le nom sont SUPPRIMÉES (elles doublonnaient les KPI Établissements / Interactions).
+  it('les pills redondantes « N établissements » / « N interactions » ne sont plus rendues', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
-    const coords = screen.getByRole('group', { name: 'Coordonnées' });
-    // Les coordonnées sont dans le bloc principal du hero (point 6).
-    expect(coords.closest('.crm-hero__main')).not.toBeNull();
-    expect(within(coords).getByText('marie@basalte.re')).toBeInTheDocument();
-    expect(within(coords).getByText('0262 12 34 56')).toBeInTheDocument();
+    expect(screen.queryByText('2 établissements')).not.toBeInTheDocument();
+    expect(screen.queryByText('3 interactions')).not.toBeInTheDocument();
+    // Aucune pill-mini dans la carte acteur (la seule pill-mini autorisée est le badge « principal »).
+    const card = document.querySelector('.crm-actor-card') as HTMLElement;
+    const pills = Array.from(card.querySelectorAll('.pill-mini'));
+    expect(pills.every((pill) => pill.textContent === 'principal')).toBe(true);
+  });
+
+  // Rectif PO §66+ points 1+2 : Coordonnées EN VERTICAL (liste, un canal par ligne) et CLIQUABLES :
+  // e-mail → mailto:, téléphone → tel: (sans espaces dans le href).
+  it('carte acteur Coordonnées : liste verticale cliquable (mailto / tel sans espaces)', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const coords = screen.getByLabelText('Coordonnées');
+    // La liste vit dans la carte acteur du rail.
+    expect(coords.closest('.crm-actor-card')).not.toBeNull();
+    expect(coords.tagName).toBe('UL');
+    // E-mail cliquable → mailto:.
+    const emailLink = within(coords).getByRole('link', { name: 'marie@basalte.re' });
+    expect(emailLink).toHaveAttribute('href', 'mailto:marie@basalte.re');
+    // Téléphone cliquable → tel: SANS les espaces (libellé affiché conserve le formatage).
+    const phoneLink = within(coords).getByRole('link', { name: '0262 12 34 56' });
+    expect(phoneLink).toHaveAttribute('href', 'tel:0262123456');
+    // Badge « principal » conservé.
     expect(within(coords).getByText('principal')).toBeInTheDocument();
   });
 
-  // Rectif PO v5 point 6 : le bouton « Modifier » est dans le hero__main (à côté du nom).
-  it('hero : le bouton Modifier est dans le hero__main et actif avec permission', async () => {
+  // Rectif PO §66+ point 4 : la carte acteur (avatar + nom + coordonnées + Modifier) vit dans la
+  // colonne DROITE (rail). Le bouton « Modifier » y est, actif avec permission.
+  it('carte acteur : Modifier dans la carte du rail, actif avec permission', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     const editBtn = screen.getByRole('button', { name: /^modifier$/i });
     expect(editBtn).toBeEnabled();
-    expect(editBtn.closest('.crm-hero__main')).not.toBeNull();
+    expect(editBtn.closest('.crm-actor-card')).not.toBeNull();
+    expect(editBtn.closest('.crm-actor-grid__side')).not.toBeNull();
   });
 
-  // Rectif PO v5 point 6 : le rail droit ne contient plus la carte Coordonnées.
-  it('le rail droit ne contient plus de carte Coordonnées', async () => {
+  // Rectif PO §66+ : le rail droit ne contient pas de carte rail (.rcard) « Coordonnées »
+  // (les coordonnées sont dans la carte acteur, pas une rcard séparée).
+  it('le rail droit ne contient pas de rcard Coordonnées', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     expect(screen.queryByRole('group', { name: /établissements & rôles/i })).toBeInTheDocument();
-    // Aucune carte rail (.rcard) n'est libellée « Coordonnées ».
-    const railCards = Array.from(document.querySelectorAll('.crm-rail .rcard'));
+    const railCards = Array.from(document.querySelectorAll('.crm-actor-grid__side .rcard'));
     expect(railCards.some((card) => card.getAttribute('aria-label') === 'Coordonnées')).toBe(false);
   });
 
-  it('hero Coordonnées : état vide explicite sans canal', async () => {
+  it('carte acteur Coordonnées : état vide explicite sans canal', async () => {
     crmMock.listActorCrm.mockResolvedValue({ ...snapshot, channels: [] });
     renderFiche();
     await screen.findByText('Appel tarifs');
     expect(screen.getByText('Aucun canal renseigné.')).toBeInTheDocument();
+  });
+
+  // Rectif PO §66+ points 4+5 : structure deux colonnes. À DROITE (.crm-actor-grid__side) : carte
+  // acteur + KPI + « Établissements & rôles » + « Sujets récurrents ». À GAUCHE
+  // (.crm-actor-grid__main) : les actions + la timeline.
+  it('structure deux colonnes : KPI + rails à droite, actions + timeline à gauche', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const side = document.querySelector('.crm-actor-grid__side') as HTMLElement;
+    const main = document.querySelector('.crm-actor-grid__main') as HTMLElement;
+    expect(side).not.toBeNull();
+    expect(main).not.toBeNull();
+    // Colonne DROITE : KPI + « Établissements & rôles » + « Sujets récurrents ».
+    expect(within(side).getByText('Interactions · 12 mois')).toBeInTheDocument();
+    expect(within(side).getByText('Établissements & rôles')).toBeInTheDocument();
+    expect(within(side).getByText('Sujets récurrents')).toBeInTheDocument();
+    expect(side.querySelector('.crm-actor-kpis')).not.toBeNull();
+    // Colonne GAUCHE : les deux boutons d'action + la timeline.
+    expect(within(main).getByRole('button', { name: /nouvelle tâche/i })).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: /nouvelle interaction/i })).toBeInTheDocument();
+    expect(main.querySelector('.crm-actor-actions')).not.toBeNull();
+    expect(within(main).getByText('Appel tarifs')).toBeInTheDocument();
+    // Les actions ne sont PAS dans le rail droit.
+    expect(within(side).queryByRole('button', { name: /nouvelle interaction/i })).not.toBeInTheDocument();
+  });
+
+  // Rectif PO §66+ point 6 : un toggle mobile « Voir les indicateurs » contrôle la région
+  // repliable (KPI + listes). Présent dans le DOM (CSS le masque ≥ breakpoint), aria-expanded + controls.
+  it('mobile : le toggle « Voir les indicateurs » existe et contrôle la région repliable', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const toggle = screen.getByRole('button', { name: /voir les indicateurs/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const controlled = toggle.getAttribute('aria-controls');
+    expect(controlled).toBeTruthy();
+    const region = document.getElementById(controlled as string);
+    expect(region).not.toBeNull();
+    expect(region).toHaveClass('crm-actor-collapsible');
+    // Toggle → déplie (is-open + aria-expanded passe à true).
+    fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: /masquer les indicateurs/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(region).toHaveClass('is-open');
   });
 
   // Rectif PO v5 point 1 : la chip « Sujets récurrents » porte une teinte stable (topic--N).

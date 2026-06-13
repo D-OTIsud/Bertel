@@ -217,6 +217,35 @@ export function interactionAuthorOf({
 /** Raison standard du gating page-wide (no-write-trap) — permission write_crm_notes. */
 export const CRM_READ_ONLY_REASON = 'Lecture seule : permission "Écrire des notes CRM" requise';
 
+/** Kinds de canal traités comme un numéro composable (href `tel:`). */
+const TEL_KINDS: ReadonlySet<string> = new Set(['phone', 'mobile', 'fax', 'whatsapp', 'sms']);
+
+/**
+ * Lien actionnable d'un canal de coordonnées (rectif PO §66+) — rend les Coordonnées cliquables.
+ * - e-mail (`email`) → `mailto:{valeur}` (interne).
+ * - téléphones (`phone`/`mobile`/`fax`/`whatsapp`/`sms`) → `tel:{valeur sans espaces}` (interne) :
+ *   on retire les espaces du HREF uniquement — le libellé affiché garde son formatage lisible.
+ * - site web (`website`) → `href` http(s) EXTERNE ; on préfixe `https://` si la valeur n'a pas de
+ *   schéma mais ressemble à un domaine (contient un point, pas d'espace). Sinon pas de lien.
+ * - tout autre kind, ou une valeur vide / non reconnaissable → `href: null` ⇒ la vue rend du
+ *   texte brut (jamais un lien cassé). `external` pilote `target=_blank rel=noreferrer` côté vue.
+ */
+export function channelHrefOf(
+  kindCode: string,
+  value: string,
+): { href: string | null; external: boolean } {
+  const trimmed = value.trim();
+  if (!trimmed) return { href: null, external: false };
+  if (kindCode === 'email') return { href: `mailto:${trimmed}`, external: false };
+  if (TEL_KINDS.has(kindCode)) return { href: `tel:${trimmed.replace(/\s+/g, '')}`, external: false };
+  if (kindCode === 'website') {
+    if (/^https?:\/\//i.test(trimmed)) return { href: trimmed, external: true };
+    // Pas de schéma : on n'en fabrique un que si ça ressemble à un domaine (un point, pas d'espace).
+    if (/^[^\s]+\.[^\s]+$/.test(trimmed)) return { href: `https://${trimmed}`, external: true };
+  }
+  return { href: null, external: false };
+}
+
 /** Vocabulaire sentiment (ref_code, domaine sentiment) — les 6 codes connus, labels FR. */
 export const CRM_SENTIMENT_OPTIONS = [
   { code: 'tres_positif', name: 'Très positif' },

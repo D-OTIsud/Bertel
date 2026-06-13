@@ -9053,31 +9053,6 @@ a {
 .crm-app .crm-hero__actions { display: flex; align-items: center; gap: 8px; flex: none; }
 /* Rectif PO v5 point 6 : nom + bouton « Modifier » sur une même ligne, dans le bloc principal. */
 .crm-app .crm-hero__id { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-/* Rectif PO v5 point 6 : Coordonnées inline (canaux) sous l'identité — s'enroulent (point 7). */
-.crm-app .crm-hero__coords {
-  display: flex;
-  align-items: center;
-  gap: 6px 16px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-.crm-app .coord-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
-  color: var(--accent-deep);
-  min-width: 0;
-}
-.crm-app .coord-inline .val {
-  font-weight: 600;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 220px;
-}
-.crm-app .crm-hero__coords-empty { font-size: 12.5px; color: var(--ink-4); }
 
 .crm-app .crm-stats {
   display: grid;
@@ -9093,12 +9068,15 @@ a {
    Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
 .crm-app .crm-actor-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  /* Colonnes inversées (rectif PO) : carte acteur + indicateurs À GAUCHE (360px),
+     actions + timeline À DROITE (1fr). `order` place le rail (side) en colonne 1 sans
+     toucher au DOM ⇒ la carte acteur reste aussi première sur mobile (1 colonne). */
+  grid-template-columns: 360px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
-.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.crm-app .crm-actor-grid__side { min-width: 0; }
+.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; order: 1; }
+.crm-app .crm-actor-grid__side { min-width: 0; order: 0; }
 
 /* Rangée d'actions en tête de la colonne principale (« Nouvelle tâche » / « Nouvelle interaction »). */
 .crm-app .crm-actor-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -9977,8 +9955,6 @@ a {
   .crm-app .crm-hero__actions .crm-btn { flex: 1 1 auto; justify-content: center; }
   /* KPI fiche : 2 → 1 colonne (les KPI annuaire sont déjà à 1 col dès 1100px). */
   .crm-app .crm-stats { grid-template-columns: 1fr; }
-  /* Coordonnées inline : la valeur peut prendre toute la largeur disponible avant d'ellipser. */
-  .crm-app .coord-inline .val { max-width: 100%; }
 }
 
 /* ---------- Responsive grille acteur deux colonnes (rectif PO §66+) ----------
@@ -9992,10 +9968,8 @@ a {
      apparaît ; .is-open (piloté par JS) la rouvre. Ordre vertical mobile : carte acteur →
      [toggle → KPI + listes] → actions + timeline. */
 @media (max-width: 960px) {
+  /* 1 colonne ; l'ordre de base (side=0 avant main=1) garde la carte acteur EN PREMIER. */
   .crm-app .crm-actor-grid { grid-template-columns: 1fr; }
-  /* Le rail (carte acteur + indicateurs) passe AVANT la colonne principale. */
-  .crm-app .crm-actor-grid__side { order: -1; }
-  .crm-app .crm-actor-grid__main { order: 0; }
 }
 @media (max-width: 720px) {
   /* Le toggle mobile apparaît ; la région repliable est masquée sauf .is-open. */

@@ -162,22 +162,23 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getByText('Aucun canal renseigné.')).toBeInTheDocument();
   });
 
-  // Rectif PO §66+ points 4+5 : structure deux colonnes. À DROITE (.crm-actor-grid__side) : carte
-  // acteur + KPI + « Établissements & rôles » + « Sujets récurrents ». À GAUCHE
-  // (.crm-actor-grid__main) : les actions + la timeline.
-  it('structure deux colonnes : KPI + rails à droite, actions + timeline à gauche', async () => {
+  // Rectif PO : structure deux colonnes INVERSÉES. À GAUCHE (.crm-actor-grid__side) : carte
+  // acteur + KPI + « Établissements & rôles » + « Sujets récurrents ». À DROITE
+  // (.crm-actor-grid__main) : les actions + la timeline. (Position visuelle pilotée par `order` CSS ;
+  // le test vérifie l'APPARTENANCE DOM, inchangée par l'inversion.)
+  it('structure deux colonnes : carte acteur + KPI + rails (.side), actions + timeline (.main)', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     const side = document.querySelector('.crm-actor-grid__side') as HTMLElement;
     const main = document.querySelector('.crm-actor-grid__main') as HTMLElement;
     expect(side).not.toBeNull();
     expect(main).not.toBeNull();
-    // Colonne DROITE : KPI + « Établissements & rôles » + « Sujets récurrents ».
+    // Colonne GAUCHE (.side) : KPI + « Établissements & rôles » + « Sujets récurrents ».
     expect(within(side).getByText('Interactions · 12 mois')).toBeInTheDocument();
     expect(within(side).getByText('Établissements & rôles')).toBeInTheDocument();
     expect(within(side).getByText('Sujets récurrents')).toBeInTheDocument();
     expect(side.querySelector('.crm-actor-kpis')).not.toBeNull();
-    // Colonne GAUCHE : les deux boutons d'action + la timeline.
+    // Colonne DROITE (.main) : les deux boutons d'action + la timeline.
     expect(within(main).getByRole('button', { name: /nouvelle tâche/i })).toBeInTheDocument();
     expect(within(main).getByRole('button', { name: /nouvelle interaction/i })).toBeInTheDocument();
     expect(main.querySelector('.crm-actor-actions')).not.toBeNull();

@@ -3,6 +3,35 @@ import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockHEB } from './BlockHEB';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
 
+/** Monte BlockHEB (HEB/HOT) avec un fixture modifiable. `result.current` reste live après fireEvent. */
+function mountHEB(apply?: (m: ReturnType<typeof fullModulesFixture>) => void) {
+  const modules = fullModulesFixture();
+  // metricOptions enrichi : sans bedrooms/pitches/meeting_rooms, la dérivation serait un no-op
+  // silencieux (piège §54). Le fixture par défaut ne contient que max_capacity.
+  modules.capacityPolicies.metricOptions = [
+    { id: 'cap', code: 'max_capacity', label: 'Capacité max.' },
+    { id: 'bed', code: 'bedrooms', label: 'Chambres' },
+    { id: 'pit', code: 'pitches', label: 'Emplacements' },
+    { id: 'mtg', code: 'meeting_rooms', label: 'Salles de réunion' },
+  ];
+  apply?.(modules);
+  const { result } = renderHook(() => useObjectEditorState('o1', modules));
+  const props = { permissions: allowAll, archetype: 'HEB' as const, typeCode: 'HOT' };
+  const view = render(<BlockHEB editor={result.current} {...props} />);
+  return { result, view, rerender: () => view.rerender(<BlockHEB editor={result.current} {...props} />) };
+}
+
+describe('BlockHEB — alignement des tableaux', () => {
+  it('header and room rows share identical grid tracks ending in a fixed width (no trailing auto)', () => {
+    mountHEB((m) => { m.rooms.items = [{ ...m.rooms.items[0], name: 'Suite', quantity: '2' }]; });
+    const header = screen.getByText('Couchages').parentElement as HTMLElement;
+    const row = screen.getByText('Suite').closest('.rep-row') as HTMLElement;
+    expect(header.style.gridTemplateColumns).toBe(row.style.gridTemplateColumns);
+    expect(header.style.gridTemplateColumns.trim().endsWith('auto')).toBe(false);
+    expect(/\d+px$/.test(header.style.gridTemplateColumns.trim())).toBe(true);
+  });
+});
+
 describe('BlockHEB pet policy (moved to §07 — PO 2026-06-11)', () => {
   it('renders no pet-policy controls and no pointer note (label + note removed — PO)', () => {
     const modules = fullModulesFixture();

@@ -11,10 +11,13 @@ import type {
 import { ModuleUnavailableNotice } from './block-notes';
 import { computeRoomsCapacitySum, nextRoomCode, reindexRoomPositions, syncCapacityWithRooms } from './rooms-utils';
 
-const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px auto';
+// Dernière piste = actions, en LARGEUR FIXE — un `auto` vaut 0px dans l'en-tête (vide) et
+// ~90px dans les lignes (boutons), donc le `1.4fr` partagé se résout différemment et désaligne
+// toutes les colonnes. Fixe = pistes identiques en-tête vs lignes (alignement exact).
+const ROOM_COLS = '14px 1.4fr 70px 70px 70px 80px 120px';
 // No handle column: meeting-room order is NOT persisted (object_meeting_room has no
 // position column), so a drag affordance would lie.
-const MICE_COLS = '1.4fr 70px 70px 70px 70px auto';
+const MICE_COLS = '1.4fr 70px 70px 70px 70px 96px';
 
 function repHeader(columns: string, labels: string[]) {
   return (
@@ -22,7 +25,7 @@ function repHeader(columns: string, labels: string[]) {
       style={{
         display: 'grid',
         gridTemplateColumns: columns,
-        gap: 8,
+        gap: 10,
         padding: '6px 12px',
         fontSize: 10,
         fontWeight: 700,
@@ -31,8 +34,8 @@ function repHeader(columns: string, labels: string[]) {
         textTransform: 'uppercase',
       }}
     >
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
+      {labels.map((label, index) => (
+        <span key={label || `col-${index}`}>{label}</span>
       ))}
     </div>
   );
@@ -152,7 +155,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
           <div className="chip-group__label" style={{ marginTop: 0 }}>
             Chambres / unités locatives
           </div>
-          {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif'])}
+          {repHeader(ROOM_COLS, ['', 'Type · vue', 'Couchages', 'Surface', 'Unités', 'Tarif', ''])}
           <SortableList
             items={rooms.items}
             getId={(item) => item.recordId ?? item.code}
@@ -264,7 +267,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             Salles séminaire & événementiel
           </div>
           {/* cap_boardroom = salle de CONSEIL (boardroom), pas banquet — le drawer dit « Conseil ». */}
-          {repHeader(MICE_COLS, ['Salle', 'Surface m²', 'Théâtre', 'Classe', 'Conseil'])}
+          {repHeader(MICE_COLS, ['Salle', 'Surface m²', 'Théâtre', 'Classe', 'Conseil', ''])}
           <Repeater
             items={meetingRooms.items}
             getKey={(item, index) => item.recordId ?? `meeting-${index}`}

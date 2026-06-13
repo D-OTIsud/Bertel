@@ -117,6 +117,8 @@ export function CrmTaches({
           event.dataTransfer.setData('text/plain', task.id);
           event.dataTransfer.effectAllowed = 'move';
         }}
+        // Drag abandonné hors d'une colonne : on efface la surbrillance de dépôt (pas d'état figé).
+        onDragEnd={() => setDropCol(null)}
       >
         <div className="ticket__title">
           {task.title}

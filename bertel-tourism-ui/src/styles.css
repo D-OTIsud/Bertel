@@ -8848,7 +8848,10 @@ a {
 .crm-app .topic-pill.topic--3 { background: var(--green-soft); color: var(--crm-green-ink); }
 .crm-app .topic-pill.topic--4 { background: var(--crm-plum-tint); color: var(--crm-plum-ink); }
 .crm-app .topic-pill.topic--5 { background: var(--crm-amber-tint); color: var(--crm-amber-ink); }
-.crm-app .topic-pill.topic--6 { background: rgba(31, 116, 145, 0.10); color: var(--crm-blue-ink); }
+/* topic--6 = ardoise (slate) : hue franchement distincte du bleu (topic--2) — l'ancien
+   rgba(31,116,145,…) n'était que le même bleu à alpha plus faible (collision visuelle).
+   Fond ardoise pastel + encre slate-700 foncée (contraste AA largement au-dessus de 4.5:1). */
+.crm-app .topic-pill.topic--6 { background: rgba(71, 85, 105, 0.18); color: #334155; }
 .crm-app .topic-pill.topic--7 { background: var(--crm-red-tint); color: var(--crm-red-ink); }
 
 /* ---------- Annuaire : liste acteurs ---------- */
@@ -9347,11 +9350,22 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Un nom d'acteur long à côté du tag contexte (≤220px) débordait à ~380px : on autorise
+     le retour à la ligne, et le nom d'acteur ellipsise (cf. .tl-card__actor) au lieu de pousser. */
+  flex-wrap: wrap;
   margin-top: 9px;
   font-size: 11px;
   color: var(--ink-4);
 }
-.crm-app .tl-card__actor { font-weight: 600; color: var(--ink-3); }
+.crm-app .tl-card__actor {
+  font-weight: 600;
+  color: var(--ink-3);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* Référent (rectif PO v5 point 4) : « par {qui a consigné} » — discret, à côté de l'acteur. */
 .crm-app .tl-card__owner { color: var(--ink-4); }
 .crm-app .tl-empty { color: var(--ink-4); font-size: 13px; margin: 4px 0 0 48px; }

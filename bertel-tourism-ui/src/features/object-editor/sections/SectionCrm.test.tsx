@@ -25,7 +25,7 @@ function fixtureWithCrm() {
     ...modules.providerFollowUp,
     interactions: [{
       id: 'i1', interactionType: 'call', subject: 'Demande de visite',
-      body: 'RDV fixé au 12.', occurredAt: '2026-06-01T08:00:00Z', actorName: 'M. Payet',
+      body: 'RDV fixé au 12.', occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
     }],

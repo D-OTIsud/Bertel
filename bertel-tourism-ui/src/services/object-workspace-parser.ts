@@ -615,6 +615,8 @@ export interface ObjectWorkspaceCrmInteractionItem {
   subject: string;
   body: string | null;
   occurredAt: string | null;
+  /** Acteur de l'interaction (list_object_crm le porte désormais) — null si absent. */
+  actorId: string | null;
   actorName: string | null;
   topicCode: string | null;
   topicName: string | null;

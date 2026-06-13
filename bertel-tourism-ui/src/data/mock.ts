@@ -407,7 +407,11 @@ export const mockCrmDirectory: CrmDirectoryEntry[] = [
     lastInteractionType: 'call',
     lastInteractionSubject: 'Appel de suivi',
     lastInteractionObjectName: 'Hotel Basalte & Lagon',
-    topTopics: ['Demande de visite', 'Modification infos BDD'],
+    // Forme `{code, name}` (contrat list_crm_directory) — le code pilote la teinte (parité fiche).
+    topTopics: [
+      { code: 'demande_de_visite', name: 'Demande de visite' },
+      { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+    ],
   },
   {
     actorId: 'actor-2',
@@ -423,7 +427,7 @@ export const mockCrmDirectory: CrmDirectoryEntry[] = [
     lastInteractionType: 'email',
     lastInteractionSubject: 'Renouvellement adhésion',
     lastInteractionObjectName: null,
-    topTopics: ['Modification infos BDD'],
+    topTopics: [{ code: 'modification_infos_bdd', name: 'Modification infos BDD' }],
   },
   {
     actorId: 'actor-3',

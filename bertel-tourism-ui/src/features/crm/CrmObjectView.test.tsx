@@ -14,14 +14,16 @@ const snapshot: ObjectCrmSnapshot = {
     {
       // topicName null ⇒ titre de carte = subject (« Appel tarifs »), ancre des assertions
       // existantes ; le fallback de titre est couvert à l'unité dans crm-primitives.test.tsx.
+      // actorId porté DIRECTEMENT par l'interaction (contrat backend) — le clic carte l'utilise.
       id: 'i1', interactionType: 'call', subject: 'Appel tarifs', body: 'Tarifs validés.',
-      occurredAt: '2026-06-04T10:00:00Z', actorName: 'Mme Marie Hoarau',
+      occurredAt: '2026-06-04T10:00:00Z', actorId: 'actor-1', actorName: 'Mme Marie Hoarau',
       topicCode: 'modification_infos_bdd', topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
     },
     {
+      // actorId null : interaction ancrée au seul objet ⇒ carte non cliquable (pas de faux lien).
       id: 'i2', interactionType: 'email', subject: 'Adhésion 2026', body: null,
-      occurredAt: '2026-03-24T09:00:00Z', actorName: 'SARL Basalte & Lagon',
+      occurredAt: '2026-03-24T09:00:00Z', actorId: null, actorName: 'SARL Basalte & Lagon',
       topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
       ownerName: 'Awa', source: 'bertel_ui',
     },
@@ -102,14 +104,20 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
   });
 
   // Rectif PO v5 point 5 : dans l'historique objet, cliquer une carte ouvre la fiche de l'acteur.
-  // list_object_crm ne porte pas actor_id ⇒ il est résolu par nom depuis les acteurs liés.
-  it('clic sur une carte de l historique → onOpenActor(actorId résolu par nom)', async () => {
+  // list_object_crm porte désormais actor_id par interaction ⇒ le clic l'utilise DIRECTEMENT
+  // (plus de résolution par nom). Une interaction sans actor_id ⇒ carte non cliquable.
+  it('clic sur une carte de l historique → onOpenActor(actorId de l interaction)', async () => {
     const props = renderView();
-    // i1 (actorName « Mme Marie Hoarau » = actor-1 lié) : on cible la carte par son corps.
+    // i1 (actorId 'actor-1') : on cible la carte par son corps.
     const card = (await screen.findByText('Tarifs validés.')).closest('.tl-card') as HTMLElement;
     expect(card).toHaveAttribute('role', 'button');
     fireEvent.click(card);
     expect(props.onOpenActor).toHaveBeenCalledWith('actor-1');
+    // i2 (actorId null) : carte NON cliquable (pas de role button), clic sans effet.
+    const card2 = (screen.getByText('Adhésion 2026').closest('.tl-card')) as HTMLElement;
+    expect(card2).not.toHaveAttribute('role', 'button');
+    fireEvent.click(card2);
+    expect(props.onOpenActor).toHaveBeenCalledTimes(1);
   });
 
   it('bouton retour avec le libellé d origine', async () => {

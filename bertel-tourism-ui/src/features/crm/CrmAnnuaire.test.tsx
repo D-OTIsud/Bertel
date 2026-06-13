@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmAnnuaire } from './CrmAnnuaire';
 import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
+import { topicTintOf } from './crm-view-utils';
 
 jest.mock('../../services/crm');
 
@@ -66,15 +67,18 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.getByText('4')).toBeInTheDocument(); // 2 + 1 + 1
   });
 
-  // Rectif PO v5 point 1 : chaque chip de sujet porte une classe de teinte stable (topic--N).
-  it('les chips de sujet (top_topics) portent une classe de teinte topic--N', async () => {
+  // Rectif PO v5 point 1 + parité fiche : la chip affiche le NOM du sujet, et sa teinte est
+  // dérivée du CODE (topicTintOf(code)) — pas du nom — pour que le même sujet ait la même
+  // couleur ici et sur la fiche acteur (qui keye déjà par code).
+  it('les chips de sujet (top_topics) affichent le nom et portent topic--{topicTintOf(code)}', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
     const chip = screen
       .getAllByText('Demande de visite')
       .find((el) => el.classList.contains('topic-chip')) as HTMLElement;
     expect(chip).toHaveClass('topic-pill');
-    expect(Array.from(chip.classList).some((c) => /^topic--\d+$/.test(c))).toBe(true);
+    // Teinte keyée par CODE ('demande_de_visite'), pas par libellé — c'est la parité avec la fiche.
+    expect(chip).toHaveClass(`topic--${topicTintOf('demande_de_visite')}`);
   });
 
   it('filtre par recherche sur le nom de l acteur ET le nom d établissement', async () => {

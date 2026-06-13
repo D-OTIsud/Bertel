@@ -179,7 +179,13 @@ export interface CrmDirectoryEntry {
   lastInteractionType: string | null;
   lastInteractionSubject: string | null;
   lastInteractionObjectName: string | null;
-  topTopics: string[];
+  /**
+   * Top sujets de l'acteur — `[{code, name}]` (contrat backend list_crm_directory). Le `code`
+   * pilote la teinte (`topicTintOf(code)`) pour une PARITÉ stricte avec la fiche acteur (qui
+   * keye déjà par code) ; le `name` est le libellé affiché. Cf. parseCrmDirectoryEntry pour
+   * la tolérance à l'ancienne forme `string[]` (cache obsolète).
+   */
+  topTopics: Array<{ code: string; name: string }>;
 }
 
 function readNumber(value: unknown): number {
@@ -212,8 +218,20 @@ export function parseCrmDirectoryEntry(record: GenericRecord): CrmDirectoryEntry
     lastInteractionType: readNullableString(record.last_interaction_type),
     lastInteractionSubject: readNullableString(record.last_interaction_subject),
     lastInteractionObjectName: readNullableString(record.last_interaction_object_name),
+    // Contrat backend : top_topics = `[{code, name}]` (la teinte keye par code → parité fiche).
+    // Défensif : on accepte aussi l'ancienne forme `string[]` (cache obsolète) en la mappant
+    // sur `{code: '', name}` (clé vide → teinte topic--0, jamais de crash).
     topTopics: Array.isArray(record.top_topics)
-      ? record.top_topics.filter((topic): topic is string => typeof topic === 'string')
+      ? record.top_topics
+          .map((topic) => {
+            if (typeof topic === 'string') return { code: '', name: topic };
+            if (topic && typeof topic === 'object') {
+              const row = topic as GenericRecord;
+              return { code: readString(row.code), name: readString(row.name) };
+            }
+            return null;
+          })
+          .filter((topic): topic is { code: string; name: string } => topic !== null)
       : [],
   };
 }
@@ -648,6 +666,9 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           subject: readString(row.subject),
           body: readNullableString(row.body),
           occurredAt: readNullableString(row.occurred_at),
+          // Acteur de l'interaction (contrat backend) — la carte de la vue objet ouvre la
+          // fiche acteur directement par cet id (plus de résolution fragile par nom).
+          actorId: readNullableString(row.actor_id),
           actorName: readNullableString(row.actor_name),
           topicCode: readNullableString(row.topic_code),
           topicName: readNullableString(row.topic_name),

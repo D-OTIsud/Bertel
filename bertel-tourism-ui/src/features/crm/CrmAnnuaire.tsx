@@ -213,10 +213,12 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
                 )}
               </span>
               <span className="chip-row col-topics">
-                {/* Rectif PO v5 point 1 : teinte de sujet stable (top_topics = noms ⇒ clé = nom). */}
+                {/* Teinte de sujet stable PAR CODE (parité fiche acteur) : top_topics est
+                    `[{code, name}]` ⇒ libellé = name, teinte = topicTintOf(code). Le même sujet
+                    porte donc la MÊME couleur ici et sur la fiche. */}
                 {entry.topTopics.slice(0, 2).map((topic) => (
-                  <span key={topic} className={`topic-chip topic-pill topic--${topicTintOf(topic)}`}>
-                    {topic}
+                  <span key={topic.code || topic.name} className={`topic-chip topic-pill topic--${topicTintOf(topic.code)}`}>
+                    {topic.name}
                   </span>
                 ))}
               </span>

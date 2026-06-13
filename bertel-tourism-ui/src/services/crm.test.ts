@@ -95,16 +95,17 @@ describe('crm parsers', () => {
         id: 'i1', interaction_type: 'call', direction: 'outbound', status: 'done',
         subject: 'Demande de visite', body: 'RDV fixé au 12.',
         occurred_at: '2026-06-01T08:00:00Z', created_at: '2026-06-01T08:05:00Z',
-        actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
+        actor_id: 'a1', actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
         sentiment_code: 'positif', sentiment_name: 'Positif', owner_name: 'Marie', source: 'bertel_ui',
       }],
       tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: null }],
       topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }],
     });
     expect(snapshot.interactions).toHaveLength(1);
+    // Contrat backend : list_object_crm porte désormais actor_id par interaction (clic carte → fiche).
     expect(snapshot.interactions[0]).toEqual({
       id: 'i1', interactionType: 'call', subject: 'Demande de visite', body: 'RDV fixé au 12.',
-      occurredAt: '2026-06-01T08:00:00Z', actorName: 'M. Payet',
+      occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
     });
@@ -146,7 +147,11 @@ describe('parseCrmDirectoryEntry', () => {
       object_count: 1, interaction_count: 10, interactions_12m: 2,
       last_interaction_at: '2026-04-16T00:00:00+00:00', last_interaction_type: 'note',
       last_interaction_subject: 'Note interne', last_interaction_object_name: 'Les Palmistes',
-      top_topics: ['Accompagnement Taxe de séjour', 'Fermeture provisoire'],
+      // Contrat backend : top_topics = `[{code, name}]` (le code pilote la teinte → parité fiche).
+      top_topics: [
+        { code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour' },
+        { code: 'fermeture_provisoire', name: 'Fermeture provisoire' },
+      ],
     });
     expect(entry).toEqual({
       actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: null,
@@ -154,8 +159,23 @@ describe('parseCrmDirectoryEntry', () => {
       objectCount: 1, interactionCount: 10, interactions12m: 2,
       lastInteractionAt: '2026-04-16T00:00:00+00:00', lastInteractionType: 'note',
       lastInteractionSubject: 'Note interne', lastInteractionObjectName: 'Les Palmistes',
-      topTopics: ['Accompagnement Taxe de séjour', 'Fermeture provisoire'],
+      topTopics: [
+        { code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour' },
+        { code: 'fermeture_provisoire', name: 'Fermeture provisoire' },
+      ],
     });
+  });
+
+  // Défense contre un cache obsolète : l'ancienne forme `string[]` est encore acceptée et
+  // mappée sur `{code: '', name}` (clé vide → teinte topic--0) — jamais de crash de parse.
+  it('tolère l ancienne forme top_topics: string[] (cache obsolète → {code: "", name})', () => {
+    const entry = parseCrmDirectoryEntry({
+      actor_id: 'a1', display_name: 'X', top_topics: ['Boutique', 'Hébergement'],
+    });
+    expect(entry.topTopics).toEqual([
+      { code: '', name: 'Boutique' },
+      { code: '', name: 'Hébergement' },
+    ]);
   });
 
   it('borne les champs absents/malformés (objects/top_topics non-tableaux → [])', () => {

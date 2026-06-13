@@ -49,6 +49,18 @@ export function CrmObjectView({
   const objectType = resolved?.type ?? '';
 
   const snapshot = objectQuery.data;
+  // Rectif PO v5 point 5 : la carte de l'historique objet doit pouvoir ouvrir la fiche acteur.
+  // list_object_crm ne renvoie pas actor_id par interaction (seulement actor_name) ⇒ on résout
+  // l'id depuis les acteurs liés de l'objet par nom (best-effort). Pas de correspondance ⇒
+  // actorId null ⇒ carte non cliquable (dégradation silencieuse, jamais de faux lien).
+  const actorIdByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const actor of snapshot?.actors ?? []) {
+      if (actor.displayName) map.set(actor.displayName, actor.actorId);
+    }
+    return map;
+  }, [snapshot]);
+
   const timelineItems = useMemo<CrmTimelineCardItem[]>(
     () =>
       (snapshot?.interactions ?? []).map((item) => ({
@@ -64,8 +76,9 @@ export function CrmObjectView({
         objectName: null,
         ownerName: item.ownerName,
         actorName: item.actorName,
+        actorId: item.actorName ? actorIdByName.get(item.actorName) ?? null : null,
       })),
-    [snapshot],
+    [snapshot, actorIdByName],
   );
 
   if (objectQuery.isLoading) {
@@ -137,6 +150,7 @@ export function CrmObjectView({
               items={timelineItems}
               showActor
               showContext={false}
+              onOpenActor={onOpenActor}
               emptyLabel="Aucune interaction enregistrée pour cet établissement."
             />
           </div>

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTimelineView } from './CrmTimelineView';
 import * as crm from '../../services/crm';
@@ -10,13 +10,14 @@ const crmMock = crm as jest.Mocked<typeof crm>;
 
 function renderTimeline() {
   const onOpenObject = jest.fn();
+  const onOpenActor = jest.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <CrmTimelineView onOpenObject={onOpenObject} />
+      <CrmTimelineView onOpenObject={onOpenObject} onOpenActor={onOpenActor} />
     </QueryClientProvider>,
   );
-  return onOpenObject;
+  return { onOpenObject, onOpenActor };
 }
 
 beforeEach(() => {
@@ -91,5 +92,24 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
     crmMock.listCrmTimeline.mockRejectedValue(new Error('refus RLS'));
     renderTimeline();
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  // Rectif PO v5 point 5 : cliquer une carte de la timeline ouvre la fiche de SON acteur.
+  it('clic sur une carte → onOpenActor(actorId)', async () => {
+    const { onOpenActor } = renderTimeline();
+    // evt-1 (actor-1) : titre = sujet normalisé « Demande de visite » ; on cible la carte par
+    // son corps pour ne pas confondre avec l'option homonyme du filtre Sujet.
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    fireEvent.click(card);
+    expect(onOpenActor).toHaveBeenCalledWith('actor-1');
+  });
+
+  // Le tag de contexte garde son propre clic → vue établissement (stopPropagation).
+  it('clic sur le tag de contexte → onOpenObject (pas onOpenActor)', async () => {
+    const { onOpenObject, onOpenActor } = renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: /hotel basalte/i }));
+    expect(onOpenObject).toHaveBeenCalledWith('obj-1');
+    expect(onOpenActor).not.toHaveBeenCalled();
   });
 });

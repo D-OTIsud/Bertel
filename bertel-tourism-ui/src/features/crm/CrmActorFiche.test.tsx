@@ -20,10 +20,13 @@ const snapshot: ActorCrmSnapshot = {
   ],
   interactions: [
     {
+      // topicName null ⇒ le titre de la carte = le subject (« Appel tarifs ») — les assertions
+      // de contexte/filtre s'ancrent dessus. La couverture du fallback topicName→subject→type
+      // est testée à l'unité dans crm-primitives.test.tsx.
       id: 'i1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',
       direction: 'outbound', status: 'done', subject: 'Appel tarifs', body: 'Tarifs 2026 validés.',
       occurredAt: '2026-06-04T10:00:00Z', actorName: null, topicCode: 'modification_infos_bdd',
-      topicName: 'Modification infos BDD', sentimentCode: 'positif', sentimentName: 'Positif',
+      topicName: null, sentimentCode: 'positif', sentimentName: 'Positif',
       ownerName: 'Florence', source: 'bertel_ui',
     },
     {

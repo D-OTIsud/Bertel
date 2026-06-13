@@ -182,6 +182,8 @@ export interface CrmTimelineCardItem {
   objectType?: string | null;
   ownerName: string | null;
   actorName?: string | null;
+  /** Acteur de l'interaction (rectif PO v5 point 5) — clic carte → fiche acteur. */
+  actorId?: string | null;
 }
 
 const TL_ICONS = {
@@ -196,37 +198,68 @@ function TlCard({
   showActor,
   showContext,
   onOpenObject,
+  onOpenActor,
 }: {
   item: CrmTimelineCardItem;
   showActor?: boolean;
   showContext?: boolean;
   onOpenObject?: (objectId: string) => void;
+  /** Rectif PO v5 point 5 : clic sur la carte → fiche acteur (timeline org + vue objet). */
+  onOpenActor?: (actorId: string) => void;
 }) {
   const icoClass = tlIcoClassOf(item.interactionType);
   const Icon = TL_ICONS[icoClass];
-  const title = item.subject || item.topicName || interactionTypeLabelOf(item.interactionType);
+  // Titre = le SUJET (rectif PO v5 point 4) : le sujet normalisé (topicName) prime, puis le
+  // subject brut (les lignes importées sans sujet retombent sur « Note interne »), puis le
+  // libellé du type en dernier recours. Le type n'est PLUS le titre — il devient une petite
+  // pastille secondaire.
+  const title = item.topicName || item.subject || interactionTypeLabelOf(item.interactionType);
   // Peps PO point 1 : la COULEUR de la ligne vient du SENTIMENT (le type pilote le glyphe).
   // Liseré gauche de la carte + anneau de l'icône teintés par le ton — la timeline varie
   // ligne à ligne même quand chaque interaction est une « note ».
   const tone = moodToneOf(item.sentimentCode);
+  // Carte cliquable → fiche acteur (rectif PO v5 point 5) quand un callback + un actorId sont
+  // fournis. La fiche acteur ne passe PAS onOpenActor (on y est déjà) ⇒ pas d'auto-lien.
+  const actorId = item.actorId;
+  const clickable = Boolean(onOpenActor && actorId);
+  const openActor = () => {
+    if (onOpenActor && actorId) onOpenActor(actorId);
+  };
   return (
     <div className="tl-item">
       <span className={'tl-item__ico ' + icoClass + ' tone--' + tone} aria-hidden>
         <Icon size={14} />
       </span>
-      <div className={'tl-card tone--' + tone}>
+      <div
+        className={'tl-card tone--' + tone + (clickable ? ' is-clickable' : '')}
+        role={clickable ? 'button' : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        title={clickable ? "Ouvrir la fiche de l'acteur" : undefined}
+        onClick={clickable ? openActor : undefined}
+        onKeyDown={
+          clickable
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openActor();
+                }
+              }
+            : undefined
+        }
+      >
         <div className="tl-card__top">
           <strong>{title}</strong>
+          {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
           <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
           <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
           <span className="tl-card__when">{formatShort(item.occurredAt)}</span>
         </div>
         {item.body ? <p className="tl-card__sum">{item.body}</p> : null}
         <div className="tl-card__foot">
-          {/* WHO : acteur de l'interaction — affichage seul (les RPCs timeline/objet
-              ne renvoient pas d'actor_id, seulement le nom). */}
+          {/* WHO : acteur de l'interaction (affichage). */}
           {showActor && item.actorName ? <span className="tl-card__actor">{item.actorName}</span> : null}
-          <span>{item.ownerName ?? 'Système'}</span>
+          {/* RÉFÉRENT : la personne qui a consigné l'interaction (rectif PO v5 point 4). */}
+          <span className="tl-card__owner">par {item.ownerName ?? 'Système'}</span>
           {showContext !== false && (
             <span style={{ marginLeft: 'auto' }}>
               <CtxTag
@@ -249,12 +282,15 @@ export function CrmTimeline({
   showActor,
   showContext,
   onOpenObject,
+  onOpenActor,
   emptyLabel,
 }: {
   items: CrmTimelineCardItem[];
   showActor?: boolean;
   showContext?: boolean;
   onOpenObject?: (objectId: string) => void;
+  /** Rectif PO v5 point 5 : carte cliquable → fiche acteur (non passé sur la fiche acteur). */
+  onOpenActor?: (actorId: string) => void;
   emptyLabel?: string;
 }) {
   let lastMonth: string | null = null;
@@ -267,7 +303,13 @@ export function CrmTimeline({
         return (
           <div key={item.id}>
             {head}
-            <TlCard item={item} showActor={showActor} showContext={showContext} onOpenObject={onOpenObject} />
+            <TlCard
+              item={item}
+              showActor={showActor}
+              showContext={showContext}
+              onOpenObject={onOpenObject}
+              onOpenActor={onOpenActor}
+            />
           </div>
         );
       })}

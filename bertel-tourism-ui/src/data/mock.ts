@@ -383,7 +383,7 @@ export const mockCrmTasks: CrmTask[] = [
 // Timeline CRM mock — topicCodes = vrais codes seedés (ref_code, domaine demand_topic) : demande_de_visite, modification_infos_bdd.
 export const mockCrmTimeline: CrmTimelinePage = {
   items: [
-    { id: 'evt-1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call', direction: 'outbound', status: 'done', subject: 'Appel de suivi', body: 'Besoin d une nouvelle photo facade.', occurredAt: '2026-06-11T11:12:00Z', actorName: 'M. Payet', topicCode: 'demande_de_visite', topicName: 'Demande de visite', sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui' },
+    { id: 'evt-1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call', direction: 'outbound', status: 'done', subject: 'Appel de suivi', body: 'Besoin d une nouvelle photo facade.', occurredAt: '2026-06-11T11:12:00Z', actorName: 'M. Payet', topicCode: null, topicName: null, sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui' },
     { id: 'evt-2', actorId: 'actor-2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', interactionType: 'email', direction: 'outbound', status: 'done', subject: 'Validation tarifs 2026', body: 'Mail envoye pour validation des tarifs 2026.', occurredAt: '2026-06-11T09:40:00Z', actorName: null, topicCode: 'modification_infos_bdd', topicName: 'Modification infos BDD', sentimentCode: null, sentimentName: null, ownerName: 'Luc', source: 'bertel_ui' },
   ],
   hasMore: false,

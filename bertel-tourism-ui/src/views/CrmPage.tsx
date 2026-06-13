@@ -135,7 +135,7 @@ export default function CrmPage() {
   } else if (nav.view === 'taches') {
     body = <CrmTaches canWrite={canWrite} onOpenObject={openObject} onOpenActor={openActor} />;
   } else if (nav.view === 'timeline') {
-    body = <CrmTimelineView onOpenObject={openObject} />;
+    body = <CrmTimelineView onOpenObject={openObject} onOpenActor={openActor} />;
   } else {
     body = <CrmAnnuaire canWrite={canWrite} onOpenActor={openActor} />;
   }

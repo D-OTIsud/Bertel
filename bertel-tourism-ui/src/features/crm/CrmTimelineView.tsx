@@ -24,7 +24,14 @@ import {
   type StatusItem,
 } from './CrmFilterBar';
 
-export function CrmTimelineView({ onOpenObject }: { onOpenObject: (objectId: string) => void }) {
+export function CrmTimelineView({
+  onOpenObject,
+  onOpenActor,
+}: {
+  onOpenObject: (objectId: string) => void;
+  /** Rectif PO v5 point 5 : clic sur une carte → fiche de l'acteur de l'interaction. */
+  onOpenActor: (actorId: string) => void;
+}) {
   const [olderPages, setOlderPages] = useState<CrmInteraction[][]>([]);
   const [cursor, setCursor] = useState<{ before: string; beforeId: string } | null>(null);
   // Filtres partagés (PO points 6+7) — défaut Toutes + Tout = timeline complète (fix point 7).
@@ -85,6 +92,7 @@ export function CrmTimelineView({ onOpenObject }: { onOpenObject: (objectId: str
         objectName: item.objectName,
         ownerName: item.ownerName,
         actorName: item.actorName,
+        actorId: item.actorId,
       })),
     [timelineItems],
   );
@@ -133,7 +141,13 @@ export function CrmTimelineView({ onOpenObject }: { onOpenObject: (objectId: str
             <div className="inline-alert">Échec du chargement : {(timelineQuery.error as Error).message}</div>
           ) : (
             <>
-              <CrmTimeline items={cardItems} showActor onOpenObject={onOpenObject} emptyLabel="Aucune interaction enregistrée." />
+              <CrmTimeline
+                items={cardItems}
+                showActor
+                onOpenObject={onOpenObject}
+                onOpenActor={onOpenActor}
+                emptyLabel="Aucune interaction enregistrée."
+              />
               {timelineQuery.data?.hasMore && (
                 <button type="button" className="crm-btn crm-load-more" onClick={loadMore}>
                   Charger plus

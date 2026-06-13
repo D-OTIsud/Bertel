@@ -12,9 +12,11 @@ const crmMock = crm as jest.Mocked<typeof crm>;
 const snapshot: ObjectCrmSnapshot = {
   interactions: [
     {
+      // topicName null ⇒ titre de carte = subject (« Appel tarifs »), ancre des assertions
+      // existantes ; le fallback de titre est couvert à l'unité dans crm-primitives.test.tsx.
       id: 'i1', interactionType: 'call', subject: 'Appel tarifs', body: 'Tarifs validés.',
       occurredAt: '2026-06-04T10:00:00Z', actorName: 'Mme Marie Hoarau',
-      topicCode: 'modification_infos_bdd', topicName: 'Modification infos BDD',
+      topicCode: 'modification_infos_bdd', topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
     },
     {
@@ -97,6 +99,17 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     // WHO par carte — les deux acteurs apparaissent dans le flux.
     expect(screen.getAllByText('Mme Marie Hoarau').length).toBeGreaterThan(0);
     expect(screen.getAllByText('SARL Basalte & Lagon').length).toBeGreaterThan(0);
+  });
+
+  // Rectif PO v5 point 5 : dans l'historique objet, cliquer une carte ouvre la fiche de l'acteur.
+  // list_object_crm ne porte pas actor_id ⇒ il est résolu par nom depuis les acteurs liés.
+  it('clic sur une carte de l historique → onOpenActor(actorId résolu par nom)', async () => {
+    const props = renderView();
+    // i1 (actorName « Mme Marie Hoarau » = actor-1 lié) : on cible la carte par son corps.
+    const card = (await screen.findByText('Tarifs validés.')).closest('.tl-card') as HTMLElement;
+    expect(card).toHaveAttribute('role', 'button');
+    fireEvent.click(card);
+    expect(props.onOpenActor).toHaveBeenCalledWith('actor-1');
   });
 
   it('bouton retour avec le libellé d origine', async () => {

@@ -64,6 +64,23 @@
 --    acteur sous cet objet) ; c) list_crm_timeline gagne p_status (active=planned / done) +
 --    p_from — mêmes filtres que list_crm_directory pour l'onglet Timeline (signature 7→9 args,
 --    DROP de l'ancienne pour éviter une surcharge PostgREST ambiguë — même leçon que 6b).
+-- 6d) FIL DE RÉPONSES + CYCLE « TRAITÉE » + INTERLOCUTEUR D'ORIGINE (§66, demande PO 2026-06-12) :
+--    a) crm_interaction.parent_interaction_id (self-FK ON DELETE CASCADE, 1 NIVEAU) : une
+--    réponse est une interaction enfant rattachée à la demande RACINE — save_crm_interaction
+--    accepte parent_interaction_id à l'INSERT, NORMALISE vers la racine (réponse-à-réponse →
+--    racine), HÉRITE l'acteur+contexte objet du parent (le payload actor_id/object_id est ignoré
+--    sur une réponse — le contexte du fil est celui du parent) et autorise sur ce contexte hérité ;
+--    owner = auteur de la réponse ; statut par défaut 'done' (une réponse n'est pas elle-même une
+--    demande en attente) ; topic NULL sauf topic_code fourni. La racine reçoit first_response_at =
+--    COALESCE(first_response_at, now()). Le re-parentage par UPDATE est REFUSÉ (les fils ne se
+--    déplacent pas — clé ignorée sur update). b) CYCLE « marquer traitée / rouvrir » : sur UPDATE,
+--    quand status est posé, resolved_at = now() si 'done' (COALESCE), NULL si 'planned', inchangé
+--    sinon — couple le statut de la demande à sa date de résolution sans nouveau RPC. c) Les trois
+--    RPC de lecture détaillée (list_crm_timeline / list_object_crm / list_actor_crm) ne renvoient
+--    plus QUE les RACINES au premier niveau (parent_interaction_id IS NULL) + une clé 'replies'
+--    imbriquée (triées occurred_at ASC) + 'interlocutor_email' (extra->>'interlocuteur_email', le
+--    « par {owner ?? interlocuteur ?? Import Berta 2} » côté UI) + 'resolved_at' sur chaque racine.
+--    Ajouts JSON additifs (pas de changement de signature, pas de DROP/REVOKE/GRANT).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -206,6 +223,21 @@ CREATE INDEX IF NOT EXISTS idx_crm_interaction_actor_occurred
 -- Colonne TEXT (l'URL est posée par la route d'upload APRÈS la création de l'acteur). No-op
 -- sur un build fresh où schema_unified.sql porte déjà la colonne.
 ALTER TABLE actor ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+-- ---------- 6d. Fil de réponses (§66, demande PO 2026-06-12) ----------
+-- Self-FK : une réponse est une interaction enfant rattachée à la demande RACINE (1 niveau) ;
+-- hérite acteur+contexte du parent (cf. save_crm_interaction). No-op sur un build fresh où
+-- schema_unified.sql porte déjà la colonne. ON DELETE CASCADE : supprimer une demande supprime
+-- son fil. FK ajoutée sous garde (la colonne nue est posée d'abord ⇒ idempotent).
+ALTER TABLE crm_interaction ADD COLUMN IF NOT EXISTS parent_interaction_id uuid;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='crm_interaction_parent_fkey') THEN
+    ALTER TABLE crm_interaction ADD CONSTRAINT crm_interaction_parent_fkey
+      FOREIGN KEY (parent_interaction_id) REFERENCES crm_interaction(id) ON DELETE CASCADE;
+  END IF;
+END$$;
+CREATE INDEX IF NOT EXISTS idx_crm_interaction_parent
+  ON crm_interaction(parent_interaction_id) WHERE parent_interaction_id IS NOT NULL;
 
 -- ---------- 7. Helpers d'autorisation (style current_user_extended_object_ids, §35) ----------
 -- Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
@@ -387,17 +419,34 @@ BEGIN
 
   -- Une seule requête (pas de second probe à dériver) : v_limit + 1 lignes, la ligne
   -- excédentaire signale has_more puis est retranchée.
+  -- §66 : RACINES uniquement (parent_interaction_id IS NULL) — la pagination keyset pagine sur
+  -- les racines ; les réponses sont imbriquées dans 'replies' (occurred_at ASC) + interlocutor_email
+  -- + resolved_at (mêmes ajouts additifs que list_object_crm / list_actor_crm).
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_items
   FROM (
     SELECT jsonb_build_object(
       'id', ci.id, 'object_id', ci.object_id, 'object_name', o.name,
       'interaction_type', ci.interaction_type, 'direction', ci.direction,
       'status', ci.status, 'subject', ci.subject, 'body', ci.body,
-      'occurred_at', ci.occurred_at, 'created_at', ci.created_at,
+      'occurred_at', ci.occurred_at, 'created_at', ci.created_at, 'resolved_at', ci.resolved_at,
       'actor_id', ci.actor_id, 'actor_name', a.display_name,
       'topic_code', t.code, 'topic_name', t.name,
       'sentiment_code', s.code, 'sentiment_name', s.name,
-      'owner_name', p.display_name, 'source', ci.source
+      'owner_name', p.display_name, 'source', ci.source,
+      'interlocutor_email', ci.extra->>'interlocuteur_email',
+      'replies', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', r.id, 'interaction_type', r.interaction_type, 'body', r.body,
+          'occurred_at', r.occurred_at, 'created_at', r.created_at,
+          'sentiment_code', rs.code, 'sentiment_name', rs.name,
+          'owner_name', rp.display_name, 'interlocutor_email', r.extra->>'interlocuteur_email',
+          'source', r.source
+        ) ORDER BY r.occurred_at ASC NULLS LAST, r.id ASC)
+        FROM crm_interaction r
+        LEFT JOIN ref_code_crm_sentiment rs ON rs.id = r.request_sentiment_id
+        LEFT JOIN app_user_profile rp ON rp.id = r.owner
+        WHERE r.parent_interaction_id = ci.id
+      ), '[]'::jsonb)
     ) AS item
     FROM crm_interaction ci
     LEFT JOIN object o ON o.id = ci.object_id -- object_id nullable (acteur-seul) ⇒ LEFT JOIN
@@ -405,7 +454,8 @@ BEGIN
     LEFT JOIN ref_code_demand_topic t ON t.id = ci.demand_topic_id
     LEFT JOIN ref_code_crm_sentiment s ON s.id = ci.request_sentiment_id
     LEFT JOIN app_user_profile p ON p.id = ci.owner
-    WHERE (v_scope IS NULL
+    WHERE ci.parent_interaction_id IS NULL
+      AND (v_scope IS NULL
            OR ci.object_id = ANY(v_scope)
            OR (ci.object_id IS NULL AND ci.actor_id = ANY(v_actor_scope)))
       AND (p_object_id IS NULL OR ci.object_id = p_object_id)
@@ -621,16 +671,33 @@ BEGIN
     RAISE EXCEPTION 'CRM non autorisé pour cet objet' USING ERRCODE = '42501';
   END IF;
 
+  -- §66 : RACINES uniquement (parent_interaction_id IS NULL) — les réponses sont imbriquées
+  -- dans 'replies' (triées occurred_at ASC). 'interlocutor_email' = auteur d'origine (Berta 2)
+  -- exposé pour « par {owner ?? interlocuteur ?? Import Berta 2} ». 'resolved_at' = cycle traitée.
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_interactions
   FROM (
     SELECT jsonb_build_object(
       'id', ci.id, 'interaction_type', ci.interaction_type, 'direction', ci.direction,
       'status', ci.status, 'subject', ci.subject, 'body', ci.body,
-      'occurred_at', ci.occurred_at, 'created_at', ci.created_at,
+      'occurred_at', ci.occurred_at, 'created_at', ci.created_at, 'resolved_at', ci.resolved_at,
       'actor_id', ci.actor_id, 'actor_name', a.display_name, -- actor_id : clic carte→acteur sans name-matching (§65)
       'topic_code', t.code, 'topic_name', t.name,
       'sentiment_code', s.code, 'sentiment_name', s.name,
-      'owner_name', p.display_name, 'source', ci.source
+      'owner_name', p.display_name, 'source', ci.source,
+      'interlocutor_email', ci.extra->>'interlocuteur_email',
+      'replies', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', r.id, 'interaction_type', r.interaction_type, 'body', r.body,
+          'occurred_at', r.occurred_at, 'created_at', r.created_at,
+          'sentiment_code', rs.code, 'sentiment_name', rs.name,
+          'owner_name', rp.display_name, 'interlocutor_email', r.extra->>'interlocuteur_email',
+          'source', r.source
+        ) ORDER BY r.occurred_at ASC NULLS LAST, r.id ASC)
+        FROM crm_interaction r
+        LEFT JOIN ref_code_crm_sentiment rs ON rs.id = r.request_sentiment_id
+        LEFT JOIN app_user_profile rp ON rp.id = r.owner
+        WHERE r.parent_interaction_id = ci.id
+      ), '[]'::jsonb)
     ) AS item
     FROM crm_interaction ci
     LEFT JOIN actor a ON a.id = ci.actor_id
@@ -638,6 +705,7 @@ BEGIN
     LEFT JOIN ref_code_crm_sentiment s ON s.id = ci.request_sentiment_id
     LEFT JOIN app_user_profile p ON p.id = ci.owner
     WHERE ci.object_id = p_object_id
+      AND ci.parent_interaction_id IS NULL
     ORDER BY ci.occurred_at DESC NULLS LAST, ci.id DESC
   ) qi;
 
@@ -699,6 +767,12 @@ DECLARE
   v_existing_actor uuid;
   v_topic_id uuid;
   v_sentiment_id uuid;
+  -- Fil de réponses (§66) : parent fourni à l'INSERT ⇒ la nouvelle interaction est une réponse.
+  v_parent_id uuid := NULLIF(p_payload->>'parent_interaction_id','')::uuid;
+  v_root_id uuid;          -- racine normalisée (réponse-à-réponse → racine)
+  v_root_parent uuid;      -- parent du parent (NULL si le parent EST la racine)
+  v_root_object text;      -- contexte objet hérité de la racine
+  v_root_actor uuid;       -- contexte acteur hérité de la racine
 BEGIN
   IF NULLIF(p_payload->>'topic_code','') IS NOT NULL THEN
     SELECT id INTO v_topic_id FROM ref_code_demand_topic
@@ -751,6 +825,16 @@ BEGIN
       interaction_type     = CASE WHEN p_payload ? 'interaction_type' THEN (p_payload->>'interaction_type')::crm_interaction_type ELSE interaction_type END,
       direction            = CASE WHEN p_payload ? 'direction' THEN (p_payload->>'direction')::crm_direction ELSE direction END,
       status               = CASE WHEN p_payload ? 'status' THEN (p_payload->>'status')::crm_status ELSE status END,
+      -- Cycle « marquer traitée / rouvrir » (§66) : quand status est posé, resolved_at suit —
+      -- 'done' ⇒ now() (COALESCE, ne réécrase pas une résolution antérieure), 'planned' ⇒ NULL
+      -- (rouvrir), tout autre statut ⇒ inchangé. Le re-parentage (parent_interaction_id) est
+      -- volontairement IGNORÉ sur UPDATE : les fils ne se déplacent pas.
+      resolved_at          = CASE WHEN p_payload ? 'status'
+                                  THEN (CASE (p_payload->>'status')
+                                          WHEN 'done'    THEN COALESCE(resolved_at, NOW())
+                                          WHEN 'planned' THEN NULL
+                                          ELSE resolved_at END)
+                                  ELSE resolved_at END,
       subject              = CASE WHEN p_payload ? 'subject' THEN NULLIF(p_payload->>'subject','') ELSE subject END,
       body                 = CASE WHEN p_payload ? 'body' THEN NULLIF(p_payload->>'body','') ELSE body END,
       occurred_at          = CASE WHEN p_payload ? 'occurred_at' THEN NULLIF(p_payload->>'occurred_at','')::timestamptz ELSE occurred_at END,
@@ -764,7 +848,61 @@ BEGIN
     RETURN jsonb_build_object('id', v_id);
   END IF;
 
-  -- INSERT : au moins un ancrage (acteur OU objet).
+  -- INSERT — RÉPONSE (§66) : parent fourni ⇒ interaction enfant rattachée à la demande RACINE.
+  IF v_parent_id IS NOT NULL THEN
+    -- Le contexte du fil EST celui du parent : on récupère la racine et son contexte, en
+    -- NORMALISANT vers la racine (réponse-à-réponse → racine, 1 niveau).
+    SELECT parent_interaction_id, actor_id, object_id
+    INTO v_root_parent, v_existing_actor, v_existing_object
+    FROM crm_interaction WHERE id = v_parent_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'interaction parente inconnue: %', v_parent_id USING ERRCODE = 'P0002';
+    END IF;
+    -- v_root_parent NULL ⇒ le parent EST la racine ; sinon la racine est son parent.
+    IF v_root_parent IS NULL THEN
+      v_root_id     := v_parent_id;
+      v_root_actor  := v_existing_actor;
+      v_root_object := v_existing_object;
+    ELSE
+      v_root_id := v_root_parent;
+      SELECT actor_id, object_id INTO v_root_actor, v_root_object
+      FROM crm_interaction WHERE id = v_root_id;
+    END IF;
+    -- Autorisation sur le contexte HÉRITÉ de la racine (jamais sur le payload) : arme objet si
+    -- contexte objet présent, sinon arme acteur.
+    IF v_root_object IS NOT NULL THEN
+      IF NOT api.user_can_write_crm(v_root_object) THEN
+        RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+      END IF;
+    ELSIF v_root_actor IS NULL OR NOT api.user_can_write_crm_actor(v_root_actor) THEN
+      RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
+    END IF;
+
+    v_id := gen_random_uuid();
+    -- Une réponse hérite acteur+contexte de la racine (payload actor_id/object_id ignoré) ;
+    -- statut 'done' par défaut (une réponse n'est pas une demande en attente) ; topic NULL sauf
+    -- topic_code fourni ; owner = auteur de la réponse.
+    INSERT INTO crm_interaction (id, parent_interaction_id, object_id, actor_id,
+                                 interaction_type, direction, status,
+                                 subject, body, occurred_at,
+                                 demand_topic_id, request_sentiment_id, owner, source)
+    VALUES (v_id, v_root_id, v_root_object, v_root_actor,
+            COALESCE(NULLIF(p_payload->>'interaction_type',''),'note')::crm_interaction_type,
+            COALESCE(NULLIF(p_payload->>'direction',''),'internal')::crm_direction,
+            COALESCE(NULLIF(p_payload->>'status',''),'done')::crm_status,
+            NULLIF(p_payload->>'subject',''),
+            NULLIF(p_payload->>'body',''),
+            COALESCE(NULLIF(p_payload->>'occurred_at','')::timestamptz, NOW()),
+            v_topic_id, v_sentiment_id,
+            auth.uid(), 'bertel_ui');
+    -- La racine est marquée « répondue » (premier accusé de réponse ; COALESCE = ne réécrase pas).
+    UPDATE crm_interaction
+       SET first_response_at = COALESCE(first_response_at, NOW()), updated_at = NOW()
+     WHERE id = v_root_id;
+    RETURN jsonb_build_object('id', v_id);
+  END IF;
+
+  -- INSERT — RACINE : au moins un ancrage (acteur OU objet).
   IF v_object_id IS NULL AND v_actor_id IS NULL THEN
     RAISE EXCEPTION 'objet ou acteur requis' USING ERRCODE = '22023';
   END IF;
@@ -1015,16 +1153,32 @@ BEGIN
     ORDER BY ch.is_primary DESC NULLS LAST, k.code
   ) qc;
 
+  -- §66 : RACINES uniquement + 'replies' imbriquées (occurred_at ASC) + interlocutor_email +
+  -- resolved_at (mêmes ajouts additifs que list_object_crm / list_crm_timeline).
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_interactions
   FROM (
     SELECT jsonb_build_object(
       'id', ci.id, 'interaction_type', ci.interaction_type, 'direction', ci.direction,
       'status', ci.status, 'subject', ci.subject, 'body', ci.body,
-      'occurred_at', ci.occurred_at, 'created_at', ci.created_at,
+      'occurred_at', ci.occurred_at, 'created_at', ci.created_at, 'resolved_at', ci.resolved_at,
       'object_id', ci.object_id, 'object_name', o.name, -- contexte (NULLs si générale)
       'topic_code', t.code, 'topic_name', t.name,
       'sentiment_code', s.code, 'sentiment_name', s.name,
-      'owner_name', p.display_name, 'source', ci.source
+      'owner_name', p.display_name, 'source', ci.source,
+      'interlocutor_email', ci.extra->>'interlocuteur_email',
+      'replies', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', r.id, 'interaction_type', r.interaction_type, 'body', r.body,
+          'occurred_at', r.occurred_at, 'created_at', r.created_at,
+          'sentiment_code', rs.code, 'sentiment_name', rs.name,
+          'owner_name', rp.display_name, 'interlocutor_email', r.extra->>'interlocuteur_email',
+          'source', r.source
+        ) ORDER BY r.occurred_at ASC NULLS LAST, r.id ASC)
+        FROM crm_interaction r
+        LEFT JOIN ref_code_crm_sentiment rs ON rs.id = r.request_sentiment_id
+        LEFT JOIN app_user_profile rp ON rp.id = r.owner
+        WHERE r.parent_interaction_id = ci.id
+      ), '[]'::jsonb)
     ) AS item
     FROM crm_interaction ci
     LEFT JOIN object o ON o.id = ci.object_id
@@ -1032,6 +1186,7 @@ BEGIN
     LEFT JOIN ref_code_crm_sentiment s ON s.id = ci.request_sentiment_id
     LEFT JOIN app_user_profile p ON p.id = ci.owner
     WHERE ci.actor_id = p_actor_id
+      AND ci.parent_interaction_id IS NULL
       AND (v_scope IS NULL OR ci.object_id IS NULL OR ci.object_id = ANY(v_scope))
     ORDER BY ci.occurred_at DESC NULLS LAST, ci.id DESC
   ) qi;

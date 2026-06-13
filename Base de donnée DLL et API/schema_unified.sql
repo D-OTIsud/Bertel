@@ -2137,6 +2137,10 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   id UUID DEFAULT uuid_generate_v4(),
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   actor_id UUID REFERENCES actor(id) ON DELETE SET NULL,
+  -- Fil de réponses (§66) : une réponse est une interaction enfant rattachée à la demande
+  -- RACINE (1 niveau) ; hérite acteur+contexte du parent (design PO 2026-06-12). NB : le
+  -- nullable réel de object_id est posé par migration_crm_module.sql (modèle acteur-centré).
+  parent_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE CASCADE,
   interaction_type crm_interaction_type NOT NULL DEFAULT 'note',
   direction crm_direction NOT NULL DEFAULT 'internal',
   status crm_status NOT NULL DEFAULT 'done',

@@ -21,12 +21,23 @@ describe('editor completion scoring', () => {
     expect(computeSectionCompletion('04', draft)).toBe(100);
   });
 
-  it('scores §06 (type block) incomplete when a HEB object has no rooms, complete when gated', () => {
+  it('scores §06 incomplete when a HEB object has neither rooms nor a max capacity, complete when gated', () => {
     const draft = fullModulesFixture();
     draft.rooms.items = [];
+    draft.capacityPolicies.capacityItems = [];
     expect(computeSectionCompletion('06', draft)).toBeLessThan(100);
 
     draft.rooms.unavailableReason = 'Module non applicable au type RES.';
+    expect(computeSectionCompletion('06', draft)).toBe(100);
+  });
+
+  it('§06 counts a roomless HEB as complete when max_capacity has a value (§64)', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+    draft.rooms.unavailableReason = null;
+    draft.capacityPolicies.capacityItems = [
+      { recordId: 'r1', metricId: 'm', metricCode: 'max_capacity', metricLabel: 'Capacité max.', unit: 'pax', value: '8', effectiveFrom: '', effectiveTo: '' },
+    ];
     expect(computeSectionCompletion('06', draft)).toBe(100);
   });
 

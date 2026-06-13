@@ -17,7 +17,7 @@ interface CompletionRule {
   fields: CompletionSelector[];
 }
 
-const SCORE_SECTION_NUMS = [
+export const SCORE_SECTION_NUMS = [
   '01',
   '02',
   '03',
@@ -85,9 +85,12 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
   },
   '06': {
     fields: [
-      // Rooms inventory — counts as complete when the module is §46-gated for the type
-      // (the type block then shows other content, e.g. RES menus, scored by their own use).
-      (draft) => Boolean(draft.rooms?.unavailableReason) || (draft.rooms?.items.length ?? 0) > 0,
+      // §46-gated (RES menus, etc.) → complet ; sinon chambres présentes ; sinon (HEB roomless,
+      // §64) crédité par une capacité max renseignée — la capacité d'accueil vit en §06 pour HEB.
+      (draft) =>
+        Boolean(draft.rooms?.unavailableReason) ||
+        (draft.rooms?.items.length ?? 0) > 0 ||
+        draft.capacityPolicies.capacityItems.some((item) => item.metricCode === 'max_capacity' && hasText(item.value)),
     ],
   },
   '07': {

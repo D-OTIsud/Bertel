@@ -1,8 +1,12 @@
 "use client";
 
-// Modals d'authoring acteur (§61 rectifs PO points 4+5).
-// - CrmActorEditModal : identité (display/first/last) + canaux de contact (kind select
-//   sur le vocabulaire contact_kind, valeur, principal, suppression, ajout de ligne).
+// Modals d'authoring acteur (§61 rectifs PO points 4+5 ; §66 civilité + nom composé + e-mail requis).
+// IDENTITÉ (§66) : le « Nom affiché » n'est PLUS éditable — il est COMPOSÉ depuis civilité +
+//   prénom + nom (« Mme » + « Jocelyne » + « Lebon » → « Mme Jocelyne Lebon ») et rendu en LECTURE
+//   SEULE (aperçu). On édite donc : civilité (select), prénom, nom/raison sociale. L'e-mail est
+//   OBLIGATOIRE dans les DEUX modals (au moins une ligne canal `email` non vide).
+// - CrmActorEditModal : identité (civilité/prénom/nom → nom affiché composé) + canaux de contact
+//   (kind select sur le vocabulaire contact_kind, valeur, principal, suppression, ajout de ligne).
 //   KISS assumé : les opérations canal sont appliquées UNE PAR UNE au submit
 //   (saveActorChannel / deleteActorChannel), arrêt et erreur inline au premier échec —
 //   le modal reste ouvert, rien n'est silencieux. Deux garanties de la revue :
@@ -35,6 +39,26 @@ import { CrmModal } from './CrmModal';
 /** Normalise une valeur de canal pour la déduplication (suggestions ⇄ lignes saisies). */
 function normChannelValue(value: string): string {
   return value.trim().toLowerCase();
+}
+
+/**
+ * Options de civilité (§66) — '' = aucune (organisation / raison sociale). Pas un ref_code :
+ * `gender` est un champ texte libre côté acteur ; on borne l'UI à ces trois choix.
+ */
+const GENDER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: '— (aucun / organisation)' },
+  { value: 'Mme', label: 'Mme' },
+  { value: 'M.', label: 'M.' },
+];
+
+/**
+ * Nom affiché COMPOSÉ (§66) — civilité + prénom + nom, parties vides ignorées, jointes par un
+ * espace. « Mme » + « Jocelyne » + « Lebon » → « Mme Jocelyne Lebon » ; une organisation sans
+ * civilité ni prénom → sa seule raison sociale. C'est l'unique source du display_name envoyé :
+ * le champ n'est PAS éditable directement (rendu en lecture seule comme aperçu).
+ */
+export function composeDisplayName(gender: string, firstName: string, lastName: string): string {
+  return [gender.trim(), firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
 }
 
 /**
@@ -84,15 +108,24 @@ export function CrmActorEditModal({
   onClose,
   onSaved,
 }: {
-  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null; photoUrl: string | null };
+  actor: {
+    id: string;
+    displayName: string;
+    gender: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    photoUrl: string | null;
+  };
   channels: ActorCrmChannel[];
   onClose: () => void;
   /** Appelé APRÈS écriture confirmée — la vue invalide fiche + annuaire. */
   onSaved: () => void;
 }) {
-  const [displayName, setDisplayName] = useState(actor.displayName);
+  // §66 — identité éditée : civilité + prénom + nom ; le nom affiché en découle (lecture seule).
+  const [gender, setGender] = useState(actor.gender ?? '');
   const [firstName, setFirstName] = useState(actor.firstName ?? '');
   const [lastName, setLastName] = useState(actor.lastName ?? '');
+  const displayName = composeDisplayName(gender, firstName, lastName);
   const [rows, setRows] = useState<ChannelRow[]>(() => rowsFromChannels(channels));
   // Portrait (PO point 4) : nouveau fichier (uploadé au submit) OU retrait explicite.
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -104,7 +137,12 @@ export function CrmActorEditModal({
   // Idempotence du retry (identité) : après un saveCrmActor réussi, la baseline de
   // comparaison devient l'état SAUVÉ (les props `actor` ne sont rafraîchies qu'à la
   // fermeture) — un re-submit après échec partiel sur les canaux ne re-soumet pas l'UPDATE.
-  const savedIdentityRef = useRef<{ displayName: string; firstName: string | null; lastName: string | null } | null>(null);
+  const savedIdentityRef = useRef<{
+    displayName: string;
+    gender: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null>(null);
 
   const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
   const kinds = kindsQuery.data ?? [];
@@ -112,18 +150,22 @@ export function CrmActorEditModal({
   const saveMutation = useMutation({
     mutationFn: async () => {
       // 1. Identité (un seul UPDATE, seulement si modifiée depuis la dernière baseline confirmée).
+      //    §66 — civilité incluse ; le display_name est COMPOSÉ (civilité + prénom + nom).
       const baseline = savedIdentityRef.current ?? {
         displayName: actor.displayName,
+        gender: actor.gender ?? '',
         firstName: actor.firstName,
         lastName: actor.lastName,
       };
       const identity = {
-        displayName: displayName.trim(),
+        displayName,
+        gender,
         firstName: firstName.trim() || null,
         lastName: lastName.trim() || null,
       };
       const identityChanged =
         identity.displayName !== baseline.displayName ||
+        identity.gender !== baseline.gender ||
         identity.firstName !== baseline.firstName ||
         identity.lastName !== baseline.lastName;
       if (identityChanged) {
@@ -228,7 +270,11 @@ export function CrmActorEditModal({
     return kinds;
   }
 
-  const canSubmit = displayName.trim().length > 0 && !saveMutation.isPending;
+  // §66 — e-mail OBLIGATOIRE aussi à l'édition : l'acteur ne doit pas finir sans canal e-mail.
+  const liveRows = rows.filter((row) => !row.deleted);
+  const hasEmail = liveRows.some((row) => row.kindCode === 'email' && row.value.trim() !== '');
+  // Nom affiché composé non vide (au moins un prénom OU un nom) + e-mail présent.
+  const canSubmit = displayName.length > 0 && hasEmail && !saveMutation.isPending;
 
   return (
     <CrmModal
@@ -245,9 +291,21 @@ export function CrmActorEditModal({
         </>
       }
     >
+      {/* §66 — civilité (select) ; le « Nom affiché » est COMPOSÉ et rendu en LECTURE SEULE. */}
       <label className="crm-field">
-        Nom affiché
-        <input aria-label="Nom affiché" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+        Civilité
+        <select
+          className="crm-select"
+          aria-label="Civilité"
+          value={gender}
+          onChange={(event) => setGender(event.target.value)}
+        >
+          {GENDER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <div className="crm-row2">
         <label className="crm-field">
@@ -255,10 +313,14 @@ export function CrmActorEditModal({
           <input aria-label="Prénom" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
         </label>
         <label className="crm-field">
-          Nom
+          Nom / Raison sociale
           <input aria-label="Nom" value={lastName} onChange={(event) => setLastName(event.target.value)} />
         </label>
       </div>
+      {/* §66 — nom affiché COMPOSÉ, en LECTURE SEULE (pas de champ éditable). */}
+      <p className="crm-field crm-display-name-preview">
+        Nom affiché : {displayName ? <strong>{displayName}</strong> : <em>(renseignez prénom/nom)</em>}
+      </p>
 
       {/* Portrait (PO point 4) : aperçu + choisir/changer + retirer (saveCrmActor photoUrl:''). */}
       <div className="crm-field">
@@ -354,6 +416,12 @@ export function CrmActorEditModal({
         >
           <Plus size={12} aria-hidden /> Ajouter un canal
         </button>
+        {/* §66 — e-mail OBLIGATOIRE : un acteur ne peut pas rester sans canal e-mail. */}
+        {!hasEmail && (
+          <p className="crm-field__hint" role="status">
+            Un e-mail est obligatoire.
+          </p>
+        )}
       </div>
 
       {saveMutation.isError && (
@@ -376,9 +444,11 @@ export function CrmActorNewModal({
   /** Appelé APRÈS création confirmée avec l'id du nouvel acteur (refresh + ouverture fiche). */
   onCreated: (actorId: string) => void;
 }) {
-  const [displayName, setDisplayName] = useState('');
+  // §66 — identité : civilité + prénom + nom ; le nom affiché en découle (non éditable).
+  const [gender, setGender] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const displayName = composeDisplayName(gender, firstName, lastName);
   const [objectName, setObjectName] = useState('');
   // Repeater de canaux (PO point 3) : 1re ligne par défaut = e-mail (PO point 1 : requis).
   const [rows, setRows] = useState<ChannelRow[]>(() => [
@@ -446,7 +516,9 @@ export function CrmActorNewModal({
       const actorId =
         createdActorRef.current ??
         (await saveCrmActor({
-          displayName: displayName.trim(),
+          // §66 — display_name COMPOSÉ (civilité + prénom + nom) ; gender envoyé s'il est choisi.
+          displayName,
+          ...(gender ? { gender } : {}),
           ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
           ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
           objectId: resolvedObject.objectId,
@@ -483,8 +555,9 @@ export function CrmActorNewModal({
     },
   });
 
-  // PO point 1 : e-mail OBLIGATOIRE — au moins une ligne e-mail non vide en plus du nom + objet.
-  const canSubmit = displayName.trim().length > 0 && Boolean(resolvedObject) && hasEmail && !createMutation.isPending;
+  // PO point 1 / §66 : nom affiché composé non vide (prénom OU nom) + établissement résolu +
+  // e-mail OBLIGATOIRE (au moins une ligne e-mail non vide).
+  const canSubmit = displayName.length > 0 && Boolean(resolvedObject) && hasEmail && !createMutation.isPending;
 
   function kindOptionsFor(row: ChannelRow) {
     if (row.kindCode && !kinds.some((kind) => kind.code === row.kindCode)) {
@@ -508,14 +581,21 @@ export function CrmActorNewModal({
         </>
       }
     >
+      {/* §66 — civilité (select) ; le « Nom affiché » est COMPOSÉ et rendu en LECTURE SEULE. */}
       <label className="crm-field">
-        Nom affiché (requis)
-        <input
-          aria-label="Nom affiché"
-          placeholder="Mme/M. Prénom Nom ou raison sociale"
-          value={displayName}
-          onChange={(event) => setDisplayName(event.target.value)}
-        />
+        Civilité
+        <select
+          className="crm-select"
+          aria-label="Civilité"
+          value={gender}
+          onChange={(event) => setGender(event.target.value)}
+        >
+          {GENDER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <div className="crm-row2">
         <label className="crm-field">
@@ -523,10 +603,14 @@ export function CrmActorNewModal({
           <input aria-label="Prénom" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
         </label>
         <label className="crm-field">
-          Nom
+          Nom / Raison sociale
           <input aria-label="Nom" value={lastName} onChange={(event) => setLastName(event.target.value)} />
         </label>
       </div>
+      {/* §66 — nom affiché COMPOSÉ, en LECTURE SEULE (pas de champ éditable). */}
+      <p className="crm-field crm-display-name-preview">
+        Nom affiché : {displayName ? <strong>{displayName}</strong> : <em>(renseignez prénom/nom)</em>}
+      </p>
 
       {/* Portrait (PO point 4) : aperçu + bouton de choix de fichier (optionnel). */}
       <div className="crm-field">

@@ -1,5 +1,6 @@
 import {
   deleteActorChannel,
+  linkActorToObject,
   listActorCrm,
   listContactKinds,
   listCrmAssignees,
@@ -215,7 +216,7 @@ describe('parseCrmDirectoryEntry', () => {
 describe('parseActorCrmSnapshot', () => {
   it('parse acteur + objets (role_code) + interactions (objectId nullable) + topics', () => {
     const snapshot = parseActorCrmSnapshot({
-      actor: { id: 'a1', display_name: 'Mme Jocelyne Lebon', first_name: 'Jocelyne', last_name: 'Lebon' },
+      actor: { id: 'a1', display_name: 'Mme Jocelyne Lebon', gender: 'Mme', first_name: 'Jocelyne', last_name: 'Lebon' },
       objects: [{ object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes', object_type: 'HLO', role_code: 'operator', role_name: 'Exploitant', is_primary: true }],
       interactions: [
         { id: 'i1', interaction_type: 'note', direction: 'internal', status: 'planned',
@@ -237,6 +238,8 @@ describe('parseActorCrmSnapshot', () => {
     expect(snapshot.actor).toEqual({
       id: 'a1',
       displayName: 'Mme Jocelyne Lebon',
+      // §66 — civilité (gender) portée par list_actor_crm.actor pour préremplir le select du modal.
+      gender: 'Mme',
       firstName: 'Jocelyne',
       lastName: 'Lebon',
       photoUrl: null,
@@ -264,9 +267,15 @@ describe('parseActorCrmSnapshot', () => {
     expect(snapshot.actor.photoUrl).toBe('https://cdn/portrait.jpg');
   });
 
+  // §66 — civilité : actor.gender → actor.gender (null quand absent/vide ; pas une organisation).
+  it('lit actor.gender → actor.gender (null quand absent)', () => {
+    expect(parseActorCrmSnapshot({ actor: { id: 'a1', display_name: 'M. Jean Payet', gender: 'M.' } }).actor.gender).toBe('M.');
+    expect(parseActorCrmSnapshot({ actor: { id: 'a1', display_name: 'SARL Untel' } }).actor.gender).toBeNull();
+  });
+
   it('rend un snapshot vide sur payload nul/malformé', () => {
     expect(parseActorCrmSnapshot(null)).toEqual({
-      actor: { id: '', displayName: '', firstName: null, lastName: null, photoUrl: null },
+      actor: { id: '', displayName: '', gender: null, firstName: null, lastName: null, photoUrl: null },
       objects: [], channels: [], interactions: [], topics: [],
     });
   });
@@ -464,10 +473,79 @@ describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO point
     expect(rpc).toHaveBeenCalledWith('save_crm_actor', { p_payload: { id: 'a1', photo_url: '' } });
   });
 
+  // §66 — civilité : gender partiel (clé présente écrite ; '' efface côté serveur). Le
+  // display_name est COMPOSÉ côté client (civilité + prénom + nom) et envoyé tel quel.
+  it('INSERT acteur : gender + display_name composé partent en payload', async () => {
+    const rpc = fakeRpcClient({ id: 'new-actor' });
+    await saveCrmActor({
+      displayName: 'Mme Jocelyne Lebon', gender: 'Mme', firstName: 'Jocelyne', lastName: 'Lebon', objectId: 'HOT123',
+    });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: {
+        display_name: 'Mme Jocelyne Lebon', gender: 'Mme', first_name: 'Jocelyne', last_name: 'Lebon', object_id: 'HOT123',
+      },
+    });
+  });
+
+  it('UPDATE acteur avec gender vide : gender = "" (effacement explicite, organisation)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', gender: '', displayName: 'SARL Untel', lastName: 'SARL Untel' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { id: 'a1', gender: '', display_name: 'SARL Untel', last_name: 'SARL Untel' },
+    });
+  });
+
   it('échec RPC → throw (l erreur PostgREST brute survit, .code 42501 compris)', async () => {
     const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
     mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
     await expect(saveCrmActor({ displayName: 'X', objectId: 'o1' })).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
+// §66 — affecter un établissement existant à un acteur depuis sa fiche (api.link_actor_to_object).
+// Gate = write-CRM sur l'OBJET (42501 sinon). Rôle par défaut serveur 'operator' (seul seedé).
+describe('linkActorToObject', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('appelle link_actor_to_object(p_payload {actor_id, object_id}) et renvoie { linked }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: true });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: true });
+    expect(rpc).toHaveBeenCalledWith('link_actor_to_object', {
+      p_payload: { actor_id: 'a1', object_id: 'HOT123', role_code: undefined },
+    });
+  });
+
+  it('passe role_code quand fourni', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: true });
+    await linkActorToObject('a1', 'HOT123', 'operator');
+    expect(rpc).toHaveBeenCalledWith('link_actor_to_object', {
+      p_payload: { actor_id: 'a1', object_id: 'HOT123', role_code: 'operator' },
+    });
+  });
+
+  it('linked=false (lien déjà existant) est propagé', async () => {
+    useSessionStore.setState({ demoMode: false });
+    fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: false });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: false });
+  });
+
+  it('échec RPC → throw (42501 = pas de write-CRM sur l objet, .code survit)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(linkActorToObject('a1', 'HOT123')).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('mode démo : renvoie { linked: true } sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: true });
   });
 });
 

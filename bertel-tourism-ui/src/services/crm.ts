@@ -326,7 +326,9 @@ export interface ActorCrmChannel {
 }
 
 export interface ActorCrmSnapshot {
-  actor: { id: string; displayName: string; firstName: string | null; lastName: string | null; photoUrl: string | null };
+  // §66 — `gender` (civilité « Mme » / « M. » / null pour une organisation) préremplit le select
+  // du modal d'édition ; le `displayName` est COMPOSÉ côté client (civilité + prénom + nom).
+  actor: { id: string; displayName: string; gender: string | null; firstName: string | null; lastName: string | null; photoUrl: string | null };
   objects: ActorCrmObjectLink[];
   /** Coordonnées réelles de la personne (rectif PO point 4). */
   channels: ActorCrmChannel[];
@@ -336,7 +338,7 @@ export interface ActorCrmSnapshot {
 }
 
 const EMPTY_ACTOR_SNAPSHOT: ActorCrmSnapshot = {
-  actor: { id: '', displayName: '', firstName: null, lastName: null, photoUrl: null },
+  actor: { id: '', displayName: '', gender: null, firstName: null, lastName: null, photoUrl: null },
   objects: [],
   channels: [],
   interactions: [],
@@ -361,6 +363,8 @@ export function parseActorCrmSnapshot(payload: unknown): ActorCrmSnapshot {
     actor: {
       id: readString(actorRecord.id),
       displayName: readString(actorRecord.display_name),
+      // §66 — civilité (null si absente/vide : organisation sans civilité).
+      gender: readNullableString(actorRecord.gender),
       firstName: readNullableString(actorRecord.first_name),
       lastName: readNullableString(actorRecord.last_name),
       photoUrl: readNullableString(actorRecord.photo_url),
@@ -405,7 +409,7 @@ function demoActorCrm(actorId: string): ActorCrmSnapshot {
     else topicCounts.set(item.topicCode, { code: item.topicCode, name: item.topicName ?? item.topicCode, count: 1 });
   }
   return {
-    actor: { id: entry.actorId, displayName: entry.displayName, firstName: null, lastName: null, photoUrl: entry.photoUrl },
+    actor: { id: entry.actorId, displayName: entry.displayName, gender: null, firstName: null, lastName: null, photoUrl: entry.photoUrl },
     objects: entry.objects.map((object) => ({ ...object, roleCode: null })),
     channels: [], // pas de PII fabriquée en démo
     interactions,
@@ -584,6 +588,11 @@ export async function deleteCrmInteraction(id: string): Promise<void> {
 export interface SaveCrmActorInput {
   id?: string;
   displayName?: string;
+  /**
+   * Civilité (§66) — « Mme » / « M. » / '' (organisation, efface côté serveur). Partiel : clé
+   * présente = écrite. Le displayName est COMPOSÉ côté client (civilité + prénom + nom).
+   */
+  gender?: string;
   firstName?: string | null;
   lastName?: string | null;
   /** INSERT seulement. */
@@ -606,6 +615,8 @@ export async function saveCrmActor(input: SaveCrmActorInput): Promise<string> {
   const payload: GenericRecord = {};
   if (input.id !== undefined) payload.id = input.id;
   if (input.displayName !== undefined) payload.display_name = input.displayName;
+  // gender partiel : clé présente (y compris '') = écrite ; '' = effacement serveur (organisation).
+  if (input.gender !== undefined) payload.gender = input.gender;
   if (input.firstName !== undefined) payload.first_name = input.firstName;
   if (input.lastName !== undefined) payload.last_name = input.lastName;
   if (input.objectId !== undefined) payload.object_id = input.objectId;
@@ -664,6 +675,32 @@ export async function deleteActorChannel(id: string): Promise<void> {
   if (error) {
     throw error;
   }
+}
+
+/**
+ * Affecte un établissement EXISTANT à un acteur (§66) — crée le lien actor_object_role.
+ * `api.link_actor_to_object({actor_id, object_id, role_code?})` est gated write-CRM sur l'OBJET
+ * (42501 sinon — le caller doit gérer le CRM de cet établissement, pas seulement voir l'acteur) ;
+ * il valide l'existence de l'acteur/l'objet (P0002) et le rôle (22023). role_code par défaut
+ * 'operator' côté serveur (seul rôle seedé). `linked=false` ⇒ le lien existait déjà (no-op).
+ * Throws l'erreur PostgREST BRUTE (`.code` survit). Démo : pas de réseau, lien réputé créé.
+ */
+export async function linkActorToObject(
+  actorId: string,
+  objectId: string,
+  roleCode?: string,
+): Promise<{ linked: boolean }> {
+  const client = requireCrmClient();
+  if (!client) {
+    return { linked: true };
+  }
+  const { data, error } = await client.schema('api').rpc('link_actor_to_object', {
+    p_payload: { actor_id: actorId, object_id: objectId, role_code: roleCode },
+  });
+  if (error) {
+    throw error;
+  }
+  return { linked: (data as GenericRecord | null)?.linked === true };
 }
 
 /**

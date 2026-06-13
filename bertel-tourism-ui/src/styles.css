@@ -9981,4 +9981,50 @@ a {
   .crm-app .coord-inline .val { max-width: 100%; }
 }
 
-/* RESPONSIVE_ACTOR_GRID_PLACEHOLDER */
+/* ---------- Responsive grille acteur deux colonnes (rectif PO §66+) ----------
+   Trois régimes :
+   - DESKTOP (≥ 961px, défaut) : grille 2 colonnes. La région repliable est forcée visible
+     (display:flex dans la règle de base) et le toggle masqué ⇒ l'état JS sideExpanded est ignoré.
+   - INTERMÉDIAIRE (721–960px) : la grille s'effondre en 1 colonne, le rail remonte AVANT la
+     colonne main (order) ⇒ carte acteur + indicateurs en tête. Toujours sans repli (tout visible).
+   - MOBILE (≤ 720px) : 1 colonne + le rail en premier ; la carte acteur reste visible mais la
+     région KPI + listes est REPLIÉE par défaut (display:none) et le toggle « Voir les indicateurs »
+     apparaît ; .is-open (piloté par JS) la rouvre. Ordre vertical mobile : carte acteur →
+     [toggle → KPI + listes] → actions + timeline. */
+@media (max-width: 960px) {
+  .crm-app .crm-actor-grid { grid-template-columns: 1fr; }
+  /* Le rail (carte acteur + indicateurs) passe AVANT la colonne principale. */
+  .crm-app .crm-actor-grid__side { order: -1; }
+  .crm-app .crm-actor-grid__main { order: 0; }
+}
+@media (max-width: 720px) {
+  /* Le toggle mobile apparaît ; la région repliable est masquée sauf .is-open. */
+  .crm-app .crm-actor-side-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .crm-app .crm-actor-side-toggle:hover { border-color: var(--line-strong); color: var(--ink); }
+  .crm-app .crm-actor-side-toggle .chev { transition: transform 0.16s ease; }
+  .crm-app .crm-actor-side-toggle .chev.is-open { transform: rotate(180deg); }
+  /* Replié par défaut sur mobile ; .is-open (JS) rouvre. */
+  .crm-app .crm-actor-collapsible { display: none; }
+  .crm-app .crm-actor-collapsible.is-open { display: flex; }
+  /* KPI : 2×2 reste lisible même en pleine largeur mobile ; passe à 1 colonne sous ~420px. */
+}
+@media (max-width: 420px) {
+  .crm-app .crm-actor-kpis { grid-template-columns: 1fr; }
+}

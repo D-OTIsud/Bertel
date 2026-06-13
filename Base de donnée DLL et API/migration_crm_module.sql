@@ -627,7 +627,7 @@ BEGIN
       'id', ci.id, 'interaction_type', ci.interaction_type, 'direction', ci.direction,
       'status', ci.status, 'subject', ci.subject, 'body', ci.body,
       'occurred_at', ci.occurred_at, 'created_at', ci.created_at,
-      'actor_name', a.display_name,
+      'actor_id', ci.actor_id, 'actor_name', a.display_name, -- actor_id : clic carte→acteur sans name-matching (§65)
       'topic_code', t.code, 'topic_name', t.name,
       'sentiment_code', s.code, 'sentiment_name', s.name,
       'owner_name', p.display_name, 'source', ci.source
@@ -927,10 +927,13 @@ BEGIN
       ORDER BY ci2.occurred_at DESC NULLS LAST, ci2.id DESC
       LIMIT 1
     ) last_i ON TRUE
+    -- top_topics : objets {code, name} (et non plus de simples noms) — la teinte des pastilles
+    -- sujet côté UI est dérivée d'un hash de la valeur ; la fiche acteur clé par code, l'annuaire
+    -- aussi désormais ⇒ teintes cohérentes entre vues (mirroir de list_actor_crm.topics). §65.
     LEFT JOIN LATERAL (
-      SELECT jsonb_agg(x.name ORDER BY x.n DESC) AS names
+      SELECT jsonb_agg(jsonb_build_object('code', x.code, 'name', x.name) ORDER BY x.n DESC) AS names
       FROM (
-        SELECT rt.name, count(*) AS n
+        SELECT rt.code, rt.name, count(*) AS n
         FROM crm_interaction ci3
         JOIN ref_code_demand_topic rt ON rt.id = ci3.demand_topic_id
         WHERE ci3.actor_id = base.actor_id
@@ -939,7 +942,7 @@ BEGIN
           AND (v_status IS NULL OR ci3.status = v_status)
           AND (p_from IS NULL OR ci3.occurred_at >= p_from)
           AND (p_to IS NULL OR ci3.occurred_at < p_to)
-        GROUP BY rt.name
+        GROUP BY rt.code, rt.name
         ORDER BY count(*) DESC
         LIMIT 2
       ) x

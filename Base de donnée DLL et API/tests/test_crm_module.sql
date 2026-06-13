@@ -78,6 +78,8 @@ DECLARE
   v_reply_id uuid;     -- réponse directe à la racine
   v_reply2_id uuid;    -- réponse-à-réponse (doit normaliser vers la racine)
   v_root jsonb;        -- la racine telle que renvoyée par un RPC de lecture
+  v_dir_count_before int; -- §66 : interaction_count annuaire de actorA AVANT une réponse
+  v_dir_count_after  int; -- §66 : interaction_count annuaire de actorA APRÈS la réponse
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -382,6 +384,24 @@ BEGIN
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'items') i
                    WHERE (i->>'id')::uuid = v_demande AND (i ? 'replies')),
            '§66: une racine de la timeline doit porter la clé replies';
+
+    -- §66 : les compteurs annuaire = interactions RACINES seulement — une réponse ne doit PAS
+    -- gonfler interaction_count. actorA est surfacé par sa racine acteur-seule (v_actor_int_id) ;
+    -- on capture son interaction_count, on ajoute une RÉPONSE à cette racine, et on assert que le
+    -- compteur de l'annuaire est INCHANGÉ (les réponses sont exclues des volumes).
+    SELECT (d->>'interaction_count')::int INTO v_dir_count_before
+    FROM jsonb_array_elements(api.list_crm_directory()) d
+    WHERE (d->>'actor_id')::uuid = v_actorA;
+    ASSERT v_dir_count_before IS NOT NULL,
+           '§66: actorA doit apparaître dans l''annuaire (racine acteur-seule) AVANT la réponse';
+    PERFORM api.save_crm_interaction(jsonb_build_object(
+      'parent_interaction_id', v_actor_int_id, 'body', 'Réponse aux vœux'));
+    SELECT (d->>'interaction_count')::int INTO v_dir_count_after
+    FROM jsonb_array_elements(api.list_crm_directory()) d
+    WHERE (d->>'actor_id')::uuid = v_actorA;
+    ASSERT v_dir_count_after = v_dir_count_before,
+           format('§66: une réponse ne doit PAS incrémenter interaction_count de l''annuaire (avant=%s, après=%s)',
+                  v_dir_count_before, v_dir_count_after);
 
     -- Cycle « marquer traitée » : status='done' pose resolved_at ; 'planned' (rouvrir) l'efface.
     v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'done'));

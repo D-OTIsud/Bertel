@@ -1,7 +1,8 @@
-import { Chip, ChipSet, Field, Fs, Input, Repeater, Select, StatCard, Textarea, Toggle } from '../primitives';
+import { Fs, Input, Repeater, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCapacityItem } from '../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
+import { AccueilPolicies, EnvironmentChips } from './capacity-controls';
 
 function createCapacityItem(
   items: ObjectWorkspaceCapacityItem[],
@@ -25,11 +26,7 @@ function createCapacityItem(
   };
 }
 
-function toggleCode(values: string[], code: string) {
-  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
-
-const CAP_COLS = '14px 1.3fr 100px 86px 120px 120px auto';
+const CAP_COLS = '14px 1.3fr 100px 86px 120px 120px 44px';
 
 function repHeader(columns: string, labels: string[]) {
   return (
@@ -37,7 +34,7 @@ function repHeader(columns: string, labels: string[]) {
       style={{
         display: 'grid',
         gridTemplateColumns: columns,
-        gap: 8,
+        gap: 10,
         padding: '6px 12px',
         fontSize: 10,
         fontWeight: 700,
@@ -46,8 +43,8 @@ function repHeader(columns: string, labels: string[]) {
         textTransform: 'uppercase',
       }}
     >
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
+      {labels.map((label, index) => (
+        <span key={label || `col-${index}`}>{label}</span>
       ))}
     </div>
   );
@@ -117,7 +114,7 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Métriques détaillées
       </div>
-      {repHeader(CAP_COLS, ['', 'Métrique', 'Valeur', 'Unité', 'Depuis', "Jusqu'au"])}
+      {repHeader(CAP_COLS, ['', 'Métrique', 'Valeur', 'Unité', 'Depuis', "Jusqu'au", ''])}
       <Repeater
         items={capacity.capacityItems}
         getKey={(item, index) => `${item.recordId ?? item.metricCode}-${index}`}
@@ -160,126 +157,17 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         Les dates de validité sont internes (non publiées) — utiles pour préparer une saison.
       </p>
 
-      <div className="chip-group__label" style={{ marginTop: 16 }}>
-        Cadre / environnement
-      </div>
-      {/* The chips ride the shared `characteristics` module (also §12): its own
-          degraded-load guard applies — never render editable chips from a fallback. */}
-      {characteristics.unavailableReason ? (
-        <ModuleUnavailableNotice reason={characteristics.unavailableReason} />
-      ) : (
-      <ChipSet>
-        {characteristics.environmentOptions.map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedEnvironmentCodes.includes(option.code)}
-            onClick={() =>
-              editor.replaceModule('characteristics', {
-                ...characteristics,
-                selectedEnvironmentCodes: toggleCode(characteristics.selectedEnvironmentCodes, option.code),
-              })
-            }
-          />
-        ))}
-      </ChipSet>
-      )}
+      {/* Cadre/environnement + Groupes + Animaux : composants partagés (§07 ici, §06 pour HEB).
+          La source d'état reste editor.draft.characteristics / .capacityPolicies. */}
+      <EnvironmentChips
+        characteristics={characteristics}
+        onChange={(next) => editor.replaceModule('characteristics', next)}
+      />
 
-      <div style={{ marginTop: 16 }}>
-      <Field label="Groupes">
-        <div className="grid-2">
-          <Input
-            value={capacity.groupPolicy.minSize}
-            placeholder="Min"
-            mono
-            onChange={(minSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, minSize },
-              })
-            }
-          />
-          <Input
-            value={capacity.groupPolicy.maxSize}
-            placeholder="Max"
-            mono
-            onChange={(maxSize) =>
-              editor.replaceModule('capacityPolicies', {
-                ...capacity,
-                groupPolicy: { ...capacity.groupPolicy, maxSize },
-              })
-            }
-          />
-        </div>
-        <Toggle
-          label="Groupes uniquement"
-          on={capacity.groupPolicy.groupOnly}
-          onChange={(groupOnly) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              groupPolicy: { ...capacity.groupPolicy, groupOnly },
-            })
-          }
-        />
-        <Textarea
-          value={capacity.groupPolicy.notes}
-          rows={3}
-          onChange={(notes) =>
-            editor.replaceModule('capacityPolicies', {
-              ...capacity,
-              groupPolicy: { ...capacity.groupPolicy, notes },
-            })
-          }
-        />
-      </Field>
-      </div>
-
-      {/* Politique d'accueil — moved here from the §06 type block (PO 2026-06-11):
-          accepting animals is an accueil concern for ANY establishment type, and
-          §07 renders for every archetype. Tri-state: « non renseigné » keeps NO DB
-          row — it must never publish « Animaux non acceptés » from an untouched form. */}
-      <div className="chip-group__label" style={{ marginTop: 16 }}>
-        Politique d'accueil
-      </div>
-      <div className="grid-3">
-        <div>
-          <Field label="Animaux">
-            <Select
-              value={capacity.petPolicy.accepted === null ? '' : capacity.petPolicy.accepted ? 'accepted' : 'refused'}
-              options={[
-                { v: '', l: '— Non renseigné —' },
-                { v: 'accepted', l: 'Acceptés' },
-                { v: 'refused', l: 'Non acceptés' },
-              ]}
-              aria-label="Animaux"
-              onChange={(next) =>
-                editor.replaceModule('capacityPolicies', {
-                  ...capacity,
-                  petPolicy: {
-                    ...capacity.petPolicy,
-                    accepted: next === '' ? null : next === 'accepted',
-                  },
-                })
-              }
-            />
-          </Field>
-          {capacity.petPolicy.accepted !== null && (
-            <Field label="Conditions d'accueil des animaux">
-              <Textarea
-                aria-label="Conditions d'accueil des animaux"
-                value={capacity.petPolicy.conditions}
-                rows={3}
-                onChange={(conditions) =>
-                  editor.replaceModule('capacityPolicies', {
-                    ...capacity,
-                    petPolicy: { ...capacity.petPolicy, conditions },
-                  })
-                }
-              />
-            </Field>
-          )}
-        </div>
-      </div>
+      <AccueilPolicies
+        capacity={capacity}
+        onChange={(next) => editor.replaceModule('capacityPolicies', next)}
+      />
       </>
       )}
     </Fs>

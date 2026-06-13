@@ -110,13 +110,15 @@ describe('crm parsers', () => {
     });
     expect(snapshot.interactions).toHaveLength(1);
     // Contrat backend : list_object_crm porte désormais actor_id + interlocutor_email +
-    // resolved_at + replies[] par interaction (fil de discussion §65/§66, fix « par Système »).
+    // status + resolved_at + replies[] par interaction (fil de discussion §65/§66, fix
+    // « par Système » + chip de statut §66).
     expect(snapshot.interactions[0]).toEqual({
       id: 'i1', interactionType: 'call', subject: 'Demande de visite', body: 'RDV fixé au 12.',
       occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
-      interlocutorEmail: 'contact@palmistes.re', resolvedAt: '2026-06-02T08:00:00Z',
+      // §66 — `status` propagé (planned/done) pour la chip de la vue objet (était droppé).
+      interlocutorEmail: 'contact@palmistes.re', status: 'done', resolvedAt: '2026-06-02T08:00:00Z',
       replies: [{
         id: 'r1', interactionType: 'note', body: 'Réponse interne.', occurredAt: '2026-06-01T09:00:00Z',
         createdAt: '2026-06-01T09:01:00Z', sentimentCode: null, sentimentName: null,

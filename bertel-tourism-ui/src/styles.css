@@ -9324,12 +9324,19 @@ a {
 .crm-app .tl-card.tone--tres_mecontent { --card-tone: #c85c48; }
 .crm-app .tl-card:hover { border-color: var(--line-strong); }
 .crm-app .tl-card:hover { border-left-color: var(--card-tone); }
-/* Carte cliquable → fiche acteur (rectif PO v5 point 5) : curseur + survol/focus marqués. */
-.crm-app .tl-card.is-clickable { cursor: pointer; }
+/* Carte cliquable → fiche acteur (rectif PO v5 point 5) : survol marqué sur la carte (le
+   conteneur), curseur + focus marqués sur la RÉGION navigable .tl-card__nav (a11y §66 : la
+   carte n'est plus role=button — seule la sous-région l'est, pour que les contrôles du fil
+   restent hors du role=button). Visuel inchangé. */
 .crm-app .tl-card.is-clickable:hover { border-color: var(--accent); }
-.crm-app .tl-card.is-clickable:focus-visible {
+/* La région de navigation occupe la zone du contenu affiché ; quand elle est cliquable elle
+   porte le curseur main et le contour de focus (l'affordance suit l'élément réellement
+   focusable). Sans is-clickable, elle est un simple <div> sans curseur ni outline. */
+.crm-app .tl-card.is-clickable .tl-card__nav { cursor: pointer; }
+.crm-app .tl-card.is-clickable .tl-card__nav:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 .crm-app .tl-card__top {
   display: flex;

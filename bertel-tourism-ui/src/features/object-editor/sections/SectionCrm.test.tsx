@@ -28,7 +28,7 @@ function fixtureWithCrm() {
       body: 'RDV fixé au 12.', occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
-      interlocutorEmail: null, resolvedAt: null, replies: [],
+      interlocutorEmail: null, status: 'done', resolvedAt: null, replies: [],
     }],
     topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 1 }],
     interactionsUnavailableReason: null,

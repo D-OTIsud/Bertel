@@ -72,7 +72,9 @@ export function CrmObjectView({
         // §65/§66 — fil de discussion + fix « par Système » + statut de la demande.
         interlocutorEmail: item.interlocutorEmail,
         source: item.source,
-        status: null,
+        // list_object_crm porte désormais `status` ⇒ on le propage (était hard-codé null, d'où la
+        // chip « En attente / Traitée » jamais rendue dans la vue objet, §66).
+        status: item.status,
         resolvedAt: item.resolvedAt,
         replies: item.replies,
       })),

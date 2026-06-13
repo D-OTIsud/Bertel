@@ -102,38 +102,41 @@ describe('CrmTimeline / TlCard (rectif PO v5 points 4+5)', () => {
     expect(getByText('par Système')).toBeInTheDocument();
   });
 
-  it('clic sur la carte → onOpenActor(actorId) quand le callback est fourni', () => {
+  it('clic sur la région navigable → onOpenActor(actorId) quand le callback est fourni', () => {
     const onOpenActor = jest.fn();
     const { container } = render(<CrmTimeline items={[makeItem()]} showContext={false} onOpenActor={onOpenActor} />);
-    const card = container.querySelector('.tl-card') as HTMLElement;
-    expect(card).toHaveAttribute('role', 'button');
-    fireEvent.click(card);
+    // A11y (§66) : c'est la sous-région .tl-card__nav qui porte role=button, pas la carte.
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    // La carte conteneur reste un <div> neutre (plus de role=button qui imbriquerait des boutons).
+    expect(container.querySelector('.tl-card')).not.toHaveAttribute('role', 'button');
+    fireEvent.click(nav);
     expect(onOpenActor).toHaveBeenCalledWith('actor-1');
   });
 
-  it('Entrée/Espace au clavier déclenchent aussi onOpenActor (a11y)', () => {
+  it('Entrée/Espace au clavier sur la région navigable déclenchent aussi onOpenActor (a11y)', () => {
     const onOpenActor = jest.fn();
     const { container } = render(<CrmTimeline items={[makeItem()]} showContext={false} onOpenActor={onOpenActor} />);
-    const card = container.querySelector('.tl-card') as HTMLElement;
-    fireEvent.keyDown(card, { key: 'Enter' });
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    fireEvent.keyDown(nav, { key: 'Enter' });
     expect(onOpenActor).toHaveBeenCalledTimes(1);
-    fireEvent.keyDown(card, { key: ' ' });
+    fireEvent.keyDown(nav, { key: ' ' });
     expect(onOpenActor).toHaveBeenCalledTimes(2);
   });
 
-  it('sans onOpenActor (fiche acteur), la carte n est pas un bouton (pas d auto-lien)', () => {
+  it('sans onOpenActor (fiche acteur), la région navigable n est pas un bouton (pas d auto-lien)', () => {
     const { container } = render(<CrmTimeline items={[makeItem()]} />);
-    const card = container.querySelector('.tl-card') as HTMLElement;
-    expect(card).not.toHaveAttribute('role', 'button');
-    expect(card).not.toHaveClass('is-clickable');
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).not.toHaveAttribute('role', 'button');
+    expect(container.querySelector('.tl-card')).not.toHaveClass('is-clickable');
   });
 
-  it('actorId absent : carte non cliquable même avec onOpenActor', () => {
+  it('actorId absent : région navigable non cliquable même avec onOpenActor', () => {
     const onOpenActor = jest.fn();
     const { container } = render(<CrmTimeline items={[makeItem({ actorId: null })]} onOpenActor={onOpenActor} />);
-    const card = container.querySelector('.tl-card') as HTMLElement;
-    expect(card).not.toHaveAttribute('role', 'button');
-    fireEvent.click(card);
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).not.toHaveAttribute('role', 'button');
+    fireEvent.click(nav);
     expect(onOpenActor).not.toHaveBeenCalled();
   });
 
@@ -143,8 +146,10 @@ describe('CrmTimeline / TlCard (rectif PO v5 points 4+5)', () => {
     const { container } = render(
       <CrmTimeline items={[makeItem()]} onOpenActor={onOpenActor} onOpenObject={onOpenObject} />,
     );
-    const card = container.querySelector('.tl-card') as HTMLElement;
-    const ctxTag = within(card).getByRole('button', { name: /hotel basalte/i });
+    // Le tag de contexte est un bouton .ctx-tag DANS la région navigable (role=button) — on le
+    // cible par sa classe car le nom accessible de la région englobe « Hotel Basalte & Lagon »
+    // (deux boutons matcheraient sinon).
+    const ctxTag = container.querySelector('.ctx-tag') as HTMLElement;
     fireEvent.click(ctxTag);
     expect(onOpenObject).toHaveBeenCalledWith('obj-1');
     // stopPropagation : le clic sur le tag NE déclenche PAS l'ouverture de l'acteur.
@@ -227,6 +232,16 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     await waitFor(() => expect(onReply).toHaveBeenCalledWith('root-1', 'Ma réponse au fil.', 'positif'));
   });
 
+  it('« Répondre » place le focus dans le textarea du composer (a11y §66)', () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    // À l'ouverture, le curseur est dans le champ de réponse (le composer n'est monté qu'alors).
+    expect(getByPlaceholderText(/votre réponse/i)).toHaveFocus();
+  });
+
   it('le composer de réponse a un textarea (≥ 3 lignes) ; « Envoyer » désactivé tant que vide', () => {
     const onReply = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByPlaceholderText } = render(
@@ -237,6 +252,55 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     expect(field.tagName).toBe('TEXTAREA');
     expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(3);
     expect(getByRole('button', { name: /envoyer/i })).toBeDisabled();
+  });
+
+  it('a11y : aucun contrôle interactif n est imbriqué dans la région role=button (séparation)', () => {
+    // §66 — la carte cliquable expose une région de navigation (role=button) ; les contrôles
+    // du fil (Répondre / Marquer traitée + composer) sont des FRÈRES de cette région, jamais
+    // ses descendants — sinon <button>/<textarea> dans role=button = ARIA/clavier invalides.
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const { container, getByRole, getByPlaceholderText } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'planned' })]}
+        canWrite
+        onReply={onReply}
+        onResolve={onResolve}
+        onOpenActor={jest.fn()}
+      />,
+    );
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    // Les boutons d'action du fil ne sont PAS dans la région de navigation.
+    expect(nav.contains(getByRole('button', { name: /répondre/i }))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /marquer traitée/i }))).toBe(false);
+    // …et le composer (textarea/select/boutons) non plus, une fois ouvert.
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    expect(nav.contains(getByPlaceholderText(/votre réponse/i))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /envoyer/i }))).toBe(false);
+    // Garde-fou : sous le role=button, aucun contrôle de fil (textarea/select + boutons
+    // Répondre/Marquer traitée/Rouvrir/Envoyer/Annuler). Le tag de contexte (.ctx-tag) reste
+    // volontairement dans la région (navigation objet, stopPropagation) — il est exclu du compte.
+    const threadControls = Array.from(nav.querySelectorAll('button, textarea, select')).filter(
+      (el) => !el.classList.contains('ctx-tag'),
+    );
+    expect(threadControls).toHaveLength(0);
+  });
+
+  it('clic sur la région navigable → onOpenActor même avec des contrôles d action présents', () => {
+    // La séparation ne casse pas la navigation : cliquer la région ouvre toujours l'acteur.
+    const onOpenActor = jest.fn();
+    const { container } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'planned' })]}
+        canWrite
+        onReply={jest.fn()}
+        onResolve={jest.fn()}
+        onOpenActor={onOpenActor}
+      />,
+    );
+    fireEvent.click(container.querySelector('.tl-card__nav') as HTMLElement);
+    expect(onOpenActor).toHaveBeenCalledWith('actor-1');
   });
 
   it('les contrôles du composer stopPropagation (clic ne navigue PAS vers l acteur)', async () => {

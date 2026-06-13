@@ -6,7 +6,7 @@
 // CtxTag = tag de contexte objet d'une interaction (« Général » si null) ;
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, CornerDownRight, Mail, MapPin, Phone, RotateCcw, StickyNote } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
 import {
@@ -240,6 +240,13 @@ function TlReplyComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canSend = body.trim().length > 0 && !busy;
+  // A11y (§66) : le composer n'est monté QUE lorsque « Répondre » l'ouvre (rendu conditionnel
+  // dans TlCard) ⇒ ce focus-au-montage ne vole jamais le focus aux cartes inactives ; il met
+  // simplement le curseur dans le champ de réponse dès l'ouverture.
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    areaRef.current?.focus();
+  }, []);
 
   async function send() {
     if (!canSend) return;
@@ -260,6 +267,7 @@ function TlReplyComposer({
   return (
     <div className="tl-reply-composer" onClick={(event) => event.stopPropagation()}>
       <textarea
+        ref={areaRef}
         className="tl-reply-composer__area"
         rows={3}
         placeholder="Votre réponse…"
@@ -444,85 +452,96 @@ function TlCard({
   // rendues que si un consommateur passe des callbacks (onReply/onResolve).
   const [composerOpen, setComposerOpen] = useState(false);
   const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve));
+  // A11y (§66, revue) : la carte est un conteneur NEUTRE. Seule la région de navigation
+  // (.tl-card__nav) porte role="button" quand la carte est cliquable — et elle n'englobe QUE
+  // le contenu affiché (titre/meta/corps/réponses/pied). Les contrôles interactifs du fil
+  // (TlThreadActions, TlReplyComposer) sont rendus en FRÈRES de cette région, hors du
+  // role=button : un <button>/<textarea> imbriqué dans un role="button" est invalide (sémantique
+  // clavier/ARIA). On sépare donc « zone navigable » et « zone d'actions ».
   return (
     <div className="tl-item">
       <span className={'tl-item__ico ' + icoClass + ' tone--' + tone} aria-hidden>
         <Icon size={14} />
       </span>
-      <div
-        className={'tl-card tone--' + tone + (clickable ? ' is-clickable' : '')}
-        role={clickable ? 'button' : undefined}
-        tabIndex={clickable ? 0 : undefined}
-        title={clickable ? "Ouvrir la fiche de l'acteur" : undefined}
-        onClick={clickable ? openActor : undefined}
-        onKeyDown={
-          clickable
-            ? (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  openActor();
+      <div className={'tl-card tone--' + tone + (clickable ? ' is-clickable' : '')}>
+        <div
+          className="tl-card__nav"
+          role={clickable ? 'button' : undefined}
+          tabIndex={clickable ? 0 : undefined}
+          title={clickable ? "Ouvrir la fiche de l'acteur" : undefined}
+          onClick={clickable ? openActor : undefined}
+          onKeyDown={
+            clickable
+              ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openActor();
+                  }
                 }
-              }
-            : undefined
-        }
-      >
-        <div className="tl-card__top">
-          <strong>{title}</strong>
-          {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
-          <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
-          <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
-          {/* Statut de la demande (§65/§66) : « En attente » (planned) / « Traitée » (done). */}
-          {status === 'planned' ? <span className="tl-status tl-status--open">En attente</span> : null}
-          {status === 'done' ? (
-            <span className="tl-status tl-status--done" title={item.resolvedAt ? `Traitée le ${formatShort(item.resolvedAt)}` : undefined}>
-              Traitée
-            </span>
-          ) : null}
-          <span className="tl-card__when">{formatShort(item.occurredAt)}</span>
-        </div>
-        {item.body ? <p className="tl-card__sum">{item.body}</p> : null}
-
-        {/* Fil de discussion (§65/§66) : réponses NICHÉES sous le corps, retrait + liseré gauche. */}
-        {replies.length > 0 ? (
-          <div className="tl-replies">
-            {replies.map((reply) => {
-              const replyAuthor = interactionAuthorOf({
-                ownerName: reply.ownerName,
-                interlocutorEmail: reply.interlocutorEmail,
-                source: reply.source,
-              });
-              return (
-                <div key={reply.id} className="tl-reply">
-                  <div className="tl-reply__head">
-                    <span className="tl-reply__author">{replyAuthor}</span>
-                    <span className="tl-reply__when">· {formatShort(reply.occurredAt)}</span>
-                    <Mood sentimentCode={reply.sentimentCode} sentimentName={reply.sentimentName} />
-                  </div>
-                  {reply.body ? <p className="tl-reply__body">{reply.body}</p> : null}
-                </div>
-              );
-            })}
+              : undefined
+          }
+        >
+          <div className="tl-card__top">
+            <strong>{title}</strong>
+            {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
+            <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
+            <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
+            {/* Statut de la demande (§65/§66) : « En attente » (planned) / « Traitée » (done). */}
+            {status === 'planned' ? <span className="tl-status tl-status--open">En attente</span> : null}
+            {status === 'done' ? (
+              <span className="tl-status tl-status--done" title={item.resolvedAt ? `Traitée le ${formatShort(item.resolvedAt)}` : undefined}>
+                Traitée
+              </span>
+            ) : null}
+            <span className="tl-card__when">{formatShort(item.occurredAt)}</span>
           </div>
-        ) : null}
+          {item.body ? <p className="tl-card__sum">{item.body}</p> : null}
 
-        <div className="tl-card__foot">
-          {/* WHO : acteur de l'interaction (affichage). */}
-          {showActor && item.actorName ? <span className="tl-card__actor">{item.actorName}</span> : null}
-          {/* RÉFÉRENT : auteur réel (fix « par Système ») — agent, interlocuteur ou source d'import. */}
-          <span className="tl-card__owner">par {author}</span>
-          {showContext !== false && (
-            <span style={{ marginLeft: 'auto' }}>
-              <CtxTag
-                objectId={item.objectId}
-                objectName={item.objectName}
-                objectType={item.objectType}
-                onOpen={onOpenObject}
-              />
-            </span>
-          )}
+          {/* Fil de discussion (§65/§66) : réponses NICHÉES sous le corps (affichage lecture
+              seule ⇒ reste DANS la région navigable). */}
+          {replies.length > 0 ? (
+            <div className="tl-replies">
+              {replies.map((reply) => {
+                const replyAuthor = interactionAuthorOf({
+                  ownerName: reply.ownerName,
+                  interlocutorEmail: reply.interlocutorEmail,
+                  source: reply.source,
+                });
+                return (
+                  <div key={reply.id} className="tl-reply">
+                    <div className="tl-reply__head">
+                      <span className="tl-reply__author">{replyAuthor}</span>
+                      <span className="tl-reply__when">· {formatShort(reply.occurredAt)}</span>
+                      <Mood sentimentCode={reply.sentimentCode} sentimentName={reply.sentimentName} />
+                    </div>
+                    {reply.body ? <p className="tl-reply__body">{reply.body}</p> : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div className="tl-card__foot">
+            {/* WHO : acteur de l'interaction (affichage). */}
+            {showActor && item.actorName ? <span className="tl-card__actor">{item.actorName}</span> : null}
+            {/* RÉFÉRENT : auteur réel (fix « par Système ») — agent, interlocuteur ou source d'import. */}
+            <span className="tl-card__owner">par {author}</span>
+            {showContext !== false && (
+              <span style={{ marginLeft: 'auto' }}>
+                <CtxTag
+                  objectId={item.objectId}
+                  objectName={item.objectName}
+                  objectType={item.objectType}
+                  onOpen={onOpenObject}
+                />
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Actions du fil (§65/§66) : Répondre + Marquer traitée/Rouvrir, gatées. */}
+        {/* Contrôles interactifs du fil — FRÈRES de .tl-card__nav, HORS du role=button (§66) :
+            boutons Répondre / Marquer traitée / Rouvrir + composer inline. Plus de
+            stopPropagation requis pour éviter la nav (ils sont hors de la zone cliquable). */}
         {hasThreadActions && actions ? (
           <TlThreadActions
             rootId={item.id}

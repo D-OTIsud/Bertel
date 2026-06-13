@@ -723,6 +723,9 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           source: readNullableString(row.source),
           // §65/§66 — fil de discussion (même contrat que parseCrmInteraction).
           interlocutorEmail: readNullableString(row.interlocutor_email),
+          // Statut de la demande — list_object_crm le porte ; lu en nullable pour piloter la chip
+          // « En attente / Traitée » (planned/done) dans la vue objet aussi (était hard-codé null).
+          status: readNullableString(row.status),
           resolvedAt: readNullableString(row.resolved_at),
           replies: parseReplies(row.replies),
         }))

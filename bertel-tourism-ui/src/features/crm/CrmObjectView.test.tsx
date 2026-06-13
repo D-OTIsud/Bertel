@@ -19,7 +19,8 @@ const snapshot: ObjectCrmSnapshot = {
       occurredAt: '2026-06-04T10:00:00Z', actorId: 'actor-1', actorName: 'Mme Marie Hoarau',
       topicCode: 'modification_infos_bdd', topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
-      interlocutorEmail: null, resolvedAt: null,
+      // §66 : list_object_crm porte `status` ⇒ la vue objet rend la chip « En attente » (planned).
+      interlocutorEmail: null, status: 'planned', resolvedAt: null,
       replies: [{
         id: 'i1-r1', interactionType: 'note', body: 'Tarifs intégrés dans la fiche.',
         occurredAt: '2026-06-05T08:00:00Z', createdAt: '2026-06-05T08:01:00Z',
@@ -34,7 +35,7 @@ const snapshot: ObjectCrmSnapshot = {
       occurredAt: '2026-03-24T09:00:00Z', actorId: null, actorName: 'SARL Basalte & Lagon',
       topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
       ownerName: null, source: 'import_berta2_crm', interlocutorEmail: 'contact@basalte.re',
-      resolvedAt: '2026-03-25T09:00:00Z', replies: [],
+      status: 'done', resolvedAt: '2026-03-25T09:00:00Z', replies: [],
     },
   ],
   topics: [{ code: 'modification_infos_bdd', name: 'Modification infos BDD', count: 1 }],
@@ -117,15 +118,18 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
   // (plus de résolution par nom). Une interaction sans actor_id ⇒ carte non cliquable.
   it('clic sur une carte de l historique → onOpenActor(actorId de l interaction)', async () => {
     const props = renderView();
-    // i1 (actorId 'actor-1') : on cible la carte par son corps.
+    // i1 (actorId 'actor-1') : on cible la carte par son corps. A11y (§66) : c'est la sous-région
+    // .tl-card__nav qui porte role=button (la carte est un conteneur neutre).
     const card = (await screen.findByText('Tarifs validés.')).closest('.tl-card') as HTMLElement;
-    expect(card).toHaveAttribute('role', 'button');
-    fireEvent.click(card);
+    expect(card).not.toHaveAttribute('role', 'button');
+    const nav = card.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    fireEvent.click(nav);
     expect(props.onOpenActor).toHaveBeenCalledWith('actor-1');
-    // i2 (actorId null) : carte NON cliquable (pas de role button), clic sans effet.
-    const card2 = (screen.getByText('Adhésion 2026').closest('.tl-card')) as HTMLElement;
-    expect(card2).not.toHaveAttribute('role', 'button');
-    fireEvent.click(card2);
+    // i2 (actorId null) : région NON cliquable (pas de role button), clic sans effet.
+    const nav2 = (screen.getByText('Adhésion 2026').closest('.tl-card') as HTMLElement).querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav2).not.toHaveAttribute('role', 'button');
+    fireEvent.click(nav2);
     expect(props.onOpenActor).toHaveBeenCalledTimes(1);
   });
 
@@ -185,6 +189,16 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     const button = screen.getByRole('button', { name: /nouvelle interaction/i });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  // §66 — la chip de statut (« En attente » / « Traitée ») s'affiche dans la vue objet : le
+  // parcours mappe désormais status: item.status (était hard-codé null ⇒ chip jamais rendue).
+  it('rend la chip de statut de la demande (En attente / Traitée) dans la vue objet', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    // i1 = planned ⇒ « En attente » ; i2 = done ⇒ « Traitée ».
+    expect(screen.getByText('En attente')).toBeInTheDocument();
+    expect(screen.getByText('Traitée')).toBeInTheDocument();
   });
 
   // §65/§66 — la réponse de i1 (replies[]) est rendue nichée dans l'historique objet.

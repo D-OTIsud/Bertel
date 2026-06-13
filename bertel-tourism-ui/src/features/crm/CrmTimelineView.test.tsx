@@ -99,9 +99,10 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
   it('clic sur une carte → onOpenActor(actorId)', async () => {
     const { onOpenActor } = renderTimeline();
     // evt-1 (actor-1) : titre = sujet normalisé « Demande de visite » ; on cible la carte par
-    // son corps pour ne pas confondre avec l'option homonyme du filtre Sujet.
+    // son corps pour ne pas confondre avec l'option homonyme du filtre Sujet. A11y (§66) : la
+    // région cliquable est .tl-card__nav (la carte elle-même n'est plus role=button).
     const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
-    fireEvent.click(card);
+    fireEvent.click(card.querySelector('.tl-card__nav') as HTMLElement);
     expect(onOpenActor).toHaveBeenCalledWith('actor-1');
   });
 
@@ -109,7 +110,9 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
   it('clic sur le tag de contexte → onOpenObject (pas onOpenActor)', async () => {
     const { onOpenObject, onOpenActor } = renderTimeline();
     const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
-    fireEvent.click(within(card).getByRole('button', { name: /hotel basalte/i }));
+    // A11y (§66) : le tag de contexte (.ctx-tag) vit dans la région navigable (role=button), dont
+    // le nom accessible englobe « Hotel Basalte » ⇒ on cible le tag par sa classe, pas par rôle.
+    fireEvent.click(card.querySelector('.ctx-tag') as HTMLElement);
     expect(onOpenObject).toHaveBeenCalledWith('obj-1');
     expect(onOpenActor).not.toHaveBeenCalled();
   });

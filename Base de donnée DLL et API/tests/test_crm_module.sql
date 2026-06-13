@@ -29,6 +29,12 @@
 --    list_object_contact_suggestions(objA) renvoie un tableau JSON, contient le contact email
 --    de l'établissement (fixture contact_channel), refuse l'étranger (42501) ;
 --    list_crm_timeline gagne p_status (active/done, 'bidon'→22023) + p_from.
+-- H) FIL DE RÉPONSES §66 (demande PO 2026-06-12) : self-FK parent_interaction_id (CASCADE) ;
+--    save_crm_interaction accepte parent_interaction_id (réponse), NORMALISE la réponse-à-réponse
+--    vers la racine, hérite acteur+contexte, owner=auteur ; les 3 RPC de lecture ne renvoient que
+--    des RACINES (parent NULL) + 'replies' imbriquées + 'interlocutor_email' + 'resolved_at' ;
+--    cycle « marquer traitée » (status=done ⇒ resolved_at) / « rouvrir » (planned ⇒ NULL) ;
+--    répondre sans write_crm_notes (C) ou cross-ORG (B) → 42501 ; delete racine = CASCADE du fil.
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
 -- Mécanique de fixture calquée sur test_room_type_read_gate.sql / test_sp2_permission_behavior.sql.
@@ -67,6 +73,11 @@ DECLARE
   -- Photo acteur + suggestions de contacts (demande PO 2026-06-12) :
   v_email_kind uuid;   -- kind_id 'email' réel (fixture contact_channel établissement)
   v_suggestions jsonb; -- retour de api.list_object_contact_suggestions(objA)
+  -- Fil de réponses §66 (demande PO 2026-06-12) :
+  v_demande uuid;      -- demande RACINE (interaction parente)
+  v_reply_id uuid;     -- réponse directe à la racine
+  v_reply2_id uuid;    -- réponse-à-réponse (doit normaliser vers la racine)
+  v_root jsonb;        -- la racine telle que renvoyée par un RPC de lecture
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -105,6 +116,16 @@ BEGIN
           WHERE c.table_schema='public' AND c.table_name='crm_interaction'
             AND c.column_name='object_id') = 'YES',
          'ancrage: crm_interaction.object_id doit être NULLABLE (contexte objet optionnel)';
+  -- §66 Fil de réponses : self-FK parent_interaction_id (colonne + FK ON DELETE CASCADE).
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='public' AND table_name='crm_interaction'
+                   AND column_name='parent_interaction_id'),
+         '§66: colonne crm_interaction.parent_interaction_id absente';
+  ASSERT EXISTS (SELECT 1 FROM pg_constraint
+                 WHERE conname = 'crm_interaction_parent_fkey'
+                   AND confrelid = 'crm_interaction'::regclass
+                   AND confdeltype = 'c'),
+         '§66: self-FK crm_interaction_parent_fkey (ON DELETE CASCADE) absente';
 
   -- ---------- Fixture (superuser, RLS bypass) ----------
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code = 'publisher' LIMIT 1;
@@ -304,6 +325,77 @@ BEGIN
     ASSERT (v_payload->'actors'->0->>'actor_id')::uuid = v_actorA
            AND v_payload->'actors'->0->>'role_name' IS NOT NULL,
            'list_object_crm: actorA (avec role_name) attendu en tête des acteurs liés';
+
+    -- ----- §66. Fil de réponses + cycle « traitée » + interlocuteur d'origine -----
+    -- Demande RACINE (sur objA, contexte objet + sujet).
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'object_id', v_objA, 'interaction_type', 'email', 'body', 'Demande initiale',
+      'topic_code', 'demande_de_visite'));
+    v_demande := (v_payload->>'id')::uuid;
+    ASSERT v_demande IS NOT NULL, '§66: demande racine non créée';
+
+    -- Réponse directe à la racine : parent posé, contexte hérité.
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'parent_interaction_id', v_demande, 'body', 'Réponse OTI'));
+    v_reply_id := (v_payload->>'id')::uuid;
+    ASSERT v_reply_id IS NOT NULL, '§66: réponse non créée';
+    -- La réponse pointe la racine, est possédée par userA, hérite acteur+objet de la racine
+    -- (sous le fixture DEFINER on lit la table en direct — superuser-fixture déjà passé en authenticated,
+    --  donc on PASSE par le RPC de lecture qui est la garantie de contrat). Direct-SELECT ici est
+    --  RLS-bloqué pour userA ⇒ on assert via le RPC.
+    v_payload := api.list_object_crm(v_objA);
+    -- La RACINE remonte avec replies ≥ 1 contenant la réponse, et la réponse N'EST PAS un item top-level.
+    v_root := (SELECT i FROM jsonb_array_elements(v_payload->'interactions') i
+               WHERE (i->>'id')::uuid = v_demande);
+    ASSERT v_root IS NOT NULL, '§66: la demande racine doit apparaître au premier niveau';
+    ASSERT jsonb_array_length(v_root->'replies') >= 1,
+           '§66: la racine doit porter au moins une réponse imbriquée';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_root->'replies') r
+                   WHERE r->>'body' = 'Réponse OTI'),
+           '§66: la réponse « Réponse OTI » doit être imbriquée sous la racine';
+    ASSERT (v_root ? 'replies') AND (v_root ? 'interlocutor_email') AND (v_root ? 'resolved_at'),
+           '§66: la racine doit exposer replies + interlocutor_email + resolved_at';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'interactions') i
+                       WHERE i->>'body' = 'Réponse OTI'),
+           '§66: la réponse ne doit JAMAIS apparaître comme item de premier niveau';
+
+    -- Réponse-à-réponse : doit NORMALISER vers la racine (1 niveau), pas pointer la réponse.
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'parent_interaction_id', v_reply_id, 'body', 'Re-réponse'));
+    v_reply2_id := (v_payload->>'id')::uuid;
+    v_payload := api.list_object_crm(v_objA);
+    v_root := (SELECT i FROM jsonb_array_elements(v_payload->'interactions') i
+               WHERE (i->>'id')::uuid = v_demande);
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_root->'replies') r
+                   WHERE (r->>'id')::uuid = v_reply2_id),
+           '§66: la réponse-à-réponse doit normaliser vers la racine (imbriquée sous la racine)';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'interactions') i
+                       WHERE (i->>'id')::uuid = v_reply2_id),
+           '§66: la réponse-à-réponse ne doit pas être un item de premier niveau';
+
+    -- Timeline org-wide : les items sont des racines ; ni la réponse ni la re-réponse n'y figurent,
+    -- et une racine porte la clé replies.
+    v_payload := api.list_crm_timeline();
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'items') i
+                       WHERE (i->>'id')::uuid IN (v_reply_id, v_reply2_id)),
+           '§66: list_crm_timeline ne doit renvoyer que des racines (aucune réponse)';
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload->'items') i
+                   WHERE (i->>'id')::uuid = v_demande AND (i ? 'replies')),
+           '§66: une racine de la timeline doit porter la clé replies';
+
+    -- Cycle « marquer traitée » : status='done' pose resolved_at ; 'planned' (rouvrir) l'efface.
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'done'));
+    v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
+               WHERE (i->>'id')::uuid = v_demande);
+    ASSERT NULLIF(v_root->>'resolved_at','') IS NOT NULL,
+           '§66 (marquer traitée): status=done doit poser resolved_at';
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'planned'));
+    v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
+               WHERE (i->>'id')::uuid = v_demande);
+    ASSERT NULLIF(v_root->>'resolved_at','') IS NULL,
+           '§66 (rouvrir): status=planned doit effacer resolved_at';
+    -- v_demande reste vivante : les blocs USER C / USER B probent l'autorisation de réponse
+    -- dessus ; le bloc USER A final la supprime (CASCADE) avant le cycle de contexte v_ctx.
   RESET ROLE;
 
   -- ---------- USER C (membre SANS permission) : lit mais n'écrit pas ----------
@@ -330,6 +422,14 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'écriture acteur-seul: le membre sans write_crm_notes doit être refusé (42501)';
+    -- §66 : répondre exige la même permission (autorisation sur le contexte hérité de la racine).
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_interaction(jsonb_build_object(
+        'parent_interaction_id', v_demande, 'body', 'réponse refusée'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, '§66: répondre sans write_crm_notes doit être refusé (42501)';
   RESET ROLE;
 
   -- ---------- USER B (autre ORG) : ne lit rien ----------
@@ -360,6 +460,15 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
     END;
     ASSERT v_denied, 'cross-ORG: list_object_contact_suggestions doit refuser l''étranger (42501)';
+    -- §66 : un étranger ne peut pas répondre à la demande de l'ORG A (autorisation sur le
+    -- contexte hérité de la racine — objA hors périmètre de B).
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_interaction(jsonb_build_object(
+        'parent_interaction_id', v_demande, 'body', 'réponse intrus'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true;
+    END;
+    ASSERT v_denied, '§66 cross-ORG: l''étranger ne doit pas pouvoir répondre (42501)';
     v_payload := api.list_crm_directory();
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_payload) d
                    WHERE (d->>'actor_id')::uuid = v_actorB),
@@ -377,6 +486,14 @@ BEGIN
     -- Suppression de l'interaction acteur-seul : exerce la branche object_id NULL du delete.
     v_payload := api.delete_crm_interaction(v_actor_int_id);
     ASSERT (v_payload->>'deleted')::boolean, 'delete (acteur-seul): deleted=true attendu';
+    -- §66 : suppression de la demande RACINE ⇒ son fil de réponses disparaît (FK CASCADE).
+    -- (Le direct-SELECT est RLS-bloqué pour userA ; on prouve la disparition via le RPC : la
+    --  racine n'apparaît plus, donc ses réponses imbriquées non plus.)
+    v_payload := api.delete_crm_interaction(v_demande);
+    ASSERT (v_payload->>'deleted')::boolean, '§66: delete de la racine doit réussir';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
+                       WHERE (i->>'id')::uuid = v_demande),
+           '§66: la racine supprimée (et son fil) ne doit plus apparaître';
     -- Ajout d'un contexte objet sur une interaction acteur-seul (NULL → valeur) : PERMIS.
     v_payload := api.save_crm_interaction(jsonb_build_object(
       'actor_id', v_actorA, 'body', 'À contextualiser'));
@@ -550,6 +667,6 @@ BEGIN
     ASSERT v_denied, 'cross-ORG: save_crm_actor UPDATE sur l''acteur de A doit être refusé (42501)';
   RESET ROLE;
 
-  RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO (photo acteur, suggestions contacts, timeline filtrée) : vocabulaires, ancrages, accès/écriture/cross-ORG, authoring acteur/canaux, annuaire filtré — assertions passées.';
+  RAISE NOTICE 'CRM module §61 + acteur-centré v2 + rectifs PO (photo acteur, suggestions contacts, timeline filtrée) + §66 fil de réponses (parent_interaction_id, normalisation racine, replies imbriquées, marquer traitée/rouvrir, interlocuteur d''origine, auth réponse, CASCADE) : assertions passées.';
 END$$;
 ROLLBACK;

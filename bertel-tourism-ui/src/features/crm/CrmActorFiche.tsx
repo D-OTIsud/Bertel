@@ -87,7 +87,7 @@ function CoordRow({ channel }: { channel: ActorChannel }) {
 }
 
 /**
- * Carte acteur (rail droit, toujours visible) : avatar, nom, sous-ligne d'identité réelle,
+ * Carte acteur (rail, toujours visible) : avatar, nom, sous-ligne des RÔLES distincts,
  * Coordonnées cliquables EN VERTICAL, bouton « Modifier » gaté. Sur mobile, c'est l'unique bloc
  * du rail affiché avant repli ; le toggle des indicateurs vit juste en dessous (hors carte).
  */
@@ -239,7 +239,9 @@ export function CrmActorFiche({
   const last12Months = occurredTimestamps.filter((timestamp) => now - timestamp <= YEAR_MS).length;
   const lastContactAt = occurredTimestamps.length > 0 ? new Date(Math.max(...occurredTimestamps)).toISOString() : null;
   const topicOptions = topicsQuery.data ?? [];
-  const identitySubline = [snapshot.actor.firstName, snapshot.actor.lastName].filter(Boolean).join(' ');
+  // Sous-ligne de la carte = les RÔLES distincts de l'acteur (le prénom/nom dupliquerait le nom
+  // affiché — rectif PO). Ex. « Exploitant » ou « Exploitant · Gérant ».
+  const identitySubline = [...new Set(objects.map((object) => object.roleName).filter(Boolean))].join(' · ');
 
   return (
     <div className="crm-body">

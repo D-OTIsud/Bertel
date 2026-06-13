@@ -88,11 +88,12 @@ beforeEach(() => {
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
-  it('rend la carte acteur (identité réelle en sous-ligne), les établissements liés et le badge principal', async () => {
+  it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {
     renderFiche();
     expect(await screen.findByText('Mme Marie Hoarau')).toBeInTheDocument();
-    // Rectif PO point 4 : prénom/nom réels sous le nom affiché.
-    expect(screen.getByText('Marie Hoarau')).toBeInTheDocument();
+    // Rectif PO : la sous-ligne montre les RÔLES distincts (le prénom/nom doublonnait le nom affiché).
+    expect(screen.getByText('Gérante · Propriétaire')).toBeInTheDocument();
+    expect(screen.queryByText('Marie Hoarau')).not.toBeInTheDocument();
     // Cartes établissements : nom + rôle + badge principal sur le lien primaire.
     expect(screen.getByText('Gérante')).toBeInTheDocument();
     expect(screen.getByText('Propriétaire')).toBeInTheDocument();

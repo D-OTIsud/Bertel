@@ -12,7 +12,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarPlus, ChevronLeft, Globe, Link2, Mail, Pencil, Phone, Plus } from 'lucide-react';
-import { listActorCrm, listDemandTopics } from '../../services/crm';
+import { listActorCrm, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmTaskModal } from './CrmTaskModal';
@@ -101,6 +101,19 @@ export function CrmActorFiche({
         })),
     [interactions, ctxFilter, typeByObjectId],
   );
+
+  // Fil de discussion (§65/§66) : répondre + basculer le statut depuis la timeline de la fiche.
+  // Une réponse hérite le contexte acteur/objet de la racine (ne PAS re-passer actorId/objectId) ;
+  // le toggle de statut pose/efface resolved_at. Refetch list_actor_crm après écriture confirmée.
+  const refetchActor = () => queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
+  const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
+    await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
+    await refetchActor();
+  };
+  const handleResolve = async (rootId: string, done: boolean) => {
+    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+    await refetchActor();
+  };
 
   if (actorQuery.isLoading) {
     return <div className="crm-loading">Chargement de la fiche acteur…</div>;
@@ -245,7 +258,14 @@ export function CrmActorFiche({
               </button>
             </div>
 
-            <CrmTimeline items={timelineItems} onOpenObject={onOpenObject} />
+            <CrmTimeline
+              items={timelineItems}
+              onOpenObject={onOpenObject}
+              canWrite={canWrite}
+              readOnlyReason={CRM_READ_ONLY_REASON}
+              onReply={handleReply}
+              onResolve={handleResolve}
+            />
           </div>
         </div>
 

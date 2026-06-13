@@ -10,10 +10,11 @@
 // Changer un filtre réinitialise le curseur keyset (on repart de la page la plus récente).
 
 import { useMemo, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { listCrmTimeline, listDemandTopics } from '../../services/crm';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
+import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 import {
   CrmFilterBar,
   PERIOD_DEFAULT,
@@ -25,13 +26,17 @@ import {
 } from './CrmFilterBar';
 
 export function CrmTimelineView({
+  canWrite,
   onOpenObject,
   onOpenActor,
 }: {
+  /** Gating page-wide write_crm_notes (no-write-trap) : répondre/résoudre désactivés sans permission. */
+  canWrite: boolean;
   onOpenObject: (objectId: string) => void;
   /** Rectif PO v5 point 5 : clic sur une carte → fiche de l'acteur de l'interaction. */
   onOpenActor: (actorId: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const [olderPages, setOlderPages] = useState<CrmInteraction[][]>([]);
   const [cursor, setCursor] = useState<{ before: string; beforeId: string } | null>(null);
   // Filtres partagés (PO points 6+7) — défaut Toutes + Tout = timeline complète (fix point 7).
@@ -122,6 +127,20 @@ export function CrmTimelineView({
     setCursor({ before: last.occurredAt, beforeId: last.id });
   }
 
+  // Fil de discussion (§65/§66) : répondre + basculer le statut depuis la timeline org-wide.
+  // Une réponse hérite le contexte de la racine ; le toggle pose/efface resolved_at. On
+  // invalide TOUTES les pages de timeline (préfixe ['crm-timeline'] : filtres + curseur) ;
+  // les pages accumulées localement se reconstruisent au refetch.
+  const refetchTimeline = () => queryClient.invalidateQueries({ queryKey: ['crm-timeline'] });
+  const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
+    await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
+    await refetchTimeline();
+  };
+  const handleResolve = async (rootId: string, done: boolean) => {
+    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+    await refetchTimeline();
+  };
+
   return (
     <div className="crm-body">
       <div className="crm-toolbar">
@@ -153,6 +172,10 @@ export function CrmTimelineView({
                 onOpenObject={onOpenObject}
                 onOpenActor={onOpenActor}
                 emptyLabel="Aucune interaction enregistrée."
+                canWrite={canWrite}
+                readOnlyReason={CRM_READ_ONLY_REASON}
+                onReply={handleReply}
+                onResolve={handleResolve}
               />
               {timelineQuery.data?.hasMore && (
                 <button type="button" className="crm-btn crm-load-more" onClick={loadMore}>

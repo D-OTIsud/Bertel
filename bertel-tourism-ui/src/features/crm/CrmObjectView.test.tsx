@@ -186,4 +186,34 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
+
+  // §65/§66 — la réponse de i1 (replies[]) est rendue nichée dans l'historique objet.
+  it('rend les réponses nichées de l historique (fil de discussion)', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    expect(screen.getByText('Tarifs intégrés dans la fiche.')).toBeInTheDocument();
+  });
+
+  // Fix « par Système » : i2 a owner null + interlocutor_email ⇒ auteur affiché = l'interlocuteur.
+  it('auteur de carte résolu sur l interlocuteur quand owner null (plus « par Système »)', async () => {
+    renderView();
+    await screen.findByText('Adhésion 2026');
+    expect(screen.getByText('par contact@basalte.re')).toBeInTheDocument();
+    expect(screen.queryByText('par Système')).not.toBeInTheDocument();
+  });
+
+  // §65/§66 — répondre dans l'historique objet : saveCrmInteraction({parentInteractionId}) + refetch.
+  it('Répondre dans l historique → saveCrmInteraction({ parentInteractionId }) + refresh', async () => {
+    renderView();
+    const card = (await screen.findByText('Tarifs validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    const composer = card.querySelector('.tl-reply-composer') as HTMLElement;
+    fireEvent.change(within(composer).getByPlaceholderText(/votre réponse/i), { target: { value: 'Suivi.' } });
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ parentInteractionId: 'i1', body: 'Suivi.' }),
+    );
+    await waitFor(() => expect(crmMock.listObjectCrm).toHaveBeenCalledTimes(2));
+  });
 });

@@ -442,4 +442,38 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     renderFiche();
     expect(await screen.findByText(/hors de votre périmètre/i)).toBeInTheDocument();
   });
+
+  // §65/§66 — répondre dans la timeline de la fiche : saveCrmInteraction({parentInteractionId}) +
+  // refetch list_actor_crm. La réponse n'envoie PAS actorId/objectId (le serveur hérite la racine).
+  it('Répondre depuis la fiche → saveCrmInteraction({ parentInteractionId }) puis recharge la fiche', async () => {
+    renderFiche();
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    const composer = card.querySelector('.tl-reply-composer') as HTMLElement;
+    fireEvent.change(within(composer).getByPlaceholderText(/votre réponse/i), { target: { value: 'Réponse fiche.' } });
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ parentInteractionId: 'i1', body: 'Réponse fiche.' }),
+    );
+    await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
+  });
+
+  // §65/§66 — i1 est 'done' ⇒ le bouton bascule sur « Rouvrir » → status planned.
+  it('Rouvrir une interaction traitée → saveCrmInteraction({ id, status: planned })', async () => {
+    renderFiche();
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /rouvrir/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'i1', status: 'planned' }));
+  });
+
+  // Gating (no-write-trap) : sans permission, les actions du fil sont désactivées avec raison.
+  it('sans permission : Répondre / Rouvrir du fil désactivés', async () => {
+    renderFiche({ canWrite: false });
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    expect(within(actionsBar).getByRole('button', { name: /répondre/i })).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /rouvrir/i })).toBeDisabled();
+  });
 });

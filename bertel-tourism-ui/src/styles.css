@@ -9412,6 +9412,45 @@ a {
 .crm-app .tl-reply__when { color: var(--ink-4); font-family: var(--font-mono); font-size: 10px; }
 .crm-app .tl-reply__body { font-size: 12px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; }
 
+/* Actions du fil (§65/§66) — « Répondre » + « Marquer traitée / Rouvrir », alignées sous la
+   carte, séparées du contenu par un trait léger. Les boutons utilisent .crm-btn.sm. */
+.crm-app .tl-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line-soft);
+}
+.crm-app .tl-actions .crm-btn { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Composer de réponse inline (§65/§66) — textarea + sentiment + Envoyer/Annuler, encadré
+   discret sous la carte (retrait visuel comme une réponse). Accents only (hors thème ORG). */
+.crm-app .tl-reply-composer {
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.crm-app .tl-reply-composer__area {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface);
+  resize: vertical;
+}
+.crm-app .tl-reply-composer__area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); outline: none; }
+.crm-app .tl-reply-composer__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
 /* Humeur / tonalité — système 6 TONS sentiment (peps PO point 1, signal couleur dominant).
    Pastille : point plein (currentColor) + fond pastel + texte coloré GRAS. Les 6 tons sont
    visiblement distincts (interrogatif = ambre, plus jamais gris) ; `neutre` = gris doux pour

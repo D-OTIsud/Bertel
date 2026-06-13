@@ -7,9 +7,10 @@
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Mail, MapPin, Phone, StickyNote } from 'lucide-react';
+import { Check, CornerDownRight, Mail, MapPin, Phone, RotateCcw, StickyNote } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
 import {
+  CRM_SENTIMENT_OPTIONS,
   formatShort,
   initialsOf,
   interactionAuthorOf,
@@ -19,6 +20,20 @@ import {
   pavTintOf,
   tlIcoClassOf,
 } from './crm-view-utils';
+
+/**
+ * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
+ * la permission. `onReply` consigne une réponse sous la racine puis invalide la query ;
+ * `onResolve` bascule le statut (done/planned). Absents ⇒ carte en lecture seule (pas de
+ * contrôle rendu). `canWrite=false` ⇒ contrôles RENDUS mais désactivés avec raison
+ * (no-write-trap) — on ne masque PAS l'affordance, on l'explique.
+ */
+export interface CrmThreadActions {
+  canWrite?: boolean;
+  readOnlyReason?: string;
+  onReply?: (rootId: string, body: string, sentimentCode?: string) => Promise<void> | void;
+  onResolve?: (rootId: string, done: boolean) => Promise<void> | void;
+}
 
 /**
  * Avatar carré arrondi teinté (acteur via actor_id, objet via object_type).
@@ -205,12 +220,185 @@ const TL_ICONS = {
   sys: StickyNote,
 } as const;
 
+/**
+ * Composer de réponse inline (§65/§66) — un textarea + sentiment optionnel + Envoyer / Annuler,
+ * rendu sous la carte racine. stopPropagation sur tous les contrôles : cliquer dedans ne
+ * navigue PAS vers l'acteur (la carte est cliquable). Double-submit gardé (busy) ; erreur
+ * inline, saisie conservée ; fermeture/vidage au succès.
+ */
+function TlReplyComposer({
+  rootId,
+  onReply,
+  onClose,
+}: {
+  rootId: string;
+  onReply: (rootId: string, body: string, sentimentCode?: string) => Promise<void> | void;
+  onClose: () => void;
+}) {
+  const [body, setBody] = useState('');
+  const [sentimentCode, setSentimentCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canSend = body.trim().length > 0 && !busy;
+
+  async function send() {
+    if (!canSend) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onReply(rootId, body.trim(), sentimentCode || undefined);
+      setBody('');
+      setSentimentCode('');
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Échec de l'envoi de la réponse.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="tl-reply-composer" onClick={(event) => event.stopPropagation()}>
+      <textarea
+        className="tl-reply-composer__area"
+        rows={3}
+        placeholder="Votre réponse…"
+        aria-label="Réponse"
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        onClick={(event) => event.stopPropagation()}
+      />
+      <div className="tl-reply-composer__row">
+        <select
+          className="crm-select"
+          aria-label="Sentiment de la réponse"
+          value={sentimentCode}
+          onChange={(event) => setSentimentCode(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <option value="">— Sentiment —</option>
+          {CRM_SENTIMENT_OPTIONS.map((sentiment) => (
+            <option key={sentiment.code} value={sentiment.code}>
+              {sentiment.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="crm-btn primary sm"
+          disabled={!canSend}
+          onClick={(event) => {
+            event.stopPropagation();
+            void send();
+          }}
+        >
+          Envoyer
+        </button>
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={busy}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+        >
+          Annuler
+        </button>
+      </div>
+      {error ? (
+        <div className="inline-alert" role="alert">
+          {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Boutons « Répondre » + « Marquer traitée / Rouvrir » (§65/§66) — gatés, stopPropagation. */
+function TlThreadActions({
+  rootId,
+  isResolved,
+  actions,
+  onOpenComposer,
+}: {
+  rootId: string;
+  isResolved: boolean;
+  actions: CrmThreadActions;
+  onOpenComposer: () => void;
+}) {
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const { canWrite, readOnlyReason, onReply, onResolve } = actions;
+  const gateTitle = canWrite === false ? readOnlyReason : undefined;
+
+  async function toggleResolve() {
+    if (!onResolve || resolving) return;
+    setResolving(true);
+    setResolveError(null);
+    try {
+      await onResolve(rootId, !isResolved);
+    } catch (caught) {
+      setResolveError(caught instanceof Error ? caught.message : 'Échec de la mise à jour du statut.');
+    } finally {
+      setResolving(false);
+    }
+  }
+
+  return (
+    <div className="tl-actions" onClick={(event) => event.stopPropagation()}>
+      {onReply ? (
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={canWrite === false}
+          title={gateTitle}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenComposer();
+          }}
+        >
+          <CornerDownRight size={11} aria-hidden /> Répondre
+        </button>
+      ) : null}
+      {onResolve ? (
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={canWrite === false || resolving}
+          title={gateTitle}
+          onClick={(event) => {
+            event.stopPropagation();
+            void toggleResolve();
+          }}
+        >
+          {isResolved ? (
+            <>
+              <RotateCcw size={11} aria-hidden /> Rouvrir
+            </>
+          ) : (
+            <>
+              <Check size={11} aria-hidden /> Marquer traitée
+            </>
+          )}
+        </button>
+      ) : null}
+      {resolveError ? (
+        <span className="inline-alert" role="alert">
+          {resolveError}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function TlCard({
   item,
   showActor,
   showContext,
   onOpenObject,
   onOpenActor,
+  actions,
 }: {
   item: CrmTimelineCardItem;
   showActor?: boolean;
@@ -218,6 +406,8 @@ function TlCard({
   onOpenObject?: (objectId: string) => void;
   /** Rectif PO v5 point 5 : clic sur la carte → fiche acteur (timeline org + vue objet). */
   onOpenActor?: (actorId: string) => void;
+  /** Écriture du fil (§65/§66) — réponse + bascule de statut, gatées. Absent ⇒ lecture seule. */
+  actions?: CrmThreadActions;
 }) {
   const icoClass = tlIcoClassOf(item.interactionType);
   const Icon = TL_ICONS[icoClass];
@@ -247,6 +437,13 @@ function TlCard({
   // Statut de la demande (§65/§66) — chip discrète : 'planned' = à traiter, 'done' = traitée.
   const status = item.status ?? null;
   const replies = item.replies ?? [];
+  // Résolu = statut 'done' OU (statut absent ET resolvedAt posé) — la vue objet ne porte pas
+  // de `status` mais peut porter `resolvedAt`, d'où la dérivation par repli.
+  const isResolved = status === 'done' || (status == null && Boolean(item.resolvedAt));
+  // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
+  // rendues que si un consommateur passe des callbacks (onReply/onResolve).
+  const [composerOpen, setComposerOpen] = useState(false);
+  const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve));
   return (
     <div className="tl-item">
       <span className={'tl-item__ico ' + icoClass + ' tone--' + tone} aria-hidden>
@@ -324,6 +521,19 @@ function TlCard({
             </span>
           )}
         </div>
+
+        {/* Actions du fil (§65/§66) : Répondre + Marquer traitée/Rouvrir, gatées. */}
+        {hasThreadActions && actions ? (
+          <TlThreadActions
+            rootId={item.id}
+            isResolved={isResolved}
+            actions={actions}
+            onOpenComposer={() => setComposerOpen(true)}
+          />
+        ) : null}
+        {composerOpen && actions?.onReply ? (
+          <TlReplyComposer rootId={item.id} onReply={actions.onReply} onClose={() => setComposerOpen(false)} />
+        ) : null}
       </div>
     </div>
   );
@@ -337,6 +547,10 @@ export function CrmTimeline({
   onOpenObject,
   onOpenActor,
   emptyLabel,
+  canWrite,
+  readOnlyReason,
+  onReply,
+  onResolve,
 }: {
   items: CrmTimelineCardItem[];
   showActor?: boolean;
@@ -345,7 +559,11 @@ export function CrmTimeline({
   /** Rectif PO v5 point 5 : carte cliquable → fiche acteur (non passé sur la fiche acteur). */
   onOpenActor?: (actorId: string) => void;
   emptyLabel?: string;
-}) {
+} & CrmThreadActions) {
+  // Les callbacks d'écriture du fil (§65/§66) sont passés à chaque carte racine. Absents ⇒
+  // chaque carte reste en lecture seule (pas de contrôle Répondre / Marquer traitée).
+  const threadActions: CrmThreadActions | undefined =
+    onReply || onResolve ? { canWrite, readOnlyReason, onReply, onResolve } : undefined;
   let lastMonth: string | null = null;
   return (
     <div className="tl">
@@ -362,6 +580,7 @@ export function CrmTimeline({
               showContext={showContext}
               onOpenObject={onOpenObject}
               onOpenActor={onOpenActor}
+              actions={threadActions}
             />
           </div>
         );

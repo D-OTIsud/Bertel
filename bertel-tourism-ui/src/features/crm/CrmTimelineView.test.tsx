@@ -8,13 +8,13 @@ jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
-function renderTimeline() {
+function renderTimeline(canWrite = true) {
   const onOpenObject = jest.fn();
   const onOpenActor = jest.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <CrmTimelineView onOpenObject={onOpenObject} onOpenActor={onOpenActor} />
+      <CrmTimelineView canWrite={canWrite} onOpenObject={onOpenObject} onOpenActor={onOpenActor} />
     </QueryClientProvider>,
   );
   return { onOpenObject, onOpenActor };
@@ -27,6 +27,7 @@ beforeEach(() => {
     { code: 'demande_de_visite', name: 'Demande de visite' },
     { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
   ]);
+  crmMock.saveCrmInteraction.mockResolvedValue('new-reply');
 });
 
 describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () => {
@@ -111,5 +112,39 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
     fireEvent.click(within(card).getByRole('button', { name: /hotel basalte/i }));
     expect(onOpenObject).toHaveBeenCalledWith('obj-1');
     expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  // §65/§66 — répondre depuis la timeline : saveCrmInteraction({parentInteractionId}) + refetch.
+  it('Répondre → saveCrmInteraction({ parentInteractionId }) puis recharge la timeline', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    const composer = card.querySelector('.tl-reply-composer') as HTMLElement;
+    fireEvent.change(within(composer).getByPlaceholderText(/votre réponse/i), { target: { value: 'Réponse au fil.' } });
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ parentInteractionId: 'evt-1', body: 'Réponse au fil.' }),
+    );
+  });
+
+  // §65/§66 — bascule traitée : evt-1 est planned ⇒ « Marquer traitée » → status done.
+  it('Marquer traitée → saveCrmInteraction({ id, status: done })', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /marquer traitée/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', status: 'done' }));
+  });
+
+  // Gating page-wide (no-write-trap) : sans permission, les actions du fil sont désactivées.
+  it('sans permission : Répondre / Marquer traitée désactivés avec raison', async () => {
+    renderTimeline(false);
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    const replyBtn = within(actionsBar).getByRole('button', { name: /répondre/i });
+    expect(replyBtn).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /marquer traitée/i })).toBeDisabled();
+    expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 });

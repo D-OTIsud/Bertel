@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
-import { listCrmDirectory, listDemandTopics, listObjectCrm } from '../../services/crm';
+import { listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
@@ -78,6 +78,18 @@ export function CrmObjectView({
       })),
     [snapshot],
   );
+
+  // Fil de discussion (§65/§66) : répondre + basculer le statut depuis l'historique de l'objet.
+  // Refetch list_object_crm après écriture confirmée (même pattern que « Nouvelle interaction »).
+  const refetchObject = () => queryClient.invalidateQueries({ queryKey: ['crm-object', objectId] });
+  const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
+    await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
+    await refetchObject();
+  };
+  const handleResolve = async (rootId: string, done: boolean) => {
+    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+    await refetchObject();
+  };
 
   if (objectQuery.isLoading) {
     return <div className="crm-loading">Chargement de la vue établissement…</div>;
@@ -150,6 +162,10 @@ export function CrmObjectView({
               showContext={false}
               onOpenActor={onOpenActor}
               emptyLabel="Aucune interaction enregistrée pour cet établissement."
+              canWrite={canWrite}
+              readOnlyReason={CRM_READ_ONLY_REASON}
+              onReply={handleReply}
+              onResolve={handleResolve}
             />
           </div>
         </div>

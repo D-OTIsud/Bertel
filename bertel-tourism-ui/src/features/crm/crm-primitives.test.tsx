@@ -1,4 +1,4 @@
-import { render, fireEvent, within } from '@testing-library/react';
+import { render, fireEvent, waitFor, within } from '@testing-library/react';
 import { CrmTimeline, Pav, type CrmTimelineCardItem } from './crm-primitives';
 
 // Repli portrait acteur (revue) : une photo cassée/404 retombe sur les initiales teintées —
@@ -204,5 +204,118 @@ describe('TlCard — fil de discussion (§65/§66)', () => {
     rerender(<CrmTimeline items={[makeItem({ status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} />);
     expect(getByText('Traitée')).toBeInTheDocument();
     expect(queryByText('En attente')).toBeNull();
+  });
+});
+
+// §65/§66 — composer de réponse inline + bascule « Marquer traitée / Rouvrir », gatés.
+describe('TlCard — répondre + résoudre (§65/§66)', () => {
+  it('sans onReply/onResolve (lecture), aucune action « Répondre » / « Marquer traitée »', () => {
+    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'planned' })]} />);
+    expect(queryByRole('button', { name: /répondre/i })).toBeNull();
+    expect(queryByRole('button', { name: /marquer traitée|rouvrir/i })).toBeNull();
+  });
+
+  it('« Répondre » ouvre le composer inline et envoie onReply(rootId, body, sentimentCode)', async () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText, getByLabelText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Ma réponse au fil.' } });
+    fireEvent.change(getByLabelText('Sentiment de la réponse'), { target: { value: 'positif' } });
+    fireEvent.click(getByRole('button', { name: /envoyer/i }));
+    await waitFor(() => expect(onReply).toHaveBeenCalledWith('root-1', 'Ma réponse au fil.', 'positif'));
+  });
+
+  it('le composer de réponse a un textarea (≥ 3 lignes) ; « Envoyer » désactivé tant que vide', () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    const field = getByPlaceholderText(/votre réponse/i);
+    expect(field.tagName).toBe('TEXTAREA');
+    expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(3);
+    expect(getByRole('button', { name: /envoyer/i })).toBeDisabled();
+  });
+
+  it('les contrôles du composer stopPropagation (clic ne navigue PAS vers l acteur)', async () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const onOpenActor = jest.fn();
+    // La carte cliquable (actorId + onOpenActor) est elle-même role="button" et son nom
+    // accessible englobe les libellés ⇒ on scope les requêtes au pied d'actions / composer.
+    const { container, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} onOpenActor={onOpenActor} />,
+    );
+    const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
+    // Ouvrir le composer ne doit pas ouvrir la fiche acteur.
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    expect(onOpenActor).not.toHaveBeenCalled();
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Réponse.' } });
+    const composer = container.querySelector('.tl-reply-composer') as HTMLElement;
+    // Envoyer ne déclenche pas non plus la navigation.
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() => expect(onReply).toHaveBeenCalled());
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('« Marquer traitée » → onResolve(rootId, true) ; « Rouvrir » → onResolve(rootId, false)', async () => {
+    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, rerender } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned', resolvedAt: null })]} canWrite onResolve={onResolve} />,
+    );
+    fireEvent.click(getByRole('button', { name: /marquer traitée/i }));
+    await waitFor(() => expect(onResolve).toHaveBeenCalledWith('root-1', true));
+    // Déjà traitée → le bouton bascule sur « Rouvrir ».
+    rerender(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onResolve={onResolve} />,
+    );
+    fireEvent.click(getByRole('button', { name: /rouvrir/i }));
+    await waitFor(() => expect(onResolve).toHaveBeenCalledWith('root-1', false));
+  });
+
+  it('« Marquer traitée » stopPropagation (pas de navigation vers l acteur)', async () => {
+    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const onOpenActor = jest.fn();
+    // Carte cliquable ⇒ scope au pied d'actions (le nom accessible de la carte englobe le libellé).
+    const { container } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onResolve={onResolve} onOpenActor={onOpenActor} />,
+    );
+    const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /marquer traitée/i }));
+    await waitFor(() => expect(onResolve).toHaveBeenCalled());
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('gating : sans permission, actions désactivées avec raison (no-write-trap)', () => {
+    const onReply = jest.fn();
+    const onResolve = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'planned' })]}
+        canWrite={false}
+        readOnlyReason="Lecture seule : permission requise"
+        onReply={onReply}
+        onResolve={onResolve}
+      />,
+    );
+    const replyBtn = getByRole('button', { name: /répondre/i });
+    const resolveBtn = getByRole('button', { name: /marquer traitée/i });
+    expect(replyBtn).toBeDisabled();
+    expect(resolveBtn).toBeDisabled();
+    expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  it('échec d envoi → erreur visible inline, composer conservé (pas de double-submit)', async () => {
+    const onReply = jest.fn().mockRejectedValue(new Error('refus RLS'));
+    const { getByRole, getByPlaceholderText, findByText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Texte conservé' } });
+    fireEvent.click(getByRole('button', { name: /envoyer/i }));
+    expect(await findByText(/refus RLS/)).toBeInTheDocument();
+    // Saisie conservée pour retenter.
+    expect(getByPlaceholderText(/votre réponse/i)).toHaveValue('Texte conservé');
   });
 });

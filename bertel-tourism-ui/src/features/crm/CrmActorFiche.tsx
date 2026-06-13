@@ -33,7 +33,7 @@ import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
-import { CRM_READ_ONLY_REASON, channelHrefOf, formatRelative, formatShort, topicTintOf } from './crm-view-utils';
+import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
 
 const YEAR_MS = 365 * 86_400_000;
 
@@ -493,17 +493,13 @@ export function CrmActorFiche({
             id="crm-actor-side-collapsible"
             className={'crm-actor-collapsible' + (sideExpanded ? ' is-open' : '')}
           >
-            {/* KPI compacts (rectif PO §66+) — 4 accents cyclés teal / orange / bleu / prune. */}
+            {/* KPI compacts (rectif PO §66+) — 4 accents cyclés teal / orange / bleu / prune.
+               Sans légende : les chiffres/dates se suffisent ; les captions doublonnaient l'en-tête (rectif PO). */}
             <div className="crm-actor-kpis">
-              <Kpi label="Interactions · 12 mois" value={String(last12Months)} hint="tous contextes confondus" accent="teal" />
-              <Kpi
-                label="Dernier contact"
-                value={lastContactAt ? formatShort(lastContactAt) : '—'}
-                hint={lastContactAt ? formatRelative(lastContactAt) : 'aucune interaction'}
-                accent="orange"
-              />
-              <Kpi label="Sujets distincts" value={String(snapshot.topics.length)} hint="sujets normalisés demand_topic" accent="blue" />
-              <Kpi label="Établissements" value={String(objects.length)} hint="contextes de la relation" accent="plum" />
+              <Kpi label="Interactions · 12 mois" value={String(last12Months)} accent="teal" />
+              <Kpi label="Dernier contact" value={lastContactAt ? formatShort(lastContactAt) : '—'} accent="orange" />
+              <Kpi label="Sujets distincts" value={String(snapshot.topics.length)} accent="blue" />
+              <Kpi label="Établissements" value={String(objects.length)} accent="plum" />
             </div>
 
             <div className="rcard" role="group" aria-label="Établissements & rôles">

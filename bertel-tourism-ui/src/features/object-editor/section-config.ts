@@ -17,7 +17,7 @@ export interface SectionGroup {
 }
 
 const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
-  HEB: 'Chambres & séminaire',
+  HEB: 'Chambres & capacité',
   RES: 'Cuisine & service',
   ASC: 'Fiche activité',
   ITI: 'Tracé & étapes',
@@ -28,6 +28,10 @@ const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
 
 export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
   const hasPlaces = archetype === 'ITI' || archetype === 'VIS';
+  // §06 absorbe la capacité d'accueil pour les hébergements (audit live 2026-06-13 :
+  // 0 type de chambre en base, 496 HEB ne portent que max_capacity en §07 ; un seul
+  // bloc « fait foi »). §07 reste rendu pour tous les autres archétypes.
+  const isHeb = archetype === 'HEB';
   return [
     {
       group: 'Identité',
@@ -45,7 +49,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
         // rooms/equipment inventory sits right before the Capacité it feeds (§07).
         { num: '05', label: 'Médias' },
         { num: '06', label: TYPE_BLOCK_LABEL[archetype] },
-        { num: '07', label: 'Capacité & accueil' },
+        ...(isHeb ? [] : [{ num: '07', label: 'Capacité & accueil' }]),
         { num: '08', label: 'Classifications' },
         { num: '09', label: 'Tags & étiquettes' },
         { num: '10', label: 'Accessibilité' },

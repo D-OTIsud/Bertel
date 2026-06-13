@@ -135,6 +135,22 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(doneCol).not.toHaveClass('bcol--target');
   });
 
+  // PO : la carte saisie est estompée (ticket--dragging → opacity 0.4) le temps du glisser.
+  it('dragStart estompe la carte saisie (ticket--dragging), dragEnd la rétablit', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    const data = new Map<string, string>();
+    const dataTransfer = { setData: (k: string, v: string) => data.set(k, v), getData: (k: string) => data.get(k) ?? '', effectAllowed: 'move' };
+    expect(card).not.toHaveClass('ticket--dragging');
+    fireEvent.dragStart(card, { dataTransfer });
+    expect(card).toHaveClass('ticket--dragging');
+    // Les autres cartes ne sont pas estompées.
+    const other = screen.getByText('Préparer la convention').closest('.ticket') as HTMLElement;
+    expect(other).not.toHaveClass('ticket--dragging');
+    fireEvent.dragEnd(card, { dataTransfer });
+    expect(card).not.toHaveClass('ticket--dragging');
+  });
+
   it('Reprendre (in_progress → todo) et Rouvrir (done → todo)', async () => {
     renderTaches();
     await screen.findByText('Valider le contrat photo');

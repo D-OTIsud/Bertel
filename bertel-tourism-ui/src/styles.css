@@ -9068,15 +9068,15 @@ a {
    Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
 .crm-app .crm-actor-grid {
   display: grid;
-  /* Colonnes inversées (rectif PO) : carte acteur + indicateurs À GAUCHE (360px),
-     actions + timeline À DROITE (1fr). `order` place le rail (side) en colonne 1 sans
-     toucher au DOM ⇒ la carte acteur reste aussi première sur mobile (1 colonne). */
-  grid-template-columns: 360px minmax(0, 1fr);
+  /* Actions + timeline À GAUCHE (1fr, colonne large), rail acteur + indicateurs À DROITE (360px,
+     sidebar) — orientation préférée du PO (le rail à droite fait moins chargé). Sur mobile la
+     grille s'effondre en 1 colonne et le rail repasse EN PREMIER (order, cf. media query). */
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 16px;
   align-items: start;
 }
-.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; order: 1; }
-.crm-app .crm-actor-grid__side { min-width: 0; order: 0; }
+.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.crm-app .crm-actor-grid__side { min-width: 0; }
 
 /* Rangée d'actions en tête de la colonne principale (« Nouvelle tâche » / « Nouvelle interaction »). */
 .crm-app .crm-actor-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -9641,6 +9641,8 @@ a {
   transition: all 0.14s ease;
 }
 .crm-app .ticket:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-m); }
+/* Carte saisie pendant le glisser : estompée à 40 % (fantôme) — affordance « en mouvement ». */
+.crm-app .ticket--dragging { opacity: 0.4; }
 .crm-app .ticket.is-done { opacity: 0.62; }
 .crm-app .ticket.is-done .ticket__title { text-decoration: line-through; }
 /* Carte déplaçable : curseur de préhension (l'affordance visuelle = la poignée ci-dessous). */
@@ -9989,8 +9991,10 @@ a {
      apparaît ; .is-open (piloté par JS) la rouvre. Ordre vertical mobile : carte acteur →
      [toggle → KPI + listes] → actions + timeline. */
 @media (max-width: 960px) {
-  /* 1 colonne ; l'ordre de base (side=0 avant main=1) garde la carte acteur EN PREMIER. */
+  /* 1 colonne ; le rail (carte acteur + indicateurs) repasse AVANT la colonne principale. */
   .crm-app .crm-actor-grid { grid-template-columns: 1fr; }
+  .crm-app .crm-actor-grid__side { order: -1; }
+  .crm-app .crm-actor-grid__main { order: 0; }
 }
 @media (max-width: 720px) {
   /* Le toggle mobile apparaît ; la région repliable est masquée sauf .is-open. */

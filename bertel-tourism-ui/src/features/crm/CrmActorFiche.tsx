@@ -5,12 +5,12 @@
 // Données réelles : api.list_actor_crm (+ canaux), api.save_crm_interaction /
 // save_crm_task / save_crm_actor / save_actor_channel via services/crm.
 //
-// Mise en page deux colonnes (rectif PO §66+ ; colonnes INVERSÉES) :
-//  - COLONNE GAUCHE (.crm-actor-grid__side, rail) : la carte acteur (avatar, nom, identité,
-//    Coordonnées cliquables verticales, « Modifier ») PUIS les KPI compacts PUIS « Établissements
-//    & rôles » PUIS « Sujets récurrents ». (Placée en colonne 1 via `order` — voir styles.css.)
-//  - COLONNE DROITE (.crm-actor-grid__main) : les actions (« Nouvelle tâche » / « Nouvelle
+// Mise en page deux colonnes (rectif PO) :
+//  - COLONNE GAUCHE (.crm-actor-grid__main, large) : les actions (« Nouvelle tâche » / « Nouvelle
 //    interaction ») PUIS l'historique d'interactions (timeline + chips de contexte + fils).
+//  - COLONNE DROITE (.crm-actor-grid__side, sidebar) : la carte acteur (avatar, nom, rôles,
+//    Coordonnées cliquables verticales, « Modifier ») PUIS les KPI compacts PUIS « Établissements
+//    & rôles » PUIS « Sujets récurrents ». (Sidebar à droite = moins chargé, préférence PO.)
 // Mobile (≤ ~720px) : une seule colonne, la carte acteur EN PREMIER (toujours visible), le reste
 // du rail (KPI + Établissements + Sujets) replié derrière un toggle « Voir les indicateurs »,
 // puis les actions + la timeline en dessous. Le repli est piloté par JS sur mobile et FORCÉ
@@ -249,9 +249,9 @@ export function CrmActorFiche({
         <ChevronLeft size={12} aria-hidden /> Annuaire des acteurs
       </button>
 
-      {/* Deux colonnes INVERSÉES (rectif PO) : rail (acteur + KPI + listes) à GAUCHE, main (actions
-          + timeline) à DROITE — placement via `order` en CSS. Sur mobile la grille s'effondre en
-          1 colonne avec le rail (order: 0) AVANT la colonne main — voir styles.css .crm-actor-grid. */}
+      {/* Deux colonnes (rectif PO) : main (actions + timeline) à GAUCHE, rail (acteur + KPI + listes)
+          à DROITE. Sur mobile la grille s'effondre en 1 colonne avec le rail (order: -1) AVANT la
+          colonne main — voir styles.css .crm-actor-grid. */}
       <div className="crm-actor-grid">
         <div className="crm-actor-grid__main">
           {!canWrite && <p className="crm-readonly-note">{CRM_READ_ONLY_REASON}</p>}

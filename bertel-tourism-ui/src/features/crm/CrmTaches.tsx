@@ -49,6 +49,8 @@ export function CrmTaches({
   // Statut de la carte en cours de glissement (sa colonne source) — sert à MATÉRIALISER les
   // zones de dépôt valides : toutes les colonnes ≠ source affichent un placeholder « Déposer ici ».
   const [draggingStatus, setDraggingStatus] = useState<CrmTaskStatus | null>(null);
+  // Id de la carte saisie — pour l'estomper (opacity 0.4) pendant le glisser (PO).
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
   // Utilisé à la fois par les boutons Avancer/Reprendre (clavier) ET le drag & drop (souris).
@@ -62,6 +64,7 @@ export function CrmTaches({
     event.preventDefault();
     setDropCol(null);
     setDraggingStatus(null);
+    setDraggingId(null);
     const id = event.dataTransfer.getData('text/plain');
     if (!id) return;
     const task = tasks.find((candidate) => candidate.id === id);
@@ -112,7 +115,11 @@ export function CrmTaches({
     return (
       <div
         key={task.id}
-        className={'ticket' + (task.status === 'done' ? ' is-done' : '')}
+        className={
+          'ticket' +
+          (task.status === 'done' ? ' is-done' : '') +
+          (draggingId === task.id ? ' ticket--dragging' : '')
+        }
         // DnD (PO point 5) : carte déplaçable seulement avec permission (le drop persiste).
         // Les boutons Avancer/Reprendre restent l'alternative clavier (le DnD est souris-only).
         draggable={canWrite || undefined}
@@ -121,11 +128,13 @@ export function CrmTaches({
           event.dataTransfer.setData('text/plain', task.id);
           event.dataTransfer.effectAllowed = 'move';
           setDraggingStatus(task.status); // matérialise les zones de dépôt voisines
+          setDraggingId(task.id); // estompe la carte saisie
         }}
         // Drag abandonné hors d'une colonne : on efface la surbrillance + les zones (pas d'état figé).
         onDragEnd={() => {
           setDropCol(null);
           setDraggingStatus(null);
+          setDraggingId(null);
         }}
       >
         <div className="ticket__title">

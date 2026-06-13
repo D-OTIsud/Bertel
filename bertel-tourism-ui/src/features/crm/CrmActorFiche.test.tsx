@@ -163,10 +163,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getByText('Aucun canal renseigné.')).toBeInTheDocument();
   });
 
-  // Rectif PO : structure deux colonnes INVERSÉES. À GAUCHE (.crm-actor-grid__side) : carte
-  // acteur + KPI + « Établissements & rôles » + « Sujets récurrents ». À DROITE
-  // (.crm-actor-grid__main) : les actions + la timeline. (Position visuelle pilotée par `order` CSS ;
-  // le test vérifie l'APPARTENANCE DOM, inchangée par l'inversion.)
+  // Rectif PO : structure deux colonnes. À DROITE (.crm-actor-grid__side, sidebar) : carte
+  // acteur + KPI + « Établissements & rôles » + « Sujets récurrents ». À GAUCHE
+  // (.crm-actor-grid__main) : les actions + la timeline. (Le test vérifie l'APPARTENANCE DOM.)
   it('structure deux colonnes : carte acteur + KPI + rails (.side), actions + timeline (.main)', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
@@ -174,12 +173,12 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const main = document.querySelector('.crm-actor-grid__main') as HTMLElement;
     expect(side).not.toBeNull();
     expect(main).not.toBeNull();
-    // Colonne GAUCHE (.side) : KPI + « Établissements & rôles » + « Sujets récurrents ».
+    // Colonne DROITE (.side, sidebar) : KPI + « Établissements & rôles » + « Sujets récurrents ».
     expect(within(side).getByText('Interactions · 12 mois')).toBeInTheDocument();
     expect(within(side).getByText('Établissements & rôles')).toBeInTheDocument();
     expect(within(side).getByText('Sujets récurrents')).toBeInTheDocument();
     expect(side.querySelector('.crm-actor-kpis')).not.toBeNull();
-    // Colonne DROITE (.main) : les deux boutons d'action + la timeline.
+    // Colonne GAUCHE (.main) : les deux boutons d'action + la timeline.
     expect(within(main).getByRole('button', { name: /nouvelle tâche/i })).toBeInTheDocument();
     expect(within(main).getByRole('button', { name: /nouvelle interaction/i })).toBeInTheDocument();
     expect(main.querySelector('.crm-actor-actions')).not.toBeNull();

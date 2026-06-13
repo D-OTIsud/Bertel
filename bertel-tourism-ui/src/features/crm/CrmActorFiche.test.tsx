@@ -9,7 +9,7 @@ jest.mock('../../services/crm');
 const crmMock = crm as jest.Mocked<typeof crm>;
 
 const snapshot: ActorCrmSnapshot = {
-  actor: { id: 'actor-1', displayName: 'Mme Marie Hoarau', firstName: 'Marie', lastName: 'Hoarau', photoUrl: null },
+  actor: { id: 'actor-1', displayName: 'Mme Marie Hoarau', gender: 'Mme', firstName: 'Marie', lastName: 'Hoarau', photoUrl: null },
   objects: [
     { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleCode: 'manager', roleName: 'Gérante', isPrimary: true },
     { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleCode: 'owner', roleName: 'Propriétaire', isPrimary: false },
@@ -80,6 +80,20 @@ beforeEach(() => {
   crmMock.saveCrmActor.mockResolvedValue('actor-1');
   crmMock.saveActorChannel.mockResolvedValue('new-channel');
   crmMock.deleteActorChannel.mockResolvedValue(undefined);
+  // §66 — affecter un établissement : annuaire CRM (source de la datalist) + lien acteur→objet.
+  // obj-1 / obj-2 sont DÉJÀ liés à l'acteur (snapshot) ⇒ obj-3 « Gîte du Volcan » est le candidat.
+  crmMock.listCrmDirectory.mockResolvedValue([
+    {
+      actorId: 'actor-1', displayName: 'Mme Marie Hoarau', photoUrl: null, objectCount: 1, interactionCount: 0,
+      interactions12m: 0, lastInteractionAt: null, lastInteractionType: null, lastInteractionSubject: null,
+      lastInteractionObjectName: null, topTopics: [],
+      objects: [
+        { objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', objectType: 'HOT', roleName: 'Gérante', isPrimary: true },
+        { objectId: 'obj-3', objectName: 'Gîte du Volcan', objectType: 'HLO', roleName: 'Exploitant', isPrimary: false },
+      ],
+    },
+  ]);
+  crmMock.linkActorToObject.mockResolvedValue({ linked: true });
   // Assignation (PO point 4) : 2 membres ; le 1er = utilisateur courant démo (usr-local-marie).
   crmMock.listCrmAssignees.mockResolvedValue([
     { userId: 'usr-local-marie', displayName: 'Marie D.' },
@@ -362,15 +376,19 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     );
   });
 
-  // Rectif PO point 4 : édition identité + canaux (diff appliqué canal par canal).
-  it('Modifier → saveCrmActor UPDATE + update/delete/insert des canaux', async () => {
+  // Rectif PO point 4 + §66 : édition identité (civilité + prénom + nom → nom affiché COMPOSÉ,
+  // lecture seule) + canaux (diff appliqué canal par canal).
+  it('Modifier → saveCrmActor UPDATE (nom composé) + update/delete/insert des canaux', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
-    // Identité.
-    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'Mme Marie Hoarau-Payet' } });
-    // Canal 1 (ch-1) : valeur modifiée → UPDATE.
+    // Identité §66 : le nom affiché n'est PAS éditable — il se compose. On change le NOM.
+    expect(within(dialog).queryByLabelText('Nom affiché')).not.toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Hoarau-Payet' } });
+    // Le nom affiché composé est rendu en lecture seule : « Mme Marie Hoarau-Payet ».
+    expect(within(dialog).getByText('Mme Marie Hoarau-Payet')).toBeInTheDocument();
+    // Canal 1 (ch-1, email) : valeur modifiée → UPDATE (reste un e-mail ⇒ contrainte satisfaite).
     fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'marie@lagon.re' } });
     // Canal 2 (ch-2) : supprimé → DELETE.
     fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer le canal 2' }));
@@ -382,8 +400,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       expect(crmMock.saveCrmActor).toHaveBeenCalledWith({
         id: 'actor-1',
         displayName: 'Mme Marie Hoarau-Payet',
+        gender: 'Mme',
         firstName: 'Marie',
-        lastName: 'Hoarau',
+        lastName: 'Hoarau-Payet',
       }),
     );
     await waitFor(() =>
@@ -411,9 +430,48 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
-    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'Autre nom' } });
+    // §66 — on modifie le NOM (le nom affiché n'est plus éditable).
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Autre nom' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
     expect(await within(dialog).findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  // §66 — édition : civilité préremplie depuis actor.gender ; le changer recompose le nom affiché
+  // (lecture seule) et le gender part dans saveCrmActor.
+  it('Modifier : civilité préremplie + son changement recompose le nom affiché et part en gender', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
+    // Préremplissage : actor.gender = 'Mme'.
+    expect(within(dialog).getByLabelText('Civilité')).toHaveValue('Mme');
+    // Passer en M. → nom affiché recomposé en « M. Marie Hoarau » (lecture seule).
+    fireEvent.change(within(dialog).getByLabelText('Civilité'), { target: { value: 'M.' } });
+    expect(within(dialog).getByText('M. Marie Hoarau')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmActor).toHaveBeenCalledWith({
+        id: 'actor-1',
+        displayName: 'M. Marie Hoarau',
+        gender: 'M.',
+        firstName: 'Marie',
+        lastName: 'Hoarau',
+      }),
+    );
+  });
+
+  // §66 — e-mail OBLIGATOIRE aussi à l'édition : supprimer le seul e-mail bloque « Enregistrer »
+  // avec la raison « Un e-mail est obligatoire. » (no-write-trap : pas d'acteur sans e-mail).
+  it('Modifier : supprimer le seul e-mail bloque Enregistrer + raison visible', async () => {
+    // L'acteur n'a qu'un e-mail (ch-1) + un téléphone (ch-2). Supprimer ch-1 ⇒ plus d'e-mail.
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
+    expect(within(dialog).getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer le canal 1' }));
+    expect(within(dialog).getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    expect(within(dialog).getByText(/un e-mail est obligatoire/i)).toBeInTheDocument();
   });
 
   // Revue (fix 1) : chaque opération appliquée est committée dans l'état local dès son succès —
@@ -425,9 +483,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
-    // Identité modifiée (UPDATE) + canal 1 modifié (UPDATE) + canal 2 supprimé (DELETE, échoue
-    // au 1er submit) + nouvelle ligne (INSERT, jamais atteinte au 1er submit).
-    fireEvent.change(within(dialog).getByLabelText('Nom affiché'), { target: { value: 'Mme Marie Hoarau-Payet' } });
+    // Identité modifiée (UPDATE — via le NOM, §66) + canal 1 modifié (UPDATE) + canal 2 supprimé
+    // (DELETE, échoue au 1er submit) + nouvelle ligne (INSERT, jamais atteinte au 1er submit).
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Hoarau-Payet' } });
     fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'marie@lagon.re' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer le canal 2' }));
     fireEvent.click(within(dialog).getByRole('button', { name: /ajouter un canal/i }));
@@ -462,6 +520,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       channels: [
         { id: 'ch-1', kindCode: 'phone', kindName: 'Téléphone', value: '0262 11 11 11', isPrimary: false },
         { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0692 22 22 22', isPrimary: true },
+        // §66 — un e-mail (canal 3) satisfait la contrainte « e-mail obligatoire » ; il n'est pas
+        // touché ⇒ aucune op canal supplémentaire (les assertions d'ordre restent sur ch-1/ch-2).
+        { id: 'ch-3', kindCode: 'email', kindName: 'Email', value: 'contact@actor.re', isPrimary: true },
       ],
     });
     renderFiche();
@@ -537,5 +598,70 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
     expect(within(actionsBar).getByRole('button', { name: /répondre/i })).toBeDisabled();
     expect(within(actionsBar).getByRole('button', { name: /rouvrir/i })).toBeDisabled();
+  });
+
+  /* ===== §66 — Affecter un établissement (link_actor_to_object) ================= */
+
+  // Résolution nom → id puis linkActorToObject(actorId, objectId) + refetch de la fiche.
+  it('Affecter un établissement : résout un nom → linkActorToObject + recharge la fiche', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const rail = screen.getByRole('group', { name: /établissements & rôles/i });
+    fireEvent.click(within(rail).getByRole('button', { name: /affecter un établissement/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Affecter un établissement' });
+    // L'annuaire propose obj-3 (Gîte du Volcan), pas les objets déjà liés (obj-1/obj-2).
+    fireEvent.change(within(dialog).getByLabelText('Établissement à affecter'), { target: { value: 'Gîte du Volcan' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Affecter' }));
+    await waitFor(() => expect(crmMock.linkActorToObject).toHaveBeenCalledWith('actor-1', 'obj-3'));
+    // Refetch fiche après lien confirmé + fermeture.
+    await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  // Nom non résolu → Affecter bloqué + raison « introuvable » ; pas d'appel RPC.
+  it('Affecter : nom introuvable → bouton bloqué + raison, aucun appel link', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /affecter un établissement/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Affecter un établissement' });
+    fireEvent.change(within(dialog).getByLabelText('Établissement à affecter'), { target: { value: 'Inconnu' } });
+    expect(within(dialog).getByRole('button', { name: 'Affecter' })).toBeDisabled();
+    expect(within(dialog).getByText(/introuvable dans l.annuaire/i)).toBeInTheDocument();
+    expect(crmMock.linkActorToObject).not.toHaveBeenCalled();
+  });
+
+  // linked=false (déjà rattaché) → note douce, modal RESTE ouvert, pas de refetch.
+  it('Affecter : déjà rattaché (linked=false) → note douce, pas de refetch', async () => {
+    crmMock.linkActorToObject.mockResolvedValue({ linked: false });
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /affecter un établissement/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Affecter un établissement' });
+    fireEvent.change(within(dialog).getByLabelText('Établissement à affecter'), { target: { value: 'Gîte du Volcan' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Affecter' }));
+    expect(await within(dialog).findByText(/déjà rattaché à cet établissement/i)).toBeInTheDocument();
+    // Pas de refetch (le lien existait déjà) et le modal reste ouvert.
+    expect(crmMock.listActorCrm).toHaveBeenCalledTimes(1);
+  });
+
+  // 42501 → message dédié inline, modal resté ouvert (saisie conservée).
+  it('Affecter : 42501 → « vous ne gérez pas le CRM de cet établissement »', async () => {
+    crmMock.linkActorToObject.mockRejectedValue(Object.assign(new Error('denied'), { code: '42501' }));
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getByRole('button', { name: /affecter un établissement/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Affecter un établissement' });
+    fireEvent.change(within(dialog).getByLabelText('Établissement à affecter'), { target: { value: 'Gîte du Volcan' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Affecter' }));
+    expect(await within(dialog).findByText(/vous ne gérez pas le crm de cet établissement/i)).toBeInTheDocument();
+  });
+
+  // Gating (no-write-trap) : sans permission, « Affecter un établissement » désactivé avec raison.
+  it('sans permission : Affecter un établissement désactivé avec raison', async () => {
+    renderFiche({ canWrite: false });
+    await screen.findByText('Appel tarifs');
+    const assignBtn = screen.getByRole('button', { name: /affecter un établissement/i });
+    expect(assignBtn).toBeDisabled();
+    expect(assignBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 });

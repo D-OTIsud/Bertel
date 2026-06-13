@@ -18,11 +18,12 @@
 // Gating page-wide write_crm_notes : boutons désactivés AVEC raison (no-write-trap).
 
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, Mail, Pencil, Phone, Plus } from 'lucide-react';
-import { listActorCrm, listDemandTopics, saveCrmInteraction } from '../../services/crm';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, Mail, Pencil, Phone, Plus } from 'lucide-react';
+import { linkActorToObject, listActorCrm, listCrmDirectory, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
+import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatRelative, formatShort, topicTintOf } from './crm-view-utils';
@@ -47,7 +48,129 @@ function errorMessageOf(error: unknown): string {
   return 'Échec du chargement CRM.';
 }
 
-type FicheModal = 'interaction' | 'task' | 'edit' | null;
+type FicheModal = 'interaction' | 'task' | 'edit' | 'assign' | null;
+
+/**
+ * Modal « Affecter un établissement » (§66) — rattache l'acteur à un établissement EXISTANT de
+ * l'annuaire CRM (crée le lien actor_object_role, rôle serveur 'operator'). Limite connue et
+ * ACCEPTÉE : seuls les objets DÉJÀ présents dans l'annuaire CRM sont sélectionnables (datalist
+ * dérivée de list_crm_directory) ; le RPC valide de toute façon le droit d'écriture côté serveur.
+ * Les établissements déjà liés à l'acteur sont exclus de la liste. `linked=false` (déjà rattaché)
+ * → note douce ; 42501 → « vous ne gérez pas le CRM de cet établissement » ; succès → refetch.
+ */
+function CrmAssignObjectModal({
+  actorId,
+  linkedObjectIds,
+  onClose,
+  onLinked,
+}: {
+  actorId: string;
+  /** Objets DÉJÀ liés à l'acteur — exclus de la datalist (pas de doublon proposé). */
+  linkedObjectIds: ReadonlySet<string>;
+  onClose: () => void;
+  /** Appelé APRÈS lien confirmé (linked=true) — la fiche est rechargée. */
+  onLinked: () => void;
+}) {
+  const [objectName, setObjectName] = useState('');
+  // Note « déjà rattaché » (linked=false) : on garde le modal ouvert pour le signaler doucement.
+  const [alreadyLinked, setAlreadyLinked] = useState(false);
+
+  // Datalist : tous les objets de l'annuaire CRM (dédupliqués), moins ceux déjà liés à l'acteur.
+  // Clé partagée ['crm-directory'] (cache du shell / de l'annuaire) → pas de double fetch.
+  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const objectOptions = useMemo(() => {
+    const byId = new Map<string, { objectId: string; objectName: string }>();
+    for (const entry of directoryQuery.data ?? []) {
+      for (const object of entry.objects) {
+        if (linkedObjectIds.has(object.objectId)) continue;
+        if (!byId.has(object.objectId)) byId.set(object.objectId, { objectId: object.objectId, objectName: object.objectName });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
+  }, [directoryQuery.data, linkedObjectIds]);
+
+  const resolvedObject =
+    objectOptions.find((object) => object.objectName.trim().toLowerCase() === objectName.trim().toLowerCase()) ?? null;
+
+  const linkMutation = useMutation({
+    mutationFn: async () => {
+      if (!resolvedObject) throw new Error('Établissement non résolu');
+      return linkActorToObject(actorId, resolvedObject.objectId);
+    },
+    onSuccess: (result) => {
+      if (result.linked) {
+        onLinked();
+        onClose();
+      } else {
+        // Déjà rattaché : pas de refetch nécessaire, on signale doucement (modal reste ouvert).
+        setAlreadyLinked(true);
+      }
+    },
+  });
+
+  function errorOf(error: unknown): string {
+    if (error && typeof error === 'object') {
+      const { code, message } = error as { code?: unknown; message?: unknown };
+      if (code === '42501') return 'Vous ne gérez pas le CRM de cet établissement.';
+      if (typeof message === 'string') return message;
+    }
+    return "Échec de l'affectation.";
+  }
+
+  const canSubmit = Boolean(resolvedObject) && !linkMutation.isPending;
+
+  return (
+    <CrmModal
+      title="Affecter un établissement"
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="crm-btn" onClick={onClose}>
+            Annuler
+          </button>
+          <button type="button" className="crm-btn primary" disabled={!canSubmit} onClick={() => linkMutation.mutate()}>
+            Affecter
+          </button>
+        </>
+      }
+    >
+      <label className="crm-field">
+        Établissement (de l&apos;annuaire CRM)
+        <input
+          aria-label="Établissement à affecter"
+          placeholder="Établissement (nom exact)"
+          list="crm-assign-object-options"
+          value={objectName}
+          onChange={(event) => {
+            setObjectName(event.target.value);
+            setAlreadyLinked(false);
+          }}
+        />
+        <datalist id="crm-assign-object-options">
+          {objectOptions.map((object) => (
+            <option key={object.objectId} value={object.objectName} />
+          ))}
+        </datalist>
+      </label>
+      {objectName.trim() !== '' && !resolvedObject && (
+        <p className="crm-field__hint">Établissement introuvable dans l&apos;annuaire.</p>
+      )}
+      <p className="crm-rail__note">
+        Rôle attribué : exploitant. Seuls les établissements déjà suivis dans le CRM sont proposés.
+      </p>
+      {alreadyLinked && (
+        <p className="crm-field__hint" role="status">
+          Déjà rattaché à cet établissement.
+        </p>
+      )}
+      {linkMutation.isError && (
+        <div className="inline-alert" role="alert">
+          {errorOf(linkMutation.error)}
+        </div>
+      )}
+    </CrmModal>
+  );
+}
 
 /** Un canal de coordonnées tel que servi par list_actor_crm. */
 interface ActorChannel {
@@ -377,6 +500,16 @@ export function CrmActorFiche({
                 </button>
               ))}
               {objects.length === 0 && <p className="crm-rail__empty">Aucun établissement lié.</p>}
+              {/* §66 — affecter un nouvel établissement (gated, no-write-trap). */}
+              <button
+                type="button"
+                className="crm-btn sm crm-rail__add"
+                disabled={!canWrite}
+                title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+                onClick={() => setModal('assign')}
+              >
+                <Building2 size={12} aria-hidden /> Affecter un établissement
+              </button>
             </div>
 
             {snapshot.topics.length > 0 && (
@@ -422,6 +555,18 @@ export function CrmActorFiche({
           onSaved={() => {
             // La fiche ET l'annuaire (display_name) — le préfixe ['crm-directory'] couvre
             // aussi les clés filtrées de l'annuaire.
+            void queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
+            void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
+          }}
+        />
+      )}
+      {modal === 'assign' && canWrite && (
+        <CrmAssignObjectModal
+          actorId={actorId}
+          linkedObjectIds={new Set(objects.map((object) => object.objectId))}
+          onClose={() => setModal(null)}
+          onLinked={() => {
+            // Le nouvel établissement apparaît dans le rail (et l'annuaire le re-compte).
             void queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
             void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
           }}

@@ -72,17 +72,16 @@ describe('editor publication validation', () => {
     });
   });
 
-  it('warns when a HEB object has no room types', () => {
+  it('does not warn a roomless HEB to add a room type (rooms are optional, §64)', () => {
     const draft = fullModulesFixture();
     draft.rooms.items = [];
+    draft.rooms.unavailableReason = null;
 
     const result = validateForPublication(draft, allowAll, 'HEB');
 
-    expect(result.warnings).toContainEqual({
-      section: '06',
-      message: expect.stringContaining('chambre'),
-      tone: 'warn',
-    });
+    expect(
+      [...result.blockers, ...result.warnings].some((i) => /type de chambre/i.test(i.message)),
+    ).toBe(false);
   });
 
   it('warns when a PMR room exists but no accessibility equipment is selected (§10)', () => {

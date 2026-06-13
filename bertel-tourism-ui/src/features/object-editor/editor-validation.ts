@@ -108,12 +108,9 @@ const VALIDATION_RULES: ValidationRule[] = [
     !draft.event.occurrences.some((occurrence) => hasText(occurrence.startAt) || hasText(occurrence.endAt))
       ? { section: '06', message: 'Un événement doit avoir une date de début ou au moins une occurrence.', tone: 'req' }
       : null,
-  ({ archetype, draft }) =>
-    // §05 HEB: an accommodation with no room inventory publishes silently otherwise.
-    // Skipped when the rooms module is §46-gated (non-HEB types reaching this archetype).
-    archetype === 'HEB' && !draft.rooms.unavailableReason && draft.rooms.items.length === 0
-      ? { section: '06', message: "Ajoutez au moins un type de chambre ou d'unité locative.", tone: 'warn' }
-      : null,
+  // §64 — plus de warn « ajoutez un type de chambre » : les chambres sont un détail OPTIONNEL
+  // (485/497 HEB sont des locatifs entiers sans découpage par chambre). La capacité d'accueil
+  // (capacité max en §06) est la donnée porteuse, pas l'inventaire des chambres.
   ({ draft }) => {
     // A PMR room declared in §05 should be reflected in the §10 accessibility equipment
     // (the Explorer accessibility facet reads the amenity codes, not the room flag).

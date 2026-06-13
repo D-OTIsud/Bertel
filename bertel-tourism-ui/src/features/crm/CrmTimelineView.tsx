@@ -11,7 +11,7 @@
 
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
+import { deleteCrmInteraction, listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
@@ -140,6 +140,17 @@ export function CrmTimelineView({
     await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
     await refetchTimeline();
   };
+  // Édition / suppression d'un commentaire (§66) — racine OU réponse. L'édition est PARTIELLE
+  // (UPDATE arm : seules body/sentiment_code sont écrites). Supprimer une racine cascade ses
+  // réponses (FK ON DELETE CASCADE) — la confirmation le signale dans la carte.
+  const handleEditInteraction = async (id: string, body: string, sentimentCode: string | null) => {
+    await saveCrmInteraction({ id, body, sentimentCode });
+    await refetchTimeline();
+  };
+  const handleDeleteInteraction = async (id: string) => {
+    await deleteCrmInteraction(id);
+    await refetchTimeline();
+  };
 
   return (
     <div className="crm-body">
@@ -176,6 +187,8 @@ export function CrmTimelineView({
                 readOnlyReason={CRM_READ_ONLY_REASON}
                 onReply={handleReply}
                 onResolve={handleResolve}
+                onEditInteraction={handleEditInteraction}
+                onDeleteInteraction={handleDeleteInteraction}
               />
               {timelineQuery.data?.hasMore && (
                 <button type="button" className="crm-btn crm-load-more" onClick={loadMore}>

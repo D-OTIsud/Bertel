@@ -64,6 +64,13 @@ function renderFiche(overrides: Partial<Parameters<typeof CrmActorFiche>[0]> = {
   return props;
 }
 
+// Depuis §66, « Modifier » désigne AUSSI les boutons d'édition de commentaire du fil. Le bouton
+// « Modifier » de la CARTE acteur (rail) porte la classe .crm-actor-card__edit — on le cible par
+// là pour ouvrir le modal d'édition d'identité sans ambiguïté avec les boutons du fil.
+function cardEditButton(): HTMLButtonElement {
+  return document.querySelector('.crm-actor-card__edit') as HTMLButtonElement;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   crmMock.listActorCrm.mockResolvedValue(snapshot);
@@ -76,6 +83,7 @@ beforeEach(() => {
     { code: 'email', name: 'Email' },
   ]);
   crmMock.saveCrmInteraction.mockResolvedValue('new-interaction');
+  crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
   crmMock.saveCrmTask.mockResolvedValue('new-task');
   crmMock.saveCrmActor.mockResolvedValue('actor-1');
   crmMock.saveActorChannel.mockResolvedValue('new-channel');
@@ -154,7 +162,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
   it('carte acteur : Modifier dans la carte du rail, actif avec permission', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
-    const editBtn = screen.getByRole('button', { name: /^modifier$/i });
+    const editBtn = cardEditButton();
     expect(editBtn).toBeEnabled();
     expect(editBtn.closest('.crm-actor-card')).not.toBeNull();
     expect(editBtn.closest('.crm-actor-grid__side')).not.toBeNull();
@@ -381,7 +389,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
   it('Modifier → saveCrmActor UPDATE (nom composé) + update/delete/insert des canaux', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     // Identité §66 : le nom affiché n'est PAS éditable — il se compose. On change le NOM.
     expect(within(dialog).queryByLabelText('Nom affiché')).not.toBeInTheDocument();
@@ -428,7 +436,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     crmMock.saveCrmActor.mockRejectedValue(new Error('refus RLS'));
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     // §66 — on modifie le NOM (le nom affiché n'est plus éditable).
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Autre nom' } });
@@ -441,7 +449,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
   it('Modifier : civilité préremplie + son changement recompose le nom affiché et part en gender', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     // Préremplissage : actor.gender = 'Mme'.
     expect(within(dialog).getByLabelText('Civilité')).toHaveValue('Mme');
@@ -466,7 +474,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     // L'acteur n'a qu'un e-mail (ch-1) + un téléphone (ch-2). Supprimer ch-1 ⇒ plus d'e-mail.
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     expect(within(dialog).getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer le canal 1' }));
@@ -481,7 +489,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     crmMock.deleteActorChannel.mockRejectedValueOnce(new Error('réseau indisponible'));
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     // Identité modifiée (UPDATE — via le NOM, §66) + canal 1 modifié (UPDATE) + canal 2 supprimé
     // (DELETE, échoue au 1er submit) + nouvelle ligne (INSERT, jamais atteinte au 1er submit).
@@ -527,7 +535,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     });
     renderFiche();
     await screen.findByText('Appel tarifs');
-    fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+    fireEvent.click(cardEditButton());
     const dialog = await screen.findByRole('dialog', { name: "Modifier l'acteur" });
     // Swap : le canal 1 (plus HAUT dans la liste) gagne le principal, le canal 2 le perd.
     fireEvent.click(within(dialog).getByLabelText('Canal 1 principal'));
@@ -552,11 +560,17 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
 
   // Assertion verrouillée par revue : gating lecture seule (no-write-trap).
   it('sans permission : actions désactivées avec raison (interaction, tâche, modifier)', async () => {
-    renderFiche({ canWrite: false });
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <CrmActorFiche actorId="actor-1" canWrite={false} onBack={jest.fn()} onOpenObject={jest.fn()} />
+      </QueryClientProvider>,
+    );
     await screen.findByText('Appel tarifs');
     expect(screen.getByRole('button', { name: /nouvelle interaction/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /nouvelle tâche/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^modifier$/i })).toBeDisabled();
+    // « Modifier » désigne désormais aussi les boutons d'édition de commentaire (§66) — on cible
+    // précisément le « Modifier » de la CARTE acteur (.crm-actor-card__edit) pour l'assertion verrouillée.
+    expect(container.querySelector('.crm-actor-card__edit')).toBeDisabled();
     expect(screen.getAllByText(/lecture seule/i).length).toBeGreaterThan(0);
   });
 
@@ -598,6 +612,44 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
     expect(within(actionsBar).getByRole('button', { name: /répondre/i })).toBeDisabled();
     expect(within(actionsBar).getByRole('button', { name: /rouvrir/i })).toBeDisabled();
+  });
+
+  // §66 (PO) — modifier un commentaire depuis la fiche : saveCrmInteraction({id, body, sentimentCode})
+  // (UPDATE arm partiel) + refetch list_actor_crm.
+  it('Modifier un commentaire → saveCrmInteraction({ id, body, sentimentCode }) puis recharge la fiche', async () => {
+    renderFiche();
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^modifier$/i }));
+    const area = within(card).getByLabelText('Modifier le commentaire');
+    fireEvent.change(area, { target: { value: 'Tarifs 2026 corrigés.' } });
+    fireEvent.click(within(card).getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'i1', body: 'Tarifs 2026 corrigés.', sentimentCode: 'positif' }),
+    );
+    await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
+  });
+
+  // §66 (PO) — supprimer un commentaire depuis la fiche : confirm puis deleteCrmInteraction(id)
+  // + refetch. i1 n'a pas de réponse ⇒ confirmation simple.
+  it('Supprimer un commentaire → confirm puis deleteCrmInteraction(id) puis recharge la fiche', async () => {
+    renderFiche();
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^supprimer$/i }));
+    expect(crmMock.deleteCrmInteraction).not.toHaveBeenCalled();
+    fireEvent.click(within(card).getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('i1'));
+    await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
+  });
+
+  // Gating : sans permission, Modifier / Supprimer du fil désactivés (no-write-trap).
+  it('sans permission : Modifier / Supprimer du fil désactivés', async () => {
+    renderFiche({ canWrite: false });
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    expect(within(actionsBar).getByRole('button', { name: /^modifier$/i })).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /^supprimer$/i })).toBeDisabled();
   });
 
   /* ===== §66 — Affecter un établissement (link_actor_to_object) ================= */

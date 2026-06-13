@@ -20,7 +20,14 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, Mail, Pencil, Phone, Plus } from 'lucide-react';
-import { linkActorToObject, listActorCrm, listCrmDirectory, listDemandTopics, saveCrmInteraction } from '../../services/crm';
+import {
+  deleteCrmInteraction,
+  linkActorToObject,
+  listActorCrm,
+  listCrmDirectory,
+  listDemandTopics,
+  saveCrmInteraction,
+} from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
@@ -340,6 +347,16 @@ export function CrmActorFiche({
     await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
     await refetchActor();
   };
+  // Édition / suppression d'un commentaire (§66) — racine OU réponse. Édition PARTIELLE
+  // (body/sentiment) ; supprimer une racine cascade ses réponses (FK ON DELETE CASCADE).
+  const handleEditInteraction = async (id: string, body: string, sentimentCode: string | null) => {
+    await saveCrmInteraction({ id, body, sentimentCode });
+    await refetchActor();
+  };
+  const handleDeleteInteraction = async (id: string) => {
+    await deleteCrmInteraction(id);
+    await refetchActor();
+  };
 
   if (actorQuery.isLoading) {
     return <div className="crm-loading">Chargement de la fiche acteur…</div>;
@@ -439,6 +456,8 @@ export function CrmActorFiche({
                 readOnlyReason={CRM_READ_ONLY_REASON}
                 onReply={handleReply}
                 onResolve={handleResolve}
+                onEditInteraction={handleEditInteraction}
+                onDeleteInteraction={handleDeleteInteraction}
               />
             </div>
           </div>

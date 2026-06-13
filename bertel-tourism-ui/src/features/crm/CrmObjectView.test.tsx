@@ -70,6 +70,7 @@ beforeEach(() => {
   crmMock.listCrmDirectory.mockResolvedValue(mockCrmDirectory);
   crmMock.listDemandTopics.mockResolvedValue([{ code: 'demande_de_visite', name: 'Demande de visite' }]);
   crmMock.saveCrmInteraction.mockResolvedValue('new-interaction');
+  crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
 });
 
 describe('CrmObjectView (§61 — vue établissement)', () => {
@@ -229,5 +230,28 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
       expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ parentInteractionId: 'i1', body: 'Suivi.' }),
     );
     await waitFor(() => expect(crmMock.listObjectCrm).toHaveBeenCalledTimes(2));
+  });
+
+  // §66 (PO) — modifier la racine depuis l'historique objet : saveCrmInteraction({id, body, sentimentCode}).
+  it('Modifier dans l historique → saveCrmInteraction({ id, body, sentimentCode }) + refresh', async () => {
+    renderView();
+    const card = (await screen.findByText('Tarifs validés.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^modifier$/i }));
+    fireEvent.change(within(card).getByLabelText('Modifier le commentaire'), { target: { value: 'Tarifs revus.' } });
+    fireEvent.click(within(card).getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'i1', body: 'Tarifs revus.', sentimentCode: 'positif' }),
+    );
+    await waitFor(() => expect(crmMock.listObjectCrm).toHaveBeenCalledTimes(2));
+  });
+
+  // §66 (PO) — supprimer une RÉPONSE (i1-r1) : passe l'id de la réponse à deleteCrmInteraction.
+  it('Supprimer une réponse → confirm puis deleteCrmInteraction(replyId)', async () => {
+    renderView();
+    const reply = (await screen.findByText('Tarifs intégrés dans la fiche.')).closest('.tl-reply') as HTMLElement;
+    fireEvent.click(within(reply).getByRole('button', { name: /^supprimer$/i }));
+    fireEvent.click(within(reply).getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('i1-r1'));
   });
 });

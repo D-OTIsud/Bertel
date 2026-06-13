@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
-import { listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
+import { deleteCrmInteraction, listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
@@ -92,6 +92,16 @@ export function CrmObjectView({
     await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
     await refetchObject();
   };
+  // Édition / suppression d'un commentaire (§66) — racine OU réponse. Édition PARTIELLE
+  // (body/sentiment) ; supprimer une racine cascade ses réponses (FK ON DELETE CASCADE).
+  const handleEditInteraction = async (id: string, body: string, sentimentCode: string | null) => {
+    await saveCrmInteraction({ id, body, sentimentCode });
+    await refetchObject();
+  };
+  const handleDeleteInteraction = async (id: string) => {
+    await deleteCrmInteraction(id);
+    await refetchObject();
+  };
 
   if (objectQuery.isLoading) {
     return <div className="crm-loading">Chargement de la vue établissement…</div>;
@@ -168,6 +178,8 @@ export function CrmObjectView({
               readOnlyReason={CRM_READ_ONLY_REASON}
               onReply={handleReply}
               onResolve={handleResolve}
+              onEditInteraction={handleEditInteraction}
+              onDeleteInteraction={handleDeleteInteraction}
             />
           </div>
         </div>

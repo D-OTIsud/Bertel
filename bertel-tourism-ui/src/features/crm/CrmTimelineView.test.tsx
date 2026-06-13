@@ -28,6 +28,7 @@ beforeEach(() => {
     { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
   ]);
   crmMock.saveCrmInteraction.mockResolvedValue('new-reply');
+  crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
 });
 
 describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () => {
@@ -149,5 +150,30 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
     expect(replyBtn).toBeDisabled();
     expect(within(actionsBar).getByRole('button', { name: /marquer traitée/i })).toBeDisabled();
     expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  // §66 (PO) — modifier depuis la timeline : saveCrmInteraction({id, body, sentimentCode}) + refetch.
+  it('Modifier → saveCrmInteraction({ id, body, sentimentCode }) puis recharge la timeline', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^modifier$/i }));
+    fireEvent.change(within(card).getByLabelText('Modifier le commentaire'), { target: { value: 'Photo facade reçue.' } });
+    fireEvent.click(within(card).getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', body: 'Photo facade reçue.', sentimentCode: 'positif' }),
+    );
+  });
+
+  // §66 (PO) — supprimer une racine AVEC réponse : la confirmation avertit de la cascade.
+  it('Supprimer (racine avec réponse) → confirm cascade puis deleteCrmInteraction(id)', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^supprimer$/i }));
+    // evt-1 a 1 réponse ⇒ l'avertissement de cascade mentionne « 1 réponse ».
+    expect(within(card).getByText(/et sa 1 réponse|et ses 1 réponse|1 réponse/i)).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('evt-1'));
   });
 });

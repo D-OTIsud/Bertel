@@ -1008,6 +1008,9 @@ BEGIN
       -- interagissant ») ; superuser ⇒ tous les acteurs ayant ≥1 lien OU ≥1 interaction.
       -- Sous filtre (v_filtered) : ≥1 interaction CORRESPONDANTE exigée en plus — les
       -- acteurs « lien seul » disparaissent (règle d'inclusion PO, cf. en-tête fonction).
+      -- §66 : compteurs annuaire = interactions RACINES seulement (les réponses §66 ne
+      -- gonflent pas les volumes). Inclusion sous filtre = ≥1 RACINE correspondante (une
+      -- réponse exige une racine du même acteur/contexte ⇒ aucun acteur ne disparaît).
       SELECT a0.id AS actor_id
       FROM actor a0
       WHERE (a0.id = ANY(v_actor_scope)
@@ -1017,6 +1020,7 @@ BEGIN
         AND (NOT v_filtered
              OR EXISTS (SELECT 1 FROM crm_interaction cf
                         WHERE cf.actor_id = a0.id
+                          AND cf.parent_interaction_id IS NULL
                           AND (v_scope IS NULL OR cf.object_id IS NULL OR cf.object_id = ANY(v_scope))
                           AND (v_topic_id IS NULL OR cf.demand_topic_id = v_topic_id)
                           AND (v_status IS NULL OR cf.status = v_status)
@@ -1046,6 +1050,7 @@ BEGIN
              max(ci.occurred_at) AS last_at
       FROM crm_interaction ci
       WHERE ci.actor_id = base.actor_id
+        AND ci.parent_interaction_id IS NULL  -- §66 : racines seulement (réponses exclues)
         AND (v_scope IS NULL OR ci.object_id IS NULL OR ci.object_id = ANY(v_scope))
         AND (v_topic_id IS NULL OR ci.demand_topic_id = v_topic_id)
         AND (v_status IS NULL OR ci.status = v_status)
@@ -1057,6 +1062,7 @@ BEGIN
       FROM crm_interaction ci2
       LEFT JOIN object o2 ON o2.id = ci2.object_id
       WHERE ci2.actor_id = base.actor_id
+        AND ci2.parent_interaction_id IS NULL  -- §66 : la dernière interaction = dernière RACINE
         AND (v_scope IS NULL OR ci2.object_id IS NULL OR ci2.object_id = ANY(v_scope))
         AND (v_topic_id IS NULL OR ci2.demand_topic_id = v_topic_id)
         AND (v_status IS NULL OR ci2.status = v_status)

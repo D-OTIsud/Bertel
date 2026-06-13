@@ -47,6 +47,9 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
 export function parseCrmInteraction(record: GenericRecord): CrmInteraction {
   return {
     id: readString(record.id),
+    // Acteur de l'interaction (rectif PO v5 point 5) — list_crm_timeline le renvoie déjà ;
+    // null sur les RPCs qui ne le portent pas (la fiche acteur n'en a pas besoin).
+    actorId: readNullableString(record.actor_id),
     // Contexte objet OPTIONNEL (§61) : une interaction peut être liée au seul acteur.
     objectId: readNullableString(record.object_id),
     objectName: readNullableString(record.object_name),

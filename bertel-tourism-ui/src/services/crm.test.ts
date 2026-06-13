@@ -246,6 +246,16 @@ describe('parseCrmInteraction — contexte objet nullable (§61)', () => {
     expect(interaction.objectId).toBeNull();
     expect(interaction.objectName).toBeNull();
   });
+
+  // Rectif PO v5 point 5 : la timeline porte actor_id (clic carte → fiche acteur).
+  it('lit actor_id → actorId (null quand absent)', () => {
+    const withActor = parseCrmInteraction({
+      id: 'i1', interaction_type: 'note', subject: 'Note', actor_id: 'a1',
+    });
+    expect(withActor.actorId).toBe('a1');
+    const withoutActor = parseCrmInteraction({ id: 'i2', interaction_type: 'note', subject: 'Note' });
+    expect(withoutActor.actorId).toBeNull();
+  });
 });
 
 describe('listCrmDirectory / listActorCrm — chemins démo', () => {

@@ -315,6 +315,12 @@ export interface CrmTask {
 
 export interface CrmInteraction {
   id: string;
+  /**
+   * Acteur de l'interaction (rectif PO v5 point 5) — `api.list_crm_timeline` renvoie déjà
+   * `actor_id`. Permet le clic « carte timeline → fiche acteur ». Null si le RPC ne le porte
+   * pas (compat ascendante : la fiche acteur n'en a pas besoin, elle est déjà sur l'acteur).
+   */
+  actorId: string | null;
   /** Contexte objet OPTIONNEL (§61, modèle acteur-centré) : null = interaction « générale ». */
   objectId: string | null;
   objectName: string | null;

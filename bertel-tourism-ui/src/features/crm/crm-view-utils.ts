@@ -36,6 +36,29 @@ export function pavTintOf(key: string): PavTint {
   return PAV_TINTS[hash % PAV_TINTS.length];
 }
 
+// Teintes de SUJET (rectif PO v5 point 1) — « que les pilules sujets soient de teintes
+// différentes ». Palette de 8 accents harmonieux (la gamme PAV/sentiment teal/orange/blue/
+// green/plum/amber + bleu-soft + rust), PAS un arc-en-ciel criard : chaque sujet reçoit un
+// index STABLE dérivé de son code (hash djb2 % 8) → même sujet = même couleur PARTOUT (rail
+// « Sujets récurrents », chips top_topics de l'annuaire, pastille sujet de la timeline, chips
+// sujet de la vue objet). Le rendu CSS est `.topic-pill.topic--N` (N = cet index) : fond pastel
+// doux + texte foncé AA-lisible, déclarés une fois dans styles.css (accents only, hors thème).
+export const TOPIC_TINT_COUNT = 8;
+
+/**
+ * Index de teinte STABLE pour un code de sujet (`demand_topic`) — hash djb2 % TOPIC_TINT_COUNT.
+ * Déterministe : le même code retombe toujours sur le même index (donc la même classe
+ * `topic--N`) à travers toutes les vues. Une clé vide → 0 (jamais d'index négatif/NaN).
+ */
+export function topicTintOf(code: string): number {
+  if (!code) return 0;
+  let hash = 5381;
+  for (let i = 0; i < code.length; i += 1) {
+    hash = ((hash * 33) ^ code.charCodeAt(i)) >>> 0;
+  }
+  return hash % TOPIC_TINT_COUNT;
+}
+
 /** Initiales d'affichage (2 premiers mots, préfixe de forme juridique ignoré). */
 export function initialsOf(name: string): string {
   const initials = name

@@ -20,20 +20,20 @@ const snapshot: ActorCrmSnapshot = {
   ],
   interactions: [
     {
-      id: 'i1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',
+      id: 'i1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',
       direction: 'outbound', status: 'done', subject: 'Appel tarifs', body: 'Tarifs 2026 validés.',
       occurredAt: '2026-06-04T10:00:00Z', actorName: null, topicCode: 'modification_infos_bdd',
       topicName: 'Modification infos BDD', sentimentCode: 'positif', sentimentName: 'Positif',
       ownerName: 'Florence', source: 'bertel_ui',
     },
     {
-      id: 'i2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', interactionType: 'email',
+      id: 'i2', actorId: 'actor-1', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', interactionType: 'email',
       direction: 'outbound', status: 'done', subject: 'Photos plats', body: null,
       occurredAt: '2026-05-18T08:00:00Z', actorName: null, topicCode: null, topicName: null,
       sentimentCode: 'inquiet', sentimentName: 'Inquiet', ownerName: 'Jean', source: 'bertel_ui',
     },
     {
-      id: 'i3', objectId: null, objectName: null, interactionType: 'note',
+      id: 'i3', actorId: 'actor-1', objectId: null, objectName: null, interactionType: 'note',
       direction: 'internal', status: 'done', subject: 'Vœux annuels', body: 'Tour d’horizon.',
       occurredAt: '2026-01-08T09:00:00Z', actorName: null, topicCode: null, topicName: null,
       sentimentCode: null, sentimentName: null, ownerName: 'Florence', source: 'bertel_ui',

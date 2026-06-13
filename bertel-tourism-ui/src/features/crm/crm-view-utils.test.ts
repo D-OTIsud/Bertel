@@ -10,6 +10,8 @@ import {
   pavTintOf,
   taskGroupOf,
   tlIcoClassOf,
+  topicTintOf,
+  TOPIC_TINT_COUNT,
 } from './crm-view-utils';
 
 // Réf. stable pour tous les calculs relatifs : jeudi 11 juin 2026, 12:00 locale.
@@ -109,6 +111,40 @@ describe('pavTintOf — teinte stable par hash', () => {
     const keys = ['HOT', 'RES', 'HLO', 'ASC', 'PCU', 'FMA', 'LOI', 'ITI', 'COM'];
     const distinct = new Set(keys.map((k) => pavTintOf(k)));
     expect(distinct.size).toBeGreaterThan(1);
+  });
+});
+
+// Rectif PO v5 point 1 : « les pilules sujets de teintes différentes ». L'index de teinte est
+// STABLE par code (même sujet = même couleur partout) et se répartit sur la palette de 8.
+describe('topicTintOf — index de teinte stable par code de sujet', () => {
+  it('même code → même index (stable à travers les vues)', () => {
+    const idx = topicTintOf('demande_de_visite');
+    expect(topicTintOf('demande_de_visite')).toBe(idx);
+  });
+
+  it('l index reste dans [0, TOPIC_TINT_COUNT[', () => {
+    const codes = ['demande_de_visite', 'modification_infos_bdd', 'reclamation', 'partenariat', 'autre'];
+    for (const code of codes) {
+      const idx = topicTintOf(code);
+      expect(idx).toBeGreaterThanOrEqual(0);
+      expect(idx).toBeLessThan(TOPIC_TINT_COUNT);
+    }
+  });
+
+  it('couvre plusieurs teintes selon le code (pas une constante)', () => {
+    // Les 20 codes OTI (domaine demand_topic) : la répartition doit toucher plusieurs index.
+    const codes = [
+      'demande_de_visite', 'modification_infos_bdd', 'reclamation', 'partenariat', 'evenement',
+      'subvention', 'classement', 'label', 'taxe_sejour', 'reseaux_sociaux', 'site_web',
+      'photo', 'tarifs', 'horaires', 'accessibilite', 'durabilite', 'formation', 'adhesion',
+      'mediation', 'autre',
+    ];
+    const distinct = new Set(codes.map((code) => topicTintOf(code)));
+    expect(distinct.size).toBeGreaterThan(2);
+  });
+
+  it('code vide → 0 (jamais NaN/négatif)', () => {
+    expect(topicTintOf('')).toBe(0);
   });
 });
 

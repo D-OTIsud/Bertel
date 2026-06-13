@@ -8,9 +8,11 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Mail, MapPin, Phone, StickyNote } from 'lucide-react';
+import type { CrmInteractionReply } from '../../types/domain';
 import {
   formatShort,
   initialsOf,
+  interactionAuthorOf,
   interactionTypeLabelOf,
   monthLabelOf,
   moodToneOf,
@@ -184,6 +186,16 @@ export interface CrmTimelineCardItem {
   actorName?: string | null;
   /** Acteur de l'interaction (rectif PO v5 point 5) — clic carte → fiche acteur. */
   actorId?: string | null;
+  /** Interlocuteur connu (§65/§66) — alimente interactionAuthorOf (fix « par Système »). */
+  interlocutorEmail?: string | null;
+  /** Source (import_*…) — alimente interactionAuthorOf. */
+  source?: string | null;
+  /** Statut de la demande (§65/§66) : 'planned' = en attente, 'done' = traitée. */
+  status?: string | null;
+  /** Timestamp de résolution (§65/§66) — affiché sur la chip « Traitée ». */
+  resolvedAt?: string | null;
+  /** Fil de discussion (§65/§66) — réponses NICHÉES sous la carte ; [] = rien rendu. */
+  replies?: CrmInteractionReply[];
 }
 
 const TL_ICONS = {
@@ -225,6 +237,16 @@ function TlCard({
   const openActor = () => {
     if (onOpenActor && actorId) onOpenActor(actorId);
   };
+  // Auteur affiché du pied (fix « par Système ») : agent ayant consigné, à défaut interlocuteur,
+  // à défaut étiquette de source d'import, à défaut seulement « Système ».
+  const author = interactionAuthorOf({
+    ownerName: item.ownerName,
+    interlocutorEmail: item.interlocutorEmail ?? null,
+    source: item.source ?? null,
+  });
+  // Statut de la demande (§65/§66) — chip discrète : 'planned' = à traiter, 'done' = traitée.
+  const status = item.status ?? null;
+  const replies = item.replies ?? [];
   return (
     <div className="tl-item">
       <span className={'tl-item__ico ' + icoClass + ' tone--' + tone} aria-hidden>
@@ -252,14 +274,45 @@ function TlCard({
           {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
           <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
           <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
+          {/* Statut de la demande (§65/§66) : « En attente » (planned) / « Traitée » (done). */}
+          {status === 'planned' ? <span className="tl-status tl-status--open">En attente</span> : null}
+          {status === 'done' ? (
+            <span className="tl-status tl-status--done" title={item.resolvedAt ? `Traitée le ${formatShort(item.resolvedAt)}` : undefined}>
+              Traitée
+            </span>
+          ) : null}
           <span className="tl-card__when">{formatShort(item.occurredAt)}</span>
         </div>
         {item.body ? <p className="tl-card__sum">{item.body}</p> : null}
+
+        {/* Fil de discussion (§65/§66) : réponses NICHÉES sous le corps, retrait + liseré gauche. */}
+        {replies.length > 0 ? (
+          <div className="tl-replies">
+            {replies.map((reply) => {
+              const replyAuthor = interactionAuthorOf({
+                ownerName: reply.ownerName,
+                interlocutorEmail: reply.interlocutorEmail,
+                source: reply.source,
+              });
+              return (
+                <div key={reply.id} className="tl-reply">
+                  <div className="tl-reply__head">
+                    <span className="tl-reply__author">{replyAuthor}</span>
+                    <span className="tl-reply__when">· {formatShort(reply.occurredAt)}</span>
+                    <Mood sentimentCode={reply.sentimentCode} sentimentName={reply.sentimentName} />
+                  </div>
+                  {reply.body ? <p className="tl-reply__body">{reply.body}</p> : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
         <div className="tl-card__foot">
           {/* WHO : acteur de l'interaction (affichage). */}
           {showActor && item.actorName ? <span className="tl-card__actor">{item.actorName}</span> : null}
-          {/* RÉFÉRENT : la personne qui a consigné l'interaction (rectif PO v5 point 4). */}
-          <span className="tl-card__owner">par {item.ownerName ?? 'Système'}</span>
+          {/* RÉFÉRENT : auteur réel (fix « par Système ») — agent, interlocuteur ou source d'import. */}
+          <span className="tl-card__owner">par {author}</span>
           {showContext !== false && (
             <span style={{ marginLeft: 'auto' }}>
               <CtxTag

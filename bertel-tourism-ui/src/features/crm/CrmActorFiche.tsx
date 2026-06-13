@@ -92,6 +92,12 @@ export function CrmActorFiche({
           objectName: item.objectName,
           objectType: item.objectId ? typeByObjectId.get(item.objectId) ?? null : null,
           ownerName: item.ownerName,
+          // §65/§66 — fil de discussion + fix « par Système » + statut de la demande.
+          interlocutorEmail: item.interlocutorEmail,
+          source: item.source,
+          status: item.status,
+          resolvedAt: item.resolvedAt,
+          replies: item.replies,
         })),
     [interactions, ctxFilter, typeByObjectId],
   );

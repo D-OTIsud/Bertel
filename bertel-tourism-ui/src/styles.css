@@ -9370,6 +9370,48 @@ a {
 .crm-app .tl-card__owner { color: var(--ink-4); }
 .crm-app .tl-empty { color: var(--ink-4); font-size: 13px; margin: 4px 0 0 48px; }
 
+/* Chip de statut de la demande (§65/§66) — « En attente » (à traiter) / « Traitée ». Petite
+   pastille dans l'en-tête de la carte (accents only, pas de couleur de thème). */
+.crm-app .tl-status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.crm-app .tl-status--open { background: var(--crm-amber-tint); color: var(--crm-amber-ink); }
+.crm-app .tl-status--done { background: var(--green-soft); color: var(--crm-green-ink); }
+
+/* Fil de discussion (§65/§66) — réponses NICHÉES sous la carte racine : retrait + liseré
+   gauche « réponse », fond légèrement enfoncé. Accents only (hors thème ORG). */
+.crm-app .tl-replies {
+  margin: 8px 0 2px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.crm-app .tl-reply {
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm, 8px);
+  padding: 7px 9px;
+}
+.crm-app .tl-reply__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+.crm-app .tl-reply__author { font-weight: 600; color: var(--ink-3); }
+.crm-app .tl-reply__when { color: var(--ink-4); font-family: var(--font-mono); font-size: 10px; }
+.crm-app .tl-reply__body { font-size: 12px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; }
+
 /* Humeur / tonalité — système 6 TONS sentiment (peps PO point 1, signal couleur dominant).
    Pastille : point plein (currentColor) + fond pastel + texte coloré GRAS. Les 6 tons sont
    visiblement distincts (interrogatif = ambre, plus jamais gris) ; `neutre` = gris doux pour

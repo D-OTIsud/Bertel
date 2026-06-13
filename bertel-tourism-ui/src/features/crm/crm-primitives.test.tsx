@@ -67,6 +67,11 @@ function makeItem(overrides: Partial<CrmTimelineCardItem> = {}): CrmTimelineCard
     ownerName: 'Florence',
     actorName: 'Mme Marie Hoarau',
     actorId: 'actor-1',
+    interlocutorEmail: null,
+    source: 'bertel_ui',
+    status: 'done',
+    resolvedAt: '2026-06-05T10:00:00Z',
+    replies: [],
     ...overrides,
   };
 }
@@ -144,5 +149,60 @@ describe('CrmTimeline / TlCard (rectif PO v5 points 4+5)', () => {
     expect(onOpenObject).toHaveBeenCalledWith('obj-1');
     // stopPropagation : le clic sur le tag NE déclenche PAS l'ouverture de l'acteur.
     expect(onOpenActor).not.toHaveBeenCalled();
+  });
+});
+
+// §65/§66 — fil de discussion + fix « par Système » + chip de statut.
+describe('TlCard — fil de discussion (§65/§66)', () => {
+  it('auteur du pied via interactionAuthorOf : interlocuteur quand owner null', () => {
+    const { getByText, queryByText } = render(
+      <CrmTimeline items={[makeItem({ ownerName: null, interlocutorEmail: 'demande@etab.re', source: 'import_berta2_crm' })]} />,
+    );
+    // L'interlocuteur connu prime sur « Système » (et même sur l'étiquette import).
+    expect(getByText('par demande@etab.re')).toBeInTheDocument();
+    expect(queryByText('par Système')).toBeNull();
+  });
+
+  it('« par Import Berta 2 » quand owner+interlocuteur null mais source import (plus jamais « Système »)', () => {
+    const { getByText } = render(
+      <CrmTimeline items={[makeItem({ ownerName: null, interlocutorEmail: null, source: 'import_berta2_crm' })]} />,
+    );
+    expect(getByText('par Import Berta 2')).toBeInTheDocument();
+  });
+
+  it('rend les réponses NICHÉES sous la racine (auteur · date + corps + pastille)', () => {
+    const item = makeItem({
+      replies: [
+        { id: 'r1', interactionType: 'note', body: 'Première réponse.', occurredAt: '2026-06-06T08:00:00Z',
+          createdAt: '2026-06-06T08:01:00Z', sentimentCode: 'positif', sentimentName: 'Positif',
+          ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui' },
+        { id: 'r2', interactionType: 'note', body: 'Deuxième réponse.', occurredAt: '2026-06-07T08:00:00Z',
+          createdAt: '2026-06-07T08:01:00Z', sentimentCode: null, sentimentName: null,
+          ownerName: null, interlocutorEmail: 'client@etab.re', source: 'bertel_ui' },
+      ],
+    });
+    const { container, getByText } = render(<CrmTimeline items={[item]} />);
+    const replies = container.querySelectorAll('.tl-replies .tl-reply');
+    expect(replies).toHaveLength(2);
+    expect(getByText('Première réponse.')).toBeInTheDocument();
+    expect(getByText('Deuxième réponse.')).toBeInTheDocument();
+    // Auteur de la 2e réponse résolu sur l'interlocuteur (owner null) — fix « par Système ».
+    expect(getByText(/client@etab\.re/)).toBeInTheDocument();
+  });
+
+  it('aucune réponse → pas de bloc .tl-replies', () => {
+    const { container } = render(<CrmTimeline items={[makeItem({ replies: [] })]} />);
+    expect(container.querySelector('.tl-replies')).toBeNull();
+  });
+
+  it('chip de statut : « En attente » si planned, « Traitée » si done', () => {
+    const { getByText, queryByText, rerender } = render(
+      <CrmTimeline items={[makeItem({ status: 'planned', resolvedAt: null })]} />,
+    );
+    expect(getByText('En attente')).toBeInTheDocument();
+    expect(queryByText('Traitée')).toBeNull();
+    rerender(<CrmTimeline items={[makeItem({ status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} />);
+    expect(getByText('Traitée')).toBeInTheDocument();
+    expect(queryByText('En attente')).toBeNull();
   });
 });

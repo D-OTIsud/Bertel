@@ -69,6 +69,12 @@ export function CrmObjectView({
         ownerName: item.ownerName,
         actorName: item.actorName,
         actorId: item.actorId,
+        // §65/§66 — fil de discussion + fix « par Système » + statut de la demande.
+        interlocutorEmail: item.interlocutorEmail,
+        source: item.source,
+        status: null,
+        resolvedAt: item.resolvedAt,
+        replies: item.replies,
       })),
     [snapshot],
   );

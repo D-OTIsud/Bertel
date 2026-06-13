@@ -40,7 +40,7 @@ describe('section registry', () => {
         ))}
       </QueryClientProvider>,
     );
-    expect(screen.getByText('Chambres, équipements & séminaire')).toBeInTheDocument();
+    expect(screen.getByText('Chambres, capacité & séminaire')).toBeInTheDocument();
     expect(screen.getByText('Identifiants externes & synchronisation')).toBeInTheDocument();
   });
 

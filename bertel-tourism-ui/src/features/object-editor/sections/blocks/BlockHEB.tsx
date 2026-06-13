@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Fs, Repeater, SortableList } from '../../primitives';
+import { Field, Fs, Input, Repeater, SortableList, StatCard } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
@@ -9,7 +9,16 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './block-notes';
-import { computeRoomsCapacitySum, nextRoomCode, reindexRoomPositions, syncCapacityWithRooms } from './rooms-utils';
+import { AccueilPolicies, EnvironmentChips } from '../capacity-controls';
+import {
+  computeUnitCount,
+  nextRoomCode,
+  reindexRoomPositions,
+  syncCapacityWithRooms,
+  syncDerivedStructural,
+  unitCountMetricCode,
+  upsertMaxCapacity,
+} from './rooms-utils';
 
 // Dernière piste = actions, en LARGEUR FIXE — un `auto` vaut 0px dans l'en-tête (vide) et
 // ~90px dans les lignes (boutons), donc le `1.4fr` partagé se résout différemment et désaligne
@@ -89,10 +98,12 @@ function createMeetingRoom(): ObjectWorkspaceMeetingRoomItem {
   };
 }
 
-export function BlockHEB({ editor, folded }: SectionProps) {
+export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
   const rooms = editor.draft.rooms;
   const meetingRooms = editor.draft.meetingRooms;
   const capacity = editor.draft.capacityPolicies;
+  const characteristics = editor.draft.characteristics;
+  const type = typeCode ?? '';
   const totalUnits = rooms.items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 0), 0);
   // When the rooms module is §46-gated, "0 type(s)" would read as missing data — say why instead.
   const pill = rooms.unavailableReason
@@ -116,13 +127,24 @@ export function BlockHEB({ editor, folded }: SectionProps) {
   const [creatingRoom, setCreatingRoom] = useState<ObjectWorkspaceRoomTypeItem | null>(null);
   const [creatingMeeting, setCreatingMeeting] = useState<ObjectWorkspaceMeetingRoomItem | null>(null);
 
-  /** Write the rooms list + keep the §07 max_capacity metric in sync (derived-unless-overridden). */
+  /**
+   * Write the rooms list + keep capacity in sync : max_capacity (derived-unless-overridden)
+   * ET les métriques structurelles dérivées (bedrooms/pitches/meeting_rooms) pour l'Explorer.
+   */
   function setRoomItems(nextItems: ObjectWorkspaceRoomTypeItem[]) {
     editor.replaceModule('rooms', { ...rooms, items: nextItems });
-    const syncedCapacity = syncCapacityWithRooms(capacity, rooms.items, nextItems);
-    if (syncedCapacity) {
-      editor.replaceModule('capacityPolicies', syncedCapacity);
-    }
+    const synced = syncCapacityWithRooms(capacity, rooms.items, nextItems) ?? capacity;
+    editor.replaceModule('capacityPolicies', syncDerivedStructural(synced, nextItems, meetingRooms.items.length, type));
+  }
+
+  function setMeetingItems(nextItems: ObjectWorkspaceMeetingRoomItem[]) {
+    editor.replaceModule('meetingRooms', { ...meetingRooms, items: nextItems });
+    editor.replaceModule('capacityPolicies', syncDerivedStructural(capacity, rooms.items, nextItems.length, type));
+  }
+
+  /** Capacité max éditable : crée la ligne si absente (objet vide), sinon mute en place. */
+  function setMaxCapacity(value: string) {
+    editor.replaceModule('capacityPolicies', upsertMaxCapacity(capacity, value));
   }
 
   function updateRoom(index: number, patch: Partial<ObjectWorkspaceRoomTypeItem>) {
@@ -137,16 +159,36 @@ export function BlockHEB({ editor, folded }: SectionProps) {
   }
 
   const accessibleRoomsCount = rooms.items.filter((item) => item.accessible).length;
-  const roomsCapacitySum = computeRoomsCapacitySum(rooms.items);
+  const maxCapValue = capacity.capacityItems.find((item) => item.metricCode === 'max_capacity')?.value ?? '';
+  const unitCount = computeUnitCount(rooms.items);
+  const unitLabel = unitCountMetricCode(type) === 'pitches' ? 'Emplacements' : 'Chambres';
 
   return (
     <Fs
       num="06"
-      title="Chambres, équipements & séminaire"
-      sub="Inventaire de l'offre hébergement : unités locatives, capacités, tarifs, équipements, salles MICE"
+      title="Chambres, capacité & séminaire"
+      sub="Capacité d'accueil, groupes et animaux — et inventaire détaillé des chambres et salles MICE. Alimente les filtres Explorer et la fiche publique."
       folded={folded}
       pill={pill}
     >
+      {/* Encart Capacité d'accueil — toujours visible, indépendant des chambres (§64).
+          La capacité max est la SEULE valeur chiffrée éditable ; chambres/salles sont dérivées. */}
+      <div className="chip-group__label" style={{ marginTop: 0 }}>Capacité d'accueil</div>
+      <div className="grid-3" style={{ marginBottom: 6 }}>
+        <Field label="Capacité max.">
+          <Input value={maxCapValue} type="number" mono aria-label="Capacité max." onChange={setMaxCapacity} />
+        </Field>
+        {rooms.items.length > 0 && <StatCard label={unitLabel} value={String(unitCount)} />}
+        {meetingRooms.items.length > 0 && <StatCard label="Salles de réunion" value={String(meetingRooms.items.length)} />}
+      </div>
+      <p className="muted" style={{ margin: '0 0 14px', fontSize: 12 }}>
+        Capacité d'accueil totale. Si vous détaillez les chambres ci-dessous, elle se calcule
+        automatiquement — ajustez au besoin (lit d'appoint).
+      </p>
+
+      <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
+      <AccueilPolicies capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+
       {/* §46 type-gated rooms module — notice INSTEAD of controls when gated */}
       {rooms.unavailableReason ? (
         <ModuleUnavailableNotice reason={rooms.unavailableReason} />
@@ -208,17 +250,9 @@ export function BlockHEB({ editor, folded }: SectionProps) {
             + Ajouter un type de chambre
           </button>
 
-          {rooms.items.length > 0 && (
-            <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-              Capacité cumulée : <strong>{roomsCapacitySum} personne(s)</strong> — reportée
-              automatiquement dans la capacité totale (§07) tant qu&apos;elle n&apos;y est pas saisie
-              manuellement.
-            </p>
-          )}
           {accessibleRoomsCount > 0 && (
             <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
-              ♿ {accessibleRoomsCount} chambre(s) PMR déclarée(s) — les équipements
-              d&apos;accessibilité correspondants se gèrent en section 10 (Accessibilité).
+              ♿ {accessibleRoomsCount} chambre(s) PMR — équipements en §10.
             </p>
           )}
 
@@ -252,11 +286,6 @@ export function BlockHEB({ editor, folded }: SectionProps) {
           )}
         </>
       )}
-
-      {/* §48 single-owner: group policy AND pet policy are edited in §07 only
-          (PO 2026-06-11 — accueil concerns belong to Capacité, for every type).
-          The « Politiques d'accueil » label + §07 pointer note were removed the
-          same day (PO: useless residue once nothing is editable here). */}
 
       {/* §46 type-gated meetingRooms module — notice INSTEAD of controls when gated (independent of rooms) */}
       {meetingRooms.unavailableReason ? (
@@ -295,12 +324,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
                     type="button"
                     className="del"
                     aria-label="Supprimer"
-                    onClick={() =>
-                      editor.replaceModule('meetingRooms', {
-                        ...meetingRooms,
-                        items: meetingRooms.items.filter((_, itemIndex) => itemIndex !== index),
-                      })
-                    }
+                    onClick={() => setMeetingItems(meetingRooms.items.filter((_, itemIndex) => itemIndex !== index))}
                   >
                     <Trash2 size={15} aria-hidden />
                   </button>
@@ -332,10 +356,7 @@ export function BlockHEB({ editor, folded }: SectionProps) {
               equipmentOptions={meetingRooms.equipmentOptions}
               onClose={() => setCreatingMeeting(null)}
               onSave={(created) => {
-                editor.replaceModule('meetingRooms', {
-                  ...meetingRooms,
-                  items: [...meetingRooms.items, created],
-                });
+                setMeetingItems([...meetingRooms.items, created]);
                 setCreatingMeeting(null);
               }}
             />

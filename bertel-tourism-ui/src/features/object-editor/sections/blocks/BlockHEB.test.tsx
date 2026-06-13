@@ -32,20 +32,72 @@ describe('BlockHEB — alignement des tableaux', () => {
   });
 });
 
-describe('BlockHEB pet policy (moved to §07 — PO 2026-06-11)', () => {
-  it('renders no pet-policy controls and no pointer note (label + note removed — PO)', () => {
-    const modules = fullModulesFixture();
-    modules.capacityPolicies.petPolicy.accepted = true;
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+describe('BlockHEB — encart Capacité d’accueil (§64)', () => {
+  it('renders an editable Capacité max field bound to capacityItems, even with zero rooms', () => {
+    const { result } = mountHEB((m) => {
+      m.rooms.items = [];
+      m.capacityPolicies.capacityItems = [
+        { recordId: 'r1', metricId: 'cap', metricCode: 'max_capacity', metricLabel: 'Capacité max.', unit: 'pax', value: '8', effectiveFrom: '', effectiveTo: '' },
+      ];
+    });
+    const field = screen.getByLabelText('Capacité max.') as HTMLInputElement;
+    expect(field.value).toBe('8');
+    act(() => { fireEvent.change(field, { target: { value: '9' } }); });
+    const item = result.current.draft.capacityPolicies.capacityItems.find((i) => i.metricCode === 'max_capacity');
+    expect(item).toMatchObject({ recordId: 'r1', metricId: 'cap', value: '9' }); // recordId/metricId préservés
+  });
 
-    expect(screen.queryByLabelText('Animaux acceptés')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Conditions d'accueil des animaux")).not.toBeInTheDocument();
-    // PO 2026-06-11: the « Politiques d'accueil » label + §07 pointer note were judged
-    // useless once §07 owns the controls — the block mentions accueil nowhere.
-    expect(screen.queryByText("Politiques d'accueil")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Capacité & contenance/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Animaux acceptés/)).not.toBeInTheDocument();
+  it('creates a max_capacity item from scratch on a capacity-less object (no write-trap)', () => {
+    const { result } = mountHEB((m) => { m.rooms.items = []; m.capacityPolicies.capacityItems = []; });
+    act(() => { fireEvent.change(screen.getByLabelText('Capacité max.'), { target: { value: '6' } }); });
+    expect(result.current.draft.capacityPolicies.capacityItems).toEqual([
+      expect.objectContaining({ recordId: null, metricCode: 'max_capacity', value: '6' }),
+    ]);
+  });
+
+  it('does NOT mark capacityPolicies dirty when a roomless object is merely rendered', () => {
+    const { result } = mountHEB((m) => {
+      m.rooms.items = [];
+      m.capacityPolicies.capacityItems = [
+        { recordId: 'r1', metricId: 'cap', metricCode: 'max_capacity', metricLabel: 'Capacité max.', unit: 'pax', value: '8', effectiveFrom: '', effectiveTo: '' },
+      ];
+    });
+    expect(result.current.dirtySections['capacity-policies']).toBeFalsy();
+  });
+
+  it('no longer shows the parasitic « … reportée … §07 » text', () => {
+    mountHEB((m) => { m.capacityPolicies.capacityItems = []; });
+    expect(screen.queryByText(/reportée/i)).toBeNull();
+  });
+
+  it('shows a Chambres tile (derived unit count) when rooms exist', () => {
+    mountHEB((m) => { m.rooms.items = [{ ...m.rooms.items[0], quantity: '3' }]; });
+    expect(screen.getByText('Chambres')).toBeInTheDocument(); // libellé exact ≠ « Chambres / unités locatives »
+  });
+
+  it('hides the derived tiles when there are no rooms', () => {
+    mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = []; });
+    expect(screen.queryByText('Chambres')).toBeNull();
+  });
+});
+
+describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)', () => {
+  it('hosts the pet policy (Animaux) in §06', () => {
+    mountHEB((m) => { m.capacityPolicies.petPolicy.accepted = true; });
+    expect(screen.getByLabelText('Animaux')).toBeInTheDocument();
+    expect(screen.getByText("Politique d'accueil")).toBeInTheDocument();
+  });
+
+  it('hosts the group policy (Groupes) in §06', () => {
+    mountHEB();
+    expect(screen.getByText('Groupes')).toBeInTheDocument();
+    expect(screen.getByText('Groupes uniquement')).toBeInTheDocument();
+  });
+
+  it('hosts the environment chips (Cadre / environnement) in §06', () => {
+    mountHEB();
+    expect(screen.getByText('Cadre / environnement')).toBeInTheDocument();
+    expect(screen.getByText('Jardin')).toBeInTheDocument(); // environmentOptions du fixture
   });
 });
 
@@ -74,27 +126,6 @@ describe('BlockHEB meeting-room edit modal', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.meetingRooms.items[0].equipmentCodes).toContain('projector');
-  });
-});
-
-describe('BlockHEB — single-owner surfaces (§48)', () => {
-  it('no longer edits the group policy in §05 (owned by §07)', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
-
-    expect(screen.queryByText('Groupes — min')).not.toBeInTheDocument();
-    expect(screen.queryByText('Groupes — max')).not.toBeInTheDocument();
-    expect(screen.queryByText('Notes groupes')).not.toBeInTheDocument();
-    expect(screen.queryByText('Groupes uniquement')).not.toBeInTheDocument();
-    // PO 2026-06-11: the §07 pointer note was removed too — no accueil residue here.
-    expect(screen.queryByText(/Géré dans la section 07/)).not.toBeInTheDocument();
-  });
-
-  it('no longer hosts the pet policy (single owner = §07, PO 2026-06-11)', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
-
-    expect(screen.queryByLabelText('Animaux acceptés')).not.toBeInTheDocument();
   });
 });
 
@@ -308,8 +339,6 @@ describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)'
     // Regex matcher: the Repeater add button renders "+ {addLabel}" as two text
     // nodes, so an exact-string match can never hit it (and would be vacuous).
     expect(screen.queryByText(/Ajouter un type de chambre/)).not.toBeInTheDocument();
-    // The accueil label/note no longer exist in this block (owned by §07, PO 2026-06-11).
-    expect(screen.queryByText("Politiques d'accueil")).not.toBeInTheDocument();
   });
 
   it('renders the meeting-rooms unavailable notice independently of the rooms area', () => {

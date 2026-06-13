@@ -66,6 +66,17 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.getByText('4')).toBeInTheDocument(); // 2 + 1 + 1
   });
 
+  // Rectif PO v5 point 1 : chaque chip de sujet porte une classe de teinte stable (topic--N).
+  it('les chips de sujet (top_topics) portent une classe de teinte topic--N', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    const chip = screen
+      .getAllByText('Demande de visite')
+      .find((el) => el.classList.contains('topic-chip')) as HTMLElement;
+    expect(chip).toHaveClass('topic-pill');
+    expect(Array.from(chip.classList).some((c) => /^topic--\d+$/.test(c))).toBe(true);
+  });
+
   it('filtre par recherche sur le nom de l acteur ET le nom d établissement', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
@@ -124,6 +135,19 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     // interaction_count filtré (2), PAS la fenêtre 12 mois (99) ni la somme de l'annuaire complet.
     await waitFor(() => expect(within(kpiCard).getByText('2')).toBeInTheDocument());
     expect(screen.getByText(/filtres appliqués aux compteurs/i)).toBeInTheDocument();
+    // Rectif PO v5 point 2 : « Acteurs suivis » devient « filtré / global » (1 entrée filtrée / 3).
+    const followedCard = screen.getByText('Acteurs suivis').closest('.crm-kpi') as HTMLElement;
+    await waitFor(() => expect(within(followedCard).getByText('1 / 3')).toBeInTheDocument());
+    expect(within(followedCard).getByText('pour le filtre sélectionné')).toBeInTheDocument();
+  });
+
+  // Rectif PO v5 point 2 : sans filtre, pas de fraction redondante — juste le global.
+  it('« Acteurs suivis » sans filtre = juste le total global (pas de Y / Y)', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    const followedCard = screen.getByText('Acteurs suivis').closest('.crm-kpi') as HTMLElement;
+    expect(within(followedCard).getByText('3')).toBeInTheDocument();
+    expect(within(followedCard).queryByText('3 / 3')).not.toBeInTheDocument();
   });
 
   it('clic sur une ligne → onOpenActor(actorId)', async () => {

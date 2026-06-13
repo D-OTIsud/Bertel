@@ -120,6 +120,15 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getByText('Aucun canal renseigné.')).toBeInTheDocument();
   });
 
+  // Rectif PO v5 point 1 : la chip « Sujets récurrents » porte une teinte stable (topic--N).
+  it('la chip Sujets récurrents porte une classe de teinte topic--N', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    const chip = screen.getByText(/Modification infos BDD — 2/).closest('.topic-chip') as HTMLElement;
+    expect(chip).toHaveClass('topic-pill');
+    expect(Array.from(chip.classList).some((c) => /^topic--\d+$/.test(c))).toBe(true);
+  });
+
   it('clic sur une carte établissement → onOpenObject(objectId)', async () => {
     const props = renderFiche();
     await screen.findByText('Appel tarifs');

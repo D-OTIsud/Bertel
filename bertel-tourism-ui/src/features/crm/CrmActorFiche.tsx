@@ -17,7 +17,7 @@ import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
-import { CRM_READ_ONLY_REASON, formatRelative, formatShort } from './crm-view-utils';
+import { CRM_READ_ONLY_REASON, formatRelative, formatShort, topicTintOf } from './crm-view-utils';
 
 const YEAR_MS = 365 * 86_400_000;
 
@@ -263,8 +263,9 @@ export function CrmActorFiche({
             <div className="rcard">
               <h4>Sujets récurrents</h4>
               <div className="chip-row">
+                {/* Rectif PO v5 point 1 : teinte de sujet stable par code (cohérente partout). */}
                 {snapshot.topics.map((topic) => (
-                  <span key={topic.code} className="topic-chip">
+                  <span key={topic.code} className={`topic-chip topic-pill topic--${topicTintOf(topic.code)}`}>
                     {topic.name} — {topic.count}
                   </span>
                 ))}

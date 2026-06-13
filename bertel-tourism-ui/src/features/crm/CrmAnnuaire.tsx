@@ -22,7 +22,7 @@ import {
   type StatusItem,
 } from './CrmFilterBar';
 import { CrmActorNewModal } from './CrmActorModals';
-import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf } from './crm-view-utils';
+import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf, topicTintOf } from './crm-view-utils';
 
 function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
   const haystack = [entry.displayName, ...entry.objects.map((object) => `${object.objectName} ${object.roleName ?? ''}`)]
@@ -95,6 +95,14 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   const interactionsKpiLabel = from ? 'Interactions (période)' : 'Interactions (toutes)';
   const totalObjects = entries.reduce((sum, entry) => sum + entry.objectCount, 0);
 
+  // KPI « Acteurs suivis » = filtré / global (rectif PO v5 point 2). Le global = la longueur
+  // de l'annuaire NON filtré (la query partagée ['crm-directory'] du shell, déjà en cache) ;
+  // le filtré = l'annuaire courant (entries). Sous filtre on affiche « X / Y » + un sous-libellé ;
+  // sans filtre, juste le global (pas de fraction redondante Y / Y).
+  const globalActorCount = baseDirectoryQuery.data?.length ?? entries.length;
+  const followedActorsValue = hasFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
+  const followedActorsHint = hasFilters ? 'pour le filtre sélectionné' : 'personnes & organisations';
+
   if (directoryQuery.isLoading) {
     return <div className="crm-loading">Chargement de l&apos;annuaire…</div>;
   }
@@ -105,8 +113,9 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   return (
     <div className="crm-body">
       <div className="crm-kpis">
-        {/* Peps PO point 1 : accents KPI distincts (teal / orange / bleu) — fini le tout-teal. */}
-        <Kpi label="Acteurs suivis" value={String(entries.length)} hint="personnes & organisations" accent="teal" />
+        {/* Peps PO point 1 : accents KPI distincts (teal / orange / bleu) — fini le tout-teal.
+            Rectif PO v5 point 2 : « Acteurs suivis » = filtré / global sous filtre. */}
+        <Kpi label="Acteurs suivis" value={followedActorsValue} hint={followedActorsHint} accent="teal" />
         <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} hint="appels, e-mails, visites terrain, notes" accent="orange" />
         <Kpi label="Établissements liés" value={String(totalObjects)} hint="contextes de la relation" accent="blue" />
       </div>
@@ -204,8 +213,9 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
                 )}
               </span>
               <span className="chip-row col-topics">
+                {/* Rectif PO v5 point 1 : teinte de sujet stable (top_topics = noms ⇒ clé = nom). */}
                 {entry.topTopics.slice(0, 2).map((topic) => (
-                  <span key={topic} className="topic-chip">
+                  <span key={topic} className={`topic-chip topic-pill topic--${topicTintOf(topic)}`}>
                     {topic}
                   </span>
                 ))}

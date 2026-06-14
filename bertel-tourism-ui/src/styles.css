@@ -9796,6 +9796,32 @@ a {
 .crm-app .ticket__actor { color: var(--accent-deep); }
 .crm-app .ticket__actor::before { content: ''; width: 5px; height: 5px; border-radius: 999px; background: currentColor; flex: none; }
 .crm-app .ticket__actor:hover { text-decoration: underline; }
+/* §66 — badge « interaction liée » : pastille d'accent cliquable (ouvre la fiche acteur ou la
+   vue établissement où vit l'interaction). Petit, discret, scopé .crm-app (accent only). */
+.crm-app .ticket__linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: var(--accent-tint);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-app .ticket__linked:hover { border-color: var(--accent); }
+.crm-app .ticket__linked svg { flex: none; }
+/* §66 — texte du prompt de clôture (modal). */
+.crm-app .crm-prompt-text { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
 .crm-app .ticket__foot {
   display: flex;
   align-items: center;

@@ -9,12 +9,17 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, GripVertical, Plus } from 'lucide-react';
-import { listCrmDirectory, listCrmTasks, saveCrmTask } from '../../services/crm';
+import { Bell, GripVertical, Link2, Plus } from 'lucide-react';
+import { listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv, Seg } from './crm-primitives';
+import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CRM_READ_ONLY_REASON, dueBadgeClassOf, formatShort } from './crm-view-utils';
+
+// §66 — une interaction « clôturable » : ni déjà traitée ni annulée. Le prompt de clôture ne
+// se déclenche que pour ces statuts (pas de proposition redondante).
+const CLOSED_INTERACTION_STATUSES = new Set(['done', 'canceled']);
 
 // 3 colonnes = les 3 statuts actifs du cycle de vie (canceled/blocked restent signalés
 // par le chip, jamais masqués en silence). cls pilote la couleur du dot + du liseré.
@@ -51,12 +56,44 @@ export function CrmTaches({
   const [draggingStatus, setDraggingStatus] = useState<CrmTaskStatus | null>(null);
   // Id de la carte saisie — pour l'estomper (opacity 0.4) pendant le glisser (PO).
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  // §66 — prompt de clôture : quand un move met une tâche LIÉE à une interaction encore
+  // ouverte en « Terminées », on PROPOSE (jamais automatiquement) de clôturer l'interaction.
+  const [closePrompt, setClosePrompt] = useState<{ interactionId: string; subject: string } | null>(null);
 
   // Déplacement kanban — persiste le statut réel via save_crm_task (jamais optimiste muet).
   // Utilisé à la fois par les boutons Avancer/Reprendre (clavier) ET le drag & drop (souris).
   const moveMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+      // §66 — clôture suggérée : le move est persisté quoi qu'il arrive ; si la tâche passe en
+      // « done » ET qu'elle est liée à une interaction encore OUVERTE, on ouvre le prompt
+      // (DnD drop ET bouton « Avancer » passent tous deux par cette mutation).
+      if (variables.status !== 'done') return;
+      const moved = tasks.find((task) => task.id === variables.id);
+      if (
+        moved?.relatedInteractionId &&
+        !CLOSED_INTERACTION_STATUSES.has(moved.relatedInteractionStatus ?? '')
+      ) {
+        setClosePrompt({
+          interactionId: moved.relatedInteractionId,
+          subject: moved.relatedInteractionSubject ?? 'Interaction liée',
+        });
+      }
+    },
+  });
+
+  // §66 — « Oui, clôturer » : marque l'interaction liée comme traitée (le serveur pose
+  // resolved_at). Invalide le kanban + toutes les vues d'interaction. Erreur visible dans le prompt.
+  const closeInteractionMutation = useMutation({
+    mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'done' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['crm-actor'] });
+      void queryClient.invalidateQueries({ queryKey: ['crm-object'] });
+      void queryClient.invalidateQueries({ queryKey: ['crm-timeline'] });
+      setClosePrompt(null);
+    },
   });
 
   // Dépôt d'une carte dans une colonne : si le statut cible diffère, on persiste (sinon no-op).
@@ -150,6 +187,22 @@ export function CrmTaches({
           {task.actorId && task.actorName && (
             <button type="button" className="ticket__actor" onClick={() => onOpenActor(task.actorId as string)}>
               {task.actorName}
+            </button>
+          )}
+          {/* §66 — badge interaction liée : cliquable → fiche acteur (ou vue établissement si
+              pas d'acteur). stopPropagation : ne déclenche ni le DnD ni la nav de la carte. */}
+          {task.relatedInteractionId && (
+            <button
+              type="button"
+              className="ticket__linked"
+              title={`Interaction liée : ${task.relatedInteractionSubject ?? 'voir le fil'}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (task.actorId) onOpenActor(task.actorId);
+                else onOpenObject(task.objectId);
+              }}
+            >
+              <Link2 size={11} aria-hidden /> {task.relatedInteractionSubject ?? 'Interaction liée'}
             </button>
           )}
         </div>
@@ -280,6 +333,39 @@ export function CrmTaches({
           onClose={() => setTaskModalOpen(false)}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
         />
+      )}
+
+      {/* §66 — prompt de clôture de l'interaction liée (proposé, jamais automatique). Le move
+          de la tâche est déjà persisté ; ici on ne décide QUE de la clôture de l'interaction. */}
+      {closePrompt && (
+        <CrmModal
+          title="Clôturer l’interaction liée ?"
+          onClose={() => setClosePrompt(null)}
+          footer={
+            <>
+              <button type="button" className="crm-btn" onClick={() => setClosePrompt(null)}>
+                Non
+              </button>
+              <button
+                type="button"
+                className="crm-btn primary"
+                disabled={closeInteractionMutation.isPending}
+                onClick={() => closeInteractionMutation.mutate(closePrompt.interactionId)}
+              >
+                Oui, clôturer
+              </button>
+            </>
+          }
+        >
+          <p className="crm-prompt-text">
+            La tâche est liée à l’interaction «&nbsp;{closePrompt.subject}&nbsp;». La marquer aussi comme traitée ?
+          </p>
+          {closeInteractionMutation.isError && (
+            <div className="inline-alert" role="alert">
+              Échec de la clôture : {(closeInteractionMutation.error as Error).message}
+            </div>
+          )}
+        </CrmModal>
       )}
     </div>
   );

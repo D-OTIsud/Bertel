@@ -2,7 +2,7 @@ import { Fs, Input, Repeater, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCapacityItem } from '../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
-import { AccueilPolicies, EnvironmentChips } from './capacity-controls';
+import { EnvironmentChips, GroupPolicyButton, PetPolicyButton } from './capacity-controls';
 
 function createCapacityItem(
   items: ObjectWorkspaceCapacityItem[],
@@ -164,10 +164,8 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         onChange={(next) => editor.replaceModule('characteristics', next)}
       />
 
-      <AccueilPolicies
-        capacity={capacity}
-        onChange={(next) => editor.replaceModule('capacityPolicies', next)}
-      />
+      <GroupPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+      <PetPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
       </>
       )}
     </Fs>

@@ -9,7 +9,7 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './block-notes';
-import { AccueilPolicies, EnvironmentChips } from '../capacity-controls';
+import { EnvironmentChips, GroupPolicyButton, PetPolicyButton } from '../capacity-controls';
 import {
   computeRoomsCapacitySum,
   computeUnitCount,
@@ -128,15 +128,6 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
   const [creatingRoom, setCreatingRoom] = useState<ObjectWorkspaceRoomTypeItem | null>(null);
   const [creatingMeeting, setCreatingMeeting] = useState<ObjectWorkspaceMeetingRoomItem | null>(null);
 
-  // §64 — le détail chambres/MICE est optionnel (485 HLO loués en entier n'ont pas de chambres) :
-  // disclosure ouvert seulement s'il y a déjà du contenu (ou une notice §46 à montrer).
-  const [detailOpen, setDetailOpen] = useState<boolean>(
-    rooms.items.length > 0 ||
-      meetingRooms.items.length > 0 ||
-      Boolean(rooms.unavailableReason) ||
-      Boolean(meetingRooms.unavailableReason),
-  );
-
   /**
    * Write the rooms list + keep capacity in sync : max_capacity (derived-unless-overridden)
    * ET les métriques structurelles dérivées (bedrooms/pitches/meeting_rooms) pour l'Explorer.
@@ -183,48 +174,38 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
       folded={folded}
       pill={pill}
     >
-      {/* Encart Capacité d'accueil — toujours visible, indépendant des chambres (§64).
-          La capacité max est la SEULE valeur chiffrée éditable ; chambres/salles sont dérivées. */}
+      {/* Capacité d'accueil — la SEULE valeur chiffrée éditable. Le détail des chambres s'ajoute
+          via un bouton dédié (à côté), découplé des salles de séminaire (§66). */}
       <div className="chip-group__label" style={{ marginTop: 0 }}>Capacité d'accueil</div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
         <Field label="Capacité max.">
           <Input value={maxCapValue} type="number" mono aria-label="Capacité max." onChange={setMaxCapacity} />
         </Field>
-        {hasRooms && (
-          <>
-            <span aria-hidden style={{ fontSize: 18, color: 'var(--ink-4)', paddingBottom: 8 }}>=</span>
-            <StatCard label="Capacité totale calculée" value={String(roomsCapacitySum)} suffix="couchages" />
-          </>
+        {!rooms.unavailableReason && (
+          <button type="button" className="rep-add" onClick={() => setCreatingRoom(createRoom(rooms.items))}>
+            + Ajouter un descriptif de chambre
+          </button>
         )}
-        {hasRooms && <StatCard label={unitLabel} value={String(unitCount)} />}
-        {meetingRooms.items.length > 0 && <StatCard label="Salles de réunion" value={String(meetingRooms.items.length)} />}
       </div>
+      {(hasRooms || meetingRooms.items.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 6 }}>
+          {hasRooms && <StatCard label="Capacité totale calculée" value={String(roomsCapacitySum)} suffix="couchages" />}
+          {hasRooms && <StatCard label={unitLabel} value={String(unitCount)} />}
+          {meetingRooms.items.length > 0 && <StatCard label="Salles de réunion" value={String(meetingRooms.items.length)} />}
+        </div>
+      )}
       <p className="muted" style={{ margin: '0 0 14px', fontSize: 12 }}>
-        Capacité d'accueil totale. Si vous détaillez les chambres ci-dessous, elle se calcule
-        automatiquement — ajustez au besoin (lit d'appoint).
+        Capacité d'accueil totale. Détaillez les chambres pour la calculer automatiquement
+        (ajustez au besoin — lit d'appoint).
       </p>
 
-      <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
-      <AccueilPolicies capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
-
-      {/* §64 — détail optionnel : tableaux chambres + salles MICE repliés par défaut quand vides. */}
-      <button
-        type="button"
-        className="rep-add"
-        aria-expanded={detailOpen}
-        onClick={() => setDetailOpen((open) => !open)}
-        style={{ marginTop: 16 }}
-      >
-        {detailOpen ? '▾' : '▸'} Détailler les chambres / unités & salles
-      </button>
-
-      {detailOpen && (
-      <div style={{ marginTop: 8 }}>
       {/* §46 type-gated rooms module — notice INSTEAD of controls when gated */}
       {rooms.unavailableReason ? (
         <ModuleUnavailableNotice reason={rooms.unavailableReason} />
       ) : (
         <>
+          {hasRooms && (
+          <>
           <div className="chip-group__label" style={{ marginTop: 0 }}>
             Chambres / unités locatives
           </div>
@@ -273,24 +254,12 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
               </>
             )}
           />
-          {!hasRooms && (
-            <p className="muted" style={{ margin: '2px 0 6px', fontSize: 12 }}>
-              Aucun type de chambre ajouté — optionnel. Renseignez-les pour calculer la capacité et
-              alimenter les filtres Explorer.
-            </p>
-          )}
-          <button
-            type="button"
-            className="rep-add"
-            onClick={() => setCreatingRoom(createRoom(rooms.items))}
-          >
-            + Ajouter un type de chambre
-          </button>
-
           {accessibleRoomsCount > 0 && (
             <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
               ♿ {accessibleRoomsCount} chambre(s) PMR — équipements en §10.
             </p>
+          )}
+          </>
           )}
 
           {/* Per-room edit modal — opens when editingRoom is set. Amenities are edited here,
@@ -333,7 +302,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
             Salles séminaire & événementiel
           </div>
           {/* cap_boardroom = salle de CONSEIL (boardroom), pas banquet — le drawer dit « Conseil ». */}
-          {repHeader(MICE_COLS, ['Salle', 'Surface m²', 'Théâtre', 'Classe', 'Conseil', ''])}
+          {meetingRooms.items.length > 0 && repHeader(MICE_COLS, ['Salle', 'Surface m²', 'Théâtre', 'Classe', 'Conseil', ''])}
           <Repeater
             items={meetingRooms.items}
             getKey={(item, index) => item.recordId ?? `meeting-${index}`}
@@ -400,8 +369,10 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
           )}
         </>
       )}
-      </div>
-      )}
+
+      <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
+      <GroupPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+      <PetPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
     </Fs>
   );
 }

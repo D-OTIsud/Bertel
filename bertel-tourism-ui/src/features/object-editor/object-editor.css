@@ -602,6 +602,10 @@
 /* ChipMultiSelect modal trigger: selected chips wrap, « Choisir » button trails on the same row. */
 .object-editor .cms__trigger { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .object-editor .cms__trigger .chip-set { margin: 0; }
+/* Policy summary: compact « value · value » readout + inline « Modifier » link (button → modal). */
+.object-editor .policy-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.object-editor .btn-link { background: none; border: 0; padding: 0; color: var(--acc); font-size: 12px; cursor: pointer; text-decoration: underline; }
+.object-editor .btn-link:hover { opacity: 0.8; }
 .object-editor .rep-add {
   display: inline-flex; align-items: center; gap: 6px;
   align-self: flex-start; margin-top: 6px;

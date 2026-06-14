@@ -91,39 +91,33 @@ describe('BlockHEB — encart Capacité d’accueil (§64)', () => {
     expect(screen.queryByText('Capacité totale calculée')).toBeNull();
   });
 
-  it('shows an empty-state line in the room disclosure when no rooms', () => {
-    mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = [] as never[]; });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Détailler les chambres/i })); });
-    expect(screen.getByText(/Aucun type de chambre/i)).toBeInTheDocument();
-  });
-});
-
-describe('BlockHEB — disclosure repliable des tables (§64)', () => {
-  it('collapses the room/MICE detail by default when there are no rooms', () => {
-    mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = []; });
-    const toggle = screen.getByRole('button', { name: /Détailler les chambres/i });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  it('offers « + Ajouter un descriptif de chambre » and shows no room table when empty (§66)', () => {
+    mountHEB((m) => { m.rooms.items = []; });
+    expect(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })).toBeInTheDocument();
     expect(screen.queryByText('Chambres / unités locatives')).toBeNull();
   });
 
-  it('expands the detail by default when rooms already exist', () => {
+  it('shows the compact room table only when rooms exist (decoupled from salles)', () => {
     mountHEB(); // le fixture par défaut a une chambre
-    expect(screen.getByRole('button', { name: /Détailler les chambres/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Chambres / unités locatives')).toBeInTheDocument();
+    // Salles = bloc séparé, toujours présent
+    expect(screen.getByText('Salles séminaire & événementiel')).toBeInTheDocument();
   });
 });
 
 describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)', () => {
-  it('hosts the pet policy (Animaux) in §06', () => {
-    mountHEB((m) => { m.capacityPolicies.petPolicy.accepted = true; });
+  it('hosts the pet policy in §06 as a separate button → modal (§66)', () => {
+    mountHEB((m) => { m.capacityPolicies.petPolicy = { accepted: null, conditions: '' }; });
+    expect(screen.getByText('Politique animaux')).toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Définir la politique animaux/i })); });
     expect(screen.getByLabelText('Animaux')).toBeInTheDocument();
-    expect(screen.getByText("Politique d'accueil")).toBeInTheDocument();
   });
 
-  it('hosts the group policy (Groupes) in §06', () => {
-    mountHEB();
-    expect(screen.getByText('Groupes')).toBeInTheDocument();
-    expect(screen.getByText('Groupes uniquement')).toBeInTheDocument();
+  it('hosts the group policy in §06 as a separate button → modal (§66)', () => {
+    mountHEB((m) => { m.capacityPolicies.groupPolicy = { minSize: '', maxSize: '', groupOnly: false, notes: '' }; });
+    expect(screen.getByText('Politique de groupe')).toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Définir une politique de groupe/i })); });
+    expect(screen.getByText('Groupes uniquement')).toBeInTheDocument(); // dans la modale
   });
 
   it('hosts the environment picker (Cadre / environnement) in §06 as a modal', () => {
@@ -215,7 +209,7 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     act(() => { fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0]); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     // Add now goes through the modal: open then save.
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
 
@@ -302,14 +296,14 @@ describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => 
     const before = result.current.draft.rooms.items.length;
 
     // Annuler: no row added.
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Annuler' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items).toHaveLength(before);
 
     // Enregistrer: the configured row is appended.
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un type de chambre/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '2' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
@@ -373,7 +367,7 @@ describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)'
     expect(screen.getByText(/Module non applicable au type RES/)).toBeInTheDocument();
     // Regex matcher: the Repeater add button renders "+ {addLabel}" as two text
     // nodes, so an exact-string match can never hit it (and would be vacuous).
-    expect(screen.queryByText(/Ajouter un type de chambre/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ajouter un descriptif de chambre/)).not.toBeInTheDocument();
   });
 
   it('renders the meeting-rooms unavailable notice independently of the rooms area', () => {
@@ -385,6 +379,6 @@ describe('BlockHEB — §46 disabled-with-reason (rooms / meetingRooms modules)'
     expect(screen.getByText(/Module non applicable au type ITI/)).toBeInTheDocument();
     expect(screen.queryByText(/Ajouter une salle/)).not.toBeInTheDocument();
     // The rooms area is gated by its OWN reason — it stays editable here.
-    expect(screen.getByText(/Ajouter un type de chambre/)).toBeInTheDocument();
+    expect(screen.getByText(/Ajouter un descriptif de chambre/)).toBeInTheDocument();
   });
 });

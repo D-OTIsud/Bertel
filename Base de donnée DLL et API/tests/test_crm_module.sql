@@ -86,6 +86,11 @@ DECLARE
   v_root jsonb;        -- la racine telle que renvoyée par un RPC de lecture
   v_dir_count_before int; -- §66 : interaction_count annuaire de actorA AVANT une réponse
   v_dir_count_after  int; -- §66 : interaction_count annuaire de actorA APRÈS la réponse
+  -- Lien tâche↔interaction (demande PO 2026-06-14, §66) :
+  v_linked_task_id uuid; -- tâche liée à la demande racine v_demande
+  v_demande_status text; -- statut de la demande racine (cohérence related_interaction_status)
+  v_int_objA2_id uuid;   -- interaction sur v_objA2 (probe cohérence objet : autre établissement)
+  v_task_jsonb jsonb;    -- la tâche liée telle que renvoyée par un RPC de lecture
 BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
@@ -422,6 +427,78 @@ BEGIN
                WHERE (i->>'id')::uuid = v_demande);
     ASSERT NULLIF(v_root->>'resolved_at','') IS NULL,
            '§66 (rouvrir): status=planned doit effacer resolved_at';
+
+    -- ----- §66. Lien tâche↔interaction (demande PO 2026-06-14) -----
+    -- Statut courant de la demande racine (rouverte ⇒ 'planned') pour la cohérence du _status exposé.
+    v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
+               WHERE (i->>'id')::uuid = v_demande);
+    v_demande_status := v_root->>'status';
+    -- Création d'une tâche sur v_objA liée à la demande racine (même établissement) : doit réussir.
+    v_payload := api.save_crm_task(jsonb_build_object(
+      'object_id', v_objA, 'title', 'Tâche liée à la demande',
+      'related_interaction_id', v_demande));
+    v_linked_task_id := (v_payload->>'id')::uuid;
+    ASSERT v_linked_task_id IS NOT NULL, '§66: tâche liée non créée';
+    -- list_object_crm(objA)->'tasks' expose related_interaction_id + _status de la demande liée.
+    v_task_jsonb := (SELECT t FROM jsonb_array_elements(api.list_object_crm(v_objA)->'tasks') t
+                     WHERE (t->>'id')::uuid = v_linked_task_id);
+    ASSERT v_task_jsonb IS NOT NULL, '§66: la tâche liée doit apparaître dans list_object_crm.tasks';
+    ASSERT (v_task_jsonb->>'related_interaction_id')::uuid = v_demande,
+           '§66: list_object_crm.tasks doit exposer related_interaction_id = la demande liée';
+    ASSERT v_task_jsonb->>'related_interaction_status' = v_demande_status,
+           '§66: related_interaction_status doit refléter le statut de la demande liée';
+    -- list_crm_tasks expose la même paire id+statut.
+    v_task_jsonb := (SELECT t FROM jsonb_array_elements(api.list_crm_tasks()) t
+                     WHERE (t->>'id')::uuid = v_linked_task_id);
+    ASSERT v_task_jsonb IS NOT NULL, '§66: la tâche liée doit apparaître dans list_crm_tasks';
+    ASSERT (v_task_jsonb->>'related_interaction_id')::uuid = v_demande
+           AND v_task_jsonb->>'related_interaction_status' = v_demande_status,
+           '§66: list_crm_tasks doit exposer related_interaction_id + related_interaction_status';
+
+    -- COHÉRENCE OBJET : une interaction d'un AUTRE établissement (v_objA2) ⇒ 22023.
+    v_payload := api.save_crm_interaction(jsonb_build_object(
+      'object_id', v_objA2, 'interaction_type', 'email', 'body', 'Demande objA2'));
+    v_int_objA2_id := (v_payload->>'id')::uuid;
+    ASSERT v_int_objA2_id IS NOT NULL, '§66: interaction sur v_objA2 non créée (fixture cohérence)';
+    -- à la création : tâche sur v_objA liée à une interaction de v_objA2 → 22023.
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_task(jsonb_build_object(
+        'object_id', v_objA, 'title', 'Tâche incohérente',
+        'related_interaction_id', v_int_objA2_id));
+    EXCEPTION WHEN invalid_parameter_value THEN v_denied := true;
+    END;
+    ASSERT v_denied,
+           '§66: lier une interaction d''un autre établissement à la création doit lever 22023';
+    -- à l'UPDATE : re-lier la tâche existante vers l'interaction de v_objA2 → 22023.
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_task(jsonb_build_object(
+        'id', v_linked_task_id, 'related_interaction_id', v_int_objA2_id));
+    EXCEPTION WHEN invalid_parameter_value THEN v_denied := true;
+    END;
+    ASSERT v_denied,
+           '§66: relier (UPDATE) vers une interaction d''un autre établissement doit lever 22023';
+
+    -- INTERACTION INCONNUE → P0002 (uuid aléatoire jamais inséré).
+    v_denied := false;
+    BEGIN
+      PERFORM api.save_crm_task(jsonb_build_object(
+        'object_id', v_objA, 'title', 'Tâche interaction fantôme',
+        'related_interaction_id', gen_random_uuid()));
+    EXCEPTION WHEN no_data_found THEN v_denied := true;
+    END;
+    ASSERT v_denied, '§66: lier une interaction inconnue doit lever P0002 (no_data_found)';
+
+    -- DÉTACHEMENT : clé présente + vide ⇒ le lien redescend à NULL.
+    PERFORM api.save_crm_task(jsonb_build_object('id', v_linked_task_id, 'related_interaction_id', ''));
+    v_task_jsonb := (SELECT t FROM jsonb_array_elements(api.list_object_crm(v_objA)->'tasks') t
+                     WHERE (t->>'id')::uuid = v_linked_task_id);
+    ASSERT NULLIF(v_task_jsonb->>'related_interaction_id','') IS NULL,
+           '§66: related_interaction_id vide doit détacher le lien (NULL)';
+    -- Nettoyage des fixtures liées (la racine reste vivante pour les blocs USER C/USER B).
+    PERFORM api.delete_crm_interaction(v_int_objA2_id);
+
     -- v_demande reste vivante : les blocs USER C / USER B probent l'autorisation de réponse
     -- dessus ; le bloc USER A final la supprime (CASCADE) avant le cycle de contexte v_ctx.
   RESET ROLE;

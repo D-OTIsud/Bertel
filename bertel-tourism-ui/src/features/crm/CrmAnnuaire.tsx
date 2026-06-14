@@ -244,6 +244,15 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
         interactions le suivent à travers tous ses contextes.
       </div>
 
+      {/* Bouton flottant « Nouvel acteur » (rectif PO : action proéminente, toujours à portée).
+          N'apparaît qu'avec la permission (le bouton toolbar reste, désactivé-avec-raison sinon). */}
+      {canWrite && (
+        <button type="button" className="crm-fab" onClick={() => setNewActorOpen(true)} aria-label="Nouvel acteur">
+          <UserPlus size={18} aria-hidden />
+          <span className="crm-fab__label">Nouvel acteur</span>
+        </button>
+      )}
+
       {newActorOpen && canWrite && (
         <CrmActorNewModal
           objectOptions={newActorObjects}

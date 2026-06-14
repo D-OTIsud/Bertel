@@ -180,7 +180,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     crmMock.saveActorChannel.mockResolvedValue('new-channel');
     const onOpenActor = renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     // §66 — le nom affiché n'est PAS éditable : il est composé depuis civilité + prénom + nom.
     expect(within(dialog).queryByLabelText('Nom affiché')).not.toBeInTheDocument();
@@ -221,7 +221,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
   it('Nouvel acteur : nom affiché composé en lecture seule, mis à jour en direct (aucun champ éditable)', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     // Aucun champ « Nom affiché » éditable.
     expect(within(dialog).queryByLabelText('Nom affiché')).not.toBeInTheDocument();
@@ -237,7 +237,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
   it('Nouvel acteur : Créer bloqué tant que nom (composé) + établissement résolu manquent', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     // §66 — on renseigne le NOM (compose le nom affiché) mais l'établissement reste introuvable.
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Test' } });
@@ -251,7 +251,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
   it('Nouvel acteur : e-mail obligatoire (Créer bloqué + raison) tant qu aucun e-mail saisi', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     // §66 — nom (compose le nom affiché).
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Test' } });
@@ -272,7 +272,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     crmMock.saveActorChannel.mockResolvedValue('new-channel');
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Deux Tels' } });
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
@@ -299,7 +299,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     ]);
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Suggéré' } });
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
@@ -324,7 +324,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     crmMock.saveActorChannel.mockResolvedValue('new-channel');
     const onOpenActor = renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /nouvel acteur/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
     const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Photo' } });
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
@@ -341,8 +341,25 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
   it('sans permission : Nouvel acteur désactivé avec raison (no-write-trap)', async () => {
     renderAnnuaire(jest.fn(), false);
     await screen.findByText('Mme Marie Hoarau');
-    const button = screen.getByRole('button', { name: /nouvel acteur/i });
+    const button = screen.getAllByRole('button', { name: /nouvel acteur/i })[0];
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  // Rectif PO : bouton flottant « Nouvel acteur » proéminent — présent avec permission (ouvre le
+  // modal), absent en lecture seule (le bouton toolbar reste, désactivé-avec-raison).
+  it('bouton flottant « Nouvel acteur » : présent + ouvre le modal avec permission', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    const fab = document.querySelector('.crm-fab') as HTMLElement;
+    expect(fab).not.toBeNull();
+    fireEvent.click(fab);
+    expect(await screen.findByRole('dialog', { name: 'Nouvel acteur' })).toBeInTheDocument();
+  });
+
+  it('bouton flottant absent en lecture seule', async () => {
+    renderAnnuaire(jest.fn(), false);
+    await screen.findByText('Mme Marie Hoarau');
+    expect(document.querySelector('.crm-fab')).toBeNull();
   });
 });

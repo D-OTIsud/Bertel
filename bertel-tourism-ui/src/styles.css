@@ -8762,6 +8762,41 @@ a {
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
+/* Bouton flottant « Nouvel acteur » (rectif PO) : action proéminente, flottante en bas à droite,
+   accent plein + ombre élevée. Accent only (garde-fou org-theme). */
+.crm-app .crm-fab {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 50px;
+  padding: 0 22px 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow-m);
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+.crm-app .crm-fab:hover {
+  transform: translateY(-2px);
+  background: var(--accent-deep);
+  box-shadow: 0 12px 28px -6px color-mix(in srgb, var(--accent) 60%, transparent), var(--shadow-m);
+}
+.crm-app .crm-fab:active { transform: translateY(0); }
+.crm-app .crm-fab:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+/* Sur écran étroit : FAB rond, label masqué (l'icône + aria-label suffisent). */
+@media (max-width: 720px) {
+  .crm-app .crm-fab { right: 16px; bottom: 16px; height: 52px; width: 52px; padding: 0; justify-content: center; }
+  .crm-app .crm-fab__label { display: none; }
+}
 .crm-app .crm-search {
   display: flex;
   align-items: center;

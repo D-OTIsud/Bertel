@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Chip, ChipSet } from './index';
 import { EditorModal } from './EditorModal';
 import { Input } from './Input';
+import { fold } from '../../../components/ui/pickers/fold';
 
 interface ChipMultiSelectOption {
   code: string;
@@ -21,18 +22,6 @@ interface ChipMultiSelectProps {
    *  full inline chip list. Use for large lists (>~12 options). Requires `onChange`. */
   modalTitle?: string;
   searchPlaceholder?: string;
-}
-
-/** Diacritic-insensitive lowercase (Réunion env names carry accents). Codepoint loop keeps
- *  the source ASCII-safe (no combining marks written literally in a regex). */
-function fold(value: string): string {
-  let out = '';
-  for (const ch of value.normalize('NFD')) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code >= 0x300 && code <= 0x36f) continue; // U+0300–U+036F combining diacritical marks
-    out += ch;
-  }
-  return out.toLowerCase();
 }
 
 /** Chip-toggle multiselect over a flat option list. Inline by default; a modal picker

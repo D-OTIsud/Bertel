@@ -89,7 +89,10 @@ export default function CrmPage() {
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   const canWriteQuery = useQuery({ queryKey: ['crm-can-write'], queryFn: userCanWriteCrmNotes });
-  const { peers, typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });
+  // syncGlobalStatus: true alimente le badge « X live » du header (présence) ; on garde le hook
+  // pour cet effet + typingUsers, mais on n'affiche plus « X collaborateur(s) en ligne » sous le
+  // titre (doublon du badge header — rectif PO).
+  const { typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });
 
   const canWrite = canWriteQuery.data === true;
   // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).
@@ -145,7 +148,6 @@ export default function CrmPage() {
       <div className="crm-sub">
         <div className="crm-sub__title">
           Relation acteurs
-          <small>{peers.length} collaborateur(s) en ligne</small>
         </div>
         <div className="crm-tabs">
           {tabs.map((tab) => (

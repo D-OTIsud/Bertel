@@ -771,7 +771,7 @@ BEGIN
       'id', ct.id, 'title', ct.title, 'status', ct.status,
       'priority', ct.priority, 'due_at', ct.due_at,
       'actor_id', ct.actor_id, 'actor_name', act.display_name, -- rattachement acteur (rectif PO)
-      -- Lien interaction (§66) : ri2 (alias distinct de la branche interactions) pour le sujet+statut.
+      -- Lien interaction (§66) : ri2 = interaction liée (alias propre à la sous-requête tâches) — sujet+statut.
       'related_interaction_id', ct.related_interaction_id,
       'related_interaction_subject', ri2.subject,
       'related_interaction_status', ri2.status

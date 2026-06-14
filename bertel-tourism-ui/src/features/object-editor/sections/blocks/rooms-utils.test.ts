@@ -1,9 +1,29 @@
 import {
+  computeRoomsCapacitySum,
   computeUnitCount,
+  roomCouchages,
   syncDerivedStructural,
   unitCountMetricCode,
   upsertMaxCapacity,
 } from './rooms-utils';
+
+describe('roomCouchages / computeRoomsCapacitySum', () => {
+  it('uses capacity_total when set', () => {
+    expect(roomCouchages({ capacityTotal: '4', capacityAdults: '2' })).toBe(4);
+  });
+  it('falls back to adults + children when total is empty (the §66 « 0 couchages » bug)', () => {
+    expect(roomCouchages({ capacityTotal: '', capacityAdults: '2', capacityChildren: '1' })).toBe(3);
+    expect(roomCouchages({ capacityTotal: '', capacityAdults: '2' })).toBe(2);
+  });
+  it('sums effective couchages × unités (empty quantity = 1)', () => {
+    expect(
+      computeRoomsCapacitySum([
+        { capacityTotal: '', capacityAdults: '2', quantity: '' }, // 2 × 1
+        { capacityTotal: '3', quantity: '4' }, // 3 × 4
+      ]),
+    ).toBe(14);
+  });
+});
 
 const OPTIONS = [
   { id: 'm-max', code: 'max_capacity', label: 'Capacité max.' },

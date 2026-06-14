@@ -9,12 +9,13 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './block-notes';
-import { EnvironmentChips, GroupPolicyButton, PetPolicyButton } from '../capacity-controls';
+import { EnvironmentChips, GroupPolicyButton, PetPolicyInline } from '../capacity-controls';
 import {
   computeRoomsCapacitySum,
   computeUnitCount,
   nextRoomCode,
   reindexRoomPositions,
+  roomCouchages,
   syncCapacityWithRooms,
   syncDerivedStructural,
   unitCountMetricCode,
@@ -182,7 +183,12 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
           <Input value={maxCapValue} type="number" mono aria-label="Capacité max." onChange={setMaxCapacity} />
         </Field>
         {!rooms.unavailableReason && (
-          <button type="button" className="rep-add" onClick={() => setCreatingRoom(createRoom(rooms.items))}>
+          <button
+            type="button"
+            className="rep-add"
+            style={{ alignSelf: 'flex-end', marginTop: 0 }}
+            onClick={() => setCreatingRoom(createRoom(rooms.items))}
+          >
             + Ajouter un descriptif de chambre
           </button>
         )}
@@ -220,11 +226,13 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
                 {/* Compact summary — full editing is done inside RoomEditModal */}
                 <div>
                   <span style={{ fontWeight: 600 }}>{item.name || '—'}</span>
-                  {item.viewTypeLabel && (
-                    <span style={{ color: 'var(--ink-4)', marginLeft: 6, fontSize: 12 }}>{item.viewTypeLabel}</span>
+                  {(item.roomTypeLabel || item.viewTypeLabel) && (
+                    <span style={{ color: 'var(--ink-4)', marginLeft: 6, fontSize: 12 }}>
+                      {[item.roomTypeLabel, item.viewTypeLabel].filter(Boolean).join(' · ')}
+                    </span>
                   )}
                 </div>
-                <span>{item.capacityTotal || item.capacityAdults || '—'}</span>
+                <span>{roomCouchages(item) || '—'}</span>
                 <span>{item.sizeSqm ? `${item.sizeSqm} m²` : '—'}</span>
                 <span>{item.quantity || '—'}</span>
                 <span>{item.basePrice ? `${item.basePrice} €` : '—'}</span>
@@ -254,6 +262,13 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
               </>
             )}
           />
+          <button
+            type="button"
+            className="rep-add"
+            onClick={() => setCreatingRoom(createRoom(rooms.items))}
+          >
+            + Ajouter une chambre
+          </button>
           {accessibleRoomsCount > 0 && (
             <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
               ♿ {accessibleRoomsCount} chambre(s) PMR — équipements en §10.
@@ -372,7 +387,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
 
       <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
       <GroupPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
-      <PetPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+      <PetPolicyInline capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
     </Fs>
   );
 }

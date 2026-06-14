@@ -143,10 +143,10 @@ export function GroupPolicyButton({
 }
 
 /**
- * Politique d'accueil des animaux — bouton « + Définir la politique animaux » → modale staged.
- * Tri-état : « non renseigné » = pas de ligne DB (jamais publié « non acceptés » par défaut).
+ * Politique d'accueil des animaux — INLINE (PO §66 : pas besoin de modale, c'est un seul
+ * champ tri-état). « Non renseigné » = pas de ligne DB (jamais publié « non acceptés » par défaut).
  */
-export function PetPolicyButton({
+export function PetPolicyInline({
   capacity,
   onChange,
 }: {
@@ -154,59 +154,39 @@ export function PetPolicyButton({
   onChange: (next: ObjectWorkspaceCapacityPoliciesModule) => void;
 }) {
   const pp = capacity.petPolicy;
-  const isSet = pp.accepted !== null;
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(pp);
-
-  const summary = `${pp.accepted ? 'Animaux acceptés' : 'Animaux non acceptés'}${hasText(pp.conditions) ? ' · conditions' : ''}`;
-
   return (
     <>
       <div className="chip-group__label" style={{ marginTop: 16 }}>
         Politique animaux
       </div>
-      <PolicyTrigger
-        isSet={isSet}
-        summary={summary}
-        addLabel="Définir la politique animaux"
-        onOpen={() => {
-          setDraft(pp);
-          setOpen(true);
-        }}
-      />
-      <EditorModal
-        open={open}
-        title="Politique d'accueil des animaux"
-        saveLabel="Valider"
-        onClose={() => setOpen(false)}
-        onSave={() => {
-          onChange({ ...capacity, petPolicy: draft });
-          setOpen(false);
-        }}
-      >
-        <Field label="Animaux">
-          <Select
-            value={draft.accepted === null ? '' : draft.accepted ? 'accepted' : 'refused'}
-            options={[
-              { v: '', l: '— Non renseigné —' },
-              { v: 'accepted', l: 'Acceptés' },
-              { v: 'refused', l: 'Non acceptés' },
-            ]}
-            aria-label="Animaux"
-            onChange={(next) => setDraft({ ...draft, accepted: next === '' ? null : next === 'accepted' })}
-          />
-        </Field>
-        {draft.accepted !== null && (
-          <Field label="Conditions d'accueil des animaux">
-            <Textarea
-              aria-label="Conditions d'accueil des animaux"
-              value={draft.conditions}
-              rows={3}
-              onChange={(conditions) => setDraft({ ...draft, conditions })}
+      <div className="grid-3">
+        <div>
+          <Field label="Animaux">
+            <Select
+              value={pp.accepted === null ? '' : pp.accepted ? 'accepted' : 'refused'}
+              options={[
+                { v: '', l: '— Non renseigné —' },
+                { v: 'accepted', l: 'Acceptés' },
+                { v: 'refused', l: 'Non acceptés' },
+              ]}
+              aria-label="Animaux"
+              onChange={(next) =>
+                onChange({ ...capacity, petPolicy: { ...pp, accepted: next === '' ? null : next === 'accepted' } })
+              }
             />
           </Field>
-        )}
-      </EditorModal>
+          {pp.accepted !== null && (
+            <Field label="Conditions d'accueil des animaux">
+              <Textarea
+                aria-label="Conditions d'accueil des animaux"
+                value={pp.conditions}
+                rows={3}
+                onChange={(conditions) => onChange({ ...capacity, petPolicy: { ...pp, conditions } })}
+              />
+            </Field>
+          )}
+        </div>
+      </div>
     </>
   );
 }

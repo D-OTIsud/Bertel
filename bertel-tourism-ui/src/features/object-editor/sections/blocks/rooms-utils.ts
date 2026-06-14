@@ -24,15 +24,27 @@ export function reindexRoomPositions<T extends { position: string }>(items: T[])
   ));
 }
 
-type RoomCapacitySlice = { capacityTotal: string; quantity: string };
+type RoomCouchagesSlice = { capacityTotal: string; capacityAdults?: string; capacityChildren?: string };
+type RoomCapacitySlice = RoomCouchagesSlice & { quantity: string };
+
+/**
+ * Couchages effectifs d'une unité — `capacity_total` s'il est saisi, sinon repli sur
+ * adultes + enfants. DOIT rester aligné avec la colonne « Couchages » affichée (sinon
+ * le total calculé diverge de ce que l'utilisateur voit ligne par ligne).
+ */
+export function roomCouchages(item: RoomCouchagesSlice): number {
+  const total = Number.parseInt(item.capacityTotal, 10);
+  if (Number.isFinite(total) && total > 0) {
+    return total;
+  }
+  const adults = Number.parseInt(item.capacityAdults ?? '', 10) || 0;
+  const children = Number.parseInt(item.capacityChildren ?? '', 10) || 0;
+  return adults + children;
+}
 
 /** Object-level accommodation capacity = Σ couchages × unités (empty quantity counts as 1 unit). */
 export function computeRoomsCapacitySum(items: RoomCapacitySlice[]): number {
-  return items.reduce((sum, item) => {
-    const couchages = Number.parseInt(item.capacityTotal, 10) || 0;
-    const unites = Number.parseInt(item.quantity, 10) || 1;
-    return sum + couchages * unites;
-  }, 0);
+  return items.reduce((sum, item) => sum + roomCouchages(item) * (Number.parseInt(item.quantity, 10) || 1), 0);
 }
 
 type CapacityModuleSlice = {

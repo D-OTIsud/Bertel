@@ -5,39 +5,32 @@ import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
 describe('SectionCapacity', () => {
   // PO 2026-06-11: tri-state pet policy — « non renseigné » (no DB row) must never
-  // silently become a public « Animaux non acceptés ». Édité via une modale staged (§66).
-  it('edits the pet policy via the modal as a tri-state, applied on Valider', () => {
+  // silently become a public « Animaux non acceptés ». INLINE (§66 : pas de modale pour les animaux).
+  it('edits the pet policy inline as a tri-state (non renseigné / acceptés / non acceptés)', () => {
     const modules = fullModulesFixture();
     modules.capacityPolicies.petPolicy = { accepted: null, conditions: '' };
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<SectionCapacity editor={result.current} permissions={allowAll} />);
 
-    // Unset ⇒ a « Définir la politique animaux » button, no inline form.
-    expect(screen.getByRole('button', { name: /Définir la politique animaux/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Animaux')).toBeNull();
-
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Définir la politique animaux/i })); });
-    // Modal open: unset state honest, conditions hidden.
+    // Unset state renders honestly and hides the conditions field.
     expect(screen.getByDisplayValue('— Non renseigné —')).toBeInTheDocument();
     expect(screen.queryByLabelText("Conditions d'accueil des animaux")).not.toBeInTheDocument();
 
     act(() => { fireEvent.change(screen.getByLabelText('Animaux'), { target: { value: 'accepted' } }); });
-    // Staged: the module is NOT mutated until Valider.
-    expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBeNull();
+    view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBe(true);
     act(() => {
       fireEvent.change(screen.getByLabelText("Conditions d'accueil des animaux"), {
         target: { value: 'Petits chiens tenus en laisse' },
       });
     });
+    expect(result.current.draft.capacityPolicies.petPolicy.conditions).toBe('Petits chiens tenus en laisse');
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Animaux'), { target: { value: 'refused' } }); });
     view.rerender(<SectionCapacity editor={result.current} permissions={allowAll} />);
-    expect(result.current.draft.capacityPolicies.petPolicy).toMatchObject({
-      accepted: true,
-      conditions: 'Petits chiens tenus en laisse',
-    });
+    expect(result.current.draft.capacityPolicies.petPolicy.accepted).toBe(false);
 
-    // Group policy also lives in §07 (its own button).
+    // Group policy stays in §07 too (its own button → modal).
     expect(screen.getByText('Politique de groupe')).toBeInTheDocument();
   });
 

@@ -106,11 +106,10 @@ describe('BlockHEB — encart Capacité d’accueil (§64)', () => {
 });
 
 describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)', () => {
-  it('hosts the pet policy in §06 as a separate button → modal (§66)', () => {
+  it('hosts the pet policy INLINE in §06 (§66 — pas de modale pour les animaux)', () => {
     mountHEB((m) => { m.capacityPolicies.petPolicy = { accepted: null, conditions: '' }; });
     expect(screen.getByText('Politique animaux')).toBeInTheDocument();
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Définir la politique animaux/i })); });
-    expect(screen.getByLabelText('Animaux')).toBeInTheDocument();
+    expect(screen.getByLabelText('Animaux')).toBeInTheDocument(); // select directement visible, sans bouton
   });
 
   it('hosts the group policy in §06 as a separate button → modal (§66)', () => {

@@ -101,7 +101,6 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   // sans filtre, juste le global (pas de fraction redondante Y / Y).
   const globalActorCount = baseDirectoryQuery.data?.length ?? entries.length;
   const followedActorsValue = hasFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
-  const followedActorsHint = hasFilters ? 'pour le filtre sélectionné' : 'personnes & organisations';
 
   if (directoryQuery.isLoading) {
     return <div className="crm-loading">Chargement de l&apos;annuaire…</div>;
@@ -114,10 +113,12 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
     <div className="crm-body">
       <div className="crm-kpis">
         {/* Peps PO point 1 : accents KPI distincts (teal / orange / bleu) — fini le tout-teal.
-            Rectif PO v5 point 2 : « Acteurs suivis » = filtré / global sous filtre. */}
-        <Kpi label="Acteurs suivis" value={followedActorsValue} hint={followedActorsHint} accent="teal" />
-        <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} hint="appels, e-mails, visites terrain, notes" accent="orange" />
-        <Kpi label="Établissements liés" value={String(totalObjects)} hint="contextes de la relation" accent="blue" />
+            Rectif PO v5 point 2 : « Acteurs suivis » = filtré / global sous filtre.
+            Sans légende (rectif PO) : la valeur (« X / Y », chiffres) + la note « filtres appliqués »
+            se suffisent ; les captions doublonnaient. */}
+        <Kpi label="Acteurs suivis" value={followedActorsValue} accent="teal" />
+        <Kpi label={interactionsKpiLabel} value={String(totalInteractions)} accent="orange" />
+        <Kpi label="Établissements liés" value={String(totalObjects)} accent="blue" />
       </div>
 
       <div className="crm-toolbar">

@@ -141,8 +141,8 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(screen.getByText(/filtres appliqués aux compteurs/i)).toBeInTheDocument();
     // Rectif PO v5 point 2 : « Acteurs suivis » devient « filtré / global » (1 entrée filtrée / 3).
     const followedCard = screen.getByText('Acteurs suivis').closest('.crm-kpi') as HTMLElement;
+    // La fraction « 1 / 3 » porte à elle seule l'info filtré/global (légendes KPI retirées — rectif PO).
     await waitFor(() => expect(within(followedCard).getByText('1 / 3')).toBeInTheDocument());
-    expect(within(followedCard).getByText('pour le filtre sélectionné')).toBeInTheDocument();
   });
 
   // Rectif PO v5 point 2 : sans filtre, pas de fraction redondante — juste le global.

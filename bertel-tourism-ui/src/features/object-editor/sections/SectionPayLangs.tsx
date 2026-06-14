@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Fs } from '../primitives';
+import { Chip, ChipMultiSelect, ChipSet, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 
 function toggleCode(values: string[], code: string) {
@@ -10,27 +10,25 @@ export function SectionPayLangs({ editor, folded }: SectionProps) {
   const paymentCount = characteristics.selectedPaymentCodes.length;
   const langCount = characteristics.selectedLanguages.length;
 
-  function toggleLanguage(code: string) {
-    const existing = characteristics.selectedLanguages.find((item) => item.code === code);
-    const option = characteristics.languageOptions.find((item) => item.code === code);
+  /** Reconcile the language selection from a flat code list (modal picker) : keep the existing
+   *  row (and its maîtrise level) for codes still present, seed a default level for new ones. */
+  function setLanguages(codes: string[]) {
     const level = characteristics.languageLevelOptions[0];
     editor.replaceModule('characteristics', {
       ...characteristics,
-      selectedLanguages: existing
-        ? characteristics.selectedLanguages.filter((item) => item.code !== code)
-        : option
-          ? [
-              ...characteristics.selectedLanguages,
-              {
-                languageId: option.id,
-                code: option.code,
-                label: option.label,
-                levelId: level?.id ?? '',
-                levelCode: level?.code ?? '',
-                levelLabel: level?.label ?? '',
-              },
-            ]
-          : characteristics.selectedLanguages,
+      selectedLanguages: codes.map((code) => {
+        const existing = characteristics.selectedLanguages.find((item) => item.code === code);
+        if (existing) return existing;
+        const option = characteristics.languageOptions.find((item) => item.code === code);
+        return {
+          languageId: option?.id ?? '',
+          code,
+          label: option?.label ?? code,
+          levelId: level?.id ?? '',
+          levelCode: level?.code ?? '',
+          levelLabel: level?.label ?? '',
+        };
+      }),
     });
   }
 
@@ -74,16 +72,13 @@ export function SectionPayLangs({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 14 }}>
         Langues parlées
       </div>
-      <ChipSet>
-        {characteristics.languageOptions.map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedLanguages.some((item) => item.code === option.code)}
-            onClick={() => toggleLanguage(option.code)}
-          />
-        ))}
-      </ChipSet>
+      <ChipMultiSelect
+        options={characteristics.languageOptions}
+        selected={characteristics.selectedLanguages.map((item) => item.code)}
+        modalTitle="Choisir les langues parlées"
+        searchPlaceholder="Rechercher une langue…"
+        onChange={setLanguages}
+      />
     </Fs>
   );
 }

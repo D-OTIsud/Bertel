@@ -157,8 +157,9 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     // Contexte non éditable : l'objet courant est affiché en statique.
     expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
     expect(within(dialog).queryByLabelText('Contexte')).not.toBeInTheDocument();
-    // Acteur optionnel parmi les acteurs liés.
-    fireEvent.change(within(dialog).getByLabelText('Acteur'), { target: { value: 'actor-2' } });
+    // Acteur optionnel parmi les acteurs liés (SearchSelect : ouvrir puis cliquer l'option).
+    fireEvent.click(within(dialog).getByRole('combobox', { name: 'Acteur' }));
+    fireEvent.click(within(dialog).getByRole('option', { name: 'SARL Basalte & Lagon' }));
     fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point annuel.' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
     await waitFor(() =>

@@ -8,6 +8,13 @@ jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
+// Les champs longs (Contexte / Sujet / Acteur / Établissement) sont des SearchSelect
+// (combobox + popover), plus des <select> natifs : on ouvre puis on clique l'option.
+function pickInDialog(dialog: HTMLElement, name: string | RegExp, optionName: string | RegExp) {
+  fireEvent.click(within(dialog).getByRole('combobox', { name }));
+  fireEvent.click(within(dialog).getByRole('option', { name: optionName }));
+}
+
 const snapshot: ActorCrmSnapshot = {
   actor: { id: 'actor-1', displayName: 'Mme Marie Hoarau', gender: 'Mme', firstName: 'Marie', lastName: 'Hoarau', photoUrl: null },
   objects: [
@@ -268,8 +275,8 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
     fireEvent.click(within(dialog).getByRole('button', { name: /e-mail/i }));
-    fireEvent.change(within(dialog).getByLabelText('Contexte'), { target: { value: 'obj-2' } });
-    fireEvent.change(within(dialog).getByLabelText('Sujet normalisé'), { target: { value: 'demande_de_visite' } });
+    pickInDialog(dialog, 'Contexte', 'Le Comptoir des Epices');
+    pickInDialog(dialog, 'Sujet normalisé', 'Demande de visite');
     fireEvent.change(within(dialog).getByLabelText('Sentiment'), { target: { value: 'positif' } });
     fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Demande de RDV photo.' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
@@ -311,7 +318,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(within(dialog).queryByRole('option', { name: /général/i })).not.toBeInTheDocument();
     fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point établissement.' } });
     expect(within(dialog).getByRole('button', { name: /consigner/i })).toBeDisabled();
-    fireEvent.change(within(dialog).getByLabelText('Contexte'), { target: { value: 'obj-1' } });
+    pickInDialog(dialog, 'Contexte', 'Hotel Basalte & Lagon');
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalled());
     expect(crmMock.saveCrmInteraction.mock.calls[0][0]).toEqual({
@@ -329,7 +336,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
     // §66 : un établissement est requis pour pouvoir consigner.
-    fireEvent.change(within(dialog).getByLabelText('Contexte'), { target: { value: 'obj-1' } });
+    pickInDialog(dialog, 'Contexte', 'Hotel Basalte & Lagon');
     fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Texte conservé' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
     expect(await within(dialog).findByText(/refus RLS/)).toBeInTheDocument();
@@ -344,7 +351,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer les photos' } });
-    fireEvent.change(within(dialog).getByLabelText('Établissement'), { target: { value: 'obj-2' } });
+    pickInDialog(dialog, 'Établissement', 'Le Comptoir des Epices');
     fireEvent.change(within(dialog).getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
     // Assignation par défaut = utilisateur courant (usr-local-marie) ; attendre la liste chargée.
     await within(dialog).findByLabelText('Attribuer à');
@@ -367,7 +374,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
-    fireEvent.change(within(dialog).getByLabelText('Établissement'), { target: { value: 'obj-1' } });
+    pickInDialog(dialog, 'Établissement', 'Hotel Basalte & Lagon');
     fireEvent.change(await within(dialog).findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
@@ -385,8 +392,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
-    // Pré-coché : pas besoin de choisir l'établissement, juste le titre.
-    expect(within(dialog).getByLabelText('Établissement')).toHaveValue('obj-1');
+    // Pré-coché : pas besoin de choisir l'établissement, juste le titre (le déclencheur
+    // du SearchSelect affiche le nom de l'unique établissement).
+    expect(within(dialog).getByRole('combobox', { name: 'Établissement' })).toHaveTextContent('Hotel Basalte & Lagon');
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>

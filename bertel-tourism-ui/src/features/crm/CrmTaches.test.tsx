@@ -9,6 +9,12 @@ jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
+// L'établissement est un SearchSelect (combobox + popover) : ouvrir puis cliquer l'option.
+function pickEstablishment(optionName: string | RegExp) {
+  fireEvent.click(screen.getByRole('combobox', { name: 'Établissement' }));
+  fireEvent.click(screen.getByRole('option', { name: optionName }));
+}
+
 const DAY_MS = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).toISOString();
 
@@ -206,7 +212,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer les photos' } });
-    fireEvent.change(screen.getByLabelText('Établissement'), { target: { value: 'Hotel Basalte & Lagon' } });
+    pickEstablishment('Hotel Basalte & Lagon');
     fireEvent.change(screen.getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
     // Attendre le chargement des assignables (le owner par défaut en dépend).
     await screen.findByLabelText('Attribuer à');
@@ -228,7 +234,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
-    fireEvent.change(screen.getByLabelText('Établissement'), { target: { value: 'Hotel Basalte & Lagon' } });
+    pickEstablishment('Hotel Basalte & Lagon');
     // Le select n'apparaît qu'une fois la liste des assignables chargée (async).
     fireEvent.change(await screen.findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
     fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
@@ -237,14 +243,17 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     );
   });
 
-  it('établissement non résolu : création bloquée avec raison visible', async () => {
+  // §66 — l'établissement est REQUIS : « Créer » reste bloqué tant qu'aucun établissement
+  // n'est choisi (le SearchSelect ne propose que des options valides ⇒ plus de saisie libre
+  // « introuvable »). Choisir un établissement débloque.
+  it('établissement requis : création bloquée tant qu aucun établissement n est choisi', async () => {
     renderTaches();
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Tâche orpheline' } });
-    fireEvent.change(screen.getByLabelText('Établissement'), { target: { value: 'Inconnu au bataillon' } });
     expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled();
-    expect(screen.getByText(/introuvable dans l.annuaire/i)).toBeInTheDocument();
+    pickEstablishment('Hotel Basalte & Lagon');
+    expect(screen.getByRole('button', { name: 'Créer' })).toBeEnabled();
   });
 
   // Assertion verrouillée par revue : un échec d'écriture est VISIBLE.

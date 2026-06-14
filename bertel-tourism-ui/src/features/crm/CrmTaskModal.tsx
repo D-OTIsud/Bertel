@@ -1,13 +1,14 @@
 "use client";
 
 // Modal « Nouvelle tâche » (§61 rectif PO point 3 + assignation PO point 4) — deux points
-// d'entrée :
+// d'entrée. L'établissement se choisit dans un SearchSelect (picker maison : combobox +
+// recherche), qui ne propose que des options valides ⇒ résolution par objectId, plus de
+// saisie libre nom → id. Le prop `picker` ne gouverne plus que l'état initial :
 // - fiche acteur (picker='select') : établissement REQUIS parmi les établissements de
 //   l'acteur (la tâche est ancrée objet) ; la tâche est rattachée à l'acteur (actorId).
-//   Si l'acteur n'a QU'UN établissement, il est pré-coché (PO point 3).
-// - onglet Tâches (picker='datalist') : résolution nom → id sur la datalist annuaire
-//   (comportement historique conservé), sans rattachement acteur (pas d'auto-sélection :
-//   datalist sur tout l'annuaire).
+//   Si l'acteur n'a QU'UN établissement, il est pré-sélectionné (PO point 3).
+// - onglet Tâches (picker='datalist') : annuaire complet, sans rattachement acteur et SANS
+//   pré-sélection (le choix reste explicite parmi tout l'annuaire).
 // Les DEUX entrées portent un sélecteur « Attribuer à » (PO point 4) — défaut = utilisateur
 // courant ; l'id choisi part en `owner` (validé serveur, membre de l'ORG).
 // Toujours ouvert sous gating write_crm_notes (boutons d'ouverture désactivés sinon).
@@ -17,6 +18,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
+import { SearchSelect } from '../../components/ui/pickers';
 
 export function CrmTaskModal({
   actorId,
@@ -43,17 +45,15 @@ export function CrmTaskModal({
   const [objectId, setObjectId] = useState(() =>
     picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '',
   );
-  const [objectName, setObjectName] = useState(''); // mode datalist
   const [dueAt, setDueAt] = useState('');
   // Assignation PO point 4 : défaut = utilisateur courant tant qu'il n'a pas choisi ('' →
   // résolu au submit pour préférer l'utilisateur courant s'il est dans la liste, sinon le
   // 1er option ; liste vide ⇒ owner omis, le backend retombe sur self).
   const [owner, setOwner] = useState<string>('');
 
-  const resolvedObject =
-    picker === 'select'
-      ? objectOptions.find((object) => object.objectId === objectId) ?? null
-      : objectOptions.find((object) => object.objectName.trim().toLowerCase() === objectName.trim().toLowerCase()) ?? null;
+  // Les deux modes (fiche acteur / onglet Tâches) résolvent désormais par objectId : le
+  // SearchSelect ne rend que des options valides (plus de saisie libre nom → id fragile).
+  const resolvedObject = objectOptions.find((object) => object.objectId === objectId) ?? null;
 
   // Owner effectif : choix explicite > utilisateur courant (s'il figure dans la liste) >
   // 1er assignable > aucun (omis). Jamais bloquant.
@@ -108,40 +108,15 @@ export function CrmTaskModal({
 
       <label className="crm-field">
         Établissement
-        {picker === 'select' ? (
-          <select
-            className="crm-select"
-            aria-label="Établissement"
-            value={objectId}
-            onChange={(event) => setObjectId(event.target.value)}
-          >
-            <option value="">— Choisir un établissement —</option>
-            {objectOptions.map((object) => (
-              <option key={object.objectId} value={object.objectId}>
-                {object.objectName}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <>
-            <input
-              aria-label="Établissement"
-              placeholder="Établissement (nom exact)"
-              list="crm-task-modal-objects"
-              value={objectName}
-              onChange={(event) => setObjectName(event.target.value)}
-            />
-            <datalist id="crm-task-modal-objects">
-              {objectOptions.map((object) => (
-                <option key={object.objectId} value={object.objectName} />
-              ))}
-            </datalist>
-          </>
-        )}
+        <SearchSelect
+          aria-label="Établissement"
+          value={objectId}
+          options={objectOptions.map((object) => ({ code: object.objectId, label: object.objectName }))}
+          onChange={setObjectId}
+          placeholder="— Choisir un établissement —"
+          searchPlaceholder="Rechercher un établissement…"
+        />
       </label>
-      {picker === 'datalist' && objectName.trim() !== '' && !resolvedObject && (
-        <p className="crm-field__hint">Établissement introuvable dans l&apos;annuaire — choisissez un nom de la liste.</p>
-      )}
 
       <label className="crm-field">
         Échéance

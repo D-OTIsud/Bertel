@@ -93,6 +93,17 @@
 --    {actor_id, object_id, role_code? (défaut 'operator')} ; gate = arme objet user_can_write_crm
 --    (gérer le CRM de l'établissement) ; is_primary dérivé (uq_actor_object_role_primary) ;
 --    idempotent ON CONFLICT (actor_id, object_id, role_id) DO NOTHING ⇒ retour {linked=FOUND}.
+-- 6f) LIEN TÂCHE↔INTERACTION (demande PO 2026-06-14, §66) : la colonne
+--    crm_task.related_interaction_id (FK crm_interaction ON DELETE SET NULL) existait mais
+--    n'était ni écrite ni lue. save_crm_task l'accepte désormais en partiel « clé présente ⇒
+--    écrite » (clé+vide = détachement) à l'INSERT comme à l'UPDATE ; quand elle est posée
+--    (non-NULL), l'interaction doit EXISTER (P0002 sinon) ET porter le MÊME object_id que la
+--    tâche — effective = COALESCE(payload.object_id, existant) — sous peine de 22023 (cohérence
+--    établissement : partager l'objet garantit le droit d'écrire l'interaction ; une interaction
+--    générale/acteur-seul à object NULL ne peut donc pas être liée). Exposition : list_crm_tasks
+--    et la branche tâches de list_object_crm renvoient related_interaction_id + _subject + _status
+--    (l'UI propose de clore l'interaction liée quand la tâche est close). Ajouts additifs (pas de
+--    changement de signature, pas de DROP/REVOKE/GRANT).
 --
 -- PREREQUISITES : schema_unified.sql (tables crm_*), rls_policies.sql (user_has_permission,
 -- is_platform_superuser, current_user_admin_rank). seeds_data.sql est édité dans la MÊME
@@ -548,7 +559,9 @@ BEGIN
       'status', ct.status, 'priority', ct.priority,
       'due_at', ct.due_at, 'created_at', ct.created_at,
       'owner_name', p.display_name,
-      'related_interaction_subject', ri.subject
+      'related_interaction_id', ct.related_interaction_id,
+      'related_interaction_subject', ri.subject,
+      'related_interaction_status', ri.status
     ) AS item
     FROM crm_task ct
     JOIN object o ON o.id = ct.object_id
@@ -576,6 +589,11 @@ DECLARE
   v_actor_id uuid := NULLIF(p_payload->>'actor_id','')::uuid;
   -- Assignation (demande PO 2026-06-12) : owner sélectionnable → auth.users (ON DELETE SET NULL).
   v_owner uuid := NULLIF(p_payload->>'owner','')::uuid;
+  -- Lien tâche↔interaction (demande PO 2026-06-14, §66) : crm_task.related_interaction_id
+  -- (ON DELETE SET NULL). Une tâche créée depuis une interaction la référence ; à la clôture
+  -- de la tâche l'UI propose de clore aussi l'interaction liée.
+  v_related_interaction_id uuid := NULLIF(p_payload->>'related_interaction_id','')::uuid;
+  v_rel_object text; -- object_id de l'interaction liée (cohérence : même établissement que la tâche)
   v_existing_object text;
   -- Défauts 'todo'/'medium' appliqués au seul INSERT ; sur UPDATE la valeur brute est castée
   -- (vide/invalide ⇒ 22P02, cohérent avec save_crm_interaction — pas de reset silencieux).
@@ -613,6 +631,20 @@ BEGIN
        AND NOT api.user_can_assign_crm(v_owner) THEN
       RAISE EXCEPTION 'Assignataire hors de votre organisation' USING ERRCODE = '22023';
     END IF;
+    -- Lien interaction (§66) : clé présente + NULL/vide = détachement (pas de validation) ;
+    -- non-NULL = l'interaction doit exister ET porter le MÊME object_id que la tâche (effective
+    -- = COALESCE(v_object_id, v_existing_object)). Partager l'objet garantit que le caller peut
+    -- aussi écrire l'interaction ; une interaction générale/acteur-seul (object NULL) ne peut donc
+    -- pas être liée — conforme au modèle.
+    IF p_payload ? 'related_interaction_id' AND v_related_interaction_id IS NOT NULL THEN
+      SELECT object_id INTO v_rel_object FROM crm_interaction WHERE id = v_related_interaction_id;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'interaction liée inconnue: %', v_related_interaction_id USING ERRCODE = 'P0002';
+      END IF;
+      IF v_rel_object IS DISTINCT FROM COALESCE(v_object_id, v_existing_object) THEN
+        RAISE EXCEPTION 'interaction liée d''un autre établissement' USING ERRCODE = '22023';
+      END IF;
+    END IF;
 
     UPDATE crm_task SET
       object_id   = COALESCE(v_object_id, object_id),
@@ -623,6 +655,7 @@ BEGIN
       status      = CASE WHEN p_payload ? 'status' THEN (p_payload->>'status')::crm_task_status ELSE status END,
       priority    = CASE WHEN p_payload ? 'priority' THEN (p_payload->>'priority')::crm_task_priority ELSE priority END,
       due_at      = CASE WHEN p_payload ? 'due_at' THEN NULLIF(p_payload->>'due_at','')::timestamptz ELSE due_at END,
+      related_interaction_id = CASE WHEN p_payload ? 'related_interaction_id' THEN v_related_interaction_id ELSE related_interaction_id END,
       updated_at  = NOW()
     WHERE id = v_id;
     RETURN jsonb_build_object('id', v_id);
@@ -652,16 +685,27 @@ BEGIN
   IF v_owner IS NOT NULL AND NOT api.user_can_assign_crm(v_owner) THEN
     RAISE EXCEPTION 'Assignataire hors de votre organisation' USING ERRCODE = '22023';
   END IF;
+  -- Lien interaction (§66) : optionnel (« créer une tâche depuis l'interaction ») ; mêmes
+  -- validations qu'à l'UPDATE — l'effective object à l'INSERT est v_object_id.
+  IF v_related_interaction_id IS NOT NULL THEN
+    SELECT object_id INTO v_rel_object FROM crm_interaction WHERE id = v_related_interaction_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'interaction liée inconnue: %', v_related_interaction_id USING ERRCODE = 'P0002';
+    END IF;
+    IF v_rel_object IS DISTINCT FROM v_object_id THEN
+      RAISE EXCEPTION 'interaction liée d''un autre établissement' USING ERRCODE = '22023';
+    END IF;
+  END IF;
 
   v_id := gen_random_uuid();
   v_status := COALESCE(NULLIF(p_payload->>'status',''),'todo')::crm_task_status;
   v_priority := COALESCE(NULLIF(p_payload->>'priority',''),'medium')::crm_task_priority;
-  INSERT INTO crm_task (id, object_id, actor_id, title, description, status, priority, due_at, owner)
+  INSERT INTO crm_task (id, object_id, actor_id, title, description, status, priority, due_at, owner, related_interaction_id)
   VALUES (v_id, v_object_id, v_actor_id, v_title,
           NULLIF(p_payload->>'description',''),
           v_status, v_priority,
           NULLIF(p_payload->>'due_at','')::timestamptz,
-          COALESCE(v_owner, auth.uid()));
+          COALESCE(v_owner, auth.uid()), v_related_interaction_id);
   RETURN jsonb_build_object('id', v_id);
 END;
 $$;
@@ -726,10 +770,15 @@ BEGIN
     SELECT jsonb_build_object(
       'id', ct.id, 'title', ct.title, 'status', ct.status,
       'priority', ct.priority, 'due_at', ct.due_at,
-      'actor_id', ct.actor_id, 'actor_name', act.display_name -- rattachement acteur (rectif PO)
+      'actor_id', ct.actor_id, 'actor_name', act.display_name, -- rattachement acteur (rectif PO)
+      -- Lien interaction (§66) : ri2 (alias distinct de la branche interactions) pour le sujet+statut.
+      'related_interaction_id', ct.related_interaction_id,
+      'related_interaction_subject', ri2.subject,
+      'related_interaction_status', ri2.status
     ) AS item
     FROM crm_task ct
     LEFT JOIN actor act ON act.id = ct.actor_id
+    LEFT JOIN crm_interaction ri2 ON ri2.id = ct.related_interaction_id
     WHERE ct.object_id = p_object_id
     ORDER BY ct.due_at ASC NULLS LAST
   ) qt;

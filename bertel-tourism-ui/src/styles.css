@@ -10178,3 +10178,48 @@ a {
 @media (max-width: 420px) {
   .crm-app .crm-actor-kpis { grid-template-columns: 1fr; }
 }
+
+/* ------------------------------------------------------------------ *
+ * Shared list pickers (SearchSelect — single-select popover).
+ * Scope-neutral so the SAME picker renders identically in .crm-app and
+ * .object-editor. Tokens only — no hard-coded hues. See
+ * docs/superpowers/specs/2026-06-14-unified-list-pickers-design.md.
+ * ------------------------------------------------------------------ */
+.picker { position: relative; }
+.picker__trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; min-height: 34px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); color: var(--ink);
+  font-size: 13px; font-weight: 500; text-align: left; cursor: pointer;
+}
+.picker__trigger:hover { border-color: var(--line-strong); }
+.picker__trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.picker__trigger.is-empty .picker__trigger-label { color: var(--ink-4); }
+.picker__trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker__chevron { flex: none; font-size: 10px; color: var(--ink-4); }
+
+.picker__panel {
+  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; right: 0;
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 280px; padding: 8px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); box-shadow: var(--shadow-m, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+.picker__search {
+  width: 100%; height: 32px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-tint); color: var(--ink); font-size: 13px;
+}
+.picker__search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.picker__options { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.picker__option {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink-2);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.picker__option:hover,
+.picker__option.is-active { background: var(--surface-2); color: var(--ink); }
+.picker__option.is-on { background: var(--accent); color: #fff; }
+.picker__empty { margin: 4px 2px; font-size: 12px; color: var(--ink-4); }

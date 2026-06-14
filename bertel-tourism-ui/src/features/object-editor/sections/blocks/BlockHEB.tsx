@@ -11,6 +11,7 @@ import type {
 import { ModuleUnavailableNotice } from './block-notes';
 import { AccueilPolicies, EnvironmentChips } from '../capacity-controls';
 import {
+  computeRoomsCapacitySum,
   computeUnitCount,
   nextRoomCode,
   reindexRoomPositions,
@@ -171,6 +172,8 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
   const maxCapValue = capacity.capacityItems.find((item) => item.metricCode === 'max_capacity')?.value ?? '';
   const unitCount = computeUnitCount(rooms.items);
   const unitLabel = unitCountMetricCode(type) === 'pitches' ? 'Emplacements' : 'Chambres';
+  const roomsCapacitySum = computeRoomsCapacitySum(rooms.items);
+  const hasRooms = rooms.items.length > 0;
 
   return (
     <Fs
@@ -183,11 +186,17 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
       {/* Encart Capacité d'accueil — toujours visible, indépendant des chambres (§64).
           La capacité max est la SEULE valeur chiffrée éditable ; chambres/salles sont dérivées. */}
       <div className="chip-group__label" style={{ marginTop: 0 }}>Capacité d'accueil</div>
-      <div className="grid-3" style={{ marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 6 }}>
         <Field label="Capacité max.">
           <Input value={maxCapValue} type="number" mono aria-label="Capacité max." onChange={setMaxCapacity} />
         </Field>
-        {rooms.items.length > 0 && <StatCard label={unitLabel} value={String(unitCount)} />}
+        {hasRooms && (
+          <>
+            <span aria-hidden style={{ fontSize: 18, color: 'var(--ink-4)', paddingBottom: 8 }}>=</span>
+            <StatCard label="Capacité totale calculée" value={String(roomsCapacitySum)} suffix="couchages" />
+          </>
+        )}
+        {hasRooms && <StatCard label={unitLabel} value={String(unitCount)} />}
         {meetingRooms.items.length > 0 && <StatCard label="Salles de réunion" value={String(meetingRooms.items.length)} />}
       </div>
       <p className="muted" style={{ margin: '0 0 14px', fontSize: 12 }}>
@@ -264,6 +273,12 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
               </>
             )}
           />
+          {!hasRooms && (
+            <p className="muted" style={{ margin: '2px 0 6px', fontSize: 12 }}>
+              Aucun type de chambre ajouté — optionnel. Renseignez-les pour calculer la capacité et
+              alimenter les filtres Explorer.
+            </p>
+          )}
           <button
             type="button"
             className="rep-add"

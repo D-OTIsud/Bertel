@@ -79,6 +79,23 @@ describe('BlockHEB — encart Capacité d’accueil (§64)', () => {
     mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = []; });
     expect(screen.queryByText('Chambres')).toBeNull();
   });
+
+  it('shows the calculated total (couchages) next to the editable max when rooms exist', () => {
+    mountHEB((m) => { m.rooms.items = [{ ...m.rooms.items[0], capacityTotal: '2', quantity: '3' }]; });
+    expect(screen.getByText('Capacité totale calculée')).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument(); // 2 couchages × 3 unités
+  });
+
+  it('does not show the calculated total when there are no rooms', () => {
+    mountHEB((m) => { m.rooms.items = []; });
+    expect(screen.queryByText('Capacité totale calculée')).toBeNull();
+  });
+
+  it('shows an empty-state line in the room disclosure when no rooms', () => {
+    mountHEB((m) => { m.rooms.items = []; m.meetingRooms.items = [] as never[]; });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Détailler les chambres/i })); });
+    expect(screen.getByText(/Aucun type de chambre/i)).toBeInTheDocument();
+  });
 });
 
 describe('BlockHEB — disclosure repliable des tables (§64)', () => {

@@ -310,7 +310,11 @@ export interface CrmTask {
   priority: CrmTaskPriority;
   dueAt: string | null;
   ownerName: string | null;
+  // §66 — lien optionnel vers l'interaction de suivi (related_interaction_id). Le `subject`
+  // alimente le badge de la carte, le `status` décide du prompt de clôture (move→done).
+  relatedInteractionId: string | null;
   relatedInteractionSubject: string | null;
+  relatedInteractionStatus: string | null;
 }
 
 /**

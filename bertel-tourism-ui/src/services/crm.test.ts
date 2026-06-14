@@ -51,14 +51,35 @@ describe('crm parsers', () => {
       id: 't1', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
       due_at: '2026-06-12T09:00:00Z', owner_name: 'Marie', related_interaction_subject: null,
+      related_interaction_id: null, related_interaction_status: null,
       actor_id: 'a1', actor_name: 'Mme Marie Hoarau',
     });
     expect(task).toEqual({
       id: 't1', objectId: 'HOT123', objectName: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
       dueAt: '2026-06-12T09:00:00Z', ownerName: 'Marie', relatedInteractionSubject: null,
+      relatedInteractionId: null, relatedInteractionStatus: null,
       actorId: 'a1', actorName: 'Mme Marie Hoarau',
     });
+  });
+
+  // §66 — lien tâche → interaction : list_crm_tasks porte désormais id + subject + status.
+  it('parse le lien interaction (related_interaction_id/subject/status → camelCase)', () => {
+    const task = parseCrmTask({
+      id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+      related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
+      related_interaction_status: 'planned',
+    });
+    expect(task.relatedInteractionId).toBe('int-9');
+    expect(task.relatedInteractionSubject).toBe('Demande de visite');
+    expect(task.relatedInteractionStatus).toBe('planned');
+  });
+
+  it('lien interaction absent → relatedInteractionId/Status null', () => {
+    const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+    expect(task.relatedInteractionId).toBeNull();
+    expect(task.relatedInteractionStatus).toBeNull();
+    expect(task.relatedInteractionSubject).toBeNull();
   });
 
   it('rattachement acteur optionnel : actor_id/actor_name absents → null', () => {
@@ -138,14 +159,21 @@ describe('crm parsers', () => {
         actor_id: 'a1', display_name: 'Mme Jocelyne Lebon', photo_url: 'https://cdn/jl.jpg',
         role_code: 'operator', role_name: 'Exploitant', is_primary: true,
       }],
-      tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: '2026-06-15T00:00:00Z' }],
+      tasks: [{
+        id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: '2026-06-15T00:00:00Z',
+        related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
+        related_interaction_status: 'planned',
+      }],
     });
     expect(snapshot.actors).toEqual([{
       actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: 'https://cdn/jl.jpg',
       roleCode: 'operator', roleName: 'Exploitant', isPrimary: true,
     }]);
+    // §66 — la tâche de la vue objet porte aussi le lien interaction (id/subject/status).
     expect(snapshot.tasks).toEqual([{
       id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', dueAt: '2026-06-15T00:00:00Z',
+      relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite',
+      relatedInteractionStatus: 'planned',
     }]);
   });
 
@@ -671,6 +699,35 @@ describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
     expect(rpc).toHaveBeenCalledWith('save_crm_task', {
       p_payload: { object_id: 'HOT123', title: 'Rappeler', due_at: '2026-06-20', owner: 'usr-jean' },
     });
+  });
+
+  // §66 — lien tâche → interaction : relatedInteractionId → related_interaction_id (clé
+  // présente écrite ; cohérence d'objet validée serveur — 22023 si objet différent).
+  it('passe related_interaction_id quand relatedInteractionId est fourni', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', actorId: 'a1', title: 'Suivi', relatedInteractionId: 'int-9' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', actor_id: 'a1', title: 'Suivi', related_interaction_id: 'int-9' },
+    });
+  });
+
+  // Détachement : '' (chaîne vide) écrit la clé pour détacher (clé présente = écrite).
+  it('passe related_interaction_id = "" pour détacher (clé présente même vide)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', relatedInteractionId: '' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { id: 't1', related_interaction_id: '' },
+    });
+  });
+
+  // Clé absente = pas de changement (n'apparaît pas dans le payload — move kanban inchangé).
+  it('relatedInteractionId omis : related_interaction_id absent du payload', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', status: 'done' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', status: 'done' } });
   });
 });
 

@@ -47,7 +47,10 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     priority: TASK_PRIORITIES.includes(priority) ? priority : 'medium',
     dueAt: readNullableString(record.due_at),
     ownerName: readNullableString(record.owner_name),
+    // §66 — lien interaction de suivi : id + subject (badge) + status (gate du prompt de clôture).
+    relatedInteractionId: readNullableString(record.related_interaction_id),
     relatedInteractionSubject: readNullableString(record.related_interaction_subject),
+    relatedInteractionStatus: readNullableString(record.related_interaction_status),
   };
 }
 
@@ -448,6 +451,12 @@ export interface SaveCrmTaskInput {
    * le serveur valide l'appartenance (sinon 22023). Omis = défaut serveur (le saisisseur).
    */
   owner?: string;
+  /**
+   * Lien interaction de suivi (§66) → `related_interaction_id`. Clé absente = pas de
+   * changement ; '' = détachement. Le serveur valide la cohérence d'objet (l'interaction
+   * liée doit avoir le MÊME object_id que la tâche, sinon 22023 ; interaction inconnue → P0002).
+   */
+  relatedInteractionId?: string;
 }
 
 export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
@@ -470,6 +479,8 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (input.priority !== undefined) payload.priority = input.priority;
   if (input.dueAt !== undefined) payload.due_at = input.dueAt;
   if (input.owner !== undefined) payload.owner = input.owner;
+  // §66 — clé présente = écrite ('' = détachement) ; absente = pas de changement.
+  if (input.relatedInteractionId !== undefined) payload.related_interaction_id = input.relatedInteractionId;
   const { data, error } = await client.schema('api').rpc('save_crm_task', { p_payload: payload });
   if (error) {
     throw error;
@@ -724,6 +735,10 @@ export interface ObjectCrmTaskItem {
   status: string;
   priority: string;
   dueAt: string | null;
+  // §66 — lien interaction de suivi (cohérence avec la carte kanban : id/subject/status).
+  relatedInteractionId: string | null;
+  relatedInteractionSubject: string | null;
+  relatedInteractionStatus: string | null;
 }
 
 export interface ObjectCrmSnapshot {
@@ -793,6 +808,10 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           status: readString(row.status),
           priority: readString(row.priority),
           dueAt: readNullableString(row.due_at),
+          // §66 — lien interaction de suivi (même contrat que list_crm_tasks).
+          relatedInteractionId: readNullableString(row.related_interaction_id),
+          relatedInteractionSubject: readNullableString(row.related_interaction_subject),
+          relatedInteractionStatus: readNullableString(row.related_interaction_status),
         }))
     : [];
   return { interactions, topics, actors, tasks };

@@ -20,6 +20,7 @@ import { listCrmAssignees, saveCrmInteraction, saveCrmTask } from '../../service
 import { useSessionStore } from '../../store/session-store';
 import { CRM_SENTIMENT_OPTIONS } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
+import { SearchSelect } from '../../components/ui/pickers';
 
 // Kinds du composer v2 : Appel / E-mail / Visite terrain / Note interne.
 const COMPOSER_KINDS = [
@@ -164,52 +165,46 @@ export function CrmInteractionModal({
         <label className="crm-field">
           Établissement
           {/* §66 — plus de « Contexte : général » : un établissement est requis. */}
-          <select className="crm-select" aria-label="Contexte" value={ctx} onChange={(event) => setCtx(event.target.value)}>
-            <option value="">— Établissement —</option>
-            {(contexts ?? []).map((object) => (
-              <option key={object.objectId} value={object.objectId}>
-                {object.objectName}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            aria-label="Contexte"
+            value={ctx}
+            options={(contexts ?? []).map((object) => ({ code: object.objectId, label: object.objectName }))}
+            onChange={setCtx}
+            placeholder="— Établissement —"
+            searchPlaceholder="Rechercher un établissement…"
+          />
         </label>
       )}
 
       {fixedContext && (actorOptions?.length ?? 0) > 0 && (
         <label className="crm-field">
           Acteur (optionnel)
-          <select
-            className="crm-select"
+          <SearchSelect
             aria-label="Acteur"
             value={pickedActor}
-            onChange={(event) => setPickedActor(event.target.value)}
-          >
-            <option value="">— Aucun acteur —</option>
-            {(actorOptions ?? []).map((actor) => (
-              <option key={actor.actorId} value={actor.actorId}>
-                {actor.displayName}
-              </option>
-            ))}
-          </select>
+            options={(actorOptions ?? []).map((actor) => ({ code: actor.actorId, label: actor.displayName }))}
+            onChange={setPickedActor}
+            allowClear
+            clearLabel="— Aucun acteur —"
+            placeholder="— Aucun acteur —"
+            searchPlaceholder="Rechercher un acteur…"
+          />
         </label>
       )}
 
       <div className="crm-row2">
         <label className="crm-field">
           Sujet
-          <select
-            className="crm-select"
+          <SearchSelect
             aria-label="Sujet normalisé"
             value={topicCode}
-            onChange={(event) => setTopicCode(event.target.value)}
-          >
-            <option value="">— Sujet —</option>
-            {topics.map((topic) => (
-              <option key={topic.code} value={topic.code}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
+            options={topics.map((topic) => ({ code: topic.code, label: topic.name }))}
+            onChange={setTopicCode}
+            allowClear
+            clearLabel="— Aucun sujet —"
+            placeholder="— Sujet —"
+            searchPlaceholder="Rechercher un sujet…"
+          />
         </label>
         <label className="crm-field">
           Sentiment

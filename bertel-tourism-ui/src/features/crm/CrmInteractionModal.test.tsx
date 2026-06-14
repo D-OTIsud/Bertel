@@ -7,6 +7,13 @@ jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
+// Les champs longs (sujet/établissement/acteur) sont des SearchSelect (combobox + popover),
+// plus des <select> natifs : on ouvre puis on clique l'option.
+function pickFromCombobox(name: string | RegExp, optionName: string | RegExp) {
+  fireEvent.click(screen.getByRole('combobox', { name }));
+  fireEvent.click(screen.getByRole('option', { name: optionName }));
+}
+
 const topics = [
   { code: 'demande_de_visite', name: 'Demande de visite' },
   { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
@@ -56,7 +63,7 @@ describe('CrmInteractionModal — établissement requis (§66 décision 1)', () 
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel passé' } });
     expect(screen.getByRole('button', { name: /consigner/i })).toBeDisabled();
     // Choisir un établissement débloque.
-    fireEvent.change(screen.getByLabelText('Contexte'), { target: { value: 'o2' } });
+    pickFromCombobox('Contexte', 'Restaurant B');
     expect(screen.getByRole('button', { name: /consigner/i })).toBeEnabled();
   });
 
@@ -93,7 +100,7 @@ describe('CrmInteractionModal — tâche de suivi liée (§66 décision 1)', () 
 
   it('titre de tâche pré-rempli depuis le sujet sélectionné (éditable)', () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByLabelText('Sujet normalisé'), { target: { value: 'demande_de_visite' } });
+    pickFromCombobox('Sujet normalisé', 'Demande de visite');
     fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
     expect((screen.getByLabelText('Titre de la tâche') as HTMLInputElement).value).toBe('Demande de visite');
   });
@@ -101,7 +108,7 @@ describe('CrmInteractionModal — tâche de suivi liée (§66 décision 1)', () 
   it('soumission séquentielle : saveCrmInteraction PUIS saveCrmTask avec relatedInteractionId = id renvoyé', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' }, actorOptions: [{ actorId: 'a1', displayName: 'Mme Hoarau' }] });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.change(screen.getByLabelText('Acteur'), { target: { value: 'a1' } });
+    pickFromCombobox('Acteur', 'Mme Hoarau');
     fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Rappeler le directeur' } });

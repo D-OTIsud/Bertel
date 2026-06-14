@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
+import { ChipMultiSelect, Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
@@ -69,36 +69,20 @@ export function BlockRES({ editor, folded }: SectionProps) {
       ) : (
         <>
           <Field label="Cuisines proposées" hint="Multi-sélection — la 1ère sera la cuisine principale">
-            <ChipSet>
-              {menus.cuisineTypeOptions.map((option) => {
-                const selected = firstItem?.cuisineTypeCodes.includes(option.code) ?? false;
-                return (
-                  <Chip
-                    key={option.code}
-                    label={option.label}
-                    on={selected}
-                    onClick={
-                      firstMenu && firstItem
-                        ? () => {
-                            updateMenu(0, {
-                              items: firstMenu.items.map((item, itemIndex) =>
-                                itemIndex === 0
-                                  ? {
-                                      ...item,
-                                      cuisineTypeCodes: selected
-                                        ? item.cuisineTypeCodes.filter((code) => code !== option.code)
-                                        : [...item.cuisineTypeCodes, option.code],
-                                    }
-                                  : item,
-                              ),
-                            });
-                          }
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            </ChipSet>
+            <ChipMultiSelect
+              options={menus.cuisineTypeOptions}
+              selected={firstItem?.cuisineTypeCodes ?? []}
+              modalTitle="Choisir les types de cuisine"
+              searchPlaceholder="Rechercher une cuisine…"
+              onChange={(codes) => {
+                if (!firstMenu || !firstItem) return;
+                updateMenu(0, {
+                  items: firstMenu.items.map((item, itemIndex) =>
+                    itemIndex === 0 ? { ...item, cuisineTypeCodes: codes } : item,
+                  ),
+                });
+              }}
+            />
           </Field>
 
           <div className="chip-group__label" style={{ marginTop: 18 }}>

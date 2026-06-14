@@ -37,6 +37,13 @@ import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from '.
 
 const YEAR_MS = 365 * 86_400_000;
 
+// §66 — l'interaction ET la tâche exigent un contexte établissement (le « Général » a été retiré).
+// Un acteur SANS établissement lié (objects = [] ; possible : on entre dans le périmètre CRM aussi
+// via interactions, pas seulement via actor_object_role) ne peut donc rien consigner : on désactive
+// les deux boutons d'en-tête AVEC cette raison, qui pointe vers « Affecter un établissement »
+// (lui-même resté actif sous canWrite ⇒ la SORTIE du cul-de-sac). No-write-trap.
+const NO_ESTABLISHMENT_REASON = 'Affectez d’abord un établissement à cet acteur.';
+
 // Icône par kind_code de canal — fallback générique pour les kinds moins courants
 // (whatsapp, messenger…) dont le libellé réel (kindName) reste affiché.
 const CHANNEL_ICONS: Record<string, typeof Mail> = {
@@ -297,6 +304,8 @@ export function CrmActorFiche({
   const interactions = useMemo(() => snapshot?.interactions ?? [], [snapshot]);
   const objects = snapshot?.objects ?? [];
   const channels = snapshot?.channels ?? [];
+  // §66 — sans établissement lié, interaction/tâche sont inconsignables (contexte requis).
+  const hasEstablishment = objects.length > 0;
 
   const typeByObjectId = useMemo(() => {
     const map = new Map<string, string>();
@@ -400,8 +409,8 @@ export function CrmActorFiche({
             <button
               type="button"
               className="crm-btn"
-              disabled={!canWrite}
-              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+              disabled={!canWrite || !hasEstablishment}
+              title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
               onClick={() => setModal('task')}
             >
               <CalendarPlus size={13} aria-hidden /> Nouvelle tâche
@@ -409,8 +418,8 @@ export function CrmActorFiche({
             <button
               type="button"
               className="crm-btn primary"
-              disabled={!canWrite}
-              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+              disabled={!canWrite || !hasEstablishment}
+              title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
               onClick={() => setModal('interaction')}
             >
               <Plus size={13} aria-hidden /> Nouvelle interaction

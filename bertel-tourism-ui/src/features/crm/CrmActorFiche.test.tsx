@@ -584,6 +584,32 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getAllByText(/lecture seule/i).length).toBeGreaterThan(0);
   });
 
+  // §66 (revue) — un acteur SANS établissement lié (objects: []) ne peut ni consigner une
+  // interaction ni créer une tâche (les deux exigent un contexte établissement depuis le retrait
+  // du « Général »). Les deux boutons d'en-tête sont désactivés AVEC la raison qui pointe vers
+  // « Affecter un établissement » (no-write-trap, cul-de-sac évité).
+  it('sans établissement (objects: []) : Nouvelle interaction / tâche désactivées avec la raison « Affecter »', async () => {
+    crmMock.listActorCrm.mockResolvedValue({ ...snapshot, objects: [] });
+    renderFiche();
+    await screen.findByText('Mme Marie Hoarau');
+    const interactionBtn = screen.getByRole('button', { name: /nouvelle interaction/i });
+    const taskBtn = screen.getByRole('button', { name: /nouvelle tâche/i });
+    expect(interactionBtn).toBeDisabled();
+    expect(taskBtn).toBeDisabled();
+    expect(interactionBtn).toHaveAttribute('title', expect.stringMatching(/affectez d.abord un établissement/i));
+    expect(taskBtn).toHaveAttribute('title', expect.stringMatching(/affectez d.abord un établissement/i));
+    // La SORTIE du cul-de-sac (« Affecter un établissement ») reste active sous canWrite.
+    expect(screen.getByRole('button', { name: /affecter un établissement/i })).toBeEnabled();
+  });
+
+  // §66 (revue) — avec au moins un établissement, les deux boutons sont actifs (pas de raison établissement).
+  it('avec établissement(s) : Nouvelle interaction / tâche actives', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    expect(screen.getByRole('button', { name: /nouvelle interaction/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /nouvelle tâche/i })).toBeEnabled();
+  });
+
   it('42501 (acteur hors périmètre) → message dédié', async () => {
     crmMock.listActorCrm.mockRejectedValue(Object.assign(new Error('permission denied'), { code: '42501' }));
     renderFiche();

@@ -299,18 +299,26 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(4);
   });
 
-  it('sans contexte choisi, consigne au seul acteur (pas d objectId)', async () => {
+  // §66 décision 1 : un établissement est désormais REQUIS à la création (plus de « Général »).
+  // Avec 2 établissements et aucun choisi, Consigner reste bloqué ; choisir un établissement
+  // débloque et la consignation porte l'objectId.
+  it('établissement requis : Consigner bloqué tant qu aucun établissement n est choisi (2 contextes)', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
-    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point général.' } });
+    // Plus d'option « général » dans le select.
+    expect(within(dialog).queryByRole('option', { name: /général/i })).not.toBeInTheDocument();
+    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point établissement.' } });
+    expect(within(dialog).getByRole('button', { name: /consigner/i })).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText('Contexte'), { target: { value: 'obj-1' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalled());
     expect(crmMock.saveCrmInteraction.mock.calls[0][0]).toEqual({
       actorId: 'actor-1',
+      objectId: 'obj-1',
       interactionType: 'call',
-      body: 'Point général.',
+      body: 'Point établissement.',
     });
   });
 
@@ -320,6 +328,8 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
+    // §66 : un établissement est requis pour pouvoir consigner.
+    fireEvent.change(within(dialog).getByLabelText('Contexte'), { target: { value: 'obj-1' } });
     fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Texte conservé' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
     expect(await within(dialog).findByText(/refus RLS/)).toBeInTheDocument();

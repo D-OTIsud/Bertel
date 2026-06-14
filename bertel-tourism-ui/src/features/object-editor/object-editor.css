@@ -599,6 +599,9 @@
   border-radius: var(--r-md);
 }
 .object-editor .rep-row__act { display: flex; gap: 4px; }
+/* ChipMultiSelect modal trigger: selected chips wrap, « Choisir » button trails on the same row. */
+.object-editor .cms__trigger { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.object-editor .cms__trigger .chip-set { margin: 0; }
 .object-editor .rep-add {
   display: inline-flex; align-items: center; gap: 6px;
   align-self: flex-start; margin-top: 6px;

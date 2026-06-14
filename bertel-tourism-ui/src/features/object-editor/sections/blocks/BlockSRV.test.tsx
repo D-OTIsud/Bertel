@@ -20,11 +20,13 @@ describe('BlockSRV — honest controls (T1a)', () => {
     expect(screen.queryByText('Cilaos')).not.toBeInTheDocument();
   });
 
-  it('keeps the prestation chips toggling and persisting', () => {
+  it('keeps the prestation picker toggling and persisting (via modal)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockSRV editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Choisir/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Accès PMR' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
     view.rerender(<BlockSRV editor={result.current} permissions={allowAll} />);
 
     expect(result.current.dirtySections.characteristics).toBe(true);

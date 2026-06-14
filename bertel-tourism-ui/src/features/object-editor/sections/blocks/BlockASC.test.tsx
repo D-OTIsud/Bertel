@@ -43,11 +43,13 @@ describe('BlockASC — honest controls (T1a)', () => {
 });
 
 describe('BlockASC — prestations & équipements (§48)', () => {
-  it('toggles a general amenity chip and marks characteristics dirty', () => {
+  it('toggles a general amenity via the modal picker and marks characteristics dirty', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockASC editor={result.current} permissions={allowAll} />);
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Accès PMR' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Choisir/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Accès PMR' })); }); // « Disponibles »
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
     view.rerender(<BlockASC editor={result.current} permissions={allowAll} />);
 
     expect(result.current.dirtySections.characteristics).toBe(true);
@@ -89,7 +91,7 @@ describe('BlockASC — §46 disabled-with-reason (activity module)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     render(<BlockASC editor={result.current} permissions={allowAll} />);
 
-    // The §48 amenity chips edit the characteristics module — never gated by activity.
-    expect(screen.getByRole('button', { name: 'Accès PMR' })).toBeInTheDocument();
+    // The §48 amenity picker edits the characteristics module — never gated by activity.
+    expect(screen.getByRole('button', { name: /Choisir/i })).toBeInTheDocument();
   });
 });

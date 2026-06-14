@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Fs, Toggle } from '../../primitives';
+import { ChipMultiSelect, Fs, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { OwnedElsewhereNote } from './block-notes';
 
@@ -10,7 +10,7 @@ export function BlockVIS({ editor, folded }: SectionProps) {
   const characteristics = editor.draft.characteristics;
   const openings = editor.draft.openings;
   const pricing = editor.draft.pricing;
-  const visitOptions = characteristics.amenityGroups.flatMap((group) => group.options).slice(0, 12);
+  const visitOptions = characteristics.amenityGroups.flatMap((group) => group.options);
   const visitModes = ['visite_libre', 'visite_guidee', 'audioguide'].filter((code) =>
     characteristics.selectedAmenityCodes.includes(code),
   ).length;
@@ -68,21 +68,15 @@ export function BlockVIS({ editor, folded }: SectionProps) {
       </div>
 
       <div className="chip-group__label">Équipements de visite</div>
-      <ChipSet>
-        {visitOptions.map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedAmenityCodes.includes(option.code)}
-            onClick={() =>
-              editor.replaceModule('characteristics', {
-                ...characteristics,
-                selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, option.code),
-              })
-            }
-          />
-        ))}
-      </ChipSet>
+      <ChipMultiSelect
+        options={visitOptions}
+        selected={characteristics.selectedAmenityCodes}
+        modalTitle="Choisir les équipements de visite"
+        searchPlaceholder="Rechercher un équipement…"
+        onChange={(codes) =>
+          editor.replaceModule('characteristics', { ...characteristics, selectedAmenityCodes: codes })
+        }
+      />
 
       {/* §48 single-owner: tariffs are edited in §13, opening hours in §14 (last-edit-wins trap otherwise) */}
       <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${pricing.prices.length} ligne(s) tarifaire(s)`} />

@@ -1,10 +1,6 @@
-import { Chip, ChipSet, Field, Fs, Input, Toggle } from '../../primitives';
+import { Chip, ChipMultiSelect, ChipSet, Field, Fs, Input, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
-
-function toggle(values: string[], code: string) {
-  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
 
 export function BlockASC({ editor, folded }: SectionProps) {
   const activity = editor.draft.activity;
@@ -76,21 +72,15 @@ export function BlockASC({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 14 }}>
         Prestations & équipements
       </div>
-      <ChipSet>
-        {characteristics.amenityGroups.flatMap((group) => group.options).slice(0, 18).map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedAmenityCodes.includes(option.code)}
-            onClick={() =>
-              editor.replaceModule('characteristics', {
-                ...characteristics,
-                selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, option.code),
-              })
-            }
-          />
-        ))}
-      </ChipSet>
+      <ChipMultiSelect
+        options={characteristics.amenityGroups.flatMap((group) => group.options)}
+        selected={characteristics.selectedAmenityCodes}
+        modalTitle="Choisir les prestations & équipements"
+        searchPlaceholder="Rechercher un équipement…"
+        onChange={(codes) =>
+          editor.replaceModule('characteristics', { ...characteristics, selectedAmenityCodes: codes })
+        }
+      />
 
       {relationships.actors.length > 0 && (
         <>

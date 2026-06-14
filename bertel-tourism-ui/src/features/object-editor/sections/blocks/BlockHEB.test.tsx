@@ -109,10 +109,13 @@ describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)',
     expect(screen.getByText('Groupes uniquement')).toBeInTheDocument();
   });
 
-  it('hosts the environment chips (Cadre / environnement) in §06', () => {
+  it('hosts the environment picker (Cadre / environnement) in §06 as a modal', () => {
     mountHEB();
     expect(screen.getByText('Cadre / environnement')).toBeInTheDocument();
-    expect(screen.getByText('Jardin')).toBeInTheDocument(); // environmentOptions du fixture
+    // Catalogue large ⇒ modal : l'option n'est PAS inline, on l'atteint via « Choisir… »
+    expect(screen.queryByRole('button', { name: 'Jardin' })).toBeNull();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Choisir/i })); });
+    expect(screen.getByRole('button', { name: 'Jardin' })).toBeInTheDocument(); // dans « Disponibles »
   });
 });
 

@@ -1,17 +1,14 @@
-import { Chip, ChipSet, Field, Input, Select, Textarea, Toggle } from '../primitives';
+import { ChipMultiSelect, Field, Input, Select, Textarea, Toggle } from '../primitives';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
 } from '../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
 
-function toggleCode(values: string[], code: string) {
-  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
-
 /**
- * Chips « Cadre / environnement » — rendu partagé §06 (HEB) / §07 (autres types).
- * Source d'état unique : editor.draft.characteristics (aucune désynchro même si deux mounts).
+ * « Cadre / environnement » — rendu partagé §06 (HEB) / §07 (autres types).
+ * Catalogue large (~60 codes ref_environment_tag) ⇒ sélection par MODAL (recherche +
+ * Sélectionnés/Disponibles). Source d'état unique : editor.draft.characteristics.
  */
 export function EnvironmentChips({
   characteristics,
@@ -28,21 +25,13 @@ export function EnvironmentChips({
       {characteristics.unavailableReason ? (
         <ModuleUnavailableNotice reason={characteristics.unavailableReason} />
       ) : (
-        <ChipSet>
-          {characteristics.environmentOptions.map((option) => (
-            <Chip
-              key={option.code}
-              label={option.label}
-              on={characteristics.selectedEnvironmentCodes.includes(option.code)}
-              onClick={() =>
-                onChange({
-                  ...characteristics,
-                  selectedEnvironmentCodes: toggleCode(characteristics.selectedEnvironmentCodes, option.code),
-                })
-              }
-            />
-          ))}
-        </ChipSet>
+        <ChipMultiSelect
+          options={characteristics.environmentOptions}
+          selected={characteristics.selectedEnvironmentCodes}
+          modalTitle="Choisir un cadre / environnement"
+          searchPlaceholder="Rechercher un environnement…"
+          onChange={(codes) => onChange({ ...characteristics, selectedEnvironmentCodes: codes })}
+        />
       )}
     </>
   );

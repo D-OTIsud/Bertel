@@ -141,7 +141,9 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
     content: value,
     editable: !disabled,
     immediatelyRender: false,
-    editorProps: { attributes: { 'aria-label': ariaLabel, class: 'md-editor__content' } },
+    // `md-content` makes block transforms (H2/H3, lists, blockquote, links) VISIBLE while editing —
+    // Tailwind preflight strips their default styling, so the editable needs the same display rules.
+    editorProps: { attributes: { 'aria-label': ariaLabel, class: 'md-editor__content md-content' } },
     onUpdate: ({ editor }) => onChangeRef.current(editor.storage.markdown.getMarkdown()),
   });
 

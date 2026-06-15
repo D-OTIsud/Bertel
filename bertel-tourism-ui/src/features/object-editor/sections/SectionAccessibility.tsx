@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChipMultiSelect, Field, Fs, Select, StatCard, Toggle } from '../primitives';
+import { ChipMultiSelect, Field, Fs, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 import { AdaptedDescriptionField } from '../widgets/AdaptedDescriptionField';
@@ -120,50 +120,18 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
       {/* The scheme is LBL_TOURISME_HANDICAP (selection='single'); the main value is
           `granted`; sub-values carry metadata.disability_type (motor/hearing/visual/cognitive).
           We never expose a free-text valueLabel input — the label name is fixed by the scheme. */}
-      <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Label Tourisme &amp; Handicap
-      </div>
-
+      {/* The T&H label is now held/added in §08 Classifications (§71 F) — no opt-in toggle here.
+          Held ⇒ per-disability-type coverage chips; not held ⇒ block hidden (add it in §08);
+          degraded ⇒ surface the unavailable reason. */}
       {distinctions.unavailableReason ? (
-        /* Degraded load: editing would dirty the shared distinctions module and a save
-           would mass-delete real §08/§10 rows (the saver throws on unavailableReason).
-           Surface the reason instead of live controls — mirrors §08 SectionClassification. */
-        <ModuleUnavailableNotice reason={distinctions.unavailableReason} />
-      ) : distinctions.accessibilityLabels.length === 0 ? (
-        /* No label held yet — offer a toggle to opt in. */
-        <Toggle
-          label="Établissement labellisé Tourisme & Handicap"
-          on={false}
-          onChange={() => {
-            const scheme = distinctions.schemeOptions.find((s) => s.isAccessibility);
-            if (!scheme) return;
-            editor.replaceModule('distinctions', {
-              ...distinctions,
-              accessibilityLabels: [
-                ...distinctions.accessibilityLabels,
-                {
-                  recordId: null,
-                  schemeId: scheme.id,
-                  schemeCode: scheme.code,
-                  schemeLabel: scheme.label,
-                  valueId: 'granted',
-                  valueCode: 'granted',
-                  valueLabel: 'granted',
-                  status: 'granted',
-                  awardedAt: '',
-                  validUntil: '',
-                  disabilityTypesCovered: [],
-                  documentId: '',
-                  documentUrl: '',
-                  documentTitle: '',
-                },
-              ],
-            });
-          }}
-        />
-      ) : (
-        /* Label is held — show structured editor per label item. */
-        distinctions.accessibilityLabels.map((item) => (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 0 }}>Label Tourisme &amp; Handicap</div>
+          <ModuleUnavailableNotice reason={distinctions.unavailableReason} />
+        </>
+      ) : distinctions.accessibilityLabels.length > 0 ? (
+        <>
+          <div className="chip-group__label" style={{ marginTop: 0 }}>Label Tourisme &amp; Handicap</div>
+          {distinctions.accessibilityLabels.map((item) => (
           <div key={`${item.schemeCode}-${item.valueCode}`} style={{ marginBottom: 12 }}>
             {/* Disability-type multiselect: chips over the 4 canonical types */}
             <div className="chip-group__label" style={{ marginTop: 6, marginBottom: 4, fontSize: '0.78rem', color: 'var(--text-2, #666)' }}>
@@ -194,8 +162,9 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
               />
             </div>
           </div>
-        ))
-      )}
+          ))}
+        </>
+      ) : null}
 
       {/* ── Accessible equipment panels — one collapsible panel per disability type ── */}
       {/* Each panel contains a ChipMultiSelect over the accessibility-family amenities

@@ -77,25 +77,19 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
     expect(screen.getByText(/Description adapt/i)).toBeInTheDocument();
   });
 
-  it('toggles on a Tourisme & Handicap label with canonical status "granted" (not "active")', () => {
-    // Empty accessibilityLabels + an isAccessibility scheme option exposes the opt-in Toggle branch.
+  it('hides the T&H label block (no opt-in toggle) when the label is not held — it is added in §08', () => {
+    // §71 F: the label is held/added in §08 Classifications. §10 no longer offers an opt-in.
     const mods = fullModulesFixture();
-    mods.distinctions = {
-      ...mods.distinctions,
-      accessibilityLabels: [],
-      schemeOptions: [
-        // `displayGroup` is required by the SchemeOption shape introduced by the parallel §09 work.
-        { id: 'th', code: 'LBL_TOURISME_HANDICAP', label: 'Tourisme & Handicap', selectionMode: 'single', isAccessibility: true, displayGroup: 'quality_label', valueOptions: [] },
-      ],
-    };
+    mods.distinctions = { ...mods.distinctions, accessibilityLabels: [] };
     const { result } = renderHook(() => useObjectEditorState('o1', mods));
-    const view = render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Établissement labellisé Tourisme & Handicap' }));
-    });
-    view.rerender(<SectionAccessibility editor={result.current} permissions={allowAll} />);
-    // Backend label reads/filters gate on status='granted'; the editor must write the canonical value.
-    expect(result.current.draft.distinctions.accessibilityLabels[0].status).toBe('granted');
+    render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    expect(
+      screen.queryByRole('button', { name: 'Établissement labellisé Tourisme & Handicap' }),
+    ).not.toBeInTheDocument();
+    // The whole "Label Tourisme & Handicap" block is hidden when the label is not held.
+    expect(screen.queryByText('Label Tourisme & Handicap')).not.toBeInTheDocument();
+    // The equipment panels (a different module) still render.
+    expect(screen.getByRole('button', { name: /Équipements moteur/i })).toBeInTheDocument();
   });
 
   it('offers canonical label-status options (granted), not the legacy "active" vocabulary', () => {

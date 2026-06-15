@@ -48,20 +48,21 @@ describe('normalizeExplorerCard', () => {
       amenity_codes: ['pet_friendly', 'acc_pmr_parking'],
     });
 
-    // §09 tags are NO LONGER in the neutral labels blend (they move to the colored tagChips group).
+    // §09 tags move to tagChips; the taxonomy ('Gite') is NOT a label chip (it shows on the
+    // card's metadata line), so it is excluded from the neutral blend.
     expect(card.labels).toEqual([
       '3 étoiles',
-      'Gite',
       'Clevacances',
       'Qualite Tourisme',
       'Milieu rural',
       'Animaux acceptes',
       'Accessibilite',
     ]);
+    expect(card.labels).not.toContain('Gite');
     expect(card.tagChips).toEqual([{ label: 'Vue mer', color: '#0ea5e9', slug: 'vue-mer' }]);
   });
 
-  it('carries the per-tag hex (default for invalid), preserves order, and cross-dedupes vs labels', () => {
+  it('carries the per-tag hex (default for invalid), preserves order, and cross-dedupes vs labels + taxonomy', () => {
     const card = normalizeExplorerCard({
       id: 'obj-2',
       name: 'Order test',
@@ -79,7 +80,9 @@ describe('normalizeExplorerCard', () => {
       { label: 'Zebra', color: '#111111', slug: 'zebra' },
       { label: 'Alpha', color: '#64748b', slug: 'alpha' },
     ]);
-    expect(card.labels).toContain('Gite');
+    // The 'gite' tag is deduped out (it matches the taxonomy shown on the meta line); the taxonomy
+    // itself is NOT a label chip.
+    expect(card.labels).not.toContain('Gite');
     expect(card.labels).not.toContain('Zebra');
   });
 

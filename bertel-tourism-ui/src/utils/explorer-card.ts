@@ -106,10 +106,9 @@ function readBadgeLabels(card: ObjectCard): string[] {
 }
 
 function readClassificationLabels(card: ObjectCard): string[] {
-  return [
-    ...readBadgesByKind(card, (kind) => kind.includes('classification') || kind.includes('ranking')),
-    ...readLabels(card.taxonomy),
-  ];
+  // Taxonomy (the métier sub-category) is NOT a label — it shows on the card's metadata line
+  // (type · city · taxonomy), so it is excluded here to avoid a duplicate neutral chip.
+  return readBadgesByKind(card, (kind) => kind.includes('classification') || kind.includes('ranking'));
 }
 
 function readAmenityCodes(card: ObjectCard): string[] {
@@ -268,7 +267,9 @@ export function normalizeExplorerCard(card: ObjectCard): ObjectCard {
     ...(hasPetFriendlySignal(card) ? ['Animaux acceptes'] : []),
     ...(hasAccessibilitySignal(card) ? ['Accessibilite'] : []),
   ]);
-  const tagChips = buildTagChips(card.tags, labels);
+  // Tag chips still dedup against the taxonomy (shown on the metadata line) so a §09 tag never
+  // duplicates it — even though taxonomy is no longer rendered as a neutral chip.
+  const tagChips = buildTagChips(card.tags, [...labels, ...readLabels(card.taxonomy)]);
   const formattedAddress = formatExplorerCardAddress(card.location);
 
   return {

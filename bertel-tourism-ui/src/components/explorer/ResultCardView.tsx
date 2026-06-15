@@ -106,7 +106,7 @@ export function ResultCardView({
   );
 
   const chipRow: ReactNode = (
-    <div className="mt-auto flex min-w-0 flex-nowrap items-center gap-1">
+    <div className="flex min-w-0 flex-nowrap items-center gap-1">
       {visibleTags.map((tag) => (
         <span
           key={tag.slug || tag.label}
@@ -174,7 +174,7 @@ export function ResultCardView({
         style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
       />
 
-      <div className="flex min-w-0 flex-col gap-1 overflow-hidden py-0.5">
+      <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden py-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(

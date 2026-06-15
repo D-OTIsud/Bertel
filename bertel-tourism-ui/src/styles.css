@@ -10242,3 +10242,19 @@ a {
 }
 /* Grouped options sit slightly indented under their header. */
 .picker__group .picker__option { padding-left: 24px; }
+
+
+/* ── Markdown content (adapted description) — shared editor card + drawer ───────── */
+.md-content { line-height: 1.6; }
+.md-content > :first-child { margin-top: 0; }
+.md-content > :last-child { margin-bottom: 0; }
+.md-content h2 { font-size: 1.15rem; font-weight: 600; margin: 1rem 0 0.4rem; }
+.md-content h3 { font-size: 1rem; font-weight: 600; margin: 0.8rem 0 0.3rem; }
+.md-content p { margin: 0.4rem 0; }
+.md-content ul, .md-content ol { margin: 0.4rem 0; padding-left: 1.4rem; }
+.md-content li { margin: 0.15rem 0; }
+.md-content blockquote {
+  margin: 0.6rem 0; padding: 0.2rem 0 0.2rem 0.9rem;
+  border-left: 3px solid var(--line, #e3e3e3); color: var(--ink-2, #555);
+}
+.md-content a { color: var(--accent, #1d6fb8); text-decoration: underline; }

@@ -2292,3 +2292,35 @@
 }
 .object-editor .taxo2-caret.is-open { transform: rotate(90deg); }
 .object-editor .taxo2-empty { font-size: 12px; color: var(--ink-4); padding: 6px 2px; }
+
+
+/* ── Adapted-description compact card (§10) ─────────────────────────────────────── */
+.adapted-desc__card,
+.adapted-desc__empty {
+  border: 1px solid var(--line, #e3e3e3); border-radius: 10px;
+  padding: 12px 14px; background: var(--surface, #fff);
+}
+.adapted-desc__empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adapted-desc__preview { max-height: 180px; overflow: hidden; }
+.adapted-desc__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.adapted-desc__langs { display: inline-flex; gap: 4px; }
+
+/* ── Markdown WYSIWYG (modal) ───────────────────────────────────────────────────── */
+.md-editor { border: 1px solid var(--line, #e3e3e3); border-radius: 8px; overflow: hidden; }
+.md-editor--loading { min-height: 180px; }
+.md-editor__toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+  padding: 6px 8px; border-bottom: 1px solid var(--line, #e3e3e3);
+  background: var(--surface-2, #f7f7f5);
+}
+.md-editor__sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--line, #e3e3e3); }
+.md-editor__btn {
+  display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--ink-2, #555); cursor: pointer; font-size: 13px;
+}
+.md-editor__btn:hover:not(:disabled) { background: var(--surface, #fff); }
+.md-editor__btn.is-on { background: var(--surface, #fff); color: var(--ink, #222); border-color: var(--line, #e3e3e3); }
+.md-editor__btn:disabled { opacity: 0.4; cursor: default; }
+.md-editor__content { min-height: 160px; padding: 12px 14px; outline: none; }
+.md-editor__content:focus { outline: none; }

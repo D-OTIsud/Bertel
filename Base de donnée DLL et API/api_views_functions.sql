@@ -3405,6 +3405,17 @@ BEGIN
                    FROM object_room_type_amenity ra
                    JOIN ref_amenity a ON a.id = ra.amenity_id
                    WHERE ra.room_type_id = rt.id
+                 ), '[]'::jsonb),
+                 -- §70 structured bed list (quantity × bed type) — drives the drawer/card bed display.
+                 'beds', COALESCE((
+                   SELECT jsonb_agg(
+                            jsonb_build_object('quantity', rb.quantity,
+                                               'bed_type', jsonb_build_object('code', bt.code, 'name', bt.name))
+                            ORDER BY rb.position, bt.name
+                          )
+                   FROM object_room_type_bed rb
+                   JOIN ref_code_bed_type bt ON bt.id = rb.bed_type_id
+                   WHERE rb.room_type_id = rt.id
                  ), '[]'::jsonb)
                )
                ORDER BY rt.position NULLS LAST, rt.name, rt.id

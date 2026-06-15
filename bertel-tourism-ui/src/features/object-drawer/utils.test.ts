@@ -485,4 +485,21 @@ describe('object drawer utils', () => {
     });
     expect(rooms[0].amenities).toContain('Wi-Fi');
   });
+
+  it('renders the structured bed list (§70) as « qty × type », falling back to bed_config when empty', () => {
+    const structured = parseRoomTypes({
+      room_types: [{
+        id: 'r1', name: 'Suite',
+        beds: [
+          { quantity: 2, bed_type: { code: 'double', name: 'Lit double' } },
+          { quantity: 1, bed_type: { code: 'single', name: 'Lit simple' } },
+        ],
+        bed_config: 'ignored when beds present',
+      }],
+    });
+    expect(structured[0].beds).toBe('2 × Lit double, 1 × Lit simple');
+
+    const legacy = parseRoomTypes({ room_types: [{ id: 'r2', name: 'Chambre', beds: [], bed_config: 'Lit double' }] });
+    expect(legacy[0].beds).toBe('Lit double');
+  });
 });

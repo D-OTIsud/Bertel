@@ -6,8 +6,10 @@ const SAFE_URL = /^(https?:|mailto:)/i;
 function SafeLink({ href, children, ...rest }: { href?: string; children?: ReactNode }) {
   const safe = href && SAFE_URL.test(href.trim()) ? href.trim() : undefined;
   if (!safe) return <span {...rest}>{children}</span>;
+  // Spread ...rest FIRST so the hardcoded security attributes (href/target/rel) can never be
+  // overridden by props forwarded from parsed markdown or a future caller.
   return (
-    <a href={safe} target="_blank" rel="noopener noreferrer" {...rest}>
+    <a {...rest} href={safe} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   );
@@ -29,10 +31,10 @@ const MD_OPTIONS = {
   },
 } as const;
 
-interface MarkdownContentProps {
+type MarkdownContentProps = {
   markdown: string;
   className?: string;
-}
+};
 
 /** Renders the constrained Markdown subset (H2/H3, bold, italic, lists, blockquote, links) to
  *  React elements. Raw HTML is never parsed (disableParsingRawHTML) and we never use

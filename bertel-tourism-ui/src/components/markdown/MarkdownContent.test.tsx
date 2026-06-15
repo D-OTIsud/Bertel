@@ -29,6 +29,14 @@ describe('MarkdownContent', () => {
     expect(screen.getByText('bad').tagName).toBe('SPAN');
   });
 
+  it('passes a link title through while keeping the locked security attributes', () => {
+    render(<MarkdownContent markdown={'[ok](https://x.fr "infobulle")'} />);
+    const ok = screen.getByRole('link', { name: 'ok' });
+    expect(ok).toHaveAttribute('title', 'infobulle');
+    expect(ok).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(ok).toHaveAttribute('target', '_blank');
+  });
+
   it('renders nothing for empty/whitespace markdown', () => {
     const { container } = render(<MarkdownContent markdown={'   '} />);
     expect(container).toBeEmptyDOMElement();

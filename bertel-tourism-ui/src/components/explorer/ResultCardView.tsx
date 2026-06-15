@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { useLayoutEffect, useRef, useState } from 'react';
 import { MapPin, Star } from 'lucide-react';
 import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
@@ -6,15 +8,18 @@ import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 
 /**
- * Pure presentational Explorer result card (the 116px row). Single source of truth shared by the
- * Explorer results list AND the §09 "Tags & étiquettes" editor preview (interactive=false) so the
- * preview shows EXACTLY what the live card renders. Owns no store/selection/drawer state — the
- * container passes data (an already-normalizeExplorerCard'd card) + interaction handlers.
+ * Pure presentational Explorer result card (116px tall, grows on demand). Single source of truth
+ * shared by the Explorer results list AND the §09 "Tags & étiquettes" editor preview (interactive=
+ * false) so the preview shows EXACTLY what the live card renders. Owns no store/selection/drawer
+ * state — the container passes data (an already-normalizeExplorerCard'd card) + interaction handlers.
  *
- * Chip row (PO decision D4): [category/bucket tag] -> [<=1 colored §09 tag] -> [<=1 neutral
- * classification/label] -> [+N]. §09 tags render FIRST (the curated colored layer) with their global
- * hex color; the neutral classification keeps priority on truncation; +N counts both hidden groups.
+ * Chip row: classements/labels (neutral) FIRST, then the colored §09 tags. Each pill shows its FULL
+ * label (no truncation); the row greedily fits as many whole pills as the width allows and rolls the
+ * rest into a "+N" badge. Hovering "+N" expands the card height to reveal the remaining pills on a
+ * 2nd/3rd line.
  */
+
+type DisplayChip = { key: string; label: string; color?: string };
 
 function bucketForCardType(type: string): ExplorerBucketKey | null {
   const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
@@ -49,8 +54,139 @@ function pickTaxonomyLabel(card: ObjectCard): string | null {
   return fallback || null;
 }
 
-const NEUTRAL_CHIP_CLASS =
-  'inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] border border-line bg-surface2 px-1.5 text-[11px] font-semibold tracking-wide text-ink-2';
+const CHIP_BASE =
+  'inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide';
+const NEUTRAL_CHIP = cn(CHIP_BASE, 'border border-line bg-surface2 text-ink-2');
+
+function ChipPill({
+  chip,
+  interactive,
+  onToggleLabel,
+}: {
+  chip: DisplayChip;
+  interactive: boolean;
+  onToggleLabel?: (label: string) => void;
+}) {
+  if (chip.color) {
+    return (
+      <span data-chip="1" className={CHIP_BASE} style={tagChipStyle(chip.color)} title={chip.label}>
+        {chip.label}
+      </span>
+    );
+  }
+  if (interactive && onToggleLabel) {
+    return (
+      <button
+        type="button"
+        data-chip="1"
+        title={chip.label}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggleLabel(chip.label);
+        }}
+        className={NEUTRAL_CHIP}
+      >
+        {chip.label}
+      </button>
+    );
+  }
+  return (
+    <span data-chip="1" className={NEUTRAL_CHIP} title={chip.label}>
+      {chip.label}
+    </span>
+  );
+}
+
+const CHIP_GAP = 4; // gap-1
+const PLUS_BADGE_WIDTH = 38; // reserved width for the "+N" badge
+
+/**
+ * Renders the chip row: greedily fits whole pills on one line (measuring real widths), rolls the
+ * rest into a "+N" badge, and reveals everything (wrapped) when `expanded`.
+ */
+function CardChipRow({
+  chips,
+  expanded,
+  onRequestExpand,
+  interactive,
+  onToggleLabel,
+}: {
+  chips: DisplayChip[];
+  expanded: boolean;
+  onRequestExpand: () => void;
+  interactive: boolean;
+  onToggleLabel?: (label: string) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const sig = chips.map((c) => c.key).join('|');
+  const [fit, setFit] = useState<number | null>(null);
+  const [measuredSig, setMeasuredSig] = useState('');
+
+  // While the chip set is unmeasured (new sig) or expanded, render every pill so the measure pass
+  // sees them all; otherwise show the fitted slice.
+  const measuring = fit === null || sig !== measuredSig;
+
+  useLayoutEffect(() => {
+    if (expanded) return;
+    const row = rowRef.current;
+    if (!row) return;
+    const items = Array.from(row.querySelectorAll<HTMLElement>('[data-chip="1"]'));
+    const avail = row.clientWidth;
+    let used = 0;
+    let count = 0;
+    for (let i = 0; i < items.length; i += 1) {
+      const w = items[i].offsetWidth + (i > 0 ? CHIP_GAP : 0);
+      if (used + w <= avail) {
+        used += w;
+        count += 1;
+      } else {
+        break;
+      }
+    }
+    // Reserve room for the "+N" badge when there is an overflow.
+    if (count < items.length) {
+      while (count > 0 && used + CHIP_GAP + PLUS_BADGE_WIDTH > avail) {
+        used -= items[count - 1].offsetWidth + (count > 1 ? CHIP_GAP : 0);
+        count -= 1;
+      }
+    }
+    setFit(count);
+    setMeasuredSig(sig);
+  }, [sig, expanded]);
+
+  const showAll = expanded || measuring;
+  const visible = showAll ? chips : chips.slice(0, fit ?? chips.length);
+  const overflow = showAll ? 0 : chips.length - (fit ?? chips.length);
+
+  return (
+    <div
+      ref={rowRef}
+      className={cn('flex min-w-0 items-center gap-1', expanded ? 'flex-wrap' : 'flex-nowrap overflow-hidden')}
+    >
+      {visible.map((chip) => (
+        <ChipPill key={chip.key} chip={chip} interactive={interactive} onToggleLabel={onToggleLabel} />
+      ))}
+      {overflow > 0 ? (
+        <button
+          type="button"
+          aria-label={`Afficher ${overflow} étiquette(s) de plus`}
+          title="Afficher plus"
+          onMouseEnter={onRequestExpand}
+          onFocus={onRequestExpand}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRequestExpand();
+          }}
+          className="inline-flex h-5 shrink-0 items-center rounded-[5px] border border-line px-1.5 text-[11px] font-semibold text-ink-3 hover:bg-surface2"
+        >
+          +{overflow}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 interface ResultCardViewProps {
   /** A card already passed through normalizeExplorerCard (labels + tagChips populated). */
@@ -75,6 +211,8 @@ export function ResultCardView({
   onToggleLabel,
   onToggleSelect,
 }: ResultCardViewProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const typeLabel = normalizeExplorerObjectType(card.type);
   const bucket = bucketForCardType(card.type);
   const categoryLabel = categoryTagLabel(bucket, typeLabel);
@@ -85,71 +223,18 @@ export function ResultCardView({
 
   const tagChips = card.tagChips ?? [];
   const neutralLabels = Array.isArray(card.labels) ? card.labels : [];
-  // The type/category pill now lives on the metadata line (below), so the bottom row is the curated
-  // display layer ONLY: up to 2 colored §09 tags + 1 neutral classification/label + overflow.
-  const visibleTags = tagChips.slice(0, 2);
-  const visibleNeutral = neutralLabels[0];
-  const overflow = tagChips.length - visibleTags.length + (neutralLabels.length - (visibleNeutral ? 1 : 0));
+  // Classements / labels (neutral) FIRST, then the colored §09 tags.
+  const chips: DisplayChip[] = [
+    ...neutralLabels.map((label, index) => ({ key: `l${index}-${label}`, label })),
+    ...tagChips.map((tag, index) => ({ key: `t${index}-${tag.slug || tag.label}`, label: tag.label, color: tag.color })),
+  ];
 
   const containerInteractive = interactive && Boolean(onOpen);
-
-  const categoryPill: ReactNode = (
-    <span
-      className={cn(
-        'inline-flex h-5 max-w-[9rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
-        categoryTagClasses(bucket),
-      )}
-      title={categoryLabel}
-    >
-      {categoryLabel}
-    </span>
-  );
-
-  const chipRow: ReactNode = (
-    <div className="flex min-w-0 flex-nowrap items-center gap-1">
-      {visibleTags.map((tag) => (
-        <span
-          key={tag.slug || tag.label}
-          className="inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide"
-          style={tagChipStyle(tag.color)}
-          title={tag.label}
-        >
-          {tag.label}
-        </span>
-      ))}
-
-      {visibleNeutral ? (
-        containerInteractive ? (
-          <button
-            type="button"
-            title={visibleNeutral}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onToggleLabel?.(visibleNeutral);
-            }}
-            className={NEUTRAL_CHIP_CLASS}
-          >
-            {visibleNeutral}
-          </button>
-        ) : (
-          <span title={visibleNeutral} className={NEUTRAL_CHIP_CLASS}>
-            {visibleNeutral}
-          </span>
-        )
-      ) : null}
-
-      {overflow > 0 ? (
-        <span className="inline-flex h-5 shrink-0 items-center rounded-[5px] border border-line px-1.5 text-[11px] font-semibold text-ink-3">
-          +{overflow}
-        </span>
-      ) : null}
-    </div>
-  );
 
   return (
     <div
       id={domId}
+      onMouseLeave={() => setExpanded(false)}
       {...(containerInteractive
         ? {
             role: 'button',
@@ -164,7 +249,8 @@ export function ResultCardView({
           }
         : {})}
       className={cn(
-        'grid h-[116px] grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s',
+        'grid grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s',
+        expanded ? 'min-h-[116px]' : 'h-[116px]',
         containerInteractive && 'cursor-pointer transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
         isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
       )}
@@ -174,7 +260,7 @@ export function ResultCardView({
         style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
       />
 
-      <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden py-0.5">
+      <div className="flex min-w-0 flex-col justify-center gap-2 overflow-hidden py-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
@@ -190,7 +276,15 @@ export function ResultCardView({
           </h3>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
-          {categoryPill}
+          <span
+            className={cn(
+              'inline-flex h-5 max-w-[9rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
+              categoryTagClasses(bucket),
+            )}
+            title={categoryLabel}
+          >
+            {categoryLabel}
+          </span>
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />
             {city}
@@ -210,7 +304,13 @@ export function ResultCardView({
             </>
           ) : null}
         </div>
-        {chipRow}
+        <CardChipRow
+          chips={chips}
+          expanded={expanded}
+          onRequestExpand={() => setExpanded(true)}
+          interactive={containerInteractive}
+          onToggleLabel={onToggleLabel}
+        />
       </div>
 
       <div className="flex flex-col items-end self-start py-0.5">

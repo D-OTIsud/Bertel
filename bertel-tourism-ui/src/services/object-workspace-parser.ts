@@ -453,6 +453,9 @@ export interface ObjectWorkspaceRoomsModule {
   viewTypeOptions: WorkspaceReferenceOption[];
   roomTypeOptions: WorkspaceReferenceOption[];
   amenityOptions: WorkspaceReferenceOption[];
+  /** Room equipment catalog grouped by family, ordered by industry popularity (§73):
+   *  families by total usage, options by per-amenity usage. Drives the §06 collapsible picker. */
+  amenityGroups: ObjectWorkspaceAmenityGroup[];
   bedTypeOptions: WorkspaceReferenceOption[];
   mediaOptions: WorkspaceReferenceOption[];
   items: ObjectWorkspaceRoomTypeItem[];
@@ -1813,8 +1816,10 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
         readArray(record.amenities ?? record.room_type_amenities).map((amenity) => readNamedReference(amenity.amenity ?? amenity)),
       ),
     ),
-    // Editor loader (object-workspace.ts) supplies the authoritative bed_type catalog via direct PostgREST.
+    // Editor loader (object-workspace.ts) supplies the authoritative bed_type catalog + grouped
+    // equipment via direct PostgREST.
     bedTypeOptions: [],
+    amenityGroups: [],
     mediaOptions: [],
     items,
     unavailableReason: null,

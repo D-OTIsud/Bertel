@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Trash2, Search, Lock, Plus } from 'lucide-react';
+import { Trash2, Search, Lock, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { EditorModal, ReferenceSelect, Field, Input, Textarea, Toggle, Chip, ChipSet } from '../primitives';
 import { fold } from '../../../components/ui/pickers/fold';
 import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule } from '../../../services/object-workspace-parser';
@@ -11,7 +11,7 @@ import {
 interface RoomEditModalProps {
   open: boolean;
   room: ObjectWorkspaceRoomTypeItem;
-  module: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'bedTypeOptions'>;
+  module: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'amenityGroups' | 'bedTypeOptions'>;
   onClose: () => void;
   onSave: (room: ObjectWorkspaceRoomTypeItem) => void;
 }
@@ -44,16 +44,26 @@ const ICON_BTN = {
 export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditModalProps) {
   const [draft, setDraft] = useState(room);
   const [equipQuery, setEquipQuery] = useState('');
+  const [openFamilies, setOpenFamilies] = useState<Set<string>>(new Set());
   const set = (patch: Partial<ObjectWorkspaceRoomTypeItem>) => setDraft((d) => ({ ...d, ...patch }));
   const priceUnit = `${draft.currency === 'EUR' ? '€' : draft.currency} / nuit`;
 
   const toggleAmenity = (code: string) =>
     set({ amenityCodes: draft.amenityCodes.includes(code) ? draft.amenityCodes.filter((c) => c !== code) : [...draft.amenityCodes, code] });
+  const toggleFamily = (code: string) =>
+    setOpenFamilies((prev) => { const next = new Set(prev); if (next.has(code)) next.delete(code); else next.add(code); return next; });
   const selectedAmenities = module.amenityOptions.filter((o) => draft.amenityCodes.includes(o.code));
   const foldedQuery = fold(equipQuery.trim());
-  const availableAmenities = module.amenityOptions.filter(
-    (o) => !draft.amenityCodes.includes(o.code) && (foldedQuery === '' || fold(o.label).includes(foldedQuery)),
-  );
+  const searchingEquip = foldedQuery !== '';
+  // Available equipment grouped by family, ordered by industry popularity (§73). A search
+  // matches across all families and auto-expands the ones with hits.
+  const dispoGroups = module.amenityGroups
+    .map((g) => ({
+      familyCode: g.familyCode,
+      familyLabel: g.familyLabel,
+      options: g.options.filter((o) => !draft.amenityCodes.includes(o.code) && (foldedQuery === '' || fold(o.label).includes(foldedQuery))),
+    }))
+    .filter((g) => g.options.length > 0);
 
   return (
     <EditorModal open={open} title={draft.name || 'Type de chambre'} onClose={onClose} onSave={() => onSave(draft)}>
@@ -172,12 +182,39 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         <span className="muted" style={{ fontSize: 12 }}>Aucune sélection</span>
       )}
       <div className="chip-group__label" style={{ margin: '10px 0 6px' }}>Disponibles</div>
-      {availableAmenities.length > 0 ? (
-        <ChipSet>
-          {availableAmenities.map((o) => (
-            <Chip key={o.code} label={o.label} sm onClick={() => toggleAmenity(o.code)} />
-          ))}
-        </ChipSet>
+      {dispoGroups.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {dispoGroups.map((g) => {
+            const open = searchingEquip || openFamilies.has(g.familyCode);
+            return (
+              <div key={g.familyCode}>
+                <button
+                  type="button"
+                  onClick={() => toggleFamily(g.familyCode)}
+                  aria-expanded={open}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                    padding: '6px 4px', background: 'transparent', border: 0, cursor: 'pointer',
+                    color: 'var(--ink-2)', fontSize: 13, fontWeight: 600, textAlign: 'left',
+                  }}
+                >
+                  {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+                  <span style={{ flex: 1 }}>{g.familyLabel}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>{g.options.length}</span>
+                </button>
+                {open && (
+                  <div style={{ padding: '2px 0 8px 20px' }}>
+                    <ChipSet>
+                      {g.options.map((o) => (
+                        <Chip key={o.code} label={o.label} sm onClick={() => toggleAmenity(o.code)} />
+                      ))}
+                    </ChipSet>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <span className="muted" style={{ fontSize: 12 }}>Aucun équipement disponible</span>
       )}

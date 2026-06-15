@@ -146,11 +146,14 @@ describe('BlockHEB room edit modal', () => {
   it('opens the room edit modal and persists per-room amenity changes', () => {
     const modules = fullModulesFixture();
     modules.rooms.amenityOptions = [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }, { id: 'ac', code: 'ac', label: 'Clim' }];
+    modules.rooms.amenityGroups = [
+      { familyCode: 'climate_control', familyLabel: 'Climatisation & chauffage', options: [{ id: 'ac', code: 'ac', label: 'Clim', disabilityTypes: [] }] },
+    ];
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
-    // Equipment is inline in the room modal (search + Sélectionnés/Disponibles) — « Clim » is a
-    // directly-clickable « Disponibles » chip, no sub-modal.
+    // Equipment is inline + grouped by collapsible category — expand the family, then click « Clim ».
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Climatisation & chauffage/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);

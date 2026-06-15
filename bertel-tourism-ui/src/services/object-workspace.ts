@@ -546,6 +546,31 @@ function buildAmenityGroups(amenities: AmenityRef[], selectedCodes: Set<string>)
     });
 }
 
+/**
+ * §73 — room equipment grouped by family in INDUSTRY-POPULARITY order (not alphabetical):
+ * `rows` arrive ordered by `ref_amenity.position` (usage rank), so options keep that order
+ * and families are sorted by `ref_code_amenity_family.position` (family usage rank). Distinct
+ * from `buildAmenityGroups` (which re-sorts alphabetically for §10/§05).
+ */
+function buildRoomAmenityGroups(rows: Record<string, unknown>[]): ObjectWorkspaceAmenityGroup[] {
+  const map = new Map<string, { group: ObjectWorkspaceAmenityGroup; familyPos: number }>();
+  for (const row of rows) {
+    const family = readRecord(row.family);
+    const familyCode = readString(family.code, 'misc');
+    const familyLabel = readString(family.name, 'Autres equipements');
+    const familyPos = toNullableInteger(readString(family.position)) ?? Number.MAX_SAFE_INTEGER;
+    const entry = map.get(familyCode) ?? { group: { familyCode, familyLabel, options: [] }, familyPos };
+    entry.group.options.push({
+      id: readString(row.id),
+      code: readString(row.code),
+      label: readString(row.name, readString(row.code)),
+      disabilityTypes: readStringList(readRecord(row.extra).disability_types),
+    });
+    map.set(familyCode, entry);
+  }
+  return Array.from(map.values()).sort((a, b) => a.familyPos - b.familyPos).map((entry) => entry.group);
+}
+
 async function getObjectWorkspaceCharacteristicsModule(
   objectId: string,
   baseModule: ObjectWorkspaceCharacteristicsModule,
@@ -2410,7 +2435,7 @@ async function getObjectWorkspaceRoomsModule(
       .order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'view_type').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'room_type').order('position', { ascending: true }),
-    client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
+    client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name, position)').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'bed_type').order('position', { ascending: true }),
   ]);
@@ -2445,6 +2470,9 @@ async function getObjectWorkspaceRoomsModule(
   const amenityOptions = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
     ? dedupeReferenceOptions((amenityRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
     : baseModule.amenityOptions;
+  const amenityGroups = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
+    ? buildRoomAmenityGroups((amenityRefsResult.value.data ?? []) as Record<string, unknown>[])
+    : baseModule.amenityGroups;
   const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
     ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
     : baseModule.mediaOptions;
@@ -2503,6 +2531,7 @@ async function getObjectWorkspaceRoomsModule(
     viewTypeOptions,
     roomTypeOptions,
     amenityOptions,
+    amenityGroups,
     bedTypeOptions,
     mediaOptions,
     items: rows.map((row, index) => {
@@ -3886,6 +3915,14 @@ export async function saveObjectWorkspaceDistinctions(objectId: string, input: O
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
+  }
+
+  // No-clobber guard (mirrors the §07 savers): a degraded load leaves distinctionGroups /
+  // accessibilityLabels empty/stale. Running the delete-reconcile below against the fresh
+  // DB rows would mass-delete real §08/§10 classifications. Throw instead of saving — both
+  // §08 (SectionClassification) and §10 (SectionAccessibility) gate their controls on this.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
   }
 
   const client = getSupabaseClient();

@@ -11,10 +11,11 @@ const room: ObjectWorkspaceRoomTypeItem = {
   basePrice: '165', currency: 'EUR', accessible: false, published: true, position: '1',
   amenityCodes: [], mediaIds: [], beds: [],
 };
-const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'bedTypeOptions'> = {
+const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'amenityGroups' | 'bedTypeOptions'> = {
   roomTypeOptions: [{ id: 'rt1', code: 'double', label: 'Chambre double' }],
   viewTypeOptions: [{ id: 'v1', code: 'sea', label: 'Vue mer' }],
   amenityOptions: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }],
+  amenityGroups: [{ familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] }],
   bedTypeOptions: [{ id: 'bt-double', code: 'double', label: 'Lit double' }],
 };
 
@@ -56,18 +57,29 @@ describe('RoomEditModal', () => {
     expect(saved).toMatchObject({ capacityTotal: '4', capacityAdults: '1', capacityChildren: '3' });
   });
 
-  it('edits amenities via the inline searchable chips (selected pulled to the top)', () => {
+  it('groups available equipment by collapsible category (collapsed by default)', () => {
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    // The « Général » family header is shown; its Wi-Fi chip is hidden until expanded.
+    expect(screen.getByRole('button', { name: /Général/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Wi-Fi' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Général/ }));
+    expect(screen.getByRole('button', { name: 'Wi-Fi' })).toBeInTheDocument();
+  });
+
+  it('adds an amenity from its category and returns it on save', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
-    // Wi-Fi starts in "Disponibles" (inline — no modal). Clicking adds it to the selection.
+    fireEvent.click(screen.getByRole('button', { name: /Général/ })); // expand the category
     fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['wifi']);
   });
 
-  it('filters the available equipment with the search box', () => {
+  it('search filters across categories and auto-expands matches', () => {
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    // A matching search reveals the chip without manually expanding its category.
+    fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'Wi' } });
     expect(screen.getByRole('button', { name: 'Wi-Fi' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'zzz' } });
     expect(screen.queryByRole('button', { name: 'Wi-Fi' })).not.toBeInTheDocument();

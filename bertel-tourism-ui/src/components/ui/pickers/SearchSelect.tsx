@@ -2,8 +2,13 @@
 
 // Single-select searchable picker (house design — mirrors the editor's ChipMultiSelect
 // modal visual language: search field + house-styled option list). Used for long lists
-// where a native <select> is unwieldy (sujet, établissement, acteur…). Popover container
-// (not a nested modal) so it can open inside an already-open modal without stacking.
+// where a native <select> is unwieldy (sujet, établissement, acteur, référentiel…).
+// Popover container (not a nested modal) so it can open inside an already-open modal
+// without stacking.
+//
+// Optional grouping: when any option carries a `group`, the list renders as
+// COLLAPSIBLE category sections (headers toggle their options) so a long catalog
+// isn't overwhelming. Typing in the search filters across every group at once.
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { fold } from './fold';
@@ -11,6 +16,8 @@ import { fold } from './fold';
 export interface SearchSelectOption {
   code: string;
   label: string;
+  /** Optional category — when any option has one, the list renders as collapsible groups. */
+  group?: string;
 }
 
 interface SearchSelectProps {
@@ -39,6 +46,7 @@ export function SearchSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
@@ -48,22 +56,63 @@ export function SearchSelect({
   // rather than collapsing to the placeholder (mirrors ReferenceSelect).
   const triggerLabel = selected ? selected.label : value !== '' ? value : placeholder;
 
+  const isGrouped = useMemo(() => options.some((o) => Boolean(o.group)), [options]);
+  // Group names in first-appearance order (stable, independent of the filter).
+  const groupOrder = useMemo(() => {
+    const seen: string[] = [];
+    for (const option of options) {
+      if (option.group && !seen.includes(option.group)) seen.push(option.group);
+    }
+    return seen;
+  }, [options]);
+  // Default open state: the group holding the current value (so the selection is visible).
+  const defaultExpanded = useMemo(() => {
+    const group = options.find((o) => o.code === value)?.group;
+    return group ? { [group]: true } : {};
+  }, [options, value]);
+
   const folded = fold(query.trim());
+  const searching = folded !== '';
   const filtered = useMemo(
     () => options.filter((o) => folded === '' || fold(o.label).includes(folded)),
     [options, folded],
   );
-  const rowCount = filtered.length + (allowClear ? 1 : 0);
 
-  // Focus the search on open; reset the query when it closes.
+  // Grouped sections for render + keyboard. While searching, every group with a match is
+  // force-expanded; otherwise a group shows its options only when expanded.
+  const sections = useMemo(() => {
+    if (!isGrouped) return [];
+    return groupOrder.map((name) => {
+      const opts = filtered.filter((o) => o.group === name);
+      return {
+        name,
+        opts,
+        headerVisible: searching ? opts.length > 0 : true,
+        isOpen: searching ? opts.length > 0 : Boolean(expanded[name]),
+      };
+    });
+  }, [isGrouped, groupOrder, filtered, searching, expanded]);
+
+  // The currently navigable options (respecting collapse + filter).
+  const flatVisible = isGrouped ? sections.flatMap((s) => (s.isOpen ? s.opts : [])) : filtered;
+  const rowIndexByCode = useMemo(() => {
+    const map = new Map<string, number>();
+    flatVisible.forEach((o, i) => map.set(o.code, allowClear ? i + 1 : i));
+    return map;
+  }, [flatVisible, allowClear]);
+  const rowCount = flatVisible.length + (allowClear ? 1 : 0);
+  const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
+
+  // Focus the search on open; reset query + collapse state when it closes.
   useEffect(() => {
     if (open) {
       setActive(0);
       searchRef.current?.focus();
     } else {
       setQuery('');
+      setExpanded(defaultExpanded);
     }
-  }, [open]);
+  }, [open, defaultExpanded]);
 
   // Outside mousedown closes the popover.
   useEffect(() => {
@@ -78,6 +127,11 @@ export function SearchSelect({
   function commit(code: string) {
     onChange(code);
     setOpen(false);
+  }
+
+  function toggleGroup(name: string) {
+    setExpanded((current) => ({ ...current, [name]: !current[name] }));
+    setActive(0);
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -100,9 +154,25 @@ export function SearchSelect({
         commit('');
         return;
       }
-      const opt = filtered[allowClear ? active - 1 : active];
+      const opt = flatVisible[allowClear ? active - 1 : active];
       if (opt) commit(opt.code);
     }
+  }
+
+  function renderOption(option: SearchSelectOption) {
+    const rowIndex = rowIndexByCode.get(option.code) ?? -1;
+    return (
+      <button
+        key={option.code}
+        type="button"
+        role="option"
+        aria-selected={option.code === value}
+        className={`picker__option${rowIndex === active ? ' is-active' : ''}${option.code === value ? ' is-on' : ''}`}
+        onClick={() => commit(option.code)}
+      >
+        {option.label}
+      </button>
+    );
   }
 
   return (
@@ -148,22 +218,26 @@ export function SearchSelect({
                 {clearLabel}
               </button>
             )}
-            {filtered.map((option, i) => {
-              const rowIndex = allowClear ? i + 1 : i;
-              return (
-                <button
-                  key={option.code}
-                  type="button"
-                  role="option"
-                  aria-selected={option.code === value}
-                  className={`picker__option${rowIndex === active ? ' is-active' : ''}${option.code === value ? ' is-on' : ''}`}
-                  onClick={() => commit(option.code)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-            {filtered.length === 0 && <p className="picker__empty">Aucun résultat</p>}
+            {isGrouped
+              ? sections.map((section) =>
+                  section.headerVisible ? (
+                    <div key={section.name} className="picker__group">
+                      <button
+                        type="button"
+                        className="picker__group-header"
+                        aria-expanded={section.isOpen}
+                        onClick={() => toggleGroup(section.name)}
+                      >
+                        <span className={`picker__group-chevron${section.isOpen ? ' is-open' : ''}`} aria-hidden>▸</span>
+                        <span className="picker__group-label">{section.name}</span>
+                        <span className="picker__group-count" aria-hidden>{section.opts.length}</span>
+                      </button>
+                      {section.isOpen && section.opts.map(renderOption)}
+                    </div>
+                  ) : null,
+                )
+              : filtered.map(renderOption)}
+            {showEmpty && <p className="picker__empty">Aucun résultat</p>}
           </div>
         </div>
       )}

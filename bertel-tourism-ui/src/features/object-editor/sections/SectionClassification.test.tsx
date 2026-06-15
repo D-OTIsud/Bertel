@@ -83,10 +83,19 @@ describe('SectionClassification', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Ajouter une classification/i }));
     });
+    act(() => {
+      fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
+    });
     // The accessibility scheme belongs to §10 — it must not be offered here.
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'handicap' } });
+    });
     expect(screen.queryByRole('option', { name: 'Tourisme & Handicap' })).not.toBeInTheDocument();
     act(() => {
-      fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'hot_stars' } });
+      fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'hotel' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('option', { name: 'Classement hôtelier' }));
     });
     act(() => {
       fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '4' } });

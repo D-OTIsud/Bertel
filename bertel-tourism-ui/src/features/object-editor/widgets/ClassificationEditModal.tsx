@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { EditorModal, Field, Input, Readout, ReferenceSelect, Select } from '../primitives';
+import { SearchSelect } from '../../../components/ui/pickers/SearchSelect';
 import {
   CLASSIFICATION_STATUS_OPTIONS,
   availableValueOptions,
@@ -10,7 +11,7 @@ import type {
   ObjectWorkspaceDistinctionSchemeOption,
 } from '../../../services/object-workspace-parser';
 
-const DISPLAY_GROUP_ORDER = ['official_classification', 'quality_label'];
+// Category labels for the collapsible référentiel picker (SearchSelect groups).
 const DISPLAY_GROUP_LABELS: Record<string, string> = {
   official_classification: 'Classements officiels',
   quality_label: 'Labels qualité',
@@ -22,33 +23,11 @@ interface ClassificationEditModalProps {
   mode: 'add' | 'edit';
   /** §08 schemes only (caller filters out accessibility — that lives in §10). */
   schemes: ObjectWorkspaceDistinctionSchemeOption[];
-  /** Held rows — drives add-picker disabling (single scheme held / multi value taken). */
+  /** Held rows — fully-used schemes are dropped from the add picker (single held / multi all-taken). */
   existingItems: ObjectWorkspaceDistinctionItem[];
   draft: ObjectWorkspaceDistinctionItem;
   onClose: () => void;
   onSave: (item: ObjectWorkspaceDistinctionItem) => void;
-}
-
-interface SchemeGroup {
-  group: string;
-  label: string;
-  schemes: ObjectWorkspaceDistinctionSchemeOption[];
-}
-
-function groupSchemes(schemes: ObjectWorkspaceDistinctionSchemeOption[]): SchemeGroup[] {
-  const order = [...DISPLAY_GROUP_ORDER];
-  for (const scheme of schemes) {
-    if (!order.includes(scheme.displayGroup)) {
-      order.push(scheme.displayGroup);
-    }
-  }
-  return order
-    .map((group) => ({
-      group,
-      label: DISPLAY_GROUP_LABELS[group] ?? group,
-      schemes: schemes.filter((scheme) => scheme.displayGroup === group),
-    }))
-    .filter((entry) => entry.schemes.length > 0);
 }
 
 /**
@@ -73,6 +52,16 @@ export function ClassificationEditModal({
   const currentScheme = schemes.find((scheme) => scheme.code === draft.schemeCode) ?? null;
   const valueChoices = currentScheme ? availableValueOptions(currentScheme, existingItems, originalValueCode) : [];
   const hasValueChoice = (currentScheme?.valueOptions.length ?? 0) > 1;
+
+  // Searchable + collapsible-by-category référentiel picker. Fully-used schemes
+  // (single already held / multi all-taken) are dropped — only addable ones show.
+  const referentialOptions = schemes
+    .filter((scheme) => !isSchemeFullyUsed(scheme, existingItems))
+    .map((scheme) => ({
+      code: scheme.code,
+      label: scheme.label,
+      group: DISPLAY_GROUP_LABELS[scheme.displayGroup] ?? scheme.displayGroup,
+    }));
 
   function selectScheme(code: string) {
     const scheme = schemes.find((candidate) => candidate.code === code);
@@ -110,25 +99,14 @@ export function ClassificationEditModal({
         {mode === 'edit' ? (
           <Readout value={draft.schemeLabel} />
         ) : (
-          <select
-            className="select"
+          <SearchSelect
             aria-label="Référentiel"
             value={draft.schemeCode}
-            onChange={(event) => selectScheme(event.target.value)}
-          >
-            <option value="" disabled>
-              — Choisir un référentiel —
-            </option>
-            {groupSchemes(schemes).map((entry) => (
-              <optgroup key={entry.group} label={entry.label}>
-                {entry.schemes.map((scheme) => (
-                  <option key={scheme.code} value={scheme.code} disabled={isSchemeFullyUsed(scheme, existingItems)}>
-                    {scheme.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            options={referentialOptions}
+            onChange={selectScheme}
+            placeholder="— Choisir un référentiel —"
+            searchPlaceholder="Rechercher un référentiel…"
+          />
         )}
       </Field>
 

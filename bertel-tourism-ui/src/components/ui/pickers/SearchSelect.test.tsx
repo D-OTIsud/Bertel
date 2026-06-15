@@ -80,3 +80,52 @@ describe('SearchSelect', () => {
     expect(screen.queryByRole('option', { name: 'Hôtel A' })).toBeNull();
   });
 });
+
+const grouped = [
+  { code: 'h1', label: 'Hôtel A', group: 'Classements' },
+  { code: 'h2', label: 'Camping B', group: 'Classements' },
+  { code: 'l1', label: 'Logis', group: 'Labels' },
+  { code: 'l2', label: 'Musée de France', group: 'Labels' },
+];
+
+describe('SearchSelect (grouped)', () => {
+  it('renders collapsible category headers and hides options until a group is expanded', () => {
+    render(<SearchSelect value="" options={grouped} onChange={jest.fn()} aria-label="Réf" />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Réf' }));
+    expect(screen.getByRole('button', { name: /Classements/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Labels/ })).toBeInTheDocument();
+    // Nothing selected → all groups collapsed → no options shown yet.
+    expect(screen.queryByRole('option', { name: 'Hôtel A' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Classements/ }));
+    expect(screen.getByRole('option', { name: 'Hôtel A' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Camping B' })).toBeInTheDocument();
+    // The other group stays collapsed.
+    expect(screen.queryByRole('option', { name: 'Logis' })).toBeNull();
+  });
+
+  it('auto-expands the group containing the selected value', () => {
+    render(<SearchSelect value="l2" options={grouped} onChange={jest.fn()} aria-label="Réf" />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Réf' }));
+    expect(screen.getByRole('option', { name: 'Musée de France' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Hôtel A' })).toBeNull();
+  });
+
+  it('searching filters across every group regardless of collapse state', () => {
+    render(<SearchSelect value="" options={grouped} onChange={jest.fn()} aria-label="Réf" />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Réf' }));
+    fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'musee' } });
+    expect(screen.getByRole('option', { name: 'Musée de France' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Hôtel A' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Logis' })).toBeNull();
+  });
+
+  it('selects a grouped option and closes', () => {
+    const onChange = jest.fn();
+    render(<SearchSelect value="" options={grouped} onChange={onChange} aria-label="Réf" />);
+    fireEvent.click(screen.getByRole('combobox', { name: 'Réf' }));
+    fireEvent.click(screen.getByRole('button', { name: /Labels/ }));
+    fireEvent.click(screen.getByRole('option', { name: 'Logis' }));
+    expect(onChange).toHaveBeenCalledWith('l1');
+    expect(screen.queryByRole('option', { name: 'Logis' })).toBeNull();
+  });
+});

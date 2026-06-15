@@ -85,32 +85,38 @@ export function ResultCardView({
 
   const tagChips = card.tagChips ?? [];
   const neutralLabels = Array.isArray(card.labels) ? card.labels : [];
-  const visibleTag = tagChips[0];
+  // The type/category pill now lives on the metadata line (below), so the bottom row is the curated
+  // display layer ONLY: up to 2 colored §09 tags + 1 neutral classification/label + overflow.
+  const visibleTags = tagChips.slice(0, 2);
   const visibleNeutral = neutralLabels[0];
-  const overflow = (tagChips.length - (visibleTag ? 1 : 0)) + (neutralLabels.length - (visibleNeutral ? 1 : 0));
+  const overflow = tagChips.length - visibleTags.length + (neutralLabels.length - (visibleNeutral ? 1 : 0));
 
   const containerInteractive = interactive && Boolean(onOpen);
 
+  const categoryPill: ReactNode = (
+    <span
+      className={cn(
+        'inline-flex h-5 max-w-[9rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
+        categoryTagClasses(bucket),
+      )}
+      title={categoryLabel}
+    >
+      {categoryLabel}
+    </span>
+  );
+
   const chipRow: ReactNode = (
     <div className="mt-auto flex min-w-0 flex-nowrap items-center gap-1">
-      <span
-        className={cn(
-          'inline-flex h-5 max-w-[10rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
-          categoryTagClasses(bucket),
-        )}
-      >
-        {categoryLabel}
-      </span>
-
-      {visibleTag ? (
+      {visibleTags.map((tag) => (
         <span
+          key={tag.slug || tag.label}
           className="inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide"
-          style={tagChipStyle(visibleTag.color)}
-          title={visibleTag.label}
+          style={tagChipStyle(tag.color)}
+          title={tag.label}
         >
-          {visibleTag.label}
+          {tag.label}
         </span>
-      ) : null}
+      ))}
 
       {visibleNeutral ? (
         containerInteractive ? (
@@ -184,6 +190,7 @@ export function ResultCardView({
           </h3>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
+          {categoryPill}
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />
             {city}

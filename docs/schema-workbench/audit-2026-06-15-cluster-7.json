@@ -1,0 +1,204 @@
+{
+  "cluster": 7,
+  "generated": "2026-06-15",
+  "scope": [
+    "payment_method",
+    "price_kind",
+    "price_unit",
+    "promotion_type",
+    "membership_campaign",
+    "membership_tier",
+    "assistance_type"
+  ],
+  "structural_probe": {
+    "literal_other_domain_rows": 0,
+    "default_partition": "ref_code_other",
+    "dedicated_partitions_count": 45,
+    "note": "All Cluster 7 domains have dedicated LIST partitions. No Cluster 7 rows fall to the DEFAULT (ref_code_other). ref_code_other exists as the DEFAULT partition and has 0 rows for domain='other' (confirmed live).",
+    "partition_list": [
+      "ref_code_assistance_type → FOR VALUES IN ('assistance_type')",
+      "ref_code_membership_campaign → FOR VALUES IN ('membership_campaign')",
+      "ref_code_membership_tier → FOR VALUES IN ('membership_tier')",
+      "ref_code_payment_method → FOR VALUES IN ('payment_method')",
+      "ref_code_price_kind → FOR VALUES IN ('price_kind')",
+      "ref_code_price_unit → FOR VALUES IN ('price_unit')",
+      "ref_code_promotion_type → FOR VALUES IN ('promotion_type')",
+      "ref_code_other → DEFAULT"
+    ]
+  },
+  "matrix": [
+    {
+      "unit": "payment_method",
+      "live_count": 15,
+      "source_count": 15,
+      "doc_count": 15,
+      "db_usage_distinct": 8,
+      "i18n_en_live": 14,
+      "i18n_es_live": 14,
+      "i18n_en_source": 14,
+      "i18n_es_source": 14,
+      "verdict": "WARN — 1 code (tickets_restaurant) missing en+es i18n in source and live; 7 codes in live data unused by object_payment_method (forward-looking/import-only)"
+    },
+    {
+      "unit": "price_kind",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 10,
+      "i18n_es_live": 10,
+      "i18n_en_source": 10,
+      "i18n_es_source": 10,
+      "verdict": "OK — fully synced across all three planes, complete i18n; 0 live usage rows (object_price empty — forward-looking)"
+    },
+    {
+      "unit": "price_unit",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 10,
+      "i18n_es_live": 10,
+      "i18n_en_source": 10,
+      "i18n_es_source": 10,
+      "verdict": "OK — fully synced, complete i18n; 0 live usage rows (object_price empty — forward-looking)"
+    },
+    {
+      "unit": "promotion_type",
+      "live_count": 14,
+      "source_count": 14,
+      "doc_count": 14,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 10,
+      "i18n_es_live": 10,
+      "i18n_en_source": 10,
+      "i18n_es_source": 10,
+      "verdict": "WARN — 4 codes (partner, weekend, long_stay, holiday) missing en+es i18n in source and live; source split: 10 codes have i18n (lines 1562–1571), 4 do not (lines 769–772 base insert only, no corresponding i18n block)"
+    },
+    {
+      "unit": "membership_campaign",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 0,
+      "i18n_es_live": 0,
+      "i18n_en_source": 0,
+      "i18n_es_source": 0,
+      "verdict": "INFO — never seeded anywhere (live=0, source=0, doc=0); object_membership has 0 rows so no orphan FK risk; forward-looking schema placeholder; RLS enabled with policies (admin_write FOR ALL + pub_read SELECT) ready for when data is introduced"
+    },
+    {
+      "unit": "membership_tier",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 0,
+      "i18n_es_live": 0,
+      "i18n_en_source": 0,
+      "i18n_es_source": 0,
+      "verdict": "INFO — never seeded anywhere (live=0, source=0, doc=0); object_membership has 0 rows so no orphan FK risk; forward-looking schema placeholder; RLS enabled with policies (admin_write FOR ALL + pub_read SELECT) ready for when data is introduced"
+    },
+    {
+      "unit": "assistance_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "i18n_en_live": 10,
+      "i18n_es_live": 10,
+      "i18n_en_source": 10,
+      "i18n_es_source": 10,
+      "verdict": "OK — fully synced, complete i18n en+es; no direct FK consumer table found in FK map (object_discount has no assistance_type FK — the column does not exist there); domain is in scope via FK csv only through object_taxonomy → ref_code_assistance_type (taxonomy usage); 0 live data rows in any consumer"
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D1",
+      "severity": "WARN",
+      "unit": "payment_method",
+      "code": "tickets_restaurant",
+      "title": "payment_method:tickets_restaurant missing en+es translations (in use by live data)",
+      "evidence": "Live query: name_i18n->>'en' = NULL, name_i18n->>'es' = NULL for code='tickets_restaurant'. Source seeds_data.sql line 211: the code was added in a separate INSERT block (Ajout 2026-03-21) with no corresponding i18n UPDATE in the i18n block (lines 1274–1287 cover 14 codes, tickets_restaurant absent). object_payment_method has 1 604 live rows — 8 distinct payment_method codes are actively used (live consumer query), and tickets_restaurant IS one of the 8 active codes (referenced by real establishment data). FR label is present and correct.",
+      "recommendation": "Add i18n block for tickets_restaurant: en='Restaurant vouchers' (or 'Meal vouchers'), es='Tickets restaurante'. Insert into the i18n UPDATE at seeds_data.sql after line 1287. Also apply via a migration UPDATE or MCP execute_sql against the live DB."
+    },
+    {
+      "dimension": "D1",
+      "severity": "WARN",
+      "unit": "promotion_type",
+      "code": "partner,weekend,long_stay,holiday",
+      "title": "4 promotion_type codes missing en+es translations (source-seeded but i18n block incomplete)",
+      "evidence": "Live query confirms: codes partner, weekend, long_stay, holiday have en_name=NULL, es_name=NULL. Source seeds_data.sql lines 769–772 insert all 4 codes (base INSERT with FR name+description only). The i18n UPDATE block at lines 1562–1571 covers only the first 10 codes (early_booking through family) — the 4 later-added codes have no corresponding i18n rows. promotion table has 0 rows (no current live impact), but the promotion feature is forward-looking and these codes will be user-visible.",
+      "recommendation": "Extend the promotion_type i18n block in seeds_data.sql after line 1571 with: partner (en='Partner offer', es='Oferta de socio'), weekend (en='Weekend', es='Fin de semana'), long_stay (en='Long stay', es='Larga estancia'), holiday (en='Holiday offer', es='Oferta vacacional'). Apply to live DB via migration UPDATE."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "payment_method",
+      "code": "american_express,cheque_vacances,crypto,google_pay,maestro,vacaf,visa",
+      "title": "7 payment_method codes seeded but not referenced by any live object_payment_method row",
+      "evidence": "Consumer query returned 8 distinct codes used in 1 604 rows: apple_pay, carte_bleue, cheque, especes, mastercard, paypal, tickets_restaurant, virement. The remaining 7 active codes (american_express, cheque_vacances, crypto, google_pay, maestro, vacaf, visa) have 0 referencing rows. All are is_active=true and is_assignable=true.",
+      "recommendation": "FORWARD-LOOKING — no action needed. These codes are legitimately available for editors to assign; 0 usage reflects the current state of the imported dataset, not a seeding defect. Mark as monitored."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "price_kind,price_unit,promotion_type,assistance_type",
+      "code": "ALL",
+      "title": "All codes in price_kind, price_unit, promotion_type, assistance_type have 0 live consumer rows",
+      "evidence": "Consumer row counts: object_price=0, promotion=0, object_discount=0, object_menu_item=0. assistance_type has no direct FK consumer table (object_discount has no assistance_type column; object_taxonomy can hold assistance_type codes via the taxonomy FK but 0 object_taxonomy rows use this domain confirmed by no consumer query hits).",
+      "recommendation": "FORWARD-LOOKING — no action needed. These domains are correctly seeded for future use. assistance_type consumer pattern (object_taxonomy) is valid but inactive. Monitor at first data entry."
+    },
+    {
+      "dimension": "D3",
+      "severity": "INFO",
+      "unit": "ref_code_payment_method",
+      "code": "POLICY_DUPLICATE",
+      "title": "ref_code_payment_method has duplicate/legacy policy names alongside standard house pair",
+      "evidence": "pg_policies shows 4 policies on ref_code_payment_method: the standard pair (admin_ref_code_write FOR ALL + pub_ref_code_read SELECT) PLUS two legacy French-named policies ('Écriture admin des moyens de paiement' FOR ALL + 'Lecture publique des moyens de paiement' SELECT). These are all PERMISSIVE and functionally redundant. The API doc table entry shows '0 policies' (incorrect — was last regenerated before the standard pair was added) while the policy detail section correctly shows 4 policies.",
+      "recommendation": "Drop the two legacy French-named policies from ref_code_payment_method to eliminate the duplicate write+read pair: DROP POLICY \"Écriture admin des moyens de paiement\" ON public.ref_code_payment_method; DROP POLICY \"Lecture publique des moyens de paiement\" ON public.ref_code_payment_method; Regenerate docs/api-db-reference.html to fix the '0 policies' discrepancy in the table row (it should show '2 policies' post-cleanup)."
+    },
+    {
+      "dimension": "D3",
+      "severity": "INFO",
+      "unit": "ref_code_membership_campaign,ref_code_membership_tier",
+      "code": "POLICY_DUPLICATE",
+      "title": "membership_campaign and membership_tier each have 4 policies (2 standard + 2 domain-specific) — redundant but harmless",
+      "evidence": "pg_policies shows: standard pair (admin_ref_code_write FOR ALL + pub_ref_code_read SELECT) PLUS domain-specific pair (admin_membership_campaign_write FOR ALL + pub_membership_campaign_read SELECT; same for tier). All PERMISSIVE. API doc table shows '0 policies' for both (stale doc — regeneration needed). The standard pair was added to all partitions globally; the domain-specific pair predates this.",
+      "recommendation": "After seeding data into these partitions, drop the redundant domain-specific policy pair (admin_membership_campaign_write / pub_membership_campaign_read and their tier equivalents), leaving only the standard house pair. Regenerate the doc. Low priority while tables are empty."
+    },
+    {
+      "dimension": "D3",
+      "severity": "INFO",
+      "unit": "ALL",
+      "code": "ZH_EL_ABSENT",
+      "title": "zh (Chinese) and el (Greek) translations absent for all Cluster 7 domains — noted once per cluster",
+      "evidence": "Live query: name_i18n->>'zh' and name_i18n->>'el' are NULL for all rows across all 7 domains. This is consistent with the project-wide i18n gap (global constraint documented in WORKFLOW.md deferred items: 'Establishment-content translation en/es/zh/el for ~834 objects — Post-MVP'). Seeds provide fr (name col) + en + es only.",
+      "recommendation": "Out of scope for this audit pass. Track alongside the global i18n deferred item (post-MVP). No action needed before MVP launch given FR-fallback policy."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "membership_campaign,membership_tier",
+      "code": "EMPTY_PARTITION",
+      "title": "membership_campaign and membership_tier partitions are empty — forward-looking with no data risk",
+      "evidence": "live_count=0 for both domains (confirmed). object_membership has 0 rows (confirmed), so no FK orphan risk. Both partitions have RLS enabled, have the correct policy pairs, and are referenced by api.get_object_resource (doc FK section shows ref_code_membership_campaign/tier as read by that RPC). The FE (object-workspace.ts lines 1935–1936 and 5055–5056) already queries these domains at load time; it will receive an empty array gracefully.",
+      "recommendation": "Seed data before enabling the membership authoring UI. Suggested minimum vocabulary: for membership_campaign: 'cotisation_annuelle' / 'cotisation_mensuelle'; for membership_tier: 'standard' / 'premium' / 'partenaire'. Add to seeds_data.sql with en+es i18n from day one to avoid the same gap found in promotion_type."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "docs/api-db-reference.html",
+      "code": "DOC_STALE_POLICY_COUNT",
+      "title": "API doc table shows '0 policies' for ref_code_membership_campaign, ref_code_membership_tier, and ref_code_payment_method — stale snapshot",
+      "evidence": "HTML table rows at lines 4086, 4087 show '0 policies · 4 triggers · FK → 0 · FK ← 4' for membership_campaign and membership_tier; line 4094 area shows ref_code_payment_method as '0 policies'. The policy detail section at lines 5257–5268 and 5301 correctly shows 4 policies each. The table section was last regenerated before the standard house policy pair was applied globally.",
+      "recommendation": "Regenerate docs/api-db-reference.html (or update the three table rows manually) after the policy cleanup recommendation in D3 is applied. The policy detail section is accurate; only the summary table row is stale."
+    }
+  ],
+  "summary_notes": {
+    "payment_method_source_split": "15 codes total in seeds_data.sql: 14 in a single INSERT block (lines 193–212) + tickets_restaurant added separately at line 211 in the same INSERT with a comment (Ajout 2026-03-21). The i18n UPDATE covers 14 codes (lines 1274–1287), missing tickets_restaurant.",
+    "promotion_type_source_split": "14 codes total: 10 in the base INSERT (lines 755–764) with i18n at lines 1562–1571; 4 added in a second INSERT block (lines 769–772) with no corresponding i18n rows.",
+    "assistance_type_consumer": "No direct FK column to ref_code_assistance_type found in object_discount or any other specific consumer table. Consumers are: object_membership (unused), object_taxonomy (via the generic polymorphic FK), and the FK map entries for ref_code_assistance_type (FK ← 3 as per api-db-reference.html line 4065).",
+    "rls_status": "All 7 Cluster 7 partitions have RLS enabled (relrowsecurity=true). Standard house policies (admin_ref_code_write FOR ALL + pub_ref_code_read SELECT) are present on all. ref_code_payment_method has 2 extra legacy French-named policies. membership_campaign and membership_tier each have 2 extra domain-specific policies."
+  }
+}

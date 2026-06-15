@@ -74,14 +74,17 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Jours de semaine (pour ouvertures riches)
-INSERT INTO ref_code (domain, code, name, position) VALUES
- ('weekday','monday','Lundi',1),
- ('weekday','tuesday','Mardi',2),
- ('weekday','wednesday','Mercredi',3),
- ('weekday','thursday','Jeudi',4),
- ('weekday','friday','Vendredi',5),
- ('weekday','saturday','Samedi',6),
- ('weekday','sunday','Dimanche',7)
+-- dow_number = ISO day-of-week (Mon=1..Sun=7), set at insert time: the backfill UPDATE in
+-- schema_unified.sql runs before these rows exist (mis-ordered), so seeding it here is the
+-- source of truth for a fresh build. See migration_seed_drift_fix_legaltype_weekday.sql (§68).
+INSERT INTO ref_code (domain, code, name, position, dow_number) VALUES
+ ('weekday','monday','Lundi',1,1),
+ ('weekday','tuesday','Mardi',2,2),
+ ('weekday','wednesday','Mercredi',3,3),
+ ('weekday','thursday','Jeudi',4,4),
+ ('weekday','friday','Vendredi',5,5),
+ ('weekday','saturday','Samedi',6,6),
+ ('weekday','sunday','Dimanche',7,7)
 ON CONFLICT DO NOTHING;
 
 -- Types de planning d'ouverture

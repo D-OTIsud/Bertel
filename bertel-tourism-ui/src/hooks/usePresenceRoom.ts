@@ -11,6 +11,7 @@ interface TrackPayload {
   name: string;
   avatar: string;
   color: string;
+  onlineSince: number;
 }
 
 interface UsePresenceRoomOptions {
@@ -40,6 +41,8 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
   const typingTimers = useRef<Record<string, number>>({});
   const lockExpiryTimerRef = useRef<number | null>(null);
   const demoLockTimersRef = useRef<Record<string, number>>({});
+  // Captured once when the editor mounts: when the current user opened this room.
+  const sessionStartRef = useRef(Date.now());
 
   const me = useMemo<PresenceMember>(
     () => ({
@@ -47,6 +50,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
       name: userName || 'Utilisateur',
       avatar,
       color: demoPalette[0],
+      onlineSince: sessionStartRef.current,
     }),
     [avatar, userId, userName],
   );
@@ -100,7 +104,12 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     }
 
     if (demoMode) {
-      const demoPeers = [me, ...mockPresence.filter((item) => item.userId !== me.userId).slice(0, 2)];
+      const otherPeers = mockPresence
+        .filter((item) => item.userId !== me.userId)
+        .slice(0, 2)
+        // Stagger the mock editors a few minutes apart so the duration label has something to show.
+        .map((item, index) => ({ ...item, onlineSince: sessionStartRef.current - (index + 1) * 7 * 60_000 }));
+      const demoPeers = [me, ...otherPeers];
       setPeers(demoPeers);
       if (syncGlobalStatus) {
         setLiveUsersCount(demoPeers.length);
@@ -143,6 +152,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
           name: item.name,
           avatar: item.avatar,
           color: item.color || demoPalette[index % demoPalette.length],
+          onlineSince: item.onlineSince,
         }));
 
       setPeers(nextPeers);

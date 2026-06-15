@@ -21,7 +21,7 @@ psql "%TBLS_DSN%" -tAf tools/db-graph/db_supplement_extract.sql > db-graph-out/c
 .tools/python/Scripts/python.exe tools/db-graph/db_graph.py
 ```
 
-Outputs: `dbdoc/` (committed), `db-graph-out/graph.json` + `*.md` (committed), `graph.html` + the JSON inputs (gitignored).
+Outputs: `dbdoc/` (committed), `db-graph-out/graph.json` + `*.md` (committed), `docs/api-db-reference.html` (committed API/DB reference with RPC/table/RLS/ref-code listings from the graph, live reference rows when `TBLS_DSN` is set, and top-level non-temporary SQL seeds as fallback), `graph.html` + the JSON inputs (gitignored).
 
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),

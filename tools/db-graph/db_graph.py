@@ -8,16 +8,41 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dbgraph.build import build_graph  # noqa: E402
-from dbgraph.render import (render_html, write_functions_md, write_index_md,  # noqa: E402
-                            write_policies_md, write_types_md)
+from dbgraph.reference_extract import (extract_live_reference_values, extract_reference_values,  # noqa: E402
+                                       merge_reference_extracts)
+from dbgraph.render import (render_api_db_reference_html, render_html, write_functions_md,  # noqa: E402
+                            write_index_md, write_policies_md, write_types_md)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "db-graph-out")
+DOCS = os.path.join(ROOT, "docs")
 
 
 def _read(name):
     with open(os.path.join(OUT, name), encoding="utf-8") as f:
         return json.load(f)
+
+
+def _make_sources_relative(refs):
+    prefix = ROOT.replace("\\", "/").rstrip("/") + "/"
+    for bucket in ("rows", "derived_sources"):
+        for item in refs.get(bucket, []):
+            source = item.get("source", "")
+            if source.startswith(prefix):
+                item["source"] = source[len(prefix):]
+    return refs
+
+
+def _reference_sql_paths(sql_paths):
+    skipped_prefixes = ("test_", "ci_")
+    skipped_names = {"lot1_pilot_inserts.sql"}
+    out = []
+    for path in sql_paths:
+        name = os.path.basename(path).lower()
+        if name.endswith(".tmp.sql") or name in skipped_names or name.startswith(skipped_prefixes):
+            continue
+        out.append(path)
+    return sorted(out)
 
 
 def main():
@@ -27,8 +52,16 @@ def main():
     tbls = _read("schema_tbls.json")
     extra = _read("catalog_extra.json")
     sql_paths = glob.glob(os.path.join(ROOT, "Base de donnée DLL et API", "*.sql"))
+    reference_paths = _reference_sql_paths(sql_paths)
     g = build_graph(tbls, extra, sql_paths)
+    seed_refs = _make_sources_relative(extract_reference_values(reference_paths))
+    live_refs = None
+    if os.environ.get("TBLS_DSN"):
+        live_refs = extract_live_reference_values(os.environ["TBLS_DSN"], g, extra)
+    refs = merge_reference_extracts(seed_refs, live_refs or {"live": {"status": "not_queried", "tables": []}})
+    refs = _make_sources_relative(refs)
     os.makedirs(OUT, exist_ok=True)
+    os.makedirs(DOCS, exist_ok=True)
     with open(os.path.join(OUT, "graph.json"), "w", encoding="utf-8") as f:
         json.dump(g, f, ensure_ascii=False, indent=1)
     with open(os.path.join(OUT, "graph.html"), "w", encoding="utf-8") as f:
@@ -37,7 +70,13 @@ def main():
                      ("TYPES.md", write_types_md), ("DB_AGENT_INDEX.md", write_index_md)):
         with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
             f.write(fn(g))
-    print("db-graph: wrote %d nodes / %d edges to %s" % (len(g["nodes"]), len(g["edges"]), OUT))
+    live_note = "TBLS_DSN=%s" % ("set" if os.environ.get("TBLS_DSN") else "missing")
+    with open(os.path.join(DOCS, "api-db-reference.html"), "w", encoding="utf-8") as f:
+        f.write(render_api_db_reference_html(g, refs, live_note=live_note))
+    live = refs.get("live", {})
+    print("db-graph: wrote %d nodes / %d edges and %d reference rows (%s, %d SQL seed rows from %d files) to %s and docs/api-db-reference.html" % (
+        len(g["nodes"]), len(g["edges"]), len(refs.get("rows", [])),
+        live.get("status", "unknown"), refs.get("seed", {}).get("rows", 0), len(reference_paths), OUT))
 
 
 if __name__ == "__main__":

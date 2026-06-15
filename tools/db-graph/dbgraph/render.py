@@ -1,6 +1,10 @@
-"""Render the unified graph into agent markdown (FUNCTIONS/POLICIES/TYPES/INDEX) and an
-interactive d3 force-graph HTML. Committed artifacts carry no function bodies."""
+"""Render the unified graph into agent markdown (FUNCTIONS/POLICIES/TYPES/INDEX), a
+reader-facing API/DB reference page, and an interactive d3 force-graph HTML.
+Committed artifacts carry no function bodies."""
+from collections import defaultdict
+import html as _html
 import json
+import re
 
 
 def _by(nodes, kind):
@@ -85,6 +89,428 @@ def write_index_md(g):
     for dom in sorted(by_dom):
         out.append("- **%s**: %s" % (dom, ", ".join("`%s`" % t for t in sorted(by_dom[dom]))))
     return "\n".join(out)
+
+
+def _esc(value):
+    return _html.escape("" if value is None else str(value), quote=True)
+
+
+def _slug(value):
+    return re.sub(r"[^a-z0-9_-]+", "-", str(value).lower()).strip("-") or "item"
+
+
+def _node_title(node):
+    if not node:
+        return ""
+    if node["kind"] == "function":
+        return "%s.%s" % (node["schema"], node["props"]["signature"])
+    return "%s.%s" % (node["schema"], node["label"])
+
+
+def _short_list(values, limit=10):
+    values = [v for v in values if v]
+    if len(values) <= limit:
+        return ", ".join("<code>%s</code>" % _esc(v) for v in values)
+    shown = ", ".join("<code>%s</code>" % _esc(v) for v in values[:limit])
+    return "%s <span class=\"muted\">+%d</span>" % (shown, len(values) - limit)
+
+
+def _source_label(source):
+    if not source:
+        return ""
+    path = str(source.get("path", "")).replace("\\", "/")
+    marker = "Base de donnée DLL et API/"
+    if marker in path:
+        path = marker + path.split(marker, 1)[1]
+    elif "/tools/db-graph/" in path:
+        path = "tools/db-graph/" + path.split("/tools/db-graph/", 1)[1]
+    if source.get("line"):
+        return "%s:%s" % (path, source["line"])
+    return path
+
+
+def _source_html(props):
+    sources = props.get("sources") or ([props["source"]] if props.get("source") else [])
+    if not sources:
+        return "<span class=\"muted\">non retrouvée dans les SQL versionnés</span>"
+    return "<br>".join("<code>%s</code>" % _esc(_source_label(source)) for source in sources)
+
+
+def _reference_key(row):
+    vals = row.get("values", {})
+    if vals.get("domain") and vals.get("code"):
+        return "%s:%s" % (vals.get("domain"), vals.get("code"))
+    if vals.get("classification_code") and vals.get("action_external_code"):
+        return "%s:%s" % (vals.get("classification_code"), vals.get("action_external_code"))
+    if vals.get("classification_code") and vals.get("group_code"):
+        return "%s:%s" % (vals.get("classification_code"), vals.get("group_code"))
+    if vals.get("category_code") and vals.get("group_code") and vals.get("external_code"):
+        return "%s:%s:%s" % (vals.get("category_code"), vals.get("group_code"), vals.get("external_code"))
+    if vals.get("category_code") and vals.get("group_code") and vals.get("code"):
+        return "%s:%s:%s" % (vals.get("category_code"), vals.get("group_code"), vals.get("code"))
+    if vals.get("scheme_code") and vals.get("code"):
+        return "%s:%s" % (vals.get("scheme_code"), vals.get("code"))
+    for key in ("slug", "code", "external_code", "category_code", "scheme_code"):
+        if vals.get(key):
+            return str(vals.get(key))
+    return row.get("source", "")
+
+
+def _reference_label(row):
+    vals = row.get("values", {})
+    for key in ("name", "label", "native_name", "description"):
+        if vals.get(key):
+            return vals.get(key)
+    return ""
+
+
+def _reference_description(row):
+    vals = row.get("values", {})
+    for key in ("description", "note", "category", "selection", "display_group"):
+        if vals.get(key):
+            return vals.get(key)
+    return ""
+
+
+def _small_code_list(values, limit=12):
+    values = list(values)
+    if not values:
+        return "<span class=\"muted\">aucun</span>"
+    shown = ", ".join("<code>%s</code>" % _esc(value) for value in values[:limit])
+    if len(values) > limit:
+        shown += " <span class=\"muted\">+%d</span>" % (len(values) - limit)
+    return shown
+
+
+def _live_error_parts(error):
+    if isinstance(error, dict):
+        return error.get("table", ""), error.get("message", "")
+    return "", str(error)
+
+
+def render_api_db_reference_html(g, reference_extract=None, live_note="TBLS_DSN not checked"):
+    """Render a deterministic HTML reference from graph.json + versioned seed rows."""
+    reference_extract = reference_extract or {"rows": [], "derived_sources": []}
+    live_meta = reference_extract.get("live") or {"status": "not_queried", "tables": []}
+    seed_meta = reference_extract.get("seed") or {}
+    ref_rows = sorted(reference_extract.get("rows", []), key=lambda r: (r["table"], _reference_key(r), r["source"]))
+    derived_sources = sorted(reference_extract.get("derived_sources", []), key=lambda r: (r["table"], r["source"]))
+    nodes = {n["id"]: n for n in g["nodes"]}
+
+    function_edges = defaultdict(list)
+    read_by_table = defaultdict(list)
+    write_by_table = defaultdict(list)
+    policies_by_table = defaultdict(list)
+    triggers_by_table = defaultdict(list)
+    trigger_exec_by_function = defaultdict(list)
+    fk_out = defaultdict(list)
+    fk_in = defaultdict(list)
+    applies = defaultdict(list)
+
+    for edge in g["edges"]:
+        kind = edge["kind"]
+        src = edge["source"]
+        tgt = edge["target"]
+        if kind in ("reads", "writes"):
+            conf = edge.get("props", {}).get("inference", {}).get("confidence", "?")
+            function_edges[src].append((kind, tgt, conf))
+            fn = nodes.get(src)
+            name = _node_title(fn)
+            if kind == "reads":
+                read_by_table[tgt].append(name)
+            else:
+                write_by_table[tgt].append(name)
+        elif kind == "gates":
+            policies_by_table[tgt].append(src)
+        elif kind == "trigger_on":
+            triggers_by_table[tgt].append(src)
+        elif kind == "executes":
+            trigger_exec_by_function[tgt].append(src)
+        elif kind == "fk":
+            fk_out[src].append(tgt)
+            fk_in[tgt].append(src)
+        elif kind == "applies_to":
+            applies[edge.get("props", {}).get("object_type", "?")].append(tgt)
+
+    functions_by_schema = defaultdict(list)
+    for n in g["nodes"]:
+        if n["kind"] == "function":
+            functions_by_schema[n["schema"]].append(n)
+    for schema in functions_by_schema:
+        functions_by_schema[schema].sort(key=lambda n: n["props"]["signature"])
+
+    table_like = [n for n in g["nodes"] if n["kind"] in ("table", "view", "matview")]
+    table_like.sort(key=lambda n: (n["domain"] or "", n["schema"], n["label"]))
+    ref_tables = [n for n in table_like if n["domain"] == "ref-lookups" or n["label"].startswith("ref_")]
+
+    rows_by_domain = defaultdict(list)
+    rows_by_table = defaultdict(list)
+    for row in ref_rows:
+        vals = row.get("values", {})
+        rows_by_table[row["table"]].append(row)
+        domain = vals.get("domain")
+        if domain:
+            rows_by_domain[domain].append(row)
+
+    rows_without_domain = [r for r in ref_rows if not r.get("values", {}).get("domain")]
+    rows_without_domain_by_table = defaultdict(list)
+    for row in rows_without_domain:
+        rows_without_domain_by_table[row["table"]].append(row)
+
+    all_functions = sorted(_by(g["nodes"], "function"), key=lambda n: (n["schema"], n["props"]["signature"]))
+    functions_without_source = [
+        _node_title(n) for n in all_functions
+        if not (n.get("props", {}).get("source") or n.get("props", {}).get("sources"))
+    ]
+    functions_without_edges = [_node_title(n) for n in all_functions if not function_edges.get(n["id"])]
+    dynamic_functions = [_node_title(n) for n in all_functions if n.get("props", {}).get("dynamic_sql")]
+    tables_with_rows = {row["table"] for row in ref_rows}
+    public_ref_tables_without_rows = [
+        n["id"] for n in ref_tables
+        if n["schema"] == "public"
+        and n["id"] not in tables_with_rows
+        and not (n["label"].startswith("ref_code_") and n["label"] not in ("ref_code_domain_registry", "ref_code_taxonomy_closure"))
+    ]
+
+    def live_status_html():
+        status = live_meta.get("status", "not_queried")
+        if status == "queried":
+            parts = [
+                "Lecture live effectuée sur %d tables publiques de référence." % len(live_meta.get("tables") or []),
+                "%d lignes seed SQL restent disponibles pour les tables non interrogées." % seed_meta.get("rows", 0),
+            ]
+            if live_meta.get("truncated"):
+                parts.append("%d table(s) tronquée(s) par limite de sécurité." % len(live_meta["truncated"]))
+            if live_meta.get("errors"):
+                parts.append("%d erreur(s) de lecture live, seeds conservés pour ces tables." % len(live_meta["errors"]))
+            return " ".join(parts)
+        if status == "error":
+            return "Lecture live demandée mais échouée ; les valeurs affichées viennent des seeds SQL versionnées. Erreur : %s" % _esc(live_meta.get("message", "non précisée"))
+        return "Aucune lecture live : les valeurs affichées viennent des seeds SQL versionnées."
+
+    def coverage_gaps_html():
+        out = ["<details><summary>Écarts de couverture à surveiller</summary>"]
+        out.append("<table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>")
+        rows = [
+            ("Fonctions sans source SQL retrouvée", functions_without_source),
+            ("Fonctions sans lecture/écriture inférée", functions_without_edges),
+            ("Fonctions avec SQL dynamique", dynamic_functions),
+            ("Tables publiques de référence sans ligne directe extraite", public_ref_tables_without_rows),
+        ]
+        for label, values in rows:
+            out.append("<tr><td>%s</td><td>%d</td><td>%s</td></tr>" % (_esc(label), len(values), _small_code_list(values)))
+        out.append("</tbody></table>")
+        if live_meta.get("errors"):
+            out.append("<h3>Erreurs de lecture live</h3><table><thead><tr><th>Table</th><th>Erreur</th></tr></thead><tbody>")
+            for err in live_meta["errors"][:40]:
+                table, message = _live_error_parts(err)
+                out.append("<tr><td><code>%s</code></td><td>%s</td></tr>" % (_esc(table), _esc(message)))
+            out.append("</tbody></table>")
+        if live_meta.get("truncated"):
+            out.append("<h3>Tables live tronquées</h3><table><thead><tr><th>Table</th><th>Limite</th></tr></thead><tbody>")
+            for row in live_meta["truncated"]:
+                out.append("<tr><td><code>%s</code></td><td>%s</td></tr>" % (_esc(row.get("table", "")), _esc(row.get("limit", ""))))
+            out.append("</tbody></table>")
+        out.append("</details>")
+        return "\n".join(out)
+
+    def function_block(n):
+        touched = sorted(function_edges.get(n["id"], []), key=lambda item: (item[0], item[1]))
+        meta = []
+        if n["props"].get("security_definer"):
+            meta.append("SECURITY DEFINER")
+        if n["props"].get("dynamic_sql"):
+            meta.append("dynamic SQL")
+        lines = [
+            "<details class=\"rpc\" data-search=\"%s\">" % _esc((_node_title(n) + " " + " ".join(t[1] for t in touched)).lower()),
+            "<summary><code>%s.%s</code></summary>" % (_esc(n["schema"]), _esc(n["props"]["signature"])),
+            "<div class=\"detail-grid\">",
+            "<p><b>Retour</b><br><code>%s</code></p>" % _esc(n["props"].get("returns", "")),
+            "<p><b>Propriétés</b><br>%s</p>" % (_esc(", ".join(meta)) if meta else "<span class=\"muted\">standard</span>"),
+            "<p><b>Exposition</b><br>%s</p>" % ("RPC PostgREST (<code>api</code>)" if n["schema"] == "api" else "helper / privé"),
+            "<p><b>Source SQL</b><br>%s</p>" % _source_html(n["props"]),
+            "</div>",
+        ]
+        if n.get("doc"):
+            lines.append("<blockquote>%s</blockquote>" % _esc(n["doc"]))
+        if touched:
+            lines.append("<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>")
+            for kind, target, conf in touched:
+                target_node = nodes.get(target)
+                label = _node_title(target_node) if target_node else target
+                lines.append("<tr><td>%s</td><td><a href=\"#table-%s\"><code>%s</code></a></td><td>%s</td></tr>" % (
+                    "lecture" if kind == "reads" else "écriture", _slug(target), _esc(label), _esc(conf)))
+            lines.append("</tbody></table>")
+        else:
+            lines.append("<p class=\"muted\">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>")
+        trigger_callers = sorted(trigger_exec_by_function.get(n["id"], []))
+        if trigger_callers:
+            lines.append("<p><b>Déclenchée par</b><br>%s</p>" % _short_list(trigger_callers, 12))
+        lines.append("</details>")
+        return "\n".join(lines)
+
+    def table_row(n):
+        tid = n["id"]
+        return (
+            "<tr id=\"table-%s\"><td><code>%s</code></td><td>%s</td><td>%s</td>"
+            "<td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+        ) % (
+            _slug(tid),
+            _esc(_node_title(n)),
+            _esc(n["kind"]),
+            _esc(n["domain"] or ""),
+            "oui" if n["props"].get("rls_enabled") else "non",
+            _short_list(sorted(set(read_by_table.get(tid, []))), 4) or "<span class=\"muted\">-</span>",
+            _short_list(sorted(set(write_by_table.get(tid, []))), 4) or "<span class=\"muted\">-</span>",
+            "%d policies · %d triggers · FK → %d · FK ← %d" % (
+                len(policies_by_table.get(tid, [])),
+                len(triggers_by_table.get(tid, [])),
+                len(fk_out.get(tid, [])),
+                len(fk_in.get(tid, [])),
+            ),
+        )
+
+    def enum_section():
+        enums = sorted(_by(g["nodes"], "enum"), key=lambda n: (n["schema"], n["label"]))
+        out = ["<div class=\"grid cards\">"]
+        for en in enums:
+            out.append("<article class=\"mini-card\"><h3><code>%s.%s</code></h3><p>%s</p></article>" % (
+                _esc(en["schema"]), _esc(en["label"]), _short_list(en["props"].get("values", []), 60)))
+        out.append("</div>")
+        if applies:
+            out.append("<h3>Applicabilité des facettes par type d'objet</h3><table><thead><tr><th>Type</th><th>Tables de facette autorisées</th></tr></thead><tbody>")
+            for object_type in sorted(applies):
+                out.append("<tr><td><code>%s</code></td><td>%s</td></tr>" % (
+                    _esc(object_type), _short_list(sorted(applies[object_type]), 30)))
+            out.append("</tbody></table>")
+        return "\n".join(out)
+
+    def reference_table(rows):
+        out = ["<table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>"]
+        for row in rows:
+            out.append("<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td><code>%s</code></td></tr>" % (
+                _esc(_reference_key(row)),
+                _esc(_reference_label(row)),
+                _esc(_reference_description(row)),
+                _esc(row.get("source", "")),
+            ))
+        out.append("</tbody></table>")
+        return "\n".join(out)
+
+    def rls_section():
+        by_table = defaultdict(list)
+        for node in _by(g["nodes"], "policy"):
+            by_table[node["props"].get("table", "")].append(node)
+        out = ["<section id=\"rls\"><h2>3) Policies RLS par table</h2>",
+               "<p>Les predicates longs sont tronqués dans le graphe généré ; la source complète reste <code>db-graph-out/catalog_extra.json</code> ou la vue live <code>pg_policies</code>.</p>"]
+        for table in sorted(by_table):
+            policies = sorted(by_table[table], key=lambda p: (p["props"].get("cmd", ""), p["label"]))
+            out.append("<details><summary><code>%s</code> (%d policies)</summary>" % (_esc(table), len(policies)))
+            out.append("<table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>")
+            for policy in policies:
+                props = policy["props"]
+                out.append("<tr><td><code>%s</code></td><td><code>%s</code></td><td>%s</td><td>%s</td><td><code>%s</code></td></tr>" % (
+                    _esc(props.get("cmd", "")),
+                    _esc(policy["label"]),
+                    _esc(", ".join(props.get("roles") or [])),
+                    "RESTRICTIVE" if props.get("restrictive") else "PERMISSIVE",
+                    _esc(props.get("predicate", "")),
+                ))
+            out.append("</tbody></table></details>")
+        out.append("</section>")
+        return "\n".join(out)
+
+    html = [
+        "<!doctype html>",
+        "<html lang=\"fr\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
+        "<title>Bertel · Référence API, RPC et DB</title>",
+        "<style>",
+        ":root{--bg:#f7fbf8;--card:#fff;--text:#17211b;--muted:#68756d;--line:#dce8df;--brand:#76B097;--code:#0b1020;--codefg:#edf4ef}",
+        "@media(prefers-color-scheme:dark){:root{--bg:#0b1110;--card:#101a17;--text:#e7efe9;--muted:#9fb0a6;--line:#22332a;--code:#070b12;--codefg:#edf4ef}}",
+        "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 Inter,system-ui,Segoe UI,Arial,sans-serif}a{color:#4f8c72;text-decoration:none}a:hover{text-decoration:underline}",
+        "header{position:sticky;top:0;z-index:2;background:linear-gradient(135deg,#76B097,#5A8B73);color:white;padding:18px 24px;box-shadow:0 8px 28px #0002}header .wrap{max-width:1180px;margin:auto;display:flex;gap:18px;justify-content:space-between;align-items:center}h1{margin:0;font-size:24px}header p{margin:4px 0 0;color:#eef8f1}",
+        "main{max-width:1180px;margin:24px auto 80px;padding:0 18px;display:grid;grid-template-columns:280px 1fr;gap:22px}.toc{position:sticky;top:92px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}.toc a{display:block;margin:6px 0}",
+        "section,.card,details{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 18px #0000000d}section{padding:18px;margin-bottom:18px}details{padding:0;margin:10px 0}summary{cursor:pointer;padding:12px 14px;font-weight:700}details>*:not(summary){margin-left:14px;margin-right:14px}details table{margin-bottom:14px}",
+        "table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.02em}code{background:var(--code);color:var(--codefg);border-radius:4px;padding:1px 4px;font-size:.92em}blockquote{margin:10px 0;padding:10px 12px;border-left:4px solid var(--brand);background:color-mix(in srgb,var(--brand) 10%,transparent)}",
+        ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.mini-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:color-mix(in srgb,var(--card) 92%,var(--brand))}.mini-card h3{margin:0 0 6px;font-size:14px}.metric{font-size:24px;font-weight:800}.muted{color:var(--muted)}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}input{width:100%;border:1px solid #ffffff66;border-radius:8px;padding:10px 12px;background:white;color:#111}",
+        "@media(max-width:900px){main{grid-template-columns:1fr}.toc{position:static}.detail-grid{grid-template-columns:1fr}header .wrap{display:block}header input{margin-top:12px}}",
+        "</style></head><body>",
+        "<header><div class=\"wrap\"><div><h1>Référence API, RPC et base de données</h1><p>Inventaire généré depuis <code>db-graph-out/graph.json</code> et les seeds SQL versionnées.</p></div><div><input id=\"q\" placeholder=\"Filtrer les RPC par nom ou table...\"></div></div></header>",
+        "<main><nav class=\"toc\"><b>Navigation</b><a href=\"#coverage\">Couverture</a><a href=\"#rpcs\">RPC / fonctions</a><a href=\"#tables\">Connexions tables</a><a href=\"#rls\">RLS policies</a><a href=\"#enums\">Enums & types</a><a href=\"#refs\">CID, tags, refcodes</a><a href=\"#ref-tables\">Tables de référence</a><a href=\"index.html\">Retour doc API</a></nav><div>",
+        "<section id=\"coverage\"><h2>0) Couverture et sources</h2>",
+        "<div class=\"grid cards\">",
+        "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>tables</b><p class=\"muted\">%d vues · %d enums</p></article>" % (g["meta"]["table_count"], g["meta"]["view_count"], g["meta"]["enum_count"]),
+        "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>fonctions/RPC</b><p class=\"muted\">%d policies · %d triggers</p></article>" % (g["meta"]["function_count"], g["meta"]["policy_count"], g["meta"]["trigger_count"]),
+        "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>valeurs référentielles</b><p class=\"muted\">live si disponible, seeds sinon</p></article>" % len(ref_rows),
+        "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>connexions graphe</b><p class=\"muted\">lectures, écritures, FK, RLS</p></article>" % g["meta"]["edge_count"],
+        "</div>",
+        "<p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent de la base live quand <code>TBLS_DSN</code> est disponible, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>",
+        "<p class=\"muted\">État connexion live au moment de la génération : %s. Pour valider les lignes réellement présentes en production, régénérer le graphe avec <code>TBLS_DSN</code> puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>.</p>" % _esc(live_note),
+        "<p class=\"muted\">%s</p>" % live_status_html(),
+        coverage_gaps_html(),
+        "</section>",
+        "<section id=\"rpcs\"><h2>1) RPC / fonctions et connexions base</h2><p>Chaque bloc liste le retour, les propriétés de sécurité, le commentaire SQL disponible, puis les tables lues ou écrites.</p>",
+    ]
+
+    schema_order = sorted(functions_by_schema, key=lambda s: (s != "api", s))
+    for schema in schema_order:
+        html.append("<h3>Schéma <code>%s</code> (%d)</h3>" % (_esc(schema), len(functions_by_schema[schema])))
+        for fn in functions_by_schema[schema]:
+            html.append(function_block(fn))
+    html.append("</section>")
+
+    html.extend([
+        "<section id=\"tables\"><h2>2) Connexions par table/vue</h2>",
+        "<table><thead><tr><th>Table/vue</th><th>Type</th><th>Domaine</th><th>RLS</th><th>Lue par</th><th>Écrite par</th><th>Autres connexions</th></tr></thead><tbody>",
+    ])
+    for table in table_like:
+        html.append(table_row(table))
+    html.append("</tbody></table></section>")
+
+    html.append(rls_section())
+
+    html.append("<section id=\"enums\"><h2>4) Types, enums et applicabilité</h2>%s</section>" % enum_section())
+
+    html.append("<section id=\"refs\"><h2>5) CID, tags, refcodes et valeurs de référence</h2>")
+    html.append("<p>Dans cette documentation, <b>Code/CID</b> désigne la clé stable exposée aux API : <code>domain:code</code> pour <code>ref_code</code>, <code>slug</code> pour <code>ref_tag</code>, ou <code>code</code>/<code>external_code</code> selon la table de référence.</p>")
+    if rows_by_domain:
+        html.append("<h3>Domaines <code>ref_code</code></h3>")
+        for domain in sorted(rows_by_domain):
+            rows = rows_by_domain[domain]
+            html.append("<details><summary><code>%s</code> (%d valeurs)</summary>%s</details>" % (
+                _esc(domain), len(rows), reference_table(rows)))
+    if rows_without_domain_by_table:
+        html.append("<h3>Autres référentiels versionnés</h3>")
+        for table in sorted(rows_without_domain_by_table):
+            rows = rows_without_domain_by_table[table]
+            html.append("<details><summary><code>%s</code> (%d valeurs)</summary>%s</details>" % (
+                _esc(table), len(rows), reference_table(rows)))
+    if derived_sources:
+        html.append("<details><summary>Sources dérivées non listées ligne par ligne (%d)</summary><table><thead><tr><th>Table</th><th>Source</th><th>Note</th></tr></thead><tbody>" % len(derived_sources))
+        for source in derived_sources:
+            html.append("<tr><td><code>%s</code></td><td><code>%s</code></td><td>%s</td></tr>" % (
+                _esc(source["table"]), _esc(source["source"]), _esc(source["note"])))
+        html.append("</tbody></table></details>")
+    html.append("</section>")
+
+    html.append("<section id=\"ref-tables\"><h2>6) Tables de référence du graphe</h2><p>Ces tables portent les référentiels. Les colonnes affichées aident à retrouver les identifiants techniques, codes, libellés et relations.</p>")
+    for table in ref_tables:
+        cols = table["props"].get("columns", [])
+        html.append("<details><summary><code>%s</code> · %s · RLS %s</summary>" % (
+            _esc(_node_title(table)), _esc(table.get("domain") or ""), "oui" if table["props"].get("rls_enabled") else "non"))
+        html.append("<table><thead><tr><th>Colonne</th><th>Type</th><th>Nullable</th><th>PK</th></tr></thead><tbody>")
+        for col in cols:
+            html.append("<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+                _esc(col.get("name")), _esc(col.get("type")), "oui" if col.get("nullable") else "non", "oui" if col.get("pk") else "non"))
+        html.append("</tbody></table></details>")
+    html.append("</section>")
+
+    html.extend([
+        "</div></main>",
+        "<script>const q=document.getElementById('q');q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();document.querySelectorAll('details.rpc').forEach(d=>{d.style.display=!v||d.dataset.search.includes(v)?'block':'none';});});</script>",
+        "</body></html>",
+    ])
+    return "\n".join(html)
 
 
 # Interactive viewer: dark/light theme, kind + domain + schema filters, d3 zoom/pan,

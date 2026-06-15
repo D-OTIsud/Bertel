@@ -827,6 +827,11 @@
               <td>Configuration PostgREST du schéma <code>api</code>, extensions PostgreSQL, permissions et cache schema.</td>
             </tr>
             <tr>
+              <td><span class="badge">Référence DB/API</span></td>
+              <td><a href="api-db-reference.html">api-db-reference.html</a></td>
+              <td>Inventaire généré des RPC/fonctions, tables lues/écrites, RLS, enums, tags, CID/refcodes et valeurs seed documentées.</td>
+            </tr>
+            <tr>
               <td><span class="badge">Tests API</span></td>
               <td><a href="README_Postman.md">README_Postman.md</a></td>
               <td>Préparer l'environnement Postman et lancer les collections de validation.</td>
@@ -855,6 +860,7 @@
           <summary>0.2 Sources de vérité</summary>
           <div class="content">
             <p>La documentation API ci-dessous décrit les contrats consommateur. Pour l'ordre SQL, les prérequis Supabase et les scripts opérationnels, le runbook SQL et le guide Supabase restent les documents de référence.</p>
+            <p class="inline-help">Pour l'audit fonction par fonction et connexion par connexion, utiliser <a href="api-db-reference.html">la référence DB/API générée</a> : elle croise <code>db-graph-out/graph.json</code>, les RPC SQL, les tables lues/écrites, les policies, les enums et les valeurs de référentiels live quand <code>TBLS_DSN</code> est disponible, sinon les seeds SQL versionnées.</p>
             <p class="inline-help">Dans le dépôt, la documentation technique détaillée du schéma reste dans <code>Base de donnée DLL et API/README.md</code>.</p>
           </div>
         </details>
@@ -1010,6 +1016,7 @@ Authorization: Bearer &lt;SUPABASE_ANON_KEY&gt;</code></pre>
               <b>Chemin</b> : <code>/rpc/&lt;nom_fonction&gt;</code></p>
             <p>Exemples : <code>/rpc/get_object_resource</code> • <code>/rpc/list_object_resources_page</code> • <code>/rpc/list_object_resources_since_fast</code> • <code>/rpc/list_object_resources_filtered_page</code> • <code>/rpc/list_object_resources_filtered_since_fast</code></p>
             <p><b>Corps</b> : JSON avec paramètres nommés (voir chaque endpoint).</p>
+            <p class="inline-help">La liste exhaustive des fonctions exposées, leurs retours, leurs propriétés <code>SECURITY DEFINER</code> et leurs connexions aux tables est maintenue dans <a href="api-db-reference.html#rpcs">la référence RPC générée</a>.</p>
           </div>
         </details>
 
@@ -2135,6 +2142,7 @@ const json = await res.json();</pre>
               <li><strong>API JSON</strong> — fonctions du schéma <code>api</code> (ex. <code>api.get_object_resource</code>, <code>api.list_object_resources_page</code>, <code>api.search_objects_by_label</code>) qui orchestrent les blocs ci-dessus.</li>
             </ul>
             <p>Les sections du dictionnaire (§3.x) décrivent comment ces blocs sont agrégés pour produire chaque champ. Pour une vision exhaustive, consultez le schéma SQL&nbsp;: <a href="../Base%20de%20donn%C3%A9e%20DLL%20et%20API/schema_unified.sql">schema_unified.sql</a>.</p>
+            <p class="inline-help">Pour vérifier une connexion précise, ouvrir <a href="api-db-reference.html#tables">Connexions par table/vue</a> ou <a href="api-db-reference.html#refs">CID, tags et refcodes</a>. La page est régénérée par <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>.</p>
           </div>
         </details>
 
@@ -2735,6 +2743,7 @@ const json = await res.json();</pre>
 
             <h4>Tags environnementaux disponibles</h4>
             <p>Le système supporte plusieurs tags environnementaux via le référentiel <code>environment_tag</code> :</p>
+            <p class="inline-help">Liste canonique générée : <a href="api-db-reference.html#refs"><code>environment_tag</code> dans CID, tags et refcodes</a>. Les lignes ci-dessous restent des exemples de lecture courante.</p>
             
             <table>
               <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
@@ -2752,6 +2761,7 @@ const json = await res.json();</pre>
 
             <h4>Moyens de paiement disponibles</h4>
             <p>Le système supporte plusieurs moyens de paiement via le référentiel <code>payment_method</code> :</p>
+            <p class="inline-help">Liste canonique générée : <a href="api-db-reference.html#refs"><code>payment_method</code> dans CID, tags et refcodes</a>. Les lignes ci-dessous restent des exemples de lecture courante.</p>
             
             <table>
               <thead><tr><th>Code</th><th>Nom</th><th>Description</th><th>Usage typique</th></tr></thead>
@@ -3124,6 +3134,7 @@ const json = await res.json();</pre>
           <summary>3.12 <code>tags[]</code> (étiquettes thématiques)</summary>
           <div class="content">
             <p>Le bloc <code>tags[]</code> contient des étiquettes thématiques personnalisées pour caractériser l'établissement : "romantique", "familial", "luxe", "authentique", etc. Ces tags permettent un filtrage et une catégorisation fine des établissements.</p>
+            <p class="inline-help">Liste canonique générée : <a href="api-db-reference.html#refs"><code>ref_tag</code> dans CID, tags et refcodes</a>. Les exemples ci-dessous documentent le format de réponse, pas une liste exhaustive.</p>
             
             <table>
               <thead><tr><th>Champ</th><th>Type</th><th>Description</th><th>Exemple</th></tr></thead>

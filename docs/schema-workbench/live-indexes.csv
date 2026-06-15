@@ -1,0 +1,957 @@
+schema,table_name,index_name,is_unique,is_primary,is_partial,method,index_def
+audit,audit_log,audit_log_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_pkey ON ONLY audit.audit_log USING btree (id, changed_at)"
+audit,audit_log_2026_03,audit_log_2026_03_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_2026_03_pkey ON audit.audit_log_2026_03 USING btree (id, changed_at)"
+audit,audit_log_2026_03,idx_audit_log_2026_03_changed_at,f,f,f,btree,CREATE INDEX idx_audit_log_2026_03_changed_at ON audit.audit_log_2026_03 USING btree (changed_at)
+audit,audit_log_2026_03,idx_audit_log_2026_03_operation,f,f,f,btree,CREATE INDEX idx_audit_log_2026_03_operation ON audit.audit_log_2026_03 USING btree (operation)
+audit,audit_log_2026_03,idx_audit_log_2026_03_table_name,f,f,f,btree,CREATE INDEX idx_audit_log_2026_03_table_name ON audit.audit_log_2026_03 USING btree (table_name)
+audit,audit_log_2026_04,audit_log_2026_04_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_2026_04_pkey ON audit.audit_log_2026_04 USING btree (id, changed_at)"
+audit,audit_log_2026_04,idx_audit_log_2026_04_changed_at,f,f,f,btree,CREATE INDEX idx_audit_log_2026_04_changed_at ON audit.audit_log_2026_04 USING btree (changed_at)
+audit,audit_log_2026_04,idx_audit_log_2026_04_operation,f,f,f,btree,CREATE INDEX idx_audit_log_2026_04_operation ON audit.audit_log_2026_04 USING btree (operation)
+audit,audit_log_2026_04,idx_audit_log_2026_04_table_name,f,f,f,btree,CREATE INDEX idx_audit_log_2026_04_table_name ON audit.audit_log_2026_04 USING btree (table_name)
+audit,audit_log_2026_05,audit_log_2026_05_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_2026_05_pkey ON audit.audit_log_2026_05 USING btree (id, changed_at)"
+audit,audit_log_2026_05,idx_audit_log_2026_05_changed_at,f,f,f,btree,CREATE INDEX idx_audit_log_2026_05_changed_at ON audit.audit_log_2026_05 USING btree (changed_at)
+audit,audit_log_2026_05,idx_audit_log_2026_05_operation,f,f,f,btree,CREATE INDEX idx_audit_log_2026_05_operation ON audit.audit_log_2026_05 USING btree (operation)
+audit,audit_log_2026_05,idx_audit_log_2026_05_table_name,f,f,f,btree,CREATE INDEX idx_audit_log_2026_05_table_name ON audit.audit_log_2026_05 USING btree (table_name)
+audit,audit_log_2026_06,audit_log_2026_06_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_2026_06_pkey ON audit.audit_log_2026_06 USING btree (id, changed_at)"
+audit,audit_log_2026_06,idx_audit_log_2026_06_changed_at,f,f,f,btree,CREATE INDEX idx_audit_log_2026_06_changed_at ON audit.audit_log_2026_06 USING btree (changed_at)
+audit,audit_log_2026_06,idx_audit_log_2026_06_operation,f,f,f,btree,CREATE INDEX idx_audit_log_2026_06_operation ON audit.audit_log_2026_06 USING btree (operation)
+audit,audit_log_2026_06,idx_audit_log_2026_06_table_name,f,f,f,btree,CREATE INDEX idx_audit_log_2026_06_table_name ON audit.audit_log_2026_06 USING btree (table_name)
+audit,audit_log_2026_07,audit_log_2026_07_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_2026_07_pkey ON audit.audit_log_2026_07 USING btree (id, changed_at)"
+audit,audit_log_2026_07,idx_audit_log_2026_07_changed_at,f,f,f,btree,CREATE INDEX idx_audit_log_2026_07_changed_at ON audit.audit_log_2026_07 USING btree (changed_at)
+audit,audit_log_2026_07,idx_audit_log_2026_07_operation,f,f,f,btree,CREATE INDEX idx_audit_log_2026_07_operation ON audit.audit_log_2026_07 USING btree (operation)
+audit,audit_log_2026_07,idx_audit_log_2026_07_table_name,f,f,f,btree,CREATE INDEX idx_audit_log_2026_07_table_name ON audit.audit_log_2026_07 USING btree (table_name)
+audit,audit_log_default,audit_log_default_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_log_default_pkey ON audit.audit_log_default USING btree (id, changed_at)"
+internal,mv_filtered_objects,idx_mv_filtered_objects_amenity_codes_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_amenity_codes_gin ON internal.mv_filtered_objects USING gin (cached_amenity_codes)
+internal,mv_filtered_objects,idx_mv_filtered_objects_city_search_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_city_search_gin ON internal.mv_filtered_objects USING gin (city_search_vector)
+internal,mv_filtered_objects,idx_mv_filtered_objects_classification_codes_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_classification_codes_gin ON internal.mv_filtered_objects USING gin (cached_classification_codes)
+internal,mv_filtered_objects,idx_mv_filtered_objects_environment_tags_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_environment_tags_gin ON internal.mv_filtered_objects USING gin (cached_environment_tags)
+internal,mv_filtered_objects,idx_mv_filtered_objects_geog_gist,f,f,f,gist,CREATE INDEX idx_mv_filtered_objects_geog_gist ON internal.mv_filtered_objects USING gist (geog2)
+internal,mv_filtered_objects,idx_mv_filtered_objects_id,t,f,f,btree,CREATE UNIQUE INDEX idx_mv_filtered_objects_id ON internal.mv_filtered_objects USING btree (id)
+internal,mv_filtered_objects,idx_mv_filtered_objects_language_codes_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_language_codes_gin ON internal.mv_filtered_objects USING gin (cached_language_codes)
+internal,mv_filtered_objects,idx_mv_filtered_objects_name_search_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_name_search_gin ON internal.mv_filtered_objects USING gin (name_search_vector)
+internal,mv_filtered_objects,idx_mv_filtered_objects_payment_codes_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_payment_codes_gin ON internal.mv_filtered_objects USING gin (cached_payment_codes)
+internal,mv_filtered_objects,idx_mv_filtered_objects_taxonomy_codes_gin,f,f,f,gin,CREATE INDEX idx_mv_filtered_objects_taxonomy_codes_gin ON internal.mv_filtered_objects USING gin (cached_taxonomy_codes)
+internal,mv_filtered_objects,idx_mv_filtered_objects_updated_at_id,f,f,f,btree,"CREATE INDEX idx_mv_filtered_objects_updated_at_id ON internal.mv_filtered_objects USING btree (updated_at, id)"
+internal,mv_ref_data_json,idx_mv_ref_data_code,f,f,f,btree,"CREATE INDEX idx_mv_ref_data_code ON internal.mv_ref_data_json USING btree (ref_type, code)"
+internal,mv_ref_data_json,idx_mv_ref_data_type_id,t,f,f,btree,"CREATE UNIQUE INDEX idx_mv_ref_data_type_id ON internal.mv_ref_data_json USING btree (ref_type, id)"
+public,actor,actor_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_pkey ON public.actor USING btree (id)
+public,actor,idx_actor_display_name_normalized_trgm,f,f,f,gin,CREATE INDEX idx_actor_display_name_normalized_trgm ON public.actor USING gin (display_name_normalized gin_trgm_ops)
+public,actor,idx_actor_first_name_normalized_trgm,f,f,f,gin,CREATE INDEX idx_actor_first_name_normalized_trgm ON public.actor USING gin (first_name_normalized gin_trgm_ops)
+public,actor,idx_actor_last_name_normalized_trgm,f,f,f,gin,CREATE INDEX idx_actor_last_name_normalized_trgm ON public.actor USING gin (last_name_normalized gin_trgm_ops)
+public,actor_channel,actor_channel_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_channel_pkey ON public.actor_channel USING btree (id)
+public,actor_channel,uq_actor_channel_primary,t,f,t,btree,"CREATE UNIQUE INDEX uq_actor_channel_primary ON public.actor_channel USING btree (actor_id, kind_id) WHERE is_primary"
+public,actor_channel,uq_actor_channel_unique,t,f,f,btree,"CREATE UNIQUE INDEX uq_actor_channel_unique ON public.actor_channel USING btree (actor_id, kind_id, value)"
+public,actor_consent,actor_consent_pkey,t,t,f,btree,"CREATE UNIQUE INDEX actor_consent_pkey ON public.actor_consent USING btree (actor_id, channel)"
+public,actor_object_role,actor_object_role_pkey,t,t,f,btree,"CREATE UNIQUE INDEX actor_object_role_pkey ON public.actor_object_role USING btree (actor_id, object_id, role_id)"
+public,actor_object_role,uq_actor_object_role_primary,t,f,t,btree,"CREATE UNIQUE INDEX uq_actor_object_role_primary ON public.actor_object_role USING btree (object_id, role_id) WHERE is_primary"
+public,app_branding_settings,app_branding_settings_pkey,t,t,f,btree,CREATE UNIQUE INDEX app_branding_settings_pkey ON public.app_branding_settings USING btree (setting_key)
+public,app_user_profile,app_user_profile_pkey,t,t,f,btree,CREATE UNIQUE INDEX app_user_profile_pkey ON public.app_user_profile USING btree (id)
+public,app_user_profile,idx_app_user_profile_locale,f,f,f,btree,CREATE INDEX idx_app_user_profile_locale ON public.app_user_profile USING btree (locale)
+public,app_user_profile,idx_app_user_profile_preferences_gin,f,f,f,gin,CREATE INDEX idx_app_user_profile_preferences_gin ON public.app_user_profile USING gin (preferences)
+public,app_user_profile,idx_app_user_profile_role,f,f,f,btree,CREATE INDEX idx_app_user_profile_role ON public.app_user_profile USING btree (role)
+public,app_user_profile,uq_app_user_profile_actor_id,t,f,t,btree,CREATE UNIQUE INDEX uq_app_user_profile_actor_id ON public.app_user_profile USING btree (actor_id) WHERE (actor_id IS NOT NULL)
+public,audit_criteria,audit_criteria_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_criteria_pkey ON public.audit_criteria USING btree (id)
+public,audit_criteria,idx_audit_criteria_template,f,f,f,btree,"CREATE INDEX idx_audit_criteria_template ON public.audit_criteria USING btree (template_id, ""position"")"
+public,audit_criteria,uq_audit_criteria_template_code,t,f,f,btree,"CREATE UNIQUE INDEX uq_audit_criteria_template_code ON public.audit_criteria USING btree (template_id, code)"
+public,audit_result,audit_result_pkey,t,t,f,btree,"CREATE UNIQUE INDEX audit_result_pkey ON public.audit_result USING btree (session_id, criteria_id)"
+public,audit_result,idx_audit_result_session,f,f,f,btree,CREATE INDEX idx_audit_result_session ON public.audit_result USING btree (session_id)
+public,audit_session,audit_session_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_session_pkey ON public.audit_session USING btree (id)
+public,audit_session,idx_audit_session_object_status,f,f,f,btree,"CREATE INDEX idx_audit_session_object_status ON public.audit_session USING btree (object_id, status, audit_date DESC)"
+public,audit_template,audit_template_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_template_pkey ON public.audit_template USING btree (id)
+public,audit_template,idx_audit_template_scheme_active,f,f,f,btree,"CREATE INDEX idx_audit_template_scheme_active ON public.audit_template USING btree (scheme_id, is_active)"
+public,audit_template,uq_audit_template_code,t,f,f,btree,CREATE UNIQUE INDEX uq_audit_template_code ON public.audit_template USING btree (code)
+public,audit_template,uq_audit_template_scheme_name,t,f,f,btree,"CREATE UNIQUE INDEX uq_audit_template_scheme_name ON public.audit_template USING btree (scheme_id, name)"
+public,contact_channel,contact_channel_object_id_kind_id_value_key,t,f,f,btree,"CREATE UNIQUE INDEX contact_channel_object_id_kind_id_value_key ON public.contact_channel USING btree (object_id, kind_id, value)"
+public,contact_channel,contact_channel_pkey,t,t,f,btree,CREATE UNIQUE INDEX contact_channel_pkey ON public.contact_channel USING btree (id)
+public,contact_channel,idx_contact_channel_kind_id,f,f,f,btree,CREATE INDEX idx_contact_channel_kind_id ON public.contact_channel USING btree (kind_id)
+public,contact_channel,idx_contact_channel_object_id,f,f,f,btree,CREATE INDEX idx_contact_channel_object_id ON public.contact_channel USING btree (object_id)
+public,contact_channel,idx_contact_channel_object_kind_id,f,f,f,btree,"CREATE INDEX idx_contact_channel_object_kind_id ON public.contact_channel USING btree (object_id, kind_id)"
+public,contact_channel,idx_contact_channel_public,f,f,f,btree,CREATE INDEX idx_contact_channel_public ON public.contact_channel USING btree (is_public)
+public,contact_channel,idx_contact_channel_role,f,f,f,btree,CREATE INDEX idx_contact_channel_role ON public.contact_channel USING btree (role_id)
+public,contact_channel,idx_contact_channel_value,f,f,f,btree,CREATE INDEX idx_contact_channel_value ON public.contact_channel USING btree (value)
+public,contact_channel,uq_contact_primary,t,f,t,btree,"CREATE UNIQUE INDEX uq_contact_primary ON public.contact_channel USING btree (object_id, kind_id) WHERE is_primary"
+public,crm_interaction,crm_interaction_pkey,t,t,f,btree,CREATE UNIQUE INDEX crm_interaction_pkey ON public.crm_interaction USING btree (id)
+public,crm_task,crm_task_pkey,t,t,f,btree,CREATE UNIQUE INDEX crm_task_pkey ON public.crm_task USING btree (id)
+public,crm_task,idx_crm_task_object,f,f,f,btree,CREATE INDEX idx_crm_task_object ON public.crm_task USING btree (object_id)
+public,crm_task,idx_crm_task_owner_due,f,f,f,btree,"CREATE INDEX idx_crm_task_owner_due ON public.crm_task USING btree (owner, due_at)"
+public,crm_task,idx_crm_task_status,f,f,f,btree,CREATE INDEX idx_crm_task_status ON public.crm_task USING btree (status)
+public,i18n_translation,i18n_translation_pkey,t,t,f,btree,CREATE UNIQUE INDEX i18n_translation_pkey ON public.i18n_translation USING btree (id)
+public,i18n_translation,idx_i18n_translation_column_language,f,f,f,btree,"CREATE INDEX idx_i18n_translation_column_language ON public.i18n_translation USING btree (target_table, target_column, language_id)"
+public,i18n_translation,idx_i18n_translation_target,f,f,f,btree,"CREATE INDEX idx_i18n_translation_target ON public.i18n_translation USING btree (target_table, target_pk)"
+public,i18n_translation,uq_i18n_translation,t,f,f,btree,"CREATE UNIQUE INDEX uq_i18n_translation ON public.i18n_translation USING btree (target_table, target_pk, target_column, language_id)"
+public,incident_report,idx_incident_report_category,f,f,f,btree,CREATE INDEX idx_incident_report_category ON public.incident_report USING btree (category_id)
+public,incident_report,idx_incident_report_created_at,f,f,f,btree,CREATE INDEX idx_incident_report_created_at ON public.incident_report USING btree (created_at DESC)
+public,incident_report,idx_incident_report_geom,f,f,f,gist,CREATE INDEX idx_incident_report_geom ON public.incident_report USING gist (geom)
+public,incident_report,idx_incident_report_object_status,f,f,f,btree,"CREATE INDEX idx_incident_report_object_status ON public.incident_report USING btree (object_id, status)"
+public,incident_report,incident_report_pkey,t,t,f,btree,CREATE UNIQUE INDEX incident_report_pkey ON public.incident_report USING btree (id)
+public,media,idx_media_analyse_data,f,f,f,gin,CREATE INDEX idx_media_analyse_data ON public.media USING gin (analyse_data)
+public,media,idx_media_description_normalized_trgm,f,f,f,gin,CREATE INDEX idx_media_description_normalized_trgm ON public.media USING gin (description_normalized gin_trgm_ops)
+public,media,idx_media_is_main,f,f,f,btree,CREATE INDEX idx_media_is_main ON public.media USING btree (is_main)
+public,media,idx_media_is_published,f,f,f,btree,CREATE INDEX idx_media_is_published ON public.media USING btree (is_published)
+public,media,idx_media_media_type_id,f,f,f,btree,CREATE INDEX idx_media_media_type_id ON public.media USING btree (media_type_id)
+public,media,idx_media_object_id,f,f,f,btree,CREATE INDEX idx_media_object_id ON public.media USING btree (object_id)
+public,media,idx_media_object_org,f,f,t,btree,"CREATE INDEX idx_media_object_org ON public.media USING btree (object_id, org_object_id) WHERE (org_object_id IS NOT NULL)"
+public,media,idx_media_org_object_id,f,f,t,btree,CREATE INDEX idx_media_org_object_id ON public.media USING btree (org_object_id) WHERE (org_object_id IS NOT NULL)
+public,media,idx_media_place_id,f,f,f,btree,CREATE INDEX idx_media_place_id ON public.media USING btree (place_id)
+public,media,idx_media_published_org,f,f,t,btree,"CREATE INDEX idx_media_published_org ON public.media USING btree (object_id, org_object_id, is_main, ""position"") WHERE (is_published = true)"
+public,media,idx_media_rights_expires_at,f,f,f,btree,CREATE INDEX idx_media_rights_expires_at ON public.media USING btree (rights_expires_at)
+public,media,idx_media_title_normalized_trgm,f,f,f,gin,CREATE INDEX idx_media_title_normalized_trgm ON public.media USING gin (title_normalized gin_trgm_ops)
+public,media,idx_media_updated_at_published,f,f,t,btree,CREATE INDEX idx_media_updated_at_published ON public.media USING btree (updated_at) WHERE (is_published = true)
+public,media,idx_media_visibility,f,f,f,btree,CREATE INDEX idx_media_visibility ON public.media USING btree (visibility)
+public,media,media_pkey,t,t,f,btree,CREATE UNIQUE INDEX media_pkey ON public.media USING btree (id)
+public,media,uq_media_one_main_per_type,t,f,t,btree,"CREATE UNIQUE INDEX uq_media_one_main_per_type ON public.media USING btree (object_id, media_type_id) WHERE is_main"
+public,media,uq_media_one_main_per_type_place,t,f,t,btree,"CREATE UNIQUE INDEX uq_media_one_main_per_type_place ON public.media USING btree (place_id, media_type_id) WHERE is_main"
+public,media_tag,idx_media_tag_media_id,f,f,f,btree,CREATE INDEX idx_media_tag_media_id ON public.media_tag USING btree (media_id)
+public,media_tag,idx_media_tag_tag_id,f,f,f,btree,CREATE INDEX idx_media_tag_tag_id ON public.media_tag USING btree (tag_id)
+public,media_tag,media_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX media_tag_pkey ON public.media_tag USING btree (media_id, tag_id)"
+public,meeting_room_equipment,idx_meeting_room_equipment_equipment,f,f,f,btree,CREATE INDEX idx_meeting_room_equipment_equipment ON public.meeting_room_equipment USING btree (equipment_id)
+public,meeting_room_equipment,idx_meeting_room_equipment_room,f,f,f,btree,CREATE INDEX idx_meeting_room_equipment_room ON public.meeting_room_equipment USING btree (room_id)
+public,meeting_room_equipment,meeting_room_equipment_pkey,t,t,f,btree,"CREATE UNIQUE INDEX meeting_room_equipment_pkey ON public.meeting_room_equipment USING btree (room_id, equipment_id)"
+public,object,idx_object_cached_amenity_codes_gin,f,f,f,gin,CREATE INDEX idx_object_cached_amenity_codes_gin ON public.object USING gin (cached_amenity_codes)
+public,object,idx_object_cached_classification_codes_gin,f,f,f,gin,CREATE INDEX idx_object_cached_classification_codes_gin ON public.object USING gin (cached_classification_codes)
+public,object,idx_object_cached_environment_tags_gin,f,f,f,gin,CREATE INDEX idx_object_cached_environment_tags_gin ON public.object USING gin (cached_environment_tags)
+public,object,idx_object_cached_language_codes_gin,f,f,f,gin,CREATE INDEX idx_object_cached_language_codes_gin ON public.object USING gin (cached_language_codes)
+public,object,idx_object_cached_payment_codes_gin,f,f,f,gin,CREATE INDEX idx_object_cached_payment_codes_gin ON public.object USING gin (cached_payment_codes)
+public,object,idx_object_cached_taxonomy_codes_gin,f,f,f,gin,CREATE INDEX idx_object_cached_taxonomy_codes_gin ON public.object USING gin (cached_taxonomy_codes)
+public,object,idx_object_name_normalized_btree,f,f,f,btree,CREATE INDEX idx_object_name_normalized_btree ON public.object USING btree (name_normalized)
+public,object,idx_object_name_normalized_trgm,f,f,f,gin,CREATE INDEX idx_object_name_normalized_trgm ON public.object USING gin (name_normalized gin_trgm_ops)
+public,object,idx_object_name_search_vector,f,f,f,gin,CREATE INDEX idx_object_name_search_vector ON public.object USING gin (name_search_vector)
+public,object,idx_object_published_name_search,f,f,t,gin,CREATE INDEX idx_object_published_name_search ON public.object USING gin (name_search_vector) WHERE (status = 'published'::object_status)
+public,object,idx_object_published_type_updated,f,f,t,btree,"CREATE INDEX idx_object_published_type_updated ON public.object USING btree (object_type, updated_at, id) WHERE (status = 'published'::object_status)"
+public,object,idx_object_published_updated_at_id,f,f,t,btree,"CREATE INDEX idx_object_published_updated_at_id ON public.object USING btree (updated_at, id) WHERE (status = 'published'::object_status)"
+public,object,idx_object_published_updated_at_source_id,f,f,t,btree,"CREATE INDEX idx_object_published_updated_at_source_id ON public.object USING btree (updated_at_source, id) WHERE (status = 'published'::object_status)"
+public,object,idx_object_status_archived,f,f,t,btree,"CREATE INDEX idx_object_status_archived ON public.object USING btree (id, name, object_type) WHERE (status = 'archived'::object_status)"
+public,object,idx_object_status_draft,f,f,t,btree,"CREATE INDEX idx_object_status_draft ON public.object USING btree (id, name, object_type) WHERE (status = 'draft'::object_status)"
+public,object,idx_object_status_published,f,f,t,btree,"CREATE INDEX idx_object_status_published ON public.object USING btree (id, name, object_type) WHERE (status = 'published'::object_status)"
+public,object,idx_object_type,f,f,f,btree,CREATE INDEX idx_object_type ON public.object USING btree (object_type)
+public,object,idx_object_type_status,f,f,f,btree,"CREATE INDEX idx_object_type_status ON public.object USING btree (object_type, status)"
+public,object,idx_object_updated_at,f,f,f,btree,CREATE INDEX idx_object_updated_at ON public.object USING btree (updated_at)
+public,object,idx_object_updated_at_id,f,f,f,btree,"CREATE INDEX idx_object_updated_at_id ON public.object USING btree (updated_at, id)"
+public,object,idx_object_updated_at_published,f,f,t,btree,CREATE INDEX idx_object_updated_at_published ON public.object USING btree (updated_at) WHERE (status = 'published'::object_status)
+public,object,idx_object_updated_at_source,f,f,f,btree,CREATE INDEX idx_object_updated_at_source ON public.object USING btree (updated_at_source)
+public,object,idx_object_updated_at_source_id,f,f,f,btree,"CREATE INDEX idx_object_updated_at_source_id ON public.object USING btree (updated_at_source, id)"
+public,object,object_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_pkey ON public.object USING btree (id)
+public,object_act,object_act_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_act_pkey ON public.object_act USING btree (object_id)
+public,object_amenity,idx_object_amenity_amenity_id,f,f,f,btree,CREATE INDEX idx_object_amenity_amenity_id ON public.object_amenity USING btree (amenity_id)
+public,object_amenity,idx_object_amenity_object_id,f,f,f,btree,CREATE INDEX idx_object_amenity_object_id ON public.object_amenity USING btree (object_id)
+public,object_amenity,object_amenity_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_amenity_pkey ON public.object_amenity USING btree (object_id, amenity_id)"
+public,object_capacity,object_capacity_object_id_metric_id_key,t,f,f,btree,"CREATE UNIQUE INDEX object_capacity_object_id_metric_id_key ON public.object_capacity USING btree (object_id, metric_id)"
+public,object_capacity,object_capacity_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_capacity_pkey ON public.object_capacity USING btree (id)
+public,object_classification,idx_classification_active,f,f,t,btree,"CREATE INDEX idx_classification_active ON public.object_classification USING btree (object_id, value_id, scheme_id) WHERE (status = 'granted'::text)"
+public,object_classification,idx_object_classification_document_id,f,f,f,btree,CREATE INDEX idx_object_classification_document_id ON public.object_classification USING btree (document_id)
+public,object_classification,idx_object_classification_object_id,f,f,f,btree,CREATE INDEX idx_object_classification_object_id ON public.object_classification USING btree (object_id)
+public,object_classification,idx_object_classification_scheme_id,f,f,f,btree,CREATE INDEX idx_object_classification_scheme_id ON public.object_classification USING btree (scheme_id)
+public,object_classification,idx_object_classification_subvalue_ids_gin,f,f,f,gin,CREATE INDEX idx_object_classification_subvalue_ids_gin ON public.object_classification USING gin (subvalue_ids)
+public,object_classification,idx_object_classification_value_id,f,f,f,btree,CREATE INDEX idx_object_classification_value_id ON public.object_classification USING btree (value_id)
+public,object_classification,object_classification_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_classification_pkey ON public.object_classification USING btree (id)
+public,object_description,idx_object_description_chapo_normalized_trgm,f,f,f,gin,CREATE INDEX idx_object_description_chapo_normalized_trgm ON public.object_description USING gin (description_chapo_normalized gin_trgm_ops)
+public,object_description,idx_object_description_i18n_gin,f,f,f,gin,CREATE INDEX idx_object_description_i18n_gin ON public.object_description USING gin (description_i18n jsonb_path_ops)
+public,object_description,idx_object_description_normalized_trgm,f,f,f,gin,CREATE INDEX idx_object_description_normalized_trgm ON public.object_description USING gin (description_normalized gin_trgm_ops)
+public,object_description,idx_object_description_object_id,f,f,f,btree,CREATE INDEX idx_object_description_object_id ON public.object_description USING btree (object_id)
+public,object_description,object_description_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_description_pkey ON public.object_description USING btree (id)
+public,object_description,uq_object_description_canonical_one,t,f,t,btree,CREATE UNIQUE INDEX uq_object_description_canonical_one ON public.object_description USING btree (object_id) WHERE (org_object_id IS NULL)
+public,object_description,uq_object_description_per_org,t,f,t,btree,"CREATE UNIQUE INDEX uq_object_description_per_org ON public.object_description USING btree (object_id, org_object_id) WHERE (org_object_id IS NOT NULL)"
+public,object_discount,idx_object_discount_groups,f,f,f,btree,"CREATE INDEX idx_object_discount_groups ON public.object_discount USING btree (min_group_size, max_group_size)"
+public,object_discount,idx_object_discount_object,f,f,f,btree,CREATE INDEX idx_object_discount_object ON public.object_discount USING btree (object_id)
+public,object_discount,idx_object_discount_validity,f,f,f,btree,"CREATE INDEX idx_object_discount_validity ON public.object_discount USING btree (valid_from, valid_to)"
+public,object_discount,object_discount_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_discount_pkey ON public.object_discount USING btree (id)
+public,object_environment_tag,idx_object_environment_tag_environment_tag_id,f,f,f,btree,CREATE INDEX idx_object_environment_tag_environment_tag_id ON public.object_environment_tag USING btree (environment_tag_id)
+public,object_environment_tag,idx_object_environment_tag_object_id,f,f,f,btree,CREATE INDEX idx_object_environment_tag_object_id ON public.object_environment_tag USING btree (object_id)
+public,object_environment_tag,object_environment_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_environment_tag_pkey ON public.object_environment_tag USING btree (object_id, environment_tag_id)"
+public,object_external_id,idx_object_external_id_object_id,f,f,f,btree,CREATE INDEX idx_object_external_id_object_id ON public.object_external_id USING btree (object_id)
+public,object_external_id,idx_object_external_id_organization_object_id,f,f,f,btree,CREATE INDEX idx_object_external_id_organization_object_id ON public.object_external_id USING btree (organization_object_id)
+public,object_external_id,object_external_id_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_external_id_pkey ON public.object_external_id USING btree (id)
+public,object_external_id,uq_object_external_id_by_source,t,f,f,btree,"CREATE UNIQUE INDEX uq_object_external_id_by_source ON public.object_external_id USING btree (organization_object_id, source_system, external_id)"
+public,object_external_id,uq_object_external_id_object_org_source,t,f,f,btree,"CREATE UNIQUE INDEX uq_object_external_id_object_org_source ON public.object_external_id USING btree (object_id, organization_object_id, source_system)"
+public,object_fma,idx_object_fma_object_id,f,f,f,btree,CREATE INDEX idx_object_fma_object_id ON public.object_fma USING btree (object_id)
+public,object_fma,object_fma_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_fma_pkey ON public.object_fma USING btree (object_id)
+public,object_fma_occurrence,idx_object_fma_occ_object,f,f,f,btree,CREATE INDEX idx_object_fma_occ_object ON public.object_fma_occurrence USING btree (object_id)
+public,object_fma_occurrence,idx_object_fma_occ_start,f,f,f,btree,CREATE INDEX idx_object_fma_occ_start ON public.object_fma_occurrence USING btree (start_at)
+public,object_fma_occurrence,object_fma_occurrence_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_fma_occurrence_pkey ON public.object_fma_occurrence USING btree (id)
+public,object_group_policy,idx_object_group_policy_object,f,f,f,btree,CREATE INDEX idx_object_group_policy_object ON public.object_group_policy USING btree (object_id)
+public,object_group_policy,object_group_policy_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_group_policy_pkey ON public.object_group_policy USING btree (object_id)
+public,object_iti,idx_iti_geom_bbox,f,f,t,gist,CREATE INDEX idx_iti_geom_bbox ON public.object_iti USING gist (geom) WHERE (geom IS NOT NULL)
+public,object_iti,idx_iti_with_track,f,f,t,btree,"CREATE INDEX idx_iti_with_track ON public.object_iti USING btree (object_id, distance_km, difficulty_level) WHERE (geom IS NOT NULL)"
+public,object_iti,idx_object_iti_geom,f,f,f,gist,CREATE INDEX idx_object_iti_geom ON public.object_iti USING gist (geom)
+public,object_iti,idx_object_iti_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_object_id ON public.object_iti USING btree (object_id)
+public,object_iti,object_iti_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_pkey ON public.object_iti USING btree (object_id)
+public,object_iti_associated_object,idx_object_iti_associated_object_associated_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_associated_object_associated_object_id ON public.object_iti_associated_object USING btree (associated_object_id)
+public,object_iti_associated_object,idx_object_iti_associated_object_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_associated_object_object_id ON public.object_iti_associated_object USING btree (object_id)
+public,object_iti_associated_object,object_iti_associated_object_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_iti_associated_object_pkey ON public.object_iti_associated_object USING btree (object_id, associated_object_id, role_id)"
+public,object_iti_info,object_iti_info_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_info_pkey ON public.object_iti_info USING btree (object_id)
+public,object_iti_practice,idx_object_iti_practice_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_practice_object_id ON public.object_iti_practice USING btree (object_id)
+public,object_iti_practice,idx_object_iti_practice_practice_id,f,f,f,btree,CREATE INDEX idx_object_iti_practice_practice_id ON public.object_iti_practice USING btree (practice_id)
+public,object_iti_practice,object_iti_practice_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_iti_practice_pkey ON public.object_iti_practice USING btree (object_id, practice_id)"
+public,object_iti_profile,idx_object_iti_profile_object,f,f,f,btree,CREATE INDEX idx_object_iti_profile_object ON public.object_iti_profile USING btree (object_id)
+public,object_iti_profile,object_iti_profile_id_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_profile_id_pkey ON public.object_iti_profile USING btree (id)
+public,object_iti_profile,uq_object_iti_profile_pos,t,f,f,btree,"CREATE UNIQUE INDEX uq_object_iti_profile_pos ON public.object_iti_profile USING btree (object_id, position_m)"
+public,object_iti_section,idx_object_iti_section_parent_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_section_parent_object_id ON public.object_iti_section USING btree (parent_object_id)
+public,object_iti_section,object_iti_section_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_section_pkey ON public.object_iti_section USING btree (id)
+public,object_iti_stage,idx_iti_stage_with_geom,f,f,t,btree,"CREATE INDEX idx_iti_stage_with_geom ON public.object_iti_stage USING btree (object_id, ""position"") WHERE (geom IS NOT NULL)"
+public,object_iti_stage,idx_object_iti_stage_geom_gist,f,f,f,gist,CREATE INDEX idx_object_iti_stage_geom_gist ON public.object_iti_stage USING gist (geom)
+public,object_iti_stage,idx_object_iti_stage_object_id,f,f,f,btree,CREATE INDEX idx_object_iti_stage_object_id ON public.object_iti_stage USING btree (object_id)
+public,object_iti_stage,object_iti_stage_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_stage_pkey ON public.object_iti_stage USING btree (id)
+public,object_iti_stage_media,idx_object_iti_stage_media_media_id,f,f,f,btree,CREATE INDEX idx_object_iti_stage_media_media_id ON public.object_iti_stage_media USING btree (media_id)
+public,object_iti_stage_media,idx_object_iti_stage_media_stage_id,f,f,f,btree,CREATE INDEX idx_object_iti_stage_media_stage_id ON public.object_iti_stage_media USING btree (stage_id)
+public,object_iti_stage_media,object_iti_stage_media_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_stage_media_pkey ON public.object_iti_stage_media USING btree (id)
+public,object_iti_stage_media,object_iti_stage_media_stage_id_media_id_key,t,f,f,btree,"CREATE UNIQUE INDEX object_iti_stage_media_stage_id_media_id_key ON public.object_iti_stage_media USING btree (stage_id, media_id)"
+public,object_language,idx_object_language_language_id,f,f,f,btree,CREATE INDEX idx_object_language_language_id ON public.object_language USING btree (language_id)
+public,object_language,idx_object_language_object_id,f,f,f,btree,CREATE INDEX idx_object_language_object_id ON public.object_language USING btree (object_id)
+public,object_language,object_language_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_language_pkey ON public.object_language USING btree (object_id, language_id)"
+public,object_legal,idx_object_legal_document_dates,f,f,f,btree,"CREATE INDEX idx_object_legal_document_dates ON public.object_legal USING btree (document_requested_at, document_delivered_at)"
+public,object_legal,idx_object_legal_expiring,f,f,t,btree,"CREATE INDEX idx_object_legal_expiring ON public.object_legal USING btree (valid_to, status) WHERE ((valid_to IS NOT NULL) AND (status = 'active'::text))"
+public,object_legal,idx_object_legal_object_type,f,f,f,btree,"CREATE INDEX idx_object_legal_object_type ON public.object_legal USING btree (object_id, type_id)"
+public,object_legal,idx_object_legal_requested,f,f,t,btree,"CREATE INDEX idx_object_legal_requested ON public.object_legal USING btree (status, document_requested_at) WHERE (status = 'requested'::text)"
+public,object_legal,idx_object_legal_status,f,f,f,btree,CREATE INDEX idx_object_legal_status ON public.object_legal USING btree (status)
+public,object_legal,idx_object_legal_valid_to,f,f,t,btree,CREATE INDEX idx_object_legal_valid_to ON public.object_legal USING btree (valid_to) WHERE (valid_to IS NOT NULL)
+public,object_legal,idx_object_legal_validity_mode,f,f,f,btree,CREATE INDEX idx_object_legal_validity_mode ON public.object_legal USING btree (validity_mode)
+public,object_legal,object_legal_object_id_type_id_valid_from_key,t,f,f,btree,"CREATE UNIQUE INDEX object_legal_object_id_type_id_valid_from_key ON public.object_legal USING btree (object_id, type_id, valid_from)"
+public,object_legal,object_legal_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_legal_pkey ON public.object_legal USING btree (id)
+public,object_location,idx_location_main_city_search,f,f,t,gin,CREATE INDEX idx_location_main_city_search ON public.object_location USING gin (city_search_vector) WHERE (is_main_location = true)
+public,object_location,idx_location_main_covering,f,f,t,btree,"CREATE INDEX idx_location_main_covering ON public.object_location USING btree (object_id) INCLUDE (latitude, longitude, address1, postcode, city, city_search_vector, geog2) WHERE (is_main_location = true)"
+public,object_location,idx_location_main_geog_gist,f,f,t,gist,CREATE INDEX idx_location_main_geog_gist ON public.object_location USING gist (geog2) WHERE ((is_main_location = true) AND (geog2 IS NOT NULL))
+public,object_location,idx_location_main_with_coords,f,f,t,btree,"CREATE INDEX idx_location_main_with_coords ON public.object_location USING btree (object_id, latitude, longitude) WHERE ((is_main_location = true) AND (latitude IS NOT NULL))"
+public,object_location,idx_object_location_city_search_vector,f,f,f,gin,CREATE INDEX idx_object_location_city_search_vector ON public.object_location USING gin (city_search_vector)
+public,object_location,idx_object_location_geog2,f,f,f,gist,CREATE INDEX idx_object_location_geog2 ON public.object_location USING gist (geog2)
+public,object_location,idx_object_location_object_id,f,f,f,btree,CREATE INDEX idx_object_location_object_id ON public.object_location USING btree (object_id)
+public,object_location,idx_object_location_place_id,f,f,f,btree,CREATE INDEX idx_object_location_place_id ON public.object_location USING btree (place_id)
+public,object_location,object_location_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_location_pkey ON public.object_location USING btree (id)
+public,object_location,uq_object_location_main,t,f,t,btree,CREATE UNIQUE INDEX uq_object_location_main ON public.object_location USING btree (object_id) WHERE is_main_location
+public,object_location,uq_object_location_main_place,t,f,t,btree,CREATE UNIQUE INDEX uq_object_location_main_place ON public.object_location USING btree (place_id) WHERE is_main_location
+public,object_meeting_room,idx_meeting_room_object,f,f,f,btree,CREATE INDEX idx_meeting_room_object ON public.object_meeting_room USING btree (object_id)
+public,object_meeting_room,object_meeting_room_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_meeting_room_pkey ON public.object_meeting_room USING btree (id)
+public,object_membership,idx_object_membership_campaign_status,f,f,f,btree,"CREATE INDEX idx_object_membership_campaign_status ON public.object_membership USING btree (campaign_id, status)"
+public,object_membership,idx_object_membership_current,f,f,t,btree,"CREATE INDEX idx_object_membership_current ON public.object_membership USING btree (org_object_id, object_id, starts_at, ends_at) WHERE (status = ANY (ARRAY['invoiced'::text, 'paid'::text]))"
+public,object_membership,idx_object_membership_object,f,f,f,btree,CREATE INDEX idx_object_membership_object ON public.object_membership USING btree (object_id)
+public,object_membership,idx_object_membership_org,f,f,f,btree,CREATE INDEX idx_object_membership_org ON public.object_membership USING btree (org_object_id)
+public,object_membership,object_membership_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_membership_pkey ON public.object_membership USING btree (id)
+public,object_menu,idx_object_menu_category_id,f,f,f,btree,CREATE INDEX idx_object_menu_category_id ON public.object_menu USING btree (category_id)
+public,object_menu,idx_object_menu_is_active,f,f,f,btree,CREATE INDEX idx_object_menu_is_active ON public.object_menu USING btree (is_active)
+public,object_menu,idx_object_menu_object_id,f,f,f,btree,CREATE INDEX idx_object_menu_object_id ON public.object_menu USING btree (object_id)
+public,object_menu,idx_object_menu_position,f,f,f,btree,"CREATE INDEX idx_object_menu_position ON public.object_menu USING btree (""position"")"
+public,object_menu,object_menu_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_pkey ON public.object_menu USING btree (id)
+public,object_menu_item,idx_object_menu_item_menu_id,f,f,f,btree,CREATE INDEX idx_object_menu_item_menu_id ON public.object_menu_item USING btree (menu_id)
+public,object_menu_item,idx_object_menu_item_position,f,f,f,btree,"CREATE INDEX idx_object_menu_item_position ON public.object_menu_item USING btree (""position"")"
+public,object_menu_item,object_menu_item_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_pkey ON public.object_menu_item USING btree (id)
+public,object_menu_item_allergen,idx_menu_item_allergen_allergen,f,f,f,btree,CREATE INDEX idx_menu_item_allergen_allergen ON public.object_menu_item_allergen USING btree (allergen_id)
+public,object_menu_item_allergen,idx_menu_item_allergen_item,f,f,f,btree,CREATE INDEX idx_menu_item_allergen_item ON public.object_menu_item_allergen USING btree (menu_item_id)
+public,object_menu_item_allergen,object_menu_item_allergen_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_menu_item_allergen_pkey ON public.object_menu_item_allergen USING btree (menu_item_id, allergen_id)"
+public,object_menu_item_cuisine_type,idx_menu_item_cuisine_type_item,f,f,f,btree,CREATE INDEX idx_menu_item_cuisine_type_item ON public.object_menu_item_cuisine_type USING btree (menu_item_id)
+public,object_menu_item_cuisine_type,idx_menu_item_cuisine_type_type,f,f,f,btree,CREATE INDEX idx_menu_item_cuisine_type_type ON public.object_menu_item_cuisine_type USING btree (cuisine_type_id)
+public,object_menu_item_cuisine_type,object_menu_item_cuisine_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_menu_item_cuisine_type_pkey ON public.object_menu_item_cuisine_type USING btree (menu_item_id, cuisine_type_id)"
+public,object_menu_item_dietary_tag,idx_menu_item_dietary_tag_item,f,f,f,btree,CREATE INDEX idx_menu_item_dietary_tag_item ON public.object_menu_item_dietary_tag USING btree (menu_item_id)
+public,object_menu_item_dietary_tag,idx_menu_item_dietary_tag_tag,f,f,f,btree,CREATE INDEX idx_menu_item_dietary_tag_tag ON public.object_menu_item_dietary_tag USING btree (dietary_tag_id)
+public,object_menu_item_dietary_tag,object_menu_item_dietary_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_menu_item_dietary_tag_pkey ON public.object_menu_item_dietary_tag USING btree (menu_item_id, dietary_tag_id)"
+public,object_menu_item_media,idx_menu_item_media_item,f,f,f,btree,CREATE INDEX idx_menu_item_media_item ON public.object_menu_item_media USING btree (menu_item_id)
+public,object_menu_item_media,idx_menu_item_media_media,f,f,f,btree,CREATE INDEX idx_menu_item_media_media ON public.object_menu_item_media USING btree (media_id)
+public,object_menu_item_media,idx_menu_item_media_position,f,f,f,btree,"CREATE INDEX idx_menu_item_media_position ON public.object_menu_item_media USING btree (""position"")"
+public,object_menu_item_media,object_menu_item_media_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_menu_item_media_pkey ON public.object_menu_item_media USING btree (menu_item_id, media_id)"
+public,object_org_link,idx_object_org_link_object_id,f,f,f,btree,CREATE INDEX idx_object_org_link_object_id ON public.object_org_link USING btree (object_id)
+public,object_org_link,idx_object_org_link_org,f,f,f,btree,"CREATE INDEX idx_object_org_link_org ON public.object_org_link USING btree (org_object_id, is_primary)"
+public,object_org_link,idx_object_org_link_org_object_id,f,f,f,btree,CREATE INDEX idx_object_org_link_org_object_id ON public.object_org_link USING btree (org_object_id)
+public,object_org_link,idx_object_org_link_role_id,f,f,f,btree,CREATE INDEX idx_object_org_link_role_id ON public.object_org_link USING btree (role_id)
+public,object_org_link,object_org_link_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_org_link_pkey ON public.object_org_link USING btree (object_id, org_object_id, role_id)"
+public,object_org_link,uq_object_primary_org,t,f,t,btree,CREATE UNIQUE INDEX uq_object_primary_org ON public.object_org_link USING btree (object_id) WHERE is_primary
+public,object_origin,idx_object_origin_object_id,f,f,f,btree,CREATE INDEX idx_object_origin_object_id ON public.object_origin USING btree (object_id)
+public,object_origin,object_origin_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_origin_pkey ON public.object_origin USING btree (object_id)
+public,object_payment_method,idx_object_payment_method_object_id,f,f,f,btree,CREATE INDEX idx_object_payment_method_object_id ON public.object_payment_method USING btree (object_id)
+public,object_payment_method,idx_object_payment_method_payment_method_id,f,f,f,btree,CREATE INDEX idx_object_payment_method_payment_method_id ON public.object_payment_method USING btree (payment_method_id)
+public,object_payment_method,object_payment_method_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_payment_method_pkey ON public.object_payment_method USING btree (object_id, payment_method_id)"
+public,object_pet_policy,idx_object_pet_policy_object,f,f,f,btree,CREATE INDEX idx_object_pet_policy_object ON public.object_pet_policy USING btree (object_id)
+public,object_pet_policy,object_pet_policy_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_pet_policy_pkey ON public.object_pet_policy USING btree (object_id)
+public,object_place,idx_object_place_object,f,f,f,btree,CREATE INDEX idx_object_place_object ON public.object_place USING btree (object_id)
+public,object_place,object_place_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_place_pkey ON public.object_place USING btree (id)
+public,object_place,uq_object_place_one_primary,t,f,t,btree,CREATE UNIQUE INDEX uq_object_place_one_primary ON public.object_place USING btree (object_id) WHERE is_primary
+public,object_place_description,object_place_description_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_place_description_pkey ON public.object_place_description USING btree (id)
+public,object_price,idx_object_price_indication,f,f,f,btree,CREATE INDEX idx_object_price_indication ON public.object_price USING btree (indication_code)
+public,object_price,idx_object_price_kind,f,f,f,btree,CREATE INDEX idx_object_price_kind ON public.object_price USING btree (kind_id)
+public,object_price,idx_object_price_object,f,f,f,btree,CREATE INDEX idx_object_price_object ON public.object_price USING btree (object_id)
+public,object_price,idx_object_price_unit,f,f,f,btree,CREATE INDEX idx_object_price_unit ON public.object_price USING btree (unit_id)
+public,object_price,idx_object_price_validity,f,f,f,btree,"CREATE INDEX idx_object_price_validity ON public.object_price USING btree (valid_from, valid_to)"
+public,object_price,object_price_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_price_pkey ON public.object_price USING btree (id)
+public,object_price_period,object_price_period_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_price_period_pkey ON public.object_price_period USING btree (id)
+public,object_private_description,idx_object_private_description_object,f,f,f,btree,CREATE INDEX idx_object_private_description_object ON public.object_private_description USING btree (object_id)
+public,object_private_description,idx_object_private_description_object_org,f,f,f,btree,"CREATE INDEX idx_object_private_description_object_org ON public.object_private_description USING btree (object_id, org_object_id)"
+public,object_private_description,idx_object_private_description_pinned,f,f,f,btree,"CREATE INDEX idx_object_private_description_pinned ON public.object_private_description USING btree (object_id, org_object_id, is_archived, is_pinned DESC, created_at DESC)"
+public,object_private_description,object_private_description_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_private_description_pkey ON public.object_private_description USING btree (id)
+public,object_relation,object_relation_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_relation_pkey ON public.object_relation USING btree (id)
+public,object_relation,uq_object_relation,t,f,f,btree,"CREATE UNIQUE INDEX uq_object_relation ON public.object_relation USING btree (source_object_id, target_object_id, relation_type_id)"
+public,object_review,idx_object_review_date,f,f,f,btree,CREATE INDEX idx_object_review_date ON public.object_review USING btree (review_date)
+public,object_review,idx_object_review_object_id,f,f,f,btree,CREATE INDEX idx_object_review_object_id ON public.object_review USING btree (object_id)
+public,object_review,idx_object_review_published,f,f,f,btree,CREATE INDEX idx_object_review_published ON public.object_review USING btree (is_published)
+public,object_review,idx_object_review_source_id,f,f,f,btree,CREATE INDEX idx_object_review_source_id ON public.object_review USING btree (source_id)
+public,object_review,object_review_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_review_pkey ON public.object_review USING btree (id)
+public,object_review,object_review_source_id_external_id_key,t,f,f,btree,"CREATE UNIQUE INDEX object_review_source_id_external_id_key ON public.object_review USING btree (source_id, external_id)"
+public,object_room_type,idx_room_type_object_id,f,f,f,btree,CREATE INDEX idx_room_type_object_id ON public.object_room_type USING btree (object_id)
+public,object_room_type,idx_room_type_published,f,f,f,btree,CREATE INDEX idx_room_type_published ON public.object_room_type USING btree (is_published)
+public,object_room_type,idx_room_type_view_type,f,f,f,btree,CREATE INDEX idx_room_type_view_type ON public.object_room_type USING btree (view_type_id)
+public,object_room_type,object_room_type_object_id_code_key,t,f,f,btree,"CREATE UNIQUE INDEX object_room_type_object_id_code_key ON public.object_room_type USING btree (object_id, code)"
+public,object_room_type,object_room_type_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_room_type_pkey ON public.object_room_type USING btree (id)
+public,object_room_type_amenity,idx_room_type_amenity_amenity_id,f,f,f,btree,CREATE INDEX idx_room_type_amenity_amenity_id ON public.object_room_type_amenity USING btree (amenity_id)
+public,object_room_type_amenity,object_room_type_amenity_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_room_type_amenity_pkey ON public.object_room_type_amenity USING btree (room_type_id, amenity_id)"
+public,object_room_type_media,idx_room_type_media_media_id,f,f,f,btree,CREATE INDEX idx_room_type_media_media_id ON public.object_room_type_media USING btree (media_id)
+public,object_room_type_media,object_room_type_media_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_room_type_media_pkey ON public.object_room_type_media USING btree (room_type_id, media_id)"
+public,object_sustainability_action,idx_object_sustainability_action_action_id,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_action_id ON public.object_sustainability_action USING btree (action_id)
+public,object_sustainability_action,idx_object_sustainability_action_object_id,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_object_id ON public.object_sustainability_action USING btree (object_id)
+public,object_sustainability_action,object_sustainability_action_object_id_action_id_key,t,f,f,btree,"CREATE UNIQUE INDEX object_sustainability_action_object_id_action_id_key ON public.object_sustainability_action USING btree (object_id, action_id)"
+public,object_sustainability_action,object_sustainability_action_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_sustainability_action_pkey ON public.object_sustainability_action USING btree (id)
+public,object_sustainability_action_label,idx_object_sustainability_action_label_action_id,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_label_action_id ON public.object_sustainability_action_label USING btree (object_sustainability_action_id)
+public,object_sustainability_action_label,idx_object_sustainability_action_label_classification_id,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_label_classification_id ON public.object_sustainability_action_label USING btree (object_classification_id)
+public,object_sustainability_action_label,object_sustainability_action_label_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_sustainability_action_label_pkey ON public.object_sustainability_action_label USING btree (object_sustainability_action_id, object_classification_id)"
+public,object_taxonomy,idx_object_taxonomy_domain,f,f,f,btree,CREATE INDEX idx_object_taxonomy_domain ON public.object_taxonomy USING btree (domain)
+public,object_taxonomy,idx_object_taxonomy_object_id,f,f,f,btree,CREATE INDEX idx_object_taxonomy_object_id ON public.object_taxonomy USING btree (object_id)
+public,object_taxonomy,idx_object_taxonomy_ref_code_id,f,f,f,btree,CREATE INDEX idx_object_taxonomy_ref_code_id ON public.object_taxonomy USING btree (ref_code_id)
+public,object_taxonomy,object_taxonomy_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_taxonomy_pkey ON public.object_taxonomy USING btree (id)
+public,object_taxonomy,uq_object_taxonomy_object_domain,t,f,f,btree,"CREATE UNIQUE INDEX uq_object_taxonomy_object_domain ON public.object_taxonomy USING btree (object_id, domain)"
+public,object_version,idx_object_version_object_id_created,f,f,f,btree,"CREATE INDEX idx_object_version_object_id_created ON ONLY public.object_version USING btree (object_id, created_at DESC)"
+public,object_version,object_version_object_id_version_number_created_at_key,t,f,f,btree,"CREATE UNIQUE INDEX object_version_object_id_version_number_created_at_key ON ONLY public.object_version USING btree (object_id, version_number, created_at)"
+public,object_version,object_version_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_version_pkey ON ONLY public.object_version USING btree (id, created_at)"
+public,object_version_2026_03,object_version_2026_03_object_id_created_at_idx,f,f,f,btree,"CREATE INDEX object_version_2026_03_object_id_created_at_idx ON public.object_version_2026_03 USING btree (object_id, created_at DESC)"
+public,object_version_2026_03,object_version_2026_03_object_id_version_number_created_at_key,t,f,f,btree,"CREATE UNIQUE INDEX object_version_2026_03_object_id_version_number_created_at_key ON public.object_version_2026_03 USING btree (object_id, version_number, created_at)"
+public,object_version_2026_03,object_version_2026_03_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_version_2026_03_pkey ON public.object_version_2026_03 USING btree (id, created_at)"
+public,object_version_2026_04,object_version_2026_04_object_id_created_at_idx,f,f,f,btree,"CREATE INDEX object_version_2026_04_object_id_created_at_idx ON public.object_version_2026_04 USING btree (object_id, created_at DESC)"
+public,object_version_2026_04,object_version_2026_04_object_id_version_number_created_at_key,t,f,f,btree,"CREATE UNIQUE INDEX object_version_2026_04_object_id_version_number_created_at_key ON public.object_version_2026_04 USING btree (object_id, version_number, created_at)"
+public,object_version_2026_04,object_version_2026_04_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_version_2026_04_pkey ON public.object_version_2026_04 USING btree (id, created_at)"
+public,object_version_2026_05,object_version_2026_05_object_id_created_at_idx,f,f,f,btree,"CREATE INDEX object_version_2026_05_object_id_created_at_idx ON public.object_version_2026_05 USING btree (object_id, created_at DESC)"
+public,object_version_2026_05,object_version_2026_05_object_id_version_number_created_at_key,t,f,f,btree,"CREATE UNIQUE INDEX object_version_2026_05_object_id_version_number_created_at_key ON public.object_version_2026_05 USING btree (object_id, version_number, created_at)"
+public,object_version_2026_05,object_version_2026_05_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_version_2026_05_pkey ON public.object_version_2026_05 USING btree (id, created_at)"
+public,object_version_default,object_version_default_object_id_created_at_idx,f,f,f,btree,"CREATE INDEX object_version_default_object_id_created_at_idx ON public.object_version_default USING btree (object_id, created_at DESC)"
+public,object_version_default,object_version_default_object_id_version_number_created_at_key,t,f,f,btree,"CREATE UNIQUE INDEX object_version_default_object_id_version_number_created_at_key ON public.object_version_default USING btree (object_id, version_number, created_at)"
+public,object_version_default,object_version_default_pkey,t,t,f,btree,"CREATE UNIQUE INDEX object_version_default_pkey ON public.object_version_default USING btree (id, created_at)"
+public,object_zone,idx_object_zone_insee_commune,f,f,f,btree,CREATE INDEX idx_object_zone_insee_commune ON public.object_zone USING btree (insee_commune)
+public,object_zone,idx_object_zone_object_id,f,f,f,btree,CREATE INDEX idx_object_zone_object_id ON public.object_zone USING btree (object_id)
+public,object_zone,object_zone_object_id_insee_commune_key,t,f,f,btree,"CREATE UNIQUE INDEX object_zone_object_id_insee_commune_key ON public.object_zone USING btree (object_id, insee_commune)"
+public,object_zone,object_zone_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_zone_pkey ON public.object_zone USING btree (id)
+public,opening_period,idx_opening_period_object,f,f,f,btree,CREATE INDEX idx_opening_period_object ON public.opening_period USING btree (object_id)
+public,opening_period,opening_period_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_period_pkey ON public.opening_period USING btree (id)
+public,opening_schedule,idx_opening_schedule_period,f,f,f,btree,CREATE INDEX idx_opening_schedule_period ON public.opening_schedule USING btree (period_id)
+public,opening_schedule,opening_schedule_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_schedule_pkey ON public.opening_schedule USING btree (id)
+public,opening_time_frame,idx_opening_time_frame_period,f,f,f,btree,CREATE INDEX idx_opening_time_frame_period ON public.opening_time_frame USING btree (time_period_id)
+public,opening_time_frame,opening_time_frame_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_time_frame_pkey ON public.opening_time_frame USING btree (id)
+public,opening_time_period,idx_opening_time_period_schedule,f,f,f,btree,CREATE INDEX idx_opening_time_period_schedule ON public.opening_time_period USING btree (schedule_id)
+public,opening_time_period,opening_time_period_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_time_period_pkey ON public.opening_time_period USING btree (id)
+public,opening_time_period_weekday,idx_opening_time_period_weekday_period,f,f,f,btree,CREATE INDEX idx_opening_time_period_weekday_period ON public.opening_time_period_weekday USING btree (time_period_id)
+public,opening_time_period_weekday,idx_opening_time_period_weekday_weekday,f,f,f,btree,CREATE INDEX idx_opening_time_period_weekday_weekday ON public.opening_time_period_weekday USING btree (weekday_id)
+public,opening_time_period_weekday,opening_time_period_weekday_pkey,t,t,f,btree,"CREATE UNIQUE INDEX opening_time_period_weekday_pkey ON public.opening_time_period_weekday USING btree (time_period_id, weekday_id)"
+public,org_config,idx_org_config_org_object_id,f,f,f,btree,CREATE INDEX idx_org_config_org_object_id ON public.org_config USING btree (org_object_id)
+public,org_config,org_config_org_object_id_key,t,f,f,btree,CREATE UNIQUE INDEX org_config_org_object_id_key ON public.org_config USING btree (org_object_id)
+public,org_config,org_config_pkey,t,t,f,btree,CREATE UNIQUE INDEX org_config_pkey ON public.org_config USING btree (id)
+public,org_permission,idx_org_permission_active,f,f,t,btree,"CREATE INDEX idx_org_permission_active ON public.org_permission USING btree (org_object_id, permission_id) WHERE (is_active = true)"
+public,org_permission,org_permission_pkey,t,t,f,btree,CREATE UNIQUE INDEX org_permission_pkey ON public.org_permission USING btree (id)
+public,org_permission,uq_org_permission,t,f,f,btree,"CREATE UNIQUE INDEX uq_org_permission ON public.org_permission USING btree (org_object_id, permission_id)"
+public,pending_change,idx_pending_change_object_status,f,f,f,btree,"CREATE INDEX idx_pending_change_object_status ON public.pending_change USING btree (object_id, status)"
+public,pending_change,idx_pending_change_target,f,f,f,btree,"CREATE INDEX idx_pending_change_target ON public.pending_change USING btree (target_table, target_pk)"
+public,pending_change,idx_pending_change_validated_effective_ts,f,f,t,btree,"CREATE INDEX idx_pending_change_validated_effective_ts ON public.pending_change USING btree (status, COALESCE(applied_at, reviewed_at)) WHERE (status = ANY (ARRAY['approved'::text, 'applied'::text]))"
+public,pending_change,pending_change_pkey,t,t,f,btree,CREATE UNIQUE INDEX pending_change_pkey ON public.pending_change USING btree (id)
+public,promotion,idx_promotion_active_public,f,f,f,btree,"CREATE INDEX idx_promotion_active_public ON public.promotion USING btree (is_active, is_public)"
+public,promotion,idx_promotion_validity,f,f,f,btree,"CREATE INDEX idx_promotion_validity ON public.promotion USING btree (valid_from, valid_to)"
+public,promotion,promotion_code_key,t,f,f,btree,CREATE UNIQUE INDEX promotion_code_key ON public.promotion USING btree (code)
+public,promotion,promotion_pkey,t,t,f,btree,CREATE UNIQUE INDEX promotion_pkey ON public.promotion USING btree (id)
+public,promotion_object,idx_promotion_object_object_id,f,f,f,btree,CREATE INDEX idx_promotion_object_object_id ON public.promotion_object USING btree (object_id)
+public,promotion_object,promotion_object_pkey,t,t,f,btree,"CREATE UNIQUE INDEX promotion_object_pkey ON public.promotion_object USING btree (promotion_id, object_id)"
+public,promotion_usage,idx_promotion_usage_promotion_id,f,f,f,btree,CREATE INDEX idx_promotion_usage_promotion_id ON public.promotion_usage USING btree (promotion_id)
+public,promotion_usage,idx_promotion_usage_user_id,f,f,f,btree,CREATE INDEX idx_promotion_usage_user_id ON public.promotion_usage USING btree (user_id)
+public,promotion_usage,promotion_usage_pkey,t,t,f,btree,CREATE UNIQUE INDEX promotion_usage_pkey ON public.promotion_usage USING btree (id)
+public,publication,idx_publication_status_year,f,f,f,btree,"CREATE INDEX idx_publication_status_year ON public.publication USING btree (status, year)"
+public,publication,publication_code_key,t,f,f,btree,CREATE UNIQUE INDEX publication_code_key ON public.publication USING btree (code)
+public,publication,publication_pkey,t,t,f,btree,CREATE UNIQUE INDEX publication_pkey ON public.publication USING btree (id)
+public,publication_object,idx_publication_object_object_id,f,f,f,btree,CREATE INDEX idx_publication_object_object_id ON public.publication_object USING btree (object_id)
+public,publication_object,idx_publication_object_status,f,f,f,btree,"CREATE INDEX idx_publication_object_status ON public.publication_object USING btree (workflow_status, publication_id)"
+public,publication_object,publication_object_pkey,t,t,f,btree,"CREATE UNIQUE INDEX publication_object_pkey ON public.publication_object USING btree (publication_id, object_id)"
+public,ref_actor_role,ref_actor_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_actor_role_code_key ON public.ref_actor_role USING btree (code)
+public,ref_actor_role,ref_actor_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_actor_role_pkey ON public.ref_actor_role USING btree (id)
+public,ref_amenity,ref_amenity_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_amenity_code_key ON public.ref_amenity USING btree (code)
+public,ref_amenity,ref_amenity_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_amenity_pkey ON public.ref_amenity USING btree (id)
+public,ref_capacity_applicability,ref_capacity_applicability_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_capacity_applicability_pkey ON public.ref_capacity_applicability USING btree (metric_id, object_type)"
+public,ref_capacity_metric,ref_capacity_metric_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_capacity_metric_code_key ON public.ref_capacity_metric USING btree (code)
+public,ref_capacity_metric,ref_capacity_metric_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_capacity_metric_pkey ON public.ref_capacity_metric USING btree (id)
+public,ref_classification_equivalent_action,idx_ref_classification_equivalent_action_action_id,f,f,f,btree,CREATE INDEX idx_ref_classification_equivalent_action_action_id ON public.ref_classification_equivalent_action USING btree (action_id)
+public,ref_classification_equivalent_action,ref_classification_equivalent_action_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_classification_equivalent_action_pkey ON public.ref_classification_equivalent_action USING btree (scheme_id, action_id)"
+public,ref_classification_equivalent_group,idx_ref_classification_equivalent_group_group_id,f,f,f,btree,CREATE INDEX idx_ref_classification_equivalent_group_group_id ON public.ref_classification_equivalent_group USING btree (group_id)
+public,ref_classification_equivalent_group,ref_classification_equivalent_group_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_classification_equivalent_group_pkey ON public.ref_classification_equivalent_group USING btree (scheme_id, group_id)"
+public,ref_classification_scheme,ref_classification_scheme_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_classification_scheme_code_key ON public.ref_classification_scheme USING btree (code)
+public,ref_classification_scheme,ref_classification_scheme_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_classification_scheme_pkey ON public.ref_classification_scheme USING btree (id)
+public,ref_classification_value,ref_classification_value_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_classification_value_pkey ON public.ref_classification_value USING btree (id)
+public,ref_classification_value,ref_classification_value_scheme_id_code_key,t,f,f,btree,"CREATE UNIQUE INDEX ref_classification_value_scheme_id_code_key ON public.ref_classification_value USING btree (scheme_id, code)"
+public,ref_code,idx_ref_code_domain_parent_id,f,f,f,btree,"CREATE INDEX idx_ref_code_domain_parent_id ON ONLY public.ref_code USING btree (domain, parent_id)"
+public,ref_code,ref_code_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_pkey ON ONLY public.ref_code USING btree (id, domain)"
+public,ref_code,uq_ref_code_domain_code,t,f,f,btree,"CREATE UNIQUE INDEX uq_ref_code_domain_code ON ONLY public.ref_code USING btree (domain, code)"
+public,ref_code_accommodation_type,ref_code_accommodation_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_accommodation_type_domain_code_idx ON public.ref_code_accommodation_type USING btree (domain, code)"
+public,ref_code_accommodation_type,ref_code_accommodation_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_accommodation_type_domain_parent_id_idx ON public.ref_code_accommodation_type USING btree (domain, parent_id)"
+public,ref_code_accommodation_type,ref_code_accommodation_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_accommodation_type_pkey ON public.ref_code_accommodation_type USING btree (id, domain)"
+public,ref_code_accommodation_type,uq_ref_code_accommodation_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_accommodation_type_code ON public.ref_code_accommodation_type USING btree (code)
+public,ref_code_accommodation_type,uq_ref_code_accommodation_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_accommodation_type_id ON public.ref_code_accommodation_type USING btree (id)
+public,ref_code_activity_type,ref_code_activity_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_activity_type_domain_code_idx ON public.ref_code_activity_type USING btree (domain, code)"
+public,ref_code_activity_type,ref_code_activity_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_activity_type_domain_parent_id_idx ON public.ref_code_activity_type USING btree (domain, parent_id)"
+public,ref_code_activity_type,ref_code_activity_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_activity_type_pkey ON public.ref_code_activity_type USING btree (id, domain)"
+public,ref_code_activity_type,uq_ref_code_activity_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_activity_type_code ON public.ref_code_activity_type USING btree (code)
+public,ref_code_activity_type,uq_ref_code_activity_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_activity_type_id ON public.ref_code_activity_type USING btree (id)
+public,ref_code_allergen,ref_code_allergen_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_allergen_domain_code_idx ON public.ref_code_allergen USING btree (domain, code)"
+public,ref_code_allergen,ref_code_allergen_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_allergen_domain_parent_id_idx ON public.ref_code_allergen USING btree (domain, parent_id)"
+public,ref_code_allergen,ref_code_allergen_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_allergen_pkey ON public.ref_code_allergen USING btree (id, domain)"
+public,ref_code_allergen,uq_ref_code_allergen_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_allergen_code ON public.ref_code_allergen USING btree (code)
+public,ref_code_allergen,uq_ref_code_allergen_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_allergen_id ON public.ref_code_allergen USING btree (id)
+public,ref_code_amenity_family,ref_code_amenity_family_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_amenity_family_domain_code_idx ON public.ref_code_amenity_family USING btree (domain, code)"
+public,ref_code_amenity_family,ref_code_amenity_family_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_amenity_family_domain_parent_id_idx ON public.ref_code_amenity_family USING btree (domain, parent_id)"
+public,ref_code_amenity_family,ref_code_amenity_family_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_amenity_family_pkey ON public.ref_code_amenity_family USING btree (id, domain)"
+public,ref_code_amenity_family,uq_ref_code_amenity_family_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_amenity_family_code ON public.ref_code_amenity_family USING btree (code)
+public,ref_code_amenity_family,uq_ref_code_amenity_family_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_amenity_family_id ON public.ref_code_amenity_family USING btree (id)
+public,ref_code_amenity_type,ref_code_amenity_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_amenity_type_domain_code_idx ON public.ref_code_amenity_type USING btree (domain, code)"
+public,ref_code_amenity_type,ref_code_amenity_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_amenity_type_domain_parent_id_idx ON public.ref_code_amenity_type USING btree (domain, parent_id)"
+public,ref_code_amenity_type,ref_code_amenity_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_amenity_type_pkey ON public.ref_code_amenity_type USING btree (id, domain)"
+public,ref_code_amenity_type,uq_ref_code_amenity_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_amenity_type_code ON public.ref_code_amenity_type USING btree (code)
+public,ref_code_amenity_type,uq_ref_code_amenity_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_amenity_type_id ON public.ref_code_amenity_type USING btree (id)
+public,ref_code_assistance_type,ref_code_assistance_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_assistance_type_domain_code_idx ON public.ref_code_assistance_type USING btree (domain, code)"
+public,ref_code_assistance_type,ref_code_assistance_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_assistance_type_domain_parent_id_idx ON public.ref_code_assistance_type USING btree (domain, parent_id)"
+public,ref_code_assistance_type,ref_code_assistance_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_assistance_type_pkey ON public.ref_code_assistance_type USING btree (id, domain)"
+public,ref_code_assistance_type,uq_ref_code_assistance_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_assistance_type_code ON public.ref_code_assistance_type USING btree (code)
+public,ref_code_assistance_type,uq_ref_code_assistance_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_assistance_type_id ON public.ref_code_assistance_type USING btree (id)
+public,ref_code_booking_status,ref_code_booking_status_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_booking_status_domain_code_idx ON public.ref_code_booking_status USING btree (domain, code)"
+public,ref_code_booking_status,ref_code_booking_status_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_booking_status_domain_parent_id_idx ON public.ref_code_booking_status USING btree (domain, parent_id)"
+public,ref_code_booking_status,ref_code_booking_status_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_booking_status_pkey ON public.ref_code_booking_status USING btree (id, domain)"
+public,ref_code_booking_status,uq_ref_code_booking_status_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_booking_status_code ON public.ref_code_booking_status USING btree (code)
+public,ref_code_booking_status,uq_ref_code_booking_status_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_booking_status_id ON public.ref_code_booking_status USING btree (id)
+public,ref_code_client_type,ref_code_client_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_client_type_domain_code_idx ON public.ref_code_client_type USING btree (domain, code)"
+public,ref_code_client_type,ref_code_client_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_client_type_domain_parent_id_idx ON public.ref_code_client_type USING btree (domain, parent_id)"
+public,ref_code_client_type,ref_code_client_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_client_type_pkey ON public.ref_code_client_type USING btree (id, domain)"
+public,ref_code_client_type,uq_ref_code_client_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_client_type_code ON public.ref_code_client_type USING btree (code)
+public,ref_code_client_type,uq_ref_code_client_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_client_type_id ON public.ref_code_client_type USING btree (id)
+public,ref_code_contact_kind,ref_code_contact_kind_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_contact_kind_domain_code_idx ON public.ref_code_contact_kind USING btree (domain, code)"
+public,ref_code_contact_kind,ref_code_contact_kind_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_contact_kind_domain_parent_id_idx ON public.ref_code_contact_kind USING btree (domain, parent_id)"
+public,ref_code_contact_kind,ref_code_contact_kind_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_contact_kind_pkey ON public.ref_code_contact_kind USING btree (id, domain)"
+public,ref_code_contact_kind,uq_ref_code_contact_kind_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_contact_kind_code ON public.ref_code_contact_kind USING btree (code)
+public,ref_code_contact_kind,uq_ref_code_contact_kind_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_contact_kind_id ON public.ref_code_contact_kind USING btree (id)
+public,ref_code_cuisine_type,ref_code_cuisine_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_cuisine_type_domain_code_idx ON public.ref_code_cuisine_type USING btree (domain, code)"
+public,ref_code_cuisine_type,ref_code_cuisine_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_cuisine_type_domain_parent_id_idx ON public.ref_code_cuisine_type USING btree (domain, parent_id)"
+public,ref_code_cuisine_type,ref_code_cuisine_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_cuisine_type_pkey ON public.ref_code_cuisine_type USING btree (id, domain)"
+public,ref_code_cuisine_type,uq_ref_code_cuisine_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_cuisine_type_code ON public.ref_code_cuisine_type USING btree (code)
+public,ref_code_cuisine_type,uq_ref_code_cuisine_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_cuisine_type_id ON public.ref_code_cuisine_type USING btree (id)
+public,ref_code_demand_subtopic,ref_code_demand_subtopic_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_demand_subtopic_domain_code_idx ON public.ref_code_demand_subtopic USING btree (domain, code)"
+public,ref_code_demand_subtopic,ref_code_demand_subtopic_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_demand_subtopic_domain_parent_id_idx ON public.ref_code_demand_subtopic USING btree (domain, parent_id)"
+public,ref_code_demand_subtopic,ref_code_demand_subtopic_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_demand_subtopic_pkey ON public.ref_code_demand_subtopic USING btree (id, domain)"
+public,ref_code_demand_subtopic,uq_ref_code_demand_subtopic_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_demand_subtopic_code ON public.ref_code_demand_subtopic USING btree (code)
+public,ref_code_demand_subtopic,uq_ref_code_demand_subtopic_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_demand_subtopic_id ON public.ref_code_demand_subtopic USING btree (id)
+public,ref_code_demand_topic,ref_code_demand_topic_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_demand_topic_domain_code_idx ON public.ref_code_demand_topic USING btree (domain, code)"
+public,ref_code_demand_topic,ref_code_demand_topic_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_demand_topic_domain_parent_id_idx ON public.ref_code_demand_topic USING btree (domain, parent_id)"
+public,ref_code_demand_topic,ref_code_demand_topic_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_demand_topic_pkey ON public.ref_code_demand_topic USING btree (id, domain)"
+public,ref_code_demand_topic,uq_ref_code_demand_topic_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_demand_topic_code ON public.ref_code_demand_topic USING btree (code)
+public,ref_code_demand_topic,uq_ref_code_demand_topic_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_demand_topic_id ON public.ref_code_demand_topic USING btree (id)
+public,ref_code_destination_type,ref_code_destination_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_destination_type_domain_code_idx ON public.ref_code_destination_type USING btree (domain, code)"
+public,ref_code_destination_type,ref_code_destination_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_destination_type_domain_parent_id_idx ON public.ref_code_destination_type USING btree (domain, parent_id)"
+public,ref_code_destination_type,ref_code_destination_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_destination_type_pkey ON public.ref_code_destination_type USING btree (id, domain)"
+public,ref_code_destination_type,uq_ref_code_destination_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_destination_type_code ON public.ref_code_destination_type USING btree (code)
+public,ref_code_destination_type,uq_ref_code_destination_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_destination_type_id ON public.ref_code_destination_type USING btree (id)
+public,ref_code_dietary_tag,ref_code_dietary_tag_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_dietary_tag_domain_code_idx ON public.ref_code_dietary_tag USING btree (domain, code)"
+public,ref_code_dietary_tag,ref_code_dietary_tag_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_dietary_tag_domain_parent_id_idx ON public.ref_code_dietary_tag USING btree (domain, parent_id)"
+public,ref_code_dietary_tag,ref_code_dietary_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_dietary_tag_pkey ON public.ref_code_dietary_tag USING btree (id, domain)"
+public,ref_code_dietary_tag,uq_ref_code_dietary_tag_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_dietary_tag_code ON public.ref_code_dietary_tag USING btree (code)
+public,ref_code_dietary_tag,uq_ref_code_dietary_tag_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_dietary_tag_id ON public.ref_code_dietary_tag USING btree (id)
+public,ref_code_document_type,ref_code_document_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_document_type_domain_code_idx ON public.ref_code_document_type USING btree (domain, code)"
+public,ref_code_document_type,ref_code_document_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_document_type_domain_parent_id_idx ON public.ref_code_document_type USING btree (domain, parent_id)"
+public,ref_code_document_type,ref_code_document_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_document_type_pkey ON public.ref_code_document_type USING btree (id, domain)"
+public,ref_code_document_type,uq_ref_code_document_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_document_type_code ON public.ref_code_document_type USING btree (code)
+public,ref_code_document_type,uq_ref_code_document_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_document_type_id ON public.ref_code_document_type USING btree (id)
+public,ref_code_domain_registry,ref_code_domain_registry_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_code_domain_registry_pkey ON public.ref_code_domain_registry USING btree (domain)
+public,ref_code_environment_tag,ref_code_environment_tag_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_environment_tag_domain_code_idx ON public.ref_code_environment_tag USING btree (domain, code)"
+public,ref_code_environment_tag,ref_code_environment_tag_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_environment_tag_domain_parent_id_idx ON public.ref_code_environment_tag USING btree (domain, parent_id)"
+public,ref_code_environment_tag,ref_code_environment_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_environment_tag_pkey ON public.ref_code_environment_tag USING btree (id, domain)"
+public,ref_code_environment_tag,uq_ref_code_environment_tag_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_environment_tag_code ON public.ref_code_environment_tag USING btree (code)
+public,ref_code_environment_tag,uq_ref_code_environment_tag_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_environment_tag_id ON public.ref_code_environment_tag USING btree (id)
+public,ref_code_event_type,ref_code_event_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_event_type_domain_code_idx ON public.ref_code_event_type USING btree (domain, code)"
+public,ref_code_event_type,ref_code_event_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_event_type_domain_parent_id_idx ON public.ref_code_event_type USING btree (domain, parent_id)"
+public,ref_code_event_type,ref_code_event_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_event_type_pkey ON public.ref_code_event_type USING btree (id, domain)"
+public,ref_code_event_type,uq_ref_code_event_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_event_type_code ON public.ref_code_event_type USING btree (code)
+public,ref_code_event_type,uq_ref_code_event_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_event_type_id ON public.ref_code_event_type USING btree (id)
+public,ref_code_feedback_type,ref_code_feedback_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_feedback_type_domain_code_idx ON public.ref_code_feedback_type USING btree (domain, code)"
+public,ref_code_feedback_type,ref_code_feedback_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_feedback_type_domain_parent_id_idx ON public.ref_code_feedback_type USING btree (domain, parent_id)"
+public,ref_code_feedback_type,ref_code_feedback_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_feedback_type_pkey ON public.ref_code_feedback_type USING btree (id, domain)"
+public,ref_code_feedback_type,uq_ref_code_feedback_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_feedback_type_code ON public.ref_code_feedback_type USING btree (code)
+public,ref_code_feedback_type,uq_ref_code_feedback_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_feedback_type_id ON public.ref_code_feedback_type USING btree (id)
+public,ref_code_incident_category,ref_code_incident_category_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_incident_category_domain_code_idx ON public.ref_code_incident_category USING btree (domain, code)"
+public,ref_code_incident_category,ref_code_incident_category_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_incident_category_domain_parent_id_idx ON public.ref_code_incident_category USING btree (domain, parent_id)"
+public,ref_code_incident_category,ref_code_incident_category_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_incident_category_pkey ON public.ref_code_incident_category USING btree (id, domain)"
+public,ref_code_incident_category,uq_ref_code_incident_category_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_incident_category_code ON public.ref_code_incident_category USING btree (code)
+public,ref_code_incident_category,uq_ref_code_incident_category_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_incident_category_id ON public.ref_code_incident_category USING btree (id)
+public,ref_code_insurance_type,ref_code_insurance_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_insurance_type_domain_code_idx ON public.ref_code_insurance_type USING btree (domain, code)"
+public,ref_code_insurance_type,ref_code_insurance_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_insurance_type_domain_parent_id_idx ON public.ref_code_insurance_type USING btree (domain, parent_id)"
+public,ref_code_insurance_type,ref_code_insurance_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_insurance_type_pkey ON public.ref_code_insurance_type USING btree (id, domain)"
+public,ref_code_insurance_type,uq_ref_code_insurance_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_insurance_type_code ON public.ref_code_insurance_type USING btree (code)
+public,ref_code_insurance_type,uq_ref_code_insurance_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_insurance_type_id ON public.ref_code_insurance_type USING btree (id)
+public,ref_code_iti_practice,ref_code_iti_practice_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_iti_practice_domain_code_idx ON public.ref_code_iti_practice USING btree (domain, code)"
+public,ref_code_iti_practice,ref_code_iti_practice_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_iti_practice_domain_parent_id_idx ON public.ref_code_iti_practice USING btree (domain, parent_id)"
+public,ref_code_iti_practice,ref_code_iti_practice_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_iti_practice_pkey ON public.ref_code_iti_practice USING btree (id, domain)"
+public,ref_code_iti_practice,uq_ref_code_iti_practice_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_iti_practice_code ON public.ref_code_iti_practice USING btree (code)
+public,ref_code_iti_practice,uq_ref_code_iti_practice_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_iti_practice_id ON public.ref_code_iti_practice USING btree (id)
+public,ref_code_language_level,ref_code_language_level_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_language_level_domain_code_idx ON public.ref_code_language_level USING btree (domain, code)"
+public,ref_code_language_level,ref_code_language_level_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_language_level_domain_parent_id_idx ON public.ref_code_language_level USING btree (domain, parent_id)"
+public,ref_code_language_level,ref_code_language_level_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_language_level_pkey ON public.ref_code_language_level USING btree (id, domain)"
+public,ref_code_language_level,uq_ref_code_language_level_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_language_level_code ON public.ref_code_language_level USING btree (code)
+public,ref_code_language_level,uq_ref_code_language_level_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_language_level_id ON public.ref_code_language_level USING btree (id)
+public,ref_code_media_tag,ref_code_media_tag_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_media_tag_domain_code_idx ON public.ref_code_media_tag USING btree (domain, code)"
+public,ref_code_media_tag,ref_code_media_tag_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_media_tag_domain_parent_id_idx ON public.ref_code_media_tag USING btree (domain, parent_id)"
+public,ref_code_media_tag,ref_code_media_tag_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_media_tag_pkey ON public.ref_code_media_tag USING btree (id, domain)"
+public,ref_code_media_tag,uq_ref_code_media_tag_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_media_tag_code ON public.ref_code_media_tag USING btree (code)
+public,ref_code_media_tag,uq_ref_code_media_tag_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_media_tag_id ON public.ref_code_media_tag USING btree (id)
+public,ref_code_media_type,ref_code_media_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_media_type_domain_code_idx ON public.ref_code_media_type USING btree (domain, code)"
+public,ref_code_media_type,ref_code_media_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_media_type_domain_parent_id_idx ON public.ref_code_media_type USING btree (domain, parent_id)"
+public,ref_code_media_type,ref_code_media_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_media_type_pkey ON public.ref_code_media_type USING btree (id, domain)"
+public,ref_code_media_type,uq_ref_code_media_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_media_type_code ON public.ref_code_media_type USING btree (code)
+public,ref_code_media_type,uq_ref_code_media_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_media_type_id ON public.ref_code_media_type USING btree (id)
+public,ref_code_meeting_equipment,ref_code_meeting_equipment_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_meeting_equipment_domain_code_idx ON public.ref_code_meeting_equipment USING btree (domain, code)"
+public,ref_code_meeting_equipment,ref_code_meeting_equipment_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_meeting_equipment_domain_parent_id_idx ON public.ref_code_meeting_equipment USING btree (domain, parent_id)"
+public,ref_code_meeting_equipment,ref_code_meeting_equipment_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_meeting_equipment_pkey ON public.ref_code_meeting_equipment USING btree (id, domain)"
+public,ref_code_meeting_equipment,uq_ref_code_meeting_equipment_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_meeting_equipment_code ON public.ref_code_meeting_equipment USING btree (code)
+public,ref_code_meeting_equipment,uq_ref_code_meeting_equipment_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_meeting_equipment_id ON public.ref_code_meeting_equipment USING btree (id)
+public,ref_code_membership_campaign,ref_code_membership_campaign_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_membership_campaign_domain_code_idx ON public.ref_code_membership_campaign USING btree (domain, code)"
+public,ref_code_membership_campaign,ref_code_membership_campaign_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_membership_campaign_domain_parent_id_idx ON public.ref_code_membership_campaign USING btree (domain, parent_id)"
+public,ref_code_membership_campaign,ref_code_membership_campaign_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_membership_campaign_pkey ON public.ref_code_membership_campaign USING btree (id, domain)"
+public,ref_code_membership_campaign,uq_ref_code_membership_campaign_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_membership_campaign_code ON public.ref_code_membership_campaign USING btree (code)
+public,ref_code_membership_campaign,uq_ref_code_membership_campaign_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_membership_campaign_id ON public.ref_code_membership_campaign USING btree (id)
+public,ref_code_membership_tier,ref_code_membership_tier_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_membership_tier_domain_code_idx ON public.ref_code_membership_tier USING btree (domain, code)"
+public,ref_code_membership_tier,ref_code_membership_tier_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_membership_tier_domain_parent_id_idx ON public.ref_code_membership_tier USING btree (domain, parent_id)"
+public,ref_code_membership_tier,ref_code_membership_tier_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_membership_tier_pkey ON public.ref_code_membership_tier USING btree (id, domain)"
+public,ref_code_membership_tier,uq_ref_code_membership_tier_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_membership_tier_code ON public.ref_code_membership_tier USING btree (code)
+public,ref_code_membership_tier,uq_ref_code_membership_tier_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_membership_tier_id ON public.ref_code_membership_tier USING btree (id)
+public,ref_code_menu_category,ref_code_menu_category_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_menu_category_domain_code_idx ON public.ref_code_menu_category USING btree (domain, code)"
+public,ref_code_menu_category,ref_code_menu_category_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_menu_category_domain_parent_id_idx ON public.ref_code_menu_category USING btree (domain, parent_id)"
+public,ref_code_menu_category,ref_code_menu_category_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_menu_category_pkey ON public.ref_code_menu_category USING btree (id, domain)"
+public,ref_code_menu_category,uq_ref_code_menu_category_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_menu_category_code ON public.ref_code_menu_category USING btree (code)
+public,ref_code_menu_category,uq_ref_code_menu_category_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_menu_category_id ON public.ref_code_menu_category USING btree (id)
+public,ref_code_mood,ref_code_mood_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_mood_domain_code_idx ON public.ref_code_mood USING btree (domain, code)"
+public,ref_code_mood,ref_code_mood_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_mood_domain_parent_id_idx ON public.ref_code_mood USING btree (domain, parent_id)"
+public,ref_code_mood,ref_code_mood_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_mood_pkey ON public.ref_code_mood USING btree (id, domain)"
+public,ref_code_mood,uq_ref_code_mood_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_mood_code ON public.ref_code_mood USING btree (code)
+public,ref_code_mood,uq_ref_code_mood_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_mood_id ON public.ref_code_mood USING btree (id)
+public,ref_code_opening_schedule_type,ref_code_opening_schedule_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_opening_schedule_type_domain_code_idx ON public.ref_code_opening_schedule_type USING btree (domain, code)"
+public,ref_code_opening_schedule_type,ref_code_opening_schedule_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_opening_schedule_type_domain_parent_id_idx ON public.ref_code_opening_schedule_type USING btree (domain, parent_id)"
+public,ref_code_opening_schedule_type,ref_code_opening_schedule_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_opening_schedule_type_pkey ON public.ref_code_opening_schedule_type USING btree (id, domain)"
+public,ref_code_opening_schedule_type,uq_ref_code_opening_schedule_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_opening_schedule_type_code ON public.ref_code_opening_schedule_type USING btree (code)
+public,ref_code_opening_schedule_type,uq_ref_code_opening_schedule_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_opening_schedule_type_id ON public.ref_code_opening_schedule_type USING btree (id)
+public,ref_code_other,ref_code_other_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_other_domain_code_idx ON public.ref_code_other USING btree (domain, code)"
+public,ref_code_other,ref_code_other_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_other_domain_parent_id_idx ON public.ref_code_other USING btree (domain, parent_id)"
+public,ref_code_other,ref_code_other_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_other_pkey ON public.ref_code_other USING btree (id, domain)"
+public,ref_code_package_type,ref_code_package_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_package_type_domain_code_idx ON public.ref_code_package_type USING btree (domain, code)"
+public,ref_code_package_type,ref_code_package_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_package_type_domain_parent_id_idx ON public.ref_code_package_type USING btree (domain, parent_id)"
+public,ref_code_package_type,ref_code_package_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_package_type_pkey ON public.ref_code_package_type USING btree (id, domain)"
+public,ref_code_package_type,uq_ref_code_package_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_package_type_code ON public.ref_code_package_type USING btree (code)
+public,ref_code_package_type,uq_ref_code_package_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_package_type_id ON public.ref_code_package_type USING btree (id)
+public,ref_code_partnership_type,ref_code_partnership_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_partnership_type_domain_code_idx ON public.ref_code_partnership_type USING btree (domain, code)"
+public,ref_code_partnership_type,ref_code_partnership_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_partnership_type_domain_parent_id_idx ON public.ref_code_partnership_type USING btree (domain, parent_id)"
+public,ref_code_partnership_type,ref_code_partnership_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_partnership_type_pkey ON public.ref_code_partnership_type USING btree (id, domain)"
+public,ref_code_partnership_type,uq_ref_code_partnership_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_partnership_type_code ON public.ref_code_partnership_type USING btree (code)
+public,ref_code_partnership_type,uq_ref_code_partnership_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_partnership_type_id ON public.ref_code_partnership_type USING btree (id)
+public,ref_code_payment_method,ref_code_payment_method_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_payment_method_domain_code_idx ON public.ref_code_payment_method USING btree (domain, code)"
+public,ref_code_payment_method,ref_code_payment_method_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_payment_method_domain_parent_id_idx ON public.ref_code_payment_method USING btree (domain, parent_id)"
+public,ref_code_payment_method,ref_code_payment_method_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_payment_method_pkey ON public.ref_code_payment_method USING btree (id, domain)"
+public,ref_code_payment_method,uq_ref_code_payment_method_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_payment_method_code ON public.ref_code_payment_method USING btree (code)
+public,ref_code_payment_method,uq_ref_code_payment_method_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_payment_method_id ON public.ref_code_payment_method USING btree (id)
+public,ref_code_price_kind,ref_code_price_kind_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_price_kind_domain_code_idx ON public.ref_code_price_kind USING btree (domain, code)"
+public,ref_code_price_kind,ref_code_price_kind_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_price_kind_domain_parent_id_idx ON public.ref_code_price_kind USING btree (domain, parent_id)"
+public,ref_code_price_kind,ref_code_price_kind_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_price_kind_pkey ON public.ref_code_price_kind USING btree (id, domain)"
+public,ref_code_price_kind,uq_ref_code_price_kind_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_price_kind_code ON public.ref_code_price_kind USING btree (code)
+public,ref_code_price_kind,uq_ref_code_price_kind_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_price_kind_id ON public.ref_code_price_kind USING btree (id)
+public,ref_code_price_unit,ref_code_price_unit_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_price_unit_domain_code_idx ON public.ref_code_price_unit USING btree (domain, code)"
+public,ref_code_price_unit,ref_code_price_unit_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_price_unit_domain_parent_id_idx ON public.ref_code_price_unit USING btree (domain, parent_id)"
+public,ref_code_price_unit,ref_code_price_unit_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_price_unit_pkey ON public.ref_code_price_unit USING btree (id, domain)"
+public,ref_code_price_unit,uq_ref_code_price_unit_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_price_unit_code ON public.ref_code_price_unit USING btree (code)
+public,ref_code_price_unit,uq_ref_code_price_unit_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_price_unit_id ON public.ref_code_price_unit USING btree (id)
+public,ref_code_promotion_type,ref_code_promotion_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_promotion_type_domain_code_idx ON public.ref_code_promotion_type USING btree (domain, code)"
+public,ref_code_promotion_type,ref_code_promotion_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_promotion_type_domain_parent_id_idx ON public.ref_code_promotion_type USING btree (domain, parent_id)"
+public,ref_code_promotion_type,ref_code_promotion_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_promotion_type_pkey ON public.ref_code_promotion_type USING btree (id, domain)"
+public,ref_code_promotion_type,uq_ref_code_promotion_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_promotion_type_code ON public.ref_code_promotion_type USING btree (code)
+public,ref_code_promotion_type,uq_ref_code_promotion_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_promotion_type_id ON public.ref_code_promotion_type USING btree (id)
+public,ref_code_room_type,ref_code_room_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_room_type_domain_code_idx ON public.ref_code_room_type USING btree (domain, code)"
+public,ref_code_room_type,ref_code_room_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_room_type_domain_parent_id_idx ON public.ref_code_room_type USING btree (domain, parent_id)"
+public,ref_code_room_type,ref_code_room_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_room_type_pkey ON public.ref_code_room_type USING btree (id, domain)"
+public,ref_code_room_type,uq_ref_code_room_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_room_type_code ON public.ref_code_room_type USING btree (code)
+public,ref_code_room_type,uq_ref_code_room_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_room_type_id ON public.ref_code_room_type USING btree (id)
+public,ref_code_season_type,ref_code_season_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_season_type_domain_code_idx ON public.ref_code_season_type USING btree (domain, code)"
+public,ref_code_season_type,ref_code_season_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_season_type_domain_parent_id_idx ON public.ref_code_season_type USING btree (domain, parent_id)"
+public,ref_code_season_type,ref_code_season_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_season_type_pkey ON public.ref_code_season_type USING btree (id, domain)"
+public,ref_code_season_type,uq_ref_code_season_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_season_type_code ON public.ref_code_season_type USING btree (code)
+public,ref_code_season_type,uq_ref_code_season_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_season_type_id ON public.ref_code_season_type USING btree (id)
+public,ref_code_service_type,ref_code_service_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_service_type_domain_code_idx ON public.ref_code_service_type USING btree (domain, code)"
+public,ref_code_service_type,ref_code_service_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_service_type_domain_parent_id_idx ON public.ref_code_service_type USING btree (domain, parent_id)"
+public,ref_code_service_type,ref_code_service_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_service_type_pkey ON public.ref_code_service_type USING btree (id, domain)"
+public,ref_code_service_type,uq_ref_code_service_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_service_type_code ON public.ref_code_service_type USING btree (code)
+public,ref_code_service_type,uq_ref_code_service_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_service_type_id ON public.ref_code_service_type USING btree (id)
+public,ref_code_social_network,ref_code_social_network_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_social_network_domain_code_idx ON public.ref_code_social_network USING btree (domain, code)"
+public,ref_code_social_network,ref_code_social_network_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_social_network_domain_parent_id_idx ON public.ref_code_social_network USING btree (domain, parent_id)"
+public,ref_code_social_network,ref_code_social_network_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_social_network_pkey ON public.ref_code_social_network USING btree (id, domain)"
+public,ref_code_social_network,uq_ref_code_social_network_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_social_network_code ON public.ref_code_social_network USING btree (code)
+public,ref_code_social_network,uq_ref_code_social_network_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_social_network_id ON public.ref_code_social_network USING btree (id)
+public,ref_code_taxonomy_closure,idx_ref_code_taxonomy_closure_ancestor,f,f,f,btree,"CREATE INDEX idx_ref_code_taxonomy_closure_ancestor ON public.ref_code_taxonomy_closure USING btree (domain, ancestor_id, depth)"
+public,ref_code_taxonomy_closure,idx_ref_code_taxonomy_closure_descendant,f,f,f,btree,"CREATE INDEX idx_ref_code_taxonomy_closure_descendant ON public.ref_code_taxonomy_closure USING btree (domain, descendant_id, depth)"
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_taxonomy_closure_pkey ON public.ref_code_taxonomy_closure USING btree (domain, ancestor_id, descendant_id)"
+public,ref_code_tourism_type,ref_code_tourism_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_tourism_type_domain_code_idx ON public.ref_code_tourism_type USING btree (domain, code)"
+public,ref_code_tourism_type,ref_code_tourism_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_tourism_type_domain_parent_id_idx ON public.ref_code_tourism_type USING btree (domain, parent_id)"
+public,ref_code_tourism_type,ref_code_tourism_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_tourism_type_pkey ON public.ref_code_tourism_type USING btree (id, domain)"
+public,ref_code_tourism_type,uq_ref_code_tourism_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_tourism_type_code ON public.ref_code_tourism_type USING btree (code)
+public,ref_code_tourism_type,uq_ref_code_tourism_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_tourism_type_id ON public.ref_code_tourism_type USING btree (id)
+public,ref_code_transport_type,ref_code_transport_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_transport_type_domain_code_idx ON public.ref_code_transport_type USING btree (domain, code)"
+public,ref_code_transport_type,ref_code_transport_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_transport_type_domain_parent_id_idx ON public.ref_code_transport_type USING btree (domain, parent_id)"
+public,ref_code_transport_type,ref_code_transport_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_transport_type_pkey ON public.ref_code_transport_type USING btree (id, domain)"
+public,ref_code_transport_type,uq_ref_code_transport_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_transport_type_code ON public.ref_code_transport_type USING btree (code)
+public,ref_code_transport_type,uq_ref_code_transport_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_transport_type_id ON public.ref_code_transport_type USING btree (id)
+public,ref_code_view_type,ref_code_view_type_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_view_type_domain_code_idx ON public.ref_code_view_type USING btree (domain, code)"
+public,ref_code_view_type,ref_code_view_type_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_view_type_domain_parent_id_idx ON public.ref_code_view_type USING btree (domain, parent_id)"
+public,ref_code_view_type,ref_code_view_type_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_view_type_pkey ON public.ref_code_view_type USING btree (id, domain)"
+public,ref_code_view_type,uq_ref_code_view_type_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_view_type_code ON public.ref_code_view_type USING btree (code)
+public,ref_code_view_type,uq_ref_code_view_type_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_view_type_id ON public.ref_code_view_type USING btree (id)
+public,ref_code_weekday,ref_code_weekday_domain_code_idx,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_weekday_domain_code_idx ON public.ref_code_weekday USING btree (domain, code)"
+public,ref_code_weekday,ref_code_weekday_domain_parent_id_idx,f,f,f,btree,"CREATE INDEX ref_code_weekday_domain_parent_id_idx ON public.ref_code_weekday USING btree (domain, parent_id)"
+public,ref_code_weekday,ref_code_weekday_pkey,t,t,f,btree,"CREATE UNIQUE INDEX ref_code_weekday_pkey ON public.ref_code_weekday USING btree (id, domain)"
+public,ref_code_weekday,uq_ref_code_weekday_code,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_weekday_code ON public.ref_code_weekday USING btree (code)
+public,ref_code_weekday,uq_ref_code_weekday_id,t,f,f,btree,CREATE UNIQUE INDEX uq_ref_code_weekday_id ON public.ref_code_weekday USING btree (id)
+public,ref_contact_role,ref_contact_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_contact_role_code_key ON public.ref_contact_role USING btree (code)
+public,ref_contact_role,ref_contact_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_contact_role_pkey ON public.ref_contact_role USING btree (id)
+public,ref_document,ref_document_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_document_pkey ON public.ref_document USING btree (id)
+public,ref_document,ref_document_url_key,t,f,f,btree,CREATE UNIQUE INDEX ref_document_url_key ON public.ref_document USING btree (url)
+public,ref_iti_assoc_role,ref_iti_assoc_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_iti_assoc_role_code_key ON public.ref_iti_assoc_role USING btree (code)
+public,ref_iti_assoc_role,ref_iti_assoc_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_iti_assoc_role_pkey ON public.ref_iti_assoc_role USING btree (id)
+public,ref_language,ref_language_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_language_code_key ON public.ref_language USING btree (code)
+public,ref_language,ref_language_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_language_pkey ON public.ref_language USING btree (id)
+public,ref_language,uq_ref_language_position,t,f,t,btree,"CREATE UNIQUE INDEX uq_ref_language_position ON public.ref_language USING btree (""position"") WHERE (""position"" IS NOT NULL)"
+public,ref_legal_type,ref_legal_type_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_legal_type_code_key ON public.ref_legal_type USING btree (code)
+public,ref_legal_type,ref_legal_type_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_legal_type_pkey ON public.ref_legal_type USING btree (id)
+public,ref_object_relation_type,ref_object_relation_type_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_object_relation_type_code_key ON public.ref_object_relation_type USING btree (code)
+public,ref_object_relation_type,ref_object_relation_type_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_object_relation_type_pkey ON public.ref_object_relation_type USING btree (id)
+public,ref_org_admin_role,ref_org_admin_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_org_admin_role_code_key ON public.ref_org_admin_role USING btree (code)
+public,ref_org_admin_role,ref_org_admin_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_org_admin_role_pkey ON public.ref_org_admin_role USING btree (id)
+public,ref_org_business_role,ref_org_business_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_org_business_role_code_key ON public.ref_org_business_role USING btree (code)
+public,ref_org_business_role,ref_org_business_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_org_business_role_pkey ON public.ref_org_business_role USING btree (id)
+public,ref_org_role,ref_org_role_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_org_role_code_key ON public.ref_org_role USING btree (code)
+public,ref_org_role,ref_org_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_org_role_pkey ON public.ref_org_role USING btree (id)
+public,ref_permission,ref_permission_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_permission_code_key ON public.ref_permission USING btree (code)
+public,ref_permission,ref_permission_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_permission_pkey ON public.ref_permission USING btree (id)
+public,ref_review_source,ref_review_source_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_review_source_code_key ON public.ref_review_source USING btree (code)
+public,ref_review_source,ref_review_source_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_review_source_pkey ON public.ref_review_source USING btree (id)
+public,ref_sustainability_action,idx_ref_sustainability_action_category_id,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_category_id ON public.ref_sustainability_action USING btree (category_id)
+public,ref_sustainability_action,idx_ref_sustainability_action_group_id,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_group_id ON public.ref_sustainability_action USING btree (group_id)
+public,ref_sustainability_action,ref_sustainability_action_category_id_code_key,t,f,f,btree,"CREATE UNIQUE INDEX ref_sustainability_action_category_id_code_key ON public.ref_sustainability_action USING btree (category_id, code)"
+public,ref_sustainability_action,ref_sustainability_action_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_pkey ON public.ref_sustainability_action USING btree (id)
+public,ref_sustainability_action,uq_ref_sustainability_action_external_code,t,f,t,btree,CREATE UNIQUE INDEX uq_ref_sustainability_action_external_code ON public.ref_sustainability_action USING btree (external_code) WHERE (external_code IS NOT NULL)
+public,ref_sustainability_action_category,ref_sustainability_action_category_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_category_code_key ON public.ref_sustainability_action_category USING btree (code)
+public,ref_sustainability_action_category,ref_sustainability_action_category_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_category_pkey ON public.ref_sustainability_action_category USING btree (id)
+public,ref_sustainability_action_group,ref_sustainability_action_group_code_key,t,f,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_group_code_key ON public.ref_sustainability_action_group USING btree (code)
+public,ref_sustainability_action_group,ref_sustainability_action_group_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_group_pkey ON public.ref_sustainability_action_group USING btree (id)
+public,ref_tag,idx_ref_tag_slug_ci,f,f,f,btree,CREATE INDEX idx_ref_tag_slug_ci ON public.ref_tag USING btree (immutable_unaccent(lower(slug)))
+public,ref_tag,ref_tag_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_tag_pkey ON public.ref_tag USING btree (id)
+public,ref_tag,ref_tag_slug_key,t,f,f,btree,CREATE UNIQUE INDEX ref_tag_slug_key ON public.ref_tag USING btree (slug)
+public,tag_link,idx_tag_link_tag_id,f,f,f,btree,CREATE INDEX idx_tag_link_tag_id ON public.tag_link USING btree (tag_id)
+public,tag_link,idx_tag_link_target,f,f,f,btree,"CREATE INDEX idx_tag_link_target ON public.tag_link USING btree (target_table, target_pk)"
+public,tag_link,tag_link_pkey,t,t,f,btree,CREATE UNIQUE INDEX tag_link_pkey ON public.tag_link USING btree (id)
+public,tag_link,uq_tag_unique_target,t,f,f,btree,"CREATE UNIQUE INDEX uq_tag_unique_target ON public.tag_link USING btree (tag_id, target_table, target_pk)"
+public,user_org_admin_role,idx_user_org_admin_role_membership_id,f,f,f,btree,CREATE INDEX idx_user_org_admin_role_membership_id ON public.user_org_admin_role USING btree (membership_id)
+public,user_org_admin_role,uq_user_org_admin_role_active,t,f,t,btree,CREATE UNIQUE INDEX uq_user_org_admin_role_active ON public.user_org_admin_role USING btree (membership_id) WHERE (is_active = true)
+public,user_org_admin_role,user_org_admin_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX user_org_admin_role_pkey ON public.user_org_admin_role USING btree (id)
+public,user_org_business_role,idx_user_org_business_role_membership_id,f,f,f,btree,CREATE INDEX idx_user_org_business_role_membership_id ON public.user_org_business_role USING btree (membership_id)
+public,user_org_business_role,uq_user_org_business_role_active,t,f,t,btree,CREATE UNIQUE INDEX uq_user_org_business_role_active ON public.user_org_business_role USING btree (membership_id) WHERE (is_active = true)
+public,user_org_business_role,user_org_business_role_pkey,t,t,f,btree,CREATE UNIQUE INDEX user_org_business_role_pkey ON public.user_org_business_role USING btree (id)
+public,user_org_membership,idx_user_org_membership_org_object_id,f,f,f,btree,CREATE INDEX idx_user_org_membership_org_object_id ON public.user_org_membership USING btree (org_object_id)
+public,user_org_membership,idx_user_org_membership_user_active,f,f,t,btree,CREATE INDEX idx_user_org_membership_user_active ON public.user_org_membership USING btree (user_id) WHERE (is_active = true)
+public,user_org_membership,idx_user_org_membership_user_id,f,f,f,btree,CREATE INDEX idx_user_org_membership_user_id ON public.user_org_membership USING btree (user_id)
+public,user_org_membership,user_org_membership_pkey,t,t,f,btree,CREATE UNIQUE INDEX user_org_membership_pkey ON public.user_org_membership USING btree (id)
+public,user_permission,idx_user_permission_active,f,f,t,btree,"CREATE INDEX idx_user_permission_active ON public.user_permission USING btree (user_id, permission_id) WHERE (is_active = true)"
+public,user_permission,uq_user_permission,t,f,f,btree,"CREATE UNIQUE INDEX uq_user_permission ON public.user_permission USING btree (user_id, permission_id)"
+public,user_permission,user_permission_pkey,t,t,f,btree,CREATE UNIQUE INDEX user_permission_pkey ON public.user_permission USING btree (id)
+staging,actor_channel_temp,actor_channel_temp_import_batch_id_staging_actor_key_kind_c_key,t,f,f,btree,"CREATE UNIQUE INDEX actor_channel_temp_import_batch_id_staging_actor_key_kind_c_key ON staging.actor_channel_temp USING btree (import_batch_id, staging_actor_key, kind_code, value)"
+staging,actor_channel_temp,actor_channel_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_channel_temp_pkey ON staging.actor_channel_temp USING btree (import_actor_channel_id)
+staging,actor_consent_temp,actor_consent_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_consent_temp_pkey ON staging.actor_consent_temp USING btree (import_row_id)
+staging,actor_consent_temp,idx_actor_consent_temp_batch,f,f,f,btree,CREATE INDEX idx_actor_consent_temp_batch ON staging.actor_consent_temp USING btree (import_batch_id)
+staging,actor_consent_temp,idx_actor_consent_temp_object_key,f,f,f,btree,CREATE INDEX idx_actor_consent_temp_object_key ON staging.actor_consent_temp USING btree (staging_object_key)
+staging,actor_object_role_temp,actor_object_role_temp_import_batch_id_staging_actor_key_st_key,t,f,f,btree,"CREATE UNIQUE INDEX actor_object_role_temp_import_batch_id_staging_actor_key_st_key ON staging.actor_object_role_temp USING btree (import_batch_id, staging_actor_key, staging_object_key, role_code)"
+staging,actor_object_role_temp,actor_object_role_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_object_role_temp_pkey ON staging.actor_object_role_temp USING btree (import_actor_role_id)
+staging,actor_temp,actor_temp_import_batch_id_staging_actor_key_key,t,f,f,btree,"CREATE UNIQUE INDEX actor_temp_import_batch_id_staging_actor_key_key ON staging.actor_temp USING btree (import_batch_id, staging_actor_key)"
+staging,actor_temp,actor_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX actor_temp_pkey ON staging.actor_temp USING btree (import_actor_id)
+staging,actor_temp,idx_actor_temp_batch,f,f,f,btree,"CREATE INDEX idx_actor_temp_batch ON staging.actor_temp USING btree (import_batch_id, staging_object_key)"
+staging,audit_audit_log_temp,audit_audit_log_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_audit_log_temp_pkey ON staging.audit_audit_log_temp USING btree (import_row_id)
+staging,audit_audit_log_temp,idx_audit_audit_log_temp_batch,f,f,f,btree,CREATE INDEX idx_audit_audit_log_temp_batch ON staging.audit_audit_log_temp USING btree (import_batch_id)
+staging,audit_audit_log_temp,idx_audit_audit_log_temp_object_key,f,f,f,btree,CREATE INDEX idx_audit_audit_log_temp_object_key ON staging.audit_audit_log_temp USING btree (staging_object_key)
+staging,audit_criteria_temp,audit_criteria_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_criteria_temp_pkey ON staging.audit_criteria_temp USING btree (import_row_id)
+staging,audit_criteria_temp,idx_audit_criteria_temp_batch,f,f,f,btree,CREATE INDEX idx_audit_criteria_temp_batch ON staging.audit_criteria_temp USING btree (import_batch_id)
+staging,audit_criteria_temp,idx_audit_criteria_temp_object_key,f,f,f,btree,CREATE INDEX idx_audit_criteria_temp_object_key ON staging.audit_criteria_temp USING btree (staging_object_key)
+staging,audit_result_temp,audit_result_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_result_temp_pkey ON staging.audit_result_temp USING btree (import_row_id)
+staging,audit_result_temp,idx_audit_result_temp_batch,f,f,f,btree,CREATE INDEX idx_audit_result_temp_batch ON staging.audit_result_temp USING btree (import_batch_id)
+staging,audit_result_temp,idx_audit_result_temp_object_key,f,f,f,btree,CREATE INDEX idx_audit_result_temp_object_key ON staging.audit_result_temp USING btree (staging_object_key)
+staging,audit_session_temp,audit_session_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_session_temp_pkey ON staging.audit_session_temp USING btree (import_row_id)
+staging,audit_session_temp,idx_audit_session_temp_batch,f,f,f,btree,CREATE INDEX idx_audit_session_temp_batch ON staging.audit_session_temp USING btree (import_batch_id)
+staging,audit_session_temp,idx_audit_session_temp_object_key,f,f,f,btree,CREATE INDEX idx_audit_session_temp_object_key ON staging.audit_session_temp USING btree (staging_object_key)
+staging,audit_template_temp,audit_template_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX audit_template_temp_pkey ON staging.audit_template_temp USING btree (import_row_id)
+staging,audit_template_temp,idx_audit_template_temp_batch,f,f,f,btree,CREATE INDEX idx_audit_template_temp_batch ON staging.audit_template_temp USING btree (import_batch_id)
+staging,audit_template_temp,idx_audit_template_temp_object_key,f,f,f,btree,CREATE INDEX idx_audit_template_temp_object_key ON staging.audit_template_temp USING btree (staging_object_key)
+staging,batch_commit_ledger,batch_commit_ledger_batch_id_key,t,f,f,btree,CREATE UNIQUE INDEX batch_commit_ledger_batch_id_key ON staging.batch_commit_ledger USING btree (batch_id)
+staging,batch_commit_ledger,batch_commit_ledger_pkey,t,t,f,btree,CREATE UNIQUE INDEX batch_commit_ledger_pkey ON staging.batch_commit_ledger USING btree (id)
+staging,batch_commit_ledger_item,batch_commit_ledger_item_ledger_id_entity_type_entity_id_key,t,f,f,btree,"CREATE UNIQUE INDEX batch_commit_ledger_item_ledger_id_entity_type_entity_id_key ON staging.batch_commit_ledger_item USING btree (ledger_id, entity_type, entity_id)"
+staging,batch_commit_ledger_item,batch_commit_ledger_item_pkey,t,t,f,btree,CREATE UNIQUE INDEX batch_commit_ledger_item_pkey ON staging.batch_commit_ledger_item USING btree (id)
+staging,batch_commit_ledger_item,idx_batch_commit_ledger_item_ledger,f,f,f,btree,"CREATE INDEX idx_batch_commit_ledger_item_ledger ON staging.batch_commit_ledger_item USING btree (ledger_id, entity_type)"
+staging,contact_channel_temp,contact_channel_temp_import_batch_id_staging_object_key_kin_key,t,f,f,btree,"CREATE UNIQUE INDEX contact_channel_temp_import_batch_id_staging_object_key_kin_key ON staging.contact_channel_temp USING btree (import_batch_id, staging_object_key, kind_code, value)"
+staging,contact_channel_temp,contact_channel_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX contact_channel_temp_pkey ON staging.contact_channel_temp USING btree (import_contact_id)
+staging,crm_comment_temp,crm_comment_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX crm_comment_temp_pkey ON staging.crm_comment_temp USING btree (import_comment_id)
+staging,crm_comment_temp,idx_crm_comment_temp_batch,f,f,f,btree,"CREATE INDEX idx_crm_comment_temp_batch ON staging.crm_comment_temp USING btree (import_batch_id, parent_legacy_crm_id)"
+staging,crm_comment_temp,idx_crm_comment_temp_resolution,f,f,f,btree,"CREATE INDEX idx_crm_comment_temp_resolution ON staging.crm_comment_temp USING btree (import_batch_id, resolution_status)"
+staging,crm_interaction_temp,crm_interaction_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX crm_interaction_temp_pkey ON staging.crm_interaction_temp USING btree (import_interaction_id)
+staging,crm_interaction_temp,idx_old_data_crm_temp_batch,f,f,f,btree,"CREATE INDEX idx_old_data_crm_temp_batch ON staging.crm_interaction_temp USING btree (import_batch_id, resolution_status)"
+staging,crm_task_temp,crm_task_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX crm_task_temp_pkey ON staging.crm_task_temp USING btree (import_task_id)
+staging,i18n_translation_temp,i18n_translation_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX i18n_translation_temp_pkey ON staging.i18n_translation_temp USING btree (import_row_id)
+staging,i18n_translation_temp,idx_i18n_translation_temp_batch,f,f,f,btree,CREATE INDEX idx_i18n_translation_temp_batch ON staging.i18n_translation_temp USING btree (import_batch_id)
+staging,i18n_translation_temp,idx_i18n_translation_temp_object_key,f,f,f,btree,CREATE INDEX idx_i18n_translation_temp_object_key ON staging.i18n_translation_temp USING btree (staging_object_key)
+staging,import_batches,idx_import_batches_retention_until,f,f,f,btree,CREATE INDEX idx_import_batches_retention_until ON staging.import_batches USING btree (retention_until)
+staging,import_batches,idx_import_batches_status,f,f,f,btree,CREATE INDEX idx_import_batches_status ON staging.import_batches USING btree (status)
+staging,import_batches,idx_import_batches_updated_at,f,f,f,btree,CREATE INDEX idx_import_batches_updated_at ON staging.import_batches USING btree (updated_at DESC)
+staging,import_batches,import_batches_pkey,t,t,f,btree,CREATE UNIQUE INDEX import_batches_pkey ON staging.import_batches USING btree (batch_id)
+staging,import_batches,uq_import_batches_idempotency_key,t,f,t,btree,CREATE UNIQUE INDEX uq_import_batches_idempotency_key ON staging.import_batches USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL)
+staging,import_creation_policy,import_creation_policy_pkey,t,t,f,btree,"CREATE UNIQUE INDEX import_creation_policy_pkey ON staging.import_creation_policy USING btree (entity_type, domain_key)"
+staging,import_events,idx_import_events_batch_created,f,f,f,btree,"CREATE INDEX idx_import_events_batch_created ON staging.import_events USING btree (import_batch_id, created_at DESC)"
+staging,import_events,import_events_pkey,t,t,f,btree,CREATE UNIQUE INDEX import_events_pkey ON staging.import_events USING btree (id)
+staging,incident_report_temp,idx_incident_report_temp_batch,f,f,f,btree,CREATE INDEX idx_incident_report_temp_batch ON staging.incident_report_temp USING btree (import_batch_id)
+staging,incident_report_temp,idx_incident_report_temp_object_key,f,f,f,btree,CREATE INDEX idx_incident_report_temp_object_key ON staging.incident_report_temp USING btree (staging_object_key)
+staging,incident_report_temp,incident_report_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX incident_report_temp_pkey ON staging.incident_report_temp USING btree (import_row_id)
+staging,mapping_contract,idx_mapping_contract_batch_status,f,f,f,btree,"CREATE INDEX idx_mapping_contract_batch_status ON staging.mapping_contract USING btree (import_batch_id, status, contract_version DESC)"
+staging,mapping_contract,mapping_contract_import_batch_id_contract_version_key,t,f,f,btree,"CREATE UNIQUE INDEX mapping_contract_import_batch_id_contract_version_key ON staging.mapping_contract USING btree (import_batch_id, contract_version)"
+staging,mapping_contract,mapping_contract_pkey,t,t,f,btree,CREATE UNIQUE INDEX mapping_contract_pkey ON staging.mapping_contract USING btree (id)
+staging,mapping_contract_field,idx_mapping_contract_field_position,f,f,f,btree,"CREATE INDEX idx_mapping_contract_field_position ON staging.mapping_contract_field USING btree (contract_id, sheet_name, ""position"", source_column)"
+staging,mapping_contract_field,idx_mapping_field_review_queue,f,f,f,btree,"CREATE INDEX idx_mapping_field_review_queue ON staging.mapping_contract_field USING btree (contract_id, status, confidence)"
+staging,mapping_contract_field,mapping_contract_field_contract_id_sheet_name_source_column_key,t,f,f,btree,"CREATE UNIQUE INDEX mapping_contract_field_contract_id_sheet_name_source_column_key ON staging.mapping_contract_field USING btree (contract_id, sheet_name, source_column, target_table, target_column)"
+staging,mapping_contract_field,mapping_contract_field_pkey,t,t,f,btree,CREATE UNIQUE INDEX mapping_contract_field_pkey ON staging.mapping_contract_field USING btree (id)
+staging,mapping_contract_sheet,mapping_contract_sheet_contract_id_sheet_name_key,t,f,f,btree,"CREATE UNIQUE INDEX mapping_contract_sheet_contract_id_sheet_name_key ON staging.mapping_contract_sheet USING btree (contract_id, sheet_name)"
+staging,mapping_contract_sheet,mapping_contract_sheet_pkey,t,t,f,btree,CREATE UNIQUE INDEX mapping_contract_sheet_pkey ON staging.mapping_contract_sheet USING btree (id)
+staging,mapping_relation_hypothesis,idx_mapping_relation_review_queue,f,f,f,btree,"CREATE INDEX idx_mapping_relation_review_queue ON staging.mapping_relation_hypothesis USING btree (contract_id, status, confidence)"
+staging,mapping_relation_hypothesis,mapping_relation_hypothesis_pkey,t,t,f,btree,CREATE UNIQUE INDEX mapping_relation_hypothesis_pkey ON staging.mapping_relation_hypothesis USING btree (id)
+staging,mapping_review_decision,mapping_review_decision_pkey,t,t,f,btree,CREATE UNIQUE INDEX mapping_review_decision_pkey ON staging.mapping_review_decision USING btree (id)
+staging,media_galerie_lot1_temp,idx_media_galerie_lot1_temp_batch,f,f,f,btree,CREATE INDEX idx_media_galerie_lot1_temp_batch ON staging.media_galerie_lot1_temp USING btree (import_batch_id)
+staging,media_galerie_lot1_temp,idx_media_galerie_lot1_temp_formulaire,f,f,f,btree,"CREATE INDEX idx_media_galerie_lot1_temp_formulaire ON staging.media_galerie_lot1_temp USING btree (import_batch_id, legacy_formulaire)"
+staging,media_galerie_lot1_temp,idx_media_galerie_lot1_temp_resolution,f,f,f,btree,"CREATE INDEX idx_media_galerie_lot1_temp_resolution ON staging.media_galerie_lot1_temp USING btree (import_batch_id, resolution_status)"
+staging,media_galerie_lot1_temp,idx_old_data_media_temp_batch,f,f,f,btree,"CREATE INDEX idx_old_data_media_temp_batch ON staging.media_galerie_lot1_temp USING btree (import_batch_id, resolution_status)"
+staging,media_galerie_lot1_temp,media_galerie_lot1_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX media_galerie_lot1_temp_pkey ON staging.media_galerie_lot1_temp USING btree (import_media_id)
+staging,media_tag_temp,idx_media_tag_temp_batch,f,f,f,btree,CREATE INDEX idx_media_tag_temp_batch ON staging.media_tag_temp USING btree (import_batch_id)
+staging,media_tag_temp,idx_media_tag_temp_object_key,f,f,f,btree,CREATE INDEX idx_media_tag_temp_object_key ON staging.media_tag_temp USING btree (staging_object_key)
+staging,media_tag_temp,media_tag_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX media_tag_temp_pkey ON staging.media_tag_temp USING btree (import_row_id)
+staging,media_temp,idx_media_temp_batch_object,f,f,f,btree,"CREATE INDEX idx_media_temp_batch_object ON staging.media_temp USING btree (import_batch_id, staging_object_key)"
+staging,media_temp,idx_media_temp_batch_status,f,f,f,btree,"CREATE INDEX idx_media_temp_batch_status ON staging.media_temp USING btree (import_batch_id, processing_status)"
+staging,media_temp,idx_media_temp_review_queue,f,f,f,btree,"CREATE INDEX idx_media_temp_review_queue ON staging.media_temp USING btree (processing_status, ai_confidence)"
+staging,media_temp,media_temp_import_batch_id_staging_object_key_source_url_key,t,f,f,btree,"CREATE UNIQUE INDEX media_temp_import_batch_id_staging_object_key_source_url_key ON staging.media_temp USING btree (import_batch_id, staging_object_key, source_url)"
+staging,media_temp,media_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX media_temp_pkey ON staging.media_temp USING btree (import_media_id)
+staging,meeting_room_equipment_temp,idx_meeting_room_equipment_temp_batch,f,f,f,btree,CREATE INDEX idx_meeting_room_equipment_temp_batch ON staging.meeting_room_equipment_temp USING btree (import_batch_id)
+staging,meeting_room_equipment_temp,idx_meeting_room_equipment_temp_object_key,f,f,f,btree,CREATE INDEX idx_meeting_room_equipment_temp_object_key ON staging.meeting_room_equipment_temp USING btree (staging_object_key)
+staging,meeting_room_equipment_temp,meeting_room_equipment_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX meeting_room_equipment_temp_pkey ON staging.meeting_room_equipment_temp USING btree (import_row_id)
+staging,object_amenity_temp,idx_object_amenity_temp_batch_sheet,f,f,f,btree,"CREATE INDEX idx_object_amenity_temp_batch_sheet ON staging.object_amenity_temp USING btree (import_batch_id, source_sheet)"
+staging,object_amenity_temp,object_amenity_temp_import_batch_id_staging_object_key_amen_key,t,f,f,btree,"CREATE UNIQUE INDEX object_amenity_temp_import_batch_id_staging_object_key_amen_key ON staging.object_amenity_temp USING btree (import_batch_id, staging_object_key, amenity_code)"
+staging,object_amenity_temp,object_amenity_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_amenity_temp_pkey ON staging.object_amenity_temp USING btree (import_amenity_id)
+staging,object_capacity_temp,object_capacity_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_capacity_temp_pkey ON staging.object_capacity_temp USING btree (import_capacity_id)
+staging,object_classification_temp,object_classification_temp_import_batch_id_staging_object_k_key,t,f,f,btree,"CREATE UNIQUE INDEX object_classification_temp_import_batch_id_staging_object_k_key ON staging.object_classification_temp USING btree (import_batch_id, staging_object_key, scheme_code, value_code)"
+staging,object_classification_temp,object_classification_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_classification_temp_pkey ON staging.object_classification_temp USING btree (import_classification_id)
+staging,object_description_temp,idx_desc_temp_batch,f,f,f,btree,"CREATE INDEX idx_desc_temp_batch ON staging.object_description_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_description_temp,object_description_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_description_temp_pkey ON staging.object_description_temp USING btree (import_description_id)
+staging,object_discount_temp,idx_object_discount_temp_batch,f,f,f,btree,CREATE INDEX idx_object_discount_temp_batch ON staging.object_discount_temp USING btree (import_batch_id)
+staging,object_discount_temp,idx_object_discount_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_discount_temp_object_key ON staging.object_discount_temp USING btree (staging_object_key)
+staging,object_discount_temp,object_discount_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_discount_temp_pkey ON staging.object_discount_temp USING btree (import_row_id)
+staging,object_environment_tag_temp,object_environment_tag_temp_import_batch_id_staging_object__key,t,f,f,btree,"CREATE UNIQUE INDEX object_environment_tag_temp_import_batch_id_staging_object__key ON staging.object_environment_tag_temp USING btree (import_batch_id, staging_object_key, environment_tag_code)"
+staging,object_environment_tag_temp,object_environment_tag_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_environment_tag_temp_pkey ON staging.object_environment_tag_temp USING btree (import_env_tag_id)
+staging,object_external_id_temp,idx_ext_id_temp_batch,f,f,f,btree,"CREATE INDEX idx_ext_id_temp_batch ON staging.object_external_id_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_external_id_temp,object_external_id_temp_import_batch_id_staging_object_key__key,t,f,f,btree,"CREATE UNIQUE INDEX object_external_id_temp_import_batch_id_staging_object_key__key ON staging.object_external_id_temp USING btree (import_batch_id, staging_object_key, external_id)"
+staging,object_external_id_temp,object_external_id_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_external_id_temp_pkey ON staging.object_external_id_temp USING btree (import_ext_id)
+staging,object_fma_occurrence_temp,idx_object_fma_occurrence_temp_batch,f,f,f,btree,CREATE INDEX idx_object_fma_occurrence_temp_batch ON staging.object_fma_occurrence_temp USING btree (import_batch_id)
+staging,object_fma_occurrence_temp,idx_object_fma_occurrence_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_fma_occurrence_temp_object_key ON staging.object_fma_occurrence_temp USING btree (staging_object_key)
+staging,object_fma_occurrence_temp,object_fma_occurrence_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_fma_occurrence_temp_pkey ON staging.object_fma_occurrence_temp USING btree (import_row_id)
+staging,object_fma_temp,object_fma_temp_import_batch_id_staging_object_key_key,t,f,f,btree,"CREATE UNIQUE INDEX object_fma_temp_import_batch_id_staging_object_key_key ON staging.object_fma_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_fma_temp,object_fma_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_fma_temp_pkey ON staging.object_fma_temp USING btree (import_fma_id)
+staging,object_group_policy_temp,idx_object_group_policy_temp_batch,f,f,f,btree,CREATE INDEX idx_object_group_policy_temp_batch ON staging.object_group_policy_temp USING btree (import_batch_id)
+staging,object_group_policy_temp,idx_object_group_policy_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_group_policy_temp_object_key ON staging.object_group_policy_temp USING btree (staging_object_key)
+staging,object_group_policy_temp,object_group_policy_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_group_policy_temp_pkey ON staging.object_group_policy_temp USING btree (import_row_id)
+staging,object_iti_associated_object_temp,idx_object_iti_associated_object_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_associated_object_temp_batch ON staging.object_iti_associated_object_temp USING btree (import_batch_id)
+staging,object_iti_associated_object_temp,idx_object_iti_associated_object_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_associated_object_temp_object_key ON staging.object_iti_associated_object_temp USING btree (staging_object_key)
+staging,object_iti_associated_object_temp,object_iti_associated_object_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_associated_object_temp_pkey ON staging.object_iti_associated_object_temp USING btree (import_row_id)
+staging,object_iti_info_temp,idx_object_iti_info_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_info_temp_batch ON staging.object_iti_info_temp USING btree (import_batch_id)
+staging,object_iti_info_temp,idx_object_iti_info_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_info_temp_object_key ON staging.object_iti_info_temp USING btree (staging_object_key)
+staging,object_iti_info_temp,object_iti_info_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_info_temp_pkey ON staging.object_iti_info_temp USING btree (import_row_id)
+staging,object_iti_practice_temp,idx_object_iti_practice_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_practice_temp_batch ON staging.object_iti_practice_temp USING btree (import_batch_id)
+staging,object_iti_practice_temp,idx_object_iti_practice_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_practice_temp_object_key ON staging.object_iti_practice_temp USING btree (staging_object_key)
+staging,object_iti_practice_temp,object_iti_practice_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_practice_temp_pkey ON staging.object_iti_practice_temp USING btree (import_row_id)
+staging,object_iti_profile_temp,idx_object_iti_profile_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_profile_temp_batch ON staging.object_iti_profile_temp USING btree (import_batch_id)
+staging,object_iti_profile_temp,idx_object_iti_profile_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_profile_temp_object_key ON staging.object_iti_profile_temp USING btree (staging_object_key)
+staging,object_iti_profile_temp,object_iti_profile_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_profile_temp_pkey ON staging.object_iti_profile_temp USING btree (import_row_id)
+staging,object_iti_section_temp,idx_object_iti_section_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_section_temp_batch ON staging.object_iti_section_temp USING btree (import_batch_id)
+staging,object_iti_section_temp,idx_object_iti_section_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_section_temp_object_key ON staging.object_iti_section_temp USING btree (staging_object_key)
+staging,object_iti_section_temp,object_iti_section_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_section_temp_pkey ON staging.object_iti_section_temp USING btree (import_row_id)
+staging,object_iti_stage_media_temp,idx_object_iti_stage_media_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_stage_media_temp_batch ON staging.object_iti_stage_media_temp USING btree (import_batch_id)
+staging,object_iti_stage_media_temp,idx_object_iti_stage_media_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_stage_media_temp_object_key ON staging.object_iti_stage_media_temp USING btree (staging_object_key)
+staging,object_iti_stage_media_temp,object_iti_stage_media_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_stage_media_temp_pkey ON staging.object_iti_stage_media_temp USING btree (import_row_id)
+staging,object_iti_stage_temp,idx_object_iti_stage_temp_batch,f,f,f,btree,CREATE INDEX idx_object_iti_stage_temp_batch ON staging.object_iti_stage_temp USING btree (import_batch_id)
+staging,object_iti_stage_temp,idx_object_iti_stage_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_iti_stage_temp_object_key ON staging.object_iti_stage_temp USING btree (staging_object_key)
+staging,object_iti_stage_temp,object_iti_stage_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_stage_temp_pkey ON staging.object_iti_stage_temp USING btree (import_row_id)
+staging,object_iti_temp,object_iti_temp_import_batch_id_staging_object_key_key,t,f,f,btree,"CREATE UNIQUE INDEX object_iti_temp_import_batch_id_staging_object_key_key ON staging.object_iti_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_iti_temp,object_iti_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_iti_temp_pkey ON staging.object_iti_temp USING btree (import_iti_id)
+staging,object_language_temp,object_language_temp_import_batch_id_staging_object_key_lan_key,t,f,f,btree,"CREATE UNIQUE INDEX object_language_temp_import_batch_id_staging_object_key_lan_key ON staging.object_language_temp USING btree (import_batch_id, staging_object_key, language_code)"
+staging,object_language_temp,object_language_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_language_temp_pkey ON staging.object_language_temp USING btree (import_language_id)
+staging,object_legal_temp,object_legal_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_legal_temp_pkey ON staging.object_legal_temp USING btree (import_legal_id)
+staging,object_location_temp,idx_object_location_temp_batch_object_key,f,f,f,btree,"CREATE INDEX idx_object_location_temp_batch_object_key ON staging.object_location_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_location_temp,object_location_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_location_temp_pkey ON staging.object_location_temp USING btree (import_location_id)
+staging,object_meeting_room_temp,idx_object_meeting_room_temp_batch,f,f,f,btree,CREATE INDEX idx_object_meeting_room_temp_batch ON staging.object_meeting_room_temp USING btree (import_batch_id)
+staging,object_meeting_room_temp,idx_object_meeting_room_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_meeting_room_temp_object_key ON staging.object_meeting_room_temp USING btree (staging_object_key)
+staging,object_meeting_room_temp,object_meeting_room_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_meeting_room_temp_pkey ON staging.object_meeting_room_temp USING btree (import_row_id)
+staging,object_membership_temp,object_membership_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_membership_temp_pkey ON staging.object_membership_temp USING btree (import_membership_id)
+staging,object_menu_item_allergen_temp,idx_object_menu_item_allergen_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_item_allergen_temp_batch ON staging.object_menu_item_allergen_temp USING btree (import_batch_id)
+staging,object_menu_item_allergen_temp,idx_object_menu_item_allergen_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_item_allergen_temp_object_key ON staging.object_menu_item_allergen_temp USING btree (staging_object_key)
+staging,object_menu_item_allergen_temp,object_menu_item_allergen_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_allergen_temp_pkey ON staging.object_menu_item_allergen_temp USING btree (import_row_id)
+staging,object_menu_item_cuisine_type_temp,idx_object_menu_item_cuisine_type_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_item_cuisine_type_temp_batch ON staging.object_menu_item_cuisine_type_temp USING btree (import_batch_id)
+staging,object_menu_item_cuisine_type_temp,idx_object_menu_item_cuisine_type_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_item_cuisine_type_temp_object_key ON staging.object_menu_item_cuisine_type_temp USING btree (staging_object_key)
+staging,object_menu_item_cuisine_type_temp,object_menu_item_cuisine_type_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_cuisine_type_temp_pkey ON staging.object_menu_item_cuisine_type_temp USING btree (import_row_id)
+staging,object_menu_item_dietary_tag_temp,idx_object_menu_item_dietary_tag_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_item_dietary_tag_temp_batch ON staging.object_menu_item_dietary_tag_temp USING btree (import_batch_id)
+staging,object_menu_item_dietary_tag_temp,idx_object_menu_item_dietary_tag_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_item_dietary_tag_temp_object_key ON staging.object_menu_item_dietary_tag_temp USING btree (staging_object_key)
+staging,object_menu_item_dietary_tag_temp,object_menu_item_dietary_tag_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_dietary_tag_temp_pkey ON staging.object_menu_item_dietary_tag_temp USING btree (import_row_id)
+staging,object_menu_item_media_temp,idx_object_menu_item_media_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_item_media_temp_batch ON staging.object_menu_item_media_temp USING btree (import_batch_id)
+staging,object_menu_item_media_temp,idx_object_menu_item_media_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_item_media_temp_object_key ON staging.object_menu_item_media_temp USING btree (staging_object_key)
+staging,object_menu_item_media_temp,object_menu_item_media_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_media_temp_pkey ON staging.object_menu_item_media_temp USING btree (import_row_id)
+staging,object_menu_item_temp,idx_object_menu_item_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_item_temp_batch ON staging.object_menu_item_temp USING btree (import_batch_id)
+staging,object_menu_item_temp,idx_object_menu_item_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_item_temp_object_key ON staging.object_menu_item_temp USING btree (staging_object_key)
+staging,object_menu_item_temp,object_menu_item_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_item_temp_pkey ON staging.object_menu_item_temp USING btree (import_row_id)
+staging,object_menu_temp,idx_object_menu_temp_batch,f,f,f,btree,CREATE INDEX idx_object_menu_temp_batch ON staging.object_menu_temp USING btree (import_batch_id)
+staging,object_menu_temp,idx_object_menu_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_menu_temp_object_key ON staging.object_menu_temp USING btree (staging_object_key)
+staging,object_menu_temp,object_menu_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_menu_temp_pkey ON staging.object_menu_temp USING btree (import_row_id)
+staging,object_org_link_temp,idx_org_link_temp_batch_sheet,f,f,f,btree,"CREATE INDEX idx_org_link_temp_batch_sheet ON staging.object_org_link_temp USING btree (import_batch_id, source_sheet)"
+staging,object_org_link_temp,idx_org_link_temp_raw_token,f,f,f,btree,"CREATE INDEX idx_org_link_temp_raw_token ON staging.object_org_link_temp USING btree (import_batch_id, raw_relation_token)"
+staging,object_org_link_temp,object_org_link_temp_import_batch_id_staging_object_key_sta_key,t,f,f,btree,"CREATE UNIQUE INDEX object_org_link_temp_import_batch_id_staging_object_key_sta_key ON staging.object_org_link_temp USING btree (import_batch_id, staging_object_key, staging_org_key, role_code)"
+staging,object_org_link_temp,object_org_link_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_org_link_temp_pkey ON staging.object_org_link_temp USING btree (import_link_id)
+staging,object_origin_temp,object_origin_temp_import_batch_id_staging_object_key_sourc_key,t,f,f,btree,"CREATE UNIQUE INDEX object_origin_temp_import_batch_id_staging_object_key_sourc_key ON staging.object_origin_temp USING btree (import_batch_id, staging_object_key, source_system)"
+staging,object_origin_temp,object_origin_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_origin_temp_pkey ON staging.object_origin_temp USING btree (import_origin_id)
+staging,object_payment_method_temp,idx_object_payment_temp_batch_sheet,f,f,f,btree,"CREATE INDEX idx_object_payment_temp_batch_sheet ON staging.object_payment_method_temp USING btree (import_batch_id, source_sheet)"
+staging,object_payment_method_temp,object_payment_method_temp_import_batch_id_staging_object_k_key,t,f,f,btree,"CREATE UNIQUE INDEX object_payment_method_temp_import_batch_id_staging_object_k_key ON staging.object_payment_method_temp USING btree (import_batch_id, staging_object_key, payment_code)"
+staging,object_payment_method_temp,object_payment_method_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_payment_method_temp_pkey ON staging.object_payment_method_temp USING btree (import_payment_id)
+staging,object_pet_policy_temp,idx_object_pet_policy_temp_batch,f,f,f,btree,CREATE INDEX idx_object_pet_policy_temp_batch ON staging.object_pet_policy_temp USING btree (import_batch_id)
+staging,object_pet_policy_temp,idx_object_pet_policy_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_pet_policy_temp_object_key ON staging.object_pet_policy_temp USING btree (staging_object_key)
+staging,object_pet_policy_temp,object_pet_policy_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_pet_policy_temp_pkey ON staging.object_pet_policy_temp USING btree (import_row_id)
+staging,object_place_description_temp,idx_object_place_description_temp_batch,f,f,f,btree,CREATE INDEX idx_object_place_description_temp_batch ON staging.object_place_description_temp USING btree (import_batch_id)
+staging,object_place_description_temp,idx_object_place_description_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_place_description_temp_object_key ON staging.object_place_description_temp USING btree (staging_object_key)
+staging,object_place_description_temp,object_place_description_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_place_description_temp_pkey ON staging.object_place_description_temp USING btree (import_row_id)
+staging,object_place_temp,idx_object_place_temp_batch,f,f,f,btree,CREATE INDEX idx_object_place_temp_batch ON staging.object_place_temp USING btree (import_batch_id)
+staging,object_place_temp,idx_object_place_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_place_temp_object_key ON staging.object_place_temp USING btree (staging_object_key)
+staging,object_place_temp,object_place_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_place_temp_pkey ON staging.object_place_temp USING btree (import_row_id)
+staging,object_price_period_temp,idx_object_price_period_temp_batch,f,f,f,btree,CREATE INDEX idx_object_price_period_temp_batch ON staging.object_price_period_temp USING btree (import_batch_id)
+staging,object_price_period_temp,idx_object_price_period_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_price_period_temp_object_key ON staging.object_price_period_temp USING btree (staging_object_key)
+staging,object_price_period_temp,object_price_period_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_price_period_temp_pkey ON staging.object_price_period_temp USING btree (import_row_id)
+staging,object_price_temp,object_price_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_price_temp_pkey ON staging.object_price_temp USING btree (import_price_id)
+staging,object_private_description_temp,idx_object_private_description_temp_batch,f,f,f,btree,CREATE INDEX idx_object_private_description_temp_batch ON staging.object_private_description_temp USING btree (import_batch_id)
+staging,object_private_description_temp,idx_object_private_description_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_private_description_temp_object_key ON staging.object_private_description_temp USING btree (staging_object_key)
+staging,object_private_description_temp,object_private_description_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_private_description_temp_pkey ON staging.object_private_description_temp USING btree (import_row_id)
+staging,object_relation_temp,idx_object_relation_temp_batch,f,f,f,btree,CREATE INDEX idx_object_relation_temp_batch ON staging.object_relation_temp USING btree (import_batch_id)
+staging,object_relation_temp,idx_object_relation_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_relation_temp_object_key ON staging.object_relation_temp USING btree (staging_object_key)
+staging,object_relation_temp,object_relation_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_relation_temp_pkey ON staging.object_relation_temp USING btree (import_row_id)
+staging,object_review_temp,object_review_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_review_temp_pkey ON staging.object_review_temp USING btree (import_review_id)
+staging,object_room_type_amenity_temp,idx_object_room_type_amenity_temp_batch,f,f,f,btree,CREATE INDEX idx_object_room_type_amenity_temp_batch ON staging.object_room_type_amenity_temp USING btree (import_batch_id)
+staging,object_room_type_amenity_temp,idx_object_room_type_amenity_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_room_type_amenity_temp_object_key ON staging.object_room_type_amenity_temp USING btree (staging_object_key)
+staging,object_room_type_amenity_temp,object_room_type_amenity_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_room_type_amenity_temp_pkey ON staging.object_room_type_amenity_temp USING btree (import_row_id)
+staging,object_room_type_media_temp,idx_object_room_type_media_temp_batch,f,f,f,btree,CREATE INDEX idx_object_room_type_media_temp_batch ON staging.object_room_type_media_temp USING btree (import_batch_id)
+staging,object_room_type_media_temp,idx_object_room_type_media_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_room_type_media_temp_object_key ON staging.object_room_type_media_temp USING btree (staging_object_key)
+staging,object_room_type_media_temp,object_room_type_media_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_room_type_media_temp_pkey ON staging.object_room_type_media_temp USING btree (import_row_id)
+staging,object_room_type_temp,object_room_type_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_room_type_temp_pkey ON staging.object_room_type_temp USING btree (import_room_type_id)
+staging,object_sustainability_action_label_temp,idx_object_sustainability_action_label_temp_batch,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_label_temp_batch ON staging.object_sustainability_action_label_temp USING btree (import_batch_id)
+staging,object_sustainability_action_label_temp,idx_object_sustainability_action_label_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_label_temp_object_key ON staging.object_sustainability_action_label_temp USING btree (staging_object_key)
+staging,object_sustainability_action_label_temp,object_sustainability_action_label_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_sustainability_action_label_temp_pkey ON staging.object_sustainability_action_label_temp USING btree (import_row_id)
+staging,object_sustainability_action_temp,idx_object_sustainability_action_temp_batch,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_temp_batch ON staging.object_sustainability_action_temp USING btree (import_batch_id)
+staging,object_sustainability_action_temp,idx_object_sustainability_action_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_sustainability_action_temp_object_key ON staging.object_sustainability_action_temp USING btree (staging_object_key)
+staging,object_sustainability_action_temp,object_sustainability_action_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_sustainability_action_temp_pkey ON staging.object_sustainability_action_temp USING btree (import_row_id)
+staging,object_temp,idx_object_temp_batch,f,f,f,btree,CREATE INDEX idx_object_temp_batch ON staging.object_temp USING btree (import_batch_id)
+staging,object_temp,idx_object_temp_batch_object_key,f,f,f,btree,"CREATE INDEX idx_object_temp_batch_object_key ON staging.object_temp USING btree (import_batch_id, staging_object_key)"
+staging,object_temp,idx_object_temp_batch_org_key,f,f,f,btree,"CREATE INDEX idx_object_temp_batch_org_key ON staging.object_temp USING btree (import_batch_id, staging_org_key)"
+staging,object_temp,idx_object_temp_dedup_status,f,f,f,btree,CREATE INDEX idx_object_temp_dedup_status ON staging.object_temp USING btree (deduplication_status)
+staging,object_temp,idx_object_temp_external_id,f,f,f,btree,CREATE INDEX idx_object_temp_external_id ON staging.object_temp USING btree (external_id)
+staging,object_temp,idx_object_temp_is_approved,f,f,f,btree,CREATE INDEX idx_object_temp_is_approved ON staging.object_temp USING btree (is_approved)
+staging,object_temp,idx_object_temp_resolution_status,f,f,f,btree,CREATE INDEX idx_object_temp_resolution_status ON staging.object_temp USING btree (resolution_status)
+staging,object_temp,idx_object_temp_source_sheet,f,f,f,btree,CREATE INDEX idx_object_temp_source_sheet ON staging.object_temp USING btree (source_sheet)
+staging,object_temp,idx_old_data_object_temp_batch,f,f,f,btree,CREATE INDEX idx_old_data_object_temp_batch ON staging.object_temp USING btree (import_batch_id)
+staging,object_temp,idx_old_data_object_temp_external_id,f,f,f,btree,CREATE INDEX idx_old_data_object_temp_external_id ON staging.object_temp USING btree (external_id)
+staging,object_temp,object_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_temp_pkey ON staging.object_temp USING btree (import_row_id)
+staging,object_version_temp,idx_object_version_temp_batch,f,f,f,btree,CREATE INDEX idx_object_version_temp_batch ON staging.object_version_temp USING btree (import_batch_id)
+staging,object_version_temp,idx_object_version_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_version_temp_object_key ON staging.object_version_temp USING btree (staging_object_key)
+staging,object_version_temp,object_version_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_version_temp_pkey ON staging.object_version_temp USING btree (import_row_id)
+staging,object_zone_temp,idx_object_zone_temp_batch,f,f,f,btree,CREATE INDEX idx_object_zone_temp_batch ON staging.object_zone_temp USING btree (import_batch_id)
+staging,object_zone_temp,idx_object_zone_temp_object_key,f,f,f,btree,CREATE INDEX idx_object_zone_temp_object_key ON staging.object_zone_temp USING btree (staging_object_key)
+staging,object_zone_temp,object_zone_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX object_zone_temp_pkey ON staging.object_zone_temp USING btree (import_row_id)
+staging,opening_period_temp,opening_period_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_period_temp_pkey ON staging.opening_period_temp USING btree (import_opening_id)
+staging,opening_schedule_temp,idx_opening_schedule_temp_batch,f,f,f,btree,CREATE INDEX idx_opening_schedule_temp_batch ON staging.opening_schedule_temp USING btree (import_batch_id)
+staging,opening_schedule_temp,idx_opening_schedule_temp_object_key,f,f,f,btree,CREATE INDEX idx_opening_schedule_temp_object_key ON staging.opening_schedule_temp USING btree (staging_object_key)
+staging,opening_schedule_temp,opening_schedule_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_schedule_temp_pkey ON staging.opening_schedule_temp USING btree (import_row_id)
+staging,opening_time_frame_temp,idx_opening_time_frame_temp_batch,f,f,f,btree,CREATE INDEX idx_opening_time_frame_temp_batch ON staging.opening_time_frame_temp USING btree (import_batch_id)
+staging,opening_time_frame_temp,idx_opening_time_frame_temp_object_key,f,f,f,btree,CREATE INDEX idx_opening_time_frame_temp_object_key ON staging.opening_time_frame_temp USING btree (staging_object_key)
+staging,opening_time_frame_temp,opening_time_frame_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_time_frame_temp_pkey ON staging.opening_time_frame_temp USING btree (import_row_id)
+staging,opening_time_period_temp,idx_opening_time_period_temp_batch,f,f,f,btree,CREATE INDEX idx_opening_time_period_temp_batch ON staging.opening_time_period_temp USING btree (import_batch_id)
+staging,opening_time_period_temp,idx_opening_time_period_temp_object_key,f,f,f,btree,CREATE INDEX idx_opening_time_period_temp_object_key ON staging.opening_time_period_temp USING btree (staging_object_key)
+staging,opening_time_period_temp,opening_time_period_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_time_period_temp_pkey ON staging.opening_time_period_temp USING btree (import_row_id)
+staging,opening_time_period_weekday_temp,idx_opening_time_period_weekday_temp_batch,f,f,f,btree,CREATE INDEX idx_opening_time_period_weekday_temp_batch ON staging.opening_time_period_weekday_temp USING btree (import_batch_id)
+staging,opening_time_period_weekday_temp,idx_opening_time_period_weekday_temp_object_key,f,f,f,btree,CREATE INDEX idx_opening_time_period_weekday_temp_object_key ON staging.opening_time_period_weekday_temp USING btree (staging_object_key)
+staging,opening_time_period_weekday_temp,opening_time_period_weekday_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX opening_time_period_weekday_temp_pkey ON staging.opening_time_period_weekday_temp USING btree (import_row_id)
+staging,org_temp,org_temp_import_batch_id_staging_org_key_key,t,f,f,btree,"CREATE UNIQUE INDEX org_temp_import_batch_id_staging_org_key_key ON staging.org_temp USING btree (import_batch_id, staging_org_key)"
+staging,org_temp,org_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX org_temp_pkey ON staging.org_temp USING btree (import_org_id)
+staging,pending_change_temp,idx_pending_change_temp_batch,f,f,f,btree,CREATE INDEX idx_pending_change_temp_batch ON staging.pending_change_temp USING btree (import_batch_id)
+staging,pending_change_temp,idx_pending_change_temp_object_key,f,f,f,btree,CREATE INDEX idx_pending_change_temp_object_key ON staging.pending_change_temp USING btree (staging_object_key)
+staging,pending_change_temp,pending_change_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX pending_change_temp_pkey ON staging.pending_change_temp USING btree (import_row_id)
+staging,promotion_object_temp,idx_promotion_object_temp_batch,f,f,f,btree,CREATE INDEX idx_promotion_object_temp_batch ON staging.promotion_object_temp USING btree (import_batch_id)
+staging,promotion_object_temp,idx_promotion_object_temp_object_key,f,f,f,btree,CREATE INDEX idx_promotion_object_temp_object_key ON staging.promotion_object_temp USING btree (staging_object_key)
+staging,promotion_object_temp,promotion_object_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX promotion_object_temp_pkey ON staging.promotion_object_temp USING btree (import_row_id)
+staging,promotion_temp,idx_promotion_temp_batch,f,f,f,btree,CREATE INDEX idx_promotion_temp_batch ON staging.promotion_temp USING btree (import_batch_id)
+staging,promotion_temp,idx_promotion_temp_object_key,f,f,f,btree,CREATE INDEX idx_promotion_temp_object_key ON staging.promotion_temp USING btree (staging_object_key)
+staging,promotion_temp,promotion_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX promotion_temp_pkey ON staging.promotion_temp USING btree (import_row_id)
+staging,promotion_usage_temp,idx_promotion_usage_temp_batch,f,f,f,btree,CREATE INDEX idx_promotion_usage_temp_batch ON staging.promotion_usage_temp USING btree (import_batch_id)
+staging,promotion_usage_temp,idx_promotion_usage_temp_object_key,f,f,f,btree,CREATE INDEX idx_promotion_usage_temp_object_key ON staging.promotion_usage_temp USING btree (staging_object_key)
+staging,promotion_usage_temp,promotion_usage_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX promotion_usage_temp_pkey ON staging.promotion_usage_temp USING btree (import_row_id)
+staging,publication_object_temp,idx_publication_object_temp_batch,f,f,f,btree,CREATE INDEX idx_publication_object_temp_batch ON staging.publication_object_temp USING btree (import_batch_id)
+staging,publication_object_temp,idx_publication_object_temp_object_key,f,f,f,btree,CREATE INDEX idx_publication_object_temp_object_key ON staging.publication_object_temp USING btree (staging_object_key)
+staging,publication_object_temp,publication_object_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX publication_object_temp_pkey ON staging.publication_object_temp USING btree (import_row_id)
+staging,publication_temp,idx_publication_temp_batch,f,f,f,btree,CREATE INDEX idx_publication_temp_batch ON staging.publication_temp USING btree (import_batch_id)
+staging,publication_temp,idx_publication_temp_object_key,f,f,f,btree,CREATE INDEX idx_publication_temp_object_key ON staging.publication_temp USING btree (staging_object_key)
+staging,publication_temp,publication_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX publication_temp_pkey ON staging.publication_temp USING btree (import_row_id)
+staging,ref_actor_role_temp,idx_ref_actor_role_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_actor_role_temp_batch ON staging.ref_actor_role_temp USING btree (import_batch_id)
+staging,ref_actor_role_temp,idx_ref_actor_role_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_actor_role_temp_object_key ON staging.ref_actor_role_temp USING btree (staging_object_key)
+staging,ref_actor_role_temp,ref_actor_role_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_actor_role_temp_pkey ON staging.ref_actor_role_temp USING btree (import_row_id)
+staging,ref_amenity_temp,idx_ref_amenity_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_amenity_temp_batch ON staging.ref_amenity_temp USING btree (import_batch_id)
+staging,ref_amenity_temp,idx_ref_amenity_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_amenity_temp_object_key ON staging.ref_amenity_temp USING btree (staging_object_key)
+staging,ref_amenity_temp,ref_amenity_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_amenity_temp_pkey ON staging.ref_amenity_temp USING btree (import_row_id)
+staging,ref_capacity_applicability_temp,idx_ref_capacity_applicability_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_capacity_applicability_temp_batch ON staging.ref_capacity_applicability_temp USING btree (import_batch_id)
+staging,ref_capacity_applicability_temp,idx_ref_capacity_applicability_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_capacity_applicability_temp_object_key ON staging.ref_capacity_applicability_temp USING btree (staging_object_key)
+staging,ref_capacity_applicability_temp,ref_capacity_applicability_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_capacity_applicability_temp_pkey ON staging.ref_capacity_applicability_temp USING btree (import_row_id)
+staging,ref_capacity_metric_temp,idx_ref_capacity_metric_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_capacity_metric_temp_batch ON staging.ref_capacity_metric_temp USING btree (import_batch_id)
+staging,ref_capacity_metric_temp,idx_ref_capacity_metric_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_capacity_metric_temp_object_key ON staging.ref_capacity_metric_temp USING btree (staging_object_key)
+staging,ref_capacity_metric_temp,ref_capacity_metric_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_capacity_metric_temp_pkey ON staging.ref_capacity_metric_temp USING btree (import_row_id)
+staging,ref_classification_scheme_temp,ref_classification_scheme_temp_import_batch_id_scheme_code_key,t,f,f,btree,"CREATE UNIQUE INDEX ref_classification_scheme_temp_import_batch_id_scheme_code_key ON staging.ref_classification_scheme_temp USING btree (import_batch_id, scheme_code)"
+staging,ref_classification_scheme_temp,ref_classification_scheme_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_classification_scheme_temp_pkey ON staging.ref_classification_scheme_temp USING btree (import_scheme_id)
+staging,ref_classification_value_temp,ref_classification_value_temp_import_batch_id_scheme_code_v_key,t,f,f,btree,"CREATE UNIQUE INDEX ref_classification_value_temp_import_batch_id_scheme_code_v_key ON staging.ref_classification_value_temp USING btree (import_batch_id, scheme_code, value_code)"
+staging,ref_classification_value_temp,ref_classification_value_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_classification_value_temp_pkey ON staging.ref_classification_value_temp USING btree (import_value_id)
+staging,ref_code_temp,ref_code_temp_import_batch_id_domain_code_key,t,f,f,btree,"CREATE UNIQUE INDEX ref_code_temp_import_batch_id_domain_code_key ON staging.ref_code_temp USING btree (import_batch_id, domain, code)"
+staging,ref_code_temp,ref_code_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_code_temp_pkey ON staging.ref_code_temp USING btree (import_ref_code_id)
+staging,ref_contact_role_temp,idx_ref_contact_role_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_contact_role_temp_batch ON staging.ref_contact_role_temp USING btree (import_batch_id)
+staging,ref_contact_role_temp,idx_ref_contact_role_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_contact_role_temp_object_key ON staging.ref_contact_role_temp USING btree (staging_object_key)
+staging,ref_contact_role_temp,ref_contact_role_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_contact_role_temp_pkey ON staging.ref_contact_role_temp USING btree (import_row_id)
+staging,ref_document_temp,idx_ref_document_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_document_temp_batch ON staging.ref_document_temp USING btree (import_batch_id)
+staging,ref_document_temp,idx_ref_document_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_document_temp_object_key ON staging.ref_document_temp USING btree (staging_object_key)
+staging,ref_document_temp,ref_document_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_document_temp_pkey ON staging.ref_document_temp USING btree (import_row_id)
+staging,ref_iti_assoc_role_temp,idx_ref_iti_assoc_role_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_iti_assoc_role_temp_batch ON staging.ref_iti_assoc_role_temp USING btree (import_batch_id)
+staging,ref_iti_assoc_role_temp,idx_ref_iti_assoc_role_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_iti_assoc_role_temp_object_key ON staging.ref_iti_assoc_role_temp USING btree (staging_object_key)
+staging,ref_iti_assoc_role_temp,ref_iti_assoc_role_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_iti_assoc_role_temp_pkey ON staging.ref_iti_assoc_role_temp USING btree (import_row_id)
+staging,ref_language_temp,idx_ref_language_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_language_temp_batch ON staging.ref_language_temp USING btree (import_batch_id)
+staging,ref_language_temp,idx_ref_language_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_language_temp_object_key ON staging.ref_language_temp USING btree (staging_object_key)
+staging,ref_language_temp,ref_language_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_language_temp_pkey ON staging.ref_language_temp USING btree (import_row_id)
+staging,ref_legal_type_temp,idx_ref_legal_type_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_legal_type_temp_batch ON staging.ref_legal_type_temp USING btree (import_batch_id)
+staging,ref_legal_type_temp,idx_ref_legal_type_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_legal_type_temp_object_key ON staging.ref_legal_type_temp USING btree (staging_object_key)
+staging,ref_legal_type_temp,ref_legal_type_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_legal_type_temp_pkey ON staging.ref_legal_type_temp USING btree (import_row_id)
+staging,ref_object_relation_type_temp,idx_ref_object_relation_type_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_object_relation_type_temp_batch ON staging.ref_object_relation_type_temp USING btree (import_batch_id)
+staging,ref_object_relation_type_temp,idx_ref_object_relation_type_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_object_relation_type_temp_object_key ON staging.ref_object_relation_type_temp USING btree (staging_object_key)
+staging,ref_object_relation_type_temp,ref_object_relation_type_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_object_relation_type_temp_pkey ON staging.ref_object_relation_type_temp USING btree (import_row_id)
+staging,ref_org_role_temp,idx_ref_org_role_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_org_role_temp_batch ON staging.ref_org_role_temp USING btree (import_batch_id)
+staging,ref_org_role_temp,idx_ref_org_role_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_org_role_temp_object_key ON staging.ref_org_role_temp USING btree (staging_object_key)
+staging,ref_org_role_temp,ref_org_role_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_org_role_temp_pkey ON staging.ref_org_role_temp USING btree (import_row_id)
+staging,ref_review_source_temp,idx_ref_review_source_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_review_source_temp_batch ON staging.ref_review_source_temp USING btree (import_batch_id)
+staging,ref_review_source_temp,idx_ref_review_source_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_review_source_temp_object_key ON staging.ref_review_source_temp USING btree (staging_object_key)
+staging,ref_review_source_temp,ref_review_source_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_review_source_temp_pkey ON staging.ref_review_source_temp USING btree (import_row_id)
+staging,ref_sustainability_action_category_temp,idx_ref_sustainability_action_category_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_category_temp_batch ON staging.ref_sustainability_action_category_temp USING btree (import_batch_id)
+staging,ref_sustainability_action_category_temp,idx_ref_sustainability_action_category_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_category_temp_object_key ON staging.ref_sustainability_action_category_temp USING btree (staging_object_key)
+staging,ref_sustainability_action_category_temp,ref_sustainability_action_category_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_category_temp_pkey ON staging.ref_sustainability_action_category_temp USING btree (import_row_id)
+staging,ref_sustainability_action_temp,idx_ref_sustainability_action_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_temp_batch ON staging.ref_sustainability_action_temp USING btree (import_batch_id)
+staging,ref_sustainability_action_temp,idx_ref_sustainability_action_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_sustainability_action_temp_object_key ON staging.ref_sustainability_action_temp USING btree (staging_object_key)
+staging,ref_sustainability_action_temp,ref_sustainability_action_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_sustainability_action_temp_pkey ON staging.ref_sustainability_action_temp USING btree (import_row_id)
+staging,ref_tag_temp,idx_ref_tag_temp_batch,f,f,f,btree,CREATE INDEX idx_ref_tag_temp_batch ON staging.ref_tag_temp USING btree (import_batch_id)
+staging,ref_tag_temp,idx_ref_tag_temp_object_key,f,f,f,btree,CREATE INDEX idx_ref_tag_temp_object_key ON staging.ref_tag_temp USING btree (staging_object_key)
+staging,ref_tag_temp,ref_tag_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX ref_tag_temp_pkey ON staging.ref_tag_temp USING btree (import_row_id)
+staging,tag_link_temp,idx_tag_link_temp_batch,f,f,f,btree,CREATE INDEX idx_tag_link_temp_batch ON staging.tag_link_temp USING btree (import_batch_id)
+staging,tag_link_temp,idx_tag_link_temp_object_key,f,f,f,btree,CREATE INDEX idx_tag_link_temp_object_key ON staging.tag_link_temp USING btree (staging_object_key)
+staging,tag_link_temp,tag_link_temp_pkey,t,t,f,btree,CREATE UNIQUE INDEX tag_link_temp_pkey ON staging.tag_link_temp USING btree (import_row_id)

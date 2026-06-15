@@ -1,0 +1,165 @@
+{
+  "cluster": 3,
+  "audit_date": "2026-06-15",
+  "auditor_note": "READ-ONLY audit. Live DB queried via Supabase MCP SELECT. Source = seeds_data.sql + migration_taxonomy_seeds_coverage.sql. Doc = docs/api-db-reference.html §5/§6. FE = bertel-tourism-ui/src grep. zh/el absent across ALL cluster-3 domains — noted once here, not repeated per finding.",
+  "i18n_global_note": "zh and el name_i18n keys are 100% absent across all 9 ref_code domains in this cluster. This is a known systemic gap (Cluster-1/2 baseline). Not re-filed per domain. en and es are 100% present for all 90 ref_code rows and all 16 iti_practice rows.",
+  "scope": [
+    "ref_code:activity_type",
+    "ref_code:iti_practice",
+    "ref_code:transport_type",
+    "ref_code:package_type",
+    "ref_code:service_type",
+    "ref_code:event_type",
+    "ref_code:mood",
+    "ref_code:tourism_type",
+    "ref_code:destination_type",
+    "ref_iti_assoc_role"
+  ],
+  "matrix": [
+    {
+      "unit": "activity_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition (ref_code_activity_type), but 0 object_taxonomy rows for this domain. Explorer filter wired (get_dashboard_filter_options RPC scans taxonomy). Forward-looking: will be populated when ASC/ACT objects are authored via the editor."
+    },
+    {
+      "unit": "iti_practice",
+      "live_count": 16,
+      "source_count": 16,
+      "doc_count": 16,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_iti_practice (direct FK confirmed in FK CSV line 90). FE reads this domain (explorer-reference.ts + object-workspace.ts). 0 rows in object_iti_practice (0 ITI objects live). Forward-looking. All 16 codes are unused per anti-join."
+    },
+    {
+      "unit": "transport_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition (ref_code_transport_type), 0 object_taxonomy rows. No dedicated FK table (not object_iti or CRM) and no FE consumer found. Dead domain candidate: only route to usage is object_taxonomy tagging of ITI/transport objects, which has not been authored."
+    },
+    {
+      "unit": "package_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition only. No dedicated table FK and no FE consumer found in src. Strong dead-domain candidate: no object type has a package_type facet table; usage would require explicit object_taxonomy tagging not present in any editor section."
+    },
+    {
+      "unit": "service_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition only. No dedicated table FK and no FE consumer found in src. Strong dead-domain candidate: same class as package_type."
+    },
+    {
+      "unit": "event_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition (ref_code_event_type). Intended for FMA (Fête & Manifestation) objects via object_taxonomy. 0 object_taxonomy rows for this domain. Forward-looking: FMA objects exist (taxonomy seeded in §57) but have not been authored/linked yet."
+    },
+    {
+      "unit": "mood",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_DISCONNECTED — FK exists via object_taxonomy partition (ref_code_mood). The FK CSV listed crm_interaction.request_mood_id/response_mood_id → ref_code_mood, but §61 (CRM migration) renamed those columns to request_sentiment_id/response_sentiment_id and repointed the FK to ref_code_crm_sentiment (a SEPARATE domain). The live FK scan confirms this: crm_interaction has NO active FK to ref_code_mood. The mood domain now has ONLY object_taxonomy + ref_code_taxonomy_closure as consumers. 0 object_taxonomy rows for mood domain. IMPORTANT: the FK CSV (live-foreign-keys.csv) is STALE for crm_interaction: it still lists request_mood_id/response_mood_id which do NOT exist in the live schema. This is a D4 live-vs-doc drift."
+    },
+    {
+      "unit": "tourism_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition (ref_code_tourism_type). No dedicated table FK, no FE consumer found. 0 object_taxonomy rows. Dead domain candidate: purpose is descriptive tagging of objects via object_taxonomy but no editor section authors it."
+    },
+    {
+      "unit": "destination_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "SEEDED_UNUSED — FK exists via object_taxonomy partition (ref_code_destination_type). No dedicated table FK, no FE consumer found. 0 object_taxonomy rows. Dead domain candidate: same class as tourism_type / transport_type."
+    },
+    {
+      "unit": "ref_iti_assoc_role",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": 0,
+      "verdict": "CRITICAL — Table has 0 rows AND no INSERT in any source file (seeds_data.sql, schema_unified.sql, all migration_*.sql). The save_object_itinerary_nested RPC (object_workspace_safe_write_rpcs.sql line 944) resolves role_id by doing SELECT id FROM ref_iti_assoc_role WHERE lower(code) = lower(role_code) and RAISES EXCEPTION '23503' if not found. object_iti_associated_object FK ON DELETE RESTRICT. With 0 rows, any call to save_object_itinerary_nested passing an associated_object WILL fail at runtime with 'Unknown itinerary association role'. The doc (api-db-reference.html) explicitly flags this table as having 'no direct extracted line'. No FE consumer surfaces this yet (0 ITI objects live), so the bug is latent but will surface at first ITI authoring with associated objects."
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D4",
+      "severity": "HIGH",
+      "unit": "ref_iti_assoc_role",
+      "code": "MISSING_SEED_ENTIRE_TABLE",
+      "title": "ref_iti_assoc_role: 0 rows live, 0 INSERT in any source file — save_object_itinerary_nested will 500 on first associated-object write",
+      "evidence": "Live query SELECT COUNT(*) FROM public.ref_iti_assoc_role returns 0. Grep across all SQL files in 'Base de donnée DLL et API/' finds zero INSERT INTO ref_iti_assoc_role. object_workspace_safe_write_rpcs.sql line 944 does SELECT id INTO v_id FROM public.ref_iti_assoc_role WHERE lower(code) = lower(v_row->>'role_code') and at line 946-947 raises EXCEPTION '23503' if v_id IS NULL. Table carries RLS ENABLE + public SELECT policy (rls_policies.sql line 890) and FK ON DELETE RESTRICT from object_iti_associated_object. The doc flags the table as 'Tables publiques de référence sans ligne directe extraite'. No consumer exists yet (0 ITI objects live, 0 object_iti_associated_object rows) so bug is latent.",
+      "recommendation": "Add seed rows to seeds_data.sql (and a companion migration for live deploy) covering at minimum: the roles actually referenced in the codebase/editor — e.g. 'sur_le_parcours_de' is already seeded in ref_object_relation_type (different table) but ITI assoc roles for related PNAs / points of interest need specific role codes. Consult the ITI B1 spec to define the canonical role vocabulary before writing seeds. Block any ITI live authoring with associated objects until seeds are present."
+    },
+    {
+      "dimension": "D4",
+      "severity": "MEDIUM",
+      "unit": "mood",
+      "code": "STALE_FK_CSV_CRM_INTERACTION",
+      "title": "live-foreign-keys.csv is stale: crm_interaction.request_mood_id / response_mood_id → ref_code_mood no longer exist after §61 migration",
+      "evidence": "FK CSV lines 41-42 reference crm_interaction.request_mood_id and response_mood_id pointing to ref_code_mood. Live information_schema.table_constraints query confirms the live crm_interaction table has NO FK to ref_code_mood; the two columns are NOW request_sentiment_id / response_sentiment_id pointing to ref_code_crm_sentiment (a separate domain, 6 codes). The column request_mood_id does not exist in the live table (validated by failed execute_sql 'column request_mood_id does not exist'). The mood domain is now exclusively connected via object_taxonomy partitioning, with 0 actual rows.",
+      "recommendation": "Regenerate live-foreign-keys.csv (run the schema-workbench extraction) to reflect the §61 migration outcome. The stale CSV will mislead future auditors into thinking mood has a CRM consumer. Also consider whether mood is still a useful taxonomy domain — with 0 object_taxonomy rows and no editor section authoring it, it is effectively dead."
+    },
+    {
+      "dimension": "D1",
+      "severity": "MEDIUM",
+      "unit": "transport_type|package_type|service_type|tourism_type|destination_type",
+      "code": "DEAD_DOMAIN_NO_CONSUMER",
+      "title": "Five domains (transport_type, package_type, service_type, tourism_type, destination_type) have 0 object_taxonomy rows, no dedicated FK table, no FE consumer — strong dead-domain candidates",
+      "evidence": "SELECT COUNT(*) FROM object_taxonomy WHERE domain IN (...) returns 0 for all five domains. Grep across bertel-tourism-ui/src finds zero references to these domain strings. The only consumers are: (a) object_taxonomy partition FKs (structural, not behavioral) and (b) ref_code_taxonomy_closure (closure table, mirrors partition). No editor section, no RPC, no explorer filter references these domains. seeds_data.sql and i18n blocks are fully present (en+es complete), so the seeding cost is sunk. The FK CSV confirms object_taxonomy.ref_code_id→domain partition constraints exist but carry no data.",
+      "recommendation": "For each domain, verify with PO whether it has a roadmap owner (an editor section, a filter facet, or a planned FMA/ACT/ITI sub-model that will consume it). If no concrete use-case is planned: (a) do NOT delete (FK constraints and partition exist — removal requires migration), but (b) mark is_active=false at the domain registry level and document the decision in lot1_mapping_decisions.md under 'dead domains'. If a specific use-case IS planned (e.g. package_type for ACT/voyage packages), open a spec before wiring."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "activity_type|event_type|mood",
+      "code": "FORWARD_LOOKING_ZERO_ROWS",
+      "title": "activity_type, event_type, mood have defined object-type consumers (ASC/ACT, FMA, taxonomy) but 0 object_taxonomy rows — forward-looking, not dead",
+      "evidence": "activity_type: FE wires domain via get_dashboard_filter_options (explorer filter); intended for ACT/ASC objects. event_type: intended for FMA (fête & manifestation) taxonomy objects seeded in §57 but not yet authored. mood: object_taxonomy partition exists, formerly a CRM field (now replaced by crm_sentiment in §61). All three have 0 actual object_taxonomy rows. Unlike the five dead-domain candidates above, these have identifiable intended consumers or Explorer wiring.",
+      "recommendation": "activity_type and event_type: no action needed — they will populate as objects are authored. mood: evaluate whether object-level mood tagging (via object_taxonomy) is still in the product roadmap now that the CRM sentiment vocabulary has been split off into crm_sentiment. If mood as an object tag has no roadmap entry, treat it as a dead domain (see recommendation above)."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "iti_practice",
+      "code": "FORWARD_LOOKING_ZERO_ROWS_ITI",
+      "title": "iti_practice: all 16 codes unused in object_iti_practice (0 ITI objects live) — forward-looking",
+      "evidence": "Anti-join SELECT r.code FROM ref_code r WHERE r.domain='iti_practice' AND r.id NOT IN (SELECT practice_id FROM object_iti_practice WHERE practice_id IS NOT NULL) returns all 16 codes. SELECT COUNT(*) FROM object_iti_practice returns 0. FE actively reads this domain in both explorer-reference.ts (filter picker) and object-workspace.ts (save_object_itinerary_nested calls delete+reinsert). Seeds and i18n (en+es) are complete.",
+      "recommendation": "No action on seeding. Track against first ITI object creation in B1 phase. The FE save path for practices is wired and tested (suite green §28 per memory)."
+    },
+    {
+      "dimension": "D3",
+      "severity": "INFO",
+      "unit": "ALL_CLUSTER3_DOMAINS",
+      "code": "ZH_EL_I18N_ABSENT_SYSTEMIC",
+      "title": "zh and el name_i18n translations absent across all 9 ref_code domains (90 codes) — systemic gap",
+      "evidence": "Live dump: all 90 rows have en=true and es=true; none have zh or el set. seeds_data.sql i18n update blocks only set name_en and name_es. This matches the cluster-1/2 baseline finding. No zh/el content exists anywhere in the seed SQL.",
+      "recommendation": "No per-domain action needed. Track under the umbrella i18n gap (established in deferred list). Schedule a zh/el translation pass post-MVP when the language target list is confirmed."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "ref_iti_assoc_role",
+      "code": "NO_I18N_SCHEMA",
+      "title": "ref_iti_assoc_role lacks name_i18n / description_i18n columns — standalone table predates the ref_code i18n pattern",
+      "evidence": "information_schema.columns for ref_iti_assoc_role shows only: id, code, name, description, position, created_at, updated_at. No name_i18n jsonb column. The table is a standalone (not a ref_code partition) and was designed before the i18n jsonb pattern was standardized.",
+      "recommendation": "When roles are seeded and ITI authoring begins, assess whether multilingual role names are needed in the UI. If yes, add name_i18n jsonb via a non-breaking ALTER TABLE migration (same pattern as ref_code). If not needed (roles are internal/structural), document the decision."
+    }
+  ]
+}

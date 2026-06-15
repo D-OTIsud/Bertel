@@ -1,0 +1,124 @@
+{
+  "cluster": 1,
+  "scope": ["allergen", "cuisine_type", "dietary_tag", "menu_category"],
+  "audit_date": "2026-06-15",
+  "methodology_notes": [
+    "Live counts verified via SELECT on public.ref_code (LIST-partitioned, queried at parent).",
+    "Source counts from seeds_data.sql (primary INSERT blocks + i18n UPDATE block at lines 1400-1481).",
+    "Doc counts from api-db-reference.html §5 <details> summaries (lines 5550, 5649, 5714, 5880).",
+    "DB usage confirmed via COUNT on object_menu_item_allergen, object_menu_item_cuisine_type, object_menu_item_dietary_tag, object_menu (all 0 rows — RES menus not yet populated).",
+    "FK consumers confirmed from live-foreign-keys.csv: allergen→object_menu_item_allergen.allergen_id; cuisine_type→object_menu_item_cuisine_type.cuisine_type_id; dietary_tag→object_menu_item_dietary_tag.dietary_tag_id; menu_category→object_menu.category_id.",
+    "All 4 domains also appear as partitions under ref_code_taxonomy_closure and object_taxonomy (FK lines 174, 206, 167, 182 of CSV) — taxonomy consumer exists but 0 rows.",
+    "i18n global gap: zh and el are 100% absent across ALL ref_code domains — reported once per domain, not per code.",
+    "RLS state confirmed: all 5 menu-chain tables (object_menu, object_menu_item, and the 3 link tables) carry correct per-command families (SELECT + INS + UPD + DEL) as of §47 (8o).",
+    "Frontend consumers confirmed in bertel-tourism-ui/src/services/object-workspace.ts (lines 2576-2581, 4382-4385) and object-workspace-parser.ts (lines 479-501, 1860-1892)."
+  ],
+  "matrix": [
+    {
+      "unit": "allergen",
+      "live_count": 14,
+      "source_count": 14,
+      "doc_count": 14,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN — perfect 3-plane match; 0 DB usage (FORWARD-LOOKING: RES menus not yet created); all 14 codes present in FE loader + saver; en14/es14 complete; zh/el absent (global gap)"
+    },
+    {
+      "unit": "cuisine_type",
+      "live_count": 29,
+      "source_count": 29,
+      "doc_count": 29,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN with one structural note — perfect 3-plane match; 0 DB usage (FORWARD-LOOKING); all 29 codes in FE; en29/es29 complete; zh/el absent (global gap); NOTE: cuisine_type:vegan duplicates dietary_tag:vegan concept at a different model level — documented below as D3/low"
+    },
+    {
+      "unit": "dietary_tag",
+      "live_count": 12,
+      "source_count": 12,
+      "doc_count": 12,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN — perfect 3-plane match; 0 DB usage (FORWARD-LOOKING); all 12 codes in FE; en12/es12 complete; zh/el absent (global gap)"
+    },
+    {
+      "unit": "menu_category",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN — perfect 3-plane match; 0 DB usage (FORWARD-LOOKING: no object_menu rows); all 10 codes in FE loader (object-workspace.ts:2578, 4382); en10/es10 complete; zh/el absent (global gap)"
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D3",
+      "severity": "medium",
+      "unit": "allergen + cuisine_type + dietary_tag + menu_category",
+      "code": "(all 65 codes)",
+      "title": "position = NULL for all 65 codes across all 4 domains — undefined display order",
+      "evidence": "SELECT domain, code, position FROM public.ref_code WHERE domain IN ('allergen','cuisine_type','dietary_tag','menu_category') → position IS NULL for every row. The FE loader calls .order('position', { ascending: true }) for all 4 domains (object-workspace.ts lines 2578-2581). With all positions NULL, Postgres returns rows in an implementation-defined order (typically heap/insertion order), which is not guaranteed stable across vacuums. The seed INSERTs do not set position. This affects the display order of 14 allergen chips, 29 cuisine chips, 12 dietary chips, and 10 menu-category options in the §13/menu editor.",
+      "recommendation": "Add a position seed for each domain in seeds_data.sql (or a dedicated positions migration). Recommended ordering: allergen → EU regulation alphabetical (celery, crustaceans, dairy, eggs, fish, gluten, lupin, molluscs, mustard, nuts, peanuts, sesame, soy, sulphites); cuisine_type → local-first then alphabetical (creole, metropolitan, traditional first); dietary_tag → most-common-first (vegetarian, vegan, halal, kosher, gluten_free, lactose_free, organic, local, …); menu_category → meal-flow order (entree, main, dessert, drinks, snacks, petit_dejeuner, brunch, menu_enfant, menu_groupe, menu_degustation). Use ON CONFLICT (domain, code) DO UPDATE SET position=EXCLUDED.position for idempotency."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "cuisine_type",
+      "code": "vegan",
+      "title": "cuisine_type:vegan duplicates the concept expressed by dietary_tag:vegan at a different model level",
+      "evidence": "cuisine_type:vegan (name='Végan', en='Vegan') exists alongside dietary_tag:vegan (name='Végan', en='Vegan'). cuisine_type describes the cooking style of a restaurant (e.g. the menu as a whole); dietary_tag describes the suitability of individual menu items. Both codes are present in FE state (WorkspaceMenuModule.cuisineTypeOptions vs dietaryTagOptions). The overlap is intentional at the data model level (a restaurant can be classified as cuisine_type:vegan AND an individual menu item can carry dietary_tag:vegan), but both codes carry the same FR/EN label with no differentiating description. A future operator importing data could miscategorize menu items as cuisine_type or vice versa.",
+      "recommendation": "No structural change needed — the distinction is correct and the FE keeps the two separate. Harden the FR description to clarify the level: cuisine_type:vegan description → 'Établissement entièrement végane (style de cuisine global)'; dietary_tag:vegan description → 'Plat sans aucun produit d\\'origine animale'. Update seeds_data.sql and redeploy the seeds block."
+    },
+    {
+      "dimension": "D2",
+      "severity": "low",
+      "unit": "allergen",
+      "code": "(all 14 codes)",
+      "title": "zh and el translations absent — global gap, post-MVP",
+      "evidence": "name_i18n contains only 'en' and 'es' keys for all 14 allergen codes. zh and el keys are absent. This is consistent with the global gap across ALL ref_code domains.",
+      "recommendation": "Track as a single post-MVP i18n task: add zh/el translations to all food-domain codes in a single migration alongside the other ref_code domains. Do not handle per-code."
+    },
+    {
+      "dimension": "D2",
+      "severity": "low",
+      "unit": "cuisine_type",
+      "code": "(all 29 codes)",
+      "title": "zh and el translations absent — global gap, post-MVP",
+      "evidence": "name_i18n contains only 'en' and 'es' keys for all 29 cuisine_type codes.",
+      "recommendation": "Same global i18n task as allergen."
+    },
+    {
+      "dimension": "D2",
+      "severity": "low",
+      "unit": "dietary_tag",
+      "code": "(all 12 codes)",
+      "title": "zh and el translations absent — global gap, post-MVP",
+      "evidence": "name_i18n contains only 'en' and 'es' keys for all 12 dietary_tag codes.",
+      "recommendation": "Same global i18n task as allergen."
+    },
+    {
+      "dimension": "D2",
+      "severity": "low",
+      "unit": "menu_category",
+      "code": "(all 10 codes)",
+      "title": "zh and el translations absent — global gap, post-MVP",
+      "evidence": "name_i18n contains only 'en' and 'es' keys for all 10 menu_category codes.",
+      "recommendation": "Same global i18n task as allergen."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "allergen + cuisine_type + dietary_tag + menu_category",
+      "code": "(all 65 codes)",
+      "title": "0 DB rows in all 4 consumer tables — classified FORWARD-LOOKING, not dead",
+      "evidence": "object_menu=0 rows, object_menu_item=0, object_menu_item_allergen=0, object_menu_item_cuisine_type=0, object_menu_item_dietary_tag=0 (confirmed live). The menu facet applies only to object_type=RES; there are live RES objects (ref_facet_applicability covers RES→object_menu per §46/§57) but no menus have been authored yet. All 4 domains are actively loaded by the FE menu editor (object-workspace.ts lines 2576-2581 for read, 4382-4385 for write path). The domains are also referenced as partition keys in object_taxonomy FKs and ref_code_taxonomy_closure, though 0 taxonomy rows exist for these domains.",
+      "recommendation": "No action. Re-evaluate at the first RES menu authoring pass: at that point, confirm all codes survive the FK constraint and that the FE correctly round-trips codes through the saver (ensureKnownCodes gate at line 4422-4424 of object-workspace.ts). Log as FORWARD-LOOKING in the deferred items tracker."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "object_menu + object_menu_item (write policies)",
+      "code": "N/A",
+      "title": "FOR ALL write policies still present on object_menu and object_menu_item in migration_permission_write_paths.sql (source) — already superseded on live by §47 per-command migration",
+      "evidence": "migration_permission_write_paths.sql lines 135-159 still create FOR ALL owner_menu_item_dietary_write / owner_menu_item_allergen_write / owner_menu_item_cuisine_write. On LIVE, these are superseded by canonical_ins/upd/del families from migration_write_policy_percommand.sql (confirmed via pg_policies query: only SELECT + INS + UPD + DEL policies present, no FOR ALL). The source file is stale relative to live on these 3 tables. The §47 runbook caveat says re-run migration_write_policy_percommand.sql after a fresh rls_policies.sql apply.",
+      "recommendation": "No immediate action needed (live is correct). At the next major schema regen, update migration_permission_write_paths.sql to drop and replace these 3 FOR ALL policies with per-command equivalents to match the live state, or annotate with a comment that migration_write_policy_percommand.sql supersedes them. This prevents confusion during fresh-apply gate runs."
+    }
+  ]
+}

@@ -284,6 +284,8 @@ export interface PresenceMember {
   name: string;
   avatar: string;
   color: string;
+  /** Epoch ms when this member joined the presence room (when the editor was opened). */
+  onlineSince?: number;
 }
 
 export interface FieldLock {

@@ -4,7 +4,7 @@ import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceCharacteristicsModule,
 } from '../../../services/object-workspace-parser';
-import { ModuleUnavailableNotice } from './blocks/block-notes';
+import { ChoiceConfirmationNotice, ModuleUnavailableNotice } from './blocks/block-notes';
 
 function hasText(value: string): boolean {
   return value.trim().length > 0;
@@ -127,6 +127,7 @@ export function GroupPolicyButton({
         </div>
         <Toggle
           label="Groupes uniquement"
+          sub="Refuse les réservations individuelles."
           on={draft.groupOnly}
           onChange={(groupOnly) => setDraft({ ...draft, groupOnly })}
         />
@@ -137,6 +138,11 @@ export function GroupPolicyButton({
             onChange={(notes) => setDraft({ ...draft, notes })}
           />
         </Field>
+        {draft.groupOnly && (
+          <ChoiceConfirmationNotice>
+            Les réservations individuelles ne sont pas acceptées.
+          </ChoiceConfirmationNotice>
+        )}
       </EditorModal>
     </>
   );

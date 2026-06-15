@@ -38335,7 +38335,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1665
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1665
+    }
    }
   },
   {
@@ -38365,7 +38375,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2113
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2113
+    }
    }
   },
   {
@@ -38380,7 +38400,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 545
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 545
+    }
    }
   },
   {
@@ -38425,7 +38455,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1675
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1675
+    }
    }
   },
   {
@@ -38440,7 +38480,17 @@
     "returns": "void",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1688
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1688
+    }
    }
   },
   {
@@ -38455,7 +38505,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 427
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 427
+    }
    }
   },
   {
@@ -38470,7 +38530,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1766
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1766
+    }
    }
   },
   {
@@ -38500,7 +38570,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": true
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3724
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3724
+    }
    }
   },
   {
@@ -38515,7 +38595,17 @@
     "returns": "json",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1850
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
+      "line": 70
+     }
+    ]
    }
   },
   {
@@ -38530,7 +38620,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2153
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2153
+    }
    }
   },
   {
@@ -38560,7 +38660,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5932
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 5932
+    }
    }
   },
   {
@@ -38575,7 +38685,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 228
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 228
+    }
    }
   },
   {
@@ -38590,7 +38710,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2097
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2097
+    }
    }
   },
   {
@@ -38605,7 +38735,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6485
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6485
+    }
    }
   },
   {
@@ -38620,7 +38760,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 26
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 26
+    }
    }
   },
   {
@@ -38635,7 +38785,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2556
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2556
+    }
    }
   },
   {
@@ -38650,7 +38810,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4571
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4571
+    }
    }
   },
   {
@@ -38665,7 +38835,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2223
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2223
+    }
    }
   },
   {
@@ -38680,7 +38860,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2247
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2247
+    }
    }
   },
   {
@@ -38695,7 +38885,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7933
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7933
+    }
    }
   },
   {
@@ -38710,7 +38910,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 4686
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 4686
+    }
    }
   },
   {
@@ -38725,7 +38935,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 4754
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 4754
+    }
    }
   },
   {
@@ -38740,7 +38960,17 @@
     "returns": "TABLE(legal_id uuid, type_code text, type_name text, type_category text, type_is_public boolean, value jsonb, document_id uuid, valid_from date, valid_to date, validity_mode text, status text, document_requested_at timestamp with time zone, document_delivered_at timestamp with time zone, note text, days_until_expiry integer)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7366
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7366
+    }
    }
   },
   {
@@ -38755,7 +38985,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5711
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5711
+    }
    }
   },
   {
@@ -38770,7 +39010,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5961
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5961
+    }
    }
   },
   {
@@ -38785,7 +39035,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6289
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6289
+    }
    }
   },
   {
@@ -38800,7 +39060,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6097
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6097
+    }
    }
   },
   {
@@ -38815,7 +39085,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 989
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 989
+    }
    }
   },
   {
@@ -38830,7 +39110,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": true
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3580
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3580
+    }
    }
   },
   {
@@ -38845,7 +39135,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6590
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6590
+    }
    }
   },
   {
@@ -38875,7 +39175,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6911
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6911
+    }
    }
   },
   {
@@ -38890,7 +39200,17 @@
     "returns": "text[]",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8880
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8880
+    }
    }
   },
   {
@@ -38920,7 +39240,17 @@
     "returns": "text",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 242
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 242
+    }
    }
   },
   {
@@ -38935,7 +39265,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8139
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8139
+    }
    }
   },
   {
@@ -38950,7 +39290,17 @@
     "returns": "text",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 297
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 297
+    }
    }
   },
   {
@@ -38995,7 +39345,17 @@
     "returns": "TABLE(type_code text, type_name text, is_required boolean, has_record boolean, is_valid boolean, status text, valid_to date, days_until_expiry integer)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7420
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7420
+    }
    }
   },
   {
@@ -39010,7 +39370,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8630
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8630
+    }
    }
   },
   {
@@ -39025,7 +39395,17 @@
     "returns": "SETOF uuid",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 110
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 110
+    }
    }
   },
   {
@@ -39040,7 +39420,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2183
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2183
+    }
    }
   },
   {
@@ -39055,7 +39445,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2193
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2193
+    }
    }
   },
   {
@@ -39070,7 +39470,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+      "line": 190
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+     "line": 190
+    }
    }
   },
   {
@@ -39085,7 +39495,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+      "line": 222
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+     "line": 222
+    }
    }
   },
   {
@@ -39100,7 +39520,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2203
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2203
+    }
    }
   },
   {
@@ -39115,7 +39545,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2213
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2213
+    }
    }
   },
   {
@@ -39130,7 +39570,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2170
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2170
+    }
    }
   },
   {
@@ -39145,7 +39595,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/branding_admin_profile_role_patch.sql",
+      "line": 13
+     },
+     {
+      "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+      "line": 28
+     }
+    ]
    }
   },
   {
@@ -39160,7 +39620,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8790
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8790
+    }
    }
   },
   {
@@ -39175,7 +39645,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_gap_rpcs.sql",
+      "line": 109
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_gap_rpcs.sql",
+     "line": 109
+    }
    }
   },
   {
@@ -39190,7 +39670,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7233
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7233
+    }
    }
   },
   {
@@ -39205,7 +39695,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8948
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8948
+    }
    }
   },
   {
@@ -39220,7 +39720,17 @@
     "returns": "TABLE(object_id text, label_rank integer)",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 907
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 907
+    }
    }
   },
   {
@@ -39235,7 +39745,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3395
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3395
+    }
    }
   },
   {
@@ -39250,7 +39770,17 @@
     "returns": "integer",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 383
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 383
+    }
    }
   },
   {
@@ -39265,7 +39795,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_permission_write_paths.sql",
+      "line": 199
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_permission_write_paths.sql",
+     "line": 199
+    }
    }
   },
   {
@@ -39280,7 +39820,17 @@
     "returns": "SETOF text",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
+      "line": 46
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
+     "line": 46
+    }
    }
   },
   {
@@ -39295,7 +39845,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_permission_write_paths.sql",
+      "line": 18
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_permission_write_paths.sql",
+     "line": 18
+    }
    }
   },
   {
@@ -39310,7 +39870,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 71
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 71
+    }
    }
   },
   {
@@ -39355,7 +39925,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_rls_read_gate_p03.sql",
+      "line": 21
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_rls_read_gate_p03.sql",
+     "line": 21
+    }
    }
   },
   {
@@ -39370,7 +39950,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8558
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8558
+    }
    }
   },
   {
@@ -39385,7 +39975,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3572
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3572
+    }
    }
   },
   {
@@ -39400,7 +40000,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 631
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 631
+    }
    }
   },
   {
@@ -39415,7 +40025,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 94
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 94
+    }
    }
   },
   {
@@ -39430,7 +40050,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4960
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4960
+    }
    }
   },
   {
@@ -39445,7 +40075,17 @@
     "returns": "text[]",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8911
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8911
+    }
    }
   },
   {
@@ -39475,7 +40115,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 102
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 102
+    }
    }
   },
   {
@@ -39490,7 +40140,17 @@
     "returns": "TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4848
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4848
+    }
    }
   },
   {
@@ -39505,7 +40165,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3659
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3659
+    }
    }
   },
   {
@@ -39520,7 +40190,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4945
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4945
+    }
    }
   },
   {
@@ -39535,7 +40215,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 45
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 45
+    }
    }
   },
   {
@@ -39550,7 +40240,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 202
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 202
+    }
    }
   },
   {
@@ -39565,7 +40265,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1616
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1616
+    }
    }
   },
   {
@@ -39580,7 +40290,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2294
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2294
+    }
    }
   },
   {
@@ -39625,7 +40345,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 949
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 949
+    }
    }
   },
   {
@@ -39640,7 +40370,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 965
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 965
+    }
    }
   },
   {
@@ -39655,7 +40395,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 36
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 36
+    }
    }
   },
   {
@@ -39685,7 +40435,17 @@
     "returns": "void",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1730
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1730
+    }
    }
   },
   {
@@ -39700,7 +40460,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 208
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 208
+    }
    }
   },
   {
@@ -39715,7 +40485,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6443
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6443
+    }
    }
   },
   {
@@ -39730,7 +40510,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1829
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1829
+    }
    }
   },
   {
@@ -39745,7 +40535,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 1881
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 1881
+    }
    }
   },
   {
@@ -39760,7 +40560,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2167
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2167
+    }
    }
   },
   {
@@ -39775,7 +40585,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 6083
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 6083
+    }
    }
   },
   {
@@ -39790,7 +40610,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2610
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2610
+    }
    }
   },
   {
@@ -39805,7 +40635,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2730
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2730
+    }
    }
   },
   {
@@ -39820,7 +40660,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3266
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3266
+    }
    }
   },
   {
@@ -39835,7 +40685,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3286
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3286
+    }
    }
   },
   {
@@ -39850,7 +40710,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3447
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3447
+    }
    }
   },
   {
@@ -39895,7 +40765,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5087
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 5087
+    }
    }
   },
   {
@@ -39910,7 +40790,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5649
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 5649
+    }
    }
   },
   {
@@ -39985,7 +40875,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5686
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 5686
+    }
    }
   },
   {
@@ -40000,7 +40900,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+      "line": 163
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
+     "line": 163
+    }
    }
   },
   {
@@ -40015,7 +40925,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3002
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3002
+    }
    }
   },
   {
@@ -40030,7 +40950,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3141
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3141
+    }
    }
   },
   {
@@ -40045,7 +40975,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3606
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3606
+    }
    }
   },
   {
@@ -40060,7 +41000,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3674
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3674
+    }
    }
   },
   {
@@ -40075,7 +41025,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2790
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2790
+    }
    }
   },
   {
@@ -40090,7 +41050,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4761
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4761
+    }
    }
   },
   {
@@ -40105,7 +41075,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2260
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2260
+    }
    }
   },
   {
@@ -40120,7 +41100,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 3068
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 3068
+    }
    }
   },
   {
@@ -40150,7 +41140,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4473
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4473
+    }
    }
   },
   {
@@ -40165,7 +41165,17 @@
     "returns": "void",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4868
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4868
+    }
    }
   },
   {
@@ -40180,7 +41190,17 @@
     "returns": "TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_open_status_timezone_perf.sql",
+      "line": 30
+     },
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4809
+     }
+    ]
    }
   },
   {
@@ -40195,7 +41215,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5824
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5824
+    }
    }
   },
   {
@@ -40210,7 +41240,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7210
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7210
+    }
    }
   },
   {
@@ -40225,7 +41265,17 @@
     "returns": "json",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8272
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8272
+    }
    }
   },
   {
@@ -40240,7 +41290,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7961
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7961
+    }
    }
   },
   {
@@ -40255,7 +41315,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6006
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6006
+    }
    }
   },
   {
@@ -40270,7 +41340,17 @@
     "returns": "TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, document_requested_at timestamp with time zone, days_since_requested integer, note text)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7996
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7996
+    }
    }
   },
   {
@@ -40285,7 +41365,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8043
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8043
+    }
    }
   },
   {
@@ -40375,7 +41465,17 @@
     "returns": "uuid",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 7
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 7
+    }
    }
   },
   {
@@ -40390,7 +41490,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2237
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2237
+    }
    }
   },
   {
@@ -40405,7 +41515,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_permission_write_paths.sql",
+      "line": 30
+     },
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 62
+     }
+    ]
    }
   },
   {
@@ -40420,7 +41540,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 43
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 43
+    }
    }
   },
   {
@@ -40435,7 +41565,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 25
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 25
+    }
    }
   },
   {
@@ -40450,7 +41590,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 34
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 34
+    }
    }
   },
   {
@@ -40480,7 +41630,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3421
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3421
+    }
    }
   },
   {
@@ -40495,7 +41655,17 @@
     "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5831
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 5831
+    }
    }
   },
   {
@@ -40525,7 +41695,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 386
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 386
+    }
    }
   },
   {
@@ -40540,7 +41720,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 649
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 649
+    }
    }
   },
   {
@@ -40555,7 +41745,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 784
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 784
+    }
    }
   },
   {
@@ -40570,7 +41770,17 @@
     "returns": "TABLE(org_id text, org_name text)",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 257
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 257
+    }
    }
   },
   {
@@ -40585,7 +41795,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 1104
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+     "line": 1104
+    }
    }
   },
   {
@@ -40600,7 +41820,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_links_editor.sql",
+      "line": 51
+     },
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 969
+     }
+    ]
    }
   },
   {
@@ -40615,7 +41845,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6184
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6184
+    }
    }
   },
   {
@@ -40630,7 +41870,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": true
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 3619
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 3619
+    }
    }
   },
   {
@@ -40660,7 +41910,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/object_workspace_gap_rpcs.sql",
+      "line": 18
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/object_workspace_gap_rpcs.sql",
+     "line": 18
+    }
    }
   },
   {
@@ -40675,7 +41935,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1648
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1648
+    }
    }
   },
   {
@@ -40690,7 +41960,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 94
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 94
+    }
    }
   },
   {
@@ -40705,7 +41985,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 129
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 129
+    }
    }
   },
   {
@@ -40720,7 +42010,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 160
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 160
+    }
    }
   },
   {
@@ -40735,7 +42035,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 266
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 266
+    }
    }
   },
   {
@@ -40750,7 +42060,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 336
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 336
+    }
    }
   },
   {
@@ -40765,7 +42085,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 385
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 385
+    }
    }
   },
   {
@@ -40780,7 +42110,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 365
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 365
+    }
    }
   },
   {
@@ -40795,7 +42135,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2082
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 2082
+    }
    }
   },
   {
@@ -40810,7 +42160,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 3043
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 3043
+    }
    }
   },
   {
@@ -40825,7 +42185,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 4790
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/schema_unified.sql",
+     "line": 4790
+    }
    }
   },
   {
@@ -40840,7 +42210,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 3095
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 3095
+    }
    }
   },
   {
@@ -40855,7 +42235,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 286
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 286
+    }
    }
   },
   {
@@ -40870,7 +42260,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2179
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2179
+    }
    }
   },
   {
@@ -40885,7 +42285,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 275
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 275
+    }
    }
   },
   {
@@ -40900,7 +42310,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2270
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2270
+    }
    }
   },
   {
@@ -40915,7 +42335,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 4796
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 4796
+    }
    }
   },
   {
@@ -40930,7 +42360,17 @@
     "returns": "json",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 2324
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 2324
+    }
    }
   },
   {
@@ -40945,7 +42385,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 186
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 186
+    }
    }
   },
   {
@@ -40960,7 +42410,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5001
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5001
+    }
    }
   },
   {
@@ -40975,7 +42435,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 4547
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 4547
+    }
    }
   },
   {
@@ -40990,7 +42460,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 4653
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 4653
+    }
    }
   },
   {
@@ -41005,7 +42485,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1502
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1502
+    }
    }
   },
   {
@@ -41020,7 +42510,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5045
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5045
+    }
    }
   },
   {
@@ -41035,7 +42535,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5272
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5272
+    }
    }
   },
   {
@@ -41050,7 +42560,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5317
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5317
+    }
    }
   },
   {
@@ -41065,7 +42585,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5527
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5527
+    }
    }
   },
   {
@@ -41080,7 +42610,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6538
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6538
+    }
    }
   },
   {
@@ -41095,7 +42635,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 1051
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 1051
+    }
    }
   },
   {
@@ -41110,7 +42660,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7736
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7736
+    }
    }
   },
   {
@@ -41125,7 +42685,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 460
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 460
+    }
    }
   },
   {
@@ -41140,7 +42710,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6255
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6255
+    }
    }
   },
   {
@@ -41155,7 +42735,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6736
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6736
+    }
    }
   },
   {
@@ -41170,7 +42760,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6829
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6829
+    }
    }
   },
   {
@@ -41185,7 +42785,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8205
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8205
+    }
    }
   },
   {
@@ -41200,7 +42810,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1697
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1697
+    }
    }
   },
   {
@@ -41215,7 +42835,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 403
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 403
+    }
    }
   },
   {
@@ -41230,7 +42860,17 @@
     "returns": "uuid",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2073
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2073
+    }
    }
   },
   {
@@ -41245,7 +42885,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2263
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2263
+    }
    }
   },
   {
@@ -41260,7 +42910,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2340
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2340
+    }
    }
   },
   {
@@ -41275,7 +42935,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2447
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2447
+    }
    }
   },
   {
@@ -41290,7 +42960,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 198
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2580
+     }
+    ]
    }
   },
   {
@@ -41305,7 +42985,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2728
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2728
+    }
    }
   },
   {
@@ -41320,7 +43010,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2852
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2852
+    }
    }
   },
   {
@@ -41335,7 +43035,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2924
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 2924
+    }
    }
   },
   {
@@ -41350,7 +43060,17 @@
     "returns": "void",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_status_lifecycle.sql",
+      "line": 78
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 3248
+     }
+    ]
    }
   },
   {
@@ -41365,7 +43085,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1560
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1560
+    }
    }
   },
   {
@@ -41380,7 +43110,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 197
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 1850
+     }
+    ]
    }
   },
   {
@@ -41395,7 +43135,17 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 216
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 216
+    }
    }
   },
   {
@@ -41410,7 +43160,17 @@
     "returns": "text",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 315
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 315
+    }
    }
   },
   {
@@ -41425,7 +43185,17 @@
     "returns": "integer",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 331
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/rls_policies.sql",
+     "line": 331
+    }
    }
   },
   {
@@ -41440,7 +43210,21 @@
     "returns": "boolean",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 15
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_explorer_rls_setbased.sql",
+      "line": 83
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 181
+     }
+    ]
    }
   },
   {
@@ -41455,7 +43239,17 @@
     "returns": "TABLE(facet_table text, object_id text, object_type object_type)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": true
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+      "line": 228
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+     "line": 228
+    }
    }
   },
   {
@@ -41470,7 +43264,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7656
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7656
+    }
    }
   },
   {
@@ -41485,7 +43289,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+      "line": 113
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+     "line": 113
+    }
    }
   },
   {
@@ -41500,7 +43314,17 @@
     "returns": "trigger",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": true
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+      "line": 190
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+     "line": 190
+    }
    }
   },
   {
@@ -41515,7 +43339,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 495
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 495
+    }
    }
   },
   {
@@ -41530,7 +43364,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 566
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 566
+    }
    }
   },
   {
@@ -41545,7 +43389,17 @@
     "returns": "bytea",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 587
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 587
+    }
    }
   },
   {
@@ -41560,7 +43414,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 608
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 608
+    }
    }
   },
   {
@@ -41575,7 +43439,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 620
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 620
+    }
    }
   },
   {
@@ -41590,7 +43464,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 643
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 643
+    }
    }
   },
   {
@@ -41605,7 +43489,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "i",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 655
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 655
+    }
    }
   },
   {
@@ -41620,7 +43514,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 673
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 673
+    }
    }
   },
   {
@@ -41635,7 +43539,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 1787
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 1787
+    }
    }
   },
   {
@@ -41650,7 +43564,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6642
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6642
+    }
    }
   },
   {
@@ -41665,7 +43589,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 6972
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 6972
+    }
    }
   },
   {
@@ -41680,7 +43614,17 @@
     "returns": "text",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7090
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7090
+    }
    }
   },
   {
@@ -41695,7 +43639,17 @@
     "returns": "TABLE(object_id text, name text, gpx_data text, file_size integer)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7183
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7183
+    }
    }
   },
   {
@@ -41710,7 +43664,17 @@
     "returns": "TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, valid_to date, days_until_expiry integer, status text)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7316
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7316
+    }
    }
   },
   {
@@ -41725,7 +43689,17 @@
     "returns": "uuid",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7462
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7462
+    }
    }
   },
   {
@@ -41740,7 +43714,17 @@
     "returns": "boolean",
     "security_definer": false,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7532
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7532
+    }
    }
   },
   {
@@ -41755,7 +43739,17 @@
     "returns": "jsonb",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7591
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7591
+    }
    }
   },
   {
@@ -41770,7 +43764,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7777
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7777
+    }
    }
   },
   {
@@ -41785,7 +43789,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 7821
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 7821
+    }
    }
   },
   {
@@ -41800,7 +43814,17 @@
     "returns": "TABLE(legal_id uuid, type_code text, type_name text, type_category text, type_is_public boolean, value jsonb, document_id uuid, valid_from date, valid_to date, validity_mode text, status text, document_requested_at timestamp with time zone, document_delivered_at timestamp with time zone, note text, days_until_expiry integer)",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8081
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8081
+    }
    }
   },
   {
@@ -41815,7 +43839,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8301
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8301
+    }
    }
   },
   {
@@ -41830,7 +43864,17 @@
     "returns": "json",
     "security_definer": false,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8437
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8437
+    }
    }
   },
   {
@@ -41845,7 +43889,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8471
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8471
+    }
    }
   },
   {
@@ -41860,7 +43914,17 @@
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 8706
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 8706
+    }
    }
   },
   {
@@ -41875,7 +43939,17 @@
     "returns": "TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
+      "line": 9
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
+     "line": 9
+    }
    }
   },
   {
@@ -41890,7 +43964,17 @@
     "returns": "text",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_status_lifecycle.sql",
+      "line": 11
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_status_lifecycle.sql",
+     "line": 11
+    }
    }
   },
   {
@@ -41905,7 +43989,17 @@
     "returns": "SETOF text",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_explorer_rls_setbased.sql",
+      "line": 36
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 140
+     }
+    ]
    }
   },
   {
@@ -41920,7 +44014,17 @@
     "returns": "text",
     "security_definer": true,
     "volatility": "v",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_facet_applicability.sql",
+      "line": 251
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 3154
+     }
+    ]
    }
   },
   {
@@ -41935,7 +44039,17 @@
     "returns": "TABLE(id uuid, display_name text, first_name text, last_name text)",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_links_editor.sql",
+      "line": 187
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_links_editor.sql",
+     "line": 187
+    }
    }
   },
   {

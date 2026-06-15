@@ -4,23 +4,26 @@ import { SectionAccessibility } from './SectionAccessibility';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
 
+jest.mock('../../../components/markdown/MarkdownEditorLazy', () => ({
+  MarkdownEditorLazy: ({ ariaLabel }: { ariaLabel: string }) => <textarea aria-label={ariaLabel} />,
+}));
+
 describe('SectionAccessibility — description adaptée (single owner since the §04 hand-off)', () => {
-  it('disables the adapted-description textarea without canonical rights (no silent drop)', () => {
+  it('shows a read-only notice and no edit button without canonical rights', () => {
     const noCanonical = {
       descriptions: { canEditCanonical: false, canDirectWrite: false, canEditOrgEnrichment: true },
     } as unknown as ObjectWorkspacePermissions;
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionAccessibility editor={result.current} permissions={noCanonical} />);
 
-    const textarea = screen.getByTestId('adapted-description-textarea');
-    expect(textarea).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Modifier/i })).toBeNull();
     expect(screen.getByText(/droits ne permettent pas/i)).toBeInTheDocument();
   });
 
-  it('keeps the adapted-description textarea editable with canonical rights', () => {
+  it('exposes the edit button (Modifier) with canonical rights', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
-    expect(screen.getByTestId('adapted-description-textarea')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Modifier/i })).toBeInTheDocument();
   });
 });
 
@@ -81,7 +84,7 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
       ...mods.distinctions,
       accessibilityLabels: [],
       schemeOptions: [
-        { id: 'th', code: 'LBL_TOURISME_HANDICAP', label: 'Tourisme & Handicap', selectionMode: 'single', isAccessibility: true, valueOptions: [] },
+        { id: 'th', code: 'LBL_TOURISME_HANDICAP', label: 'Tourisme & Handicap', selectionMode: 'single', isAccessibility: true, displayGroup: 'quality_label', valueOptions: [] },
       ],
     };
     const { result } = renderHook(() => useObjectEditorState('o1', mods));

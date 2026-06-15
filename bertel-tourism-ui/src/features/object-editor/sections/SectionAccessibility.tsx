@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ChipMultiSelect, Field, Fs, LangTabs, Select, StatCard, Textarea, Toggle } from '../primitives';
+import { ChipMultiSelect, Field, Fs, Select, StatCard, Toggle } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
-import { readTranslatableField, updateTranslatableField } from './descriptions-field';
+import { AdaptedDescriptionField } from '../widgets/AdaptedDescriptionField';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
 
 /**
@@ -17,13 +17,10 @@ const DISABILITY_TYPES = [
   { code: 'cognitive', label: 'Mental' },
 ];
 
-const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
-
 export function SectionAccessibility({ editor, permissions, folded }: SectionProps) {
   const distinctions = editor.draft.distinctions;
   const characteristics = editor.draft.characteristics;
   const descriptions = editor.draft.descriptions;
-  const active = descriptions.activeLanguage;
   const objectScope = descriptions.object;
   // description_adapted is a CANONICAL object_description column: mirror §04's gate
   // (the saver skips the canonical leg without it). canDirectWrite fallback keeps
@@ -86,12 +83,6 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
           .join(', ')
       : '—';
 
-  const langTabs = descriptions.availableLanguages.map((code) => ({
-    code,
-    label: LANG_LABELS[code] ?? code.toUpperCase(),
-    filled: Boolean(readTranslatableField(objectScope.adaptedDescription, code, descriptions.localLanguage).trim()),
-  }));
-
   return (
     <Fs
       num="10"
@@ -114,42 +105,15 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
       </div>
 
       <Field
-        label="Description adaptée (description_adapted)"
+        label="Description adaptée"
         hint="Texte alternatif détaillé — utilisé par Acceslibre et lecteurs d'écran. Multilingue."
       >
-        {langTabs.length > 0 && (
-          <LangTabs
-            tabs={langTabs}
-            active={active}
-            onSelect={(code) => editor.replaceModule('descriptions', { ...descriptions, activeLanguage: code })}
-          />
-        )}
-        {/* Single owner of description_adapted since the §04 hand-off. Gated like §04's
-            canonical scope — the descriptions saver skips the canonical leg without
-            canEditCanonical, so an ungated textarea would silently drop the edit. */}
-        <Textarea
-          value={readTranslatableField(objectScope.adaptedDescription, active, descriptions.localLanguage)}
-          rows={5}
-          disabled={!canEditAdapted}
-          data-testid="adapted-description-textarea"
-          onChange={(value) => {
-            const updated = updateTranslatableField(
-              objectScope.adaptedDescription,
-              active,
-              descriptions.localLanguage,
-              value,
-            );
-            editor.replaceModule('descriptions', {
-              ...descriptions,
-              object: { ...objectScope, adaptedDescription: updated },
-            });
-          }}
+        <AdaptedDescriptionField
+          editor={editor}
+          descriptions={descriptions}
+          objectScope={objectScope}
+          canEdit={canEditAdapted}
         />
-        {!canEditAdapted && (
-          <p className="muted" style={{ marginTop: 6 }}>
-            Lecture seule : vos droits ne permettent pas d&apos;éditer la version par défaut (canonique).
-          </p>
-        )}
       </Field>
 
       {/* ── Tourisme & Handicap label block ───────────────────────────────────── */}

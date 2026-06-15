@@ -7,7 +7,7 @@
  * code must skip every existing unit-N suffix.
  */
 
-import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceRoomBed, WorkspaceMediaOption } from '../../../../services/object-workspace-parser';
 
 /** Curated « most common in rooms » amenity codes, in display order (§74). Surfaced flat above
  *  the collapsible category groups so the universal room amenities (Wi-Fi, clim, sèche-cheveux,
@@ -307,6 +307,37 @@ export function updateBedQuantity(beds: ObjectWorkspaceRoomBed[], index: number,
   const n = Number.parseInt(quantity, 10);
   const q = Number.isFinite(n) && n > 0 ? n : 1;
   return beds.map((b, i) => (i === index ? { ...b, quantity: String(q) } : b));
+}
+
+// --- Room media (object_room_type_media) -------------------------------------------------
+// A room's photos are a CURATION of the establishment's media: each link points at an existing
+// `media` row (owned by the object, authored in §05 Médias — there is no media.id until §05 has
+// saved it). The loader/saver already read/reconcile `object_room_type_media`; these helpers just
+// drive the §06 picker over the room item's `mediaIds` against the module's `mediaOptions`.
+
+/** Link a media to the room (append once, order preserved — no duplicates). */
+export function addRoomMedia(ids: string[], id: string): string[] {
+  return ids.includes(id) ? ids : [...ids, id];
+}
+
+/** Unlink a media from the room. */
+export function removeRoomMedia(ids: string[], id: string): string[] {
+  return ids.filter((existing) => existing !== id);
+}
+
+/** The linked media as full options, in link order. Ids without a matching option are skipped —
+ *  a stale link (media deleted in §05) silently disappears instead of rendering a broken tile. */
+export function resolveRoomMedia(ids: string[], options: WorkspaceMediaOption[]): WorkspaceMediaOption[] {
+  const byId = new Map(options.map((option) => [option.id, option]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((option): option is WorkspaceMediaOption => Boolean(option));
+}
+
+/** The object's media not yet linked to this room — the « à rattacher » pool for the picker. */
+export function availableRoomMedia(ids: string[], options: WorkspaceMediaOption[]): WorkspaceMediaOption[] {
+  const linked = new Set(ids);
+  return options.filter((option) => !linked.has(option.id));
 }
 
 /** DB rows for object_room_type_bed: resolve code→id, skip unknown, dedupe by bed_type_id, 1-based position. */

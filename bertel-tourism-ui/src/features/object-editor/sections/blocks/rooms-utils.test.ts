@@ -1,12 +1,16 @@
 import {
   addBedRow,
+  addRoomMedia,
   applyAdults,
   applyChildren,
   applyCouchagesTotal,
+  availableRoomMedia,
   buildBedRows,
   computeRoomsCapacitySum,
   computeUnitCount,
   removeBedRow,
+  removeRoomMedia,
+  resolveRoomMedia,
   roomCouchages,
   setBedType,
   splitRoomAmenities,
@@ -15,7 +19,7 @@ import {
   updateBedQuantity,
   upsertMaxCapacity,
 } from './rooms-utils';
-import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceRoomBed, WorkspaceMediaOption } from '../../../../services/object-workspace-parser';
 
 const bed = (code: string, q = '1'): ObjectWorkspaceRoomBed =>
   ({ bedTypeId: `id-${code}`, bedTypeCode: code, bedTypeLabel: code, quantity: q });
@@ -220,5 +224,31 @@ describe('splitRoomAmenities', () => {
     expect(categories).toEqual([
       { familyCode: 'services', familyLabel: 'Services', options: [{ id: 'shuttle', code: 'shuttle', label: 'Navette' }] },
     ]);
+  });
+});
+
+describe('room-media helpers', () => {
+  const mediaOpt = (id: string, label = id): WorkspaceMediaOption =>
+    ({ id, code: id, label, url: `https://cdn.example/${id}.jpg` });
+  const opts = [mediaOpt('a'), mediaOpt('b'), mediaOpt('c')];
+
+  it('addRoomMedia appends once, preserving order', () => {
+    expect(addRoomMedia(['a'], 'b')).toEqual(['a', 'b']);
+    expect(addRoomMedia(['a', 'b'], 'a')).toEqual(['a', 'b']); // no duplicate
+  });
+
+  it('removeRoomMedia drops the id and is a no-op for an absent id', () => {
+    expect(removeRoomMedia(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
+    expect(removeRoomMedia(['a'], 'x')).toEqual(['a']);
+  });
+
+  it('resolveRoomMedia returns linked options in link order, skipping stale ids', () => {
+    expect(resolveRoomMedia(['c', 'a'], opts).map((o) => o.id)).toEqual(['c', 'a']);
+    expect(resolveRoomMedia(['a', 'gone'], opts).map((o) => o.id)).toEqual(['a']); // stale link dropped
+  });
+
+  it('availableRoomMedia returns object media not yet linked', () => {
+    expect(availableRoomMedia(['b'], opts).map((o) => o.id)).toEqual(['a', 'c']);
+    expect(availableRoomMedia(['a', 'b', 'c'], opts)).toEqual([]); // all linked
   });
 });

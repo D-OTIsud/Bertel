@@ -31,13 +31,13 @@ describe('formatExplorerCardAddress', () => {
 });
 
 describe('normalizeExplorerCard', () => {
-  it('orders classifications, labels, tags, and service signals for card pills', () => {
+  it('splits §09 tags into colored tagChips and keeps the neutral labels blend ordered', () => {
     const card = normalizeExplorerCard({
       id: 'obj-1',
       name: 'Chez Frida',
       type: 'HLO',
       labels: ['Clevacances'],
-      tags: [{ slug: 'vue-mer', name: 'Vue mer' }],
+      tags: [{ slug: 'vue-mer', name: 'Vue mer', color: '#0ea5e9' }],
       badges: [
         { kind: 'quality_label', code: 'qtir', label: 'Qualite Tourisme' },
         { kind: 'classification', code: '3-stars', label: 'Classement meubles · 3 étoiles' },
@@ -48,16 +48,39 @@ describe('normalizeExplorerCard', () => {
       amenity_codes: ['pet_friendly', 'acc_pmr_parking'],
     });
 
+    // §09 tags are NO LONGER in the neutral labels blend (they move to the colored tagChips group).
     expect(card.labels).toEqual([
       '3 étoiles',
       'Gite',
       'Clevacances',
       'Qualite Tourisme',
-      'Vue mer',
       'Milieu rural',
       'Animaux acceptes',
       'Accessibilite',
     ]);
+    expect(card.tagChips).toEqual([{ label: 'Vue mer', color: '#0ea5e9', slug: 'vue-mer' }]);
+  });
+
+  it('carries the per-tag hex (default for invalid), preserves order, and cross-dedupes vs labels', () => {
+    const card = normalizeExplorerCard({
+      id: 'obj-2',
+      name: 'Order test',
+      type: 'HLO',
+      // Order here = tag_link.position from the RPC; preserved as-is.
+      tags: [
+        { slug: 'zebra', name: 'Zebra', color: '#111111' },
+        { slug: 'alpha', name: 'Alpha', color: 'not-a-hex' }, // invalid -> default slate
+        { slug: 'gite', name: 'Gite' }, // collides with the taxonomy label -> cross-deduped out
+      ],
+      taxonomy: [{ domain: 'hebergement', code: 'gite', name: 'Gite' }],
+    });
+
+    expect(card.tagChips).toEqual([
+      { label: 'Zebra', color: '#111111', slug: 'zebra' },
+      { label: 'Alpha', color: '#64748b', slug: 'alpha' },
+    ]);
+    expect(card.labels).toContain('Gite');
+    expect(card.labels).not.toContain('Zebra');
   });
 
   it('preserves ranked label metadata and surfaces match distinction pills', () => {

@@ -54,6 +54,17 @@ export interface ObjectCardBadge {
   name?: string | null;
 }
 
+/**
+ * §09 colored tag chip — the curated display-tag layer (ref_tag) with its GLOBAL hex color,
+ * already deduped against the neutral `labels` blend and ordered by tag_link.position.
+ * Derived by normalizeExplorerCard; rendered first (colored) on the card + map.
+ */
+export interface ObjectCardTagChip {
+  label: string;
+  color: string; // hex #rrggbb
+  slug: string;
+}
+
 export interface ObjectCardTaxonomy {
   domain?: string | null;
   code?: string | null;
@@ -183,6 +194,8 @@ export interface ObjectCard {
   open_now?: boolean | null;
   description?: string | null;
   labels?: string[];
+  /** §09 colored tag chips (curated display layer), set by normalizeExplorerCard. */
+  tagChips?: ObjectCardTagChip[];
   label_match?: ObjectCardLabelMatch | null;
   tags?: ObjectCardTag[];
   badges?: ObjectCardBadge[];

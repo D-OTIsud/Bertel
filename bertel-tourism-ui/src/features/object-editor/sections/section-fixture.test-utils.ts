@@ -310,10 +310,9 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
     },
     tags: {
       displayed: [
-        { tagId: 't1', slug: 'hotel-4', label: 'Hôtel 4★', colorVariant: 'teal', source: 'classification' },
-        { tagId: 't2', slug: 'cuisine', label: 'Cuisine', colorVariant: 'orange', source: 'thematic' },
+        { tagId: 't1', slug: 'hotel-4', label: 'Hôtel 4★', color: '#14b8a6' },
+        { tagId: 't2', slug: 'cuisine', label: 'Cuisine', color: '#f97316' },
       ],
-      derived: [],
       library: [],
     },
     sustainability: {

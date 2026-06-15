@@ -1,14 +1,10 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Star } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
-import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
+import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
-import { cn } from '@/lib/utils';
-
-const MAX_LABEL_TAGS = 1;
+import { ResultCardView } from './ResultCardView';
 
 interface ResultsListProps {
   cards: ObjectCard[];
@@ -20,39 +16,6 @@ interface ResultsListProps {
 
 function toResultCardDomId(cardId: string): string {
   return `result-card-${String(cardId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-}
-
-function bucketForCardType(type: string): ExplorerBucketKey | null {
-  const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
-  for (const [bucket, types] of Object.entries(EXPLORER_BUCKET_TYPE_MAP) as [ExplorerBucketKey, BackendObjectTypeCode[]][]) {
-    if (types.includes(code)) {
-      return bucket;
-    }
-  }
-  return null;
-}
-
-function categoryTagClasses(bucket: ExplorerBucketKey | null): string {
-  if (bucket === 'HOT') return 'bg-teal-soft text-teal-2';
-  if (bucket === 'ACT') return 'bg-orange-soft text-orange-2';
-  return 'border border-line bg-surface2 text-ink-2';
-}
-
-function categoryTagLabel(bucket: ExplorerBucketKey | null, typeLabel: string): string {
-  if (bucket) {
-    const opt = EXPLORER_BUCKET_OPTIONS.find((o) => o.code === bucket);
-    if (opt) return opt.label;
-  }
-  return typeLabel;
-}
-
-function pickTaxonomyLabel(card: ObjectCard): string | null {
-  const first = card.taxonomy?.[0];
-  if (!first) return null;
-  const leaf = first.path?.[first.path.length - 1]?.name?.trim();
-  if (leaf) return leaf;
-  const fallback = first.name?.trim();
-  return fallback || null;
 }
 
 function ResultsListSkeleton() {
@@ -163,130 +126,26 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
         {orderedCards.map((card) => {
-          const typeLabel = normalizeExplorerObjectType(card.type);
-          const bucket = bucketForCardType(card.type);
-          const categoryLabel = categoryTagLabel(bucket, typeLabel);
-          const city = card.location?.city ?? '—';
-          const taxonomyLabel = pickTaxonomyLabel(card);
-          const labels = Array.isArray(card.labels) ? card.labels : [];
-          const labelTags = labels.slice(0, MAX_LABEL_TAGS);
-          const extraLabelCount = Math.max(0, labels.length - MAX_LABEL_TAGS);
           const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
-          const isOpen = Boolean(card.open_now);
-          const capacityLine = card.render?.capacity?.trim();
           const inSelection = selectedObjectIds.includes(card.id);
-
           return (
-            <div
+            <ResultCardView
               key={card.id}
-              id={toResultCardDomId(card.id)}
-              role="button"
-              tabIndex={0}
-              onClick={() => openDrawer(card.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  openDrawer(card.id);
+              card={card}
+              domId={toResultCardDomId(card.id)}
+              isSelected={isSelected}
+              inSelection={inSelection}
+              onOpen={() => openDrawer(card.id)}
+              onToggleLabel={toggleLabel}
+              onToggleSelect={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!inSelection) {
+                  flyStarToSelection(event.currentTarget);
                 }
+                toggleSelectedObject(card.id);
               }}
-              className={cn(
-                'grid h-[116px] cursor-pointer grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
-                isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
-              )}
-            >
-              <div
-                className="h-24 w-24 flex-none overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
-                style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
-              />
-
-              <div className="flex min-w-0 flex-col gap-1 overflow-hidden py-0.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={cn(
-                      'h-2 w-2 shrink-0 rounded-full',
-                      isOpen ? 'bg-brand-green shadow-[0_0_0_3px_rgba(44,163,111,0.16)]' : 'bg-brand-red shadow-[0_0_0_3px_rgba(200,92,72,0.14)]',
-                    )}
-                    title={isOpen ? 'Ouvert' : 'Fermeture'}
-                  />
-                  <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
-                    {card.name}
-                  </h3>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
-                  <span className="inline-flex min-w-0 items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />
-                    {city}
-                  </span>
-                  {taxonomyLabel ? (
-                    <>
-                      <span className="text-ink-4">·</span>
-                      <span className="max-w-[12rem] shrink-0 truncate" title={taxonomyLabel}>
-                        {taxonomyLabel}
-                      </span>
-                    </>
-                  ) : null}
-                  {capacityLine ? (
-                    <>
-                      <span className="text-ink-4">·</span>
-                      <span className="shrink-0">{capacityLine}</span>
-                    </>
-                  ) : null}
-                </div>
-                <div className="mt-auto flex min-w-0 flex-nowrap items-center gap-1">
-                  <span
-                    className={cn(
-                      'inline-flex h-5 max-w-[10rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
-                      categoryTagClasses(bucket),
-                    )}
-                  >
-                    {categoryLabel}
-                  </span>
-                  {labelTags.map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      title={label}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        toggleLabel(label);
-                      }}
-                      className="inline-flex h-5 max-w-[9rem] shrink items-center truncate rounded-[5px] border border-line bg-surface2 px-1.5 text-[11px] font-semibold tracking-wide text-ink-2"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  {extraLabelCount > 0 ? (
-                    <span className="inline-flex h-5 shrink-0 items-center rounded-[5px] border border-line px-1.5 text-[11px] font-semibold text-ink-3">
-                      +{extraLabelCount}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex flex-col items-end self-start py-0.5">
-                <button
-                  type="button"
-                  className={cn(
-                    'grid h-7 w-7 place-items-center rounded-[8px] transition',
-                    inSelection ? 'text-orange' : 'text-ink-4 hover:bg-orange-soft hover:text-orange',
-                  )}
-                  aria-label={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
-                  aria-pressed={inSelection}
-                  title={inSelection ? 'Retirer de la selection' : 'Ajouter a la selection'}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (!inSelection) {
-                      flyStarToSelection(event.currentTarget);
-                    }
-                    toggleSelectedObject(card.id);
-                  }}
-                >
-                  <Star className={cn('h-4 w-4', inSelection && 'fill-current')} />
-                </button>
-              </div>
-            </div>
+            />
           );
         })}
       </div>

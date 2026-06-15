@@ -1,4 +1,4 @@
-import type { LocationSummary, ObjectCard } from '../types/domain';
+import type { LocationSummary, ObjectCard, ObjectCardTagChip } from '../types/domain';
 
 function cleanText(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
@@ -213,22 +213,68 @@ export function formatExplorerCardAddress(location?: LocationSummary): string | 
   return [baseAddress, ...extras].filter(Boolean).join(', ') || null;
 }
 
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/;
+const DEFAULT_TAG_HEX = '#64748b';
+
+function normalizeHexColor(value: unknown): string {
+  const v = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return HEX_COLOR_RE.test(v) ? v : DEFAULT_TAG_HEX;
+}
+
+/**
+ * Inline style for a colored §09 tag chip: solid hex fill + a contrast-computed text color
+ * (relative luminance) so any palette color stays legible. Shared by the card, map hover and the
+ * §09 editor preview/swatches.
+ */
+export function tagChipStyle(hex: string): { backgroundColor: string; color: string } {
+  const color = normalizeHexColor(hex);
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return { backgroundColor: color, color: luminance > 0.6 ? '#1f2937' : '#ffffff' };
+}
+
+/**
+ * Build the colored §09 tag chips: keep card.tags order (= tag_link.position from the RPC), dedup by
+ * normalized label, and CROSS-DEDUPE against the neutral `labels` blend so the same concept never
+ * shows as both a colored chip and a neutral label.
+ */
+function buildTagChips(tags: unknown, neutralLabels: string[]): ObjectCardTagChip[] {
+  const taken = new Set(neutralLabels.map((label) => normalizeForCompare(label)));
+  const chips: ObjectCardTagChip[] = [];
+  for (const raw of readObjectList(tags)) {
+    const label = shortenDisplayLabel(readLabel(raw));
+    const key = normalizeForCompare(label);
+    if (!label || !key || taken.has(key)) {
+      continue;
+    }
+    taken.add(key);
+    chips.push({ label, color: normalizeHexColor(raw.color), slug: cleanText(raw.slug) });
+  }
+  return chips;
+}
+
 export function normalizeExplorerCard(card: ObjectCard): ObjectCard {
+  // §09 tags are the curated COLORED display layer — pulled OUT of the neutral `labels` blend (so a
+  // tag never double-renders as a colored chip AND a neutral label / inflates +N) and emitted as a
+  // separate colored, position-ordered group via buildTagChips.
   const labels = dedupeLabels([
     readLabelMatchLabel(card),
     ...readClassificationLabels(card),
     ...readLabels(card.labels),
     ...readBadgeLabels(card),
-    ...readLabels(card.tags),
     ...readLabels(card.environment_tags),
     ...(hasPetFriendlySignal(card) ? ['Animaux acceptes'] : []),
     ...(hasAccessibilitySignal(card) ? ['Accessibilite'] : []),
   ]);
+  const tagChips = buildTagChips(card.tags, labels);
   const formattedAddress = formatExplorerCardAddress(card.location);
 
   return {
     ...card,
     labels,
+    tagChips,
     location: card.location
       ? {
           ...card.location,

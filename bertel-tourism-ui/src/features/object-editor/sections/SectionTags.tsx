@@ -1,100 +1,66 @@
 import { useState } from 'react';
-import { Fs, Select, SortableList } from '../primitives';
-import type { SelectOption } from '../primitives';
+import { Fs, SortableList } from '../primitives';
+import { ResultCardView } from '../../../components/explorer/ResultCardView';
+import { TagPickerModal } from '../widgets/TagPickerModal';
+import { tagChipStyle } from '../../../utils/explorer-card';
+import { buildPreviewCardFromDraft } from './tags-preview';
 import type { SectionProps } from './section-types';
-import type {
-  ObjectWorkspaceTagColorVariant,
-  ObjectWorkspaceTagItem,
-} from '../../../services/object-workspace-parser';
+import type { ObjectWorkspaceTagItem, ObjectWorkspaceTagsModule } from '../../../services/object-workspace-parser';
 
 /**
- * Plan 4 — Section 09 "Tags & étiquettes".
+ * Plan §76 — Section 09 "Tags & étiquettes" (redesign).
  *
- * Mirrors `docs/Bertel_design_exemple/edit-classification.jsx → SectionTags`.
- *
- * Tags are the colored display layer shown on Explorer cards and in fiche
- * headers. The displayed list IS the priority order (drag-to-reorder via the
- * move-up / move-down buttons). Color variant + source are per-row metadata
- * stored in `tag_link.extra` via the `save_object_workspace_tags` RPC.
+ * Tags are the curated COLORED display layer shown on Explorer cards + the map. The list IS the
+ * priority order (drag to reorder → tag_link.position, which the card now honors). Color is GLOBAL
+ * per tag (ref_tag.color, hex) — shown read-only on each chip and edited in the modal (api.set_tag_color).
+ * "Ajouter un tag" opens a modal to search existing tags or create a new one (dedup-guarded,
+ * api.create_tag). The right pane is the REAL Explorer card (shared ResultCardView) built from the
+ * live draft, so reorder/recolor/add/remove are reflected truthfully and instantly.
  */
 
-const COLOR_VARIANTS: SelectOption[] = [
-  { v: 'teal', l: 'Teal · principal' },
-  { v: 'orange', l: 'Orange · accroche' },
-  { v: 'neutral', l: 'Neutre' },
-  { v: 'outline', l: 'Outline · sobre' },
-  { v: 'green', l: 'Vert · statut' },
-];
+type ModalState = { open: boolean; mode: 'add' | 'color'; editTag: ObjectWorkspaceTagItem | null };
 
-const SOURCE_OPTIONS: SelectOption[] = [
-  { v: 'thematic', l: 'Thématique' },
-  { v: 'audience', l: 'Public' },
-  { v: 'ambience', l: 'Ambiance' },
-  { v: 'badges', l: 'Badge éditorial' },
-  { v: 'classification', l: 'Auto · classification' },
-  { v: 'taxo', l: 'Auto · taxonomie' },
-];
-
-interface TagPreviewCardProps {
-  tags: ObjectWorkspaceTagItem[];
-  resourceName: string;
+function sameTag(a: ObjectWorkspaceTagItem, b: ObjectWorkspaceTagItem): boolean {
+  return a.tagId && b.tagId ? a.tagId === b.tagId : a.slug === b.slug;
 }
 
-function TagPreviewCard({ tags, resourceName }: TagPreviewCardProps) {
-  return (
-    <div className="tag-preview">
-      <div className="tag-preview__head">
-        <strong>Aperçu carte</strong>
-        <span style={{ fontSize: 10.5, color: 'var(--ink-4)' }}>tel qu'affiché dans l'Explorer</span>
-      </div>
-      <div className="tag-preview__card">
-        <div className="tag-preview__img" />
-        <div className="tag-preview__body">
-          <div className="tag-preview__title">{resourceName || 'Aperçu de la fiche'}</div>
-          <div className="tag-preview__sub">Hôtel · L'Entre-Deux · Bras-Long</div>
-          <div className="tag-preview__tags">
-            {tags.slice(0, 4).map((tag, index) => (
-              <span key={`${tag.slug}-${index}`} className={`tag ${tag.colorVariant}`}>
-                {tag.label}
-              </span>
-            ))}
-            {tags.length > 4 && <span className="tag outline">+{tags.length - 4}</span>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function SectionTags({ editor, folded }: SectionProps) {
+export function SectionTags({ editor, permissions, objectId, typeCode, folded }: SectionProps) {
   const module = editor.draft.tags;
   const displayed = module.displayed;
-  const [picking, setPicking] = useState(false);
+  const writable = permissions?.tags?.canDirectWrite ?? false;
+  const disabledReason = permissions?.tags?.disabledReason ?? null;
+  const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', editTag: null });
 
-  /** Tags from the library that are not yet in the displayed list (matched by tagId falling back to slug). */
-  const availableLibraryTags = module.library.filter(
-    (libTag) =>
-      !displayed.some(
-        (d) => (d.tagId && libTag.tagId ? d.tagId === libTag.tagId : d.slug === libTag.slug),
-      ),
-  );
+  const previewCard = buildPreviewCardFromDraft(editor, typeCode);
 
-  function addFromLibrary(tag: ObjectWorkspaceTagItem) {
-    editor.replaceModule('tags', { ...module, displayed: [...displayed, tag] });
-    setPicking(false);
+  function setModule(next: ObjectWorkspaceTagsModule) {
+    editor.replaceModule('tags', next);
   }
 
-  function updateTag(index: number, patch: Partial<ObjectWorkspaceTagItem>) {
-    editor.replaceModule('tags', {
+  function addTag(tag: ObjectWorkspaceTagItem) {
+    if (displayed.some((d) => sameTag(d, tag))) return;
+    setModule({
       ...module,
-      displayed: displayed.map((tag, i) => (i === index ? { ...tag, ...patch } : tag)),
+      displayed: [...displayed, tag],
+      library: module.library.filter((l) => !sameTag(l, tag)),
     });
   }
 
   function removeTag(index: number) {
-    editor.replaceModule('tags', {
+    const removed = displayed[index];
+    setModule({
       ...module,
       displayed: displayed.filter((_, i) => i !== index),
+      // Return the removed tag to the library so it stays re-addable.
+      library: removed && !module.library.some((l) => sameTag(l, removed)) ? [...module.library, removed] : module.library,
+    });
+  }
+
+  function recolor(tagId: string, color: string) {
+    setModule({
+      ...module,
+      displayed: displayed.map((t) => (t.tagId === tagId ? { ...t, color } : t)),
+      library: module.library.map((t) => (t.tagId === tagId ? { ...t, color } : t)),
     });
   }
 
@@ -106,136 +72,110 @@ export function SectionTags({ editor, folded }: SectionProps) {
       folded={folded}
       pill={{ tone: 'ok', label: `${displayed.length} affichée(s)` }}
     >
-      <div className="grid-2-1" style={{ marginBottom: 18 }}>
+      <div className="grid-2-1" style={{ marginBottom: 4 }}>
         <div>
           <div className="chip-group__label" style={{ marginTop: 0 }}>
             Tags affichés en priorité
             <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-              {' '}(ordre = priorité)
+              {' '}(glisser pour réordonner)
             </span>
           </div>
 
           {displayed.length === 0 ? (
             <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-              Aucun tag affiché. Sélectionner un tag dans la bibliothèque pour l'ajouter ici.
+              Aucun tag affiché.{writable ? ' Ajoutez-en un ci-dessous.' : ''}
             </p>
           ) : (
-            <>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '14px 1fr 150px 130px auto',
-                  gap: 6,
-                  padding: '6px 12px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--ink-4)',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                <span />
-                <span>Libellé affiché</span>
-                <span>Variante couleur</span>
-                <span>Source</span>
-                <span />
-              </div>
-              <SortableList
-                items={displayed}
-                getId={(t) => t.tagId || t.slug}
-                onReorder={(next) => editor.replaceModule('tags', { ...module, displayed: next })}
-                columns="14px 1fr 150px 130px auto"
-                renderItem={(tag, index) => (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className={`tag ${tag.colorVariant}`} style={{ flex: 'none' }}>
-                        {tag.label}
-                      </span>
-                    </div>
-                    <Select
-                      value={tag.colorVariant}
-                      options={COLOR_VARIANTS}
-                      onChange={(value) =>
-                        updateTag(index, { colorVariant: value as ObjectWorkspaceTagColorVariant })
-                      }
-                    />
-                    <Select
-                      value={tag.source}
-                      options={SOURCE_OPTIONS}
-                      onChange={(value) =>
-                        updateTag(index, { source: value as ObjectWorkspaceTagItem['source'] })
-                      }
-                    />
-                    <div className="rep-row__act">
-                      <button type="button" className="del" onClick={() => removeTag(index)}>
-                        ✕
-                      </button>
-                    </div>
-                  </>
-                )}
-              />
-            </>
+            <SortableList
+              items={displayed}
+              getId={(t) => t.tagId || t.slug}
+              onReorder={(next) => setModule({ ...module, displayed: next })}
+              columns="14px 1fr auto auto"
+              renderItem={(tag, index) => (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    <span
+                      style={{
+                        ...tagChipStyle(tag.color),
+                        padding: '3px 10px',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tag.label}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!writable}
+                    style={{ fontSize: 11 }}
+                    onClick={() => setModal({ open: true, mode: 'color', editTag: tag })}
+                  >
+                    Couleur
+                  </button>
+                  <div className="rep-row__act">
+                    <button
+                      type="button"
+                      className="del"
+                      disabled={!writable}
+                      aria-label={`Retirer ${tag.label}`}
+                      onClick={() => removeTag(index)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </>
+              )}
+            />
           )}
+
+          {writable ? (
+            <button
+              type="button"
+              onClick={() => setModal({ open: true, mode: 'add', editTag: null })}
+              style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 10 }}
+            >
+              Ajouter un tag
+            </button>
+          ) : (
+            <p className="muted" style={{ marginTop: 10 }}>
+              {disabledReason ?? 'Lecture seule.'}
+            </p>
+          )}
+
+          <p className="muted" style={{ marginTop: 12, fontSize: 11.5 }}>
+            Les classements certifiés (étoiles, labels) priment sur ces tags dans l’espace limité de la carte.
+          </p>
         </div>
 
-        <TagPreviewCard tags={displayed} resourceName="" />
-      </div>
-
-      {/* Library picker — lets the user append an existing ref_tag to the displayed list. */}
-      <div style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={() => setPicking((prev) => !prev)}
-          style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-        >
-          {picking ? 'Fermer la bibliothèque' : 'Ajouter un tag'}
-        </button>
-
-        {picking && (
-          <div style={{ marginTop: 8 }}>
-            {availableLibraryTags.length === 0 ? (
-              <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-                Aucun tag disponible dans la bibliothèque.
-              </p>
-            ) : (
-              <div className="chip-set" style={{ marginTop: 4 }}>
-                {availableLibraryTags.map((tag) => (
-                  <button
-                    key={tag.tagId ?? tag.slug}
-                    type="button"
-                    className={`tag ${tag.colorVariant}`}
-                    onClick={() => addFromLibrary(tag)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {tag.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {module.derived.length > 0 && (
-        <>
-          <div className="chip-group__label" style={{ marginTop: 18 }}>
-            Tags auto-générés
+        <div>
+          <div className="chip-group__label" style={{ marginTop: 0 }}>
+            Aperçu carte
             <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-              {' '}(dérivés de classification + taxonomie · lecture seule)
+              {' '}(tel qu’affiché dans l’Explorer)
             </span>
           </div>
-          <div className="chip-set">
-            {module.derived.map((tag) => (
-              <span key={tag.slug} className="tag outline">
-                {tag.label}
-                <em style={{ marginLeft: 4, color: 'var(--ink-4)', fontStyle: 'normal' }}>
-                  ← {tag.source}
-                </em>
-              </span>
-            ))}
-          </div>
-        </>
-      )}
+          <ResultCardView card={previewCard} interactive={false} />
+        </div>
+      </div>
+
+      <TagPickerModal
+        open={modal.open}
+        mode={modal.mode}
+        anchorObjectId={objectId}
+        library={module.library}
+        displayed={displayed}
+        editTag={modal.editTag}
+        onClose={() => setModal((m) => ({ ...m, open: false }))}
+        onAdd={addTag}
+        onRecolor={recolor}
+      />
     </Fs>
   );
 }

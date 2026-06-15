@@ -11,6 +11,7 @@ import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
+import { tagChipStyle } from '../../utils/explorer-card';
 import { buildObjectFeatureCollection } from './map-source';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
@@ -73,8 +74,27 @@ type HoverPopupState = {
   city?: string;
   typeLabel?: string;
   openNow?: boolean | null;
-  labels?: string[];
+  chips?: { label: string; color?: string }[];
 };
+
+/**
+ * Hover chips: the colored §09 tags first (with their global hex), then neutral labels — deduped,
+ * capped at 2. Mirrors the result card's color story so the map tells the same story as the list.
+ */
+function buildHoverChips(card: ObjectCard): { label: string; color?: string }[] {
+  const colored = (card.tagChips ?? []).map((chip) => ({ label: chip.label, color: chip.color }));
+  const neutral = (Array.isArray(card.labels) ? card.labels : []).map((label) => ({ label }));
+  const seen = new Set<string>();
+  const out: { label: string; color?: string }[] = [];
+  for (const chip of [...colored, ...neutral]) {
+    const key = chip.label.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(chip);
+    if (out.length >= 2) break;
+  }
+  return out;
+}
 
 /** Resolve a card's display category label (matches the result-card pill). */
 function getCategoryLabel(type: string): string {
@@ -316,7 +336,7 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
           city: card.location?.city ?? undefined,
           typeLabel: getCategoryLabel(card.type),
           openNow: card.open_now ?? null,
-          labels: Array.isArray(card.labels) ? card.labels.slice(0, 2) : undefined,
+          chips: buildHoverChips(card),
           lngLat: [lng, lat],
         });
       }, HOVER_INTENT_DELAY_MS);
@@ -677,11 +697,15 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
                         ) : null}
                       </span>
                     ) : null}
-                    {hoverPopupState.labels && hoverPopupState.labels.length > 0 ? (
+                    {hoverPopupState.chips && hoverPopupState.chips.length > 0 ? (
                       <span className="map-hover-card__tags">
-                        {hoverPopupState.labels.map((label) => (
-                          <span key={label} className="map-hover-card__tag">
-                            {label}
+                        {hoverPopupState.chips.map((chip) => (
+                          <span
+                            key={chip.label}
+                            className="map-hover-card__tag"
+                            style={chip.color ? tagChipStyle(chip.color) : undefined}
+                          >
+                            {chip.label}
                           </span>
                         ))}
                       </span>

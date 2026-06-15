@@ -902,27 +902,16 @@ export interface ObjectWorkspaceContactsModule {
   relatedOrganizationContactsCount: number;
 }
 
-export type ObjectWorkspaceTagColorVariant = 'teal' | 'orange' | 'neutral' | 'outline' | 'green';
-
-export type ObjectWorkspaceTagSource =
-  | 'thematic'
-  | 'audience'
-  | 'ambience'
-  | 'badges'
-  | 'classification'
-  | 'taxo';
-
 export interface ObjectWorkspaceTagItem {
   tagId: string;
   slug: string;
   label: string;
-  colorVariant: ObjectWorkspaceTagColorVariant;
-  source: ObjectWorkspaceTagSource;
+  /** Global display color (ref_tag.color) as a lowercase hex #rrggbb. */
+  color: string;
 }
 
 export interface ObjectWorkspaceTagsModule {
   displayed: ObjectWorkspaceTagItem[];
-  derived: ObjectWorkspaceTagItem[];
   library: ObjectWorkspaceTagItem[];
 }
 
@@ -2711,36 +2700,20 @@ function dedupeReferenceOptions(options: WorkspaceReferenceOption[]): WorkspaceR
   return normalized.sort((left, right) => left.label.localeCompare(right.label, 'fr'));
 }
 
-const TAG_COLOR_VARIANTS = new Set<ObjectWorkspaceTagColorVariant>(['teal', 'orange', 'neutral', 'outline', 'green']);
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/;
 
-export function normalizeTagColorVariant(value: string): ObjectWorkspaceTagColorVariant {
-  const normalized = value.trim().toLowerCase();
-  return TAG_COLOR_VARIANTS.has(normalized as ObjectWorkspaceTagColorVariant)
-    ? normalized as ObjectWorkspaceTagColorVariant
-    : 'teal';
-}
+/** Neutral slate — the default tag color when none is set (mirrors api.create_tag). */
+export const DEFAULT_TAG_COLOR = '#64748b';
 
 /**
- * Resolve the display color for a tag, with per-object override winning over the global ref_tag color.
- * tag_link.extra.color_variant (linkExtra) takes precedence; ref_tag.color (refTag) is the fallback;
- * 'neutral' is the ultimate default when neither is set.
+ * Normalize a tag's display color to a lowercase hex #rrggbb. ref_tag.color stores hex
+ * (a designed palette; the old named-variant set was UI-fallback fiction). Color is GLOBAL
+ * per tag — no per-object override. Anything invalid falls back to the neutral slate default.
  * Exported so object-workspace.ts can re-export it for tests and callers.
  */
-export function resolveTagColor(
-  refTag: { color?: unknown },
-  linkExtra: { color_variant?: unknown },
-): ObjectWorkspaceTagColorVariant {
-  return normalizeTagColorVariant(
-    readString(linkExtra?.color_variant, readString(refTag?.color, 'neutral')),
-  );
-}
-
-export function normalizeTagSource(value: string): ObjectWorkspaceTagSource {
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'audience' || normalized === 'ambience' || normalized === 'badges' || normalized === 'classification' || normalized === 'taxo') {
-    return normalized;
-  }
-  return 'thematic';
+export function normalizeTagColor(value: unknown, fallback: string = DEFAULT_TAG_COLOR): string {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return HEX_COLOR_RE.test(normalized) ? normalized : fallback;
 }
 
 /** Strip non-digits from INSEE identifiers. */
@@ -2873,21 +2846,19 @@ function channelLogoCode(kindCode: string, kindName: string): string {
 
 function parseWorkspaceTagsModule(raw: Record<string, unknown>): ObjectWorkspaceTagsModule {
   const displayed = readArray(raw.tags).map((record) => {
-    const extra = readRecord(record.extra);
     const slug = readString(record.slug);
     const label = readString(record.name, slug);
     return {
       tagId: readString(record.id, readString(record.tag_id)),
       slug,
       label,
-      colorVariant: resolveTagColor(record, extra),
-      source: normalizeTagSource(readString(extra.source, 'thematic')),
+      // Color is GLOBAL per tag (ref_tag.color, hex). No per-object override.
+      color: normalizeTagColor(record.color),
     };
   }).filter((item) => item.slug || item.label);
 
   return {
     displayed,
-    derived: [],
     library: [],
   };
 }

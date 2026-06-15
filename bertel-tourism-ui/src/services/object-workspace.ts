@@ -45,6 +45,7 @@ import {
   type ObjectWorkspaceMenuItem,
   type ObjectWorkspaceMenusModule,
   type ObjectWorkspaceSustainabilityModule,
+  type ObjectWorkspaceTagItem,
   type ObjectWorkspaceTagsModule,
   type ObjectWorkspaceEventModule,
   type ObjectWorkspaceItineraryModule,
@@ -62,16 +63,15 @@ import {
   type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
   type WorkspaceMediaOption,
-  normalizeTagSource,
-  resolveTagColor,
+  normalizeTagColor,
 } from './object-workspace-parser';
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
 import { buildBedRows } from '../features/object-editor/sections/blocks/rooms-utils';
 import { listObjectCrm } from './crm';
 
-// Re-export resolveTagColor so callers and tests that import from this entry point can reach it
+// Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
-export { resolveTagColor } from './object-workspace-parser';
+export { normalizeTagColor } from './object-workspace-parser';
 
 export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
 
@@ -3273,15 +3273,14 @@ async function getObjectWorkspaceTagsModule(
     displayed = ((tagLinkResult.data ?? []) as Record<string, unknown>[])
       .map((link) => {
         const refTag = refTagById.get(readString(link.tag_id)) ?? {};
-        const extra = readRecord(link.extra);
         const slug = readString((refTag as Record<string, unknown>).slug);
         const label = readString((refTag as Record<string, unknown>).name, slug);
         return {
           tagId: readString(link.tag_id),
           slug,
           label,
-          colorVariant: resolveTagColor(refTag as { color?: unknown }, extra as { color_variant?: unknown }),
-          source: normalizeTagSource(readString(extra.source, 'thematic')),
+          // Color is GLOBAL per tag (ref_tag.color, hex) — no per-object tag_link.extra override.
+          color: normalizeTagColor((refTag as Record<string, unknown>).color),
         };
       })
       .filter((item) => item.slug || item.label);
@@ -3295,8 +3294,7 @@ async function getObjectWorkspaceTagsModule(
       tagId: readString(row.id),
       slug: readString(row.slug),
       label: readString(row.name, readString(row.slug)),
-      colorVariant: resolveTagColor(row, {}),
-      source: 'thematic' as const,
+      color: normalizeTagColor(row.color),
     }))
     .filter((tag) => tag.slug && !displayedTagIds.has(tag.tagId));
 
@@ -4242,17 +4240,87 @@ export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWor
   }
 
   await callObjectWorkspaceRpc('save_object_workspace_tags', objectId, {
+    // Per-object save persists ONLY which tags are displayed + their order (tag_link rows +
+    // position). Color is GLOBAL per tag (ref_tag.color) and is written by api.set_tag_color,
+    // not here. Label is read from ref_tag at load time (never persisted per-object).
     tags: input.displayed.map((tag) => ({
       tag_id: toRpcUuid(tag.tagId),
       slug: tag.slug,
-      // Only color_variant and source go into tag_link.extra; label is read from ref_tag at load time
-      // and must not be persisted per-object (it would diverge from ref_tag.name on renames).
-      extra: {
-        color_variant: tag.colorVariant,
-        source: tag.source,
-      },
     })),
   }, 'Impossible d enregistrer les tags.');
+}
+
+/**
+ * §09 — create a GLOBAL tag (or return the existing one) via api.create_tag.
+ * Dedup-guarded server-side on ref_tag.name_normalized; gated per-object by the anchor object.
+ * Returns the canonical {tagId, slug, label, color} to merge into the editor draft (id reconciliation:
+ * a later reorder/save must carry the real tag_id, never an empty one). demoMode → local optimistic tag.
+ */
+export async function createWorkspaceTag(
+  anchorObjectId: string,
+  name: string,
+  color: string,
+): Promise<ObjectWorkspaceTagItem> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error('Le nom du tag est requis.');
+  }
+  const normalizedColor = normalizeTagColor(color);
+
+  if (useSessionStore.getState().demoMode) {
+    return { tagId: '', slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-'), label: trimmed, color: normalizedColor };
+  }
+
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour créer le tag.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('create_tag', {
+    p_anchor_object_id: anchorObjectId,
+    p_name: trimmed,
+    p_color: normalizedColor,
+  });
+  if (error) {
+    throw mapMutationError(error, 'Impossible de créer le tag.');
+  }
+  const row = readRecord(data);
+  return {
+    tagId: readString(row.tag_id),
+    slug: readString(row.slug),
+    label: readString(row.name, trimmed),
+    color: normalizeTagColor(row.color),
+  };
+}
+
+/**
+ * §09 — set a tag's GLOBAL color (ref_tag.color) via api.set_tag_color. Affects every object/surface
+ * (color is global per tag). Gated per-object by the anchor object. demoMode → no-op echo.
+ */
+export async function setWorkspaceTagColor(
+  anchorObjectId: string,
+  tagId: string,
+  color: string,
+): Promise<string> {
+  const normalizedColor = normalizeTagColor(color);
+  if (useSessionStore.getState().demoMode) {
+    return normalizedColor;
+  }
+  if (!tagId) {
+    throw new Error('Identifiant de tag manquant pour le changement de couleur.');
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour changer la couleur du tag.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('set_tag_color', {
+    p_anchor_object_id: anchorObjectId,
+    p_tag_id: tagId,
+    p_color: normalizedColor,
+  });
+  if (error) {
+    throw mapMutationError(error, 'Impossible de changer la couleur du tag.');
+  }
+  return normalizeTagColor(readRecord(data).color, normalizedColor);
 }
 
 function buildCodeIdMap(rows: unknown[]): Map<string, string> {

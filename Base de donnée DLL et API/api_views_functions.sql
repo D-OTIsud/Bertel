@@ -3257,9 +3257,8 @@ BEGIN
       COALESCE((
       SELECT jsonb_agg(
                jsonb_build_object('slug', t.slug, 'name', t.name, 'color', t.color, 'icon', t.icon, 'icon_url', t.icon_url)
-               -- §09: per-object priority order (tag_link.position). NOTE: this function has a
-               -- pending undeployed change (structured beds, commit ecf6ed8); this ORDER BY line
-               -- ships with the NEXT get_object_resource deploy, not the tags-only live apply.
+               -- §09: per-object priority order (tag_link.position) — deployed 2026-06-15
+               -- (MCP migration get_object_resource_tag_order; in lockstep with the 3 card/map sites).
                ORDER BY COALESCE(tl.position, 999999), t.name, t.slug
              )
       FROM tag_link tl

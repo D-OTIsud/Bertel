@@ -7,6 +7,8 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+# scratch deploy/test artifacts (e.g. crm_body.tmp.sql, notes.tmp.md) — *.tmp doesn't catch these
+*.tmp.*
 
 # IDE files
 .vscode/

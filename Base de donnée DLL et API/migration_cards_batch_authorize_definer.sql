@@ -246,7 +246,10 @@ AS $$
           'icon', t.icon,
           'icon_url', t.icon_url
         )
-        ORDER BY COALESCE(t.position, 999999), t.name, t.slug
+        -- §09: per-object priority order (tag_link.position), NOT global ref_tag.position.
+        -- This DEFINER override is the LIVE body serving the Explorer grid (manifest 8j);
+        -- it must carry the same order change as the baseline in api_views_functions.sql.
+        ORDER BY COALESCE(tl.position, 999999), t.name, t.slug
       ) AS payload
     FROM tag_link tl
     JOIN distinct_ids di ON di.id = tl.target_pk

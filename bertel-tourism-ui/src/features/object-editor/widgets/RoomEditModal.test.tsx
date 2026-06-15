@@ -18,14 +18,56 @@ const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions
 };
 
 describe('RoomEditModal', () => {
-  it('edits room type + amenities and returns the patched room on save', () => {
+  it('edits the room type and returns the patched room on save', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
     fireEvent.change(screen.getByLabelText('Type de chambre'), { target: { value: 'double' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.roomTypeCode).toBe('double');
+  });
+
+  it('uses numeric inputs and unit suffixes', () => {
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByLabelText('Couchages (total)').getAttribute('type')).toBe('number');
+    expect(screen.getByLabelText('Surface').getAttribute('type')).toBe('number');
+    expect(screen.getByLabelText('Tarif indicatif').getAttribute('type')).toBe('number');
+    expect(screen.getByText('m²')).toBeInTheDocument();
+    expect(screen.getByText('€ / nuit')).toBeInTheDocument();
+  });
+
+  it('relabels Unités to Nb. de chambres (de ce type)', () => {
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByLabelText('Nb. de chambres (de ce type)')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Unités')).not.toBeInTheDocument();
+  });
+
+  it('locks adults + children to the total', () => {
+    const onSave = jest.fn();
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '4' } });
+    expect((screen.getByLabelText('Adultes') as HTMLInputElement).value).toBe('4');
+    expect((screen.getByLabelText('Enfants') as HTMLInputElement).value).toBe('0');
+    fireEvent.change(screen.getByLabelText('Adultes'), { target: { value: '1' } });
+    expect((screen.getByLabelText('Enfants') as HTMLInputElement).value).toBe('3');
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
+    expect(saved).toMatchObject({ capacityTotal: '4', capacityAdults: '1', capacityChildren: '3' });
+  });
+
+  it('edits amenities through the searchable equipment modal', () => {
+    const onSave = jest.fn();
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /Choisir/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['wifi']);
+  });
+
+  it('renders a PMR accessibility toggle', () => {
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Chambre accessible (PMR)' })).toBeInTheDocument();
   });
 });

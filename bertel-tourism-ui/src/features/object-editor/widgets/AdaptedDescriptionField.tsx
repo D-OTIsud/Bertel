@@ -101,7 +101,7 @@ export function AdaptedDescriptionField({ editor, descriptions, objectScope, can
       {/* Radix Dialog (inside EditorModal) owns visibility via `open`; it unmounts its content
           when closed, so the WYSIWYG (and TipTap) still load lazily on first open. No outer
           `open &&` guard — that double-gate caused a redundant mount + spurious act() warnings. */}
-      <EditorModal open={open} title="Description adaptée" onClose={() => setOpen(false)} onSave={save}>
+      <EditorModal open={open} title="Description adaptée" size="lg" onClose={() => setOpen(false)} onSave={save}>
         <LangTabs tabs={langTabs} active={activeLang} onSelect={setActiveLang} />
         <MarkdownEditorLazy
           value={readTranslatableField(draft, activeLang, local)}

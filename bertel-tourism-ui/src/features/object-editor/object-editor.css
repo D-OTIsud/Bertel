@@ -2322,5 +2322,5 @@
 .md-editor__btn:hover:not(:disabled) { background: var(--surface, #fff); }
 .md-editor__btn.is-on { background: var(--surface, #fff); color: var(--ink, #222); border-color: var(--line, #e3e3e3); }
 .md-editor__btn:disabled { opacity: 0.4; cursor: default; }
-.md-editor__content { min-height: 160px; padding: 12px 14px; outline: none; }
+.md-editor__content { min-height: 220px; padding: 12px 14px; outline: none; }
 .md-editor__content:focus { outline: none; }

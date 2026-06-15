@@ -9,14 +9,17 @@ interface EditorModalProps {
   saveLabel?: string;
   /** Disables the save/validate action — used for read-only modals with no write path. */
   saveDisabled?: boolean;
+  /** 'lg' widens the dialog (max-w-2xl) — for content that needs room, e.g. the rich-text
+   *  description editor. Default keeps the standard max-w-lg used by the record modals. */
+  size?: 'default' | 'lg';
   children: ReactNode;
 }
 
 /** Focused add/edit modal for editor sub-records (media, rooms). Save/Cancel footer. */
-export function EditorModal({ open, title, onClose, onSave, saveLabel = 'Enregistrer', saveDisabled = false, children }: EditorModalProps) {
+export function EditorModal({ open, title, onClose, onSave, saveLabel = 'Enregistrer', saveDisabled = false, size = 'default', children }: EditorModalProps) {
   return (
     <Dialog open={open} onOpenChange={(next: boolean) => { if (!next) onClose(); }}>
-      <DialogContent className="object-editor">
+      <DialogContent className={size === 'lg' ? 'object-editor max-w-2xl' : 'object-editor'}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

@@ -5,7 +5,7 @@ import { fold } from '../../../components/ui/pickers/fold';
 import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule } from '../../../services/object-workspace-parser';
 import {
   applyCouchagesTotal, applyAdults, applyChildren,
-  addBedRow, setBedType, removeBedRow, updateBedQuantity,
+  addBedRow, setBedType, removeBedRow, updateBedQuantity, splitRoomAmenities,
 } from '../sections/blocks/rooms-utils';
 
 interface RoomEditModalProps {
@@ -55,15 +55,12 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
   const selectedAmenities = module.amenityOptions.filter((o) => draft.amenityCodes.includes(o.code));
   const foldedQuery = fold(equipQuery.trim());
   const searchingEquip = foldedQuery !== '';
-  // Available equipment grouped by family, ordered by industry popularity (§73). A search
-  // matches across all families and auto-expands the ones with hits.
-  const dispoGroups = module.amenityGroups
-    .map((g) => ({
-      familyCode: g.familyCode,
-      familyLabel: g.familyLabel,
-      options: g.options.filter((o) => !draft.amenityCodes.includes(o.code) && (foldedQuery === '' || fold(o.label).includes(foldedQuery))),
-    }))
-    .filter((g) => g.options.length > 0);
+  // « Les plus courants » (curated common room amenities, flat) + the remaining category groups
+  // (collapsed, ordered by industry popularity §73, common codes removed). A search matches across
+  // both and auto-expands the categories with hits (§74).
+  const isAmenityAvailable = (o: { code: string; label: string }) =>
+    !draft.amenityCodes.includes(o.code) && (foldedQuery === '' || fold(o.label).includes(foldedQuery));
+  const { common: courantAmenities, categories: dispoGroups } = splitRoomAmenities(module.amenityGroups, isAmenityAvailable);
 
   return (
     <EditorModal open={open} title={draft.name || 'Type de chambre'} onClose={onClose} onSave={() => onSave(draft)}>
@@ -91,6 +88,14 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         </Field>
       </div>
       <Field label="Nom / libellé"><Input value={draft.name} onChange={(name) => set({ name })} /></Field>
+      {/* `quantity` = object_room_type.total_rooms — INVENTORY of this room TYPE, not rooms-inside-a-suite.
+          Standalone + explained (PO §74) so it isn't misread as a per-room physical attribute. */}
+      <Field label="Nombre de chambres de ce type">
+        <Input type="number" value={draft.quantity} mono aria-label="Nb. de chambres (de ce type)" onChange={(quantity) => set({ quantity })} />
+        <span className="muted" style={{ fontSize: 11 }}>
+          Combien de chambres identiques de ce type l'établissement propose-t-il&nbsp;? (ex.&nbsp;5 suites «&nbsp;Vue Mer&nbsp;» identiques)
+        </span>
+      </Field>
 
       <SectionLabel>Couchages &amp; capacité</SectionLabel>
       {/* Total is the anchor — adults/children stay locked to it (applyAdults/applyChildren rebalance). */}
@@ -144,15 +149,10 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         <Plus size={14} aria-hidden /> Ajouter un lit
       </button>
 
-      <SectionLabel>Surface, quantité &amp; tarif</SectionLabel>
-      <div style={COL3}>
+      <SectionLabel>Surface &amp; tarif</SectionLabel>
+      <div style={COL2}>
         <Field label="Surface">
           <Input type="number" value={draft.sizeSqm} mono suffix="m²" aria-label="Surface" onChange={(sizeSqm) => set({ sizeSqm })} />
-        </Field>
-        {/* `quantity` = object_room_type.total_rooms — « combien de chambres identiques de ce type ». */}
-        <Field label="Nb. de chambres">
-          <Input type="number" value={draft.quantity} mono aria-label="Nb. de chambres (de ce type)" onChange={(quantity) => set({ quantity })} />
-          <span className="muted" style={{ fontSize: 11 }}>chambres identiques</span>
         </Field>
         <Field label="Tarif indicatif">
           <Input type="number" value={draft.basePrice} mono suffix={priceUnit} aria-label="Tarif indicatif" onChange={(basePrice) => set({ basePrice })} />
@@ -181,7 +181,18 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       ) : (
         <span className="muted" style={{ fontSize: 12 }}>Aucune sélection</span>
       )}
-      <div className="chip-group__label" style={{ margin: '10px 0 6px' }}>Disponibles</div>
+      {/* Curated common room amenities — flat + always visible, one click away (§74). */}
+      {courantAmenities.length > 0 && (
+        <>
+          <div className="chip-group__label" style={{ margin: '10px 0 6px' }}>Les plus courants</div>
+          <ChipSet>
+            {courantAmenities.map((o) => (
+              <Chip key={o.code} label={o.label} sm onClick={() => toggleAmenity(o.code)} />
+            ))}
+          </ChipSet>
+        </>
+      )}
+      <div className="chip-group__label" style={{ margin: '12px 0 6px' }}>Par catégorie</div>
       {dispoGroups.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {dispoGroups.map((g) => {

@@ -14,8 +14,13 @@ const room: ObjectWorkspaceRoomTypeItem = {
 const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'amenityGroups' | 'bedTypeOptions'> = {
   roomTypeOptions: [{ id: 'rt1', code: 'double', label: 'Chambre double' }],
   viewTypeOptions: [{ id: 'v1', code: 'sea', label: 'Vue mer' }],
-  amenityOptions: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }],
-  amenityGroups: [{ familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] }],
+  amenityOptions: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }, { id: 'concierge', code: 'concierge', label: 'Conciergerie' }],
+  amenityGroups: [
+    // wifi is a curated « common » code → surfaces flat in « Les plus courants ».
+    { familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] },
+    // concierge is not common → lives in a collapsible category.
+    { familyCode: 'services', familyLabel: 'Services', options: [{ id: 'concierge', code: 'concierge', label: 'Conciergerie', disabilityTypes: [] }] },
+  ],
   bedTypeOptions: [{ id: 'bt-double', code: 'double', label: 'Lit double' }],
 };
 
@@ -57,32 +62,43 @@ describe('RoomEditModal', () => {
     expect(saved).toMatchObject({ capacityTotal: '4', capacityAdults: '1', capacityChildren: '3' });
   });
 
-  it('groups available equipment by collapsible category (collapsed by default)', () => {
+  it('surfaces common amenities flat and keeps the rest in collapsible categories', () => {
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
-    // The « Général » family header is shown; its Wi-Fi chip is hidden until expanded.
-    expect(screen.getByRole('button', { name: /Général/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Wi-Fi' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Général/ }));
+    // Wi-Fi is a « common » code → visible flat, no expanding needed.
     expect(screen.getByRole('button', { name: 'Wi-Fi' })).toBeInTheDocument();
+    // Conciergerie is not common → its « Services » category is collapsed until clicked.
+    expect(screen.getByRole('button', { name: /Services/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Conciergerie' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Services/ }));
+    expect(screen.getByRole('button', { name: 'Conciergerie' })).toBeInTheDocument();
   });
 
-  it('adds an amenity from its category and returns it on save', () => {
+  it('adds a common amenity in one click (Les plus courants)', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
-    fireEvent.click(screen.getByRole('button', { name: /Général/ })); // expand the category
-    fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' })); // flat, no category to open
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['wifi']);
   });
 
-  it('search filters across categories and auto-expands matches', () => {
+  it('adds an amenity from a collapsible category and returns it on save', () => {
+    const onSave = jest.fn();
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /Services/ })); // expand the category
+    fireEvent.click(screen.getByRole('button', { name: 'Conciergerie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
+    expect(saved.amenityCodes).toEqual(['concierge']);
+  });
+
+  it('search reveals a category amenity without manually expanding', () => {
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
-    // A matching search reveals the chip without manually expanding its category.
-    fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'Wi' } });
-    expect(screen.getByRole('button', { name: 'Wi-Fi' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Conciergerie' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'Conci' } });
+    expect(screen.getByRole('button', { name: 'Conciergerie' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'zzz' } });
-    expect(screen.queryByRole('button', { name: 'Wi-Fi' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Conciergerie' })).not.toBeInTheDocument();
   });
 
   it('renders a PMR accessibility toggle', () => {

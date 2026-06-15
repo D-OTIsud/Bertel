@@ -9,6 +9,7 @@ import {
   removeBedRow,
   roomCouchages,
   setBedType,
+  splitRoomAmenities,
   syncDerivedStructural,
   unitCountMetricCode,
   updateBedQuantity,
@@ -189,5 +190,35 @@ describe('couchages lock helpers', () => {
   });
   it('applyChildren clamps children to [0, total]', () => {
     expect(applyChildren('9', '4')).toEqual({ capacityAdults: '0', capacityChildren: '4' });
+  });
+});
+
+describe('splitRoomAmenities', () => {
+  const group = (familyCode: string, familyLabel: string, opts: [string, string][]) => ({
+    familyCode, familyLabel, options: opts.map(([code, label]) => ({ id: code, code, label })),
+  });
+  const groups = [
+    group('general', 'Général', [['wifi', 'Wi-Fi'], ['tv', 'Télévision']]),
+    group('services', 'Services', [['concierge', 'Conciergerie'], ['shuttle', 'Navette']]),
+  ];
+
+  it('puts curated common codes flat (in curated order); the rest stay in categories', () => {
+    const { common, categories } = splitRoomAmenities(groups, () => true);
+    expect(common.map((o) => o.code)).toEqual(['wifi', 'tv']); // ROOM_COMMON order, common only
+    // « general » drops out — both its amenities are common, so the category is empty.
+    expect(categories).toEqual([
+      { familyCode: 'services', familyLabel: 'Services', options: [
+        { id: 'concierge', code: 'concierge', label: 'Conciergerie' },
+        { id: 'shuttle', code: 'shuttle', label: 'Navette' },
+      ] },
+    ]);
+  });
+
+  it('honours the availability filter for both common and categories', () => {
+    const { common, categories } = splitRoomAmenities(groups, (o) => o.code !== 'wifi' && o.code !== 'concierge');
+    expect(common.map((o) => o.code)).toEqual(['tv']);
+    expect(categories).toEqual([
+      { familyCode: 'services', familyLabel: 'Services', options: [{ id: 'shuttle', code: 'shuttle', label: 'Navette' }] },
+    ]);
   });
 });

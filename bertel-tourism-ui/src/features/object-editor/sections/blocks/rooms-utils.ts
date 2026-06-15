@@ -9,6 +9,41 @@
 
 import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
 
+/** Curated « most common in rooms » amenity codes, in display order (§74). Surfaced flat above
+ *  the collapsible category groups so the universal room amenities (Wi-Fi, clim, sèche-cheveux,
+ *  linge…) are one click away. The amenity catalog is entirely object-scoped (no room flag), so
+ *  this list is the room-relevance signal — adjust it to change what « Les plus courants » shows. */
+export const ROOM_COMMON_AMENITY_CODES = [
+  'wifi', 'tv', 'air_conditioning', 'private_bathroom', 'shower', 'towels',
+  'bed_linen', 'hairdryer', 'toiletries', 'heating', 'safe', 'desk',
+  'minibar', 'refrigerator', 'balcony', 'coffee_machine',
+];
+
+type AmenityOpt = { id: string; code: string; label: string };
+type AmenityGroup = { familyCode: string; familyLabel: string; options: AmenityOpt[] };
+
+/**
+ * Split the room equipment catalog into a flat « courants » list (the curated common codes, in
+ * curated order) + the remaining category groups (with the common codes removed, so nothing is
+ * shown twice). `isAvailable` is the editor's live filter (unselected AND matching the search).
+ * Pure — the editor owns selection + query state.
+ */
+export function splitRoomAmenities(
+  groups: AmenityGroup[],
+  isAvailable: (option: AmenityOpt) => boolean,
+): { common: AmenityOpt[]; categories: AmenityGroup[] } {
+  const byCode = new Map<string, AmenityOpt>();
+  for (const group of groups) for (const option of group.options) byCode.set(option.code, option);
+  const commonSet = new Set(ROOM_COMMON_AMENITY_CODES);
+  const common = ROOM_COMMON_AMENITY_CODES
+    .map((code) => byCode.get(code))
+    .filter((option): option is AmenityOpt => Boolean(option) && isAvailable(option as AmenityOpt));
+  const categories = groups
+    .map((group) => ({ ...group, options: group.options.filter((option) => !commonSet.has(option.code) && isAvailable(option)) }))
+    .filter((group) => group.options.length > 0);
+  return { common, categories };
+}
+
 const UNIT_CODE = /^unit-(\d+)$/;
 
 export function nextRoomCode(items: { code: string }[]): string {

@@ -92,7 +92,7 @@ describe('editor publication validation', () => {
     const result = validateForPublication(draft, allowAll, 'HEB');
 
     expect(result.warnings).toContainEqual({
-      section: '10',
+      section: '09',
       message: expect.stringContaining('PMR'),
       tone: 'warn',
     });
@@ -105,7 +105,7 @@ describe('editor publication validation', () => {
 
     const result = validateForPublication(draft, allowAll, 'HEB');
 
-    expect(result.warnings.some((w) => w.section === '10' && /PMR/.test(w.message))).toBe(false);
+    expect(result.warnings.some((w) => w.section === '09' && /PMR/.test(w.message))).toBe(false);
   });
 
   it('does not warn about rooms when the rooms module is type-gated', () => {

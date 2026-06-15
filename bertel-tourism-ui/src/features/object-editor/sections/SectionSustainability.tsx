@@ -70,7 +70,7 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
 
   return (
     <Fs
-      num="11"
+      num="10"
       title="Démarche durable"
       sub="Actions concrètes déclarées par l'établissement, distinctes des labels officiels"
       folded={folded}

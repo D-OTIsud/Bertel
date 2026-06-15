@@ -51,9 +51,11 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
         { num: '06', label: TYPE_BLOCK_LABEL[archetype] },
         ...(isHeb ? [] : [{ num: '07', label: 'Capacité & accueil' }]),
         { num: '08', label: 'Classifications' },
-        { num: '09', label: 'Tags & étiquettes' },
-        { num: '10', label: 'Accessibilité' },
-        { num: '11', label: 'Démarche durable' },
+        // Renumbered 2026-06-15 (user): labels (T&H, durabilité) are held in §08 now, so the
+        // two label-detail sections sit right after §08 and Tags (display layer) drops to 11.
+        { num: '09', label: 'Accessibilité' },
+        { num: '10', label: 'Démarche durable' },
+        { num: '11', label: 'Tags & étiquettes' },
         { num: '12', label: 'Paiements & langues' },
       ],
     },

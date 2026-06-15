@@ -127,7 +127,7 @@ const VALIDATION_RULES: ValidationRule[] = [
     return hasAccessibilityEquipment
       ? null
       : {
-          section: '10',
+          section: '09',
           message: 'Une chambre PMR est déclarée (§06) — sélectionnez les équipements d’accessibilité correspondants.',
           tone: 'warn',
         };

@@ -85,7 +85,7 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
 
   return (
     <Fs
-      num="10"
+      num="09"
       title="Accessibilité"
       sub="Équipements PMR (ref_amenity famille accessibility), label Tourisme & Handicap, texte adapté multilingue"
       folded={folded}

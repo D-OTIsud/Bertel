@@ -66,7 +66,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
 
   return (
     <Fs
-      num="09"
+      num="11"
       title="Tags & étiquettes"
       sub="Couche d'affichage colorée — apparaît sur la carte Explorer et en tête de fiche. Distincte de la taxonomie métier et des classifications."
       folded={folded}

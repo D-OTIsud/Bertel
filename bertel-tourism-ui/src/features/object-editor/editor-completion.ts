@@ -26,7 +26,7 @@ export const SCORE_SECTION_NUMS = [
   '06',
   '07',
   '08',
-  '10',
+  '09',
   '12',
   '13',
   '14',
@@ -105,7 +105,8 @@ export const SECTION_COMPLETION_RULES: Record<string, CompletionRule> = {
       (draft) => draft.distinctions.distinctionGroups.some((group) => group.items.length > 0),
     ],
   },
-  '10': {
+  // Renumbered 2026-06-15 (user): Accessibilité is §09.
+  '09': {
     fields: [
       (draft) => draft.distinctions.accessibilityLabels.length > 0 || draft.distinctions.accessibilityAmenityCoverage.length > 0,
     ],

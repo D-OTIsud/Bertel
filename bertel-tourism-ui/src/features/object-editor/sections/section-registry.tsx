@@ -47,9 +47,10 @@ export const SECTION_COMPONENTS: Record<string, ComponentType<SectionProps>> = {
   '06': TypeBlockSection,
   '07': SectionCapacity,
   '08': SectionClassification,
-  '09': SectionTags,
-  '10': SectionAccessibility,
-  '11': SectionSustainability,
+  // Renumbered 2026-06-15 (user): Accessibilité 09, Démarche durable 10, Tags 11.
+  '09': SectionAccessibility,
+  '10': SectionSustainability,
+  '11': SectionTags,
   '12': SectionPayLangs,
   '13': SectionPricing,
   '14': SectionOpenings,

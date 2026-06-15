@@ -889,6 +889,20 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10)
 ON CONFLICT DO NOTHING;
 
+-- Types de lits (§70 — configuration des lits structurée du descriptif de chambre)
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('bed_type', 'single', 'Lit simple (90 cm)', 'Lit une place', 1),
+('bed_type', 'double', 'Lit double (140 cm)', 'Lit deux places standard', 2),
+('bed_type', 'queen', 'Lit queen (160 cm)', 'Grand lit deux places', 3),
+('bed_type', 'king', 'Lit king (180 cm)', 'Très grand lit deux places', 4),
+('bed_type', 'twin_singles', 'Lits jumeaux (2 x 90 cm)', 'Deux lits simples séparables', 5),
+('bed_type', 'bunk', 'Lits superposés', 'Lits superposés', 6),
+('bed_type', 'sofa_bed', 'Canapé-lit', 'Canapé convertible', 7),
+('bed_type', 'extra_bed', 'Lit d''appoint', 'Lit d''appoint sur demande', 8),
+('bed_type', 'baby_cot', 'Lit bébé / berceau', 'Lit bébé ou berceau', 9),
+('bed_type', 'mezzanine', 'Lit mezzanine', 'Lit en mezzanine', 10)
+ON CONFLICT DO NOTHING;
+
 -- Types de vue (chambres)
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('view_type', 'sea', 'Vue mer', 'Vue sur la mer ou l''océan', 1),
@@ -1651,7 +1665,17 @@ WITH ref_code_translations(domain, code, name_en, name_es, description_en, descr
     ('room_type','presidential','Presidential suite','Suite presidencial','Presidential suite','Suite presidencial'),
     ('room_type','junior_suite','Junior suite','Junior suite','Junior suite','Junior suite'),
     ('room_type','accessible','Accessible room','Habitación accesible','Accessible room for PRM','Habitación accesible para PMR'),
-    ('room_type','connecting','Connecting rooms','Habitaciones comunicadas','Connecting rooms','Habitaciones comunicadas')
+    ('room_type','connecting','Connecting rooms','Habitaciones comunicadas','Connecting rooms','Habitaciones comunicadas'),
+    ('bed_type','single','Single bed (90 cm)','Cama individual (90 cm)',NULL,NULL),
+    ('bed_type','double','Double bed (140 cm)','Cama doble (140 cm)',NULL,NULL),
+    ('bed_type','queen','Queen bed (160 cm)','Cama queen (160 cm)',NULL,NULL),
+    ('bed_type','king','King bed (180 cm)','Cama king (180 cm)',NULL,NULL),
+    ('bed_type','twin_singles','Twin beds (2 x 90 cm)','Camas gemelas (2 x 90 cm)',NULL,NULL),
+    ('bed_type','bunk','Bunk beds','Literas',NULL,NULL),
+    ('bed_type','sofa_bed','Sofa bed','Sofá cama',NULL,NULL),
+    ('bed_type','extra_bed','Extra bed','Cama supletoria',NULL,NULL),
+    ('bed_type','baby_cot','Baby cot','Cuna',NULL,NULL),
+    ('bed_type','mezzanine','Mezzanine bed','Cama en altillo',NULL,NULL)
 )
 UPDATE ref_code rc
 SET name_i18n = COALESCE(rc.name_i18n, '{}'::jsonb) || jsonb_build_object('en', rct.name_en, 'es', rct.name_es),

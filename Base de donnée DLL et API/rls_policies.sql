@@ -67,6 +67,7 @@ ALTER TABLE app_user_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type_amenity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_room_type_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE object_room_type_bed ENABLE ROW LEVEL SECURITY;
 
 -- Activation RLS sur les tables de liaison M:N
 ALTER TABLE object_language ENABLE ROW LEVEL SECURITY;
@@ -1273,6 +1274,21 @@ CREATE POLICY "Écriture amenities chambre par propriétaire" ON object_room_typ
       WHERE rt.id = object_room_type_amenity.room_type_id
         AND o.created_by = auth.uid()
     )
+  );
+
+-- §70: object_room_type_bed read gate (§38 split form, outer column qualified §55). The
+-- per-command canonical write policies live in migration_room_type_bed.sql (manifest 14c),
+-- mirroring how the amenity per-command writes live in migration_room_type_read_gate.sql (8v).
+CREATE POLICY "read_object_room_type_bed" ON object_room_type_bed
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM object_room_type rt
+      JOIN object o ON o.id = rt.object_id
+      WHERE rt.id = object_room_type_bed.room_type_id
+        AND rt.is_published IS TRUE AND o.status = 'published')
+    OR room_type_id IN (
+      SELECT rt.id FROM object_room_type rt
+      WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
   );
 
 CREATE POLICY "read_object_room_type_media" ON object_room_type_media

@@ -226,6 +226,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_crm_module.sql"
 
+      - name: room-type bed test (§70 14c — bed_type vocab + i18n + object_room_type_bed RLS per-command + qualified)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_bed.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

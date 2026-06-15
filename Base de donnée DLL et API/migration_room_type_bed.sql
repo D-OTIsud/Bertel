@@ -25,12 +25,12 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
   ('bed_type','single','Lit simple (90 cm)','Lit une place', 1),
   ('bed_type','double','Lit double (140 cm)','Lit deux places standard', 2),
   ('bed_type','queen','Lit queen (160 cm)','Grand lit deux places', 3),
-  ('bed_type','king','Lit king (180 cm)','Tres grand lit deux places', 4),
-  ('bed_type','twin_singles','Lits jumeaux (2 x 90 cm)','Deux lits simples separables', 5),
-  ('bed_type','bunk','Lits superposes','Lits superposes', 6),
-  ('bed_type','sofa_bed','Canape-lit','Canape convertible', 7),
+  ('bed_type','king','Lit king (180 cm)','Très grand lit deux places', 4),
+  ('bed_type','twin_singles','Lits jumeaux (2 x 90 cm)','Deux lits simples séparables', 5),
+  ('bed_type','bunk','Lits superposés','Lits superposés', 6),
+  ('bed_type','sofa_bed','Canapé-lit','Canapé convertible', 7),
   ('bed_type','extra_bed','Lit d''appoint','Lit d''appoint sur demande', 8),
-  ('bed_type','baby_cot','Lit bebe / berceau','Lit bebe ou berceau', 9),
+  ('bed_type','baby_cot','Lit bébé / berceau','Lit bébé ou berceau', 9),
   ('bed_type','mezzanine','Lit mezzanine','Lit en mezzanine', 10)
 ON CONFLICT DO NOTHING;
 
@@ -42,7 +42,7 @@ WITH bed_type_translations(code, name_en, name_es) AS (
     ('king','King bed (180 cm)','Cama king (180 cm)'),
     ('twin_singles','Twin beds (2 x 90 cm)','Camas gemelas (2 x 90 cm)'),
     ('bunk','Bunk beds','Literas'),
-    ('sofa_bed','Sofa bed','Sofa cama'),
+    ('sofa_bed','Sofa bed','Sofá cama'),
     ('extra_bed','Extra bed','Cama supletoria'),
     ('baby_cot','Baby cot','Cuna'),
     ('mezzanine','Mezzanine bed','Cama en altillo')

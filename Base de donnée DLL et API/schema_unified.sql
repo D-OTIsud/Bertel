@@ -339,6 +339,7 @@ CREATE TABLE IF NOT EXISTS ref_code_destination_type PARTITION OF ref_code FOR V
 CREATE TABLE IF NOT EXISTS ref_code_event_type PARTITION OF ref_code FOR VALUES IN ('event_type');
 CREATE TABLE IF NOT EXISTS ref_code_package_type PARTITION OF ref_code FOR VALUES IN ('package_type');
 CREATE TABLE IF NOT EXISTS ref_code_room_type PARTITION OF ref_code FOR VALUES IN ('room_type');
+CREATE TABLE IF NOT EXISTS ref_code_bed_type PARTITION OF ref_code FOR VALUES IN ('bed_type');
 CREATE TABLE IF NOT EXISTS ref_code_view_type PARTITION OF ref_code FOR VALUES IN ('view_type');
 CREATE TABLE IF NOT EXISTS ref_code_amenity_type PARTITION OF ref_code FOR VALUES IN ('amenity_type');
 CREATE TABLE IF NOT EXISTS ref_code_membership_tier PARTITION OF ref_code FOR VALUES IN ('membership_tier');
@@ -434,6 +435,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_id ON ref_code_de
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_id ON ref_code_event_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_id ON ref_code_package_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_id ON ref_code_room_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_bed_type_id ON ref_code_bed_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_id ON ref_code_view_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_id ON ref_code_amenity_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_id ON ref_code_membership_tier (id);
@@ -479,6 +481,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_code ON ref_code_
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_code ON ref_code_event_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_code ON ref_code_package_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_code ON ref_code_room_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_bed_type_code ON ref_code_bed_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_code ON ref_code_view_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_code ON ref_code_amenity_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_code ON ref_code_membership_tier(code);
@@ -2406,6 +2409,18 @@ CREATE TABLE IF NOT EXISTS object_room_type_amenity (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_type_id, amenity_id)
 );
+
+-- §70: structured bed list per room type (qty x bed type). Sibling of object_room_type_amenity
+-- plus a quantity/position payload; bed_type_id -> ref_code_bed_type FK-target partition.
+CREATE TABLE IF NOT EXISTS object_room_type_bed (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  bed_type_id  UUID NOT NULL REFERENCES ref_code_bed_type(id) ON DELETE CASCADE,
+  quantity     INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  position     INTEGER NOT NULL DEFAULT 1,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, bed_type_id)
+);
+CREATE INDEX IF NOT EXISTS idx_room_type_bed_bed_type_id ON object_room_type_bed(bed_type_id);
 
 CREATE TABLE IF NOT EXISTS object_room_type_media (
   room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,

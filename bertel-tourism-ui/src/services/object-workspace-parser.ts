@@ -225,6 +225,12 @@ export interface WorkspaceReferenceOption {
   label: string;
 }
 
+/** A media reference option that also carries its file URL, so pickers can render a
+ *  thumbnail (room photo picker §06, menu item media). `id`/`code` = media.id. */
+export interface WorkspaceMediaOption extends WorkspaceReferenceOption {
+  url: string;
+}
+
 export interface ObjectWorkspaceAmenityOption extends WorkspaceReferenceOption {
   /** Disability types covered by this amenity (e.g. 'motor', 'hearing', 'visual', 'cognitive').
    *  Empty array for non-accessibility families. */
@@ -457,7 +463,7 @@ export interface ObjectWorkspaceRoomsModule {
    *  families by total usage, options by per-amenity usage. Drives the §06 collapsible picker. */
   amenityGroups: ObjectWorkspaceAmenityGroup[];
   bedTypeOptions: WorkspaceReferenceOption[];
-  mediaOptions: WorkspaceReferenceOption[];
+  mediaOptions: WorkspaceMediaOption[];
   items: ObjectWorkspaceRoomTypeItem[];
   unavailableReason: string | null;
 }
@@ -520,7 +526,7 @@ export interface ObjectWorkspaceMenusModule {
   cuisineTypeOptions: WorkspaceReferenceOption[];
   priceKindOptions: WorkspaceReferenceOption[];
   priceUnitOptions: WorkspaceReferenceOption[];
-  mediaOptions: WorkspaceReferenceOption[];
+  mediaOptions: WorkspaceMediaOption[];
   items: ObjectWorkspaceMenu[];
   unavailableReason: string | null;
 }

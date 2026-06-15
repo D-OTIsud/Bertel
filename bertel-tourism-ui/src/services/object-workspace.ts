@@ -61,6 +61,7 @@ import {
   type ObjectWorkspaceTaxonomyNodeOption,
   type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
+  type WorkspaceMediaOption,
   normalizeTagSource,
   resolveTagColor,
 } from './object-workspace-parser';
@@ -440,7 +441,7 @@ function normalizeReferenceOption(row: Record<string, unknown>): WorkspaceRefere
   };
 }
 
-function sortReferenceOptions(options: WorkspaceReferenceOption[]): WorkspaceReferenceOption[] {
+function sortReferenceOptions<T extends WorkspaceReferenceOption>(options: T[]): T[] {
   return [...options].sort((left, right) => left.label.localeCompare(right.label, 'fr'));
 }
 
@@ -2365,12 +2366,13 @@ function optionMapById(options: WorkspaceReferenceOption[]): Map<string, Workspa
   return new Map(options.map((option) => [option.id, option]));
 }
 
-function normalizeMediaOption(row: Record<string, unknown>): WorkspaceReferenceOption {
+function normalizeMediaOption(row: Record<string, unknown>): WorkspaceMediaOption {
   const id = readString(row.id);
   return {
     id,
     code: id,
     label: readString(row.title, readString(row.name, readString(row.url, id))),
+    url: readString(row.url),
   };
 }
 

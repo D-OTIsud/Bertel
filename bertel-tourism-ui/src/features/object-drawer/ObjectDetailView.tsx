@@ -1212,7 +1212,10 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
     return null;
   }
 
-  const adaptedText = preview.adaptedDescription;
+  // Only the canonical adapted field is genuinely Markdown-authored. `preview.adaptedDescription`
+  // falls back to mobile/editorial (plain prose) when the adapted field is empty — so compare
+  // against the RAW field to avoid Markdown-rendering plain prose (stray #/*/- would mis-render).
+  const adaptedText = parsed.text.adaptedDescription;
   const renderCopy = (text: string, className: string) =>
     text && text === adaptedText
       ? <MarkdownContent markdown={text} className={className} />
@@ -1232,9 +1235,7 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
               {renderCopy(fullText, 'detail-overview__body')}
             </>
           )}
-          {expanded && alternateText && (
-            <MarkdownContent markdown={alternateText} className="detail-overview__support" />
-          )}
+          {expanded && alternateText && renderCopy(alternateText, 'detail-overview__support')}
         </div>
         {showToggle && (
           <button

@@ -34,6 +34,7 @@ import {
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
   useAddObjectPrivateNoteMutation,
@@ -1211,22 +1212,29 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
     return null;
   }
 
+  const adaptedText = preview.adaptedDescription;
+  const renderCopy = (text: string, className: string) =>
+    text && text === adaptedText
+      ? <MarkdownContent markdown={text} className={className} />
+      : <p className={className}>{text}</p>;
+
   return (
     <Section title="Description" headerExtra={versionsLink}>
       <div className="detail-overview">
         <div className="detail-overview__copy">
-          {summary && (
-            <p className={`detail-overview__lead${!expanded && showToggle ? ' detail-overview__lead--clamped' : ''}`}>
-              {summary}
-            </p>
+          {summary && renderCopy(
+            summary,
+            `detail-overview__lead${!expanded && showToggle ? ' detail-overview__lead--clamped' : ''}`,
           )}
           {showExtendedText && (
             <>
               <span className="detail-overview__separator" aria-hidden="true" />
-              <p className="detail-overview__body">{fullText}</p>
+              {renderCopy(fullText, 'detail-overview__body')}
             </>
           )}
-          {expanded && alternateText && <p className="detail-overview__support">{alternateText}</p>}
+          {expanded && alternateText && (
+            <MarkdownContent markdown={alternateText} className="detail-overview__support" />
+          )}
         </div>
         {showToggle && (
           <button

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockHEB } from './BlockHEB';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -119,6 +119,19 @@ describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)',
     expect(screen.getByText('Groupes uniquement')).toBeInTheDocument(); // dans la modale
   });
 
+  it('confirms the « Groupes uniquement » choice with a live notice at the bottom of the modal', () => {
+    mountHEB((m) => { m.capacityPolicies.groupPolicy = { minSize: '', maxSize: '', groupOnly: false, notes: '' }; });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Définir une politique de groupe/i })); });
+    const notice = 'Les réservations individuelles ne sont pas acceptées.';
+    expect(screen.queryByText(notice)).not.toBeInTheDocument(); // off ⇒ pas d'encart
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Groupes uniquement' })); });
+    expect(screen.getByText(notice)).toBeInTheDocument(); // on ⇒ confirme le choix
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Groupes uniquement' })); });
+    expect(screen.queryByText(notice)).not.toBeInTheDocument(); // off à nouveau ⇒ retiré
+  });
+
   it('hosts the environment picker (Cadre / environnement) in §06 as a modal', () => {
     mountHEB();
     expect(screen.getByText('Cadre / environnement')).toBeInTheDocument();
@@ -136,7 +149,11 @@ describe('BlockHEB room edit modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
+    // Equipment is now behind the « Choisir » modal trigger inside the room dialog (search +
+    // Sélectionnés/Disponibles). Scope to the room dialog — the §06 environment picker also has a « Choisir ».
+    act(() => { fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Choisir/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items[0].amenityCodes).toContain('ac');
@@ -175,14 +192,16 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     expect(result.current.draft.meetingRooms.items[0].capacityU).toBe('24');
   });
 
-  it('lets the room modal edit adults and children capacities', () => {
+  it('locks room adults + children to the couchages total', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
+    // Total is the anchor: set it to 4, then adults = 3 rebalances children to 1 (sum stays 4).
+    act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '4' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Adultes'), { target: { value: '3' } }); });
-    act(() => { fireEvent.change(screen.getByLabelText('Enfants'), { target: { value: '1' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.rooms.items[0].capacityTotal).toBe('4');
     expect(result.current.draft.rooms.items[0].capacityAdults).toBe('3');
     expect(result.current.draft.rooms.items[0].capacityChildren).toBe('1');
   });

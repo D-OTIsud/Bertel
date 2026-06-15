@@ -14,9 +14,9 @@ import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspa
  *  linge…) are one click away. The amenity catalog is entirely object-scoped (no room flag), so
  *  this list is the room-relevance signal — adjust it to change what « Les plus courants » shows. */
 export const ROOM_COMMON_AMENITY_CODES = [
-  'wifi', 'tv', 'air_conditioning', 'private_bathroom', 'shower', 'towels',
-  'bed_linen', 'hairdryer', 'toiletries', 'heating', 'safe', 'desk',
-  'minibar', 'refrigerator', 'balcony', 'coffee_machine',
+  'wifi', 'tv', 'kitchenette', 'refrigerator', 'air_conditioning', 'private_bathroom',
+  'shower', 'towels', 'bed_linen', 'coffee_machine', 'microwave', 'heating',
+  'hairdryer', 'safe', 'balcony', 'desk',
 ];
 
 type AmenityOpt = { id: string; code: string; label: string };

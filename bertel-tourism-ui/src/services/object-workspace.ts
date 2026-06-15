@@ -2435,7 +2435,7 @@ async function getObjectWorkspaceRoomsModule(
       .order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'view_type').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'room_type').order('position', { ascending: true }),
-    client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name, position)').order('position', { ascending: true }),
+    client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name, position)').in('scope', ['room', 'both']).order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'bed_type').order('position', { ascending: true }),
   ]);

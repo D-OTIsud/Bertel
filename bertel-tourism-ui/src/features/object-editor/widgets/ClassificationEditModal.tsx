@@ -93,7 +93,10 @@ export function ClassificationEditModal({
     });
   }
 
-  const saveDisabled = !draft.schemeCode || !draft.valueCode;
+  // A granted label must carry an acquisition date; "en cours/demande" (not yet
+  // obtained) and the validity date stay optional. See decision log §70.
+  const awardedRequired = draft.status === 'granted';
+  const saveDisabled = !draft.schemeCode || !draft.valueCode || (awardedRequired && !draft.awardedAt);
 
   return (
     <EditorModal
@@ -155,7 +158,7 @@ export function ClassificationEditModal({
         />
       </Field>
 
-      <Field label="Acquis le">
+      <Field label="Acquis le" required={awardedRequired}>
         <Input type="date" aria-label="Acquis le" value={draft.awardedAt} onChange={(awardedAt) => set({ awardedAt })} />
       </Field>
       <Field label="Valable jusqu'au">

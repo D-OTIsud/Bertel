@@ -71,9 +71,27 @@ describe('ClassificationEditModal', () => {
     fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'maitre_restaurateur' } });
     expect(screen.queryByLabelText('Valeur attribuée')).not.toBeInTheDocument();
     expect(screen.getByText('Marque accordée')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceDistinctionItem;
     expect(saved.valueCode).toBe('granted');
+  });
+
+  it('requires the acquisition date to save a granted label, validity stays optional', () => {
+    renderAdd();
+    fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'hot_stars' } });
+    // Defaults to status "Accordée" → save blocked until an acquisition date is set.
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
+    // Validity left empty — still saveable (some labels never expire).
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+  });
+
+  it('does not require an acquisition date for an en cours / requested entry', () => {
+    renderAdd();
+    fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'hot_stars' } });
+    fireEvent.change(screen.getByLabelText('Statut'), { target: { value: 'requested' } });
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
   });
 
   it('offers the canonical granted status, not the legacy active alias', () => {
@@ -87,6 +105,7 @@ describe('ClassificationEditModal', () => {
     const { onSave } = renderAdd();
     fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'hot_stars' } });
     fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceDistinctionItem;
     expect(saved.schemeCode).toBe('hot_stars');

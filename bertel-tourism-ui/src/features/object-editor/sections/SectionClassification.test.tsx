@@ -17,7 +17,7 @@ function classRow(over: Partial<ObjectWorkspaceDistinctionItem>): ObjectWorkspac
     valueCode: '4',
     valueLabel: '4 étoiles',
     status: 'granted',
-    awardedAt: '',
+    awardedAt: '2025-01-01',
     validUntil: '',
     disabilityTypesCovered: [],
     ...over,
@@ -90,6 +90,9 @@ describe('SectionClassification', () => {
     });
     act(() => {
       fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '4' } });
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
     });
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));

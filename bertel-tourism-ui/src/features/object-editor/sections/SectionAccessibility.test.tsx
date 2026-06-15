@@ -84,6 +84,7 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
       ...mods.distinctions,
       accessibilityLabels: [],
       schemeOptions: [
+        // `displayGroup` is required by the SchemeOption shape introduced by the parallel §09 work.
         { id: 'th', code: 'LBL_TOURISME_HANDICAP', label: 'Tourisme & Handicap', selectionMode: 'single', isAccessibility: true, displayGroup: 'quality_label', valueOptions: [] },
       ],
     };

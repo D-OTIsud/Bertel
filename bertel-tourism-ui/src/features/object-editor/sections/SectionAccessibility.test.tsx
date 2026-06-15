@@ -34,6 +34,19 @@ describe('SectionAccessibility — Tourisme & Handicap label', () => {
     expect(screen.queryByDisplayValue('Tourisme Handicap')).not.toBeInTheDocument(); // no free-text value Input
   });
 
+  it('gates the T&H label controls behind a notice when the shared distinctions module is degraded', () => {
+    // §08 and §10 share the distinctions saver; a degraded load must not be editable
+    // (editing would dirty it and a save would mass-delete real rows). §71 E review.
+    const m = fullModulesFixture();
+    m.distinctions.unavailableReason = 'Distinctions indisponibles dans le live actuel.';
+    const { result } = renderHook(() => useObjectEditorState('o1', m));
+    render(<SectionAccessibility editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText(/Module indisponible/i)).toBeInTheDocument();
+    // The held-label disability-type chips must NOT render (the equipment panels below are
+    // a different module and keep their own "Équipements moteur" headers).
+    expect(screen.queryByRole('button', { name: 'Moteur' })).not.toBeInTheDocument();
+  });
+
   it('toggles a covered disability type and marks the module dirty', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionAccessibility editor={result.current} permissions={allowAll} />);

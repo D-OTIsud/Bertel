@@ -57,5 +57,5 @@ BEGIN
     RAISE EXCEPTION 'FAIL: logis expected selection=multiple, got %', v_logis;
   END IF;
 
-  RAISE NOTICE 'PASS: §08 catalogue expansion — 5 classements + 8 labels + QTIR de Charme present and valued.';
+  RAISE NOTICE 'PASS: §08 catalogue expansion — 5 classements + 7 labels qualité + QTIR de Charme present and valued.';
 END $$;

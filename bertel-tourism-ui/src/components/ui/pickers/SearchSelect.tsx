@@ -103,16 +103,20 @@ export function SearchSelect({
   const rowCount = flatVisible.length + (allowClear ? 1 : 0);
   const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
 
-  // Focus the search on open; reset query + collapse state when it closes.
+  // Focus the search + seed the open groups on the OPEN transition; clear the query on close.
+  // Keyed on `open` only (NOT defaultExpanded): if the caller's `options` identity changes
+  // while the popover is open, re-running this would steal focus / reset ArrowDown navigation.
+  // defaultExpanded is read fresh at open time. (§71 E review)
   useEffect(() => {
     if (open) {
       setActive(0);
+      setExpanded(defaultExpanded);
       searchRef.current?.focus();
     } else {
       setQuery('');
-      setExpanded(defaultExpanded);
     }
-  }, [open, defaultExpanded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Outside mousedown closes the popover.
   useEffect(() => {

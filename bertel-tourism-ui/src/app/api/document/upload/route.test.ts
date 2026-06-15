@@ -27,7 +27,8 @@ const OBJECT_ID = 'HOTRUN0000000001';
 
 function pdfForm(objectId: string = OBJECT_ID): FormData {
   const form = new FormData();
-  form.append('file', new File([new Uint8Array([1, 2, 3])], 'attestation.pdf', { type: 'application/pdf' }));
+  // Real %PDF- header — the route validates magic bytes, not just the client MIME (§71 E).
+  form.append('file', new File([new TextEncoder().encode('%PDF-1.4 test')], 'attestation.pdf', { type: 'application/pdf' }));
   form.append('object_id', objectId);
   return form;
 }

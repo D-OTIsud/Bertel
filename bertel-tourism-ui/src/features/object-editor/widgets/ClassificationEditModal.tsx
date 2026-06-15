@@ -101,7 +101,12 @@ export function ClassificationEditModal({
   // A granted label must carry an acquisition date; "en cours/demande" (not yet
   // obtained) and the validity date stay optional. See decision log §70.
   const awardedRequired = draft.status === 'granted';
-  const saveDisabled = !draft.schemeCode || !draft.valueCode || (awardedRequired && !draft.awardedAt);
+  // Block validity-before-acquisition client-side: the DB chk_label_dates CHECK would
+  // otherwise reject the save with an opaque error mid-batch (§71 E review). ISO date
+  // strings (YYYY-MM-DD) compare lexically = chronologically.
+  const datesOutOfOrder = Boolean(draft.awardedAt && draft.validUntil && draft.validUntil < draft.awardedAt);
+  const saveDisabled =
+    !draft.schemeCode || !draft.valueCode || (awardedRequired && !draft.awardedAt) || datesOutOfOrder;
 
   return (
     <EditorModal
@@ -162,6 +167,11 @@ export function ClassificationEditModal({
           value={draft.validUntil}
           onChange={(validUntil) => set({ validUntil })}
         />
+        {datesOutOfOrder && (
+          <p className="muted" role="alert" style={{ marginTop: 6, color: 'var(--red, #93392a)' }}>
+            La date de validité doit être postérieure à la date d&apos;acquisition.
+          </p>
+        )}
       </Field>
 
       {/* Justificatif (ref_document) — optional. Shows the attached document with a remove

@@ -1,4 +1,6 @@
-import { buildClassificationSubvalueIds } from './object-workspace';
+import { buildClassificationSubvalueIds, saveObjectWorkspaceDistinctions } from './object-workspace';
+import type { ObjectWorkspaceDistinctionsModule } from './object-workspace-parser';
+import { useSessionStore } from '../store/session-store';
 
 // Pins the object_classification.subvalue_ids WRITE contract for LBL_TOURISME_HANDICAP.
 // The §10 editor's "Types de handicap couverts" chips edit disabilityTypesCovered
@@ -48,5 +50,30 @@ describe('buildClassificationSubvalueIds', () => {
 
   it('dedupes repeated codes', () => {
     expect(buildClassificationSubvalueIds(['motor', 'motor'], TH, subvalueRefs)).toEqual(['uuid-motor']);
+  });
+});
+
+describe('saveObjectWorkspaceDistinctions — no-clobber guard (§71 E review)', () => {
+  // §08 and §10 share this saver. A degraded load sets unavailableReason and empties the
+  // groups; without this guard a §10 edit + save would delete every real §08 classification
+  // row (the delete-reconcile reads fresh DB rows but the saved set is empty). The guard
+  // throws BEFORE any DB access, so the test needs no client mock.
+  // jest.setup forces NEXT_PUBLIC_ENABLE_DEMO_MODE=true (saver no-ops in demo) — turn it off
+  // so the guard is actually reached.
+  const prevDemo = useSessionStore.getState().demoMode;
+  beforeEach(() => useSessionStore.setState({ demoMode: false }));
+  afterEach(() => useSessionStore.setState({ demoMode: prevDemo }));
+
+  it('throws on a degraded module instead of running the delete-reconcile', async () => {
+    const degraded: ObjectWorkspaceDistinctionsModule = {
+      distinctionGroups: [],
+      accessibilityLabels: [],
+      accessibilityAmenityCoverage: [],
+      schemeOptions: [],
+      unavailableReason: 'Distinctions indisponibles dans le live actuel.',
+    };
+    await expect(saveObjectWorkspaceDistinctions('HOTRUN0000000001', degraded)).rejects.toThrow(
+      'Distinctions indisponibles',
+    );
   });
 });

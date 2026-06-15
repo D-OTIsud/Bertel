@@ -116,6 +116,15 @@ describe('ClassificationEditModal', () => {
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
   });
 
+  it('blocks saving when the validity date precedes the acquisition date', () => {
+    renderAdd();
+    selectRef('hotel', 'Classement hôtelier');
+    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-06-01' } });
+    fireEvent.change(screen.getByLabelText("Valable jusqu'au"), { target: { value: '2025-01-01' } });
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/postérieure/);
+  });
+
   it('offers the canonical granted status, not the legacy active alias', () => {
     renderAdd();
     const statusValues = screen.getAllByRole('option').map((o) => o.getAttribute('value'));

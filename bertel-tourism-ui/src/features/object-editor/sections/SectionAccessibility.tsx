@@ -3,6 +3,7 @@ import { ChipMultiSelect, Field, Fs, LangTabs, Select, StatCard, Textarea, Toggl
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
+import { ModuleUnavailableNotice } from './blocks/block-notes';
 
 /**
  * Canonical disability-type set for LBL_TOURISME_HANDICAP / `object_classification` sub-values.
@@ -159,7 +160,12 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
         Label Tourisme &amp; Handicap
       </div>
 
-      {distinctions.accessibilityLabels.length === 0 ? (
+      {distinctions.unavailableReason ? (
+        /* Degraded load: editing would dirty the shared distinctions module and a save
+           would mass-delete real §08/§10 rows (the saver throws on unavailableReason).
+           Surface the reason instead of live controls — mirrors §08 SectionClassification. */
+        <ModuleUnavailableNotice reason={distinctions.unavailableReason} />
+      ) : distinctions.accessibilityLabels.length === 0 ? (
         /* No label held yet — offer a toggle to opt in. */
         <Toggle
           label="Établissement labellisé Tourisme & Handicap"

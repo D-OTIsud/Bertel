@@ -76,7 +76,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     let contentType: string;
     let ext: string;
     if (isPdf) {
-      validateDocument({ mimeType: file.type, byteLength: fileBuffer.byteLength });
+      validateDocument({ buffer: fileBuffer, mimeType: file.type });
       storedBuffer = fileBuffer;
       contentType = 'application/pdf';
       ext = 'pdf';

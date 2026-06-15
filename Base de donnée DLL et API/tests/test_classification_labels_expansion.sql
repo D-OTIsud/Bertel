@@ -18,21 +18,23 @@ BEGIN
     RAISE EXCEPTION 'FAIL: expected 5 new official classements, got %', v_official;
   END IF;
 
-  -- (2) The 8 new quality labels exist (is_distinction + quality_label group).
+  -- (2) The 7 new quality labels exist (is_distinction + quality_label group).
+  -- Note: national « Qualité Tourisme™ » is NOT added here — it already exists as
+  -- LBL_QUALITE_TOURISME (sustainability_labels), §08-editable since §71 E.
   SELECT count(*) INTO v_quality
   FROM public.ref_classification_scheme
   WHERE is_distinction AND display_group = 'quality_label'
-    AND code IN ('qualite_tourisme','monument_historique','musee_de_france','jardin_remarquable',
+    AND code IN ('monument_historique','musee_de_france','jardin_remarquable',
                  'maison_des_illustres','accueil_velo','tables_auberges','logis');
-  IF v_quality <> 8 THEN
-    RAISE EXCEPTION 'FAIL: expected 8 new quality labels, got %', v_quality;
+  IF v_quality <> 7 THEN
+    RAISE EXCEPTION 'FAIL: expected 7 new quality labels, got %', v_quality;
   END IF;
 
   -- (3) Each new graded scheme carries its values (no value-less scheme).
   SELECT string_agg(s.code, ', ') INTO v_missing
   FROM public.ref_classification_scheme s
   WHERE s.code IN ('residence_tourisme_stars','village_vacances_stars','auberge_collective_stars','prl_stars',
-                   'ot_category','monument_historique','qualite_tourisme','musee_de_france','jardin_remarquable',
+                   'ot_category','monument_historique','musee_de_france','jardin_remarquable',
                    'maison_des_illustres','accueil_velo','tables_auberges','logis')
     AND NOT EXISTS (SELECT 1 FROM public.ref_classification_value v WHERE v.scheme_id = s.id);
   IF v_missing IS NOT NULL THEN

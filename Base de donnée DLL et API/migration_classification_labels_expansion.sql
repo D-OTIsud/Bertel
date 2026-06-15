@@ -26,9 +26,12 @@ INSERT INTO ref_classification_scheme (code, name, description, selection, is_di
 ('ot_category',             'Classement office de tourisme',   'Classement préfectoral des offices de tourisme (catégories)','single',TRUE,'official_classification',10)
 ON CONFLICT (code) DO NOTHING;
 
--- ─── Labels qualité — patrimoine (Culture) + national + réseaux ──────────────
+-- ─── Labels qualité — patrimoine (Culture) + réseaux ─────────────────────────
+-- NOTE (§71 E) : « Qualité Tourisme™ » national N'EST PAS recréé ici — il existe déjà
+-- en base sous `LBL_QUALITE_TOURISME` (display_group sustainability_labels), désormais
+-- éditable en §08 via la passe §71 E (relâchement du filtre distinctions). Son
+-- successeur « Destination d'excellence » = `LBL_DESTINATION_EXCELLENCE` (idem).
 INSERT INTO ref_classification_scheme (code, name, description, selection, is_distinction, display_group, position) VALUES
-('qualite_tourisme',     'Qualité Tourisme™',         'Marque d''État nationale Qualité Tourisme (renommage « Destination d''excellence » en cours d''ici fin 2026)','single',  TRUE,'quality_label',18),
 ('monument_historique',  'Monument Historique',       'Protection au titre des monuments historiques (classé ou inscrit) — Ministère de la Culture',                'single',  TRUE,'quality_label',19),
 ('musee_de_france',      'Musée de France',           'Appellation « Musée de France » (Ministère de la Culture)',                                                    'single',  TRUE,'quality_label',20),
 ('jardin_remarquable',   'Jardin Remarquable',        'Label « Jardin Remarquable » (Ministère de la Culture)',                                                       'single',  TRUE,'quality_label',21),
@@ -66,7 +69,7 @@ WHERE s.code = 'monument_historique'
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, 'granted', 'Obtenu', 1
 FROM ref_classification_scheme s
-WHERE s.code IN ('qualite_tourisme','musee_de_france','jardin_remarquable','maison_des_illustres','accueil_velo')
+WHERE s.code IN ('musee_de_france','jardin_remarquable','maison_des_illustres','accueil_velo')
   AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = 'granted');
 
 -- ─── Valeurs : Tables & Auberges de France (catégories) ──────────────────────

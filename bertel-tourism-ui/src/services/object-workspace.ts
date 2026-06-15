@@ -811,7 +811,11 @@ function normalizeClassificationValueRef(row: Record<string, unknown>): Classifi
 
 function isDistinctionClassificationScheme(row: Record<string, unknown>): boolean {
   const displayGroup = readString(row.display_group);
-  return row.is_distinction === true && displayGroup !== 'accessibility_labels' && displayGroup !== 'sustainability_labels';
+  // §08 authors official classements, quality labels AND sustainability/eco labels
+  // (Clef Verte, Pavillon Bleu, Destination d'excellence…). Only accessibility labels
+  // are excluded — §10 owns those via the separate accessibilityLabels path. The §11
+  // Durabilité section authors sustainability *actions*, not these *labels* (§71 E).
+  return row.is_distinction === true && displayGroup !== 'accessibility_labels';
 }
 
 function isAccessibilityClassificationScheme(row: Record<string, unknown>): boolean {

@@ -17,6 +17,7 @@ import type {
 const DISPLAY_GROUP_LABELS: Record<string, string> = {
   official_classification: 'Classements officiels',
   quality_label: 'Labels qualité',
+  sustainability_labels: 'Durabilité / environnement',
   '': 'Autres',
 };
 

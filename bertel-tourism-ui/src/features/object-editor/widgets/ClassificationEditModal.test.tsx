@@ -65,6 +65,21 @@ describe('ClassificationEditModal', () => {
     expect(screen.getByRole('button', { name: /Labels qualité/ })).toBeInTheDocument();
   });
 
+  it('labels the sustainability category for durabilité labels', () => {
+    const sustaScheme: ObjectWorkspaceDistinctionSchemeOption = {
+      id: 'sch-de',
+      code: 'LBL_DESTINATION_EXCELLENCE',
+      label: "Destination d'excellence",
+      selectionMode: 'single',
+      isAccessibility: false,
+      displayGroup: 'sustainability_labels',
+      valueOptions: [{ id: 'g', code: 'granted', label: 'Obtenu' }],
+    };
+    renderAdd({ schemes: [starsScheme, sustaScheme] });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
+    expect(screen.getByRole('button', { name: /Durabilité \/ environnement/ })).toBeInTheDocument();
+  });
+
   it('shows a value selector with levels for a star scheme', () => {
     renderAdd();
     selectRef('hotel', 'Classement hôtelier');

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { usePresenceRoom } from '../../../hooks/usePresenceRoom';
+import type { PresenceMember } from '../../../types/domain';
 
 interface PresenceRailProps {
   objectId: string;
@@ -9,6 +11,21 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 // Minute-granular label, so a 30s refresh keeps it accurate without churning renders.
 const TICK_MS = 30_000;
+// How long the "X a quitté la page" snackbar stays up.
+const PRESENCE_LEAVE_TOAST_MS = 5_000;
+
+/**
+ * Peers who were in the room on the previous sync but are gone now — the editors who just left.
+ * Excludes the current user (self is never reported as "departed", e.g. on presence flapping).
+ */
+export function computeDepartedPeers(
+  previous: PresenceMember[],
+  next: PresenceMember[],
+  selfUserId: string,
+): PresenceMember[] {
+  const presentIds = new Set(next.map((peer) => peer.userId));
+  return previous.filter((peer) => peer.userId !== selfUserId && !presentIds.has(peer.userId));
+}
 
 function initials(name: string): string {
   return name
@@ -44,13 +61,24 @@ export function formatPresenceDuration(onlineSince: number | undefined, now: num
 }
 
 export function PresenceRail({ objectId }: PresenceRailProps) {
-  const { peers, typingUsers } = usePresenceRoom(`room:${objectId}`);
+  const { peers, me, typingUsers } = usePresenceRoom(`room:${objectId}`);
   const [now, setNow] = useState(() => Date.now());
+  const previousPeersRef = useRef<PresenceMember[]>(peers);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), TICK_MS);
     return () => window.clearInterval(id);
   }, []);
+
+  // Notify when another editor leaves the page. Compares each presence sync against the
+  // previous one; no toast on first render (previous === current) or when a peer joins.
+  useEffect(() => {
+    const departed = computeDepartedPeers(previousPeersRef.current, peers, me?.userId ?? '');
+    previousPeersRef.current = peers;
+    departed.forEach((peer) => {
+      toast(`${peer.name} a quitté la page`, { duration: PRESENCE_LEAVE_TOAST_MS });
+    });
+  }, [peers, me?.userId]);
 
   return (
     <div className="card">

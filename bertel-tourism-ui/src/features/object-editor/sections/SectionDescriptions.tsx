@@ -100,7 +100,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
           placeholder={fallback('chapo')}
           disabled={readOnly}
           data-testid="chapo-textarea"
-          count max={160} rows={2}
+          count max={160} rows={5}
         />
       </Field>
 
@@ -110,7 +110,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
           onChange={(v) => patchField('description', v)}
           placeholder={fallback('description')}
           disabled={readOnly}
-          rich count max={2000}
+          rich count max={2000} rows={12}
         />
       </Field>
 

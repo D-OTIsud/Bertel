@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -10,16 +10,22 @@ import {
   List, ListOrdered, Quote, Link as LinkIcon, Undo2, Redo2,
 } from 'lucide-react';
 
-interface MarkdownEditorProps {
+type MarkdownEditorProps = {
   value: string;
   onChange: (markdown: string) => void;
   disabled?: boolean;
   ariaLabel: string;
-}
+};
 
-function ToolBtn({
-  label, active, disabled, onClick, children,
-}: { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode }) {
+type ToolBtnProps = {
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+};
+
+function ToolBtn({ label, active, disabled, onClick, children }: ToolBtnProps) {
   return (
     <button
       type="button"
@@ -104,6 +110,13 @@ function Toolbar({ editor }: { editor: Editor }) {
  *  H2/H3, bold, italic, bullet/ordered lists, blockquote, links. No raw HTML in or out
  *  (Markdown.configure({ html: false })). value/onChange are Markdown — the canonical store. */
 export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: MarkdownEditorProps) {
+  // Keep onChange in a ref so the once-bound onUpdate callback never calls a stale closure
+  // (the parent passes a fresh arrow each render — e.g. one closing over the active language).
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -117,6 +130,10 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
         openOnClick: false,
         autolink: true,
         protocols: ['http', 'https', 'mailto'],
+        // `protocols` is additive in TipTap Link v2 — it does NOT restrict autolink. `validate`
+        // is the real gate: it rejects tel:/ftp:/javascript: etc. for autolink AND pasted links,
+        // mirroring the manual-prompt regex in setLink().
+        validate: (href) => /^(https?:|mailto:)/i.test(href),
         HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
       }),
       Markdown.configure({ html: false, linkify: false, transformPastedText: true }),
@@ -125,7 +142,7 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
     editable: !disabled,
     immediatelyRender: false,
     editorProps: { attributes: { 'aria-label': ariaLabel, class: 'md-editor__content' } },
-    onUpdate: ({ editor }) => onChange(editor.storage.markdown.getMarkdown()),
+    onUpdate: ({ editor }) => onChangeRef.current(editor.storage.markdown.getMarkdown()),
   });
 
   // External value change (e.g. switching language tab) → reset content WITHOUT firing onUpdate.
@@ -140,7 +157,7 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
     editor?.setEditable(!disabled);
   }, [disabled, editor]);
 
-  if (!editor) return null;
+  if (!editor) return <div className="md-editor md-editor--loading" aria-hidden />;
 
   return (
     <div className="md-editor">

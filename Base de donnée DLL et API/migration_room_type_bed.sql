@@ -1,5 +1,5 @@
 -- migration_room_type_bed.sql
--- §70 (Phase 2 — room descriptive): structured bed list per room type.
+-- §72 (Phase 2 — room descriptive): structured bed list per room type.
 -- Adds: (1) ref_code 'bed_type' FK-target partition (+ uniques + house RLS pair), (2) ~10
 -- seeded bed-type codes + en/es i18n, (3) object_room_type_bed (room -> bed type + quantity)
 -- with the §38 split read gate + per-command canonical write (outer columns qualified, §55).

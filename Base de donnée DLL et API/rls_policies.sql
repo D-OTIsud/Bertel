@@ -1276,7 +1276,7 @@ CREATE POLICY "Écriture amenities chambre par propriétaire" ON object_room_typ
     )
   );
 
--- §70: object_room_type_bed read gate (§38 split form, outer column qualified §55). The
+-- §72: object_room_type_bed read gate (§38 split form, outer column qualified §55). The
 -- per-command canonical write policies live in migration_room_type_bed.sql (manifest 14c),
 -- mirroring how the amenity per-command writes live in migration_room_type_read_gate.sql (8v).
 CREATE POLICY "read_object_room_type_bed" ON object_room_type_bed

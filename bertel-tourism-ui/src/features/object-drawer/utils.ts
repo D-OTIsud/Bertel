@@ -1132,7 +1132,7 @@ export function parseOpenings(raw: Record<string, unknown>): OpeningItem[] {
   return openingPeriods.flatMap((period) => flattenOpeningSchedules(period));
 }
 
-/** §70 — render the structured bed list ([{quantity, bed_type:{code,name}}]) as « 2 × Lit double, 1 × Lit simple ». */
+/** §72 — render the structured bed list ([{quantity, bed_type:{code,name}}]) as « 2 × Lit double, 1 × Lit simple ». */
 function formatBedList(value: unknown): string {
   return readArray(value)
     .map((bed) => {
@@ -1145,7 +1145,7 @@ function formatBedList(value: unknown): string {
 
 export function parseRoomTypes(raw: Record<string, unknown>): RoomTypeItem[] {
   // Live shape = get_object_resource's to_jsonb(object_room_type): bed_config / total_rooms.
-  // §70: `beds` is now the structured array; fall back to the legacy free-text bed_config when empty.
+  // §72: `beds` is now the structured array; fall back to the legacy free-text bed_config when empty.
   return readArray(raw.room_types ?? raw.object_room_types).map((room, index) => ({
     id: readString(room.id, `room-${index}`),
     name: readString(room.name, readNamedValue(room.room_type, 'Type de chambre')),

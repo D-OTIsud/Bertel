@@ -889,7 +889,7 @@ INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('room_type', 'connecting', 'Chambres communicantes', 'Chambres communicantes', 10)
 ON CONFLICT DO NOTHING;
 
--- Types de lits (§70 — configuration des lits structurée du descriptif de chambre)
+-- Types de lits (§72 — configuration des lits structurée du descriptif de chambre)
 INSERT INTO ref_code (domain, code, name, description, position) VALUES
 ('bed_type', 'single', 'Lit simple (90 cm)', 'Lit une place', 1),
 ('bed_type', 'double', 'Lit double (140 cm)', 'Lit deux places standard', 2),

@@ -1,4 +1,4 @@
--- test_room_type_bed.sql -- §70 structured bed list (Phase 2).
+-- test_room_type_bed.sql -- §72 structured bed list (Phase 2).
 -- Asserts post-state after schema_unified + rls_policies + seeds_data + migration_room_type_bed.
 -- Read-only; raises on any failure, emits PASS otherwise.
 DO $$

@@ -2410,7 +2410,7 @@ CREATE TABLE IF NOT EXISTS object_room_type_amenity (
   PRIMARY KEY (room_type_id, amenity_id)
 );
 
--- §70: structured bed list per room type (qty x bed type). Sibling of object_room_type_amenity
+-- §72: structured bed list per room type (qty x bed type). Sibling of object_room_type_amenity
 -- plus a quantity/position payload; bed_type_id -> ref_code_bed_type FK-target partition.
 CREATE TABLE IF NOT EXISTS object_room_type_bed (
   room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,

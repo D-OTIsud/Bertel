@@ -63,7 +63,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       </p>
 
       <SectionLabel>Configuration des lits</SectionLabel>
-      {/* Structured « quantité × type de lit » list (§70). Blank rows are dropped at save (buildBedRows). */}
+      {/* Structured « quantité × type de lit » list (§72). Blank rows are dropped at save (buildBedRows). */}
       {draft.beds.map((bed, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 32px', gap: 8, alignItems: 'center', marginBottom: 6 }}>
           <Input

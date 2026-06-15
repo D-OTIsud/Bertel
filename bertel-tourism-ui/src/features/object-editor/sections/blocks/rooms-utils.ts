@@ -248,7 +248,7 @@ export function applyChildren(children: string, total: string): { capacityAdults
   return { capacityAdults: String(t - c), capacityChildren: String(c) };
 }
 
-/* §70 — structured bed list (quantité × type de lit) row helpers. Pure; the editor drives the
+/* §72 — structured bed list (quantité × type de lit) row helpers. Pure; the editor drives the
  * draft list and `buildBedRows` projects it to object_room_type_bed rows at save time. */
 type BedRefOption = { id: string; code: string; label: string };
 

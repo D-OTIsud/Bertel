@@ -406,7 +406,7 @@ export interface ObjectWorkspacePricingModule {
   unavailableReason: string | null;
 }
 
-/** One structured bed entry of a room type (§70): quantity × bed type from ref_code 'bed_type'. */
+/** One structured bed entry of a room type (§72): quantity × bed type from ref_code 'bed_type'. */
 export interface ObjectWorkspaceRoomBed {
   bedTypeId: string;
   bedTypeCode: string;
@@ -1785,7 +1785,7 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       mediaIds: readArray(record.media ?? record.room_type_media).map((media) =>
         readString(media.media_id, readString(readRecord(media.media).id, readString(media.id))),
       ).filter(Boolean),
-      // §70 structured bed list (get_object_resource emits `beds` as [{quantity, bed_type:{code,name}}]).
+      // §72 structured bed list (get_object_resource emits `beds` as [{quantity, bed_type:{code,name}}]).
       beds: readArray(record.beds ?? record.room_type_beds).map((bed) => {
         const ref = readNamedReference(bed.bed_type ?? bed);
         return { bedTypeId: ref.id, bedTypeCode: ref.code, bedTypeLabel: ref.label, quantity: readString(bed.quantity, '1') };

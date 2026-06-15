@@ -47,13 +47,16 @@ export function AdaptedDescriptionField({ editor, descriptions, objectScope, can
       ...descriptions,
       object: { ...objectScope, adaptedDescription: draft },
     });
+    setActiveLang(descriptions.activeLanguage || local);
     setOpen(false);
   }
 
   const previewMarkdown = readTranslatableField(field, local, local);
+  // Preview-card pips reflect the PERSISTED field (what's saved), in the local language.
   const filledLangs = descriptions.availableLanguages.filter(
     (code) => readTranslatableField(field, code, local).trim() !== '',
   );
+  // Modal tabs' "filled" dot tracks the in-flight DRAFT (what the user is editing now).
   const langTabs = descriptions.availableLanguages.map((code) => ({
     code,
     label: LANG_LABELS[code] ?? code.toUpperCase(),
@@ -95,16 +98,17 @@ export function AdaptedDescriptionField({ editor, descriptions, objectScope, can
         </p>
       )}
 
-      {open && (
-        <EditorModal open={open} title="Description adaptée" onClose={() => setOpen(false)} onSave={save}>
-          <LangTabs tabs={langTabs} active={activeLang} onSelect={setActiveLang} />
-          <MarkdownEditorLazy
-            value={readTranslatableField(draft, activeLang, local)}
-            ariaLabel={`Description adaptée — ${LANG_LABELS[activeLang] ?? activeLang.toUpperCase()}`}
-            onChange={(md) => setDraft((d) => updateTranslatableField(d, activeLang, local, md))}
-          />
-        </EditorModal>
-      )}
+      {/* Radix Dialog (inside EditorModal) owns visibility via `open`; it unmounts its content
+          when closed, so the WYSIWYG (and TipTap) still load lazily on first open. No outer
+          `open &&` guard — that double-gate caused a redundant mount + spurious act() warnings. */}
+      <EditorModal open={open} title="Description adaptée" onClose={() => setOpen(false)} onSave={save}>
+        <LangTabs tabs={langTabs} active={activeLang} onSelect={setActiveLang} />
+        <MarkdownEditorLazy
+          value={readTranslatableField(draft, activeLang, local)}
+          ariaLabel={`Description adaptée — ${LANG_LABELS[activeLang] ?? activeLang.toUpperCase()}`}
+          onChange={(md) => setDraft((d) => updateTranslatableField(d, activeLang, local, md))}
+        />
+      </EditorModal>
     </div>
   );
 }

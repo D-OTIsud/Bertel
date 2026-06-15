@@ -1,9 +1,5 @@
-import { Chip, ChipMultiSelect, ChipSet, Fs } from '../primitives';
+import { ChipMultiSelect, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
-
-function toggleCode(values: string[], code: string) {
-  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
-}
 
 export function SectionPayLangs({ editor, folded }: SectionProps) {
   const characteristics = editor.draft.characteristics;
@@ -53,21 +49,18 @@ export function SectionPayLangs({ editor, folded }: SectionProps) {
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Modes de paiement acceptés
       </div>
-      <ChipSet>
-        {characteristics.paymentOptions.map((option) => (
-          <Chip
-            key={option.code}
-            label={option.label}
-            on={characteristics.selectedPaymentCodes.includes(option.code)}
-            onClick={() =>
-              editor.replaceModule('characteristics', {
-                ...characteristics,
-                selectedPaymentCodes: toggleCode(characteristics.selectedPaymentCodes, option.code),
-              })
-            }
-          />
-        ))}
-      </ChipSet>
+      <ChipMultiSelect
+        options={characteristics.paymentOptions}
+        selected={characteristics.selectedPaymentCodes}
+        modalTitle="Choisir les modes de paiement"
+        searchPlaceholder="Rechercher un mode de paiement…"
+        onChange={(codes) =>
+          editor.replaceModule('characteristics', {
+            ...characteristics,
+            selectedPaymentCodes: codes,
+          })
+        }
+      />
 
       <div className="chip-group__label" style={{ marginTop: 14 }}>
         Langues parlées

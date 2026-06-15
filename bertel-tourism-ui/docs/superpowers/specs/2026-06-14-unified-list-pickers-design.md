@@ -152,6 +152,10 @@ inconsistent next to the modals; otherwise defer. Segmented controls (`Seg`) sta
   structure if flattened).
 - Small inline chip lists already matching the "Disponibles" look (`SectionPayLangs`
   payment modes, `BlockITI` practices) — fine as-is.
+  - **Update 2026-06-15:** PO reversed this for `SectionPayLangs` **payment modes** — they
+    now use the `ChipMultiSelect` modal picker (same control as the section's *Langues
+    parlées*: « Choisir / modifier » + search + Sélectionnés/Disponibles). `BlockITI`
+    practices stay inline.
 - Address/location typeaheads (`AddressBanCombobox`, `LocationReferenceCombobox`) — async,
   free-text, distinct concern.
 

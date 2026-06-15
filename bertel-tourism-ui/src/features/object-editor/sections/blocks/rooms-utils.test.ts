@@ -1,4 +1,7 @@
 import {
+  applyAdults,
+  applyChildren,
+  applyCouchagesTotal,
   computeRoomsCapacitySum,
   computeUnitCount,
   roomCouchages,
@@ -130,5 +133,27 @@ describe('syncDerivedStructural', () => {
     ]);
     const next = syncDerivedStructural(seeded, [{ quantity: '3' }], 0, 'HOT');
     expect(next.capacityItems.find((i) => i.metricCode === 'max_capacity')).toMatchObject({ recordId: 'r1', value: '48' });
+  });
+});
+
+describe('couchages lock helpers', () => {
+  it('applyCouchagesTotal pre-fills adults = total, children = 0', () => {
+    expect(applyCouchagesTotal('4')).toEqual({ capacityTotal: '4', capacityAdults: '4', capacityChildren: '0' });
+  });
+  it('applyCouchagesTotal treats empty/invalid total as 0 adults', () => {
+    expect(applyCouchagesTotal('')).toEqual({ capacityTotal: '', capacityAdults: '0', capacityChildren: '0' });
+  });
+  it('applyAdults rebalances children so adults + children = total', () => {
+    expect(applyAdults('1', '4')).toEqual({ capacityAdults: '1', capacityChildren: '3' });
+  });
+  it('applyAdults clamps adults to [0, total]', () => {
+    expect(applyAdults('9', '4')).toEqual({ capacityAdults: '4', capacityChildren: '0' });
+    expect(applyAdults('-2', '4')).toEqual({ capacityAdults: '0', capacityChildren: '4' });
+  });
+  it('applyChildren rebalances adults so adults + children = total', () => {
+    expect(applyChildren('1', '4')).toEqual({ capacityAdults: '3', capacityChildren: '1' });
+  });
+  it('applyChildren clamps children to [0, total]', () => {
+    expect(applyChildren('9', '4')).toEqual({ capacityAdults: '0', capacityChildren: '4' });
   });
 });

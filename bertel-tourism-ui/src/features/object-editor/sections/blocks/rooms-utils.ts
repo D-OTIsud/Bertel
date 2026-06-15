@@ -216,3 +216,32 @@ export function syncDerivedStructural<M extends CapacityModuleSlice>(
   next = upsertDerivedRow(next, 'meeting_rooms', meetingRoomsCount);
   return next;
 }
+
+/** Parse a room capacity string to a non-negative int (empty/invalid/negative → 0). */
+function toCapacityInt(value: string): number {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * Couchages split — le total est l'ancre. Saisir le total pré-remplit adultes = total,
+ * enfants = 0. `applyAdults`/`applyChildren` maintiennent `adultes + enfants === total`
+ * après chaque édition (clamp à [0, total]). Les trois sont des STRINGS (inputs contrôlés).
+ */
+export function applyCouchagesTotal(total: string): {
+  capacityTotal: string; capacityAdults: string; capacityChildren: string;
+} {
+  return { capacityTotal: total, capacityAdults: String(toCapacityInt(total)), capacityChildren: '0' };
+}
+
+export function applyAdults(adults: string, total: string): { capacityAdults: string; capacityChildren: string } {
+  const t = toCapacityInt(total);
+  const a = Math.min(Math.max(toCapacityInt(adults), 0), t);
+  return { capacityAdults: String(a), capacityChildren: String(t - a) };
+}
+
+export function applyChildren(children: string, total: string): { capacityAdults: string; capacityChildren: string } {
+  const t = toCapacityInt(total);
+  const c = Math.min(Math.max(toCapacityInt(children), 0), t);
+  return { capacityAdults: String(t - c), capacityChildren: String(c) };
+}

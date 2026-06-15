@@ -140,6 +140,12 @@ def _reference_key(row):
     vals = row.get("values", {})
     if vals.get("domain") and vals.get("code"):
         return "%s:%s" % (vals.get("domain"), vals.get("code"))
+    if vals.get("domain") and vals.get("ancestor_code") and vals.get("descendant_code"):
+        return "%s:%s>%s" % (vals.get("domain"), vals.get("ancestor_code"), vals.get("descendant_code"))
+    if vals.get("metric_code") and vals.get("object_type"):
+        return "%s:%s" % (vals.get("metric_code"), vals.get("object_type"))
+    if vals.get("facet_table") and vals.get("object_type"):
+        return "%s:%s" % (vals.get("facet_table"), vals.get("object_type"))
     if vals.get("classification_code") and vals.get("action_external_code"):
         return "%s:%s" % (vals.get("classification_code"), vals.get("action_external_code"))
     if vals.get("classification_code") and vals.get("group_code"):
@@ -150,7 +156,7 @@ def _reference_key(row):
         return "%s:%s:%s" % (vals.get("category_code"), vals.get("group_code"), vals.get("code"))
     if vals.get("scheme_code") and vals.get("code"):
         return "%s:%s" % (vals.get("scheme_code"), vals.get("code"))
-    for key in ("slug", "code", "external_code", "category_code", "scheme_code"):
+    for key in ("slug", "code", "external_code", "category_code", "scheme_code", "insee_code"):
         if vals.get(key):
             return str(vals.get(key))
     return row.get("source", "")
@@ -158,7 +164,10 @@ def _reference_key(row):
 
 def _reference_label(row):
     vals = row.get("values", {})
-    for key in ("name", "label", "native_name", "description"):
+    if vals.get("ancestor_name") and vals.get("descendant_name"):
+        return "%s → %s" % (vals.get("ancestor_name"), vals.get("descendant_name"))
+    for key in ("name", "label", "native_name", "metric_name", "action_label", "group_name",
+                "category_name", "scheme_name", "family_name", "description"):
         if vals.get(key):
             return vals.get(key)
     return ""
@@ -166,10 +175,15 @@ def _reference_label(row):
 
 def _reference_description(row):
     vals = row.get("values", {})
-    for key in ("description", "note", "category", "selection", "display_group"):
+    parts = []
+    for key in ("description", "note"):
         if vals.get(key):
-            return vals.get(key)
-    return ""
+            parts.append(str(vals.get(key)))
+    for key in ("category", "selection", "display_group", "relation_type", "requirement_type",
+                "match_scope", "object_type", "depth"):
+        if vals.get(key):
+            parts.append("%s=%s" % (key, vals.get(key)))
+    return " · ".join(parts)
 
 
 def _small_code_list(values, limit=12):
@@ -249,10 +263,10 @@ def render_api_db_reference_html(g, reference_extract=None, live_note="TBLS_DSN 
         vals = row.get("values", {})
         rows_by_table[row["table"]].append(row)
         domain = vals.get("domain")
-        if domain:
+        if row["table"] == "public.ref_code" and domain:
             rows_by_domain[domain].append(row)
 
-    rows_without_domain = [r for r in ref_rows if not r.get("values", {}).get("domain")]
+    rows_without_domain = [r for r in ref_rows if r["table"] != "public.ref_code" or not r.get("values", {}).get("domain")]
     rows_without_domain_by_table = defaultdict(list)
     for row in rows_without_domain:
         rows_without_domain_by_table[row["table"]].append(row)
@@ -265,28 +279,38 @@ def render_api_db_reference_html(g, reference_extract=None, live_note="TBLS_DSN 
     functions_without_edges = [_node_title(n) for n in all_functions if not function_edges.get(n["id"])]
     dynamic_functions = [_node_title(n) for n in all_functions if n.get("props", {}).get("dynamic_sql")]
     tables_with_rows = {row["table"] for row in ref_rows}
+    live_table_set = set(live_meta.get("tables") or [])
     public_ref_tables_without_rows = [
         n["id"] for n in ref_tables
         if n["schema"] == "public"
         and n["id"] not in tables_with_rows
+        and n["id"] not in live_table_set
         and not (n["label"].startswith("ref_code_") and n["label"] not in ("ref_code_domain_registry", "ref_code_taxonomy_closure"))
     ]
 
     def live_status_html():
         status = live_meta.get("status", "not_queried")
-        if status == "queried":
+        if status in ("queried", "mcp_queried", "mcp_verified_rest_export"):
+            mode = "directe"
+            if status == "mcp_queried":
+                mode = "MCP"
+            elif status == "mcp_verified_rest_export":
+                mode = "MCP vérifiée + REST Supabase publishable"
             parts = [
-                "Lecture live effectuée sur %d tables publiques de référence." % len(live_meta.get("tables") or []),
-                "%d lignes seed SQL restent disponibles pour les tables non interrogées." % seed_meta.get("rows", 0),
+                "Lecture live %s effectuée sur %d tables publiques de référence." % (
+                    mode, len(live_meta.get("tables") or [])),
+                "%d lignes seed SQL restent disponibles comme filet de secours." % seed_meta.get("rows", 0),
             ]
             if live_meta.get("truncated"):
                 parts.append("%d table(s) tronquée(s) par limite de sécurité." % len(live_meta["truncated"]))
-            if live_meta.get("errors"):
+            if live_meta.get("count_mismatches"):
+                parts.append("%d écart(s) de visibilité REST, seeds conservés pour ces tables." % len(live_meta["count_mismatches"]))
+            elif live_meta.get("errors"):
                 parts.append("%d erreur(s) de lecture live, seeds conservés pour ces tables." % len(live_meta["errors"]))
             return " ".join(parts)
         if status == "error":
             return "Lecture live demandée mais échouée ; les valeurs affichées viennent des seeds SQL versionnées. Erreur : %s" % _esc(live_meta.get("message", "non précisée"))
-        return "Aucune lecture live : les valeurs affichées viennent des seeds SQL versionnées."
+        return "Aucune lecture live MCP : les valeurs affichées viennent des seeds SQL versionnées."
 
     def coverage_gaps_html():
         out = ["<details><summary>Écarts de couverture à surveiller</summary>"]
@@ -444,8 +468,8 @@ def render_api_db_reference_html(g, reference_extract=None, live_note="TBLS_DSN 
         "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>valeurs référentielles</b><p class=\"muted\">live si disponible, seeds sinon</p></article>" % len(ref_rows),
         "<article class=\"mini-card\"><div class=\"metric\">%d</div><b>connexions graphe</b><p class=\"muted\">lectures, écritures, FK, RLS</p></article>" % g["meta"]["edge_count"],
         "</div>",
-        "<p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent de la base live quand <code>TBLS_DSN</code> est disponible, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>",
-        "<p class=\"muted\">État connexion live au moment de la génération : %s. Pour valider les lignes réellement présentes en production, régénérer le graphe avec <code>TBLS_DSN</code> puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>.</p>" % _esc(live_note),
+        "<p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent du fichier live <code>db-graph-out/reference_live.json</code> quand il existe, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>",
+        "<p class=\"muted\">État source live au moment de la génération : %s. Workflow conseillé : lancer <code>tools/db-graph/db_reference_audit.sql</code> via Supabase MCP <code>execute_sql</code>, récupérer l'URL projet et une clé publishable via MCP, exécuter <code>tools/db-graph/export_reference_live_rest.py</code>, puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>. Le dump MCP pur <code>tools/db-graph/db_reference_extract.sql</code> reste disponible si le client MCP accepte le volume complet.</p>" % _esc(live_note),
         "<p class=\"muted\">%s</p>" % live_status_html(),
         coverage_gaps_html(),
         "</section>",

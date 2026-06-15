@@ -860,7 +860,7 @@
           <summary>0.2 Sources de vérité</summary>
           <div class="content">
             <p>La documentation API ci-dessous décrit les contrats consommateur. Pour l'ordre SQL, les prérequis Supabase et les scripts opérationnels, le runbook SQL et le guide Supabase restent les documents de référence.</p>
-            <p class="inline-help">Pour l'audit fonction par fonction et connexion par connexion, utiliser <a href="api-db-reference.html">la référence DB/API générée</a> : elle croise <code>db-graph-out/graph.json</code>, les RPC SQL, les tables lues/écrites, les policies, les enums et les valeurs de référentiels live quand <code>TBLS_DSN</code> est disponible, sinon les seeds SQL versionnées.</p>
+            <p class="inline-help">Pour l'audit fonction par fonction et connexion par connexion, utiliser <a href="api-db-reference.html">la référence DB/API générée</a> : elle croise <code>db-graph-out/graph.json</code>, les RPC SQL, les tables lues/écrites, les policies, les enums et les valeurs de référentiels live vérifiées par Supabase MCP quand <code>db-graph-out/reference_live.json</code> est disponible, sinon les seeds SQL versionnées.</p>
             <p class="inline-help">Dans le dépôt, la documentation technique détaillée du schéma reste dans <code>Base de donnée DLL et API/README.md</code>.</p>
           </div>
         </details>

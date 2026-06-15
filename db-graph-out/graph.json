@@ -38339,12 +38339,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1665
+      "line": 1795
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1665
+     "line": 1795
     }
    }
   },
@@ -38379,12 +38379,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2113
+      "line": 2116
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2113
+     "line": 2116
     }
    }
   },
@@ -38459,12 +38459,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1675
+      "line": 1678
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1675
+     "line": 1678
     }
    }
   },
@@ -38484,12 +38484,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1688
+      "line": 1691
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1688
+     "line": 1691
     }
    }
   },
@@ -38534,12 +38534,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1766
+      "line": 1769
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1766
+     "line": 1769
     }
    }
   },
@@ -38574,12 +38574,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3724
+      "line": 3739
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3724
+     "line": 3739
     }
    }
   },
@@ -38599,7 +38599,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1850
+      "line": 1980
      },
      {
       "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
@@ -38624,12 +38624,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2153
+      "line": 2284
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2153
+     "line": 2284
     }
    }
   },
@@ -38664,12 +38664,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5932
+      "line": 5947
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5932
+     "line": 5947
     }
    }
   },
@@ -38714,12 +38714,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2097
+      "line": 2100
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2097
+     "line": 2100
     }
    }
   },
@@ -38739,12 +38739,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6485
+      "line": 6630
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6485
+     "line": 6630
     }
    }
   },
@@ -38789,12 +38789,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2556
+      "line": 2571
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2556
+     "line": 2571
     }
    }
   },
@@ -38814,12 +38814,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4571
+      "line": 4586
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4571
+     "line": 4586
     }
    }
   },
@@ -38839,12 +38839,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2223
+      "line": 2354
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2223
+     "line": 2354
     }
    }
   },
@@ -38864,12 +38864,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2247
+      "line": 2378
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2247
+     "line": 2378
     }
    }
   },
@@ -38889,12 +38889,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7933
+      "line": 8078
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7933
+     "line": 8078
     }
    }
   },
@@ -38914,12 +38914,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 4686
+      "line": 4831
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 4686
+     "line": 4831
     }
    }
   },
@@ -38939,12 +38939,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 4754
+      "line": 4899
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 4754
+     "line": 4899
     }
    }
   },
@@ -38964,12 +38964,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7366
+      "line": 7511
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7366
+     "line": 7511
     }
    }
   },
@@ -38989,12 +38989,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5711
+      "line": 5856
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5711
+     "line": 5856
     }
    }
   },
@@ -39014,12 +39014,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5961
+      "line": 6106
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5961
+     "line": 6106
     }
    }
   },
@@ -39039,12 +39039,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6289
+      "line": 6434
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6289
+     "line": 6434
     }
    }
   },
@@ -39064,12 +39064,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6097
+      "line": 6242
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6097
+     "line": 6242
     }
    }
   },
@@ -39089,12 +39089,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 989
+      "line": 992
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 989
+     "line": 992
     }
    }
   },
@@ -39114,12 +39114,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3580
+      "line": 3595
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3580
+     "line": 3595
     }
    }
   },
@@ -39139,12 +39139,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6590
+      "line": 6735
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6590
+     "line": 6735
     }
    }
   },
@@ -39179,12 +39179,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6911
+      "line": 7056
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6911
+     "line": 7056
     }
    }
   },
@@ -39204,12 +39204,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8880
+      "line": 9025
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8880
+     "line": 9025
     }
    }
   },
@@ -39244,12 +39244,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 242
+      "line": 243
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 242
+     "line": 243
     }
    }
   },
@@ -39269,12 +39269,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8139
+      "line": 8284
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8139
+     "line": 8284
     }
    }
   },
@@ -39294,12 +39294,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 297
+      "line": 298
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 297
+     "line": 298
     }
    }
   },
@@ -39349,12 +39349,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7420
+      "line": 7565
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7420
+     "line": 7565
     }
    }
   },
@@ -39374,12 +39374,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8630
+      "line": 8775
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8630
+     "line": 8775
     }
    }
   },
@@ -39399,12 +39399,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 110
+      "line": 111
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 110
+     "line": 111
     }
    }
   },
@@ -39424,12 +39424,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2183
+      "line": 2314
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2183
+     "line": 2314
     }
    }
   },
@@ -39449,12 +39449,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2193
+      "line": 2324
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2193
+     "line": 2324
     }
    }
   },
@@ -39524,12 +39524,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2203
+      "line": 2334
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2203
+     "line": 2334
     }
    }
   },
@@ -39549,12 +39549,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2213
+      "line": 2344
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2213
+     "line": 2344
     }
    }
   },
@@ -39574,12 +39574,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2170
+      "line": 2301
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2170
+     "line": 2301
     }
    }
   },
@@ -39624,12 +39624,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8790
+      "line": 8935
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8790
+     "line": 8935
     }
    }
   },
@@ -39674,12 +39674,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7233
+      "line": 7378
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7233
+     "line": 7378
     }
    }
   },
@@ -39699,12 +39699,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8948
+      "line": 9093
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8948
+     "line": 9093
     }
    }
   },
@@ -39749,12 +39749,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3395
+      "line": 3410
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3395
+     "line": 3410
     }
    }
   },
@@ -39774,12 +39774,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 383
+      "line": 384
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 383
+     "line": 384
     }
    }
   },
@@ -39954,12 +39954,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8558
+      "line": 8703
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8558
+     "line": 8703
     }
    }
   },
@@ -39979,12 +39979,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3572
+      "line": 3587
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3572
+     "line": 3587
     }
    }
   },
@@ -40054,12 +40054,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4960
+      "line": 4975
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4960
+     "line": 4975
     }
    }
   },
@@ -40079,12 +40079,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8911
+      "line": 9056
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8911
+     "line": 9056
     }
    }
   },
@@ -40119,12 +40119,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 102
+      "line": 103
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 102
+     "line": 103
     }
    }
   },
@@ -40144,12 +40144,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4848
+      "line": 4863
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4848
+     "line": 4863
     }
    }
   },
@@ -40169,12 +40169,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3659
+      "line": 3674
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3659
+     "line": 3674
     }
    }
   },
@@ -40194,12 +40194,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4945
+      "line": 4960
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4945
+     "line": 4960
     }
    }
   },
@@ -40244,12 +40244,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 202
+      "line": 203
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 202
+     "line": 203
     }
    }
   },
@@ -40270,12 +40270,12 @@
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
       "line": 1616
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
+      "line": 33
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1616
-    }
+    ]
    }
   },
   {
@@ -40294,12 +40294,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2294
+      "line": 2425
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2294
+     "line": 2425
     }
    }
   },
@@ -40349,12 +40349,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 949
+      "line": 952
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 949
+     "line": 952
     }
    }
   },
@@ -40374,12 +40374,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 965
+      "line": 968
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 965
+     "line": 968
     }
    }
   },
@@ -40439,12 +40439,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1730
+      "line": 1733
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1730
+     "line": 1733
     }
    }
   },
@@ -40489,12 +40489,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6443
+      "line": 6588
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6443
+     "line": 6588
     }
    }
   },
@@ -40514,12 +40514,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1829
+      "line": 1832
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1829
+     "line": 1832
     }
    }
   },
@@ -40539,12 +40539,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1881
+      "line": 1884
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1881
+     "line": 1884
     }
    }
   },
@@ -40564,12 +40564,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2167
+      "line": 2170
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2167
+     "line": 2170
     }
    }
   },
@@ -40589,12 +40589,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6083
+      "line": 6098
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6083
+     "line": 6098
     }
    }
   },
@@ -40614,12 +40614,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2610
+      "line": 2625
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2610
+     "line": 2625
     }
    }
   },
@@ -40639,12 +40639,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2730
+      "line": 2745
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2730
+     "line": 2745
     }
    }
   },
@@ -40664,12 +40664,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3266
+      "line": 3281
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3266
+     "line": 3281
     }
    }
   },
@@ -40689,12 +40689,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3286
+      "line": 3301
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3286
+     "line": 3301
     }
    }
   },
@@ -40714,12 +40714,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3447
+      "line": 3462
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3447
+     "line": 3462
     }
    }
   },
@@ -40769,12 +40769,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5087
+      "line": 5102
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5087
+     "line": 5102
     }
    }
   },
@@ -40794,12 +40794,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5649
+      "line": 5664
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5649
+     "line": 5664
     }
    }
   },
@@ -40879,12 +40879,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5686
+      "line": 5701
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5686
+     "line": 5701
     }
    }
   },
@@ -40929,12 +40929,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3002
+      "line": 3017
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3002
+     "line": 3017
     }
    }
   },
@@ -40954,12 +40954,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3141
+      "line": 3156
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3141
+     "line": 3156
     }
    }
   },
@@ -40979,12 +40979,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3606
+      "line": 3621
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3606
+     "line": 3621
     }
    }
   },
@@ -41004,12 +41004,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3674
+      "line": 3689
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3674
+     "line": 3689
     }
    }
   },
@@ -41029,12 +41029,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2790
+      "line": 2806
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2790
+     "line": 2806
     }
    }
   },
@@ -41054,12 +41054,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4761
+      "line": 4776
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4761
+     "line": 4776
     }
    }
   },
@@ -41079,12 +41079,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2260
+      "line": 2391
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2260
+     "line": 2391
     }
    }
   },
@@ -41104,12 +41104,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 3068
+      "line": 3084
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 3068
+     "line": 3084
     }
    }
   },
@@ -41144,12 +41144,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4473
+      "line": 4488
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4473
+     "line": 4488
     }
    }
   },
@@ -41169,12 +41169,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4868
+      "line": 4883
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4868
+     "line": 4883
     }
    }
   },
@@ -41198,7 +41198,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4809
+      "line": 4824
      }
     ]
    }
@@ -41219,12 +41219,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5824
+      "line": 5969
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5824
+     "line": 5969
     }
    }
   },
@@ -41244,12 +41244,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7210
+      "line": 7355
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7210
+     "line": 7355
     }
    }
   },
@@ -41269,12 +41269,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8272
+      "line": 8417
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8272
+     "line": 8417
     }
    }
   },
@@ -41294,12 +41294,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7961
+      "line": 8106
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7961
+     "line": 8106
     }
    }
   },
@@ -41319,12 +41319,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6006
+      "line": 6151
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6006
+     "line": 6151
     }
    }
   },
@@ -41344,12 +41344,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7996
+      "line": 8141
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7996
+     "line": 8141
     }
    }
   },
@@ -41369,12 +41369,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8043
+      "line": 8188
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8043
+     "line": 8188
     }
    }
   },
@@ -41494,12 +41494,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2237
+      "line": 2368
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2237
+     "line": 2368
     }
    }
   },
@@ -41634,12 +41634,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3421
+      "line": 3436
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3421
+     "line": 3436
     }
    }
   },
@@ -41659,12 +41659,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5831
+      "line": 5846
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5831
+     "line": 5846
     }
    }
   },
@@ -41774,12 +41774,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 257
+      "line": 258
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 257
+     "line": 258
     }
    }
   },
@@ -41849,12 +41849,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6184
+      "line": 6329
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6184
+     "line": 6329
     }
    }
   },
@@ -41874,12 +41874,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3619
+      "line": 3634
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3619
+     "line": 3634
     }
    }
   },
@@ -41939,12 +41939,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1648
+      "line": 1778
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1648
+     "line": 1778
     }
    }
   },
@@ -42114,12 +42114,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 365
+      "line": 366
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 365
+     "line": 366
     }
    }
   },
@@ -42139,12 +42139,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2082
+      "line": 2085
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2082
+     "line": 2085
     }
    }
   },
@@ -42164,12 +42164,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 3043
+      "line": 3059
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 3043
+     "line": 3059
     }
    }
   },
@@ -42189,12 +42189,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4790
+      "line": 4805
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4790
+     "line": 4805
     }
    }
   },
@@ -42214,12 +42214,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 3095
+      "line": 3111
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 3095
+     "line": 3111
     }
    }
   },
@@ -42239,12 +42239,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 286
+      "line": 287
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 286
+     "line": 287
     }
    }
   },
@@ -42264,12 +42264,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2179
+      "line": 2195
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2179
+     "line": 2195
     }
    }
   },
@@ -42289,12 +42289,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 275
+      "line": 276
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 275
+     "line": 276
     }
    }
   },
@@ -42314,12 +42314,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2270
+      "line": 2401
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2270
+     "line": 2401
     }
    }
   },
@@ -42339,12 +42339,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 4796
+      "line": 4941
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 4796
+     "line": 4941
     }
    }
   },
@@ -42364,12 +42364,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2324
+      "line": 2455
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2324
+     "line": 2455
     }
    }
   },
@@ -42414,12 +42414,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5001
+      "line": 5146
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5001
+     "line": 5146
     }
    }
   },
@@ -42439,12 +42439,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 4547
+      "line": 4692
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 4547
+     "line": 4692
     }
    }
   },
@@ -42464,12 +42464,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 4653
+      "line": 4798
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 4653
+     "line": 4798
     }
    }
   },
@@ -42514,12 +42514,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5045
+      "line": 5190
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5045
+     "line": 5190
     }
    }
   },
@@ -42539,12 +42539,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5272
+      "line": 5417
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5272
+     "line": 5417
     }
    }
   },
@@ -42564,12 +42564,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5317
+      "line": 5462
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5317
+     "line": 5462
     }
    }
   },
@@ -42589,12 +42589,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5527
+      "line": 5672
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5527
+     "line": 5672
     }
    }
   },
@@ -42614,12 +42614,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6538
+      "line": 6683
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6538
+     "line": 6683
     }
    }
   },
@@ -42639,12 +42639,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 1051
+      "line": 1052
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 1051
+     "line": 1052
     }
    }
   },
@@ -42664,12 +42664,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7736
+      "line": 7881
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7736
+     "line": 7881
     }
    }
   },
@@ -42689,12 +42689,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 460
+      "line": 461
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 460
+     "line": 461
     }
    }
   },
@@ -42714,12 +42714,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6255
+      "line": 6400
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6255
+     "line": 6400
     }
    }
   },
@@ -42739,12 +42739,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6736
+      "line": 6881
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6736
+     "line": 6881
     }
    }
   },
@@ -42764,12 +42764,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6829
+      "line": 6974
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6829
+     "line": 6974
     }
    }
   },
@@ -42789,12 +42789,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8205
+      "line": 8350
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8205
+     "line": 8350
     }
    }
   },
@@ -42814,12 +42814,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1697
+      "line": 1827
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1697
+     "line": 1827
     }
    }
   },
@@ -42839,12 +42839,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 403
+      "line": 404
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 403
+     "line": 404
     }
    }
   },
@@ -42864,12 +42864,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2073
+      "line": 2089
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2073
+     "line": 2089
     }
    }
   },
@@ -42889,12 +42889,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2263
+      "line": 2279
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2263
+     "line": 2279
     }
    }
   },
@@ -42914,12 +42914,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2340
+      "line": 2356
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2340
+     "line": 2356
     }
    }
   },
@@ -42939,12 +42939,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2447
+      "line": 2463
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2447
+     "line": 2463
     }
    }
   },
@@ -42964,11 +42964,11 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 198
+      "line": 199
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2580
+      "line": 2596
      }
     ]
    }
@@ -42989,12 +42989,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2728
+      "line": 2744
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2728
+     "line": 2744
     }
    }
   },
@@ -43014,12 +43014,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2852
+      "line": 2868
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2852
+     "line": 2868
     }
    }
   },
@@ -43039,12 +43039,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2924
+      "line": 2940
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2924
+     "line": 2940
     }
    }
   },
@@ -43068,7 +43068,7 @@
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 3248
+      "line": 3264
      }
     ]
    }
@@ -43114,11 +43114,11 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 197
+      "line": 198
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 1850
+      "line": 1866
      }
     ]
    }
@@ -43139,12 +43139,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 216
+      "line": 217
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 216
+     "line": 217
     }
    }
   },
@@ -43164,12 +43164,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 315
+      "line": 316
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 315
+     "line": 316
     }
    }
   },
@@ -43189,12 +43189,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 331
+      "line": 332
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 331
+     "line": 332
     }
    }
   },
@@ -43222,7 +43222,7 @@
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 181
+      "line": 182
      }
     ]
    }
@@ -43268,12 +43268,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7656
+      "line": 7801
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7656
+     "line": 7801
     }
    }
   },
@@ -43543,12 +43543,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1787
+      "line": 1917
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1787
+     "line": 1917
     }
    }
   },
@@ -43568,12 +43568,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6642
+      "line": 6787
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6642
+     "line": 6787
     }
    }
   },
@@ -43593,12 +43593,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6972
+      "line": 7117
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6972
+     "line": 7117
     }
    }
   },
@@ -43618,12 +43618,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7090
+      "line": 7235
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7090
+     "line": 7235
     }
    }
   },
@@ -43643,12 +43643,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7183
+      "line": 7328
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7183
+     "line": 7328
     }
    }
   },
@@ -43668,12 +43668,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7316
+      "line": 7461
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7316
+     "line": 7461
     }
    }
   },
@@ -43693,12 +43693,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7462
+      "line": 7607
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7462
+     "line": 7607
     }
    }
   },
@@ -43718,12 +43718,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7532
+      "line": 7677
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7532
+     "line": 7677
     }
    }
   },
@@ -43743,12 +43743,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7591
+      "line": 7736
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7591
+     "line": 7736
     }
    }
   },
@@ -43768,12 +43768,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7777
+      "line": 7922
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7777
+     "line": 7922
     }
    }
   },
@@ -43793,12 +43793,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7821
+      "line": 7966
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7821
+     "line": 7966
     }
    }
   },
@@ -43818,12 +43818,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8081
+      "line": 8226
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8081
+     "line": 8226
     }
    }
   },
@@ -43843,12 +43843,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8301
+      "line": 8446
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8301
+     "line": 8446
     }
    }
   },
@@ -43868,12 +43868,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8437
+      "line": 8582
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8437
+     "line": 8582
     }
    }
   },
@@ -43893,12 +43893,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8471
+      "line": 8616
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8471
+     "line": 8616
     }
    }
   },
@@ -43918,12 +43918,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8706
+      "line": 8851
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8706
+     "line": 8851
     }
    }
   },
@@ -43997,7 +43997,7 @@
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 140
+      "line": 141
      }
     ]
    }
@@ -44022,7 +44022,7 @@
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 3154
+      "line": 3170
      }
     ]
    }

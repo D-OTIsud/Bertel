@@ -9,6 +9,7 @@ live database.
 import os
 import re
 import ssl
+import json
 from datetime import date, datetime, time
 from decimal import Decimal
 from urllib.parse import parse_qs, unquote, urlparse
@@ -396,6 +397,45 @@ def extract_live_reference_values(dsn, graph, extra=None, max_rows_per_table=100
             pass
 
     return {"rows": rows, "derived_sources": [], "live": live}
+
+
+def _decode_mcp_payload(value):
+    if isinstance(value, str):
+        return json.loads(value)
+    return value
+
+
+def load_mcp_reference_values(path):
+    """Load reference rows exported by Supabase MCP or MCP-assisted REST.
+
+    The expected query is `tools/db-graph/db_reference_extract.sql`, whose result
+    is usually one row containing a `reference_extract` JSON value. This loader is
+    intentionally tolerant because MCP clients may serialize JSON columns either
+    as nested objects or as strings. It also accepts the local
+    `export_reference_live_rest.py` output, which is used when an MCP response
+    would be too large to paste back without truncation.
+    """
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+    payload = _decode_mcp_payload(payload)
+    if isinstance(payload, dict) and "reference_extract" in payload:
+        data = _decode_mcp_payload(payload["reference_extract"])
+    elif isinstance(payload, list) and payload and isinstance(payload[0], dict) and "reference_extract" in payload[0]:
+        data = _decode_mcp_payload(payload[0]["reference_extract"])
+    elif isinstance(payload, dict) and "rows" in payload:
+        data = payload
+    else:
+        raise ValueError("Unsupported MCP reference JSON shape; expected reference_extract or rows")
+    data.setdefault("derived_sources", [])
+    data.setdefault("live", {"status": "mcp_queried", "tables": []})
+    data["live"].setdefault("status", "mcp_queried")
+    data["live"].setdefault("tables", sorted({row.get("table") for row in data.get("rows", []) if row.get("table")}))
+    data["live"].setdefault("errors", [])
+    data["live"].setdefault("truncated", [])
+    for row in data.get("rows", []):
+        row.setdefault("source", "mcp:%s" % row.get("table", "unknown"))
+        row.setdefault("source_kind", "mcp_execute_sql")
+    return data
 
 
 def merge_reference_extracts(seed_refs, live_refs):

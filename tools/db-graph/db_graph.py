@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dbgraph.build import build_graph  # noqa: E402
 from dbgraph.reference_extract import (extract_live_reference_values, extract_reference_values,  # noqa: E402
-                                       merge_reference_extracts)
+                                       load_mcp_reference_values, merge_reference_extracts)
 from dbgraph.render import (render_api_db_reference_html, render_html, write_functions_md,  # noqa: E402
                             write_index_md, write_policies_md, write_types_md)
 
@@ -45,6 +45,15 @@ def _reference_sql_paths(sql_paths):
     return sorted(out)
 
 
+def _load_live_reference_extract(g, extra):
+    mcp_path = os.environ.get("DB_GRAPH_MCP_REFERENCE_JSON") or os.path.join(OUT, "reference_live.json")
+    if os.path.exists(mcp_path):
+        return load_mcp_reference_values(mcp_path), "Supabase MCP JSON=%s" % os.path.relpath(mcp_path, ROOT).replace("\\", "/")
+    if os.environ.get("TBLS_DSN") and os.environ.get("DB_GRAPH_ALLOW_DIRECT_LIVE") == "1":
+        return extract_live_reference_values(os.environ["TBLS_DSN"], g, extra), "direct TBLS_DSN opt-in"
+    return {"live": {"status": "not_queried", "tables": [], "errors": [], "truncated": []}}, "Supabase MCP JSON=missing"
+
+
 def main():
     if not (os.path.exists(os.path.join(OUT, "schema_tbls.json")) and
             os.path.exists(os.path.join(OUT, "catalog_extra.json"))):
@@ -55,10 +64,8 @@ def main():
     reference_paths = _reference_sql_paths(sql_paths)
     g = build_graph(tbls, extra, sql_paths)
     seed_refs = _make_sources_relative(extract_reference_values(reference_paths))
-    live_refs = None
-    if os.environ.get("TBLS_DSN"):
-        live_refs = extract_live_reference_values(os.environ["TBLS_DSN"], g, extra)
-    refs = merge_reference_extracts(seed_refs, live_refs or {"live": {"status": "not_queried", "tables": []}})
+    live_refs, live_note = _load_live_reference_extract(g, extra)
+    refs = merge_reference_extracts(seed_refs, live_refs)
     refs = _make_sources_relative(refs)
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(DOCS, exist_ok=True)
@@ -70,7 +77,6 @@ def main():
                      ("TYPES.md", write_types_md), ("DB_AGENT_INDEX.md", write_index_md)):
         with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
             f.write(fn(g))
-    live_note = "TBLS_DSN=%s" % ("set" if os.environ.get("TBLS_DSN") else "missing")
     with open(os.path.join(DOCS, "api-db-reference.html"), "w", encoding="utf-8") as f:
         f.write(render_api_db_reference_html(g, refs, live_note=live_note))
     live = refs.get("live", {})

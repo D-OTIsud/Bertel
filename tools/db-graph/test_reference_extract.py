@@ -1,4 +1,7 @@
-from dbgraph.reference_extract import extract_reference_values, live_reference_tables, merge_reference_extracts
+import json
+
+from dbgraph.reference_extract import (extract_reference_values, live_reference_tables,
+                                       load_mcp_reference_values, merge_reference_extracts)
 
 
 def test_extract_reference_values_from_insert_and_cte(tmp_path):
@@ -87,3 +90,23 @@ def test_merge_reference_extracts_prefers_queried_live_tables():
     assert ("public.ref_code", "cash", None, "seed.sql:1") not in keys
     assert ("public.ref_tag", None, "family", "seed.sql:4") in keys
     assert merged["seed"]["rows"] == 2
+
+
+def test_load_mcp_reference_values_accepts_execute_sql_row(tmp_path):
+    out = tmp_path / "reference_live.json"
+    out.write_text(json.dumps([{
+        "reference_extract": {
+            "rows": [{
+                "table": "public.ref_code",
+                "values": {"domain": "payment_method", "code": "especes"},
+            }],
+            "live": {"status": "mcp_queried"},
+        }
+    }]), encoding="utf-8")
+
+    refs = load_mcp_reference_values(str(out))
+
+    assert refs["live"]["status"] == "mcp_queried"
+    assert refs["live"]["tables"] == ["public.ref_code"]
+    assert refs["rows"][0]["source"] == "mcp:public.ref_code"
+    assert refs["rows"][0]["source_kind"] == "mcp_execute_sql"

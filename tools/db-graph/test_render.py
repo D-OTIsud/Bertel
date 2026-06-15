@@ -51,15 +51,15 @@ def test_render_api_db_reference_html_lists_rpcs_tables_and_refs():
         "derived_sources": [],
         "live": {"status": "not_queried", "tables": []},
         "seed": {"rows": 1, "derived_sources": 0},
-    }, live_note="TBLS_DSN=missing")
+    }, live_note="Supabase MCP JSON=missing")
     assert "Référence API" in html
     assert "RPC / fonctions" in html
     assert "RLS policies" in html
     assert "api_views_functions.sql:42" in html
     assert "payment_method:cash" in html
-    assert "TBLS_DSN=missing" in html
+    assert "Supabase MCP JSON=missing" in html
     assert "Écarts de couverture" in html
-    assert "Aucune lecture live" in html
+    assert "Aucune lecture live MCP" in html
 
 def test_render_api_db_reference_html_describes_live_rows():
     graph = _g()
@@ -67,17 +67,17 @@ def test_render_api_db_reference_html_describes_live_rows():
         "rows": [{
             "table": "public.ref_code",
             "values": {"domain": "payment_method", "code": "especes", "name": "Espèces"},
-            "source": "live:public.ref_code",
-            "source_kind": "live_table",
-        }],
-        "derived_sources": [],
-        "live": {"status": "queried", "tables": ["public.ref_code"], "errors": [], "truncated": []},
+        "source": "mcp:public.ref_code",
+        "source_kind": "mcp_execute_sql",
+    }],
+    "derived_sources": [],
+        "live": {"status": "mcp_queried", "tables": ["public.ref_code"], "errors": [], "truncated": []},
         "seed": {"rows": 10, "derived_sources": 0},
-    }, live_note="TBLS_DSN=set")
+    }, live_note="Supabase MCP JSON=db-graph-out/reference_live.json")
 
-    assert "Lecture live effectuée" in html
+    assert "Lecture live MCP effectuée" in html
     assert "payment_method:especes" in html
-    assert "live:public.ref_code" in html
+    assert "mcp:public.ref_code" in html
 
 def test_render_api_db_reference_html_handles_live_connection_error():
     html = render_api_db_reference_html(_g(), {
@@ -85,7 +85,7 @@ def test_render_api_db_reference_html_handles_live_connection_error():
         "derived_sources": [],
         "live": {"status": "error", "message": "could not connect", "errors": ["timeout"], "tables": []},
         "seed": {"rows": 0, "derived_sources": 0},
-    }, live_note="TBLS_DSN=set")
+    }, live_note="Supabase MCP JSON=db-graph-out/reference_live.json")
 
     assert "Lecture live demandée mais échouée" in html
     assert "timeout" in html

@@ -53,9 +53,28 @@ function repHeader(columns: string, labels: string[]) {
 
 export function SectionClassification({ editor, folded }: SectionProps) {
   const distinctions = editor.draft.distinctions;
-  // §10 owns accessibility labels — keep them out of the §08 picker.
-  const schemes = distinctions.schemeOptions.filter((scheme) => !scheme.isAccessibility);
-  const rows = distinctions.distinctionGroups.flatMap((group) => group.items);
+  // §08 surfaces EVERY distinction family — classements, quality, sustainability AND
+  // accessibility (Tourisme & Handicap). Accessibility schemes are offered with their value
+  // forced to 'granted'; the granted_* sub-values are the per-disability coverage, which stays
+  // edited in §10 (the §08 modal never touches disabilityTypesCovered → coverage is preserved).
+  const accessibilityCodes = new Set(
+    distinctions.schemeOptions.filter((scheme) => scheme.isAccessibility).map((scheme) => scheme.code),
+  );
+  const isAccessibilityRow = (item: ObjectWorkspaceDistinctionItem) => accessibilityCodes.has(item.schemeCode);
+
+  const schemes = distinctions.schemeOptions.map((scheme) =>
+    scheme.isAccessibility
+      ? { ...scheme, valueOptions: scheme.valueOptions.filter((value) => value.code === 'granted') }
+      : scheme,
+  );
+
+  // Combined view across both module arms (distinctionGroups + the accessibilityLabels arm
+  // that §10 also edits). commit() splits it back so a T&H row lands in accessibilityLabels
+  // (one arm only — no double-write in the saver).
+  const rows = [
+    ...distinctions.distinctionGroups.flatMap((group) => group.items),
+    ...distinctions.accessibilityLabels,
+  ];
 
   const granted = rows.filter((item) => statusBucket(item) === 'granted').length;
   const pending = rows.filter((item) => statusBucket(item) === 'pending').length;
@@ -69,11 +88,14 @@ export function SectionClassification({ editor, folded }: SectionProps) {
   const [adding, setAdding] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Edit/delete operate on the flat list; regroup before writing back to the module.
+  // Edit/delete operate on the combined flat list; split it back into the two module arms:
+  // accessibility rows → accessibilityLabels (shared with §10, coverage preserved), everything
+  // else → distinctionGroups. One arm per row ⇒ the saver never double-processes T&H.
   function commit(nextRows: ObjectWorkspaceDistinctionItem[]) {
     editor.replaceModule('distinctions', {
       ...distinctions,
-      distinctionGroups: regroupDistinctionItems(nextRows),
+      distinctionGroups: regroupDistinctionItems(nextRows.filter((item) => !isAccessibilityRow(item))),
+      accessibilityLabels: nextRows.filter(isAccessibilityRow),
     });
   }
 

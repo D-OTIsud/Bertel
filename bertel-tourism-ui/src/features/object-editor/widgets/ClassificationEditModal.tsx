@@ -18,6 +18,7 @@ const DISPLAY_GROUP_LABELS: Record<string, string> = {
   official_classification: 'Classements officiels',
   quality_label: 'Labels qualité',
   sustainability_labels: 'Durabilité / environnement',
+  accessibility_labels: 'Accessibilité',
   '': 'Autres',
 };
 
@@ -144,6 +145,12 @@ export function ClassificationEditModal({
             />
           ) : (
             <Readout value={draft.valueLabel || currentScheme.valueOptions[0]?.label || 'Marque accordée'} />
+          )}
+          {currentScheme.displayGroup === 'accessibility_labels' && (
+            <p className="muted" style={{ marginTop: 6 }}>
+              La couverture par type de handicap (moteur, auditif, visuel, mental) se gère dans la section
+              Accessibilité (§10).
+            </p>
           )}
         </Field>
       )}

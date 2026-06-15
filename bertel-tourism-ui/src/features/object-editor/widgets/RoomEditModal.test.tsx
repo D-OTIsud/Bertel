@@ -9,12 +9,13 @@ const room: ObjectWorkspaceRoomTypeItem = {
   floorLevel: '', viewTypeId: '', viewTypeCode: '', viewTypeLabel: '',
   roomTypeId: '', roomTypeCode: '', roomTypeLabel: '',
   basePrice: '165', currency: 'EUR', accessible: false, published: true, position: '1',
-  amenityCodes: [], mediaIds: [],
+  amenityCodes: [], mediaIds: [], beds: [],
 };
-const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions'> = {
+const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'bedTypeOptions'> = {
   roomTypeOptions: [{ id: 'rt1', code: 'double', label: 'Chambre double' }],
   viewTypeOptions: [{ id: 'v1', code: 'sea', label: 'Vue mer' }],
   amenityOptions: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi' }],
+  bedTypeOptions: [{ id: 'bt-double', code: 'double', label: 'Lit double' }],
 };
 
 describe('RoomEditModal', () => {
@@ -69,5 +70,18 @@ describe('RoomEditModal', () => {
   it('renders a PMR accessibility toggle', () => {
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByRole('button', { name: 'Chambre accessible (PMR)' })).toBeInTheDocument();
+  });
+
+  it('adds and edits a structured bed row', () => {
+    const onSave = jest.fn();
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un lit/i }));
+    fireEvent.change(screen.getByLabelText('Type de lit 1'), { target: { value: 'double' } });
+    fireEvent.change(screen.getByLabelText('Nombre de lits 1'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
+    expect(saved.beds).toEqual([
+      { bedTypeId: 'bt-double', bedTypeCode: 'double', bedTypeLabel: 'Lit double', quantity: '2' },
+    ]);
   });
 });

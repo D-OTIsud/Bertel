@@ -54,6 +54,7 @@ import {
   type ObjectWorkspaceProviderFollowUpModule,
   type ObjectWorkspaceDiscountItem,
   type ObjectWorkspaceRoomsModule,
+  type ObjectWorkspaceRoomBed,
   type ObjectWorkspaceTaxonomyAssignment,
   type ObjectWorkspaceTaxonomyDomain,
   type ObjectWorkspaceTaxonomyModule,
@@ -64,6 +65,7 @@ import {
   resolveTagColor,
 } from './object-workspace-parser';
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
+import { buildBedRows } from '../features/object-editor/sections/blocks/rooms-utils';
 import { listObjectCrm } from './crm';
 
 // Re-export resolveTagColor so callers and tests that import from this entry point can reach it
@@ -2371,7 +2373,7 @@ async function getObjectWorkspaceRoomsModule(
       : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
   }
 
-  const [roomsResult, viewRefsResult, roomTypeRefsResult, amenityRefsResult, mediaResult] = await Promise.allSettled([
+  const [roomsResult, viewRefsResult, roomTypeRefsResult, amenityRefsResult, mediaResult, bedTypeRefsResult] = await Promise.allSettled([
     client
       .from('object_room_type')
       .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
@@ -2381,6 +2383,7 @@ async function getObjectWorkspaceRoomsModule(
     client.from('ref_code').select('id, code, name, position').eq('domain', 'room_type').order('position', { ascending: true }),
     client.from('ref_amenity').select('id, code, name, position').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'bed_type').order('position', { ascending: true }),
   ]);
 
   if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
@@ -2392,12 +2395,14 @@ async function getObjectWorkspaceRoomsModule(
 
   const rows = (roomsResult.value.data ?? []) as Record<string, unknown>[];
   const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
-  const [amenityLinksResult, mediaLinksResult] = roomIds.length > 0
+  const [amenityLinksResult, mediaLinksResult, bedLinksResult] = roomIds.length > 0
     ? await Promise.allSettled([
         client.from('object_room_type_amenity').select('room_type_id, amenity_id').in('room_type_id', roomIds),
         client.from('object_room_type_media').select('room_type_id, media_id').in('room_type_id', roomIds),
+        client.from('object_room_type_bed').select('room_type_id, bed_type_id, quantity, position').in('room_type_id', roomIds),
       ])
     : [
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
         { status: 'fulfilled' as const, value: { data: [], error: null } },
         { status: 'fulfilled' as const, value: { data: [], error: null } },
       ];
@@ -2414,11 +2419,16 @@ async function getObjectWorkspaceRoomsModule(
   const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
     ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
     : baseModule.mediaOptions;
+  const bedTypeOptions = bedTypeRefsResult.status === 'fulfilled' && bedTypeRefsResult.value.error == null
+    ? dedupeReferenceOptions((bedTypeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.bedTypeOptions;
   const viewTypeById = optionMapById(viewTypeOptions);
   const roomTypeById = optionMapById(roomTypeOptions);
   const amenityById = optionMapById(amenityOptions);
+  const bedTypeById = optionMapById(bedTypeOptions);
   const amenityCodesByRoom = new Map<string, string[]>();
   const mediaIdsByRoom = new Map<string, string[]>();
+  const bedsByRoom = new Map<string, ObjectWorkspaceRoomBed[]>();
 
   if (amenityLinksResult.status === 'fulfilled' && amenityLinksResult.value.error == null) {
     for (const row of (amenityLinksResult.value.data ?? []) as Record<string, unknown>[]) {
@@ -2442,10 +2452,29 @@ async function getObjectWorkspaceRoomsModule(
     }
   }
 
+  // §70 structured beds — resolve bed_type_id → option, group per room, ordered by position.
+  if (bedLinksResult.status === 'fulfilled' && bedLinksResult.value.error == null) {
+    const bedRows = [...((bedLinksResult.value.data ?? []) as Record<string, unknown>[])].sort(
+      (a, b) => (Number.parseInt(readString(a.position), 10) || 0) - (Number.parseInt(readString(b.position), 10) || 0),
+    );
+    for (const row of bedRows) {
+      const roomId = readString(row.room_type_id);
+      const option = bedTypeById.get(readString(row.bed_type_id));
+      if (!roomId || !option) {
+        continue;
+      }
+      bedsByRoom.set(roomId, [
+        ...(bedsByRoom.get(roomId) ?? []),
+        { bedTypeId: option.id, bedTypeCode: option.code, bedTypeLabel: option.label, quantity: readString(row.quantity, '1') },
+      ]);
+    }
+  }
+
   return {
     viewTypeOptions,
     roomTypeOptions,
     amenityOptions,
+    bedTypeOptions,
     mediaOptions,
     items: rows.map((row, index) => {
       const viewType = viewTypeById.get(readString(row.view_type_id));
@@ -2479,6 +2508,7 @@ async function getObjectWorkspaceRoomsModule(
         position: readString(row.position, String(index + 1)),
         amenityCodes: amenityCodesByRoom.get(roomId) ?? [],
         mediaIds: mediaIdsByRoom.get(roomId) ?? [],
+        beds: bedsByRoom.get(roomId) ?? [],
       };
     }),
     unavailableReason: null,
@@ -4188,10 +4218,11 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
     throw new Error('Connexion backend indisponible pour enregistrer les chambres et unites.');
   }
 
-  const [viewRefsResult, amenityRefsResult, existingRoomsResult] = await Promise.all([
+  const [viewRefsResult, amenityRefsResult, existingRoomsResult, bedTypeRefsResult] = await Promise.all([
     client.from('ref_code').select('id, code').eq('domain', 'view_type'),
     client.from('ref_amenity').select('id, code'),
     client.from('object_room_type').select('id').eq('object_id', objectId),
+    client.from('ref_code').select('id, code').eq('domain', 'bed_type'),
   ]);
 
   if (viewRefsResult.error) {
@@ -4203,9 +4234,13 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
   if (existingRoomsResult.error) {
     throw mapMutationError(existingRoomsResult.error, 'Impossible de charger les chambres existantes.');
   }
+  if (bedTypeRefsResult.error) {
+    throw mapMutationError(bedTypeRefsResult.error, 'Impossible de charger les types de lit.');
+  }
 
   const viewIdByCode = buildCodeIdMap(viewRefsResult.data ?? []);
   const amenityIdByCode = buildCodeIdMap(amenityRefsResult.data ?? []);
+  const bedTypeIdByCode = buildCodeIdMap(bedTypeRefsResult.data ?? []);
   const viewCodes = input.items.map((item) => item.viewTypeCode).filter(Boolean);
   ensureKnownCodes(viewCodes, viewIdByCode, 'Type de vue');
   ensureKnownCodes(input.items.flatMap((item) => item.amenityCodes), amenityIdByCode, 'Equipement');
@@ -4214,15 +4249,19 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
     .map((row) => readString((row as Record<string, unknown>).id))
     .filter(Boolean);
   if (existingRoomIds.length > 0) {
-    const [deleteAmenityLinks, deleteMediaLinks] = await Promise.all([
+    const [deleteAmenityLinks, deleteMediaLinks, deleteBedLinks] = await Promise.all([
       client.from('object_room_type_amenity').delete().in('room_type_id', existingRoomIds),
       client.from('object_room_type_media').delete().in('room_type_id', existingRoomIds),
+      client.from('object_room_type_bed').delete().in('room_type_id', existingRoomIds),
     ]);
     if (deleteAmenityLinks.error) {
       throw mapMutationError(deleteAmenityLinks.error, 'Impossible de reinitialiser les equipements de chambre.');
     }
     if (deleteMediaLinks.error) {
       throw mapMutationError(deleteMediaLinks.error, 'Impossible de reinitialiser les medias lies aux chambres.');
+    }
+    if (deleteBedLinks.error) {
+      throw mapMutationError(deleteBedLinks.error, 'Impossible de reinitialiser la configuration des lits.');
     }
   }
 
@@ -4269,6 +4308,13 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
       const { error: amenityError } = await client.from('object_room_type_amenity').insert(amenityRows);
       if (amenityError) {
         throw mapMutationError(amenityError, 'Impossible de sauvegarder les equipements de chambre.');
+      }
+    }
+    const bedRows = buildBedRows(item.beds, bedTypeIdByCode).map((row) => ({ ...row, room_type_id: roomId }));
+    if (bedRows.length > 0) {
+      const { error: bedError } = await client.from('object_room_type_bed').insert(bedRows);
+      if (bedError) {
+        throw mapMutationError(bedError, 'Impossible de sauvegarder la configuration des lits.');
       }
     }
     const mediaRows = Array.from(new Set(item.mediaIds))

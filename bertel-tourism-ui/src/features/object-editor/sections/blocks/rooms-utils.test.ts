@@ -1,14 +1,48 @@
 import {
+  addBedRow,
   applyAdults,
   applyChildren,
   applyCouchagesTotal,
+  buildBedRows,
   computeRoomsCapacitySum,
   computeUnitCount,
+  removeBedRow,
   roomCouchages,
+  setBedType,
   syncDerivedStructural,
   unitCountMetricCode,
+  updateBedQuantity,
   upsertMaxCapacity,
 } from './rooms-utils';
+import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
+
+const bed = (code: string, q = '1'): ObjectWorkspaceRoomBed =>
+  ({ bedTypeId: `id-${code}`, bedTypeCode: code, bedTypeLabel: code, quantity: q });
+
+describe('bed-row helpers', () => {
+  it('addBedRow appends a blank row with quantity 1', () => {
+    expect(addBedRow([])).toEqual([{ bedTypeId: '', bedTypeCode: '', bedTypeLabel: '', quantity: '1' }]);
+  });
+  it('setBedType sets the bed type of one row', () => {
+    expect(setBedType(addBedRow([]), 0, { id: 'id-double', code: 'double', label: 'Lit double' })).toEqual([
+      { bedTypeId: 'id-double', bedTypeCode: 'double', bedTypeLabel: 'Lit double', quantity: '1' },
+    ]);
+  });
+  it('updateBedQuantity clamps to at least 1', () => {
+    expect(updateBedQuantity([bed('double')], 0, '0')[0].quantity).toBe('1');
+    expect(updateBedQuantity([bed('double')], 0, '3')[0].quantity).toBe('3');
+  });
+  it('removeBedRow drops the row at the index', () => {
+    expect(removeBedRow([bed('double'), bed('single')], 0)).toEqual([bed('single')]);
+  });
+  it('buildBedRows maps to DB rows, skips unknown codes, dedupes, 1-based position', () => {
+    const map = new Map([['double', 'uuid-d'], ['single', 'uuid-s']]);
+    expect(buildBedRows([bed('double', '2'), bed('unknown'), bed('single'), bed('double', '5')], map)).toEqual([
+      { bed_type_id: 'uuid-d', quantity: 2, position: 1 },
+      { bed_type_id: 'uuid-s', quantity: 1, position: 2 },
+    ]);
+  });
+});
 
 describe('roomCouchages / computeRoomsCapacitySum', () => {
   it('uses capacity_total when set', () => {

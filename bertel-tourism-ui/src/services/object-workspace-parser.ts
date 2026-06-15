@@ -406,6 +406,14 @@ export interface ObjectWorkspacePricingModule {
   unavailableReason: string | null;
 }
 
+/** One structured bed entry of a room type (§70): quantity × bed type from ref_code 'bed_type'. */
+export interface ObjectWorkspaceRoomBed {
+  bedTypeId: string;
+  bedTypeCode: string;
+  bedTypeLabel: string;
+  quantity: string;
+}
+
 export interface ObjectWorkspaceRoomTypeItem {
   recordId: string | null;
   code: string;
@@ -434,12 +442,14 @@ export interface ObjectWorkspaceRoomTypeItem {
   position: string;
   amenityCodes: string[];
   mediaIds: string[];
+  beds: ObjectWorkspaceRoomBed[];
 }
 
 export interface ObjectWorkspaceRoomsModule {
   viewTypeOptions: WorkspaceReferenceOption[];
   roomTypeOptions: WorkspaceReferenceOption[];
   amenityOptions: WorkspaceReferenceOption[];
+  bedTypeOptions: WorkspaceReferenceOption[];
   mediaOptions: WorkspaceReferenceOption[];
   items: ObjectWorkspaceRoomTypeItem[];
   unavailableReason: string | null;
@@ -1756,7 +1766,7 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       capacityChildren: readString(record.capacity_children),
       capacityTotal: readString(record.capacity_total, readString(record.capacity)),
       sizeSqm: readString(record.size_sqm, readString(record.area_m2, readString(record.surface_m2))),
-      bedConfig: readString(record.bed_config, readString(record.beds, readString(record.bed_config_summary))),
+      bedConfig: readString(record.bed_config, readString(record.bed_config_summary)),
       bedConfigTranslations: readTextMap(record.bed_config_i18n),
       quantity: readString(record.total_rooms, readString(record.quantity, readString(record.inventory_count))),
       floorLevel: readString(record.floor_level),
@@ -1775,6 +1785,11 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       mediaIds: readArray(record.media ?? record.room_type_media).map((media) =>
         readString(media.media_id, readString(readRecord(media.media).id, readString(media.id))),
       ).filter(Boolean),
+      // §70 structured bed list (get_object_resource emits `beds` as [{quantity, bed_type:{code,name}}]).
+      beds: readArray(record.beds ?? record.room_type_beds).map((bed) => {
+        const ref = readNamedReference(bed.bed_type ?? bed);
+        return { bedTypeId: ref.id, bedTypeCode: ref.code, bedTypeLabel: ref.label, quantity: readString(bed.quantity, '1') };
+      }).filter((bed) => bed.bedTypeCode),
     };
   });
 
@@ -1794,6 +1809,8 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
         readArray(record.amenities ?? record.room_type_amenities).map((amenity) => readNamedReference(amenity.amenity ?? amenity)),
       ),
     ),
+    // Editor loader (object-workspace.ts) supplies the authoritative bed_type catalog via direct PostgREST.
+    bedTypeOptions: [],
     mediaOptions: [],
     items,
     unavailableReason: null,

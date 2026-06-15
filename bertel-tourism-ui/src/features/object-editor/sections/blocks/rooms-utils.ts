@@ -7,6 +7,8 @@
  * code must skip every existing unit-N suffix.
  */
 
+import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
+
 const UNIT_CODE = /^unit-(\d+)$/;
 
 export function nextRoomCode(items: { code: string }[]): string {
@@ -244,4 +246,49 @@ export function applyChildren(children: string, total: string): { capacityAdults
   const t = toCapacityInt(total);
   const c = Math.min(Math.max(toCapacityInt(children), 0), t);
   return { capacityAdults: String(t - c), capacityChildren: String(c) };
+}
+
+/* §70 — structured bed list (quantité × type de lit) row helpers. Pure; the editor drives the
+ * draft list and `buildBedRows` projects it to object_room_type_bed rows at save time. */
+type BedRefOption = { id: string; code: string; label: string };
+
+/** Append a blank row (quantity 1, no bed type yet) — the row's select then sets the type. */
+export function addBedRow(beds: ObjectWorkspaceRoomBed[]): ObjectWorkspaceRoomBed[] {
+  return [...beds, { bedTypeId: '', bedTypeCode: '', bedTypeLabel: '', quantity: '1' }];
+}
+
+/** Set the bed type of one row (from the row's reference select). */
+export function setBedType(beds: ObjectWorkspaceRoomBed[], index: number, option: BedRefOption): ObjectWorkspaceRoomBed[] {
+  return beds.map((bed, i) => (
+    i === index ? { ...bed, bedTypeId: option.id, bedTypeCode: option.code, bedTypeLabel: option.label } : bed
+  ));
+}
+
+export function removeBedRow(beds: ObjectWorkspaceRoomBed[], index: number): ObjectWorkspaceRoomBed[] {
+  return beds.filter((_, i) => i !== index);
+}
+
+export function updateBedQuantity(beds: ObjectWorkspaceRoomBed[], index: number, quantity: string): ObjectWorkspaceRoomBed[] {
+  const n = Number.parseInt(quantity, 10);
+  const q = Number.isFinite(n) && n > 0 ? n : 1;
+  return beds.map((b, i) => (i === index ? { ...b, quantity: String(q) } : b));
+}
+
+/** DB rows for object_room_type_bed: resolve code→id, skip unknown, dedupe by bed_type_id, 1-based position. */
+export function buildBedRows(
+  beds: ObjectWorkspaceRoomBed[],
+  idByCode: Map<string, string>,
+): { bed_type_id: string; quantity: number; position: number }[] {
+  const seen = new Set<string>();
+  const rows: { bed_type_id: string; quantity: number; position: number }[] = [];
+  for (const b of beds) {
+    const id = idByCode.get(b.bedTypeCode.toLowerCase());
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const n = Number.parseInt(b.quantity, 10);
+    rows.push({ bed_type_id: id, quantity: Number.isFinite(n) && n > 0 ? n : 1, position: rows.length + 1 });
+  }
+  return rows;
 }

@@ -83,6 +83,7 @@ function createRoom(items: ObjectWorkspaceRoomTypeItem[]): ObjectWorkspaceRoomTy
     position: String(index + 1),
     amenityCodes: [],
     mediaIds: [],
+    beds: [],
   };
 }
 

@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
 import { EditorModal, ReferenceSelect, ChipMultiSelect, Field, Input, Textarea, Toggle } from '../primitives';
 import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule } from '../../../services/object-workspace-parser';
-import { applyCouchagesTotal, applyAdults, applyChildren } from '../sections/blocks/rooms-utils';
+import { applyCouchagesTotal, applyAdults, applyChildren, addBedRow, setBedType, removeBedRow, updateBedQuantity } from '../sections/blocks/rooms-utils';
 
 interface RoomEditModalProps {
   open: boolean;
   room: ObjectWorkspaceRoomTypeItem;
-  module: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions'>;
+  module: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions' | 'amenityOptions' | 'bedTypeOptions'>;
   onClose: () => void;
   onSave: (room: ObjectWorkspaceRoomTypeItem) => void;
 }
@@ -62,8 +63,37 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       </p>
 
       <SectionLabel>Configuration des lits</SectionLabel>
-      {/* Phase 1 placeholder — Phase 2 replaces this with the structured « quantité × type de lit » list. */}
-      <Field label="Configuration lits"><Input value={draft.bedConfig} aria-label="Configuration lits" onChange={(bedConfig) => set({ bedConfig })} /></Field>
+      {/* Structured « quantité × type de lit » list (§70). Blank rows are dropped at save (buildBedRows). */}
+      {draft.beds.map((bed, i) => (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 32px', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+          <Input
+            type="number"
+            value={bed.quantity}
+            mono
+            aria-label={`Nombre de lits ${i + 1}`}
+            onChange={(q) => setDraft((d) => ({ ...d, beds: updateBedQuantity(d.beds, i, q) }))}
+          />
+          <ReferenceSelect
+            value={bed.bedTypeCode}
+            options={module.bedTypeOptions}
+            allowEmpty
+            emptyLabel="— Type de lit —"
+            aria-label={`Type de lit ${i + 1}`}
+            onChange={(code, opt) => setDraft((d) => ({ ...d, beds: setBedType(d.beds, i, { id: opt?.id ?? '', code, label: opt?.label ?? '' }) }))}
+          />
+          <button
+            type="button"
+            className="del"
+            aria-label={`Supprimer le lit ${i + 1}`}
+            onClick={() => setDraft((d) => ({ ...d, beds: removeBedRow(d.beds, i) }))}
+          >
+            <Trash2 size={15} aria-hidden />
+          </button>
+        </div>
+      ))}
+      <button type="button" className="rep-add" onClick={() => setDraft((d) => ({ ...d, beds: addBedRow(d.beds) }))}>
+        + Ajouter un lit
+      </button>
 
       <SectionLabel>Surface, quantité &amp; tarif</SectionLabel>
       <Field label="Surface">

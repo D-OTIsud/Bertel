@@ -74,7 +74,7 @@ ni éditeur riche. Next 16 / React 19.
 | Périmètre de rendu | **Éditeur + affichage** | « affiché de manière identique » → on rend le Markdown dans le tiroir |
 | Format de stockage | **Markdown** dans les colonnes texte existantes | Portable, ré-affichable à l'identique, aucun changement de schéma |
 | Éditeur | **TipTap** (sérialisation Markdown), repli **Lexical** si souci React 19 | Barre d'outils propre, set contraint, très documenté |
-| Rendu | **`react-markdown` + `remark-gfm`**, **sans** `rehype-raw` | Pas de HTML brut → XSS-safe par défaut |
+| Rendu | **`markdown-to-jsx`** (`disableParsingRawHTML`), **sans** `dangerouslySetInnerHTML` | Pas de HTML brut → XSS-safe ; compatible `next/jest` sans bidouille `transformIgnorePatterns` (contrairement à react-markdown, ESM-only) |
 
 ### 4.1 Jeu de mise en forme (sous-ensemble Markdown autorisé)
 
@@ -94,10 +94,11 @@ Trois petites unités isolées, chacune avec une responsabilité unique et une i
 ### 5.1 `MarkdownContent` — rendu d'affichage (partagé)
 - **Emplacement** : `bertel-tourism-ui/src/components/markdown/MarkdownContent.tsx` (+ `markdown.css`).
 - **Props** : `{ markdown: string; className?: string }`.
-- **Rôle** : transforme une chaîne Markdown en HTML **sanitisé** via `react-markdown` + `remark-gfm`,
-  **sans** `rehype-raw` (le HTML brut éventuel est rendu comme texte, jamais exécuté). Restreint le rendu
-  au sous-ensemble autorisé (mapping `components` : `h1→h2` par sécurité, liens en `rel="noopener noreferrer"`,
-  schema d'URL validé `http/https/mailto`).
+- **Rôle** : transforme une chaîne Markdown en éléments React **sanitisés** via `markdown-to-jsx`
+  (`disableParsingRawHTML: true` → le HTML brut éventuel est rendu comme texte, jamais exécuté ;
+  **aucun** `dangerouslySetInnerHTML`). Restreint le rendu au sous-ensemble autorisé (mapping `overrides` :
+  `h1→h2` par sécurité, liens en `rel="noopener noreferrer"` + schéma d'URL validé `http/https/mailto`,
+  `img` retiré).
 - **Source unique de vérité** du « à quoi ressemble une description adaptée ». Consommé par le tiroir
   et par la carte compacte de §10.
 
@@ -202,7 +203,7 @@ ce texte devient un simple paragraphe ; ré-affiché par `MarkdownContent`, il s
 - `bertel-tourism-ui/src/features/object-editor/sections/SectionAccessibility.tsx` (remplace le bloc textarea)
 - `bertel-tourism-ui/src/features/object-drawer/ObjectDetailView.tsx` (`OverviewSection` → `MarkdownContent`)
 - `bertel-tourism-ui/package.json` (deps : `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`,
-  sérialiseur Markdown ; `react-markdown`, `remark-gfm`)
+  `tiptap-markdown` ; `markdown-to-jsx`)
 
 **Inchangés** (vérifiés) : schéma DB, RPCs, `buildObjectDescriptionPayload`/`buildOrgDescriptionPayload`,
 `updateTranslatableField`/`readTranslatableField`.

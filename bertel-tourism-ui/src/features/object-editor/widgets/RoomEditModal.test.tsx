@@ -56,15 +56,21 @@ describe('RoomEditModal', () => {
     expect(saved).toMatchObject({ capacityTotal: '4', capacityAdults: '1', capacityChildren: '3' });
   });
 
-  it('edits amenities through the searchable equipment modal', () => {
+  it('edits amenities via the inline searchable chips (selected pulled to the top)', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
-    fireEvent.click(screen.getByRole('button', { name: /Choisir/ }));
+    // Wi-Fi starts in "Disponibles" (inline — no modal). Clicking adds it to the selection.
     fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['wifi']);
+  });
+
+  it('filters the available equipment with the search box', () => {
+    render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Wi-Fi' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Rechercher un équipement'), { target: { value: 'zzz' } });
+    expect(screen.queryByRole('button', { name: 'Wi-Fi' })).not.toBeInTheDocument();
   });
 
   it('renders a PMR accessibility toggle', () => {

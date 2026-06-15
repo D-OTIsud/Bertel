@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockHEB } from './BlockHEB';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -149,11 +149,9 @@ describe('BlockHEB room edit modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
-    // Equipment is now behind the « Choisir » modal trigger inside the room dialog (search +
-    // Sélectionnés/Disponibles). Scope to the room dialog — the §06 environment picker also has a « Choisir ».
-    act(() => { fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Choisir/i })); });
+    // Equipment is inline in the room modal (search + Sélectionnés/Disponibles) — « Clim » is a
+    // directly-clickable « Disponibles » chip, no sub-modal.
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items[0].amenityCodes).toContain('ac');

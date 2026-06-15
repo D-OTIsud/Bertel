@@ -183,6 +183,9 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
                   awardedAt: '',
                   validUntil: '',
                   disabilityTypesCovered: [],
+                  documentId: '',
+                  documentUrl: '',
+                  documentTitle: '',
                 },
               ],
             });

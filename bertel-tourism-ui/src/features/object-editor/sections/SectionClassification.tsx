@@ -181,6 +181,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
               schemes={schemes}
               existingItems={rows}
               draft={createClassificationDraft()}
+              objectId={editor.objectId}
               onClose={() => setAdding(false)}
               onSave={(item) => {
                 commit([...rows, item]);
@@ -196,6 +197,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
               schemes={schemes}
               existingItems={rows}
               draft={rows[editingIndex]}
+              objectId={editor.objectId}
               onClose={() => setEditingIndex(null)}
               onSave={(item) => {
                 commit(rows.map((row, rowIndex) => (rowIndex === editingIndex ? item : row)));

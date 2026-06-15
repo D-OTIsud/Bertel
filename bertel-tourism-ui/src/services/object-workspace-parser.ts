@@ -304,6 +304,10 @@ export interface ObjectWorkspaceDistinctionItem {
   awardedAt: string;
   validUntil: string;
   disabilityTypesCovered: string[];
+  /** Justificatif (ref_document) attached to this classification — §71 C. */
+  documentId: string;
+  documentUrl: string;
+  documentTitle: string;
 }
 
 export interface ObjectWorkspaceDistinctionGroup {

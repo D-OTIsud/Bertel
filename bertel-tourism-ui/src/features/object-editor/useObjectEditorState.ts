@@ -10,6 +10,8 @@ import { cloneModules, getDirtySections, type EditorSnapshot } from './editor-st
  * modules back into the baseline so they read clean.
  */
 export interface ObjectEditorState {
+  /** Canonical object id this editor edits (for per-object routes like uploads). */
+  objectId: string;
   draft: ObjectWorkspaceModules;
   dirtySections: Partial<Record<WorkspaceModuleId, boolean>>;
   isDirty: boolean;
@@ -81,5 +83,5 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
   const dirtySections = useMemo(() => getDirtySections(snapshot), [snapshot]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { draft: snapshot.draft, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
 }

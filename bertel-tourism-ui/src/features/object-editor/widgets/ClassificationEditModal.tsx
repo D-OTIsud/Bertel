@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EditorModal, Field, Input, Readout, ReferenceSelect, Select } from '../primitives';
 import { SearchSelect } from '../../../components/ui/pickers/SearchSelect';
+import { DocumentUploadField } from './DocumentUploadField';
+import { getSupabaseClient } from '../../../lib/supabase';
 import {
   CLASSIFICATION_STATUS_OPTIONS,
   availableValueOptions,
@@ -26,6 +28,8 @@ interface ClassificationEditModalProps {
   /** Held rows — fully-used schemes are dropped from the add picker (single held / multi all-taken). */
   existingItems: ObjectWorkspaceDistinctionItem[];
   draft: ObjectWorkspaceDistinctionItem;
+  /** Canonical object id — needed by the justificatif upload route. */
+  objectId: string;
   onClose: () => void;
   onSave: (item: ObjectWorkspaceDistinctionItem) => void;
 }
@@ -41,6 +45,7 @@ export function ClassificationEditModal({
   schemes,
   existingItems,
   draft: initialDraft,
+  objectId,
   onClose,
   onSave,
 }: ClassificationEditModalProps) {
@@ -48,6 +53,16 @@ export function ClassificationEditModal({
   // The value already on the row when the modal opened — kept selectable while editing.
   const [originalValueCode] = useState(initialDraft.valueCode);
   const set = (patch: Partial<ObjectWorkspaceDistinctionItem>) => setDraft((current) => ({ ...current, ...patch }));
+
+  // Resolve the Supabase access token so the justificatif upload can authenticate
+  // against /api/document/upload (mirrors MediaEditModal). Null until resolved →
+  // the upload field renders only once a token is available.
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
+  }, []);
 
   const currentScheme = schemes.find((scheme) => scheme.code === draft.schemeCode) ?? null;
   const valueChoices = currentScheme ? availableValueOptions(currentScheme, existingItems, originalValueCode) : [];
@@ -147,6 +162,35 @@ export function ClassificationEditModal({
           onChange={(validUntil) => set({ validUntil })}
         />
       </Field>
+
+      {/* Justificatif (ref_document) — optional. Shows the attached document with a remove
+          action, or the upload field once an access token is resolved. §71 C. */}
+      {draft.documentUrl ? (
+        <Field label="Justificatif">
+          <div className="doc-attached">
+            <a href={draft.documentUrl} target="_blank" rel="noopener noreferrer">
+              {draft.documentTitle || 'Document joint'}
+            </a>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => set({ documentId: '', documentUrl: '', documentTitle: '' })}
+            >
+              Retirer
+            </button>
+          </div>
+        </Field>
+      ) : (
+        accessToken && (
+          <DocumentUploadField
+            objectId={objectId}
+            accessToken={accessToken}
+            onUploaded={(document) =>
+              set({ documentId: document.documentId, documentUrl: document.url, documentTitle: document.title })
+            }
+          />
+        )
+      )}
     </EditorModal>
   );
 }

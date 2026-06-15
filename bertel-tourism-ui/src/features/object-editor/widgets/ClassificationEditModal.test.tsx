@@ -48,6 +48,7 @@ function renderAdd(over: Partial<Parameters<typeof ClassificationEditModal>[0]> 
       schemes={SCHEMES}
       existingItems={[]}
       draft={createClassificationDraft()}
+      objectId="HOTRUN0000000001"
       onClose={() => {}}
       onSave={onSave}
       {...over}
@@ -138,6 +139,7 @@ describe('ClassificationEditModal', () => {
           { ...createClassificationDraft(), schemeId: 'sch-stars', schemeCode: 'hot_stars', schemeLabel: 'Classement hôtelier', valueId: 'v3', valueCode: '3', valueLabel: '3 étoiles' },
         ]}
         draft={{ ...createClassificationDraft(), schemeId: 'sch-stars', schemeCode: 'hot_stars', schemeLabel: 'Classement hôtelier', valueId: 'v3', valueCode: '3', valueLabel: '3 étoiles' }}
+        objectId="HOTRUN0000000001"
         onClose={() => {}}
         onSave={() => {}}
       />,

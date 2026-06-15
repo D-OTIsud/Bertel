@@ -41,6 +41,9 @@ export function createClassificationDraft(): ObjectWorkspaceDistinctionItem {
     awardedAt: '',
     validUntil: '',
     disabilityTypesCovered: [],
+    documentId: '',
+    documentUrl: '',
+    documentTitle: '',
   };
 }
 

@@ -873,6 +873,7 @@ function normalizeWorkspaceDistinctionItem(params: {
   row: Record<string, unknown>;
   schemeById: Map<string, ClassificationSchemeRef>;
   valueById: Map<string, ClassificationValueRef>;
+  documentById?: Map<string, { url: string; title: string }>;
 }): ObjectWorkspaceDistinctionItem | null {
   const schemeId = readString(params.row.scheme_id);
   const valueId = readString(params.row.value_id);
@@ -882,6 +883,9 @@ function normalizeWorkspaceDistinctionItem(params: {
   if (!schemeRef || !valueRef) {
     return null;
   }
+
+  const documentId = readString(params.row.document_id);
+  const document = documentId ? params.documentById?.get(documentId) : undefined;
 
   return {
     recordId: readString(params.row.id) || null,
@@ -895,6 +899,9 @@ function normalizeWorkspaceDistinctionItem(params: {
     awardedAt: readString(params.row.awarded_at),
     validUntil: readString(params.row.valid_until),
     disabilityTypesCovered: readDisabilityTypesCovered(params.row.subvalue_ids, params.valueById),
+    documentId,
+    documentUrl: document?.url ?? '',
+    documentTitle: document?.title ?? '',
   };
 }
 
@@ -1239,7 +1246,7 @@ async function getObjectWorkspaceDistinctionsModule(
       .order('ordinal', { ascending: true }),
     client
       .from('object_classification')
-      .select('id, scheme_id, value_id, status, awarded_at, valid_until, subvalue_ids')
+      .select('id, scheme_id, value_id, status, awarded_at, valid_until, subvalue_ids, document_id')
       .eq('object_id', objectId)
       .order('created_at', { ascending: true }),
     client
@@ -1284,6 +1291,22 @@ async function getObjectWorkspaceDistinctionsModule(
   const distinctionItemsBySchemeId = new Map<string, ObjectWorkspaceDistinctionItem[]>();
   const accessibilityLabels: ObjectWorkspaceDistinctionItem[] = [];
 
+  // Resolve attached justificatifs (ref_document) so each item can show its document.
+  const documentById = new Map<string, { url: string; title: string }>();
+  const documentIds = Array.from(
+    new Set(
+      ((objectClassificationsResult.value.data ?? []) as Record<string, unknown>[])
+        .map((row) => readString(row.document_id))
+        .filter(Boolean),
+    ),
+  );
+  if (documentIds.length > 0) {
+    const docResult = await client.from('ref_document').select('id, url, title').in('id', documentIds);
+    for (const row of (docResult.data ?? []) as Record<string, unknown>[]) {
+      documentById.set(readString(row.id), { url: readString(row.url), title: readString(row.title) });
+    }
+  }
+
   for (const row of (objectClassificationsResult.value.data ?? []) as Record<string, unknown>[]) {
     const schemeId = readString(row.scheme_id);
 
@@ -1292,6 +1315,7 @@ async function getObjectWorkspaceDistinctionsModule(
         row,
         schemeById: distinctionSchemeById,
         valueById,
+        documentById,
       });
       if (!item) {
         continue;
@@ -1308,6 +1332,7 @@ async function getObjectWorkspaceDistinctionsModule(
         row,
         schemeById: accessibilitySchemeById,
         valueById,
+        documentById,
       });
       if (item) {
         accessibilityLabels.push(item);
@@ -3931,6 +3956,8 @@ export async function saveObjectWorkspaceDistinctions(objectId: string, input: O
       // §10 T&H per-disability-type coverage: resolve the chip codes to granted_* sub-value UUIDs.
       // Empty for non-accessibility distinctions (their disabilityTypesCovered is always []).
       subvalue_ids: buildClassificationSubvalueIds(item.disabilityTypesCovered, schemeRef.id, valueRefs),
+      // §71 C — justificatif (ref_document) created by /api/document/upload; NULL = none.
+      document_id: item.documentId ? item.documentId : null,
     };
 
     const existingId =

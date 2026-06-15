@@ -1174,6 +1174,85 @@ JOIN (
 WHERE s.code = 'clevacances_keys'
   AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
 
+-- ─── §71 — Expansion du catalogue §08 (classements officiels + labels qualité) ─
+-- Demandé par l'OTI (« avoir tous les classements / labels »). Recherche §71.
+-- Aussi livré en incrémental : migration_classification_labels_expansion.sql (manifest 14d).
+-- §10 (accessibilité) et §11 (durabilité) restent dans leurs sections — non touchés.
+INSERT INTO ref_classification_scheme (code, name, description, selection, is_distinction, display_group, position) VALUES
+('residence_tourisme_stars','Classement résidence de tourisme','Classement officiel Atout France des résidences de tourisme (étoiles)','single',TRUE,'official_classification',6),
+('village_vacances_stars',  'Classement village de vacances',  'Classement officiel Atout France des villages de vacances (étoiles)','single',TRUE,'official_classification',7),
+('auberge_collective_stars','Classement auberge collective',   'Classement officiel Atout France des auberges collectives (étoiles)','single',TRUE,'official_classification',8),
+('prl_stars',               'Classement parc résidentiel de loisirs','Classement officiel Atout France des PRL (étoiles)','single',TRUE,'official_classification',9),
+('ot_category',             'Classement office de tourisme',   'Classement préfectoral des offices de tourisme (catégories)','single',TRUE,'official_classification',10),
+('qualite_tourisme',     'Qualité Tourisme™',         'Marque d''État nationale Qualité Tourisme (renommage « Destination d''excellence » en cours d''ici fin 2026)','single',  TRUE,'quality_label',18),
+('monument_historique',  'Monument Historique',       'Protection au titre des monuments historiques (classé ou inscrit) — Ministère de la Culture',                'single',  TRUE,'quality_label',19),
+('musee_de_france',      'Musée de France',           'Appellation « Musée de France » (Ministère de la Culture)',                                                    'single',  TRUE,'quality_label',20),
+('jardin_remarquable',   'Jardin Remarquable',        'Label « Jardin Remarquable » (Ministère de la Culture)',                                                       'single',  TRUE,'quality_label',21),
+('maison_des_illustres', 'Maison des Illustres',      'Label « Maison des Illustres » (Ministère de la Culture)',                                                     'single',  TRUE,'quality_label',22),
+('accueil_velo',         'Accueil Vélo',              'Marque nationale « Accueil Vélo » (services aux cyclotouristes)',                                               'single',  TRUE,'quality_label',23),
+('tables_auberges',      'Tables & Auberges de France','Label restauration Tables & Auberges de France (catégories)',                                                  'single',  TRUE,'quality_label',24),
+('logis',                'Logis',                     'Réseau Logis — classement cheminées (hébergement) et cocottes (restauration)',                                 'multiple',TRUE,'quality_label',25)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES ('1','1 étoile',1),('2','2 étoiles',2),('3','3 étoiles',3),('4','4 étoiles',4),('5','5 étoiles',5)) AS v(code,name,ordinal) ON TRUE
+WHERE s.code IN ('residence_tourisme_stars','village_vacances_stars','auberge_collective_stars','prl_stars')
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES ('cat_1','Catégorie I',1),('cat_2','Catégorie II',2),('cat_3','Catégorie III (en extinction)',3)) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'ot_category'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES ('classe','Classé',1),('inscrit','Inscrit à l''inventaire',2)) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'monument_historique'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, 'granted', 'Obtenu', 1
+FROM ref_classification_scheme s
+WHERE s.code IN ('qualite_tourisme','musee_de_france','jardin_remarquable','maison_des_illustres','accueil_velo')
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = 'granted');
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES
+  ('prestige',        'Prestige',             1),
+  ('gastronomique',   'Gastronomique',        2),
+  ('terroir',         'Terroir',              3),
+  ('bistrot_gourmand','Bistrot gourmand',     4),
+  ('auberge_village', 'Auberge de village',   5),
+  ('hostellerie',     'Hostellerie',          6),
+  ('producteur',      'Producteur / fermier', 7)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'tables_auberges'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, v.code, v.name, v.ordinal
+FROM ref_classification_scheme s
+JOIN (VALUES
+  ('cheminee_1','1 cheminée',1),('cheminee_2','2 cheminées',2),('cheminee_3','3 cheminées',3),
+  ('cocotte_1','1 cocotte',4),  ('cocotte_2','2 cocottes',5),  ('cocotte_3','3 cocottes',6)
+) AS v(code,name,ordinal) ON TRUE
+WHERE s.code = 'logis'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
+
+-- QTIR « de Charme » : valeur supplémentaire sur le scheme régional existant.
+INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
+SELECT s.id, 'charme', 'QTIR de Charme', 2
+FROM ref_classification_scheme s
+WHERE s.code = 'qualite_tourisme_reunion'
+  AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = 'charme');
+
 -- Valeurs: Tourisme & Handicap (multi) — removed.
 -- tourisme_handicap scheme retired. V5 canonical: LBL_TOURISME_HANDICAP with singleton
 -- value 'granted' (seeded in ACCESSIBILITÉ V5 section below).

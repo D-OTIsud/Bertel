@@ -2,34 +2,150 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionClassification } from './SectionClassification';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import type {
+  ObjectWorkspaceDistinctionGroup,
+  ObjectWorkspaceDistinctionItem,
+} from '../../../services/object-workspace-parser';
 
-function modulesWithStarsScheme() {
+function classRow(over: Partial<ObjectWorkspaceDistinctionItem>): ObjectWorkspaceDistinctionItem {
+  return {
+    recordId: null,
+    schemeId: 'sch-stars',
+    schemeCode: 'hot_stars',
+    schemeLabel: 'Classement hôtelier',
+    valueId: 'v4',
+    valueCode: '4',
+    valueLabel: '4 étoiles',
+    status: 'granted',
+    awardedAt: '',
+    validUntil: '',
+    disabilityTypesCovered: [],
+    ...over,
+  };
+}
+
+function modulesWithSchemes(groups: ObjectWorkspaceDistinctionGroup[] = []) {
   const m = fullModulesFixture();
-  m.distinctions.schemeOptions = [{
-    id: 'stars', code: 'stars', label: 'Étoiles', selectionMode: 'single', isAccessibility: false,
-    valueOptions: [{ id: '3', code: '3', label: '3 étoiles' }, { id: '4', code: '4', label: '4 étoiles' }],
-  }];
+  m.distinctions = {
+    distinctionGroups: groups,
+    accessibilityLabels: [],
+    accessibilityAmenityCoverage: [],
+    schemeOptions: [
+      {
+        id: 'sch-stars',
+        code: 'hot_stars',
+        label: 'Classement hôtelier',
+        selectionMode: 'single',
+        isAccessibility: false,
+        displayGroup: 'official_classification',
+        valueOptions: [
+          { id: 'v1', code: '1', label: '1 étoile' },
+          { id: 'v4', code: '4', label: '4 étoiles' },
+          { id: 'v5', code: '5', label: '5 étoiles' },
+        ],
+      },
+      {
+        id: 'sch-mr',
+        code: 'maitre_restaurateur',
+        label: 'Maîtres Restaurateurs',
+        selectionMode: 'single',
+        isAccessibility: false,
+        displayGroup: 'quality_label',
+        valueOptions: [{ id: 'g1', code: 'granted', label: 'Marque accordée' }],
+      },
+      {
+        id: 'sch-acc',
+        code: 'th',
+        label: 'Tourisme & Handicap',
+        selectionMode: 'single',
+        isAccessibility: true,
+        displayGroup: 'accessibility_labels',
+        valueOptions: [{ id: 'a1', code: 'granted', label: 'Obtenu' }],
+      },
+    ],
+    unavailableReason: null,
+  };
   return m;
 }
 
 describe('SectionClassification', () => {
-  it('edits a distinction value via a reference selector, not free text', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithStarsScheme()));
-    const view = render(<SectionClassification editor={result.current} permissions={allowAll} />);
-    const valueSelect = screen.getByLabelText(/Valeur attribuée/i);
-    expect(valueSelect.tagName).toBe('SELECT');
-    act(() => { fireEvent.change(valueSelect, { target: { value: '3' } }); });
-    view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
-    expect(result.current.draft.distinctions.distinctionGroups[0].items[0].valueCode).toBe('3');
+  it('shows an empty state and an add affordance when nothing is held', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithSchemes()));
+    render(<SectionClassification editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText(/Aucune classification/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ajouter une classification/i })).toBeInTheDocument();
   });
 
-  it('offers canonical classification-status options (granted), not the legacy "active" alias', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithStarsScheme()));
+  it('adds a classification through the modal and appends it to the draft', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithSchemes()));
+    const view = render(<SectionClassification editor={result.current} permissions={allowAll} />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Ajouter une classification/i }));
+    });
+    // The accessibility scheme belongs to §10 — it must not be offered here.
+    expect(screen.queryByRole('option', { name: 'Tourisme & Handicap' })).not.toBeInTheDocument();
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Référentiel'), { target: { value: 'hot_stars' } });
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '4' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    });
+
+    view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
+    const items = result.current.draft.distinctions.distinctionGroups.flatMap((g) => g.items);
+    expect(items).toHaveLength(1);
+    expect(items[0].schemeCode).toBe('hot_stars');
+    expect(items[0].valueCode).toBe('4');
+  });
+
+  it('deletes a held classification row', () => {
+    const groups: ObjectWorkspaceDistinctionGroup[] = [
+      { schemeCode: 'hot_stars', schemeLabel: 'Classement hôtelier', items: [classRow({ recordId: 'd1' })] },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithSchemes(groups)));
+    const view = render(<SectionClassification editor={result.current} permissions={allowAll} />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Supprimer/i }));
+    });
+
+    view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.distinctions.distinctionGroups.flatMap((g) => g.items)).toHaveLength(0);
+  });
+
+  it('edits a held row through the modal', () => {
+    const groups: ObjectWorkspaceDistinctionGroup[] = [
+      { schemeCode: 'hot_stars', schemeLabel: 'Classement hôtelier', items: [classRow({ recordId: 'd1' })] },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithSchemes(groups)));
+    const view = render(<SectionClassification editor={result.current} permissions={allowAll} />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Modifier/i }));
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '5' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    });
+
+    view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
+    const items = result.current.draft.distinctions.distinctionGroups.flatMap((g) => g.items);
+    expect(items).toHaveLength(1);
+    expect(items[0].valueCode).toBe('5');
+  });
+
+  it('shows the unavailable notice and no add button when the module is gated', () => {
+    const m = modulesWithSchemes();
+    m.distinctions.unavailableReason = 'Distinctions indisponibles dans le live actuel.';
+    const { result } = renderHook(() => useObjectEditorState('o1', m));
     render(<SectionClassification editor={result.current} permissions={allowAll} />);
-    // Canonical object_classification.status lifecycle is granted/requested/suspended/expired;
-    // the editor must not offer the non-canonical 'active' alias (invisible to every label read/filter).
-    const statusValues = screen.getAllByRole('option').map((opt) => opt.getAttribute('value'));
-    expect(statusValues).toContain('granted');
-    expect(statusValues).not.toContain('active');
+    expect(screen.getByText(/Module indisponible/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ajouter une classification/i })).not.toBeInTheDocument();
   });
 });

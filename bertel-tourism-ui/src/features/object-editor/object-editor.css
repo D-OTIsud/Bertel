@@ -1795,6 +1795,21 @@
 .object-editor .class-kpi--warn .class-kpi__num { color: #8a5c1d; }
 .object-editor .class-kpi--red { background: rgba(200,92,72,0.10); border-color: rgba(200,92,72,0.22); }
 .object-editor .class-kpi--red .class-kpi__num { color: #93392a; }
+/* §08 row status chip — mirrors the class-kpi tone palette. */
+.object-editor .class-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.object-editor .class-status--ok { background: var(--green-soft); border-color: rgba(44,163,111,0.22); color: #1a6b48; }
+.object-editor .class-status--warn { background: rgba(214,147,58,0.12); border-color: rgba(214,147,58,0.24); color: #8a5c1d; }
+.object-editor .class-status--red { background: rgba(200,92,72,0.10); border-color: rgba(200,92,72,0.24); color: #93392a; }
 .object-editor .class-row__sch { min-width: 0; }
 .object-editor .class-row__scheme {
   font-family: var(--font-display);

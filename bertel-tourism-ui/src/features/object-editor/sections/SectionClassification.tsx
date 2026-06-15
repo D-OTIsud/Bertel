@@ -1,25 +1,33 @@
-import { Fs, Input, ReferenceSelect, Select } from '../primitives';
+import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Fs } from '../primitives';
+import { ModuleUnavailableNotice } from './blocks/block-notes';
+import { ClassificationEditModal } from '../widgets/ClassificationEditModal';
+import {
+  CLASSIFICATION_STATUS_OPTIONS,
+  createClassificationDraft,
+  regroupDistinctionItems,
+} from './classification-edit';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDistinctionItem } from '../../../services/object-workspace-parser';
 
-// Canonical object_classification.status lifecycle (OBJECT_DATA_DICTIONARY.md): granted/requested/suspended/expired.
-// The legacy 'active'/'pending'/'revoked' aliases are NOT written — every backend label read/filter
-// gates on status='granted', so a non-canonical status makes an editor-authored label invisible. See lot1_mapping_decisions §30.
-const STATUS_OPTIONS = [
-  { v: 'granted', l: 'Accordée' },
-  { v: 'requested', l: 'En cours / demande' },
-  { v: 'suspended', l: 'Retirée' },
-  { v: 'expired', l: 'Expirée' },
-];
+const STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  CLASSIFICATION_STATUS_OPTIONS.map((option) => [option.v, option.l]),
+);
 
-const CLASS_COLS = '14px 1.4fr 1.2fr 110px 95px 95px auto';
+// Display columns (no drag handle — order is not meaningful here).
+const CLASS_COLS = '1.4fr 1.2fr 130px 95px 95px auto';
 
-function statusBucket(item: ObjectWorkspaceDistinctionItem) {
+type StatusBucket = 'granted' | 'pending' | 'expired';
+
+function statusBucket(item: ObjectWorkspaceDistinctionItem): StatusBucket {
   const status = item.status || 'granted';
   if (status === 'requested' || status === 'pending') return 'pending';
   if (status === 'expired' || status === 'suspended' || status === 'revoked') return 'expired';
   return 'granted';
 }
+
+const BUCKET_TONE: Record<StatusBucket, string> = { granted: 'ok', pending: 'warn', expired: 'red' };
 
 function repHeader(columns: string, labels: string[]) {
   return (
@@ -36,8 +44,8 @@ function repHeader(columns: string, labels: string[]) {
         textTransform: 'uppercase',
       }}
     >
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
+      {labels.map((label, index) => (
+        <span key={label || `col-${index}`}>{label}</span>
       ))}
     </div>
   );
@@ -45,23 +53,27 @@ function repHeader(columns: string, labels: string[]) {
 
 export function SectionClassification({ editor, folded }: SectionProps) {
   const distinctions = editor.draft.distinctions;
-  const rows = distinctions.distinctionGroups.flatMap((group) => group.items.map((item) => ({ group, item })));
-  const granted = rows.filter(({ item }) => statusBucket(item) === 'granted').length;
-  const pending = rows.filter(({ item }) => statusBucket(item) === 'pending').length;
-  const expired = rows.filter(({ item }) => statusBucket(item) === 'expired').length;
+  // §10 owns accessibility labels — keep them out of the §08 picker.
+  const schemes = distinctions.schemeOptions.filter((scheme) => !scheme.isAccessibility);
+  const rows = distinctions.distinctionGroups.flatMap((group) => group.items);
+
+  const granted = rows.filter((item) => statusBucket(item) === 'granted').length;
+  const pending = rows.filter((item) => statusBucket(item) === 'pending').length;
+  const expired = rows.filter((item) => statusBucket(item) === 'expired').length;
   const nextExpiry = rows
-    .map(({ item }) => item.validUntil)
+    .map((item) => item.validUntil)
     .filter(Boolean)
     .sort()[0];
 
-  function update(groupCode: string, item: ObjectWorkspaceDistinctionItem, patch: Partial<ObjectWorkspaceDistinctionItem>) {
+  const gated = Boolean(distinctions.unavailableReason);
+  const [adding, setAdding] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Edit/delete operate on the flat list; regroup before writing back to the module.
+  function commit(nextRows: ObjectWorkspaceDistinctionItem[]) {
     editor.replaceModule('distinctions', {
       ...distinctions,
-      distinctionGroups: distinctions.distinctionGroups.map((group) =>
-        group.schemeCode === groupCode
-          ? { ...group, items: group.items.map((candidate) => (candidate === item ? { ...candidate, ...patch } : candidate)) }
-          : group,
-      ),
+      distinctionGroups: regroupDistinctionItems(nextRows),
     });
   }
 
@@ -71,10 +83,14 @@ export function SectionClassification({ editor, folded }: SectionProps) {
       title="Classifications & distinctions"
       sub="Étoiles, labels, marques, statuts et dates de validité."
       folded={folded}
-      pill={{
-        tone: granted > 0 ? 'ok' : 'warn',
-        label: pending > 0 ? `${granted} accordée(s) · ${pending} en cours` : `${granted} accordée(s)`,
-      }}
+      pill={
+        gated
+          ? { tone: 'warn', label: 'Indisponible' }
+          : {
+              tone: granted > 0 ? 'ok' : 'warn',
+              label: pending > 0 ? `${granted} accordée(s) · ${pending} en cours` : `${granted} accordée(s)`,
+            }
+      }
     >
       <div className="grid-4" style={{ marginBottom: 14 }}>
         <div className="class-kpi class-kpi--ok">
@@ -97,38 +113,98 @@ export function SectionClassification({ editor, folded }: SectionProps) {
         </div>
       </div>
 
-      {repHeader(CLASS_COLS, ['', 'Référentiel', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au"])}
-      <div className="repeater">
-        {rows.map(({ group, item }) => (
-          <div
-            key={`${group.schemeCode}-${item.valueCode}`}
-            className="rep-row class-row"
-            style={{ gridTemplateColumns: CLASS_COLS, alignItems: 'center' }}
-          >
-            <span className="rep-row__handle" aria-hidden />
-            <div className="class-row__sch">
-              <div className="class-row__scheme">{group.schemeLabel}</div>
-            </div>
-            <ReferenceSelect
-              aria-label="Valeur attribuée"
-              value={item.valueCode}
-              options={distinctions.schemeOptions.find((s) => s.code === group.schemeCode)?.valueOptions ?? []}
-              onChange={(_code, option) => {
-                if (option) {
-                  update(group.schemeCode, item, { valueId: option.id, valueCode: option.code, valueLabel: option.label });
-                }
+      {gated ? (
+        <ModuleUnavailableNotice reason={distinctions.unavailableReason ?? ''} />
+      ) : (
+        <>
+          {rows.length === 0 ? (
+            <p className="muted" style={{ margin: '4px 0 12px' }}>
+              Aucune classification ou label renseigné. Ajoutez une étoile, un classement officiel ou un label de
+              qualité.
+            </p>
+          ) : (
+            <>
+              {repHeader(CLASS_COLS, ['Référentiel', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au", ''])}
+              <div className="repeater">
+                {rows.map((item, index) => {
+                  const bucket = statusBucket(item);
+                  return (
+                    <div
+                      key={`${item.schemeCode}-${item.valueCode}-${index}`}
+                      className="rep-row class-row"
+                      style={{ gridTemplateColumns: CLASS_COLS, alignItems: 'center' }}
+                    >
+                      <div className="class-row__sch">
+                        <div className="class-row__scheme">{item.schemeLabel}</div>
+                      </div>
+                      <div>{item.valueLabel || '—'}</div>
+                      <div>
+                        <span className={`class-status class-status--${BUCKET_TONE[bucket]}`}>
+                          {STATUS_LABELS[item.status] ?? item.status ?? 'Accordée'}
+                        </span>
+                      </div>
+                      <div className="mono">{item.awardedAt || '—'}</div>
+                      <div className="mono">{item.validUntil || '—'}</div>
+                      <div className="rep-row__act">
+                        <button
+                          type="button"
+                          aria-label={`Modifier ${item.schemeLabel}`}
+                          onClick={() => setEditingIndex(index)}
+                          style={{ fontSize: 12, padding: '2px 6px', cursor: 'pointer' }}
+                        >
+                          <Pencil size={14} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className="del"
+                          aria-label={`Supprimer ${item.schemeLabel}`}
+                          onClick={() => commit(rows.filter((_, rowIndex) => rowIndex !== index))}
+                        >
+                          <Trash2 size={14} aria-hidden />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <button type="button" className="rep-add" onClick={() => setAdding(true)}>
+            + Ajouter une classification
+          </button>
+
+          {adding && (
+            <ClassificationEditModal
+              open
+              mode="add"
+              schemes={schemes}
+              existingItems={rows}
+              draft={createClassificationDraft()}
+              onClose={() => setAdding(false)}
+              onSave={(item) => {
+                commit([...rows, item]);
+                setAdding(false);
               }}
             />
-            <Select
-              value={item.status || 'granted'}
-              options={STATUS_OPTIONS}
-              onChange={(status) => update(group.schemeCode, item, { status })}
+          )}
+
+          {editingIndex !== null && rows[editingIndex] && (
+            <ClassificationEditModal
+              open
+              mode="edit"
+              schemes={schemes}
+              existingItems={rows}
+              draft={rows[editingIndex]}
+              onClose={() => setEditingIndex(null)}
+              onSave={(item) => {
+                commit(rows.map((row, rowIndex) => (rowIndex === editingIndex ? item : row)));
+                setEditingIndex(null);
+              }}
             />
-            <Input type="date" value={item.awardedAt} onChange={(awardedAt) => update(group.schemeCode, item, { awardedAt })} />
-            <Input type="date" value={item.validUntil} onChange={(validUntil) => update(group.schemeCode, item, { validUntil })} />
-          </div>
-        ))}
-      </div>
+          )}
+        </>
+      )}
     </Fs>
   );
 }

@@ -1330,6 +1330,7 @@ async function getObjectWorkspaceDistinctionsModule(
     label: scheme.label,
     selectionMode: scheme.selectionMode,
     isAccessibility: accessibilitySchemes.some((s) => s.id === scheme.id),
+    displayGroup: scheme.displayGroup,
     valueOptions: valueRefs
       .filter((value) => value.schemeId === scheme.id)
       .sort((left, right) => left.ordinal - right.ordinal || left.label.localeCompare(right.label, 'fr'))

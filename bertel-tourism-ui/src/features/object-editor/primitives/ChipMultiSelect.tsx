@@ -22,6 +22,10 @@ interface ChipMultiSelectProps {
    *  full inline chip list. Use for large lists (>~12 options). Requires `onChange`. */
   modalTitle?: string;
   searchPlaceholder?: string;
+  /** Optional native tooltip for the modal-mode trigger chips. Returns the title for a
+   *  selected code (e.g. a language level); falls back to "Retirer" when undefined.
+   *  No effect in inline mode. */
+  chipTitle?: (code: string) => string | undefined;
 }
 
 /** Chip-toggle multiselect over a flat option list. Inline by default; a modal picker
@@ -34,6 +38,7 @@ export function ChipMultiSelect({
   sm,
   modalTitle,
   searchPlaceholder,
+  chipTitle,
 }: ChipMultiSelectProps) {
   if (!modalTitle) {
     return (
@@ -58,6 +63,7 @@ export function ChipMultiSelect({
       title={modalTitle}
       searchPlaceholder={searchPlaceholder}
       sm={sm}
+      chipTitle={chipTitle}
     />
   );
 }
@@ -69,6 +75,7 @@ function ChipMultiSelectModal({
   title,
   searchPlaceholder,
   sm,
+  chipTitle,
 }: {
   options: ChipMultiSelectOption[];
   selected: string[];
@@ -76,6 +83,7 @@ function ChipMultiSelectModal({
   title: string;
   searchPlaceholder?: string;
   sm?: boolean;
+  chipTitle?: (code: string) => string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -112,7 +120,7 @@ function ChipMultiSelectModal({
                 label={option.label}
                 on
                 sm
-                title="Retirer"
+                title={chipTitle?.(option.code) ?? 'Retirer'}
                 onClick={() => onChange(selected.filter((code) => code !== option.code))}
               />
             ))}

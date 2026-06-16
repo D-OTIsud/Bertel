@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { PaymentChips, SpokenLanguagesField } from './commercial-controls';
 import type { ObjectWorkspaceCharacteristicsModule } from '../../../services/object-workspace-parser';
 
@@ -48,13 +48,43 @@ describe('SpokenLanguagesField', () => {
     expect(screen.getByText('KO')).toBeInTheDocument();
   });
 
-  it('renders a level select per selected language and writes the chosen level', () => {
+  it('does not render inline level selects — levels live behind a modal', () => {
+    render(<SpokenLanguagesField characteristics={characteristics()} onChange={() => undefined} />);
+    expect(screen.queryByLabelText('Niveau Allemand')).toBeNull();
+  });
+
+  it('hides the level button when no language is selected', () => {
+    render(<SpokenLanguagesField characteristics={characteristics({ selectedLanguages: [] })} onChange={() => undefined} />);
+    expect(screen.queryByRole('button', { name: /niveau/i })).toBeNull();
+  });
+
+  it('reveals the assigned level as a tooltip on the language chip', () => {
+    render(<SpokenLanguagesField characteristics={characteristics()} onChange={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Allemand' })).toHaveAttribute(
+      'title',
+      expect.stringContaining('Débutant'),
+    );
+  });
+
+  it('assigns a level through the modal and writes it on Valider (staged until then)', () => {
     let next: ObjectWorkspaceCharacteristicsModule | null = null;
     render(<SpokenLanguagesField characteristics={characteristics()} onChange={(value) => { next = value; }} />);
 
-    const levelSelect = screen.getByLabelText('Niveau Allemand');
-    fireEvent.change(levelSelect, { target: { value: 'l-fluent' } });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /niveau/i })); });
+    fireEvent.change(screen.getByLabelText('Niveau Allemand'), { target: { value: 'l-fluent' } });
+    expect(next).toBeNull(); // staged — nothing applied yet
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
     expect(next?.selectedLanguages[0]).toMatchObject({ code: 'de', levelId: 'l-fluent', levelCode: 'fluent', levelLabel: 'Courant' });
+  });
+
+  it('clears a level by choosing « Aucun niveau »', () => {
+    let next: ObjectWorkspaceCharacteristicsModule | null = null;
+    render(<SpokenLanguagesField characteristics={characteristics()} onChange={(value) => { next = value; }} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /niveau/i })); });
+    fireEvent.change(screen.getByLabelText('Niveau Allemand'), { target: { value: '' } });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Valider' })); });
+    expect(next?.selectedLanguages[0]).toMatchObject({ code: 'de', levelId: '', levelCode: '', levelLabel: '' });
   });
 });

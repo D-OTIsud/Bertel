@@ -1,6 +1,8 @@
 import type { ArchetypeCode } from './archetypes';
 import type { ObjectWorkspacePermissions } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { readTranslatableField } from './sections/descriptions-field';
+import { spokenCodeToDescKey } from './sections/spoken-languages';
 
 export type ValidationTone = 'req' | 'warn';
 
@@ -96,6 +98,31 @@ const VALIDATION_RULES: ValidationRule[] = [
     return [chapo.baseValue, ...Object.values(chapo.values)].some(hasText)
       ? null
       : { section: '04', message: "L'accroche est obligatoire avant publication.", tone: 'req' };
+  },
+  ({ draft }) => {
+    // Each spoken language should have a complete translation (accroche + descriptif).
+    // Non-blocking — content translation is deferred post-MVP (FR fallback at launch).
+    const characteristics = draft.characteristics;
+    if (characteristics.unavailableReason) {
+      return null;
+    }
+    const object = draft.descriptions.object;
+    const local = draft.descriptions.localLanguage;
+    const missing = characteristics.selectedLanguages
+      .filter((lang) => {
+        const key = spokenCodeToDescKey(lang.code);
+        const hasChapo = hasText(readTranslatableField(object.chapo, key, local));
+        const hasDescription = hasText(readTranslatableField(object.description, key, local));
+        return !hasChapo || !hasDescription;
+      })
+      .map((lang) => lang.label);
+    return missing.length === 0
+      ? null
+      : {
+          section: '04',
+          message: `Langues parlées sans traduction complète : ${missing.join(', ')} (accroche + descriptif attendus).`,
+          tone: 'warn',
+        };
   },
   ({ archetype, draft }) =>
     archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)

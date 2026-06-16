@@ -216,4 +216,54 @@ describe('editor publication validation', () => {
 
     expect(result.blockers.some((b) => b.section === '02')).toBe(false);
   });
+
+  it('warns when a spoken language has no complete translation (accroche + descriptif)', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'fr', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' },
+      { languageId: 'de', code: 'de', label: 'Allemand', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    // fr is complete in the fixture; de has neither chapo nor description.
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('Allemand'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn when every spoken language is fully translated', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'fr', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
+
+  it('does not warn about spoken languages when the characteristics module is degraded', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.unavailableReason = 'Module dégradé';
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'de', code: 'de', label: 'Allemand', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
+
+  it('maps the reunion creole spoken code rcf to the cre description key', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: { fr: 'Chapo', cre: 'Chapo kreol' } };
+    draft.descriptions.object.description = { baseValue: '', values: { fr: 'Desc', cre: 'Desc kreol' } };
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'rcf', code: 'rcf', label: 'Créole réunionnais', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    // The creole translation exists under key 'cre' → no warning despite the spoken code being 'rcf'.
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
 });

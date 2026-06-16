@@ -6404,6 +6404,16 @@ a {
   border-color: var(--line-strong);
 }
 
+.map-panel__tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.map-panel__tool-button:disabled:hover {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
 .map-panel__tool-button--active {
   color: #fffdf8;
   background: var(--theme-primary);

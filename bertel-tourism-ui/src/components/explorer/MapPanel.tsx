@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { ArrowUpRight, LassoSelect, MapPin } from 'lucide-react';
+import { ArrowUpRight, LassoSelect, Maximize, MapPin } from 'lucide-react';
 import { Layer, Map, Marker, NavigationControl, Popup, Source } from 'react-map-gl/maplibre';
 import {
   defaultMarkerStyles,
@@ -140,6 +140,12 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
   const lassoPointsRef = useRef<ScreenPoint[]>([]);
   const mapRef = useRef<any>(null);
   const lastFitSignatureRef = useRef<string | null>(null);
+  /**
+   * Once true, the user owns the camera: auto-fit-on-filter is frozen and the
+   * view only changes via explicit gestures or the toolbar "reset zoom" tool.
+   * Set on the first real interaction with the map surface (see effect below).
+   */
+  const hasUserInteractedRef = useRef(false);
   const [bounds, setBounds] = useState<BBox | null>(null);
   const [zoom, setZoom] = useState<number>(DEFAULT_MAP_ZOOM);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -252,13 +258,60 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
     };
   }, [hoverPopupState, dismissHoverPopup]);
 
-  useEffect(() => {
-    if (!mapLoaded) {
-      return;
-    }
+  /** Move the camera to frame the given marker coordinates (single point → centered zoom). */
+  const fitToCoordinates = useCallback(
+    (coordinates: readonly (readonly [number, number])[]) => {
+      if (coordinates.length === 0) {
+        return;
+      }
 
-    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current;
-    if (!mapInstance) {
+      const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current;
+      if (!mapInstance) {
+        return;
+      }
+
+      if (coordinates.length === 1) {
+        const [longitude, latitude] = coordinates[0];
+        mapInstance.easeTo({
+          center: [longitude, latitude],
+          zoom: SINGLE_POINT_ZOOM,
+          duration: 500,
+        });
+        return;
+      }
+
+      const [minLng, minLat, maxLng, maxLat] = coordinates.reduce(
+        (acc, [lon, lat]) => [
+          Math.min(acc[0], lon),
+          Math.min(acc[1], lat),
+          Math.max(acc[2], lon),
+          Math.max(acc[3], lat),
+        ],
+        [Infinity, Infinity, -Infinity, -Infinity],
+      );
+
+      mapInstance.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        {
+          padding: MAP_FIT_PADDING,
+          duration: 500,
+          maxZoom: SINGLE_POINT_ZOOM,
+        },
+      );
+    },
+    [],
+  );
+
+  // Auto-fit the camera to the visible markers — but ONLY until the user takes
+  // control of the map. On first load (no interaction yet) the view fits the
+  // current set, and keeps fitting as data/filters change. Once the user has
+  // zoomed/panned (hasUserInteractedRef), filtering must NOT move the camera:
+  // they keep their chosen view and re-frame on demand via the toolbar tool.
+  useEffect(() => {
+    if (!mapLoaded || hasUserInteractedRef.current) {
       return;
     }
 
@@ -273,39 +326,40 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
     }
 
     lastFitSignatureRef.current = nextSignature;
+    fitToCoordinates(markerCoordinates);
+  }, [mapLoaded, markerCoordinates, fitToCoordinates]);
 
-    if (markerCoordinates.length === 1) {
-      const [[longitude, latitude]] = markerCoordinates;
-      mapInstance.easeTo({
-        center: [longitude, latitude],
-        zoom: SINGLE_POINT_ZOOM,
-        duration: 500,
-      });
-      return;
+  // Freeze auto-fit on the first genuine interaction with the map surface.
+  // Capture-phase native listeners catch every camera-affecting gesture —
+  // drag/click (pointerdown), scroll & pinch zoom (wheel/pointerdown),
+  // NavigationControl +/- and cluster drill-in (bubble through the container),
+  // and keyboard pan/zoom — regardless of React's synthetic stopPropagation.
+  useEffect(() => {
+    if (!mapLoaded) {
+      return undefined;
     }
 
-    const [minLng, minLat, maxLng, maxLat] = markerCoordinates.reduce(
-      (acc, [lon, lat]) => [
-        Math.min(acc[0], lon),
-        Math.min(acc[1], lat),
-        Math.max(acc[2], lon),
-        Math.max(acc[3], lat),
-      ],
-      [Infinity, Infinity, -Infinity, -Infinity],
-    );
+    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current;
+    const container: HTMLElement | undefined = mapInstance?.getContainer?.();
+    if (!container) {
+      return undefined;
+    }
 
-    mapInstance.fitBounds(
-      [
-        [minLng, minLat],
-        [maxLng, maxLat],
-      ],
-      {
-        padding: MAP_FIT_PADDING,
-        duration: 500,
-        maxZoom: SINGLE_POINT_ZOOM,
-      },
-    );
-  }, [mapLoaded, markerCoordinates]);
+    const markInteracted = () => {
+      hasUserInteractedRef.current = true;
+    };
+    const passiveCapture: AddEventListenerOptions = { capture: true, passive: true };
+    const capture: AddEventListenerOptions = { capture: true };
+    container.addEventListener('pointerdown', markInteracted, passiveCapture);
+    container.addEventListener('wheel', markInteracted, passiveCapture);
+    container.addEventListener('keydown', markInteracted, capture);
+
+    return () => {
+      container.removeEventListener('pointerdown', markInteracted, passiveCapture);
+      container.removeEventListener('wheel', markInteracted, passiveCapture);
+      container.removeEventListener('keydown', markInteracted, capture);
+    };
+  }, [mapLoaded]);
 
   useEffect(() => {
     if (!lassoFeedback) {
@@ -511,6 +565,26 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
     [disableLasso, lassoDrawing],
   );
 
+  const handleResetZoom = useCallback(() => {
+    dismissHoverPopup();
+    fitToCoordinates(markerCoordinates);
+  }, [dismissHoverPopup, fitToCoordinates, markerCoordinates]);
+
+  const resetZoomLabel = 'Réinitialiser le zoom (voir tous les objets)';
+  const hasGeolocatedObjects = markerCoordinates.length > 0;
+  const resetZoomButton = (
+    <button
+      type="button"
+      className="map-panel__tool-button"
+      onClick={handleResetZoom}
+      title={resetZoomLabel}
+      aria-label={resetZoomLabel}
+      disabled={!hasGeolocatedObjects}
+    >
+      <Maximize className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
+
   const lassoTooltip = lassoArmed ? 'Annuler la selection par lasso' : 'Selection par lasso';
   const lassoButton = (
     <button
@@ -539,6 +613,7 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
             <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>
           </div>
           <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
+            {resetZoomButton}
             {lassoButton}
           </div>
         </div>
@@ -546,6 +621,7 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
       {!isColumn ? (
         <div className="map-panel__header-actions-wrap">
           <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
+            {resetZoomButton}
             {lassoButton}
           </div>
         </div>

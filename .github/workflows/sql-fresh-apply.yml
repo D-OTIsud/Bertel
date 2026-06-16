@@ -236,6 +236,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_opening_period_type.sql"
 
+      - name: object stay policy test (§85 14k — object_stay_policy table + §38 read gate + per-command canonical write + triggers)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_stay_policy.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

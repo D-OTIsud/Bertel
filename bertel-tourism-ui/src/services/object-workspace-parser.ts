@@ -290,11 +290,20 @@ export interface ObjectWorkspacePetPolicyForm {
   conditions: string;
 }
 
+/** Heure d'arrivée / départ (HEB) — check-in window + check-out deadline. Times are 'HH:MM' or ''. */
+export interface ObjectWorkspaceStayPolicyForm {
+  checkInFrom: string;
+  checkInUntil: string;
+  checkOutUntil: string;
+  conditions: string;
+}
+
 export interface ObjectWorkspaceCapacityPoliciesModule {
   metricOptions: WorkspaceReferenceOption[];
   capacityItems: ObjectWorkspaceCapacityItem[];
   groupPolicy: ObjectWorkspaceGroupPolicyForm;
   petPolicy: ObjectWorkspacePetPolicyForm;
+  stayPolicy: ObjectWorkspaceStayPolicyForm;
   unavailableReason: string | null;
 }
 
@@ -1617,6 +1626,10 @@ function parseWorkspaceCapacityPoliciesModule(raw: Record<string, unknown>): Obj
 
   const groupPolicyRecord = readArray(raw.group_policies)[0] ?? {};
   const petPolicyRecord = readRecord(raw.pet_policy);
+  // stay_policy is loaded by the capacity enrichment (direct object_stay_policy select), like
+  // pet/group — base = empty (get_object_resource does not emit it). Times normalize to HH:MM.
+  const stayPolicyRecord = readRecord(raw.stay_policy);
+  const toHm = (value: string): string => (value.length >= 5 ? value.slice(0, 5) : value);
 
   return {
     metricOptions: dedupeReferenceOptions(
@@ -1637,6 +1650,12 @@ function parseWorkspaceCapacityPoliciesModule(raw: Record<string, unknown>): Obj
       // No row (or no accepted key) = « non renseigné » — tri-state, never false.
       accepted: petPolicyRecord.accepted == null ? null : readBoolean(petPolicyRecord.accepted),
       conditions: readString(petPolicyRecord.conditions),
+    },
+    stayPolicy: {
+      checkInFrom: toHm(readString(stayPolicyRecord.check_in_from)),
+      checkInUntil: toHm(readString(stayPolicyRecord.check_in_until)),
+      checkOutUntil: toHm(readString(stayPolicyRecord.check_out_until)),
+      conditions: readString(stayPolicyRecord.conditions),
     },
     unavailableReason: null,
   };

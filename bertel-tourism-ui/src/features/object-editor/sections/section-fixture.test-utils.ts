@@ -180,6 +180,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       capacityItems: [{ recordId: 'cap1', metricId: 'cap', metricCode: 'max_capacity', metricLabel: 'Capacité max.', unit: 'pax', value: '48', effectiveFrom: '', effectiveTo: '' }],
       groupPolicy: { minSize: '8', maxSize: '40', groupOnly: false, notes: 'Sur réservation' },
       petPolicy: { accepted: false, conditions: 'Petits animaux' },
+      stayPolicy: { checkInFrom: '16:00', checkInUntil: '20:00', checkOutUntil: '11:00', conditions: 'Arrivée tardive sur demande' },
       unavailableReason: null,
     },
     distinctions: {

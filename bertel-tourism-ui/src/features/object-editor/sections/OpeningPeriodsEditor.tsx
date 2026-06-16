@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2 } from 'lucide-react';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
 import {
   buildRibbonSegments,
@@ -10,7 +10,21 @@ import {
   todayMonthFraction,
   type OpeningPeriodKind,
 } from './blocks/opening-period-meta';
+import { scheduleRowsFromPeriod } from './blocks/opening-schedule';
 import { classifyClosedDays } from './opening-period-edit';
+
+/** Read-only per-day hours for the expanded row detail. */
+function periodDayHours(period: ObjectWorkspaceOpeningPeriod): { short: string; text: string; open: boolean }[] {
+  return scheduleRowsFromPeriod(period).map((row) => {
+    const slots = row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot && (slot.start || slot.end)));
+    const fmt = (value: string) => (value.length >= 5 ? value.slice(0, 5) : value || '—');
+    return {
+      short: row.shortLabel ?? row.code,
+      open: slots.length > 0,
+      text: slots.length > 0 ? slots.map((slot) => `${fmt(slot.start)}–${fmt(slot.end)}`).join(' · ') : 'Fermé',
+    };
+  });
+}
 import type { ObjectWorkspaceOpeningPeriodTypeOption } from '../../../services/object-workspace-parser';
 
 interface OpeningPeriodsListProps {
@@ -43,6 +57,7 @@ const ROW_COLS = '8px minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 1fr) auto';
  */
 export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex, onAdd, onEdit, onDelete }: OpeningPeriodsListProps) {
   const [selectedIndex, setSelectedIndex] = useState(currentIndex);
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const ribbonSegments = useMemo(() => buildRibbonSegments(periods), [periods]);
   const nowPct = (todayMonthFraction() / 12) * 100;
 
@@ -144,40 +159,75 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
         {periods.map((period, index) => {
           const label = periodName(period, index);
           const isNow = index === currentIndex;
+          const isExpanded = Boolean(expanded[index]);
+          const dateClosures = classifyClosedDays(period.closedDays)
+            .filter((entry) => entry.kind !== 'weekday')
+            .map((entry) => entry.label);
           return (
-            <div
-              key={`${period.recordId ?? 'period'}-${index}`}
-              className={`rep-row${selectedIndex === index ? ' is-selected' : ''}`}
-              style={{ gridTemplateColumns: ROW_COLS, alignItems: 'center' }}
-            >
-              <span style={{ display: 'block', width: 8, height: 28, borderRadius: 3, background: periodColor(period) }} />
-              <div style={{ minWidth: 0 }}>
-                <span style={{ fontWeight: 600 }}>{label}</span>
-                {isNow && (
-                  <span className="pill ok" style={{ marginLeft: 8, fontSize: 10 }}>
-                    en cours
-                  </span>
-                )}
+            <div key={`${period.recordId ?? 'period'}-${index}`} className="opC__row-wrap">
+              <div
+                className={`rep-row${selectedIndex === index ? ' is-selected' : ''}`}
+                style={{ gridTemplateColumns: ROW_COLS, alignItems: 'center' }}
+              >
+                <span style={{ display: 'block', width: 8, height: 28, borderRadius: 3, background: periodColor(period) }} />
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{label}</span>
+                  {isNow && (
+                    <span className="pill ok" style={{ marginLeft: 8, fontSize: 10 }}>
+                      en cours
+                    </span>
+                  )}
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {formatPeriodRange(period)}
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {periodWeekSummary(period)}
+                </div>
+                <div className="rep-row__act">
+                  <button
+                    type="button"
+                    aria-label={`Détails de ${label}`}
+                    aria-expanded={isExpanded}
+                    onClick={() => setExpanded((state) => ({ ...state, [index]: !state[index] }))}
+                    style={{ fontSize: 12, padding: '2px 6px', cursor: 'pointer' }}
+                  >
+                    <ChevronDown
+                      size={14}
+                      aria-hidden
+                      style={{ transform: isExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 150ms' }}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Modifier ${label}`}
+                    onClick={() => onEdit(index)}
+                    style={{ fontSize: 12, padding: '2px 6px', cursor: 'pointer' }}
+                  >
+                    <Pencil size={14} aria-hidden />
+                  </button>
+                  <button type="button" className="del" aria-label={`Supprimer ${label}`} onClick={() => onDelete(index)}>
+                    <Trash2 size={14} aria-hidden />
+                  </button>
+                </div>
               </div>
-              <div className="muted" style={{ fontSize: 12 }}>
-                {formatPeriodRange(period)}
-              </div>
-              <div className="muted" style={{ fontSize: 12 }}>
-                {periodWeekSummary(period)}
-              </div>
-              <div className="rep-row__act">
-                <button
-                  type="button"
-                  aria-label={`Modifier ${label}`}
-                  onClick={() => onEdit(index)}
-                  style={{ fontSize: 12, padding: '2px 6px', cursor: 'pointer' }}
-                >
-                  <Pencil size={14} aria-hidden />
-                </button>
-                <button type="button" className="del" aria-label={`Supprimer ${label}`} onClick={() => onDelete(index)}>
-                  <Trash2 size={14} aria-hidden />
-                </button>
-              </div>
+
+              {isExpanded && (
+                <div className="opC__row-detail">
+                  <div className="opC__row-hours">
+                    {periodDayHours(period).map((day) => (
+                      <span key={day.short} className={day.open ? '' : 'muted'}>
+                        <strong>{day.short}</strong> {day.text}
+                      </span>
+                    ))}
+                  </div>
+                  {dateClosures.length > 0 && (
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                      Fermetures exceptionnelles : {dateClosures.join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

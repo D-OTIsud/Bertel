@@ -149,6 +149,71 @@ export function GroupPolicyButton({
 }
 
 /**
+ * Arrivée & départ (politique de séjour) — bouton → modale staged (§64 pattern), miroir de
+ * GroupPolicyButton. Pour les HEB (location/gîte) : heure d'arrivée (de–à) + heure de départ
+ * (avant) + conditions. Heures contraintes (type="time"). Tout vide ⇒ le saver supprime la ligne.
+ */
+export function StayPolicyButton({
+  capacity,
+  onChange,
+}: {
+  capacity: ObjectWorkspaceCapacityPoliciesModule;
+  onChange: (next: ObjectWorkspaceCapacityPoliciesModule) => void;
+}) {
+  const sp = capacity.stayPolicy;
+  const isSet = hasText(sp.checkInFrom) || hasText(sp.checkInUntil) || hasText(sp.checkOutUntil) || hasText(sp.conditions);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(sp);
+
+  const arrival =
+    hasText(sp.checkInFrom) || hasText(sp.checkInUntil) ? `arrivée ${sp.checkInFrom || '—'}–${sp.checkInUntil || '—'}` : '';
+  const departure = hasText(sp.checkOutUntil) ? `départ avant ${sp.checkOutUntil}` : '';
+  const summary = [arrival, departure, hasText(sp.conditions) ? 'avec conditions' : ''].filter(Boolean).join(' · ') || 'Horaires définis';
+
+  return (
+    <>
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Arrivée &amp; départ
+      </div>
+      <PolicyTrigger
+        isSet={isSet}
+        summary={summary}
+        addLabel="Définir l'arrivée &amp; le départ"
+        onOpen={() => {
+          setDraft(sp);
+          setOpen(true);
+        }}
+      />
+      <EditorModal
+        open={open}
+        title="Arrivée & départ"
+        saveLabel="Valider"
+        onClose={() => setOpen(false)}
+        onSave={() => {
+          onChange({ ...capacity, stayPolicy: draft });
+          setOpen(false);
+        }}
+      >
+        <div className="grid-2">
+          <Field label="Arrivée à partir de">
+            <Input type="time" aria-label="Arrivée à partir de" value={draft.checkInFrom} onChange={(checkInFrom) => setDraft({ ...draft, checkInFrom })} />
+          </Field>
+          <Field label="Arrivée jusqu'à">
+            <Input type="time" aria-label="Arrivée jusqu'à" value={draft.checkInUntil} onChange={(checkInUntil) => setDraft({ ...draft, checkInUntil })} />
+          </Field>
+        </div>
+        <Field label="Départ avant">
+          <Input type="time" aria-label="Départ avant" value={draft.checkOutUntil} onChange={(checkOutUntil) => setDraft({ ...draft, checkOutUntil })} />
+        </Field>
+        <Field label="Conditions (arrivée tardive, boîte à clés…)">
+          <Textarea value={draft.conditions} rows={3} onChange={(conditions) => setDraft({ ...draft, conditions })} />
+        </Field>
+      </EditorModal>
+    </>
+  );
+}
+
+/**
  * Politique d'accueil des animaux — INLINE (PO §66 : pas besoin de modale, c'est un seul
  * champ tri-état). « Non renseigné » = pas de ligne DB (jamais publié « non acceptés » par défaut).
  */

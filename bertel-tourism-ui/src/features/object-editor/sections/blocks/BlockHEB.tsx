@@ -9,7 +9,7 @@ import type {
   ObjectWorkspaceRoomTypeItem,
 } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './block-notes';
-import { EnvironmentChips, GroupPolicyButton, PetPolicyInline } from '../capacity-controls';
+import { EnvironmentChips, GroupPolicyButton, PetPolicyInline, StayPolicyButton } from '../capacity-controls';
 import {
   computeRoomsCapacitySum,
   computeUnitCount,
@@ -387,6 +387,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
       )}
 
       <EnvironmentChips characteristics={characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
+      <StayPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
       <GroupPolicyButton capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
       <PetPolicyInline capacity={capacity} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
     </Fs>

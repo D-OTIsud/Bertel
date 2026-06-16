@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { EditorModal, Field, Input, ScheduleEditor, Select } from '../primitives';
 import {
   OPENING_BUCKET_OPTIONS,
-  OPENING_WEEKDAYS,
   addClosedDate,
-  addClosedWeekday,
   classifyClosedDays,
   validatePeriodDraft,
 } from '../sections/opening-period-edit';
@@ -23,11 +21,6 @@ interface OpeningPeriodEditModalProps {
   onClose: () => void;
   onSave: (period: ObjectWorkspaceOpeningPeriod) => void;
 }
-
-const WEEKDAY_ADD_OPTIONS = [
-  { v: '', l: '— Jour de la semaine —' },
-  ...OPENING_WEEKDAYS.map((day) => ({ v: day.code, l: day.label })),
-];
 
 /**
  * Focused add/edit modal for one §14 opening period (parallel to ClassificationEditModal).
@@ -66,12 +59,6 @@ export function OpeningPeriodEditModal({
 
   function removeClosedDayAt(index: number) {
     set({ closedDays: draft.closedDays.filter((_, dayIndex) => dayIndex !== index) });
-  }
-
-  function addWeekday(code: string) {
-    if (code) {
-      set({ closedDays: addClosedWeekday(draft.closedDays, code) });
-    }
   }
 
   function tryAddDate() {
@@ -151,7 +138,10 @@ export function OpeningPeriodEditModal({
         />
       </Field>
 
-      <Field label="Jours & dates de fermeture" hint="Jours de la semaine fermés et fermetures exceptionnelles (ex. jours fériés).">
+      <Field
+        label="Dates de fermeture exceptionnelle"
+        hint="Jours fériés et congés ponctuels. Pour fermer un jour de la semaine, laissez ses horaires vides ci-dessus."
+      >
         {closedDayEntries.length > 0 && (
           <div className="chip-set" style={{ marginBottom: 8 }}>
             {closedDayEntries.map((entry, index) => (
@@ -169,14 +159,11 @@ export function OpeningPeriodEditModal({
             ))}
           </div>
         )}
-        <div className="grid-2" style={{ gap: 10 }}>
-          <Select aria-label="Ajouter un jour fermé" value="" options={WEEKDAY_ADD_OPTIONS} onChange={addWeekday} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <Input type="date" aria-label="Date de fermeture" value={dateInput} onChange={(value) => { setDateInput(value); setDateInputError(false); }} />
-            <button type="button" className="btn" onClick={tryAddDate}>
-              Ajouter
-            </button>
-          </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Input type="date" aria-label="Date de fermeture" value={dateInput} onChange={(value) => { setDateInput(value); setDateInputError(false); }} />
+          <button type="button" className="btn" onClick={tryAddDate}>
+            Ajouter
+          </button>
         </div>
         {dateInputError && (
           <p role="alert" className="muted" style={{ marginTop: 6, color: 'var(--red, #93392a)' }}>

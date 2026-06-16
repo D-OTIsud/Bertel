@@ -87,6 +87,14 @@ describe('SectionOpenings', () => {
     expect(screen.getByText('1/7 j. · continu')).toBeInTheDocument();
   });
 
+  it('expands a period row to reveal its weekly hours read-only, without opening the modal', () => {
+    setup();
+    expect(screen.queryByText(/09:00/)).not.toBeInTheDocument(); // collapsed: hours hidden
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Détails de Standard' })); });
+    expect(screen.getByText(/09:00/)).toBeInTheDocument(); // expanded: weekly hours shown
+    expect(screen.queryByText('modal-edit')).not.toBeInTheDocument(); // viewing ≠ editing
+  });
+
   it('renders an empty-state add button when there are no periods', () => {
     const modules = fullModulesFixture();
     modules.openings = { ...modules.openings, periods: [] };

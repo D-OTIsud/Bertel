@@ -90,12 +90,18 @@ describe('OpeningPeriodEditModal', () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ recordId: 'op-123', order: '2' }));
   });
 
-  it('adds a closed weekday as a removable chip', () => {
+  it('adds an exceptional closure DATE as a removable chip', () => {
     const onSave = renderModal({ seasonTypeCode: 'year_round' });
-    fireEvent.change(screen.getByLabelText('Ajouter un jour fermé'), { target: { value: 'monday' } });
-    expect(screen.getByRole('button', { name: 'Retirer Lundi' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Date de fermeture'), { target: { value: '2026-12-25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    expect(screen.getByRole('button', { name: 'Retirer 25/12/2026' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ closedDays: ['monday'] }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ closedDays: ['2026-12-25'] }));
+  });
+
+  it('has no weekday closed-day control (weekday closure is expressed by leaving hours empty)', () => {
+    renderModal({ seasonTypeCode: 'year_round' });
+    expect(screen.queryByLabelText('Ajouter un jour fermé')).not.toBeInTheDocument();
   });
 
   it('shows an inline error and blocks save when the end date precedes the start date', () => {

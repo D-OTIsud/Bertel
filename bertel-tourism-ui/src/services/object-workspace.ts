@@ -727,17 +727,18 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
     };
   }
 
-  const [metricRefsResult, capacitiesResult, groupPolicyResult, petPolicyResult, applicabilityResult] = await Promise.all([
+  const [metricRefsResult, capacitiesResult, groupPolicyResult, petPolicyResult, stayPolicyResult, applicabilityResult] = await Promise.all([
     client.from('ref_capacity_metric').select('id, code, name, position').order('position', { ascending: true }),
     client.from('object_capacity').select('id, metric_id, value_integer, unit, effective_from, effective_to').eq('object_id', objectId),
     client.from('object_group_policy').select('min_size, max_size, group_only, notes').eq('object_id', objectId).maybeSingle(),
     client.from('object_pet_policy').select('accepted, conditions').eq('object_id', objectId).maybeSingle(),
+    client.from('object_stay_policy').select('check_in_from, check_in_until, check_out_until, conditions').eq('object_id', objectId).maybeSingle(),
     objectType
       ? client.from('ref_capacity_applicability').select('metric_id').eq('object_type', objectType)
       : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (metricRefsResult.error || capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error) {
+  if (metricRefsResult.error || capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error || stayPolicyResult.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module C4 complet pour ce profil.',
@@ -772,6 +773,8 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
     : allMetricOptions;
   const groupPolicy = readRecord(groupPolicyResult.data);
   const petPolicy = readRecord(petPolicyResult.data);
+  const stayPolicy = readRecord(stayPolicyResult.data);
+  const toHm = (value: string): string => (value.length >= 5 ? value.slice(0, 5) : value);
 
   return {
     metricOptions,
@@ -787,6 +790,12 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
       // « Animaux non acceptés » on the first save of an untouched §07.
       accepted: petPolicy.accepted == null ? null : readBoolean(petPolicy.accepted),
       conditions: readString(petPolicy.conditions),
+    },
+    stayPolicy: {
+      checkInFrom: toHm(readString(stayPolicy.check_in_from)),
+      checkInUntil: toHm(readString(stayPolicy.check_in_until)),
+      checkOutUntil: toHm(readString(stayPolicy.check_out_until)),
+      conditions: readString(stayPolicy.conditions),
     },
     unavailableReason: null,
   };
@@ -4143,6 +4152,27 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
           conditions: toNullableText(input.petPolicy.conditions),
         },
   }, 'Impossible d enregistrer capacites et politiques.');
+
+  // §85 stay policy (heure d'arrivée / départ) — direct PostgREST write, gated by the
+  // canonical_* RLS on object_stay_policy (§40/§41 child-write precedent). All-empty ⇒ delete
+  // the row (so an untouched form never materialises an empty policy).
+  const client = getSupabaseClient();
+  if (client) {
+    const sp = input.stayPolicy;
+    const stayEmpty = ![sp.checkInFrom, sp.checkInUntil, sp.checkOutUntil, sp.conditions].some((value) => value.trim().length > 0);
+    const { error } = stayEmpty
+      ? await client.from('object_stay_policy').delete().eq('object_id', objectId)
+      : await client.from('object_stay_policy').upsert({
+          object_id: objectId,
+          check_in_from: sp.checkInFrom.trim() || null,
+          check_in_until: sp.checkInUntil.trim() || null,
+          check_out_until: sp.checkOutUntil.trim() || null,
+          conditions: sp.conditions.trim() || null,
+        });
+    if (error) {
+      throw new Error('Impossible d enregistrer la politique de séjour.');
+    }
+  }
 }
 
 export async function saveObjectWorkspacePricing(objectId: string, input: ObjectWorkspacePricingModule): Promise<void> {

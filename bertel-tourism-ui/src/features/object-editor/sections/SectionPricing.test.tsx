@@ -38,4 +38,16 @@ describe('SectionPricing — discounts (§48)', () => {
 
     expect(result.current.draft.pricing.discounts[0]).toMatchObject({ discountPercent: '10', discountAmount: '', currency: '' });
   });
+
+  it('renders the payment block and marks characteristics dirty on change', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText('Modes de paiement acceptés')).toBeInTheDocument();
+    // The selected payment ('CB') is shown as a removable chip; removing it writes characteristics.
+    act(() => { fireEvent.click(screen.getByTitle('Retirer')); });
+
+    expect(result.current.draft.characteristics.selectedPaymentCodes).toEqual([]);
+    expect(result.current.dirtySections.characteristics).toBe(true);
+  });
 });

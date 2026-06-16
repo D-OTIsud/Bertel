@@ -2,6 +2,7 @@ import { Field, Fs, Input, Repeater, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import { addPricingRow, removePricingRow, updatePricingRow } from './pricing-row';
 import { addDiscountRow, removeDiscountRow, updateDiscountRow } from './discount-row';
+import { PaymentChips } from './commercial-controls';
 
 const CATEGORY_OPTIONS = [
   { v: 'all', l: 'Tarif principal' },
@@ -125,6 +126,11 @@ export function SectionPricing({ editor, folded }: SectionProps) {
           />
         </Field>
       </div>
+
+      <PaymentChips
+        characteristics={editor.draft.characteristics}
+        onChange={(next) => editor.replaceModule('characteristics', next)}
+      />
 
       <div className="chip-group__label" style={{ marginTop: 14 }}>
         Remises &amp; réductions

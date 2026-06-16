@@ -260,7 +260,15 @@ export function ResultCardView({
         style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
       />
 
-      <div className="flex min-w-0 flex-col justify-center gap-2 overflow-hidden py-0.5">
+      <div
+        className={cn(
+          'flex min-w-0 flex-col gap-2 py-0.5',
+          // Collapsed: center + clip to the fixed 116px. Expanded: let the column (and the grid row)
+          // grow to fit the wrapped chips — overflow-hidden on a grid item caps its min size to 0,
+          // so it must be removed here or the extra chip lines get clipped.
+          expanded ? 'justify-start' : 'justify-center overflow-hidden',
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(

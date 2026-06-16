@@ -16,6 +16,7 @@
 // puis les actions + la timeline en dessous. Le repli est piloté par JS sur mobile et FORCÉ
 // déplié au-dessus du breakpoint par media query (desktop ignore l'état JS).
 // Gating page-wide write_crm_notes : boutons désactivés AVEC raison (no-write-trap).
+// Gate `canWrite` fourni par l'hôte (page-wide sur /crm ; per-objet dans le tiroir éditeur).
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -282,11 +283,14 @@ export function CrmActorFiche({
   canWrite,
   onBack,
   onOpenObject,
+  backLabel = 'Annuaire des acteurs',
 }: {
   actorId: string;
   canWrite: boolean;
   onBack: () => void;
   onOpenObject: (objectId: string) => void;
+  /** Libellé du bouton retour (défaut /crm = « Annuaire des acteurs » ; tiroir = « Retour à l'établissement »). */
+  backLabel?: string;
 }) {
   const queryClient = useQueryClient();
   const actorQuery = useQuery({ queryKey: ['crm-actor', actorId], queryFn: () => listActorCrm(actorId) });
@@ -374,7 +378,7 @@ export function CrmActorFiche({
     return (
       <div className="crm-body">
         <button type="button" className="crm-back" onClick={onBack}>
-          <ChevronLeft size={12} aria-hidden /> Annuaire des acteurs
+          <ChevronLeft size={12} aria-hidden /> {backLabel}
         </button>
         <div className="inline-alert">{errorMessageOf(actorQuery.error)}</div>
       </div>
@@ -395,7 +399,7 @@ export function CrmActorFiche({
   return (
     <div className="crm-body">
       <button type="button" className="crm-back" onClick={onBack}>
-        <ChevronLeft size={12} aria-hidden /> Annuaire des acteurs
+        <ChevronLeft size={12} aria-hidden /> {backLabel}
       </button>
 
       {/* Deux colonnes (rectif PO) : main (actions + timeline) à GAUCHE, rail (acteur + KPI + listes)

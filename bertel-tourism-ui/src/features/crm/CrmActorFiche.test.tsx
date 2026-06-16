@@ -618,6 +618,12 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(screen.getByRole('button', { name: /nouvelle tâche/i })).toBeEnabled();
   });
 
+  it('utilise le libellé de retour fourni (backLabel)', async () => {
+    const props = renderFiche({ backLabel: "Retour à l'établissement" });
+    fireEvent.click(await screen.findByRole('button', { name: "Retour à l'établissement" }));
+    expect(props.onBack).toHaveBeenCalled();
+  });
+
   it('42501 (acteur hors périmètre) → message dédié', async () => {
     crmMock.listActorCrm.mockRejectedValue(Object.assign(new Error('permission denied'), { code: '42501' }));
     renderFiche();

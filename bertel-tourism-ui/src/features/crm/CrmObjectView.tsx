@@ -7,6 +7,8 @@
 // acteur optionnel parmi les acteurs liés. Données réelles : api.list_object_crm ;
 // le nom/type de l'objet est résolu depuis l'annuaire (le RPC objet ne porte pas ces
 // champs). Gating page-wide write_crm_notes (no-write-trap).
+// Gate `canWrite` fourni par l'hôte (page-wide `write_crm_notes` sur /crm ; per-objet
+// `user_can_write_crm` dans le tiroir éditeur).
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -23,12 +25,15 @@ export function CrmObjectView({
   canWrite,
   onBack,
   onOpenActor,
+  hideOpenEditor = false,
 }: {
   objectId: string;
   backLabel: string;
   canWrite: boolean;
   onBack: () => void;
   onOpenActor: (actorId: string) => void;
+  /** Masque le lien « Ouvrir dans l'éditeur » — circulaire quand l'hôte EST déjà l'éditeur. */
+  hideOpenEditor?: boolean;
 }) {
   const queryClient = useQueryClient();
   const objectQuery = useQuery({ queryKey: ['crm-object', objectId], queryFn: () => listObjectCrm(objectId) });
@@ -147,9 +152,11 @@ export function CrmObjectView({
           </div>
         </div>
         <div className="crm-hero__actions">
-          <Link className="crm-btn" href={`/objects/${objectId}/edit`}>
-            <ExternalLink size={13} aria-hidden /> Ouvrir dans l&apos;éditeur
-          </Link>
+          {!hideOpenEditor && (
+            <Link className="crm-btn" href={`/objects/${objectId}/edit`}>
+              <ExternalLink size={13} aria-hidden /> Ouvrir dans l&apos;éditeur
+            </Link>
+          )}
           <button
             type="button"
             className="crm-btn primary"

@@ -82,6 +82,12 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     expect(editorLink).toHaveAttribute('href', '/objects/obj-1/edit');
   });
 
+  it('masque le lien éditeur quand hideOpenEditor (hôte = éditeur)', async () => {
+    renderView({ hideOpenEditor: true });
+    await screen.findByText('Hotel Basalte & Lagon');
+    expect(screen.queryByRole('link', { name: /ouvrir dans l.éditeur/i })).not.toBeInTheDocument();
+  });
+
   it('rend les acteurs liés avec rôle + badge principal ; clic → onOpenActor', async () => {
     const props = renderView();
     await screen.findByText('Hotel Basalte & Lagon');

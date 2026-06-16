@@ -3,10 +3,8 @@ import { Fs, Field, Textarea, LangTabs, ScopeTabs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDescriptionScope } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
-
-const LANG_LABELS: Record<string, string> = {
-  fr: 'Français', en: 'English', cre: 'Créole', de: 'Deutsch', es: 'Español',
-};
+import { SpokenLanguagesField } from './commercial-controls';
+import { descLanguageTabs, resolveLanguageLabel } from './spoken-languages';
 
 const EMPTY_FIELD = { baseValue: '', values: {} as Record<string, string> };
 const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
@@ -18,6 +16,7 @@ const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
 /** Section 04 — multilingual descriptions: default (shared) layer + per-organisation personalised overlay. */
 export function SectionDescriptions({ editor, permissions, folded }: SectionProps) {
   const descriptions = editor.draft.descriptions;
+  const characteristics = editor.draft.characteristics;
   const active = descriptions.activeLanguage;
   const canEditOrg = permissions.descriptions?.canEditOrgEnrichment ?? false;
   const canEditCanonical = permissions.descriptions?.canEditCanonical ?? false;
@@ -44,9 +43,10 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
       : { ...descriptions, object: nextScope });
   }
 
-  const tabs = descriptions.availableLanguages.map((code) => ({
+  const tabCodes = descLanguageTabs(descriptions.availableLanguages, characteristics.selectedLanguages);
+  const tabs = tabCodes.map((code) => ({
     code,
-    label: LANG_LABELS[code] ?? code,
+    label: resolveLanguageLabel(code, characteristics.languageOptions),
     filled: Boolean(
       readTranslatableField(activeScopeData.description, code, descriptions.localLanguage).trim()
       || readTranslatableField(activeScopeData.chapo, code, descriptions.localLanguage).trim(),
@@ -84,6 +84,11 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
       folded={folded}
       pill={{ tone: 'ok', label: onOrg ? 'Personnalisée' : 'Par défaut' }}
     >
+      <SpokenLanguagesField
+        characteristics={characteristics}
+        onChange={(next) => editor.replaceModule('characteristics', next)}
+      />
+
       <div className="desc-selectors">
         {scopeTabs.length > 1 ? (
           <ScopeTabs tabs={scopeTabs} active={scope} onSelect={(c) => setScope(c as 'canonical' | 'org')} />

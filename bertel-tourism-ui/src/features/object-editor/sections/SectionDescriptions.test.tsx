@@ -23,6 +23,21 @@ function modules(orgOverlay: unknown = null): ObjectWorkspaceModules {
       orgOverlay,
       places: [],
     },
+    characteristics: {
+      languageOptions: [
+        { id: 'fr', code: 'fr', label: 'Français' },
+        { id: 'de', code: 'de', label: 'Allemand' },
+      ],
+      languageLevelOptions: [{ id: 'l1', code: 'fluent', label: 'Courant' }],
+      selectedLanguages: [],
+      paymentOptions: [],
+      selectedPaymentCodes: [],
+      environmentOptions: [],
+      selectedEnvironmentCodes: [],
+      amenityGroups: [],
+      selectedAmenityCodes: [],
+      unavailableReason: null,
+    },
   } as unknown as ObjectWorkspaceModules;
 }
 
@@ -84,5 +99,22 @@ describe('SectionDescriptions', () => {
     fireEvent.change(accroche, { target: { value: 'Accroche OTI propre' } });
     expect(result.current.draft.descriptions.orgOverlay?.chapo.baseValue).toBe('Accroche OTI propre');
     expect(result.current.draft.descriptions.object.chapo.baseValue).toBe('');
+  });
+
+  it('renders the spoken-languages block', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modules()));
+    render(<SectionDescriptions editor={result.current} permissions={canonicalOnly} />);
+    expect(screen.getByText('Langues parlées')).toBeInTheDocument();
+  });
+
+  it('surfaces a description tab for a spoken language that has no translation yet', () => {
+    const base = modules();
+    (base as unknown as { characteristics: { selectedLanguages: unknown[] } }).characteristics.selectedLanguages = [
+      { languageId: 'de', code: 'de', label: 'Allemand', levelId: 'l1', levelCode: 'fluent', levelLabel: 'Courant' },
+    ];
+    const { result } = renderHook(() => useObjectEditorState('o1', base));
+    render(<SectionDescriptions editor={result.current} permissions={canonicalOnly} />);
+    // fr + en come from availableLanguages; Deutsch is added by the spoken language.
+    expect(screen.getByRole('button', { name: 'Deutsch' })).toBeInTheDocument();
   });
 });

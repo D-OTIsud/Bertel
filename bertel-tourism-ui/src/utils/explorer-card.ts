@@ -67,11 +67,31 @@ function shortenDisplayLabel(label: string): string {
   return label;
 }
 
+// Label values that are a granted STATUS (binary "obtained") rather than a meaningful grade/type.
+const STATUS_VALUE_WORDS = new Set(['obtenu', 'accorde', 'acquis', 'octroye', 'attribue']);
+
+/**
+ * Strip a trailing " · <value>" from a classification/label when the value is a binary granted
+ * STATUS ("· Obtenu") or a "Titulaire …" repeat of the scheme name — so the pill shows only the
+ * label name. Graded values ("4 étoiles", "Catégorie I", "Gastronomique", "1 cheminée") are kept.
+ */
+function stripRedundantValueSuffix(label: string): string {
+  const idx = label.lastIndexOf(' · ');
+  if (idx === -1) {
+    return label;
+  }
+  const valueKey = normalizeForCompare(label.slice(idx + 3));
+  if (STATUS_VALUE_WORDS.has(valueKey) || valueKey.startsWith('titulaire')) {
+    return label.slice(0, idx).trimEnd();
+  }
+  return label;
+}
+
 function dedupeLabels(labels: string[]): string[] {
   const seen = new Set<string>();
   const next: string[] = [];
 
-  for (const label of labels.map(cleanText).map(shortenDisplayLabel).filter(Boolean)) {
+  for (const label of labels.map(cleanText).map(shortenDisplayLabel).map(stripRedundantValueSuffix).filter(Boolean)) {
     const key = normalizeForCompare(label);
     if (!key || seen.has(key)) {
       continue;

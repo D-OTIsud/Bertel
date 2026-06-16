@@ -86,6 +86,30 @@ describe('normalizeExplorerCard', () => {
     expect(card.labels).not.toContain('Zebra');
   });
 
+  it('strips a "· Obtenu" status / "· Titulaire X" repeat from label pills, keeps grades + types', () => {
+    const card = normalizeExplorerCard({
+      id: 'obj-labels',
+      name: 'Labels',
+      type: 'HOT',
+      badges: [
+        { kind: 'classification', code: 'qtir:obtenu', label: 'Qualité Tourisme Île de La Réunion · Obtenu' },
+        { kind: 'classification', code: 'hotel:4', label: 'Classement hôtelier · 4 étoiles' },
+        { kind: 'classification', code: 'tables:gastro', label: 'Tables & Auberges de France · Gastronomique' },
+        { kind: 'sustainability_label', code: 'clef:titulaire', label: 'Clef Verte · Titulaire Clef Verte' },
+      ],
+    });
+
+    // Binary granted status dropped → name only.
+    expect(card.labels).toContain('Qualité Tourisme Île de La Réunion');
+    expect(card.labels).not.toContain('Qualité Tourisme Île de La Réunion · Obtenu');
+    // "Titulaire X" repeat dropped → scheme name only.
+    expect(card.labels).toContain('Clef Verte');
+    expect(card.labels).not.toContain('Clef Verte · Titulaire Clef Verte');
+    // Graded classement kept (shortened) and a real typed value kept as-is.
+    expect(card.labels).toContain('4 étoiles');
+    expect(card.labels).toContain('Tables & Auberges de France · Gastronomique');
+  });
+
   it('preserves ranked label metadata and surfaces match distinction pills', () => {
     const certified = normalizeExplorerCard({
       id: 'obj-certified',

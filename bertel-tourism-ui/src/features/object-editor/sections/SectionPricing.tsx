@@ -1,208 +1,136 @@
-import { Field, Fs, Input, Repeater, Select } from '../primitives';
+import { useState } from 'react';
+import { Fs } from '../primitives';
 import type { SectionProps } from './section-types';
-import { addPricingRow, removePricingRow, updatePricingRow } from './pricing-row';
-import { addDiscountRow, removeDiscountRow, updateDiscountRow } from './discount-row';
+import type {
+  ObjectWorkspaceDiscountItem,
+  ObjectWorkspacePriceItem,
+} from '../../../services/object-workspace-parser';
+import { DiscountList, PriceList } from './PricingLinesEditor';
 import { PaymentChips } from './commercial-controls';
+import { PricingLineEditModal } from '../widgets/PricingLineEditModal';
+import { DiscountEditModal } from '../widgets/DiscountEditModal';
+import { createPricingDraft } from './pricing-row';
+import { createDiscountRow } from './discount-row';
 
-const CATEGORY_OPTIONS = [
-  { v: 'all', l: 'Tarif principal' },
-  { v: 'option', l: 'Option / extra' },
-  { v: 'menu', l: 'Menu / formule' },
-  { v: 'pack', l: 'Pack / forfait' },
-  { v: 'session', l: 'Session encadrée' },
-  { v: 'group', l: 'Groupe' },
-  { v: 'taxe', l: 'Taxe / collecte' },
-  { v: 'devis', l: 'Sur devis' },
-  { v: 'commission', l: 'Commission' },
-  { v: 'free', l: 'Gratuit' },
-];
-
+/**
+ * §13 Tarifs & extras — modal-driven (parallel to §14 openings / §08 classifications).
+ * Two compact lists (tariff lines + discounts) are read-only presenters; all add/edit
+ * happens in PricingLineEditModal / DiscountEditModal, which own the per-row detail
+ * (type, public, amount range, unit, season, validity, age brackets, conditions). The
+ * old "Politique & règles" block (acompte / délai annulation / TVA) was removed: it wrote
+ * those values onto price[0]'s conditions/valid_from/source columns — a write-trap that
+ * errored the whole save the moment a non-date string reached the valid_from date column.
+ * Booking policy needs its own model (decision log §84). PaymentChips is the §83 payment
+ * block (object_payment_method) the PO relocated into §13.
+ */
 export function SectionPricing({ editor, folded }: SectionProps) {
   const pricing = editor.draft.pricing;
-  const firstPrice = pricing.prices[0];
+  const [addingPrice, setAddingPrice] = useState(false);
+  const [editingPriceIndex, setEditingPriceIndex] = useState<number | null>(null);
+  const [addingDiscount, setAddingDiscount] = useState(false);
+  const [editingDiscountIndex, setEditingDiscountIndex] = useState<number | null>(null);
+
+  function replacePrices(next: ObjectWorkspacePriceItem[]) {
+    editor.replaceModule('pricing', { ...pricing, prices: next });
+  }
+  function replaceDiscounts(next: ObjectWorkspaceDiscountItem[]) {
+    editor.replaceModule('pricing', { ...pricing, discounts: next });
+  }
+
+  function deletePrice(index: number) {
+    const label = pricing.prices[index]?.kindLabel || `la ligne ${index + 1}`;
+    if (!window.confirm(`Supprimer ${label} ?`)) {
+      return;
+    }
+    replacePrices(pricing.prices.filter((_, priceIndex) => priceIndex !== index));
+  }
+  function deleteDiscount(index: number) {
+    const label = pricing.discounts[index]?.conditions || `la remise ${index + 1}`;
+    if (!window.confirm(`Supprimer « ${label} » ?`)) {
+      return;
+    }
+    replaceDiscounts(pricing.discounts.filter((_, discountIndex) => discountIndex !== index));
+  }
 
   return (
     <Fs
       num="13"
-      title="Tarifs & extras"
-      sub="Tarifs, options, saisons, publics et conditions"
+      title="Tarifs, paiement & extras"
+      sub="Tarifs, options, paiement, saisons, publics et conditions"
       folded={folded}
       pill={{ tone: 'ok', label: `${pricing.prices.length} ligne(s) · ${pricing.discounts.length} remise(s)` }}
     >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '14px 2fr 90px 130px 110px auto',
-          gap: 8,
-          padding: '6px 12px',
-          fontSize: 10,
-          fontWeight: 700,
-          color: 'var(--ink-4)',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-        }}
-      >
-        <span />
-        <span>Libellé</span>
-        <span>Montant</span>
-        <span>Unité</span>
-        <span>Catégorie</span>
-        <span />
-      </div>
-      <Repeater
-        items={pricing.prices}
-        getKey={(price, index) => `${price.recordId ?? 'draft'}-${index}`}
-        columns="14px 2fr 90px 130px 110px auto"
-        addLabel="Ajouter une ligne tarifaire"
-        onAdd={() => editor.replaceModule('pricing', addPricingRow(pricing))}
-        renderRow={(price, index) => (
-          <>
-            <span className="rep-row__handle" aria-hidden />
-            {/* §48: kindLabel is derived from the kind ref on reload — the saver only persists kind_id/kind_code; edit the kind via the Catégorie select. */}
-            <Input
-              value={price.kindLabel}
-              placeholder="Libellé tarif"
-              readOnly
-              onChange={() => undefined}
-            />
-            <Input
-              value={price.amount}
-              mono
-              onChange={(amount) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { amount }))}
-            />
-            <Select
-              value={price.unitCode}
-              options={[{ v: '', l: 'Sans unité' }, ...pricing.priceUnitOptions.map((option) => ({ v: option.code, l: option.label }))]}
-              onChange={(unitCode) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { unitCode }))}
-            />
-            <Select
-              value={price.indicationCode || price.kindCode}
-              options={[
-                ...pricing.priceKindOptions.map((option) => ({ v: option.code, l: option.label })),
-                ...CATEGORY_OPTIONS.filter((option) => !pricing.priceKindOptions.some((kind) => kind.code === option.v)),
-              ]}
-              onChange={(kindCode) => editor.replaceModule('pricing', updatePricingRow(pricing, index, { kindCode }))}
-            />
-            <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removePricingRow(pricing, index))}>
-              Supprimer
-            </button>
-          </>
-        )}
+      <PriceList
+        pricing={pricing}
+        onAdd={() => setAddingPrice(true)}
+        onEdit={(index) => setEditingPriceIndex(index)}
+        onDelete={deletePrice}
       />
-
-      <div className="chip-group__label" style={{ marginTop: 14 }}>
-        Politique & règles
-      </div>
-      <div className="grid-3">
-        <Field label="Acompte demandé">
-          <Select
-            value={firstPrice?.conditions || ''}
-            options={['', 'Aucun', '30 %', '50 %', 'Totalité']}
-            onChange={(conditions) => {
-              if (!firstPrice) return;
-              editor.replaceModule('pricing', updatePricingRow(pricing, 0, { conditions }));
-            }}
-          />
-        </Field>
-        <Field label="Délai annulation gratuite">
-          <Input
-            value={firstPrice?.validFrom || ''}
-            mono
-            placeholder="J-7"
-            onChange={(validFrom) => {
-              if (!firstPrice) return;
-              editor.replaceModule('pricing', updatePricingRow(pricing, 0, { validFrom }));
-            }}
-          />
-        </Field>
-        <Field label="TVA applicable">
-          <Select
-            value={firstPrice?.source || ''}
-            options={['', '0 %', '5.5 %', '10 %', '20 %', 'Auto-entrepreneur (exo.)']}
-            onChange={(source) => {
-              if (!firstPrice) return;
-              editor.replaceModule('pricing', updatePricingRow(pricing, 0, { source }));
-            }}
-          />
-        </Field>
-      </div>
 
       <PaymentChips
         characteristics={editor.draft.characteristics}
         onChange={(next) => editor.replaceModule('characteristics', next)}
       />
 
-      <div className="chip-group__label" style={{ marginTop: 14 }}>
-        Remises &amp; réductions
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '14px 1.6fr 80px 80px 70px 70px 110px 110px auto',
-          gap: 8, padding: '6px 12px', fontSize: 10, fontWeight: 700,
-          color: 'var(--ink-4)', letterSpacing: '0.06em', textTransform: 'uppercase',
-        }}
-      >
-        <span /><span>Conditions</span><span>%</span><span>Montant</span><span>Grp min</span><span>Grp max</span><span>Du</span><span>Au</span><span />
-      </div>
-      <Repeater
-        items={pricing.discounts}
-        getKey={(discount, index) => `${discount.recordId ?? 'discount'}-${index}`}
-        columns="14px 1.6fr 80px 80px 70px 70px 110px 110px auto"
-        addLabel="Ajouter une remise"
-        onAdd={() => editor.replaceModule('pricing', addDiscountRow(pricing))}
-        renderRow={(discount, index) => (
-          <>
-            <span className="rep-row__handle" aria-hidden />
-            <Input
-              value={discount.conditions}
-              placeholder="Conditions (ex. groupes, scolaires…)"
-              onChange={(conditions) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { conditions }))}
-            />
-            <Input
-              value={discount.discountPercent}
-              mono
-              suffix="%"
-              aria-label="Remise en pourcentage"
-              onChange={(discountPercent) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { discountPercent }))}
-            />
-            <Input
-              value={discount.discountAmount}
-              mono
-              suffix="€"
-              aria-label="Remise en montant"
-              onChange={(discountAmount) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { discountAmount }))}
-            />
-            <Input
-              value={discount.minGroupSize}
-              mono
-              aria-label="Taille de groupe minimale"
-              onChange={(minGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { minGroupSize }))}
-            />
-            <Input
-              value={discount.maxGroupSize}
-              mono
-              aria-label="Taille de groupe maximale"
-              onChange={(maxGroupSize) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { maxGroupSize }))}
-            />
-            <Input
-              type="date"
-              value={discount.validFrom}
-              aria-label="Début de validité de la remise"
-              onChange={(validFrom) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validFrom }))}
-            />
-            <Input
-              type="date"
-              value={discount.validTo}
-              aria-label="Fin de validité de la remise"
-              onChange={(validTo) => editor.replaceModule('pricing', updateDiscountRow(pricing, index, { validTo }))}
-            />
-            <button type="button" className="del" onClick={() => editor.replaceModule('pricing', removeDiscountRow(pricing, index))}>
-              Supprimer
-            </button>
-          </>
-        )}
+      <div className="chip-group__label" style={{ marginTop: 16 }}>Remises &amp; réductions</div>
+      <DiscountList
+        discounts={pricing.discounts}
+        onAdd={() => setAddingDiscount(true)}
+        onEdit={(index) => setEditingDiscountIndex(index)}
+        onDelete={deleteDiscount}
       />
+
+      {addingPrice && (
+        <PricingLineEditModal
+          open
+          mode="add"
+          pricing={pricing}
+          draft={createPricingDraft(pricing)}
+          onClose={() => setAddingPrice(false)}
+          onSave={(price) => {
+            replacePrices([...pricing.prices, price]);
+            setAddingPrice(false);
+          }}
+        />
+      )}
+      {editingPriceIndex !== null && pricing.prices[editingPriceIndex] && (
+        <PricingLineEditModal
+          open
+          mode="edit"
+          pricing={pricing}
+          draft={pricing.prices[editingPriceIndex]}
+          onClose={() => setEditingPriceIndex(null)}
+          onSave={(price) => {
+            replacePrices(pricing.prices.map((row, rowIndex) => (rowIndex === editingPriceIndex ? price : row)));
+            setEditingPriceIndex(null);
+          }}
+        />
+      )}
+
+      {addingDiscount && (
+        <DiscountEditModal
+          open
+          mode="add"
+          draft={createDiscountRow()}
+          onClose={() => setAddingDiscount(false)}
+          onSave={(discount) => {
+            replaceDiscounts([...pricing.discounts, discount]);
+            setAddingDiscount(false);
+          }}
+        />
+      )}
+      {editingDiscountIndex !== null && pricing.discounts[editingDiscountIndex] && (
+        <DiscountEditModal
+          open
+          mode="edit"
+          draft={pricing.discounts[editingDiscountIndex]}
+          onClose={() => setEditingDiscountIndex(null)}
+          onSave={(discount) => {
+            replaceDiscounts(pricing.discounts.map((row, rowIndex) => (rowIndex === editingDiscountIndex ? discount : row)));
+            setEditingDiscountIndex(null);
+          }}
+        />
+      )}
     </Fs>
   );
 }

@@ -258,32 +258,59 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('environment_tag','littoral_sauvage', 'Littoral sauvage', 'Côte sauvage et préservée')
 ON CONFLICT DO NOTHING;
 
--- Types de tarifs (price_kind)
-INSERT INTO ref_code (domain, code, name, description) VALUES
-('price_kind','adulte', 'Adulte', 'Tarif adulte plein'),
-('price_kind','enfant', 'Enfant', 'Tarif enfant'),
-('price_kind','senior', 'Senior', 'Tarif senior'),
-('price_kind','etudiant', 'Étudiant', 'Tarif étudiant'),
-('price_kind','famille', 'Famille', 'Forfait famille'),
-('price_kind','groupe', 'Groupe', 'Tarif groupe'),
-('price_kind','couple', 'Couple', 'Tarif duo / couple'),
-('price_kind','personne_handicapee', 'Personne en situation de handicap', 'Tarif PMR'),
-('price_kind','resident', 'Résident', 'Tarif résident / local'),
-('price_kind','gratuit', 'Gratuit', 'Accès gratuit')
+-- Public / bénéficiaire d'un tarif (price_kind) — axe « pour qui ». §13 deux-axes.
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('price_kind','adulte', 'Adulte', 'Tarif adulte plein', 1),
+('price_kind','enfant', 'Enfant', 'Tarif enfant', 2),
+('price_kind','bebe', 'Bébé / Tout-petit', 'Tarif bébé / tout-petit', 3),
+('price_kind','jeune', 'Jeune / Junior', 'Tarif jeune / junior', 4),
+('price_kind','etudiant', 'Étudiant', 'Tarif étudiant', 5),
+('price_kind','senior', 'Senior', 'Tarif senior', 6),
+('price_kind','famille', 'Famille', 'Forfait famille', 7),
+('price_kind','couple', 'Couple', 'Tarif duo / couple', 8),
+('price_kind','groupe', 'Groupe', 'Tarif groupe', 9),
+('price_kind','scolaire', 'Scolaire', 'Tarif groupe scolaire', 10),
+('price_kind','resident', 'Résident', 'Tarif résident / local', 11),
+('price_kind','abonne', 'Abonné / Adhérent', 'Tarif abonné / adhérent', 12),
+('price_kind','demandeur_emploi', 'Demandeur d''emploi', 'Tarif demandeur d''emploi', 13),
+('price_kind','personne_handicapee', 'Personne en situation de handicap', 'Tarif PMR', 14),
+('price_kind','gratuit', 'Gratuit', 'Accès gratuit', 15)
 ON CONFLICT DO NOTHING;
 
--- Unités tarifaires (price_unit)
-INSERT INTO ref_code (domain, code, name, description) VALUES
-('price_unit','par_personne', 'Par personne', 'Tarif exprimé par personne'),
-('price_unit','par_nuit', 'Par nuit', 'Tarif par nuitée'),
-('price_unit','par_jour', 'Par jour', 'Tarif journalier'),
-('price_unit','par_semaine', 'Par semaine', 'Forfait hebdomadaire'),
-('price_unit','par_mois', 'Par mois', 'Forfait mensuel'),
-('price_unit','par_sejour', 'Par séjour', 'Montant pour l''ensemble du séjour'),
-('price_unit','par_groupe', 'Par groupe', 'Tarif pour un groupe défini'),
-('price_unit','par_forfait', 'Par forfait', 'Forfait global'),
-('price_unit','par_heure', 'Par heure', 'Tarif horaire'),
-('price_unit','par_personne_nuit', 'Par personne et par nuit', 'Tarif combiné personne/nuit')
+-- Type de tarif (price_type) — axe « quelle nature ». §13 deux-axes, stocké dans object_price.indication_code (texte, non FK).
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('price_type','principal', 'Tarif principal', 'Tarif de base de la prestation', 1),
+('price_type','option', 'Option / extra', 'Supplément ou prestation optionnelle', 2),
+('price_type','menu', 'Menu / formule', 'Menu, formule ou plat', 3),
+('price_type','pack', 'Pack / forfait', 'Offre groupée ou forfait packagé', 4),
+('price_type','abonnement', 'Abonnement / pass', 'Abonnement, carte ou pass multi-entrées', 5),
+('price_type','taxe', 'Taxe / redevance', 'Taxe de séjour, redevance ou collecte', 6),
+('price_type','caution', 'Caution', 'Caution ou dépôt de garantie', 7),
+('price_type','devis', 'Sur devis', 'Tarif communiqué sur devis', 8)
+ON CONFLICT DO NOTHING;
+
+-- Unités tarifaires (price_unit) — axe « par quoi ».
+INSERT INTO ref_code (domain, code, name, description, position) VALUES
+('price_unit','par_personne', 'Par personne', 'Tarif exprimé par personne', 1),
+('price_unit','par_personne_nuit', 'Par personne et par nuit', 'Tarif combiné personne/nuit', 2),
+('price_unit','par_personne_jour', 'Par personne et par jour', 'Tarif combiné personne/jour', 3),
+('price_unit','par_nuit', 'Par nuit', 'Tarif par nuitée', 4),
+('price_unit','par_sejour', 'Par séjour', 'Montant pour l''ensemble du séjour', 5),
+('price_unit','par_jour', 'Par jour', 'Tarif journalier', 6),
+('price_unit','par_semaine', 'Par semaine', 'Forfait hebdomadaire', 7),
+('price_unit','par_mois', 'Par mois', 'Forfait mensuel', 8),
+('price_unit','par_an', 'Par an', 'Tarif annuel (abonnement, pass)', 9),
+('price_unit','par_heure', 'Par heure', 'Tarif horaire', 10),
+('price_unit','par_seance', 'Par séance', 'Tarif par séance ou créneau', 11),
+('price_unit','par_entree', 'Par entrée / billet', 'Tarif par entrée ou billet', 12),
+('price_unit','par_couvert', 'Par couvert', 'Tarif par couvert (restauration)', 13),
+('price_unit','par_chambre', 'Par chambre', 'Tarif par chambre', 14),
+('price_unit','par_logement', 'Par logement (entier)', 'Tarif pour le logement entier (location)', 15),
+('price_unit','par_vehicule', 'Par véhicule', 'Tarif par véhicule', 16),
+('price_unit','par_trajet', 'Par trajet', 'Tarif par trajet (transport)', 17),
+('price_unit','par_groupe', 'Par groupe', 'Tarif pour un groupe défini', 18),
+('price_unit','par_forfait', 'Par forfait', 'Forfait global', 19),
+('price_unit','par_unite', 'Par unité', 'Tarif par unité / article', 20)
 ON CONFLICT DO NOTHING;
 
 -- Équipements de réunion

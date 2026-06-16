@@ -172,6 +172,8 @@ function buildWorkspaceResource(params: { id: string; name: string; type?: strin
       },
       pricing: {
         priceKindOptions: [],
+        priceTypeOptions: [],
+        priceSeasonOptions: [],
         priceUnitOptions: [],
         prices: [],
         discounts: [],

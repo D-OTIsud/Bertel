@@ -28,36 +28,73 @@ export function addDiscountRow(pricing: ObjectWorkspacePricingModule): ObjectWor
   return { ...pricing, discounts: [...pricing.discounts, createDiscountRow()] };
 }
 
+/**
+ * Apply a patch to one discount while enforcing the percent-XOR-amount contract
+ * (chk_discount_xor + chk_discount_currency_amount). Shared by the repeater updater
+ * and the §13 DiscountEditModal. When both fields arrive non-empty in one patch the
+ * amount wins (the percent branch would otherwise clear the amount, leaving BOTH empty).
+ */
+export function withDiscountXor(
+  discount: ObjectWorkspaceDiscountItem,
+  patch: Partial<ObjectWorkspaceDiscountItem>,
+): ObjectWorkspaceDiscountItem {
+  const next = { ...discount, ...patch };
+  const amountPatched = patch.discountAmount !== undefined && patch.discountAmount !== '';
+  if (!amountPatched && patch.discountPercent !== undefined && patch.discountPercent !== '') {
+    next.discountAmount = '';
+    next.currency = '';
+  }
+  if (amountPatched) {
+    next.discountPercent = '';
+    if (!next.currency) {
+      next.currency = 'EUR';
+    }
+  }
+  return next;
+}
+
 export function updateDiscountRow(
   pricing: ObjectWorkspacePricingModule,
   index: number,
   patch: Partial<ObjectWorkspaceDiscountItem>,
 ): ObjectWorkspacePricingModule {
-  const discounts = pricing.discounts.map((discount, discountIndex) => {
-    if (discountIndex !== index) {
-      return discount;
-    }
-    const next = { ...discount, ...patch };
-    // XOR precedence: when both fields arrive non-empty in one patch, the amount wins
-    // (the percent branch would otherwise clear the amount and leave BOTH empty).
-    const amountPatched = patch.discountAmount !== undefined && patch.discountAmount !== '';
-    if (!amountPatched && patch.discountPercent !== undefined && patch.discountPercent !== '') {
-      next.discountAmount = '';
-      next.currency = '';
-    }
-    if (amountPatched) {
-      next.discountPercent = '';
-      if (!next.currency) {
-        next.currency = 'EUR';
-      }
-    }
-    return next;
-  });
+  const discounts = pricing.discounts.map((discount, discountIndex) =>
+    discountIndex === index ? withDiscountXor(discount, patch) : discount,
+  );
   return { ...pricing, discounts };
 }
 
 export function removeDiscountRow(pricing: ObjectWorkspacePricingModule, index: number): ObjectWorkspacePricingModule {
   return { ...pricing, discounts: pricing.discounts.filter((_, discountIndex) => discountIndex !== index) };
+}
+
+export interface DiscountValidation {
+  canSave: boolean;
+  error: string | null;
+}
+
+/**
+ * §13 — single-row save gate for the DiscountEditModal. Mirrors the DB CHECKs
+ * (XOR percent/amount, percent ≤ 100, group-size and validity-window order) so the
+ * modal's Enregistrer is disabled with a reason rather than failing in the batch saver.
+ */
+export function validateDiscountDraft(discount: ObjectWorkspaceDiscountItem): DiscountValidation {
+  if (!discount.discountPercent && !discount.discountAmount) {
+    return { canSave: false, error: 'Renseignez un pourcentage ou un montant.' };
+  }
+  if (discount.discountPercent && Number(discount.discountPercent) > 100) {
+    return { canSave: false, error: 'Une remise en pourcentage ne peut pas dépasser 100 %.' };
+  }
+  if (
+    discount.minGroupSize && discount.maxGroupSize
+    && Number(discount.maxGroupSize) < Number(discount.minGroupSize)
+  ) {
+    return { canSave: false, error: 'La taille de groupe maximale doit être supérieure ou égale à la minimale.' };
+  }
+  if (discount.validFrom && discount.validTo && discount.validTo < discount.validFrom) {
+    return { canSave: false, error: 'La fin de validité doit être postérieure au début.' };
+  }
+  return { canSave: true, error: null };
 }
 
 /**

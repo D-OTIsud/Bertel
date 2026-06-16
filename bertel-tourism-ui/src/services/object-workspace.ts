@@ -2270,8 +2270,10 @@ async function getObjectWorkspacePricingModule(
     };
   }
 
-  const [kindRefsResult, unitRefsResult, pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
+  const [kindRefsResult, typeRefsResult, seasonRefsResult, unitRefsResult, pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
     client.from('ref_code').select('id, code, name, position').eq('domain', 'price_kind').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_type').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'season_type').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'price_unit').order('position', { ascending: true }),
     client
       .from('object_price')
@@ -2316,6 +2318,14 @@ async function getObjectWorkspacePricingModule(
   const kindOptions = dedupeReferenceOptions(
     (kindRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
   );
+  // §13 price_type catalog — graceful fallback to the parser-derived options when the
+  // domain is not exposed (older live / restricted profile), like the other ref fetches.
+  const typeOptions = typeRefsResult.status === 'fulfilled' && typeRefsResult.value.error == null
+    ? dedupeReferenceOptions((typeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.priceTypeOptions;
+  const seasonOptions = seasonRefsResult.status === 'fulfilled' && seasonRefsResult.value.error == null
+    ? dedupeReferenceOptions((seasonRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+    : baseModule.priceSeasonOptions;
   const unitOptions = dedupeReferenceOptions(
     (unitRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
   );
@@ -2343,6 +2353,8 @@ async function getObjectWorkspacePricingModule(
 
   return {
     priceKindOptions: kindOptions,
+    priceTypeOptions: typeOptions,
+    priceSeasonOptions: seasonOptions,
     priceUnitOptions: unitOptions,
     prices: priceRows.map((row) => normalizeWorkspacePriceItem({
       row,

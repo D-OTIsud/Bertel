@@ -3,40 +3,61 @@ import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionPricing } from './SectionPricing';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
-/** §48 — §13 discounts repeater (object_discount; XOR percent/amount enforced by discount-row helpers). */
-describe('SectionPricing — discounts (§48)', () => {
-  it('adds a discount row and marks pricing dirty', () => {
+/** §84 — §13 redesigned: modal-driven tariff lines + discounts, no inline grid, no write-trap policy block. */
+describe('SectionPricing (§84 modal redesign)', () => {
+  it('opens the add modal and appends a tariff line on save', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une ligne tarifaire/i })); });
+    view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    // The default draft already carries a public (first kind) → Enregistrer is enabled.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.pricing.prices).toHaveLength(2);
+    expect(result.current.dirtySections.pricing).toBe(true);
+  });
+
+  it('no longer renders the redundant read-only Libellé column', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPricing editor={result.current} permissions={allowAll} />);
+    expect(screen.queryByPlaceholderText('Libellé tarif')).toBeNull();
+  });
+
+  it('removed the write-trap "Politique & règles" block (acompte / délai annulation / TVA)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPricing editor={result.current} permissions={allowAll} />);
+    expect(screen.queryByText(/Délai annulation/i)).toBeNull();
+    expect(screen.queryByText(/Acompte demandé/i)).toBeNull();
+  });
+
+  it('adds a discount via the modal and keeps the percent-XOR-amount contract', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une remise/i })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
-    expect(result.current.draft.pricing.discounts).toHaveLength(1);
-    expect(result.current.dirtySections.pricing).toBe(true);
-  });
-
-  it('renders the price label read-only (kindLabel is derived from the kind ref — §48)', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPricing editor={result.current} permissions={allowAll} />);
-
-    // getByDisplayValue('Adulte') is ambiguous here: the Catégorie <select>'s
-    // selected option also displays 'Adulte' — target the label input by placeholder.
-    const labelInput = screen.getByPlaceholderText('Libellé tarif');
-    expect(labelInput).toHaveDisplayValue('Adulte');
-    expect(labelInput).toHaveAttribute('readonly');
-  });
-
-  it('typing a percent clears any amount on the same row (chk_discount_xor)', () => {
-    const modules = fullModulesFixture();
-    modules.pricing.discounts = [{ recordId: 'd1', conditions: 'Groupes', discountPercent: '', discountAmount: '15', currency: 'EUR', minGroupSize: '', maxGroupSize: '', validFrom: '', validTo: '', source: '' }];
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);
-
-    act(() => { fireEvent.change(screen.getByLabelText('Remise en pourcentage'), { target: { value: '10' } }); });
+    act(() => { fireEvent.change(screen.getByLabelText('Remise en pourcentage'), { target: { value: '15' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
-    expect(result.current.draft.pricing.discounts[0]).toMatchObject({ discountPercent: '10', discountAmount: '', currency: '' });
+    expect(result.current.draft.pricing.discounts).toHaveLength(1);
+    expect(result.current.draft.pricing.discounts[0]).toMatchObject({ discountPercent: '15', discountAmount: '' });
+  });
+
+  it('deletes the seeded tariff line after confirmation', () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Supprimer Adulte/i })); });
+    view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.pricing.prices).toHaveLength(0);
+    confirmSpy.mockRestore();
   });
 
   it('renders the payment block and marks characteristics dirty on change', () => {

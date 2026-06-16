@@ -311,6 +311,7 @@ CREATE TABLE IF NOT EXISTS ref_code_payment_method PARTITION OF ref_code FOR VAL
 CREATE TABLE IF NOT EXISTS ref_code_environment_tag PARTITION OF ref_code FOR VALUES IN ('environment_tag');
 CREATE TABLE IF NOT EXISTS ref_code_price_kind PARTITION OF ref_code FOR VALUES IN ('price_kind');
 CREATE TABLE IF NOT EXISTS ref_code_price_unit PARTITION OF ref_code FOR VALUES IN ('price_unit');
+CREATE TABLE IF NOT EXISTS ref_code_price_type PARTITION OF ref_code FOR VALUES IN ('price_type');
 CREATE TABLE IF NOT EXISTS ref_code_meeting_equipment PARTITION OF ref_code FOR VALUES IN ('meeting_equipment');
 CREATE TABLE IF NOT EXISTS ref_code_opening_schedule_type PARTITION OF ref_code FOR VALUES IN ('opening_schedule_type');
 CREATE TABLE IF NOT EXISTS ref_code_iti_practice PARTITION OF ref_code FOR VALUES IN ('iti_practice');
@@ -407,6 +408,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_id ON ref_code_paym
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_id ON ref_code_environment_tag (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_id ON ref_code_price_kind (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_id ON ref_code_price_unit (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_id ON ref_code_price_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_meeting_equipment_id ON ref_code_meeting_equipment (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_opening_schedule_type_id ON ref_code_opening_schedule_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_iti_practice_id ON ref_code_iti_practice (id);
@@ -453,6 +455,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_code ON ref_code_pa
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_code ON ref_code_environment_tag(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_code ON ref_code_price_kind(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_code ON ref_code_price_unit(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_code ON ref_code_price_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_meeting_equipment_code ON ref_code_meeting_equipment(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_opening_schedule_type_code ON ref_code_opening_schedule_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_iti_practice_code ON ref_code_iti_practice(code);

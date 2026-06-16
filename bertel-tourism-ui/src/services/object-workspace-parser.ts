@@ -408,6 +408,10 @@ export interface ObjectWorkspacePromotionSummary {
 
 export interface ObjectWorkspacePricingModule {
   priceKindOptions: WorkspaceReferenceOption[];
+  /** §13 two-axis: tariff type (ref_code domain 'price_type'), persisted in object_price.indication_code. */
+  priceTypeOptions: WorkspaceReferenceOption[];
+  /** §13 season scope (ref_code domain 'season_type'), persisted in object_price.season_code. */
+  priceSeasonOptions: WorkspaceReferenceOption[];
   priceUnitOptions: WorkspaceReferenceOption[];
   prices: ObjectWorkspacePriceItem[];
   discounts: ObjectWorkspaceDiscountItem[];
@@ -1705,6 +1709,16 @@ function parseWorkspacePricingModule(raw: Record<string, unknown>): ObjectWorksp
         code: price.kindCode,
         label: price.kindLabel,
       })),
+    ),
+    priceTypeOptions: dedupeReferenceOptions(
+      prices
+        .filter((price) => price.indicationCode)
+        .map((price) => ({ id: price.indicationCode, code: price.indicationCode, label: price.indicationCode })),
+    ),
+    priceSeasonOptions: dedupeReferenceOptions(
+      prices
+        .filter((price) => price.seasonCode)
+        .map((price) => ({ id: price.seasonCode, code: price.seasonCode, label: price.seasonCode })),
     ),
     priceUnitOptions: dedupeReferenceOptions(
       prices.map((price) => ({

@@ -2,7 +2,7 @@ import { addDiscountRow, removeDiscountRow, updateDiscountRow, validateDiscountR
 import type { ObjectWorkspacePricingModule } from '../../../services/object-workspace-parser';
 
 const base = (): ObjectWorkspacePricingModule => ({
-  priceKindOptions: [], priceUnitOptions: [], prices: [],
+  priceKindOptions: [], priceTypeOptions: [], priceSeasonOptions: [], priceUnitOptions: [], prices: [],
   discounts: [{ recordId: 'd1', conditions: 'Groupes', discountPercent: '10', discountAmount: '', currency: '', minGroupSize: '8', maxGroupSize: '', validFrom: '', validTo: '', source: '' }],
   promotions: [], promotionsUnavailableReason: null, unavailableReason: null,
 });

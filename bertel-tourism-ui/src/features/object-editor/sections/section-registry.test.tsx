@@ -55,7 +55,7 @@ describe('section registry', () => {
     expect(result.current.dirtySections.media).toBe(true);
 
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
-    // §77 — the amount is edited in the modal now, not inline. Open the seeded "Adulte" line.
+    // §84 — the amount is edited in the modal now, not inline. Open the seeded "Adulte" line.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Adulte/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Montant'), { target: { value: '15' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });

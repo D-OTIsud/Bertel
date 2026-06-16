@@ -44,7 +44,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
     {
       group: 'Caractéristiques',
       items: [
-        { num: '04', label: 'Descriptions' },
+        { num: '04', label: 'Descriptions & langues parlées' },
         // Renumbered 2026-06-11 (user): Médias is 05 and the type block 06, so the
         // rooms/equipment inventory sits right before the Capacité it feeds (§07).
         { num: '05', label: 'Médias' },
@@ -56,13 +56,12 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
         { num: '09', label: 'Accessibilité' },
         { num: '10', label: 'Démarche durable' },
         { num: '11', label: 'Tags & étiquettes' },
-        { num: '12', label: 'Paiements & langues' },
       ],
     },
     {
       group: 'Tarifs & ouverture',
       items: [
-        { num: '13', label: 'Tarifs & extras' },
+        { num: '13', label: 'Tarifs, paiement & extras' },
         { num: '14', label: "Périodes d'ouverture" },
       ],
     },

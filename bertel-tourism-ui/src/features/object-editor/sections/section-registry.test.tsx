@@ -8,9 +8,9 @@ import { getRegisteredSections } from './section-registry';
 
 describe('section registry', () => {
   it('returns the full ordered section list by archetype', () => {
-    expect(getRegisteredSections('HEB')).toHaveLength(20);
-    expect(getRegisteredSections('ITI')).toHaveLength(22);
-    expect(getRegisteredSections('RES')).toHaveLength(21);
+    expect(getRegisteredSections('HEB')).toHaveLength(19);
+    expect(getRegisteredSections('ITI')).toHaveLength(21);
+    expect(getRegisteredSections('RES')).toHaveLength(20);
   });
 
   it('omits §07 for HEB (capacity merged into §06) but keeps it elsewhere', () => {
@@ -55,9 +55,10 @@ describe('section registry', () => {
     expect(result.current.dirtySections.media).toBe(true);
 
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
-    act(() => {
-      fireEvent.change(screen.getByDisplayValue('12'), { target: { value: '15' } });
-    });
+    // §77 — the amount is edited in the modal now, not inline. Open the seeded "Adulte" line.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Adulte/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Montant'), { target: { value: '15' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
     expect(result.current.dirtySections.pricing).toBe(true);
   });

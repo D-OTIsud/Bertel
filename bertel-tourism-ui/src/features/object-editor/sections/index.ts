@@ -6,7 +6,6 @@ export { SectionMedia } from './SectionMedia';
 export { SectionCapacity } from './SectionCapacity';
 export { SectionClassification } from './SectionClassification';
 export { SectionAccessibility } from './SectionAccessibility';
-export { SectionPayLangs } from './SectionPayLangs';
 export { SectionPricing } from './SectionPricing';
 export { SectionOpenings } from './SectionOpenings';
 export { SectionRelations } from './SectionRelations';

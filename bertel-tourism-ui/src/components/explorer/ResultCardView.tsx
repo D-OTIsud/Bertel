@@ -249,7 +249,10 @@ export function ResultCardView({
           }
         : {})}
       className={cn(
-        'grid grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s',
+        // shrink-0: the card is a flex child of the overflowing results scroll list. Without it,
+        // flexbox shrinks an expanded card below its wrapped-chip content (min-h overrides the flex
+        // default min-height:auto), so the extra chip rows spill onto the next card. See ResultCardView.test.tsx.
+        'grid shrink-0 grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s',
         expanded ? 'min-h-[116px]' : 'h-[116px]',
         containerInteractive && 'cursor-pointer transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
         isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',

@@ -24,7 +24,7 @@ function ResultsListSkeleton() {
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={`results-skeleton-${index}`}
-          className="grid h-[116px] grid-cols-[96px_minmax(0,1fr)_28px] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
+          className="grid h-[116px] shrink-0 grid-cols-[96px_minmax(0,1fr)_28px] gap-3 rounded-shellMd border border-line bg-surface p-2.5"
         >
           <div className="h-24 w-24 rounded-[10px] bg-surface2 drawer-skeleton" />
           <div className="flex min-w-0 flex-col gap-2 py-0.5">

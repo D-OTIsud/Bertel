@@ -140,6 +140,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 14g    migration_amenity_room_scope.sql  (§75 scope ~30 room-relevant amenities to ''both'' so the §06 room picker shows only them — hides establishment-level amenities; data fixup, code-list-derived so fresh==live, after seeds) =='
 \ir migration_amenity_room_scope.sql
 
+\echo '== 14i    migration_opening_period_type.sql  (§81 explicit opening-period type: ref_code_opening_period_type partition + 4 seeds + opening_period.period_type_id FK + save_object_openings/build_opening_period_json wiring; CREATE OR REPLACE after the function files) =='
+\ir migration_opening_period_type.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

@@ -175,6 +175,7 @@ describe('parseObjectWorkspace', () => {
               id: 'opening-period-current-1',
               order: 1,
               label: 'Saison courante',
+              period_type_code: 'high_season',
               date_start: '2026-01-01',
               date_end: '2026-12-31',
               weekday_slots: {
@@ -520,6 +521,7 @@ describe('parseObjectWorkspace', () => {
       recordId: 'opening-period-current-1',
       bucket: 'current',
       label: 'Saison courante',
+      seasonTypeCode: 'high_season',
       startDate: '2026-01-01',
       endDate: '2026-12-31',
     });

@@ -1846,15 +1846,6 @@
   flex-direction: column;
   gap: 10px;
 }
-.object-editor .op__more {
-  font-size: 12px;
-  color: var(--teal);
-  font-weight: 600;
-  cursor: pointer;
-  border: 0;
-  background: transparent;
-  padding: 0;
-}
 .object-editor .opB__top {
   display: flex;
   align-items: flex-start;
@@ -1863,7 +1854,6 @@
   flex-wrap: wrap;
   margin-bottom: 4px;
 }
-.object-editor .opB__status { display: flex; flex-direction: column; gap: 6px; }
 .object-editor .opB__pill {
   display: inline-flex;
   align-items: center;
@@ -1882,7 +1872,6 @@
   border-radius: 999px;
   background: var(--op-open);
 }
-.object-editor .opB__until { font-size: 13px; color: var(--ink-2); }
 .object-editor .opB__legend { display: flex; gap: 12px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
 .object-editor .opB__legend span { display: inline-flex; align-items: center; gap: 6px; }
 .object-editor .opB__legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -1937,141 +1926,23 @@
   margin-bottom: 8px;
 }
 .object-editor .opB__scale span { text-align: center; }
-.object-editor .opB__week-shut {
-  font-size: 12px;
-  color: var(--ink-3);
-  font-style: italic;
+.object-editor .op__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   padding: 8px 0;
 }
-.object-editor .opB__detail {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line-soft);
-}
-.object-editor .opB__detail-eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ink-4);
-}
-.object-editor .opB__detail-name {
-  margin: 4px 0;
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.object-editor .opB__detail-name i {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
-}
-.object-editor .opB__now-chip {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: var(--teal);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-.object-editor .opB__detail-meta { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
-.object-editor .opC__card {
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-.object-editor .opC__card.is-now {
-  border-color: rgba(23, 107, 106, 0.35);
-  box-shadow: 0 0 0 3px rgba(23, 107, 106, 0.08);
-}
-.object-editor .opC__card-head {
-  display: grid;
-  grid-template-columns: 4px 1fr auto;
-  gap: 14px;
-  align-items: center;
-  padding: 14px 16px 14px 0;
-  cursor: pointer;
-}
-.object-editor .opC__card-stripe { align-self: stretch; background: var(--op-high); }
-.object-editor .opC__card.low .opC__card-stripe { background: var(--op-low); }
-.object-editor .opC__card.shut .opC__card-stripe { background: var(--op-shut); }
-.object-editor .opC__card-name {
+.object-editor .op__empty h4 {
+  margin: 0;
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
-.object-editor .opC__card-now {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: var(--teal);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-.object-editor .opC__card-range { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-.object-editor .opC__card-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.object-editor .opC__chev {
-  border: 0;
-  background: transparent;
-  color: var(--ink-4);
-  cursor: pointer;
-  padding: 4px;
-}
-.object-editor .opC__card.is-open .opC__chev { transform: rotate(180deg); }
-.object-editor .opC__card-body {
-  padding: 0 16px 16px 18px;
-  border-top: 1px solid var(--line-soft);
-}
-.object-editor .opC__week {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-top: 12px;
-}
-.object-editor .opC__week-cell {
-  background: var(--bg-tint);
-  border-radius: 8px;
-  padding: 8px 6px;
-  text-align: center;
-}
-.object-editor .opC__week-cell.closed {
-  color: var(--ink-4);
-  background: repeating-linear-gradient(135deg, var(--surface-2) 0 4px, var(--bg-tint) 4px 8px);
-}
-.object-editor .opC__week-cell.is-today {
+.object-editor .rep-row.is-selected {
   outline: 2px solid var(--teal);
-  outline-offset: 1px;
-  background: var(--surface);
-}
-.object-editor .opC__week-cell .d {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-bottom: 4px;
-}
-.object-editor .opC__week-cell .h {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.3;
+  outline-offset: -2px;
+  border-radius: var(--r-md);
 }
 .object-editor .opC__excep-card {
   background: var(--bg-tint);

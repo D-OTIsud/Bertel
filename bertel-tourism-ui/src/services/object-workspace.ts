@@ -31,6 +31,7 @@ import {
   type ObjectWorkspacePublicationSelectionItem,
   type ObjectWorkspacePricingModule,
   type ObjectWorkspaceOpeningsModule,
+  type ObjectWorkspaceOpeningPeriodTypeOption,
   type ObjectWorkspaceSyncIdentifiersModule,
   type ObjectWorkspaceMembershipItem,
   type ObjectWorkspaceMembershipModule,
@@ -3012,6 +3013,34 @@ async function getObjectWorkspaceItineraryModule(
   };
 }
 
+/**
+ * §81: the admin-extensible period-type catalog (ref_code domain `opening_period_type`,
+ * public read). Mirrors the §41 zones pattern — a direct ref_code select, not bundled in
+ * get_object_resource. Best-effort: returns [] on failure (the modal then shows no types).
+ */
+async function loadOpeningPeriodTypeOptions(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+): Promise<ObjectWorkspaceOpeningPeriodTypeOption[]> {
+  const { data, error } = await client
+    .from('ref_code')
+    .select('code, name, position, metadata')
+    .eq('domain', 'opening_period_type')
+    .eq('is_active', true)
+    .order('position', { ascending: true });
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) => {
+    const metadata = (row.metadata ?? {}) as { color?: unknown; all_year?: unknown };
+    return {
+      code: String(row.code ?? ''),
+      label: String(row.name ?? row.code ?? ''),
+      color: typeof metadata.color === 'string' ? metadata.color : '',
+      allYear: metadata.all_year === true,
+    };
+  });
+}
+
 async function getObjectWorkspaceOpeningsModule(
   objectId: string,
   baseModule: ObjectWorkspaceOpeningsModule,
@@ -3031,14 +3060,15 @@ async function getObjectWorkspaceOpeningsModule(
         };
   }
 
-  const { count, error } = await client
-    .from('opening_period')
-    .select('id', { head: true, count: 'exact' })
-    .eq('object_id', objectId);
+  const [{ count, error }, periodTypeOptions] = await Promise.all([
+    client.from('opening_period').select('id', { head: true, count: 'exact' }).eq('object_id', objectId),
+    loadOpeningPeriodTypeOptions(client),
+  ]);
 
   if (error) {
     return {
       ...baseModule,
+      periodTypeOptions,
       unavailableReason: 'Le live actuel ne fournit pas encore un module C6 complet pour ce profil.',
     };
   }
@@ -3046,12 +3076,14 @@ async function getObjectWorkspaceOpeningsModule(
   if ((count ?? 0) > 0 && baseModule.periods.length === 0) {
     return {
       ...baseModule,
+      periodTypeOptions,
       unavailableReason: 'Des ouvertures existent en base mais ne remontent pas encore correctement dans le payload de travail.',
     };
   }
 
   return {
     ...baseModule,
+    periodTypeOptions,
     unavailableReason: null,
   };
 }
@@ -4190,6 +4222,7 @@ export async function saveObjectWorkspaceOpenings(objectId: string, input: Objec
       return {
         id: toRpcUuid(period.recordId),
         name: toNullableText(period.label),
+        period_type_code: toNullableText(period.seasonTypeCode),
         date_start: period.allYears ? null : toNullableText(period.startDate),
         date_end: period.allYears ? null : toNullableText(period.endDate),
         all_years: period.allYears,

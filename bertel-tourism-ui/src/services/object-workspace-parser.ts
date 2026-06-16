@@ -604,6 +604,8 @@ export interface ObjectWorkspaceOpeningPeriod {
   order: string;
   bucket: ObjectWorkspaceOpeningBucket;
   label: string;
+  /** Explicit period-type code (ref_code_opening_period_type, e.g. high_season). '' = legacy/untyped. */
+  seasonTypeCode: string;
   startDate: string;
   endDate: string;
   allYears: boolean;
@@ -611,8 +613,19 @@ export interface ObjectWorkspaceOpeningPeriod {
   weekdays: ObjectWorkspaceOpeningWeekday[];
 }
 
+/** Admin-extensible period-type option (ref_code domain `opening_period_type`). */
+export interface ObjectWorkspaceOpeningPeriodTypeOption {
+  code: string;
+  label: string;
+  /** Ribbon/stripe colour (hex), from ref_code.metadata.color. '' when unset. */
+  color: string;
+  /** metadata.all_year = true ⇒ "open all year, no dates" (drives the modal's date UI). */
+  allYear: boolean;
+}
+
 export interface ObjectWorkspaceOpeningsModule {
   periods: ObjectWorkspaceOpeningPeriod[];
+  periodTypeOptions: ObjectWorkspaceOpeningPeriodTypeOption[];
   unavailableReason: string | null;
 }
 
@@ -2179,6 +2192,7 @@ function parseWorkspaceOpeningPeriodRecord(
     order: readString(record.order, String(index + 1)),
     bucket,
     label: readString(record.label, readString(record.name, `Periode ${index + 1}`)),
+    seasonTypeCode: readString(record.period_type_code),
     startDate: readString(record.date_start, readString(record.start_date)),
     endDate: readString(record.date_end, readString(record.end_date)),
     allYears,
@@ -2217,6 +2231,7 @@ function parseWorkspaceOpeningPeriodsFromRaw(raw: Record<string, unknown>): Obje
       order: String(index + 1),
       bucket: 'undated' as const,
       label: readString(record.label, `Horaire ${index + 1}`),
+      seasonTypeCode: readString(record.period_type_code),
       startDate: readString(record.date_start, readString(record.start_date)),
       endDate: readString(record.date_end, readString(record.end_date)),
       allYears: isOpeningPeriodAllYears(record),
@@ -2237,6 +2252,8 @@ function parseWorkspaceOpeningPeriodsFromRaw(raw: Record<string, unknown>): Obje
 function parseWorkspaceOpeningsModule(raw: Record<string, unknown>): ObjectWorkspaceOpeningsModule {
   return {
     periods: parseWorkspaceOpeningPeriodsFromRaw(raw),
+    // Catalog is loaded by the openings enrichment (direct ref_code select); base = empty.
+    periodTypeOptions: [],
     unavailableReason: null,
   };
 }

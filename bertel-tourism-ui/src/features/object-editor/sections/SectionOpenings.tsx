@@ -1,37 +1,28 @@
+import { useState } from 'react';
 import { Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
 import { OpeningPeriodsEditor } from './OpeningPeriodsEditor';
-
-const WEEKDAYS = [
-  ['monday', 'Lundi'],
-  ['tuesday', 'Mardi'],
-  ['wednesday', 'Mercredi'],
-  ['thursday', 'Jeudi'],
-  ['friday', 'Vendredi'],
-  ['saturday', 'Samedi'],
-  ['sunday', 'Dimanche'],
-] as const;
-
-function createPeriod(index: number): ObjectWorkspaceOpeningPeriod {
-  return {
-    recordId: null,
-    order: String(index + 1),
-    bucket: 'current',
-    label: '',
-    startDate: '',
-    endDate: '',
-    allYears: true,
-    closedDays: [],
-    weekdays: WEEKDAYS.map(([code, label]) => ({ code, label, slots: [] })),
-  };
-}
+import { OpeningPeriodEditModal } from '../widgets/OpeningPeriodEditModal';
+import { createPeriodDraft } from './opening-period-edit';
+import { currentPeriodIndex } from './blocks/opening-period-meta';
 
 export function SectionOpenings({ editor, folded }: SectionProps) {
   const openings = editor.draft.openings;
+  const periods = openings.periods;
+  const [adding, setAdding] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  function replace(periods: ObjectWorkspaceOpeningPeriod[]) {
-    editor.replaceModule('openings', { ...openings, periods });
+  function replace(next: ObjectWorkspaceOpeningPeriod[]) {
+    editor.replaceModule('openings', { ...openings, periods: next });
+  }
+
+  function handleDelete(index: number) {
+    const label = periods[index]?.label || `Période ${index + 1}`;
+    if (!window.confirm(`Supprimer la période « ${label} » ?`)) {
+      return;
+    }
+    replace(periods.filter((_, periodIndex) => periodIndex !== index));
   }
 
   return (
@@ -40,13 +31,44 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
       title="Périodes d'ouverture"
       sub="Saisons, exceptions, jours fériés et horaires par jour"
       folded={folded}
-      pill={{ tone: 'ok', label: `${openings.periods.length} période(s)` }}
+      pill={{ tone: 'ok', label: `${periods.length} période(s)` }}
     >
       <OpeningPeriodsEditor
-        periods={openings.periods}
-        onPeriodsChange={replace}
-        onAddPeriod={() => replace([...openings.periods, createPeriod(openings.periods.length)])}
+        periods={periods}
+        periodTypeOptions={openings.periodTypeOptions}
+        currentIndex={currentPeriodIndex(periods)}
+        onAdd={() => setAdding(true)}
+        onEdit={(index) => setEditingIndex(index)}
+        onDelete={handleDelete}
       />
+
+      {adding && (
+        <OpeningPeriodEditModal
+          open
+          mode="add"
+          draft={createPeriodDraft(periods.length)}
+          periodTypeOptions={openings.periodTypeOptions}
+          onClose={() => setAdding(false)}
+          onSave={(period) => {
+            replace([...periods, period]);
+            setAdding(false);
+          }}
+        />
+      )}
+
+      {editingIndex !== null && periods[editingIndex] && (
+        <OpeningPeriodEditModal
+          open
+          mode="edit"
+          draft={periods[editingIndex]}
+          periodTypeOptions={openings.periodTypeOptions}
+          onClose={() => setEditingIndex(null)}
+          onSave={(period) => {
+            replace(periods.map((row, rowIndex) => (rowIndex === editingIndex ? period : row)));
+            setEditingIndex(null);
+          }}
+        />
+      )}
     </Fs>
   );
 }

@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { EditorModal, Field, Input, ScheduleEditor, Select } from '../primitives';
 import { validatePeriodDraft } from '../sections/opening-period-edit';
 import {
-  decodeCyclicMonthDay,
-  encodeCyclicRange,
+  decodeCyclicFields,
+  encodeCyclicFields,
+  EMPTY_CYCLIC_FIELDS,
   findPeriodConflicts,
+  type CyclicFields,
   type RecurrencePeriod,
 } from '../sections/opening-recurrence';
 import { scheduleRowsFromPeriod } from '../sections/blocks/opening-schedule';
@@ -90,31 +92,18 @@ export function OpeningPeriodEditModal({
   }
 
   // --- Cyclic month/day editing ---------------------------------------------
-  // Decode the current sentinel-year dates back into month/day selects (empty when unset).
-  const startMD = draft.startDate ? decodeCyclicMonthDay(draft.startDate) : null;
-  const endMD = draft.endDate ? decodeCyclicMonthDay(draft.endDate) : null;
-  const startMonth = startMD ? String(startMD.month) : '';
-  const startDay = startMD ? String(startMD.day) : '';
-  const endMonth = endMD ? String(endMD.month) : '';
-  const endDay = endMD ? String(endMD.day) : '';
-
-  function recomputeCyclic(next: { startMonth?: string; startDay?: string; endMonth?: string; endDay?: string }) {
-    const sm = next.startMonth ?? startMonth;
-    const sd = next.startDay ?? startDay;
-    const em = next.endMonth ?? endMonth;
-    const ed = next.endDay ?? endDay;
-
-    if (!sm || !em) {
-      // Not enough info to encode a range yet; leave dates empty.
-      set({ startDate: '', endDate: '' });
-      return;
-    }
-    const startMonthNum = Number(sm);
-    const endMonthNum = Number(em);
-    const startDayNum = sd ? Number(sd) : 1;
-    // No end day → last day of the end month in the leap sentinel year (2000).
-    const endDayNum = ed ? Number(ed) : new Date(2000, endMonthNum, 0).getDate();
-    set(encodeCyclicRange(startMonthNum, startDayNum, endMonthNum, endDayNum));
+  // The picker lives in its OWN state, NOT derived from the encoded date: a partial
+  // selection (only the start month, say) cannot be encoded, so deriving the selects
+  // from startDate/endDate dropped the pick (it snapped back to "— Mois —"). We hold the
+  // fields here and mirror them onto the draft dates (empty while incomplete) so the save
+  // gate ("Renseignez le début et la fin") and the overlap check still read from the draft.
+  const [cyclic, setCyclic] = useState<CyclicFields>(() =>
+    decodeCyclicFields(initialDraft.startDate, initialDraft.endDate),
+  );
+  function patchCyclic(patch: Partial<CyclicFields>) {
+    const next = { ...cyclic, ...patch };
+    setCyclic(next);
+    set(encodeCyclicFields(next));
   }
 
   return (
@@ -135,18 +124,31 @@ export function OpeningPeriodEditModal({
           aria-label="Récurrence"
           value={draft.recurrence}
           options={RECURRENCE_OPTIONS.map((o) => ({ v: o.v, l: o.l }))}
-          onChange={(r) => set({ recurrence: r as ObjectWorkspaceOpeningPeriod['recurrence'], startDate: '', endDate: '' })}
+          onChange={(r) => {
+            const recurrence = r as ObjectWorkspaceOpeningPeriod['recurrence'];
+            // Reset dates + the cyclic picker. A year-round period carries no season étiquette,
+            // so drop the type when switching to "Toute l'année" (nothing to label).
+            setCyclic(EMPTY_CYCLIC_FIELDS);
+            set({
+              recurrence,
+              startDate: '',
+              endDate: '',
+              ...(recurrence === 'always' ? { seasonTypeCode: '' } : {}),
+            });
+          }}
         />
       </Field>
 
-      <Field label="Type / étiquette (optionnel)" hint="Haute / Mi / Hors saison — pour colorer et nommer la période.">
-        <Select
-          aria-label="Type de période"
-          value={draft.seasonTypeCode}
-          options={typeSelectOptions}
-          onChange={selectType}
-        />
-      </Field>
+      {draft.recurrence !== 'always' && (
+        <Field label="Type / étiquette (optionnel)" hint="Haute / Mi / Hors saison — pour colorer et nommer la période.">
+          <Select
+            aria-label="Type de période"
+            value={draft.seasonTypeCode}
+            options={typeSelectOptions}
+            onChange={selectType}
+          />
+        </Field>
+      )}
 
       {draft.recurrence === 'cyclic' && (
         <>
@@ -155,15 +157,15 @@ export function OpeningPeriodEditModal({
               <div style={{ display: 'flex', gap: 6 }}>
                 <Select
                   aria-label="Mois de début"
-                  value={startMonth}
+                  value={cyclic.startMonth}
                   options={MONTH_OPTIONS}
-                  onChange={(v) => recomputeCyclic({ startMonth: v })}
+                  onChange={(v) => patchCyclic({ startMonth: v })}
                 />
                 <Select
                   aria-label="Jour de début"
-                  value={startDay}
+                  value={cyclic.startDay}
                   options={DAY_OPTIONS}
-                  onChange={(v) => recomputeCyclic({ startDay: v })}
+                  onChange={(v) => patchCyclic({ startDay: v })}
                 />
               </div>
             </Field>
@@ -171,15 +173,15 @@ export function OpeningPeriodEditModal({
               <div style={{ display: 'flex', gap: 6 }}>
                 <Select
                   aria-label="Mois de fin"
-                  value={endMonth}
+                  value={cyclic.endMonth}
                   options={MONTH_OPTIONS}
-                  onChange={(v) => recomputeCyclic({ endMonth: v })}
+                  onChange={(v) => patchCyclic({ endMonth: v })}
                 />
                 <Select
                   aria-label="Jour de fin"
-                  value={endDay}
+                  value={cyclic.endDay}
                   options={DAY_OPTIONS}
-                  onChange={(v) => recomputeCyclic({ endDay: v })}
+                  onChange={(v) => patchCyclic({ endDay: v })}
                 />
               </div>
             </Field>

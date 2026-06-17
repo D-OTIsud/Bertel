@@ -18,6 +18,7 @@ function legalModule(overrides: Partial<ObjectWorkspaceLegalModule> = {}): Objec
       {
         recordId: 'r-siret', typeId: 'id-siret', typeCode: 'siret', typeLabel: 'SIRET', category: 'business',
         isPublic: true, isRequired: true, valueJson: JSON.stringify({ value: '44851998300012' }), documentId: '',
+        documentUrl: '', documentTitle: '',
         validFrom: '', validTo: '', validityMode: 'forever', status: 'active', documentRequestedAt: '',
         documentDeliveredAt: '', note: '', daysUntilExpiry: '',
       },
@@ -52,20 +53,74 @@ describe('SectionLegal', () => {
     expect(readLegalScalar(result.current.draft.legal.records, 'siret')).toBe('12345678900012');
   });
 
-  it('adds a legal document row via "Ajouter un document"', () => {
+  it('adds a legal document via the modal ("Ajouter un document" → "Enregistrer")', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} />);
 
     const documentsBefore = result.current.draft.legal.records.filter((record) => record.typeCode === 'liability_insurance');
     expect(documentsBefore).toHaveLength(0);
 
+    // Opening the modal must NOT mutate state — only saving commits the row.
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Ajouter un document/ }));
+    });
+    expect(result.current.draft.legal.records.filter((r) => r.typeCode === 'liability_insurance')).toHaveLength(0);
+    expect(screen.getByLabelText('Type de document')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     });
 
     const documentsAfter = result.current.draft.legal.records.filter((record) => !['siret', 'siren', 'raison_sociale', 'vat_number'].includes(record.typeCode));
     expect(documentsAfter).toHaveLength(1);
+    expect(documentsAfter[0].typeCode).toBe('liability_insurance');
     expect(documentsAfter[0].validityMode).toBe('forever');
+  });
+
+  it('shows an "Obligatoire" chip and an expiry flag, and raises the §18 alert pill for an expired mandatory document', () => {
+    const expiredInsurance: ObjectWorkspaceLegalModule['records'][number] = {
+      recordId: 'r-li', typeId: 'id-li', typeCode: 'liability_insurance', typeLabel: 'Assurance RC', category: 'insurance',
+      isPublic: false, isRequired: true, valueJson: JSON.stringify({ value: 'POL-1' }), documentId: '',
+      documentUrl: '', documentTitle: '', validFrom: '2024-01-01', validTo: '2000-01-01', validityMode: 'fixed_end_date',
+      status: 'active', documentRequestedAt: '', documentDeliveredAt: '', note: '', daysUntilExpiry: '',
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
+    act(() => {
+      result.current.replaceModule('legal', { ...result.current.draft.legal, records: [...result.current.draft.legal.records, expiredInsurance] });
+    });
+    render(<SectionLegal editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText('Assurance RC')).toBeInTheDocument();
+    expect(screen.getByText('Obligatoire')).toBeInTheDocument();
+    expect(screen.getByText('Expiré')).toBeInTheDocument();
+    expect(screen.getByText('Document obligatoire expiré')).toBeInTheDocument();
+  });
+
+  it('opens the edit modal on a document row and commits changes via "Enregistrer"', () => {
+    const insurance: ObjectWorkspaceLegalModule['records'][number] = {
+      recordId: 'r-li', typeId: 'id-li', typeCode: 'liability_insurance', typeLabel: 'Assurance RC', category: 'insurance',
+      isPublic: false, isRequired: true, valueJson: '', documentId: '', documentUrl: '', documentTitle: '',
+      validFrom: '', validTo: '', validityMode: 'forever', status: 'active', documentRequestedAt: '',
+      documentDeliveredAt: '', note: '', daysUntilExpiry: '',
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
+    act(() => {
+      result.current.replaceModule('legal', { ...result.current.draft.legal, records: [...result.current.draft.legal.records, insurance] });
+    });
+    render(<SectionLegal editor={result.current} permissions={allowAll} />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Modifier le document/ }));
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText('Référence du document'), { target: { value: 'POL-2026-99' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    });
+
+    const saved = result.current.draft.legal.records.find((r) => r.typeCode === 'liability_insurance');
+    expect(saved?.valueJson).toBe(JSON.stringify({ value: 'POL-2026-99' }));
   });
 
   it('is read-only (no SIRET input) when the legal module is unavailable', () => {

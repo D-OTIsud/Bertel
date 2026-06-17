@@ -2211,6 +2211,8 @@ function normalizeWorkspaceLegalRecord(
     isRequired: typeRef?.isRequired ?? readBoolean(type.is_required),
     valueJson: stringifyLegalValue(row.value),
     documentId: readString(row.document_id),
+    documentUrl: readString(readRecord(row.document).url, readString(row.document_url)),
+    documentTitle: readString(readRecord(row.document).title, readString(row.document_title)),
     validFrom: readString(row.valid_from),
     validTo: readString(row.valid_to),
     validityMode: readString(row.validity_mode, 'fixed_end_date'),
@@ -2220,6 +2222,40 @@ function normalizeWorkspaceLegalRecord(
     note: readString(row.note),
     daysUntilExpiry: readString(row.days_until_expiry),
   };
+}
+
+/**
+ * Batch-resolve each record's `document_id` to its ref_document url/title for display.
+ * Display-only enrichment (the saver persists document_id, not the url/title). Any failure
+ * falls back to the records as-is — a missing link never breaks the load.
+ */
+async function resolveLegalDocumentLinks(
+  client: ReturnType<typeof getSupabaseClient>,
+  records: ObjectWorkspaceLegalRecord[],
+): Promise<ObjectWorkspaceLegalRecord[]> {
+  if (!client) {
+    return records;
+  }
+  const documentIds = Array.from(
+    new Set(records.map((record) => record.documentId).filter((id): id is string => Boolean(id))),
+  );
+  if (documentIds.length === 0) {
+    return records;
+  }
+  const docResult = await client.from('ref_document').select('id, url, title').in('id', documentIds);
+  if (docResult.error || !Array.isArray(docResult.data)) {
+    return records;
+  }
+  const byId = new Map(
+    docResult.data.map((row) => {
+      const record = row as Record<string, unknown>;
+      return [readString(record.id), { url: readString(record.url), title: readString(record.title) }] as const;
+    }),
+  );
+  return records.map((record) => {
+    const doc = record.documentId ? byId.get(record.documentId) : undefined;
+    return doc ? { ...record, documentUrl: doc.url, documentTitle: doc.title } : record;
+  });
 }
 
 function normalizeWorkspaceLegalComplianceDetail(row: Record<string, unknown>): ObjectWorkspaceLegalComplianceDetail {
@@ -2320,6 +2356,11 @@ async function getObjectWorkspaceLegalModule(
       )
     : [];
 
+  // Resolve attached justificatifs (document_id → url/title) for display. get_object_legal_data
+  // returns only document_id; the editor needs a clickable link, so batch-select ref_document
+  // (same pattern as the media loader). Display-only — the saver still persists document_id.
+  const recordsWithDocuments = await resolveLegalDocumentLinks(client, records);
+
   const compliance =
     complianceResult.status === 'fulfilled' && complianceResult.value.error == null
       ? normalizeWorkspaceLegalComplianceSummary(complianceResult.value.data)
@@ -2327,7 +2368,7 @@ async function getObjectWorkspaceLegalModule(
 
   return {
     typeOptions,
-    records,
+    records: recordsWithDocuments,
     compliance,
     unavailableReason:
       complianceResult.status === 'fulfilled' && complianceResult.value.error == null

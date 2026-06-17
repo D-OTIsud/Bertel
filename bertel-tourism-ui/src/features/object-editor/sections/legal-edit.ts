@@ -104,6 +104,8 @@ export function buildNewDocumentRecord(option: ObjectWorkspaceLegalTypeOption): 
     isRequired: option.isRequired,
     valueJson: '',
     documentId: '',
+    documentUrl: '',
+    documentTitle: '',
     validFrom: '',
     validTo: '',
     validityMode: 'forever',
@@ -113,4 +115,129 @@ export function buildNewDocumentRecord(option: ObjectWorkspaceLegalTypeOption): 
     note: '',
     daysUntilExpiry: '',
   };
+}
+
+/**
+ * Document status options surfaced in the §18 modal. The DB CHECK allows
+ * active/expired/suspended/revoked/requested; the editor authors the two everyday
+ * states — the rest are preserved (never silently dropped) when an imported row
+ * carries them. See object_legal.status (schema_unified.sql).
+ */
+export const LEGAL_DOCUMENT_STATUS_OPTIONS: readonly { v: string; l: string }[] = [
+  { v: 'active', l: 'En vigueur' },
+  { v: 'expired', l: 'Expiré' },
+];
+
+/** Validity-mode choices: a non-expiring document vs one bounded by an end date. */
+export const LEGAL_VALIDITY_OPTIONS: readonly { v: string; l: string }[] = [
+  { v: 'forever', l: 'Sans expiration' },
+  { v: 'fixed_end_date', l: 'Date de fin' },
+];
+
+/** Whether a record is non-expiring (validity_mode anything but the fixed-end-date bound). */
+export function isLegalRecordForever(record: ObjectWorkspaceLegalRecord): boolean {
+  return (record.validityMode || 'forever') !== 'fixed_end_date';
+}
+
+/** The document's reference number (object_legal.value → `{ value }`), empty when none. */
+export function readLegalReference(record: ObjectWorkspaceLegalRecord): string {
+  return readLegalRecordScalarValue(record);
+}
+
+/** Canonical JSONB string for a reference value; empty string clears the value to `{}` shape. */
+export function buildReferenceValueJson(value: string): string {
+  return value.trim() ? JSON.stringify({ value: value.trim() }) : '';
+}
+
+export type LegalExpiryTone = 'ok' | 'warn' | 'expired';
+
+export interface LegalExpiryFlag {
+  tone: LegalExpiryTone;
+  label: string;
+}
+
+/** Threshold (days) under which a dated document is flagged "expiring soon". */
+export const LEGAL_EXPIRY_WARN_DAYS = 30;
+
+/**
+ * Whole days from `today` until `record.validTo` (negative once past), or null when the
+ * record has no end date. Computed from the dates (not the stored days_until_expiry) so the
+ * flag stays correct after an in-modal edit. ISO dates compared in UTC to avoid TZ drift.
+ */
+export function computeLegalDaysUntilExpiry(record: ObjectWorkspaceLegalRecord, today: string): number | null {
+  if (!record.validTo.trim()) {
+    return null;
+  }
+  const end = Date.parse(`${record.validTo.trim()}T00:00:00Z`);
+  const now = Date.parse(`${today.trim()}T00:00:00Z`);
+  if (Number.isNaN(end) || Number.isNaN(now)) {
+    return null;
+  }
+  return Math.round((end - now) / 86_400_000);
+}
+
+/**
+ * The status/expiry badge for a document row. Explicit lifecycle statuses win; otherwise the
+ * end date drives it: past → expired, within {@link LEGAL_EXPIRY_WARN_DAYS} → warn, else ok.
+ * A non-expiring active document is simply "En vigueur".
+ */
+export function computeLegalExpiryFlag(record: ObjectWorkspaceLegalRecord, today: string): LegalExpiryFlag {
+  const status = (record.status || 'active').trim().toLowerCase();
+  if (status === 'revoked') {
+    return { tone: 'expired', label: 'Révoqué' };
+  }
+  if (status === 'suspended') {
+    return { tone: 'warn', label: 'Suspendu' };
+  }
+  if (status === 'expired') {
+    return { tone: 'expired', label: 'Expiré' };
+  }
+  const days = computeLegalDaysUntilExpiry(record, today);
+  if (days === null) {
+    return { tone: 'ok', label: 'En vigueur' };
+  }
+  if (days < 0) {
+    return { tone: 'expired', label: 'Expiré' };
+  }
+  if (days <= LEGAL_EXPIRY_WARN_DAYS) {
+    return { tone: 'warn', label: days === 0 ? "Expire aujourd'hui" : `Expire dans ${days} j` };
+  }
+  return { tone: 'ok', label: 'En vigueur' };
+}
+
+/** True when a MANDATORY document (required type) is past its end date — the emphasized flag case. */
+export function isRequiredDocumentExpired(record: ObjectWorkspaceLegalRecord, today: string): boolean {
+  return record.isRequired && computeLegalExpiryFlag(record, today).tone === 'expired';
+}
+
+/** True when a MANDATORY document is valid but expiring within the warn window. */
+export function isRequiredDocumentExpiringSoon(record: ObjectWorkspaceLegalRecord, today: string): boolean {
+  return record.isRequired && computeLegalExpiryFlag(record, today).tone === 'warn';
+}
+
+/** Any mandatory document past its end date among `records`. Drives the §18 alert pill. */
+export function hasExpiredRequiredDocument(records: ObjectWorkspaceLegalRecord[], today: string): boolean {
+  return records.some((record) => isRequiredDocumentExpired(record, today));
+}
+
+/** Any mandatory document expiring within the warn window among `records`. */
+export function hasExpiringRequiredDocument(records: ObjectWorkspaceLegalRecord[], today: string): boolean {
+  return records.some((record) => isRequiredDocumentExpiringSoon(record, today));
+}
+
+/** Human-readable validity summary for a document display row. */
+export function formatLegalValidity(record: ObjectWorkspaceLegalRecord): string {
+  if (isLegalRecordForever(record)) {
+    return 'Sans expiration';
+  }
+  if (record.validFrom && record.validTo) {
+    return `du ${record.validFrom} au ${record.validTo}`;
+  }
+  if (record.validTo) {
+    return `jusqu'au ${record.validTo}`;
+  }
+  if (record.validFrom) {
+    return `à partir du ${record.validFrom}`;
+  }
+  return '—';
 }

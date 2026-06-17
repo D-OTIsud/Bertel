@@ -1944,6 +1944,9 @@
 /* §08 justificatif attached-document row (link + remove). */
 .object-editor .doc-attached { display: flex; align-items: center; gap: 10px; }
 .object-editor .doc-attached a { color: var(--accent); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* §18 read-only "Obligatoire" indicator (derived from the document type — not per-row editable). */
+.object-editor .legal-required-flag { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); min-height: 38px; }
+.object-editor .legal-required-flag input[type="checkbox"] { cursor: default; }
 .object-editor .class-row__sch { min-width: 0; }
 .object-editor .class-row__scheme {
   font-family: var(--font-display);

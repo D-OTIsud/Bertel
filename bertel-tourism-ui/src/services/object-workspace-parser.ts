@@ -834,6 +834,13 @@ export interface ObjectWorkspaceLegalRecord {
   isRequired: boolean;
   valueJson: string;
   documentId: string;
+  /**
+   * The attached justificatif's URL/title, resolved from ref_document for display only
+   * (by the loader for saved rows, or from the upload response for a just-attached file).
+   * NOT persisted directly — the saver writes document_id; these are derived.
+   */
+  documentUrl: string;
+  documentTitle: string;
   validFrom: string;
   validTo: string;
   validityMode: string;
@@ -2756,6 +2763,8 @@ function parseWorkspaceLegalRecord(record: GenericRecord, index: number): Object
     isRequired: readBoolean(typeRecord.is_required),
     valueJson: stringifyWorkspaceJsonValue(record.value),
     documentId: readString(record.document_id),
+    documentUrl: readString(readRecord(record.document).url, readString(record.document_url)),
+    documentTitle: readString(readRecord(record.document).title, readString(record.document_title)),
     validFrom: readString(record.valid_from),
     validTo: readString(record.valid_to),
     validityMode: readString(record.validity_mode),

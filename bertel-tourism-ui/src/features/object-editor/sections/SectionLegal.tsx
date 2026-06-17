@@ -1,54 +1,75 @@
-import { Field, Fs, Input, Readout, Repeater, Select } from '../primitives';
+import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Chip, Field, Fs, Input, Readout } from '../primitives';
+import { LegalDocumentEditModal } from '../widgets/LegalDocumentEditModal';
 import type { SectionProps } from './section-types';
 import {
   normalizeInseeDigits,
-  readLegalRecordScalarValue,
   type ObjectWorkspaceLegalRecord,
 } from '../../../services/object-workspace-parser';
 import {
   buildNewDocumentRecord,
+  computeLegalExpiryFlag,
+  formatLegalValidity,
+  hasExpiredRequiredDocument,
+  hasExpiringRequiredDocument,
   isIdentityLegalType,
+  readLegalReference,
   readLegalScalar,
   upsertLegalScalar,
+  type LegalExpiryTone,
 } from './legal-edit';
 
 /**
  * Section 18 — "Juridique" (renommée depuis « Fournisseur / Prestataire »).
  *
- * Édite l'identité juridique de l'OBJET via le module `legal` (object_legal), désormais ENREGISTRABLE
- * (`saveObjectWorkspaceLegal` réconcilie les lignes sous la policy `owner_write_legal`). Plus aucun
- * contenu « prestataire » ici : les prestataires rattachés vivent en §19 (Suivi prestataire). Deux
+ * Édite l'identité juridique de l'OBJET via le module `legal` (object_legal), ENREGISTRABLE
+ * (`saveObjectWorkspaceLegal` réconcilie les lignes sous la policy `owner_write_legal`). Deux
  * familles de lignes :
  *  - Identité (SIRET, SIREN, raison sociale, n° TVA) : champs plats, valeur scalaire, sans expiration.
- *  - Documents légaux (licences, assurances, certificats…) : répéteur avec validité + statut.
+ *  - Documents légaux (licences, assurances, certificats…) : affichage compact + modale d'édition
+ *    (type, référence, validité, statut, note et un JUSTIFICATIF uploadé — `document_id` →
+ *    ref_document via /api/document/upload, comme la §08). Un document OBLIGATOIRE (type
+ *    `ref_legal_type.is_required`) expiré porte un drapeau rouge et bascule la pastille d'en-tête.
  *
  * Forme juridique / code NAF NE sont PAS surfacés : aucun `ref_legal_type` ne les porte (un champ
- * éditable serait un write-trap). L'upload de FICHIER reste différé (§59, upload par section) — on
- * capture ici la référence + la validité, pas le binaire.
+ * éditable serait un write-trap). « Obligatoire » est en lecture seule (dérivé du type, pas de
+ * colonne par ligne) — décision PO 2026-06-17.
  */
 
-const STATUS_OPTIONS = [
-  { v: 'active', l: 'En vigueur' },
-  { v: 'expired', l: 'Expiré' },
-];
+const LEGAL_DOC_COLS = '1.5fr 1fr 1.3fr 130px auto';
 
-const VALIDITY_OPTIONS = [
-  { v: 'forever', l: 'Sans expiration' },
-  { v: 'fixed_end_date', l: 'Date de fin' },
-];
+/** Map an expiry flag tone to its `class-status` modifier (the design uses `--red` for expired). */
+const FLAG_TONE_CLASS: Record<LegalExpiryTone, string> = { ok: 'ok', warn: 'warn', expired: 'red' };
 
-function recordReference(record: ObjectWorkspaceLegalRecord): string {
-  return readLegalRecordScalarValue(record);
-}
-
-function buildReferenceValueJson(value: string): string {
-  return value.trim() ? JSON.stringify({ value: value.trim() }) : '';
+function docListHeader(showActions: boolean) {
+  const labels = ['Document', 'Référence', 'Validité', 'État', showActions ? '' : ''];
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: LEGAL_DOC_COLS,
+        gap: 8,
+        padding: '6px 12px',
+        fontSize: 10,
+        fontWeight: 700,
+        color: 'var(--ink-4)',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {labels.map((label, index) => (
+        <span key={label || `col-${index}`}>{label}</span>
+      ))}
+    </div>
+  );
 }
 
 export function SectionLegal({ editor, permissions, folded }: SectionProps) {
   const legal = editor.draft.legal;
   const access = permissions.legal;
   const canWrite = Boolean(access?.canDirectWrite) && !legal.unavailableReason;
+  const today = new Date().toISOString().slice(0, 10);
 
   const siret = readLegalScalar(legal.records, 'siret');
   const documentEntries = legal.records
@@ -56,14 +77,17 @@ export function SectionLegal({ editor, permissions, folded }: SectionProps) {
     .filter((entry) => !isIdentityLegalType(entry.record.typeCode));
   const documentTypeOptions = legal.typeOptions.filter((option) => !isIdentityLegalType(option.code));
 
+  // 'add' opens a blank modal; a number opens the modal on legal.records[index].
+  const [docModal, setDocModal] = useState<'add' | number | null>(null);
+
   function setScalar(typeCode: string, value: string) {
     editor.replaceModule('legal', upsertLegalScalar(legal, typeCode, value));
   }
 
-  function updateRecordAt(index: number, patch: Partial<ObjectWorkspaceLegalRecord>) {
+  function commitRecordAt(index: number, record: ObjectWorkspaceLegalRecord) {
     editor.replaceModule('legal', {
       ...legal,
-      records: legal.records.map((record, position) => (position === index ? { ...record, ...patch } : record)),
+      records: legal.records.map((current, position) => (position === index ? record : current)),
     });
   }
 
@@ -74,16 +98,26 @@ export function SectionLegal({ editor, permissions, folded }: SectionProps) {
     });
   }
 
-  function addDocument() {
-    const used = new Set(legal.records.map((record) => record.typeCode.toLowerCase()));
-    const option = documentTypeOptions.find((item) => !used.has(item.code.toLowerCase())) ?? documentTypeOptions[0];
-    if (!option) return;
-    editor.replaceModule('legal', { ...legal, records: [...legal.records, buildNewDocumentRecord(option)] });
+  function addRecord(record: ObjectWorkspaceLegalRecord) {
+    editor.replaceModule('legal', { ...legal, records: [...legal.records, record] });
   }
 
-  const pill = siret
-    ? { tone: 'ok' as const, label: 'SIRET renseigné' }
-    : { tone: 'warn' as const, label: 'SIRET manquant' };
+  /** Fresh draft for the "add" modal: pick the first unused document type (else the first one). */
+  function buildAddDraft(): ObjectWorkspaceLegalRecord | null {
+    const used = new Set(legal.records.map((record) => record.typeCode.toLowerCase()));
+    const option = documentTypeOptions.find((item) => !used.has(item.code.toLowerCase())) ?? documentTypeOptions[0];
+    return option ? buildNewDocumentRecord(option) : null;
+  }
+
+  const requiredExpired = hasExpiredRequiredDocument(legal.records, today);
+  const requiredExpiring = hasExpiringRequiredDocument(legal.records, today);
+  const pill = requiredExpired
+    ? { tone: 'req' as const, label: 'Document obligatoire expiré' }
+    : requiredExpiring
+      ? { tone: 'warn' as const, label: 'Document obligatoire à renouveler' }
+      : siret
+        ? { tone: 'ok' as const, label: 'SIRET renseigné' }
+        : { tone: 'warn' as const, label: 'SIRET manquant' };
 
   return (
     <Fs
@@ -172,116 +206,118 @@ export function SectionLegal({ editor, permissions, folded }: SectionProps) {
 
       <div className="chip-group__label" style={{ marginTop: 16 }}>Documents légaux</div>
       <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 8px' }}>
-        Licences, assurances, certificats… On enregistre le type, la référence et la validité. Le dépôt du
-        fichier lui-même sera ajouté ultérieurement (upload par section).
+        Licences, assurances, certificats… On enregistre le type, la référence, la validité et le justificatif
+        (PDF ou image, 10 Mo max). Un document obligatoire expiré est signalé en rouge.
       </p>
 
-      {canWrite ? (
-        documentTypeOptions.length === 0 ? (
-          <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+      {documentEntries.length > 0 ? (
+        <>
+          {docListHeader(canWrite)}
+          <div className="repeater">
+            {documentEntries.map((entry) => {
+              const { record, index } = entry;
+              const flag = computeLegalExpiryFlag(record, today);
+              return (
+                <div
+                  key={`${record.recordId ?? 'doc'}-${index}`}
+                  className="rep-row"
+                  style={{ gridTemplateColumns: LEGAL_DOC_COLS, alignItems: 'center' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600 }}>{record.typeLabel || record.typeCode}</span>
+                    {record.isRequired && <Chip label="Obligatoire" sm />}
+                  </div>
+                  <div>{readLegalReference(record) || '—'}</div>
+                  <div style={{ fontSize: 12 }}>
+                    <span className="mono">{formatLegalValidity(record)}</span>
+                    {record.documentUrl && (
+                      <a
+                        href={record.documentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'block', color: 'var(--accent)', textDecoration: 'underline', marginTop: 2 }}
+                      >
+                        Voir le justificatif
+                      </a>
+                    )}
+                  </div>
+                  <div>
+                    <span className={`class-status class-status--${FLAG_TONE_CLASS[flag.tone]}`}>{flag.label}</span>
+                  </div>
+                  <div className="rep-row__act">
+                    {canWrite && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label={`Modifier le document ${record.typeLabel || record.typeCode}`}
+                          onClick={() => setDocModal(index)}
+                          style={{ fontSize: 12, padding: '2px 6px', cursor: 'pointer' }}
+                        >
+                          <Pencil size={14} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className="del"
+                          aria-label={`Supprimer le document ${record.typeLabel || record.typeCode}`}
+                          onClick={() => removeRecordAt(index)}
+                        >
+                          <Trash2 size={14} aria-hidden />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>Aucun document légal enregistré.</p>
+      )}
+
+      {canWrite &&
+        (documentTypeOptions.length === 0 ? (
+          <p style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 8 }}>
             Catalogue des types juridiques indisponible — l&apos;ajout de documents est désactivé.
           </p>
         ) : (
-          <Repeater
-            items={documentEntries}
-            getKey={(entry) => `${entry.record.recordId ?? 'new'}-${entry.index}`}
-            columns="1.4fr 1fr 140px 130px 130px 130px auto"
-            addLabel="Ajouter un document"
-            onAdd={addDocument}
-            renderRow={(entry) => {
-              const { record, index } = entry;
-              const isForever = (record.validityMode || 'forever') !== 'fixed_end_date';
-              const statusOptions = STATUS_OPTIONS.some((option) => option.v === record.status)
-                ? STATUS_OPTIONS
-                : [{ v: record.status, l: record.status }, ...STATUS_OPTIONS];
-              return (
-                <>
-                  <Select
-                    value={record.typeCode}
-                    aria-label="Type de document"
-                    options={[
-                      ...(documentTypeOptions.some((option) => option.code === record.typeCode)
-                        ? []
-                        : [{ v: record.typeCode, l: record.typeLabel || record.typeCode }]),
-                      ...documentTypeOptions.map((option) => ({ v: option.code, l: option.label })),
-                    ]}
-                    onChange={(typeCode) => {
-                      const option = documentTypeOptions.find((item) => item.code === typeCode);
-                      updateRecordAt(index, {
-                        typeCode,
-                        typeId: option?.id ?? record.typeId,
-                        typeLabel: option?.label ?? typeCode,
-                        category: option?.category ?? record.category,
-                        isPublic: option?.isPublic ?? record.isPublic,
-                        isRequired: option?.isRequired ?? record.isRequired,
-                      });
-                    }}
-                  />
-                  <Input
-                    value={recordReference(record)}
-                    placeholder="N° / référence"
-                    aria-label="Référence du document"
-                    onChange={(value) => updateRecordAt(index, { valueJson: buildReferenceValueJson(value) })}
-                  />
-                  <Select
-                    value={isForever ? 'forever' : 'fixed_end_date'}
-                    aria-label="Mode de validité"
-                    options={VALIDITY_OPTIONS}
-                    onChange={(mode) =>
-                      updateRecordAt(index, {
-                        validityMode: mode,
-                        validTo: mode === 'forever' ? '' : record.validTo,
-                      })
-                    }
-                  />
-                  <Input
-                    type="date"
-                    value={record.validFrom}
-                    aria-label="Valide à partir du"
-                    onChange={(validFrom) => updateRecordAt(index, { validFrom })}
-                  />
-                  {isForever ? (
-                    <Input value="" placeholder="—" readOnly aria-label="Sans date de fin" onChange={() => undefined} />
-                  ) : (
-                    <Input
-                      type="date"
-                      value={record.validTo}
-                      aria-label="Valide jusqu'au"
-                      onChange={(validTo) => updateRecordAt(index, { validTo })}
-                    />
-                  )}
-                  <Select
-                    value={record.status || 'active'}
-                    aria-label="Statut du document"
-                    options={statusOptions}
-                    onChange={(status) => updateRecordAt(index, { status })}
-                  />
-                  <button
-                    type="button"
-                    className="del"
-                    aria-label={`Supprimer le document ${record.typeLabel || record.typeCode}`}
-                    onClick={() => removeRecordAt(index)}
-                  >
-                    Supprimer
-                  </button>
-                </>
-              );
+          <button type="button" className="rep-add" onClick={() => setDocModal('add')}>
+            + Ajouter un document
+          </button>
+        ))}
+
+      {docModal === 'add' && (() => {
+        const draft = buildAddDraft();
+        if (!draft) return null;
+        return (
+          <LegalDocumentEditModal
+            open
+            mode="add"
+            draft={draft}
+            typeOptions={documentTypeOptions}
+            objectId={editor.objectId}
+            onClose={() => setDocModal(null)}
+            onSave={(record) => {
+              addRecord(record);
+              setDocModal(null);
             }}
           />
-        )
-      ) : documentEntries.length > 0 ? (
-        documentEntries.map((entry) => (
-          <Field key={`${entry.record.recordId ?? 'doc'}-${entry.index}`} label={entry.record.typeLabel || entry.record.typeCode}>
-            <Readout
-              value={[recordReference(entry.record), entry.record.validTo ? `→ ${entry.record.validTo}` : '']
-                .filter(Boolean)
-                .join(' ')}
-              placeholder="—"
-            />
-          </Field>
-        ))
-      ) : (
-        <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>Aucun document légal enregistré.</p>
+        );
+      })()}
+
+      {typeof docModal === 'number' && legal.records[docModal] && (
+        <LegalDocumentEditModal
+          open
+          mode="edit"
+          draft={legal.records[docModal]}
+          typeOptions={documentTypeOptions}
+          objectId={editor.objectId}
+          onClose={() => setDocModal(null)}
+          onSave={(record) => {
+            commitRecordAt(docModal, record);
+            setDocModal(null);
+          }}
+        />
       )}
     </Fs>
   );

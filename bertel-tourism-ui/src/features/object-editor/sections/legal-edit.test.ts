@@ -1,7 +1,14 @@
 import {
   LEGAL_IDENTITY_TYPE_CODES,
   buildNewDocumentRecord,
+  buildReferenceValueJson,
+  computeLegalDaysUntilExpiry,
+  computeLegalExpiryFlag,
+  formatLegalValidity,
+  hasExpiredRequiredDocument,
+  hasExpiringRequiredDocument,
   isIdentityLegalType,
+  readLegalReference,
   readLegalScalar,
   splitLegalRecords,
   upsertLegalScalar,
@@ -23,6 +30,8 @@ function record(partial: Partial<ObjectWorkspaceLegalRecord>): ObjectWorkspaceLe
     isRequired: false,
     valueJson: '',
     documentId: '',
+    documentUrl: '',
+    documentTitle: '',
     validFrom: '',
     validTo: '',
     validityMode: 'forever',
@@ -182,5 +191,115 @@ describe('buildNewDocumentRecord', () => {
     expect(created.validityMode).toBe('forever');
     expect(created.valueJson).toBe('');
     expect(created.status).toBe('active');
+    expect(created.documentId).toBe('');
+    expect(created.documentUrl).toBe('');
+    expect(created.documentTitle).toBe('');
+  });
+});
+
+describe('readLegalReference / buildReferenceValueJson', () => {
+  test('reads the value-wrapped reference', () => {
+    expect(readLegalReference(record({ valueJson: JSON.stringify({ value: 'POL-2026-001' }) }))).toBe('POL-2026-001');
+  });
+
+  test('builds the canonical { value } shape, trimming', () => {
+    expect(buildReferenceValueJson('  POL-2026-001  ')).toBe(JSON.stringify({ value: 'POL-2026-001' }));
+  });
+
+  test('clears to empty string for a blank reference', () => {
+    expect(buildReferenceValueJson('   ')).toBe('');
+  });
+});
+
+describe('computeLegalDaysUntilExpiry', () => {
+  test('returns null for a record with no end date', () => {
+    expect(computeLegalDaysUntilExpiry(record({ validTo: '' }), '2026-06-17')).toBeNull();
+  });
+
+  test('counts whole days to a future end date', () => {
+    expect(computeLegalDaysUntilExpiry(record({ validTo: '2026-06-27' }), '2026-06-17')).toBe(10);
+  });
+
+  test('is negative once past the end date', () => {
+    expect(computeLegalDaysUntilExpiry(record({ validTo: '2026-06-10' }), '2026-06-17')).toBe(-7);
+  });
+
+  test('is computed from the dates, not the stored days_until_expiry (stays correct after an edit)', () => {
+    expect(computeLegalDaysUntilExpiry(record({ validTo: '2026-06-27', daysUntilExpiry: '999' }), '2026-06-17')).toBe(10);
+  });
+});
+
+describe('computeLegalExpiryFlag', () => {
+  test('non-expiring active document is "En vigueur" (ok)', () => {
+    expect(computeLegalExpiryFlag(record({ validityMode: 'forever', validTo: '' }), '2026-06-17')).toEqual({
+      tone: 'ok',
+      label: 'En vigueur',
+    });
+  });
+
+  test('past end date is "Expiré" (expired)', () => {
+    expect(computeLegalExpiryFlag(record({ validityMode: 'fixed_end_date', validTo: '2026-06-10' }), '2026-06-17')).toEqual({
+      tone: 'expired',
+      label: 'Expiré',
+    });
+  });
+
+  test('within the warn window is "Expire dans N j" (warn)', () => {
+    expect(computeLegalExpiryFlag(record({ validityMode: 'fixed_end_date', validTo: '2026-06-27' }), '2026-06-17')).toEqual({
+      tone: 'warn',
+      label: 'Expire dans 10 j',
+    });
+  });
+
+  test('far-future end date is "En vigueur" (ok)', () => {
+    expect(computeLegalExpiryFlag(record({ validityMode: 'fixed_end_date', validTo: '2030-01-01' }), '2026-06-17').tone).toBe('ok');
+  });
+
+  test('explicit expired status wins regardless of dates', () => {
+    expect(computeLegalExpiryFlag(record({ status: 'expired', validityMode: 'forever', validTo: '' }), '2026-06-17')).toEqual({
+      tone: 'expired',
+      label: 'Expiré',
+    });
+  });
+});
+
+describe('hasExpiredRequiredDocument / hasExpiringRequiredDocument', () => {
+  test('flags a mandatory document past its end date', () => {
+    const records = [
+      record({ typeCode: 'liability_insurance', isRequired: true, validityMode: 'fixed_end_date', validTo: '2026-06-10' }),
+    ];
+    expect(hasExpiredRequiredDocument(records, '2026-06-17')).toBe(true);
+    expect(hasExpiringRequiredDocument(records, '2026-06-17')).toBe(false);
+  });
+
+  test('an expired but NON-mandatory document does not raise the required flag', () => {
+    const records = [
+      record({ typeCode: 'cyber_insurance', isRequired: false, validityMode: 'fixed_end_date', validTo: '2026-06-10' }),
+    ];
+    expect(hasExpiredRequiredDocument(records, '2026-06-17')).toBe(false);
+  });
+
+  test('flags a mandatory document expiring within the warn window', () => {
+    const records = [
+      record({ typeCode: 'liability_insurance', isRequired: true, validityMode: 'fixed_end_date', validTo: '2026-06-27' }),
+    ];
+    expect(hasExpiringRequiredDocument(records, '2026-06-17')).toBe(true);
+    expect(hasExpiredRequiredDocument(records, '2026-06-17')).toBe(false);
+  });
+});
+
+describe('formatLegalValidity', () => {
+  test('non-expiring records read "Sans expiration"', () => {
+    expect(formatLegalValidity(record({ validityMode: 'forever' }))).toBe('Sans expiration');
+  });
+
+  test('a bounded record reads "du X au Y"', () => {
+    expect(
+      formatLegalValidity(record({ validityMode: 'fixed_end_date', validFrom: '2026-01-01', validTo: '2026-12-31' })),
+    ).toBe('du 2026-01-01 au 2026-12-31');
+  });
+
+  test('an end date alone reads "jusqu\'au Y"', () => {
+    expect(formatLegalValidity(record({ validityMode: 'fixed_end_date', validTo: '2026-12-31' }))).toBe("jusqu'au 2026-12-31");
   });
 });

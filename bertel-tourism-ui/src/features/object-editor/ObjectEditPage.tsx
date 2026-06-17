@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
-import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation } from '../../hooks/useExplorerQueries';
+import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { getArchetypeMeta, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
@@ -26,6 +26,8 @@ import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-regist
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
+import { ConfirmDialog } from './primitives';
+import { buildEditorTools, archiveTargetStatus, type EditorToolKey } from './shell/editor-tools';
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
@@ -143,6 +145,43 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [blockersModalOpen, setBlockersModalOpen] = useState(false);
   const [modalContext, setModalContext] = useState<'publish' | 'save'>('publish');
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
+
+  const setObjectStatus = useSetObjectStatusMutation(objectId);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+
+  const lifecycleStatus = editor.draft.generalInfo.status || editor.draft.publication.status || 'draft';
+  const lifecyclePublishedAt = editor.draft.publication.publishedAt || editor.draft.generalInfo.publishedAt || '';
+  const isArchived = lifecycleStatus === 'archived';
+
+  const editorTools = useMemo(
+    () =>
+      buildEditorTools({
+        status: lifecycleStatus,
+        canArchive: resource.permissions.publication.canDirectWrite,
+        archiveDisabledReason: resource.permissions.publication.disabledReason,
+      }),
+    [lifecycleStatus, resource.permissions.publication.canDirectWrite, resource.permissions.publication.disabledReason],
+  );
+
+  function handleToolSelect(key: EditorToolKey) {
+    if (key === 'archive') {
+      setArchiveConfirmOpen(true);
+    }
+    // 'versions' and 'import-export' are disabled in tranche B and never fire.
+  }
+
+  async function handleArchiveConfirm() {
+    const target = archiveTargetStatus(lifecycleStatus, lifecyclePublishedAt);
+    try {
+      await setObjectStatus.mutateAsync(target);
+      editor.setSavedStatus(target);
+      setArchiveConfirmOpen(false);
+      setStatusMessage(isArchived ? 'Fiche restaurée.' : 'Fiche archivée.');
+    } catch (error) {
+      setArchiveConfirmOpen(false);
+      setStatusMessage(error instanceof Error ? error.message : 'Changement de statut impossible.');
+    }
+  }
 
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
   const navItems = useMemo(() => flattenSectionItems(groups), [groups]);
@@ -312,7 +351,14 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         }
       />
       <div className="edit-body">
-        <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
+        <EditorNav
+          groups={groups}
+          activeNum={activeNum}
+          sectionState={navSectionState}
+          onSelect={scrollToSection}
+          tools={editorTools}
+          onToolSelect={handleToolSelect}
+        />
         <main ref={mainRef} className="edit-main">
           {sections.map(({ num, Component }) => (
             <Component
@@ -336,6 +382,20 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           onGoToSection={scrollToSection}
         />
       </div>
+      <ConfirmDialog
+        open={archiveConfirmOpen}
+        title={isArchived ? 'Restaurer la fiche' : 'Archiver la fiche'}
+        message={
+          isArchived
+            ? 'La fiche quittera l’état archivé et redeviendra modifiable (brouillon ou hors-ligne). Elle pourra être republiée.'
+            : 'La fiche sera archivée et retirée de l’Explorer. Aucune donnée n’est supprimée — vous pourrez la restaurer.'
+        }
+        confirmLabel={isArchived ? 'Restaurer' : 'Archiver'}
+        cancelLabel="Annuler"
+        tone={isArchived ? 'default' : 'danger'}
+        onCancel={() => setArchiveConfirmOpen(false)}
+        onConfirm={() => void handleArchiveConfirm()}
+      />
       <BlockersModal
         open={blockersModalOpen}
         onClose={() => setBlockersModalOpen(false)}

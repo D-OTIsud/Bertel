@@ -16,6 +16,8 @@ export interface BuildEditorToolsInput {
   canArchive: boolean;
   /** permissions.publication.disabledReason — shown when canArchive is false. */
   archiveDisabledReason?: string | null;
+  /** object.current_version (from the versions query). When set, the history tool is enabled. */
+  currentVersion?: number | null;
 }
 
 const SOON = 'Bientôt disponible';
@@ -32,7 +34,13 @@ export function archiveTargetStatus(status: string, publishedAt: string): 'archi
 export function buildEditorTools(input: BuildEditorToolsInput): EditorToolItem[] {
   const isArchived = input.status === 'archived';
   return [
-    { key: 'versions', label: 'Versions / historique', disabled: true, disabledReason: SOON },
+    {
+      key: 'versions',
+      label: 'Versions / historique',
+      disabled: input.currentVersion == null,
+      disabledReason: input.currentVersion == null ? SOON : undefined,
+      stat: input.currentVersion == null ? undefined : `v${input.currentVersion}`,
+    },
     { key: 'import-export', label: 'Import / export', disabled: true, disabledReason: SOON },
     {
       key: 'archive',

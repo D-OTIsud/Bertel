@@ -41,6 +41,20 @@ describe('buildEditorTools', () => {
     expect(archive.disabled).toBe(true);
     expect(archive.disabledReason).toBe('Lecture seule.');
   });
+
+  it('enables the versions tool with a real version stat when currentVersion is provided', () => {
+    const versions = buildEditorTools({ ...base, currentVersion: 7 }).find((t) => t.key === 'versions')!;
+    expect(versions.disabled).toBe(false);
+    expect(versions.stat).toBe('v7');
+    expect(versions.disabledReason).toBeUndefined();
+  });
+
+  it('keeps versions disabled (no fake stat) while currentVersion is unknown', () => {
+    const versions = buildEditorTools(base).find((t) => t.key === 'versions')!;
+    expect(versions.disabled).toBe(true);
+    expect(versions.stat).toBeUndefined();
+    expect(versions.disabledReason).toMatch(/bient/i);
+  });
 });
 
 describe('archiveTargetStatus', () => {

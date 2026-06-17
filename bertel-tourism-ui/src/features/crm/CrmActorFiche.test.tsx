@@ -95,6 +95,7 @@ beforeEach(() => {
   crmMock.saveCrmActor.mockResolvedValue('actor-1');
   crmMock.saveActorChannel.mockResolvedValue('new-channel');
   crmMock.deleteActorChannel.mockResolvedValue(undefined);
+  crmMock.listObjectAddresses.mockResolvedValue([]);
   // §66 — affecter un établissement : annuaire CRM (source de la datalist) + lien acteur→objet.
   // obj-1 / obj-2 sont DÉJÀ liés à l'acteur (snapshot) ⇒ obj-3 « Gîte du Volcan » est le candidat.
   crmMock.listCrmDirectory.mockResolvedValue([

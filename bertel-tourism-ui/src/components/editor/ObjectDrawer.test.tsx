@@ -143,7 +143,7 @@ function buildWorkspaceResource(params: { id: string; name: string; type?: strin
         places: [],
       },
       media: { typeOptions: [], tagOptions: [], objectItems: [], placeItems: [], placeScopeUnavailableReason: null, unavailableReason: null },
-      contacts: { kindOptions: [], roleOptions: [], objectItems: [], relatedActorContactsCount: 0, relatedOrganizationContactsCount: 0 },
+      contacts: { kindOptions: [], roleOptions: [], objectItems: [], webItems: [], webKindOptions: [], relatedActorContactsCount: 0, relatedOrganizationContactsCount: 0 },
       characteristics: {
         languageOptions: [],
         languageLevelOptions: [],

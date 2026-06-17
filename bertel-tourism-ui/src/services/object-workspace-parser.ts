@@ -920,10 +920,32 @@ export interface ObjectWorkspaceContactItem {
   position: string;
 }
 
+/**
+ * §90 — object-scoped online presence: a réseau social (domain `social_network`)
+ * OR a distribution/OTA link (domain `distribution_channel`). Backed by the
+ * `object_web_channel` table (composite FK to `ref_code(id, domain)`); surfaced in
+ * §03's second group. No role / no is_primary (unlike a contact channel).
+ */
+export interface ObjectWorkspaceWebChannelItem {
+  id: string;
+  kindId: string;
+  kindCode: string;
+  kindLabel: string;
+  /** 'social_network' | 'distribution_channel' — drives the §03 UI grouping. */
+  kindDomain: string;
+  value: string;
+  isPublic: boolean;
+  position: string;
+}
+
 export interface ObjectWorkspaceContactsModule {
   kindOptions: WorkspaceReferenceOption[];
   roleOptions: WorkspaceReferenceOption[];
   objectItems: ObjectWorkspaceContactItem[];
+  /** §90 réseaux sociaux + distribution (object_web_channel). */
+  webItems: ObjectWorkspaceWebChannelItem[];
+  /** §90 kind catalog for web channels (ref_code social_network + distribution_channel). */
+  webKindOptions: WorkspaceReferenceOption[];
   relatedActorContactsCount: number;
   relatedOrganizationContactsCount: number;
 }
@@ -1375,6 +1397,30 @@ function parseWorkspaceContactItem(record: GenericRecord, index: number): Object
     value,
     isPublic: record.is_public == null ? true : readBoolean(record.is_public),
     isPrimary: readBoolean(record.is_primary),
+    position: readString(record.position, String(index)),
+  };
+}
+
+/**
+ * §90 — parse one `object_web_channel` row (réseau social or distribution link).
+ * Exported for tests. Accepts BOTH shapes: the `api.get_object_resource` `web_channels`
+ * payload (kind_code / kind_name / kind_domain, no kind_id) and a direct PostgREST row.
+ * Drops empty-value rows (mirrors parseWorkspaceContactItem). NULL is_public ⇒ public.
+ */
+export function parseWorkspaceWebChannelItem(record: GenericRecord, index: number): ObjectWorkspaceWebChannelItem | null {
+  const value = readString(record.value).trim();
+  if (!value) {
+    return null;
+  }
+  const kindRecord = readRecord(record.kind);
+  return {
+    id: readString(record.id, `web-${index}`),
+    kindId: readString(record.kind_id),
+    kindCode: readString(record.kind_code, readString(kindRecord.code)),
+    kindLabel: readString(record.kind_name, readString(kindRecord.name, readString(record.kind_code, 'Présence web'))),
+    kindDomain: readString(record.kind_domain),
+    value,
+    isPublic: record.is_public == null ? true : readBoolean(record.is_public),
     position: readString(record.position, String(index)),
   };
 }
@@ -2771,7 +2817,7 @@ export function normalizeInseeDigits(value: string): string {
   return value.replace(/\D/g, '');
 }
 
-function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string {
+export function readLegalRecordScalarValue(record: ObjectWorkspaceLegalRecord): string {
   const raw = record.valueJson.trim();
   if (!raw) {
     return '';
@@ -3075,6 +3121,9 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
   const objectContacts = readArray(raw.contacts)
     .map((item, index) => parseWorkspaceContactItem(item, index))
     .filter((item): item is ObjectWorkspaceContactItem => item !== null);
+  const objectWebChannels = readArray(raw.web_channels)
+    .map((item, index) => parseWorkspaceWebChannelItem(item, index))
+    .filter((item): item is ObjectWorkspaceWebChannelItem => item !== null);
   const relatedActorContactsCount = readArray(raw.actors).reduce((count, actor) => count + readArray(actor.contacts).length, 0);
   const relatedOrganizationContactsCount = [
     ...readArray(raw.organizations),
@@ -3153,6 +3202,8 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       kindOptions: [],
       roleOptions: [],
       objectItems: objectContacts,
+      webItems: objectWebChannels,
+      webKindOptions: [],
       relatedActorContactsCount,
       relatedOrganizationContactsCount,
     },

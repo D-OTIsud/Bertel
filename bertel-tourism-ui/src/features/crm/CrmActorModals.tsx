@@ -33,8 +33,12 @@ import {
   saveCrmActor,
   uploadActorPhoto,
   type ActorCrmChannel,
+  type ObjectAddressSuggestion,
 } from '../../services/crm';
 import { CrmModal } from './CrmModal';
+
+/** kind_code des canaux qui sont des ADRESSES POSTALES (édités dans le bloc « Adresses », pas les canaux). */
+const ADDRESS_KIND = 'address';
 
 /** Normalise une valeur de canal pour la déduplication (suggestions ⇄ lignes saisies). */
 function normChannelValue(value: string): string {
@@ -105,6 +109,7 @@ function rowsFromChannels(channels: ActorCrmChannel[]): ChannelRow[] {
 export function CrmActorEditModal({
   actor,
   channels,
+  addressSuggestions = [],
   onClose,
   onSaved,
 }: {
@@ -117,6 +122,8 @@ export function CrmActorEditModal({
     photoUrl: string | null;
   };
   channels: ActorCrmChannel[];
+  /** Adresses des établissements rattachés — proposées en un clic dans le bloc « Adresses ». */
+  addressSuggestions?: ObjectAddressSuggestion[];
   onClose: () => void;
   /** Appelé APRÈS écriture confirmée — la vue invalide fiche + annuaire. */
   onSaved: () => void;
@@ -261,13 +268,38 @@ export function CrmActorEditModal({
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
-  // Options du select kind : vocabulaire + le code courant de la ligne s'il n'y est pas
-  // (catalogue en échec fail-soft → la ligne reste éditable sans perdre son kind).
-  function kindOptionsFor(row: ChannelRow) {
-    if (row.kindCode && !kinds.some((kind) => kind.code === row.kindCode)) {
-      return [{ code: row.kindCode, name: row.kindCode }, ...kinds];
+  // Les ADRESSES (kind 'address') vivent dans un bloc dédié ; les canaux de COMMUNICATION
+  // (téléphone, e-mail, web…) excluent ce kind. Tous restent des lignes `rows` (mêmes save/delete).
+  const commKinds = kinds.filter((kind) => kind.code !== ADDRESS_KIND);
+  const addressKindAvailable = kinds.some((kind) => kind.code === ADDRESS_KIND);
+  const commEntries = rows
+    .map((row, index) => ({ row, index }))
+    .filter((entry) => !entry.row.deleted && entry.row.kindCode !== ADDRESS_KIND);
+  const addressEntries = rows
+    .map((row, index) => ({ row, index }))
+    .filter((entry) => !entry.row.deleted && entry.row.kindCode === ADDRESS_KIND);
+
+  // Options du select kind (canaux de COMMUNICATION) : vocabulaire hors 'address' + le code
+  // courant s'il n'y est pas (catalogue fail-soft → la ligne reste éditable sans perdre son kind).
+  function commKindOptionsFor(row: ChannelRow) {
+    if (row.kindCode && !commKinds.some((kind) => kind.code === row.kindCode)) {
+      return [{ code: row.kindCode, name: row.kindCode }, ...commKinds];
     }
-    return kinds;
+    return commKinds;
+  }
+
+  function addAddress(value = '') {
+    setRows((current) => [
+      ...current,
+      { key: `new-${newChannelRowSeq++}`, id: null, kindCode: ADDRESS_KIND, value, isPrimary: false, deleted: false },
+    ]);
+  }
+
+  // Suggestion d'adresse (établissement rattaché) : ajoute une ligne adresse pré-remplie, sauf doublon.
+  function applyAddressSuggestion(value: string) {
+    const exists = addressEntries.some((entry) => normChannelValue(entry.row.value) === normChannelValue(value));
+    if (exists) return;
+    addAddress(value);
   }
 
   // §66 — e-mail OBLIGATOIRE aussi à l'édition : l'acteur ne doit pas finir sans canal e-mail.
@@ -356,61 +388,59 @@ export function CrmActorEditModal({
 
       <div className="crm-field">
         Canaux de contact
-        {rows.map((row, index) =>
-          row.deleted ? null : (
-            <div key={row.key} className="chan-row">
-              <select
-                className="crm-select"
-                aria-label={`Type du canal ${index + 1}`}
-                value={row.kindCode}
-                onChange={(event) => patchRow(index, { kindCode: event.target.value })}
-              >
-                {kindOptionsFor(row).map((kind) => (
-                  <option key={kind.code} value={kind.code}>
-                    {kind.name}
-                  </option>
-                ))}
-              </select>
+        {commEntries.map(({ row, index }) => (
+          <div key={row.key} className="chan-row">
+            <select
+              className="crm-select"
+              aria-label={`Type du canal ${index + 1}`}
+              value={row.kindCode}
+              onChange={(event) => patchRow(index, { kindCode: event.target.value })}
+            >
+              {commKindOptionsFor(row).map((kind) => (
+                <option key={kind.code} value={kind.code}>
+                  {kind.name}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label={`Valeur du canal ${index + 1}`}
+              placeholder="valeur (numéro, e-mail…)"
+              value={row.value}
+              onChange={(event) => patchRow(index, { value: event.target.value })}
+            />
+            <label className="chan-row__primary">
               <input
-                aria-label={`Valeur du canal ${index + 1}`}
-                placeholder="valeur (adresse, numéro…)"
-                value={row.value}
-                onChange={(event) => patchRow(index, { value: event.target.value })}
+                type="checkbox"
+                aria-label={`Canal ${index + 1} principal`}
+                checked={row.isPrimary}
+                onChange={(event) => patchRow(index, { isPrimary: event.target.checked })}
               />
-              <label className="chan-row__primary">
-                <input
-                  type="checkbox"
-                  aria-label={`Canal ${index + 1} principal`}
-                  checked={row.isPrimary}
-                  onChange={(event) => patchRow(index, { isPrimary: event.target.checked })}
-                />
-                principal
-              </label>
-              <button
-                type="button"
-                className="crm-btn sm"
-                aria-label={`Supprimer le canal ${index + 1}`}
-                onClick={() => {
-                  // Nouvelle ligne : retrait immédiat ; ligne existante : marquée pour
-                  // suppression au submit (deleteActorChannel).
-                  if (row.id) patchRow(index, { deleted: true });
-                  else setRows((current) => current.filter((_, i) => i !== index));
-                }}
-              >
-                <Trash2 size={12} aria-hidden />
-              </button>
-            </div>
-          ),
-        )}
+              principal
+            </label>
+            <button
+              type="button"
+              className="crm-btn sm"
+              aria-label={`Supprimer le canal ${index + 1}`}
+              onClick={() => {
+                // Nouvelle ligne : retrait immédiat ; ligne existante : marquée pour
+                // suppression au submit (deleteActorChannel).
+                if (row.id) patchRow(index, { deleted: true });
+                else setRows((current) => current.filter((_, i) => i !== index));
+              }}
+            >
+              <Trash2 size={12} aria-hidden />
+            </button>
+          </div>
+        ))}
         <button
           type="button"
           className="crm-btn sm"
-          disabled={kinds.length === 0}
-          title={kinds.length === 0 ? 'Vocabulaire des canaux indisponible' : undefined}
+          disabled={commKinds.length === 0}
+          title={commKinds.length === 0 ? 'Vocabulaire des canaux indisponible' : undefined}
           onClick={() =>
             setRows((current) => [
               ...current,
-              { key: `new-${newChannelRowSeq++}`, id: null, kindCode: kinds[0]?.code ?? '', value: '', isPrimary: false, deleted: false },
+              { key: `new-${newChannelRowSeq++}`, id: null, kindCode: commKinds[0]?.code ?? '', value: '', isPrimary: false, deleted: false },
             ])
           }
         >
@@ -422,6 +452,63 @@ export function CrmActorEditModal({
             Un e-mail est obligatoire.
           </p>
         )}
+      </div>
+
+      {/* §19 — Adresses postales du prestataire (actor_channel kind 'address'). Plusieurs possibles :
+          on suggère celles des établissements rattachés (un clic) ET on autorise une saisie libre. */}
+      <div className="crm-field">
+        Adresses
+        {addressSuggestions.length > 0 && (
+          <div className="chip-row crm-contact-suggestions">
+            {addressSuggestions.map((suggestion) => {
+              const already = addressEntries.some(
+                (entry) => normChannelValue(entry.row.value) === normChannelValue(suggestion.address),
+              );
+              return (
+                <button
+                  key={`${suggestion.objectId}:${suggestion.address}`}
+                  type="button"
+                  className="crm-chip crm-suggestion-chip"
+                  disabled={already}
+                  title={already ? 'Déjà ajoutée' : `Ajouter l'adresse de ${suggestion.objectName}`}
+                  onClick={() => applyAddressSuggestion(suggestion.address)}
+                >
+                  <Plus size={11} aria-hidden /> {suggestion.objectName} — {suggestion.address}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {addressEntries.map(({ row, index }, position) => (
+          <div key={row.key} className="chan-row chan-row--address">
+            <input
+              aria-label={`Adresse ${position + 1}`}
+              placeholder="Adresse postale (rue, code postal, ville…)"
+              value={row.value}
+              onChange={(event) => patchRow(index, { value: event.target.value })}
+            />
+            <button
+              type="button"
+              className="crm-btn sm"
+              aria-label={`Supprimer l'adresse ${position + 1}`}
+              onClick={() => {
+                if (row.id) patchRow(index, { deleted: true });
+                else setRows((current) => current.filter((_, i) => i !== index));
+              }}
+            >
+              <Trash2 size={12} aria-hidden />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={!addressKindAvailable}
+          title={addressKindAvailable ? undefined : "Vocabulaire d'adresse indisponible"}
+          onClick={() => addAddress()}
+        >
+          <Plus size={12} aria-hidden /> Ajouter une adresse
+        </button>
       </div>
 
       {saveMutation.isError && (

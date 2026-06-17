@@ -1732,6 +1732,95 @@ GRANT EXECUTE ON FUNCTION api.create_tag(text, text, text) TO authenticated, ser
 COMMENT ON FUNCTION api.create_tag(text, text, text) IS
 '§09: dedup-guarded GLOBAL tag creation. Gated per-object (user_can_write_object_canonical). Dedup on ref_tag.name_normalized (insert-or-return-existing); slug derived inline; gen_random_uuid; created_by set. Returns {tag_id, slug, name, color, created}.';
 
+-- ===========================================================================
+-- §17 — create-on-the-go membership vocabulary (campaigns + tiers, charte incl.).
+-- Mirror of api.create_tag: gated per-object (workspace_assert_can_write_object,
+-- fail-closed), dedup on ref_code.name_normalized (STORED generated column =
+-- immutable_unaccent(lower(name))) WITHIN the domain; code derived inline (snake,
+-- anti-collision suffix); gen_random_uuid (restricted search_path ⇒ never
+-- uuid_generate_v4). Returns {ref_id, code, name, created}. Both campaign AND tier
+-- are required by object_membership (NOT NULL) — a free charte is a campaign+tier
+-- pair, "gratuit" carried by the label. The 0028/0029 advisor flag is expected (§36).
+-- ===========================================================================
+
+CREATE OR REPLACE FUNCTION api.create_membership_campaign(p_anchor_object_id text, p_name text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, auth
+AS $$
+DECLARE
+  v_name text := btrim(COALESCE(p_name, ''));
+  v_norm text;
+  v_code text;
+  v_row  public.ref_code%ROWTYPE;
+BEGIN
+  PERFORM internal.workspace_assert_can_write_object(p_anchor_object_id);
+  IF v_name = '' THEN RAISE EXCEPTION 'Campaign name is required' USING ERRCODE = '22023'; END IF;
+  v_norm := immutable_unaccent(lower(v_name));
+  SELECT * INTO v_row FROM public.ref_code WHERE domain = 'membership_campaign' AND name_normalized = v_norm LIMIT 1;
+  IF FOUND THEN RETURN jsonb_build_object('ref_id', v_row.id, 'code', v_row.code, 'name', v_row.name, 'created', false); END IF;
+  v_code := btrim(regexp_replace(v_norm, '[^a-z0-9]+', '_', 'g'), '_');
+  IF v_code = '' THEN RAISE EXCEPTION 'Campaign name yields an empty code' USING ERRCODE = '22023'; END IF;
+  BEGIN
+    INSERT INTO public.ref_code (id, domain, code, name)
+    VALUES (gen_random_uuid(), 'membership_campaign', v_code, v_name) RETURNING * INTO v_row;
+  EXCEPTION WHEN unique_violation THEN
+    SELECT * INTO v_row FROM public.ref_code WHERE domain = 'membership_campaign' AND name_normalized = v_norm LIMIT 1;
+    IF NOT FOUND THEN
+      v_code := v_code || '_' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 6);
+      INSERT INTO public.ref_code (id, domain, code, name)
+      VALUES (gen_random_uuid(), 'membership_campaign', v_code, v_name) RETURNING * INTO v_row;
+    END IF;
+  END;
+  RETURN jsonb_build_object('ref_id', v_row.id, 'code', v_row.code, 'name', v_row.name, 'created', true);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.create_membership_campaign(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.create_membership_campaign(text, text) TO authenticated, service_role;
+COMMENT ON FUNCTION api.create_membership_campaign(text, text) IS
+'§17: dedup-guarded create-on-the-go of a membership_campaign ref_code. Gated per-object; dedup on ref_code.name_normalized within the domain; gen_random_uuid. Returns {ref_id, code, name, created}.';
+
+CREATE OR REPLACE FUNCTION api.create_membership_tier(p_anchor_object_id text, p_name text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, auth
+AS $$
+DECLARE
+  v_name text := btrim(COALESCE(p_name, ''));
+  v_norm text;
+  v_code text;
+  v_row  public.ref_code%ROWTYPE;
+BEGIN
+  PERFORM internal.workspace_assert_can_write_object(p_anchor_object_id);
+  IF v_name = '' THEN RAISE EXCEPTION 'Tier name is required' USING ERRCODE = '22023'; END IF;
+  v_norm := immutable_unaccent(lower(v_name));
+  SELECT * INTO v_row FROM public.ref_code WHERE domain = 'membership_tier' AND name_normalized = v_norm LIMIT 1;
+  IF FOUND THEN RETURN jsonb_build_object('ref_id', v_row.id, 'code', v_row.code, 'name', v_row.name, 'created', false); END IF;
+  v_code := btrim(regexp_replace(v_norm, '[^a-z0-9]+', '_', 'g'), '_');
+  IF v_code = '' THEN RAISE EXCEPTION 'Tier name yields an empty code' USING ERRCODE = '22023'; END IF;
+  BEGIN
+    INSERT INTO public.ref_code (id, domain, code, name)
+    VALUES (gen_random_uuid(), 'membership_tier', v_code, v_name) RETURNING * INTO v_row;
+  EXCEPTION WHEN unique_violation THEN
+    SELECT * INTO v_row FROM public.ref_code WHERE domain = 'membership_tier' AND name_normalized = v_norm LIMIT 1;
+    IF NOT FOUND THEN
+      v_code := v_code || '_' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 6);
+      INSERT INTO public.ref_code (id, domain, code, name)
+      VALUES (gen_random_uuid(), 'membership_tier', v_code, v_name) RETURNING * INTO v_row;
+    END IF;
+  END;
+  RETURN jsonb_build_object('ref_id', v_row.id, 'code', v_row.code, 'name', v_row.name, 'created', true);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.create_membership_tier(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.create_membership_tier(text, text) TO authenticated, service_role;
+COMMENT ON FUNCTION api.create_membership_tier(text, text) IS
+'§17: dedup-guarded create-on-the-go of a membership_tier ref_code. Gated per-object; dedup on ref_code.name_normalized within the domain; gen_random_uuid. Returns {ref_id, code, name, created}.';
+
 CREATE OR REPLACE FUNCTION api.set_tag_color(
   p_anchor_object_id text,
   p_tag_id uuid,
@@ -2905,6 +2994,31 @@ BEGIN
       JOIN ref_code_contact_kind rc ON rc.id = c.kind_id
       WHERE c.object_id = obj.id
         AND (v_can_read_extended OR c.is_public = TRUE)
+    ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- Web channels (réseaux sociaux + distribution) — object-scoped online presence (§90)
+  IF v_fields IS NULL OR 'web_channels' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'web_channels',
+      COALESCE((
+      SELECT jsonb_agg(
+               jsonb_build_object(
+                 'kind_code',   rc.code,
+                 'kind_name',   COALESCE(api.i18n_pick_strict(rc.name_i18n, lang, 'fr'), rc.name),
+                 'kind_domain', wc.kind_domain,
+                 'icon_url',    rc.icon_url,
+                 'value',       wc.value,
+                 'is_public',   wc.is_public,
+                 'position',    wc.position
+               )
+               ORDER BY wc.position NULLS LAST, wc.created_at, wc.ctid
+             )
+      FROM object_web_channel wc
+      JOIN ref_code rc ON rc.id = wc.kind_id AND rc.domain = wc.kind_domain
+      WHERE wc.object_id = obj.id
+        AND (v_can_read_extended OR wc.is_public = TRUE)
     ), '[]'::jsonb)
     );
   END IF;

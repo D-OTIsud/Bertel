@@ -3,22 +3,7 @@ import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionAttachments } from './SectionAttachments';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
-// §48 Task 7 — the ActorPicker has its own spec (debounce + api.search_actors); here it is
-// stubbed so the section specs only exercise the §17 repeater's onPick wiring.
-jest.mock('../widgets/ActorPicker', () => {
-  const mockReact = jest.requireActual<typeof import('react')>('react');
-  return {
-    ActorPicker: ({ onPick }: { onPick: (actor: { id: string; displayName: string; firstName: string; lastName: string }) => void }) =>
-      mockReact.createElement(
-        'button',
-        {
-          type: 'button',
-          onClick: () => onPick({ id: 'act-9', displayName: 'Rémi Janisset', firstName: 'Rémi', lastName: 'Janisset' }),
-        },
-        'Choisir Rémi Janisset',
-      ),
-  };
-});
+// NB: actor (prestataire) authoring moved to §19 (ProviderCards.test.tsx). §17 keeps org links only.
 
 /**
  * §17 org-link authoring (§48). The read-only "Organisation éditrice" kv becomes an editable
@@ -40,16 +25,24 @@ describe('SectionAttachments — §17 org-link authoring (§48)', () => {
     expect(result.current.dirtySections.relationships).toBe(true);
   });
 
-  it('adds an org link defaulting to publisher', () => {
+  it('adds an org link via the OrgPicker modal, defaulting to publisher', () => {
     const modules = fullModulesFixture();
     modules.relationships.organizationLinks = [];
+    if (modules.relationships.orgOptions.length === 0) {
+      modules.relationships.orgOptions = [{ id: 'ORG1', name: 'OTI du Sud' }];
+    }
+    const firstOrg = modules.relationships.orgOptions[0];
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
 
+    // open the modal, then pick the first catalog org
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Rattacher une organisation/i })); });
+    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: new RegExp(firstOrg.name, 'i') })); });
     view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.relationships.organizationLinks).toHaveLength(1);
+    expect(result.current.draft.relationships.organizationLinks[0].id).toBe(firstOrg.id);
     expect(result.current.draft.relationships.organizationLinks[0].roleCode).toBe('publisher');
     expect(result.current.draft.relationships.organizationLinks[0].isPrimary).toBe(true);
   });
@@ -90,103 +83,38 @@ describe('SectionAttachments — §17 org-link authoring (§48)', () => {
     expect(result.current.draft.relationships.organizationLinks).toHaveLength(0);
     expect(result.current.dirtySections.relationships).toBe(true);
   });
-});
 
-/**
- * §17 actor-role authoring (§48 Task 7). The read-only "Acteurs liés" kv becomes an editable
- * repeater over actor_object_role (actor / role / visibility / primary-per-role / note),
- * persisted through the actors arm of api.save_object_relations. New actors are linked via
- * the ActorPicker (api.search_actors). Delete buttons carry per-actor aria-labels so they
- * never collide with the org-link / membership "Supprimer" buttons.
- */
-describe('SectionAttachments — §17 actor authoring (§48)', () => {
-  it('changes an actor role and marks relationships dirty', () => {
-    const modules = fullModulesFixture();
-    modules.relationships.actorRoleOptions = [
-      { id: 'operator', code: 'operator', label: 'Exploitant' },
-      { id: 'guide', code: 'guide', label: 'Guide accompagnateur' },
-    ];
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    act(() => {
-      fireEvent.change(screen.getByDisplayValue('Exploitant'), { target: { value: 'guide' } });
-    });
-    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    expect(result.current.draft.relationships.actors[0].roleCode).toBe('guide');
-    expect(result.current.dirtySections.relationships).toBe(true);
-  });
-
-  it('removes an actor link via its aria-label and marks relationships dirty', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: "Supprimer l'acteur Marie Guide" }));
-    });
-    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    expect(result.current.draft.relationships.actors).toHaveLength(0);
-    expect(result.current.dirtySections.relationships).toBe(true);
-  });
-
-  it('picks an actor and appends a row defaulting to operator, primary when first for that role', () => {
-    const modules = fullModulesFixture();
-    modules.relationships.actors = [];
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Lier un acteur/i })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir Rémi Janisset' })); });
-    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    const actors = result.current.draft.relationships.actors;
-    expect(actors).toHaveLength(1);
-    expect(actors[0]).toMatchObject({
-      id: 'act-9', displayName: 'Rémi Janisset', roleCode: 'operator', isPrimary: true, visibility: 'public',
-    });
-    expect(result.current.dirtySections.relationships).toBe(true);
-  });
-
-  it('a picked actor is not primary when the role already has a primary (uq_actor_object_role_primary)', () => {
-    // Default fixture: Marie Guide is already the primary operator.
+  it('no longer renders the prestataire (actor) block — moved to §19', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionAttachments editor={result.current} permissions={allowAll} />);
 
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Lier un acteur/i })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir Rémi Janisset' })); });
-
-    const actors = result.current.draft.relationships.actors;
-    expect(actors).toHaveLength(2);
-    expect(actors[1].isPrimary).toBe(false);
-  });
-
-  it('renders read-only when the actor links could not be loaded (anti-clobber)', () => {
-    const modules = fullModulesFixture();
-    modules.relationships.actorWriteUnavailableReason = 'load failed';
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    render(<SectionAttachments editor={result.current} permissions={allowAll} />);
-
-    expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
+    expect(screen.queryByText(/Acteurs liés/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Lier un acteur/i })).not.toBeInTheDocument();
   });
+});
 
-  it('setting an actor primary clears only same-role rows (uq per (object, role))', () => {
+describe('SectionAttachments — §17 adhésions (modale + état vide)', () => {
+  it('shows an explicit empty state when there is no adhésion', () => {
     const modules = fullModulesFixture();
-    modules.relationships.actors = [
-      { ...modules.relationships.actors[0], id: 'a1', displayName: 'Marie Guide', roleCode: 'operator', isPrimary: true },
-      { ...modules.relationships.actors[0], id: 'a2', displayName: 'Paul Op', roleCode: 'operator', isPrimary: false },
-      { ...modules.relationships.actors[0], id: 'a3', displayName: 'Jean Guide', roleCode: 'guide', isPrimary: true },
-    ];
+    modules.memberships.items = [];
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} />);
+    render(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByText(/Aucune adhésion/i)).toBeInTheDocument();
+  });
 
-    // Promote Paul (operator) — Marie (same role) must clear, Jean (guide) must stay primary.
-    act(() => { fireEvent.click(screen.getAllByLabelText('Définir comme acteur principal pour ce rôle')[0]); });
-    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} />);
+  it('opens the membership modal from "Ajouter une adhésion"', () => {
+    const modules = fullModulesFixture();
+    modules.memberships.items = [];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const view = render(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une adhésion/i })); });
+    view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByRole('button', { name: /Enregistrer/i })).toBeInTheDocument();
+  });
 
-    const actors = result.current.draft.relationships.actors;
-    expect(actors.map((a) => a.isPrimary)).toEqual([false, true, true]);
+  it('no longer renders the "Campagnes disponibles" chipset', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.queryByText(/Campagnes disponibles/i)).not.toBeInTheDocument();
   });
 });

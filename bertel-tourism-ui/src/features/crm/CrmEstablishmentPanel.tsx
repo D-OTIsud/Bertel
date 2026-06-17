@@ -14,14 +14,17 @@ export function CrmEstablishmentPanel({
   objectId,
   canWrite,
   onClose,
+  initialActorId = null,
 }: {
   objectId: string;
   canWrite: boolean;
   /** Ferme le tiroir hôte : le bouton retour de la vue établissement est la racine du tiroir. */
   onClose: () => void;
+  /** Ouvre directement la fiche de cet acteur (deep-link depuis une carte prestataire §19). */
+  initialActorId?: string | null;
 }) {
   // null = vue établissement (par défaut) ; set = fiche de cet acteur (sous-vue glissée).
-  const [actorId, setActorId] = useState<string | null>(null);
+  const [actorId, setActorId] = useState<string | null>(initialActorId);
 
   if (actorId) {
     return (

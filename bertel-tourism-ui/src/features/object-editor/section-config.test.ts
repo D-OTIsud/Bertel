@@ -1,22 +1,23 @@
 import { makeSections } from './section-config';
 
 describe('makeSections', () => {
-  it('produces 21 sections for ITI (includes section 16 Lieux & étapes)', () => {
+  it('produces 20 sections for ITI (includes section 16 Lieux & étapes; §20 retired in §90)', () => {
     const flat = makeSections('ITI').flatMap((g) => g.items);
-    expect(flat).toHaveLength(21);
+    expect(flat).toHaveLength(20);
     expect(flat.some((s) => s.num === '16')).toBe(true);
+    expect(flat.some((s) => s.num === '20')).toBe(false);
   });
 
   it('omits sections 16 and 07 for HEB (capacity absorbed by §06)', () => {
     const flat = makeSections('HEB').flatMap((g) => g.items);
-    expect(flat).toHaveLength(19);
+    expect(flat).toHaveLength(18);
     expect(flat.some((s) => s.num === '16')).toBe(false);
     expect(flat.some((s) => s.num === '07')).toBe(false);
   });
 
   it('keeps section 07 for non-HEB archetypes', () => {
     const res = makeSections('RES').flatMap((g) => g.items);
-    expect(res).toHaveLength(20);
+    expect(res).toHaveLength(19);
     expect(res.some((s) => s.num === '07')).toBe(true);
   });
 

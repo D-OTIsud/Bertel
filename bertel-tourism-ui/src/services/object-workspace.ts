@@ -249,6 +249,42 @@ async function callObjectWorkspaceRpc(
   return result;
 }
 
+/**
+ * §17 — create-on-the-go membership campaign/tier (mirror createWorkspaceTag). Gated per-object by the
+ * RPC (workspace_assert_can_write_object); returns the existing-or-created ref option for the combobox.
+ */
+async function createMembershipRef(
+  fnName: 'create_membership_campaign' | 'create_membership_tier',
+  objectId: string,
+  name: string,
+): Promise<WorkspaceReferenceOption> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour creer la valeur d'adhesion.");
+  }
+  const { data, error } = await apiClient.schema('api').rpc(fnName, {
+    p_anchor_object_id: objectId,
+    p_name: name,
+  });
+  if (error) {
+    throw mapMutationError(error, "Creation de la valeur d'adhesion impossible.");
+  }
+  const row = readRecord(data);
+  return {
+    id: readString(row.ref_id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+  };
+}
+
+export function createMembershipCampaign(objectId: string, name: string): Promise<WorkspaceReferenceOption> {
+  return createMembershipRef('create_membership_campaign', objectId, name);
+}
+
+export function createMembershipTier(objectId: string, name: string): Promise<WorkspaceReferenceOption> {
+  return createMembershipRef('create_membership_tier', objectId, name);
+}
+
 function readString(value: unknown, fallback = ''): string {
   if (typeof value === 'string') {
     return value;
@@ -1659,6 +1695,11 @@ async function getObjectWorkspaceContactsModule(
       roleOptions: [
         { id: 'demo-accueil', code: 'accueil', label: 'Accueil' },
       ],
+      webKindOptions: [
+        { id: 'demo-facebook', code: 'facebook', label: 'Facebook' },
+        { id: 'demo-instagram', code: 'instagram', label: 'Instagram' },
+        { id: 'demo-booking', code: 'booking', label: 'Booking.com' },
+      ],
     };
   }
 
@@ -1667,10 +1708,13 @@ async function getObjectWorkspaceContactsModule(
     return baseModule;
   }
 
-  const [contactsResult, kindRefsResult, roleRefsResult] = await Promise.all([
+  const [contactsResult, kindRefsResult, roleRefsResult, webChannelsResult, webKindRefsResult] = await Promise.all([
     client.from('contact_channel').select('id, kind_id, value, role_id, is_public, is_primary, position').eq('object_id', objectId).order('is_primary', { ascending: false }).order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name').eq('domain', 'contact_kind').order('position', { ascending: true }),
     client.from('ref_contact_role').select('id, code, name').order('position', { ascending: true }),
+    // §90 object-scoped réseaux sociaux + distribution (object_web_channel, direct PostgREST — §40/§41 precedent)
+    client.from('object_web_channel').select('id, kind_id, kind_domain, value, is_public, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, domain').in('domain', ['social_network', 'distribution_channel']).order('domain', { ascending: true }).order('position', { ascending: true }),
   ]);
 
   if (contactsResult.error || kindRefsResult.error || roleRefsResult.error) {
@@ -1682,10 +1726,40 @@ async function getObjectWorkspaceContactsModule(
   const kindById = new Map(kindOptions.map((option) => [option.id, option]));
   const roleById = new Map(roleOptions.map((option) => [option.id, option]));
 
+  // §90 web channels degrade gracefully: a missing/unexposed table keeps the parser-derived
+  // baseModule.webItems and an empty catalog rather than breaking the whole contacts load.
+  const webKindRows = webKindRefsResult.error ? [] : (webKindRefsResult.data ?? []);
+  const webKindOptions = webKindRows.map((row) => normalizeReferenceOption(row as Record<string, unknown>));
+  const webKindById = new Map(
+    webKindRows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return [readString(r.id), { code: readString(r.code), name: readString(r.name), domain: readString(r.domain) }] as const;
+    }),
+  );
+  const webItems = webChannelsResult.error
+    ? baseModule.webItems
+    : (webChannelsResult.data ?? []).map((row, index) => {
+        const r = row as Record<string, unknown>;
+        const kindId = readString(r.kind_id);
+        const ref = webKindById.get(kindId);
+        return {
+          id: readString(r.id, `web-${index}`),
+          kindId,
+          kindCode: ref?.code ?? '',
+          kindLabel: ref?.name || ref?.code || 'Présence web',
+          kindDomain: readString(r.kind_domain, ref?.domain ?? ''),
+          value: readString(r.value),
+          isPublic: r.is_public == null ? true : r.is_public === true,
+          position: readString(r.position, String(index)),
+        };
+      });
+
   return {
     ...baseModule,
     kindOptions,
     roleOptions,
+    webKindOptions,
+    webItems,
     objectItems: (contactsResult.data ?? []).map((row) =>
       normalizeWorkspaceContactItem({
         row: row as Record<string, unknown>,
@@ -5756,6 +5830,74 @@ export async function saveObjectWorkspaceContacts(objectId: string, input: Objec
     const { error } = await client.from('contact_channel').delete().in('id', idsToDelete);
     if (error) {
       throw mapMutationError(error, "Impossible de supprimer les contacts retires.");
+    }
+  }
+
+  // §90 — reconcile object_web_channel (réseaux sociaux + distribution OTA) from input.webItems.
+  // Resolve kind code -> (id, domain) for the composite FK; upsert/insert each, delete removed.
+  // Empty-value rows are skipped (blank draft rows / chk_web_channel_value_not_empty). Direct
+  // PostgREST under the per-command canonical write RLS (§40/§41 child-table precedent).
+  const webItems = (input.webItems ?? []).filter((item) => item.value.trim().length > 0);
+  const [webKindRefsResult, existingWebResult] = await Promise.all([
+    client.from('ref_code').select('id, code, domain').in('domain', ['social_network', 'distribution_channel']),
+    client.from('object_web_channel').select('id').eq('object_id', objectId),
+  ]);
+  if (webKindRefsResult.error) {
+    throw mapMutationError(webKindRefsResult.error, 'Impossible de charger les types de réseaux / distribution.');
+  }
+  if (existingWebResult.error) {
+    throw mapMutationError(existingWebResult.error, 'Impossible de charger les réseaux / canaux existants.');
+  }
+
+  const webKindByCode = new Map(
+    (webKindRefsResult.data ?? []).map((row) => {
+      const r = row as Record<string, unknown>;
+      return [readString(r.code).toLowerCase(), { id: readString(r.id), domain: readString(r.domain) }] as const;
+    }),
+  );
+  const existingWebIds = new Set(
+    (existingWebResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean),
+  );
+
+  const unknownWebKind = webItems.find((item) => !webKindByCode.has(item.kindCode.toLowerCase()));
+  if (unknownWebKind) {
+    throw new Error(`Type de réseau / canal inconnu: ${unknownWebKind.kindCode || 'vide'}.`);
+  }
+
+  const keptWebIds = new Set<string>();
+  for (let index = 0; index < webItems.length; index += 1) {
+    const item = webItems[index];
+    const ref = webKindByCode.get(item.kindCode.toLowerCase());
+    const payload = {
+      object_id: objectId,
+      kind_id: ref?.id ?? null,
+      kind_domain: ref?.domain ?? null,
+      value: item.value.trim(),
+      is_public: item.isPublic,
+      position: toNullableInteger(item.position) ?? index,
+    };
+
+    let webId = item.id;
+    if (existingWebIds.has(item.id)) {
+      const { error } = await client.from('object_web_channel').update(payload).eq('id', item.id);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un réseau / canal.");
+      }
+    } else {
+      const { data, error } = await client.from('object_web_channel').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, 'Impossible de créer un réseau / canal.');
+      }
+      webId = readString((data as Record<string, unknown>).id);
+    }
+    keptWebIds.add(webId);
+  }
+
+  const webIdsToDelete = Array.from(existingWebIds).filter((id) => !keptWebIds.has(id));
+  if (webIdsToDelete.length > 0) {
+    const { error } = await client.from('object_web_channel').delete().in('id', webIdsToDelete);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de supprimer les réseaux / canaux retirés.');
     }
   }
 }

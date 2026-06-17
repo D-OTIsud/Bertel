@@ -70,6 +70,7 @@ import {
   type OpeningItem,
   getOpeningYearTimelineSegment,
   type OrganizationItem,
+  parseWebChannels,
   type PetPolicyItem,
   type GroupPolicyItem,
   type PriceItem,
@@ -114,6 +115,7 @@ interface PreviewData {
   prices: PriceItem[];
   openings: OpeningItem[];
   contacts: ContactItem[];
+  webChannels: ContactItem[];
   actors: ActorItem[];
   organizations: OrganizationItem[];
   memberships: MembershipItem[];
@@ -296,6 +298,7 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
     prices: parsed.operations.prices,
     openings: parsed.operations.openings,
     contacts: parsed.contacts.public,
+    webChannels: parseWebChannels(parsed.raw),
     actors: parsed.relations.actors,
     organizations: parsed.relations.organizations,
     memberships: parsed.relations.memberships,
@@ -2962,6 +2965,26 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
   );
 }
 
+/** §90 — object-scoped réseaux sociaux + distribution (object_web_channel). Reuses ContactCard
+ *  (platform favicon + href already resolved in parseWebChannels). Public rows only. */
+function WebChannelsSection({ channels }: { channels: ContactItem[] }) {
+  if (!channels.length) {
+    return null;
+  }
+
+  return (
+    <Section title="Réseaux sociaux & réservation" aside>
+      <div className="detail-contact-list">
+        <div className="detail-contact-card detail-contact-card--deck">
+          {channels.slice(0, 8).map((channel) => (
+            <ContactCard key={channel.id} contact={channel} />
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 function ContactCard({ contact }: { contact: ContactItem }) {
   const [copied, setCopied] = useState(false);
   const [iconFailed, setIconFailed] = useState(false);
@@ -3176,6 +3199,7 @@ function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSee
     LocationMapSection({ preview }),
     OpeningsAsideSection({ openings: preview.openings, openNow: preview.openNow }),
     ContactSection({ contacts: preview.contacts }),
+    WebChannelsSection({ channels: preview.webChannels }),
     PracticalSection({ facts, openings: preview.openings }),
     RelatedObjectsSection({ items: preview.relatedObjects }),
     TeamSection({ actors: canSeeActors ? preview.actors : [] }),

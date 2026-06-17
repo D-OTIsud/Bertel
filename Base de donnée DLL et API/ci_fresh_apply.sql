@@ -146,6 +146,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 14k    migration_object_stay_policy.sql  (§85 accommodation stay policy: object_stay_policy table — check-in/out times — mirroring object_pet_policy; §38 read gate + per-command canonical write + updated_at/audit triggers; surfaced in §06 for HEB; read/write via direct PostgREST, no RPC/get_object_resource change) =='
 \ir migration_object_stay_policy.sql
 
+\echo '== 14m    migration_object_web_channel.sql  (§90 object-scoped réseaux sociaux + distribution OTA: object_web_channel — composite FK (kind_id,kind_domain)->ref_code(id,domain) for social_network|distribution_channel; §49 split read gate + per-command canonical write + updated_at/audit triggers; get_object_resource web_channels key folded in api_views_functions.sql; editor §03 read/write via direct PostgREST; retires §20) =='
+\ir migration_object_web_channel.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Chip, ChipSet, Fs, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
+import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-workspace-parser';
 import { listObjectCrm } from '../../../services/crm';
 import { EditorCrmDrawer } from '../widgets/EditorCrmDrawer';
+import { ProviderCards } from './ProviderCards';
 
 const YEAR_MS = 365 * 86_400_000;
 
@@ -30,7 +32,19 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
   const topics = followUp.topics;
   const access = permissions.crm;
   const canWrite = Boolean(access?.canDirectWrite);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const relationships = editor.draft.relationships;
+  const canWriteActors = Boolean(permissions.relationships?.canDirectWrite);
+  // Drawer can open object-wide (actorId null) or directly on a prestataire's fiche (deep-link).
+  const [drawer, setDrawer] = useState<{ open: boolean; actorId: string | null }>({ open: false, actorId: null });
+
+  function replaceActors(actors: ObjectWorkspaceActorLinkItem[]) {
+    editor.replaceModule('relationships', { ...relationships, actors });
+  }
+
+  function openActorFiche(actorId: string) {
+    if (!objectId) return;
+    setDrawer({ open: true, actorId });
+  }
 
   const now = Date.now();
   const occurredTimestamps = interactions
@@ -53,17 +67,16 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
     });
   }
 
-  const pillLabel = followUp.interactionsUnavailableReason
-    ? 'Non chargé'
-    : `${interactions.length} interaction(s)`;
+  const prestataireCount = relationships.actors.length;
+  const pillLabel = `${prestataireCount} prestataire(s)`;
 
   return (
     <Fs
       num="19"
       title="Suivi prestataire (CRM)"
-      sub="Interactions, demandes, sujets normalisés (demand_topic) · pilotage OTI"
+      sub="Prestataires rattachés à la fiche et suivi relationnel (interactions, sujets normalisés) · pilotage OTI"
       folded={folded}
-      pill={{ tone: interactions.length > 0 ? 'ok' : 'warn', label: pillLabel }}
+      pill={{ tone: prestataireCount > 0 ? 'ok' : 'warn', label: pillLabel }}
     >
       {!canWrite && (
         <p
@@ -82,6 +95,14 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
         </p>
       )}
 
+      <ProviderCards
+        relationships={relationships}
+        canWrite={canWriteActors}
+        onChange={replaceActors}
+        onOpenActor={objectId ? openActorFiche : undefined}
+      />
+
+      <div className="chip-group__label" style={{ marginTop: 16 }}>Suivi relationnel (CRM)</div>
       <div className="grid-4" style={{ marginBottom: 14 }}>
         <StatCard label="Interactions / 12 mois" value={String(last12Months)} />
         <StatCard label="Dernier contact" value={lastContact ? formatShortDate(lastContact) : '—'} />
@@ -107,7 +128,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
           style={{ marginTop: 0 }}
           disabled={!objectId}
           title={!objectId ? 'Enregistrez la fiche pour accéder au suivi CRM.' : undefined}
-          onClick={() => setDrawerOpen(true)}
+          onClick={() => setDrawer({ open: true, actorId: null })}
         >
           Ouvrir le suivi CRM{interactions.length > 0 ? ` · ${interactions.length}` : ''}
         </button>
@@ -136,9 +157,10 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
         <EditorCrmDrawer
           objectId={objectId}
           canWrite={canWrite}
-          open={drawerOpen}
+          open={drawer.open}
+          initialActorId={drawer.actorId}
           onClose={() => {
-            setDrawerOpen(false);
+            setDrawer({ open: false, actorId: null });
             void refreshCrm();
           }}
         />

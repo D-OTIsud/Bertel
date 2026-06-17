@@ -6,6 +6,7 @@ import {
   parseActors,
   parseCapacities,
   parseContacts,
+  parseWebChannels,
   parseExternalSyncs,
   parseGroupPolicy,
   parseItinerarySummary,
@@ -501,5 +502,41 @@ describe('object drawer utils', () => {
 
     const legacy = parseRoomTypes({ room_types: [{ id: 'r2', name: 'Chambre', beds: [], bed_config: 'Lit double' }] });
     expect(legacy[0].beds).toBe('Lit double');
+  });
+});
+
+describe('parseWebChannels (§90)', () => {
+  it('parses public réseaux sociaux + distribution rows with platform identity', () => {
+    const raw = {
+      name: 'Le Lagon Bleu',
+      web_channels: [
+        { kind_code: 'facebook', kind_name: 'Facebook', kind_domain: 'social_network', value: 'https://facebook.com/lagon', is_public: true, position: 0 },
+        { kind_code: 'booking', kind_name: 'Booking.com', kind_domain: 'distribution_channel', value: 'https://www.booking.com/hotel/re/lagon.html', is_public: true, position: 1 },
+      ],
+    } as Record<string, unknown>;
+
+    const channels = parseWebChannels(raw);
+
+    expect(channels).toHaveLength(2);
+    expect(channels[0]).toMatchObject({ kindCode: 'facebook', displayValue: 'Facebook' });
+    expect(channels[1]).toMatchObject({ kindCode: 'booking', displayValue: 'Booking.com' });
+  });
+
+  it('hides non-public web channels (private rows of a published object)', () => {
+    const raw = {
+      web_channels: [
+        { kind_code: 'instagram', value: 'https://instagram.com/secret', is_public: false },
+        { kind_code: 'facebook', value: 'https://facebook.com/public', is_public: true },
+      ],
+    } as Record<string, unknown>;
+
+    const channels = parseWebChannels(raw);
+
+    expect(channels).toHaveLength(1);
+    expect(channels[0].kindCode).toBe('facebook');
+  });
+
+  it('returns an empty array when there are no web channels', () => {
+    expect(parseWebChannels({} as Record<string, unknown>)).toEqual([]);
   });
 });

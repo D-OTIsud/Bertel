@@ -22,6 +22,9 @@ function item(over: Partial<ObjectWorkspaceDistinctionItem>): ObjectWorkspaceDis
     awardedAt: '',
     validUntil: '',
     disabilityTypesCovered: [],
+    documentId: '',
+    documentUrl: '',
+    documentTitle: '',
     ...over,
   };
 }

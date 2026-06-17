@@ -20,13 +20,14 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, Mail, Pencil, Phone, Plus } from 'lucide-react';
+import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, MapPin, Mail, Pencil, Phone, Plus } from 'lucide-react';
 import {
   deleteCrmInteraction,
   linkActorToObject,
   listActorCrm,
   listCrmDirectory,
   listDemandTopics,
+  listObjectAddresses,
   saveCrmInteraction,
 } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
@@ -52,6 +53,7 @@ const CHANNEL_ICONS: Record<string, typeof Mail> = {
   phone: Phone,
   mobile: Phone,
   website: Globe,
+  address: MapPin,
 };
 
 function errorMessageOf(error: unknown): string {
@@ -295,6 +297,18 @@ export function CrmActorFiche({
   const queryClient = useQueryClient();
   const actorQuery = useQuery({ queryKey: ['crm-actor', actorId], queryFn: () => listActorCrm(actorId) });
   const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+
+  // §19 — adresses des établissements rattachés, proposées en un clic dans l'éditeur d'identité.
+  const addressObjects = (actorQuery.data?.objects ?? []).map((object) => ({
+    objectId: object.objectId,
+    objectName: object.objectName,
+  }));
+  const addressSuggestionsQuery = useQuery({
+    queryKey: ['crm-actor-object-addresses', actorId, addressObjects.map((object) => object.objectId).join(',')],
+    queryFn: () => listObjectAddresses(addressObjects),
+    enabled: addressObjects.length > 0,
+  });
+  const addressSuggestions = addressSuggestionsQuery.data ?? [];
 
   // 'all' | 'general' | <objectId> — filtre de contexte de la timeline.
   const [ctxFilter, setCtxFilter] = useState<string>('all');
@@ -579,6 +593,7 @@ export function CrmActorFiche({
         <CrmActorEditModal
           actor={snapshot.actor}
           channels={channels}
+          addressSuggestions={addressSuggestions}
           onClose={() => setModal(null)}
           onSaved={() => {
             // La fiche ET l'annuaire (display_name) — le préfixe ['crm-directory'] couvre

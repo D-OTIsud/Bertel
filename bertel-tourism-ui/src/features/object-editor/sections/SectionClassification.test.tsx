@@ -20,6 +20,9 @@ function classRow(over: Partial<ObjectWorkspaceDistinctionItem>): ObjectWorkspac
     awardedAt: '2025-01-01',
     validUntil: '',
     disabilityTypesCovered: [],
+    documentId: '',
+    documentUrl: '',
+    documentTitle: '',
     ...over,
   };
 }

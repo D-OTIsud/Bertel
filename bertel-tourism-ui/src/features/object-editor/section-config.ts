@@ -78,9 +78,8 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
     {
       group: 'Gestion',
       items: [
-        { num: '18', label: 'Fournisseur' },
+        { num: '18', label: 'Juridique' },
         { num: '19', label: 'Suivi prestataire' },
-        { num: '20', label: 'Distribution' },
         { num: '21', label: 'Publication' },
         { num: '22', label: 'Identifiants externes' },
       ],

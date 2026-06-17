@@ -309,4 +309,33 @@ describe('SectionContacts — §48 contact flags', () => {
 
     expect(result.current.dirtySections.contacts).toBe(false);
   });
+
+  it('renders the §90 web channels group with its kind catalog', () => {
+    const { result } = renderHook(() =>
+      useObjectEditorState('o1', modulesWithContacts({
+        webItems: [
+          { id: 'w1', kindId: 'wk1', kindCode: 'facebook', kindLabel: 'Facebook', kindDomain: 'social_network', value: 'https://facebook.com/x', isPublic: true, position: '0' },
+        ],
+      })),
+    );
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(/Réseaux sociaux\s*&\s*distribution/i)).toBeInTheDocument();
+    const webSelect = screen.getByRole('combobox', { name: 'Type de réseau ou canal' });
+    const labels = within(webSelect).getAllByRole('option').map((option) => option.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['Facebook', 'Instagram', 'Booking.com']));
+  });
+
+  it('adds an editable web channel row (§90)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts({ webItems: [] })));
+    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Type de réseau ou canal' })).not.toBeInTheDocument();
+    act(() => { fireEvent.click(screen.getByRole('button', { name: '+ Ajouter un réseau ou canal' })); });
+    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByRole('combobox', { name: 'Type de réseau ou canal' })).toBeInTheDocument();
+    expect(result.current.draft.contacts.webItems).toHaveLength(1);
+    expect(result.current.dirtySections.contacts).toBe(true);
+  });
 });

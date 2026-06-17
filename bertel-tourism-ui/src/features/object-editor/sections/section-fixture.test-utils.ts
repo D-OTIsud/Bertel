@@ -115,6 +115,12 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         { id: 'r1', code: 'accueil', label: 'Accueil' },
         { id: 'r2', code: 'reservation', label: 'Réservation' },
       ],
+      webItems: [],
+      webKindOptions: [
+        { id: 'wk1', code: 'facebook', label: 'Facebook' },
+        { id: 'wk2', code: 'instagram', label: 'Instagram' },
+        { id: 'wk3', code: 'booking', label: 'Booking.com' },
+      ],
       relatedActorContactsCount: 0,
       relatedOrganizationContactsCount: 0,
     },

@@ -56,7 +56,11 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
  ('contact_kind','wechat','WeChat','Identifiant WeChat pour la clientèle asiatique'),
  ('contact_kind','line','LINE','Identifiant LINE'),
  ('contact_kind','viber','Viber','Contact Viber'),
- ('contact_kind','telegram','Telegram','Compte Telegram pour les notifications')
+ ('contact_kind','telegram','Telegram','Compte Telegram pour les notifications'),
+ -- 'address' : adresse postale d'un acteur/prestataire — authoring §19 via actor_channel
+ -- (migration_actor_address_kind.sql, manifest 14b). ref_code_contact_kind est une partition
+ -- de ref_code, donc cet INSERT alimente le partition (FK actor_channel.kind_id satisfaite).
+ ('contact_kind','address','Adresse','Adresse postale du prestataire / de l''acteur')
 ON CONFLICT DO NOTHING;
 
 -- Réseaux sociaux clés pour la promotion touristique
@@ -107,6 +111,18 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
  ('media_type','webcam','Webcam','Flux webcam en direct'),
  ('media_type','logo','Logo','Logotypes officiels'),
  ('media_type','press_kit','Dossier de presse','Dossiers médias et communiqués')
+ON CONFLICT DO NOTHING;
+
+-- §17 — adhésions OTI : vocabulaire socle (campagnes + paliers, charte gratuite incluse).
+-- L'utilisateur en crée d'autres à la volée via api.create_membership_campaign / _tier.
+INSERT INTO ref_code (domain, code, name, position) VALUES
+ ('membership_campaign','adhesion_2025','Adhésion 2025',1),
+ ('membership_campaign','adhesion_2026','Adhésion 2026',2),
+ ('membership_campaign','charte','Charte d''engagement',3),
+ ('membership_tier','membre','Membre',1),
+ ('membership_tier','membre_premium','Membre Premium',2),
+ ('membership_tier','partenaire','Partenaire',3),
+ ('membership_tier','charte_gratuit','Charte (gratuit)',4)
 ON CONFLICT DO NOTHING;
 
 -- Tags de médias (catégorisation multi-dimensionnelle)
@@ -1329,6 +1345,7 @@ WITH ref_code_translations(domain, code, name_en, name_es, description_en, descr
     ('contact_kind','line','LINE','LINE','LINE ID','Identificador de LINE'),
     ('contact_kind','viber','Viber','Viber','Viber contact','Contacto de Viber'),
     ('contact_kind','telegram','Telegram','Telegram','Telegram account for notifications','Cuenta de Telegram para notificaciones'),
+    -- NB: 'address' contact_kind (manifest 14b) has FR only for now — EN/ES joins the deferred i18n backlog.
     ('social_network','facebook','Facebook','Facebook','Official Facebook page','Página oficial de Facebook'),
     ('social_network','instagram','Instagram','Instagram','Instagram profile','Perfil de Instagram'),
     ('social_network','youtube','YouTube','YouTube','Destination YouTube channel','Canal de YouTube del destino'),

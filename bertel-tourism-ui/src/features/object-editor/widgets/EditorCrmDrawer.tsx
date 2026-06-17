@@ -16,11 +16,14 @@ export function EditorCrmDrawer({
   canWrite,
   open,
   onClose,
+  initialActorId = null,
 }: {
   objectId: string;
   canWrite: boolean;
   open: boolean;
   onClose: () => void;
+  /** Ouvre le tiroir directement sur la fiche de cet acteur (carte prestataire §19). */
+  initialActorId?: string | null;
 }) {
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
@@ -53,7 +56,13 @@ export function EditorCrmDrawer({
               </div>
             </div>
             <div className="drawer__content">
-              <CrmEstablishmentPanel objectId={objectId} canWrite={canWrite} onClose={onClose} />
+              <CrmEstablishmentPanel
+                key={initialActorId ?? 'object'}
+                objectId={objectId}
+                canWrite={canWrite}
+                onClose={onClose}
+                initialActorId={initialActorId}
+              />
             </div>
           </div>
         </div>

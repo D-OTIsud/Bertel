@@ -1045,6 +1045,43 @@ export function parseContacts(raw: Record<string, unknown>): ContactItem[] {
     });
 }
 
+/**
+ * §90 — object-scoped réseaux sociaux + distribution (raw.web_channels from
+ * api.get_object_resource). Mirrors parseContacts: public rows only, platform identity
+ * (name + favicon) resolved from the value. Renders as a dedicated drawer section.
+ */
+export function parseWebChannels(raw: Record<string, unknown>): ContactItem[] {
+  return readArray(raw.web_channels)
+    .map<ContactItem | null>((channel, index) => {
+      const kindCode = readString(channel.kind_code).toLowerCase();
+      const kindLabel = readString(channel.kind_name, kindCode || 'Présence web');
+      const value = readString(channel.value);
+      const isPublic = readBoolean(channel.is_public) !== false;
+      if (!isPublic || !value) {
+        return null;
+      }
+      const platform = resolveWebPlatform(value);
+      return {
+        id: readString(channel.id, `web-${index}`),
+        label: kindLabel,
+        kind: kindLabel,
+        kindCode,
+        value,
+        displayValue: platform ? platform.displayName : value,
+        href: buildContactHref(kindCode, value),
+        iconUrl: platform?.faviconUrl ?? readString(channel.icon_url),
+        isPrimary: false,
+        isPublic,
+        position: readInteger(channel.position),
+        source: 'object',
+        sourceName: readString(raw.name, 'Lieu'),
+        visibility: readString(channel.visibility),
+      };
+    })
+    .filter((item): item is ContactItem => item !== null)
+    .sort((left, right) => (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER));
+}
+
 export function parseActors(raw: Record<string, unknown>): ActorItem[] {
   return readArray(raw.actors).map((actor, index) => ({
     id: readString(actor.id, `actor-${index}`),

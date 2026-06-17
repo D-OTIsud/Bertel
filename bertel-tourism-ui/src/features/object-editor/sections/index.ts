@@ -17,4 +17,5 @@ export { SectionSync } from './SectionSync';
 export { SectionTags } from './SectionTags';
 export { SectionSustainability } from './SectionSustainability';
 export { SectionProvider } from './SectionProvider';
+export { SectionLegal } from './SectionLegal';
 export { SectionDistribution } from './SectionDistribution';

@@ -10,14 +10,13 @@ import {
   SectionContacts,
   SectionCrm,
   SectionDescriptions,
-  SectionDistribution,
   SectionIdentity,
+  SectionLegal,
   SectionLocation,
   SectionMedia,
   SectionOpenings,
   SectionPlaces,
   SectionPricing,
-  SectionProvider,
   SectionPublication,
   SectionRelations,
   SectionSustainability,
@@ -55,9 +54,12 @@ export const SECTION_COMPONENTS: Record<string, ComponentType<SectionProps>> = {
   '15': SectionRelations,
   '16': SectionPlaces,
   '17': SectionAttachments,
-  '18': SectionProvider,
+  '18': SectionLegal,
   '19': SectionCrm,
-  '20': SectionDistribution,
+  // §90 — §20 « Distribution & réseaux sociaux » retired: it projected the OPERATOR actor's
+  // actor_channel (which cannot hold social/distribution kinds ⇒ always empty). Réseaux sociaux
+  // + distribution now live on the OBJECT in §03 (object_web_channel). SectionDistribution.tsx
+  // is dead (kept for the PO to remove).
   '21': SectionPublication,
   '22': SectionSync,
 };

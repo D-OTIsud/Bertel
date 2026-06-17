@@ -606,6 +606,24 @@
 .object-editor .lang-level-grid { display: flex; flex-direction: column; gap: 8px; }
 .object-editor .lang-level-grid__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .object-editor .lang-level-grid__name { font-size: 14px; color: var(--ink-1); }
+.object-editor .lang-level-grid__act { display: flex; align-items: center; gap: 6px; }
+/* The row the level modal was opened from (chip click) gets a highlight ring. */
+.object-editor .lang-level-grid__row.is-focus {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px;
+}
+/* §04 language chips: clickable body (opens the level modal) + a trailing remove « × ». */
+.object-editor .lang-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.object-editor .lang-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.object-editor .lang-chip { display: inline-flex; align-items: stretch; }
+.object-editor .lang-chip__del {
+  display: inline-grid; place-items: center;
+  width: 22px; margin-left: 2px;
+  border: 0; border-radius: 6px;
+  color: var(--ink-3); background: transparent;
+  font-size: 15px; line-height: 1; cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.object-editor .lang-chip__del:hover { color: var(--red); background: rgba(200, 92, 72, 0.10); }
 /* Policy summary: compact « value · value » readout + inline « Modifier » link (button → modal). */
 .object-editor .policy-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
 .object-editor .btn-link { background: none; border: 0; padding: 0; color: var(--acc); font-size: 12px; cursor: pointer; text-decoration: underline; }

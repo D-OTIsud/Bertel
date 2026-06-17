@@ -27,6 +27,7 @@ function baseModule(): ObjectWorkspaceCapacityPoliciesModule {
     capacityItems: [],
     groupPolicy: { minSize: '', maxSize: '', groupOnly: false, notes: '' },
     petPolicy: { accepted: false, conditions: '' },
+    stayPolicy: { checkInFrom: '', checkInUntil: '', checkOutUntil: '', conditions: '' },
     unavailableReason: null,
   };
 }

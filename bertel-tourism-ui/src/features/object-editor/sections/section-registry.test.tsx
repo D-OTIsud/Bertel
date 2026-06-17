@@ -8,9 +8,10 @@ import { getRegisteredSections } from './section-registry';
 
 describe('section registry', () => {
   it('returns the full ordered section list by archetype', () => {
-    expect(getRegisteredSections('HEB')).toHaveLength(19);
-    expect(getRegisteredSections('ITI')).toHaveLength(21);
-    expect(getRegisteredSections('RES')).toHaveLength(20);
+    // §90: §20 « Distribution & réseaux sociaux » retired (réseaux/distribution moved to §03).
+    expect(getRegisteredSections('HEB')).toHaveLength(18);
+    expect(getRegisteredSections('ITI')).toHaveLength(20);
+    expect(getRegisteredSections('RES')).toHaveLength(19);
   });
 
   it('omits §07 for HEB (capacity merged into §06) but keeps it elsewhere', () => {

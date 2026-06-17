@@ -944,6 +944,98 @@ export async function listObjectContactSuggestions(objectId: string): Promise<Ob
     : [];
 }
 
+/* ===== Adresses des établissements rattachés (§19 — suggestions adresse acteur) ====
+   Pour proposer, dans la fiche prestataire, les adresses des objets auxquels l'acteur est
+   rattaché. Lecture directe object_location (schéma public, sous RLS read), fail-soft → []. */
+
+export interface ObjectAddressSuggestion {
+  objectId: string;
+  objectName: string;
+  address: string;
+}
+
+/** Compose une adresse postale lisible depuis une ligne object_location (parties vides ignorées). */
+export function formatLocationAddress(record: {
+  address1?: string | null;
+  address1_suite?: string | null;
+  address2?: string | null;
+  address3?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  lieu_dit?: string | null;
+}): string {
+  const clean = (value: string | null | undefined) => (value ?? '').trim();
+  const street = [record.address1, record.address1_suite, record.address2].map(clean).filter(Boolean).join(' ');
+  const cityLine = [clean(record.postcode), clean(record.city)].filter(Boolean).join(' ');
+  return [street, clean(record.address3), clean(record.lieu_dit), cityLine].filter(Boolean).join(', ');
+}
+
+/**
+ * Adresses (principale par objet) des établissements rattachés — suggestions pour l'éditeur
+ * d'adresses acteur (§19). Fail-soft : démo / pas de client / erreur RLS → [] (le bloc se masque).
+ */
+export async function listObjectAddresses(
+  objects: Array<{ objectId: string; objectName: string }>,
+): Promise<ObjectAddressSuggestion[]> {
+  if (objects.length === 0) {
+    return [];
+  }
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return [];
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return [];
+  }
+  const ids = [...new Set(objects.map((object) => object.objectId))];
+  const { data, error } = await client
+    .from('object_location')
+    .select('object_id, address1, address1_suite, address2, address3, postcode, city, lieu_dit, is_main_location, position')
+    .in('object_id', ids);
+  if (error) {
+    return [];
+  }
+
+  // Garde la ligne « principale » par objet (is_main_location, puis position la plus basse).
+  const byObject = new Map<string, GenericRecord>();
+  for (const row of (data ?? []) as GenericRecord[]) {
+    const objectId = readString(row.object_id);
+    if (!objectId) continue;
+    const existing = byObject.get(objectId);
+    if (!existing) {
+      byObject.set(objectId, row);
+      continue;
+    }
+    const rowMain = row.is_main_location === true;
+    const existingMain = existing.is_main_location === true;
+    const better =
+      (rowMain && !existingMain) ||
+      (rowMain === existingMain && Number(row.position ?? 0) < Number(existing.position ?? 0));
+    if (better) {
+      byObject.set(objectId, row);
+    }
+  }
+
+  const nameById = new Map(objects.map((object) => [object.objectId, object.objectName]));
+  const result: ObjectAddressSuggestion[] = [];
+  for (const [objectId, row] of byObject) {
+    const address = formatLocationAddress({
+      address1: readString(row.address1) || null,
+      address1_suite: readString(row.address1_suite) || null,
+      address2: readString(row.address2) || null,
+      address3: readString(row.address3) || null,
+      postcode: readString(row.postcode) || null,
+      city: readString(row.city) || null,
+      lieu_dit: readString(row.lieu_dit) || null,
+    });
+    if (address) {
+      result.push({ objectId, objectName: nameById.get(objectId) ?? objectId, address });
+    }
+  }
+  return result;
+}
+
 /* ===== Upload portrait acteur (PO point 4) ======================================
    Mêmes invariants que le pipeline média (CLAUDE.md) : la route /api/actor-photo/upload
    est le SEUL écrivain (autorise as-the-caller via user_can_write_crm_actor, strippe l'EXIF,

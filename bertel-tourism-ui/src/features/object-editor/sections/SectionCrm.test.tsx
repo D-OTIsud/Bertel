@@ -39,15 +39,15 @@ describe('SectionCrm — §19 synthèse + tiroir', () => {
     expect(screen.getByText('Demande de visite')).toBeInTheDocument();
   });
 
-  it('le bouton « Ouvrir le suivi CRM » ouvre le tiroir', () => {
+  it('le bouton « Fiche CRM » d’une carte ouvre le tiroir sur cet acteur', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fixtureWithCrm()));
     render(<SectionCrm editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(screen.queryByTestId('crm-drawer')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /ouvrir le suivi crm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /fiche crm/i }));
     expect(screen.getByTestId('crm-drawer')).toBeInTheDocument();
   });
 
-  it('sans permission crm : bandeau lecture seule + raison, bouton actif, tiroir canWrite=false', () => {
+  it('sans permission crm : bandeau lecture seule + raison, le tiroir s’ouvre en canWrite=false', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fixtureWithCrm()));
     const noCrm = {
       ...allowAll,
@@ -55,16 +55,34 @@ describe('SectionCrm — §19 synthèse + tiroir', () => {
     };
     render(<SectionCrm editor={result.current} permissions={noCrm} objectId="o1" />);
     expect(screen.getByText(/Écrire des notes CRM/)).toBeInTheDocument();
-    const openBtn = screen.getByRole('button', { name: /ouvrir le suivi crm/i });
-    expect(openBtn).toBeEnabled();
-    fireEvent.click(openBtn);
+    fireEvent.click(screen.getByRole('button', { name: /fiche crm/i }));
     expect(screen.getByTestId('crm-drawer')).toHaveTextContent('drawer:o1:false');
   });
 
-  it('bouton désactivé quand objectId absent', () => {
+  it('aucune entrée vers le tiroir (bouton « Fiche CRM ») quand objectId absent', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fixtureWithCrm()));
     render(<SectionCrm editor={result.current} permissions={allowAll} />);
-    expect(screen.getByRole('button', { name: /ouvrir le suivi crm/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /fiche crm/i })).not.toBeInTheDocument();
+  });
+
+  it('badge de notification sur la carte du prestataire ayant des interactions en attente', () => {
+    const modules = fixtureWithCrm();
+    modules.providerFollowUp = {
+      ...modules.providerFollowUp,
+      interactions: [
+        ...modules.providerFollowUp.interactions, // a1 / status 'done' → ne compte pas
+        {
+          id: 'i2', interactionType: 'call', subject: 'Rappel en attente', body: null,
+          occurredAt: '2026-06-10T08:00:00Z', actorId: 'a1', actorName: 'Marie Guide',
+          topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
+          ownerName: null, source: null, interlocutorEmail: null,
+          status: 'planned', resolvedAt: null, replies: [],
+        },
+      ],
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionCrm editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.getByLabelText(/1 interaction\(s\) en attente avec Marie Guide/i)).toBeInTheDocument();
   });
 
   it('affiche la raison d indisponibilité quand le module n est pas chargé', () => {

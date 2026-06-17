@@ -20,6 +20,8 @@ import {
   type SectionCompletion,
 } from './editor-completion';
 import { validateForPublication, type Issue } from './editor-validation';
+import { saveResultToIssues, publishErrorToIssue } from './save-issues';
+import { BlockersModal } from './widgets/BlockersModal';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
@@ -138,6 +140,9 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [mode, setMode] = useState<EditorMode>('complet');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [blockersModalOpen, setBlockersModalOpen] = useState(false);
+  const [modalContext, setModalContext] = useState<'publish' | 'save'>('publish');
+  const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
 
   const groups = useMemo(() => makeSections(meta.archetype), [meta.archetype]);
   const navItems = useMemo(() => flattenSectionItems(groups), [groups]);
@@ -172,14 +177,18 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     [validation.blockers, validation.warnings],
   );
   const historyItems = useMemo(() => buildHistoryItems(editor.draft), [editor.draft]);
+  const sectionLabels = useMemo(
+    () => Object.fromEntries(navItems.map((item) => [item.num, item.label])),
+    [navItems],
+  );
 
   /** Persist local draft modules to the database (shared by publish and draft-save). */
-  async function persistDirtyModules(): Promise<boolean> {
+  async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[] }> {
     const dirty = (Object.keys(editor.dirtySections) as WorkspaceModuleId[]).filter(
       (m) => editor.dirtySections[m],
     );
     if (dirty.length === 0) {
-      return true;
+      return { ok: true, saveErrors: [] };
     }
 
     const result = await save(dirty, resource.permissions, editor.draft);
@@ -187,20 +196,20 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       result.saved.flatMap((m) => (m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]])),
     );
 
+    const issues = saveResultToIssues(result);
     if (result.failed.length > 0) {
-      // §48 — surface the first failure reason (e.g. a pre-save discount validation error)
-      // instead of an opaque count, so the user can act on it from the save bar.
+      // §48 — keep the terse save-bar message; the modal carries the full per-section detail.
       setStatusMessage(`${result.failed.length} section(s) en échec : ${result.failed[0].message}`);
-      return false;
+      return { ok: false, saveErrors: issues };
     }
     if (result.blocked.length > 0) {
       setStatusMessage(
         `${result.saved.length} section(s) enregistrée(s), ${result.blocked.length} bloquée(s).`,
       );
-      return false;
+      return { ok: false, saveErrors: issues };
     }
 
-    return true;
+    return { ok: true, saveErrors: [] };
   }
 
   /** Persist work-in-progress without publishing and without the blocker gate. */
@@ -208,9 +217,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     setStatusMessage(null);
     setSavingDraft(true);
     try {
-      const ok = await persistDirtyModules();
+      const { ok, saveErrors: errors } = await persistDirtyModules();
       if (ok) {
         setStatusMessage('Brouillon enregistré.');
+      } else {
+        setSaveErrors(errors);
+        setModalContext('save');
+        setBlockersModalOpen(true);
       }
     } finally {
       setSavingDraft(false);
@@ -219,17 +232,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
   async function handlePublish() {
     if (validation.blockers.length > 0) {
-      const first = validation.blockers[0];
+      setSaveErrors([]);
+      setModalContext('publish');
+      setBlockersModalOpen(true);
       setStatusMessage(`${validation.blockers.length} blocage(s) empêchent la publication.`);
-      if (first) {
-        scrollToSection(first.section);
-      }
       return;
     }
 
     setStatusMessage(null);
-    const persisted = await persistDirtyModules();
-    if (!persisted) {
+    const { ok, saveErrors: errors } = await persistDirtyModules();
+    if (!ok) {
+      setSaveErrors(errors);
+      setModalContext('save');
+      setBlockersModalOpen(true);
       return;
     }
 
@@ -238,8 +253,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       editor.setSavedStatus('published');
       setStatusMessage('Fiche enregistrée et publiée.');
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Publication impossible.');
+      const issue = publishErrorToIssue(error);
+      setSaveErrors([issue]);
+      setModalContext('save');
+      setBlockersModalOpen(true);
+      setStatusMessage(issue.message);
     }
+  }
+
+  /** Open the explanatory modal from the topbar validation chip. */
+  function showBlockers() {
+    setSaveErrors([]);
+    setModalContext('publish');
+    setBlockersModalOpen(true);
   }
 
   function exitToExplorer() {
@@ -273,13 +299,15 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         publishing={publishObject.isPending}
         saving={saving}
         savingDraft={savingDraft}
-        publishDisabled={validation.blockers.length > 0}
         statusMessage={statusMessage}
         onModeChange={setMode}
         onPreview={openPreviewDrawer}
         onCancel={exitToExplorer}
         onPublish={() => void handlePublish()}
         onSaveDraft={() => void handleSaveDraft()}
+        onShowBlockers={
+          validation.blockers.length > 0 || validation.warnings.length > 0 ? showBlockers : undefined
+        }
       />
       <div className="edit-body">
         <EditorNav groups={groups} activeNum={activeNum} sectionState={navSectionState} onSelect={scrollToSection} />
@@ -306,6 +334,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           onGoToSection={scrollToSection}
         />
       </div>
+      <BlockersModal
+        open={blockersModalOpen}
+        onClose={() => setBlockersModalOpen(false)}
+        context={modalContext}
+        requiredBlockers={validation.blockers}
+        saveErrors={saveErrors}
+        warnings={validation.warnings}
+        sectionLabels={sectionLabels}
+        onGoToSection={(num) => {
+          scrollToSection(num);
+          setBlockersModalOpen(false);
+        }}
+      />
     </div>
   );
 }

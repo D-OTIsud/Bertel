@@ -40,6 +40,8 @@ import {
   saveObjectWorkspaceSustainability,
   saveObjectWorkspaceTags,
   saveObjectWorkspaceTaxonomy,
+  upsertObjectExternalId,
+  deleteObjectExternalId,
 } from '../services/object-workspace';
 import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
@@ -377,6 +379,54 @@ export function useSetObjectStatusMutation(objectId: string | null) {
       }
 
       return setObjectStatus(objectId, status);
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
+  });
+}
+
+export function useUpsertExternalIdMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { sourceSystem: string; externalId: string; lastSyncedAt: string | null }) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour enregistrer l'identifiant externe.");
+      }
+
+      return upsertObjectExternalId({ objectId, ...input });
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteExternalIdMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour supprimer l'identifiant externe.");
+      }
+
+      return deleteObjectExternalId(id);
     },
     onSuccess: async () => {
       if (!objectId) {

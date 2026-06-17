@@ -51,25 +51,42 @@ describe('ProviderCards — §19 prestataire authoring', () => {
     expect(screen.getByText('Prestataires rattachés')).toBeInTheDocument();
   });
 
-  it('changes a prestataire role through onChange', () => {
+  it('changes a prestataire role through the edit modal', () => {
     const onChange = jest.fn();
     render(<ProviderCards relationships={relationships()} canWrite onChange={onChange} />);
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Marie Guide/ })); });
     act(() => {
       fireEvent.change(screen.getByLabelText('Rôle de Marie Guide'), { target: { value: 'guide' } });
     });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0][0]).toMatchObject({ roleCode: 'guide', roleId: 'guide', roleLabel: 'Guide' });
   });
 
-  it('detaches a prestataire through onChange', () => {
+  it('detaches a prestataire only after confirming in the dialog', () => {
+    const onChange = jest.fn();
+    render(<ProviderCards relationships={relationships()} canWrite onChange={onChange} />);
+
+    // The card button opens the confirm; it does NOT detach immediately.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Détacher Marie Guide/ })); });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText(/Voulez-vous vraiment détacher/)).toBeInTheDocument();
+
+    // Confirm button (exact "Détacher") performs the detach.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Détacher' })); });
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it('does not detach when the confirm dialog is cancelled', () => {
     const onChange = jest.fn();
     render(<ProviderCards relationships={relationships()} canWrite onChange={onChange} />);
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Détacher Marie Guide/ })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Annuler' })); });
 
-    expect(onChange).toHaveBeenCalledWith([]);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('attaches a prestataire from the search modal, primary when first for that role', () => {

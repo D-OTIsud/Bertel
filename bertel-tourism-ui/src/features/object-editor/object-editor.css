@@ -586,9 +586,57 @@
   background: var(--bg-tint); gap: 4px;
 }
 .object-editor .stat-card__label {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
   font-size: 10px; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink-4);
+}
+/* KPI info affordance + hover/focus popover (e.g. the sujets behind "Sujets distincts"). */
+.object-editor .stat-card__info {
+  position: relative;
+  display: inline-grid; place-items: center;
+  width: 18px; height: 18px; flex: none;
+  border-radius: 6px;
+  color: var(--ink-4);
+  cursor: help;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.object-editor .stat-card__info:hover,
+.object-editor .stat-card__info:focus-visible {
+  outline: 0;
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+}
+.object-editor .stat-card__pop {
+  position: absolute; bottom: calc(100% + 8px); right: -6px; z-index: 30;
+  width: max-content; max-width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(20, 22, 28, 0.18);
+  text-transform: none; letter-spacing: normal;
+  font-weight: 500; color: var(--ink-2);
+  opacity: 0; transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.object-editor .stat-card__info:hover .stat-card__pop,
+.object-editor .stat-card__info:focus-within .stat-card__pop,
+.object-editor .stat-card__info:focus-visible .stat-card__pop {
+  opacity: 1; transform: translateY(0);
+}
+.object-editor .stat-card__pop-title {
+  display: block; margin-bottom: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.object-editor .stat-card__pop-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.object-editor .stat-card__pop-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; }
+.object-editor .stat-card__pop-count {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--ink-3); background: var(--bg-tint);
+  padding: 1px 7px; border-radius: 999px;
 }
 .object-editor .stat-card__row {
   display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px;
@@ -2342,3 +2390,146 @@
 .md-editor__btn:disabled { opacity: 0.4; cursor: default; }
 .md-editor__content { min-height: 220px; padding: 12px 14px; outline: none; }
 .md-editor__content:focus { outline: none; }
+
+/* ============================================================================
+   §19 Suivi prestataire — provider cards, CRM CTA, confirm dialog
+   ========================================================================== */
+
+/* Read-only / empty notices */
+.object-editor .provider-readonly {
+  font-size: 12px; color: var(--ink-4); margin: 0 0 8px;
+}
+.object-editor .provider-readonly strong { color: var(--ink-3); }
+.object-editor .provider-empty { font-size: 12px; color: var(--ink-4); margin: 0; }
+
+/* Card grid — auto-fit so cards sit side by side on wide editors, stack when narrow. */
+.object-editor .provider-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.object-editor .provider-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.object-editor .provider-card:hover {
+  border-color: var(--line);
+  box-shadow: 0 2px 10px rgba(20, 22, 28, 0.05);
+}
+.object-editor .provider-card__head { display: flex; align-items: flex-start; gap: 11px; }
+.object-editor .provider-card__avatar {
+  width: 36px; height: 36px; flex: none;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+}
+.object-editor .provider-card__id { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.object-editor .provider-card__name {
+  font-size: 14px; font-weight: 650; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .provider-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.object-editor .provider-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+  color: var(--ink-2); background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+}
+.object-editor .provider-badge--primary {
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+  border-color: transparent;
+}
+.object-editor .provider-badge--primary svg { color: var(--accent); }
+.object-editor .provider-badge--vis { color: var(--ink-3); }
+.object-editor .provider-card__note {
+  margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
+  padding-left: 11px; border-left: 2px solid var(--line-soft);
+}
+.object-editor .provider-card__actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding-top: 9px; margin-top: 1px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .provider-act {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.object-editor .provider-act:hover { background: var(--surface-2); color: var(--ink); }
+.object-editor .provider-act:focus-visible {
+  outline: 0; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .provider-act svg { color: var(--ink-4); }
+.object-editor .provider-act:hover svg { color: inherit; }
+.object-editor .provider-act--danger { margin-left: auto; }
+.object-editor .provider-act--danger:hover {
+  color: var(--red); border-color: var(--red);
+  background: rgba(200, 92, 72, 0.08);
+}
+.object-editor .provider-act--danger:hover svg { color: var(--red); }
+
+/* Provider edit modal — role + visibility side by side. */
+.object-editor .provider-modal__grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+/* Confirm dialog message */
+.object-editor .confirm-dialog__message {
+  margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2);
+}
+
+/* Danger button (confirm-destructive) */
+.object-editor .btn.danger {
+  background: var(--red); border-color: var(--red); color: #fff;
+}
+.object-editor .btn.danger:hover { filter: brightness(1.05); }
+
+/* "Ouvrir le suivi CRM" — a distinct open/navigate CTA, NOT an "+ add" affordance. */
+.object-editor .crm-open-row { margin-top: 4px; }
+.object-editor .crm-open-cta {
+  display: inline-flex; align-items: center; gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--surface), var(--bg-tint));
+  color: var(--ink);
+  cursor: pointer; text-align: left;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.04s ease;
+}
+.object-editor .crm-open-cta:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(20, 22, 28, 0.08);
+}
+.object-editor .crm-open-cta:active { transform: translateY(1px); }
+.object-editor .crm-open-cta:focus-visible {
+  outline: 0; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .crm-open-cta:disabled {
+  opacity: 0.55; cursor: not-allowed;
+  background: var(--bg-tint); box-shadow: none; border-color: var(--line-soft);
+}
+.object-editor .crm-open-cta > svg { color: var(--accent); flex: none; }
+.object-editor .crm-open-cta__text { display: flex; flex-direction: column; gap: 1px; }
+.object-editor .crm-open-cta__text { font-size: 13.5px; font-weight: 650; }
+.object-editor .crm-open-cta__text small { font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
+.object-editor .crm-open-cta__count {
+  margin-left: 4px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: #fff; background: var(--accent);
+  padding: 2px 8px; border-radius: 999px;
+}

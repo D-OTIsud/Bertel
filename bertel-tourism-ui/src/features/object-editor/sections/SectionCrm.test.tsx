@@ -29,11 +29,14 @@ function fixtureWithCrm() {
 }
 
 describe('SectionCrm — §19 synthèse + tiroir', () => {
-  it('rend les KPIs et la distribution de sujets depuis providerFollowUp', () => {
+  it('rend les KPIs et la distribution de sujets (tooltip du KPI « Sujets distincts »)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fixtureWithCrm()));
     render(<SectionCrm editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(screen.getByText('Interactions totales')).toBeInTheDocument();
-    expect(screen.getByText('Demande de visite — 1')).toBeInTheDocument();
+    expect(screen.getByText('Sujets distincts')).toBeInTheDocument();
+    // La distribution de sujets vit désormais dans le tooltip du KPI (présente dans le DOM).
+    expect(screen.getByText('Sujets abordés')).toBeInTheDocument();
+    expect(screen.getByText('Demande de visite')).toBeInTheDocument();
   });
 
   it('le bouton « Ouvrir le suivi CRM » ouvre le tiroir', () => {

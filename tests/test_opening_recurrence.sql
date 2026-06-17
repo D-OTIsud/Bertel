@@ -46,6 +46,16 @@ BEGIN
     {"is_closure":true,"all_years":false,"date_start":"2025-06-01","date_end":"2025-06-10"},
     {"is_closure":true,"all_years":false,"date_start":"2025-06-05","date_end":"2025-06-15"}
   ]'::jsonb);
+  -- Garde : deux fenêtres IDENTIQUES de même couche = conflit (la stricte containment seule est tolérée)
+  IF NOT api.periods_partial_overlap(true,'2000-05-01','2000-09-30','2000-05-01','2000-09-30') THEN RAISE EXCEPTION 'overlap: identical windows not flagged'; END IF;
+  BEGIN
+    PERFORM api.assert_no_period_overlap('[
+      {"all_years":true,"date_start":"2000-05-01","date_end":"2000-09-30"},
+      {"all_years":true,"date_start":"2000-05-01","date_end":"2000-09-30"}
+    ]'::jsonb);
+    RAISE EXCEPTION 'guard: identical windows were not rejected';
+  EXCEPTION WHEN sqlstate '23514' THEN NULL; -- attendu
+  END;
 
   -- Type « Annuelle » retiré ; colonne is_closure présente
   IF EXISTS (SELECT 1 FROM ref_code WHERE domain='opening_period_type' AND code='year_round') THEN RAISE EXCEPTION 'year_round not retired'; END IF;

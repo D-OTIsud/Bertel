@@ -156,7 +156,7 @@ AS $$
   SELECT CASE
     WHEN p_date_start IS NULL OR p_date_end IS NULL THEN 100000
     WHEN COALESCE(p_all_years, FALSE) THEN
-      -- jour de l'année (sur 2000, bissextile) ; wrap → +366
+      -- jour-de-l'an approx. mois*31+jour (monotone) ; wrap → +372 (= 12*31)
       ((to_char(p_date_end,'MM')::int - 1) * 31 + to_char(p_date_end,'DD')::int)
       - ((to_char(p_date_start,'MM')::int - 1) * 31 + to_char(p_date_start,'DD')::int)
       + CASE WHEN to_char(p_date_end,'MMDD') < to_char(p_date_start,'MMDD') THEN 372 ELSE 0 END

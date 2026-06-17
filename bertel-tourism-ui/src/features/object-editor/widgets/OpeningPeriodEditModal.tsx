@@ -228,7 +228,10 @@ export function OpeningPeriodEditModal({
         </p>
       )}
 
-      <Field label="Horaires hebdomadaires" hint="Cliquez un jour pour l’ouvrir, puis saisissez les plages.">
+      <Field
+        label="Horaires hebdomadaires"
+        hint="Cliquez un jour pour l’ouvrir, puis saisissez les plages. Laissez les heures vides = ouvert sans horaire précis (ex. hôtel, location)."
+      >
         <ScheduleEditor
           rows={scheduleRowsFromPeriod(draft)}
           colA="Plage 1"

@@ -4306,6 +4306,9 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
 export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
   return periods.map((period, periodIndex) => {
     const openTimePeriods = period.weekdays
+      // Only days the user opened persist; closed days are omitted (the read won't surface them).
+      // An open day with no time frames => open WITHOUT fixed hours (round-trips as closed:false + []).
+      .filter((weekday) => weekday.slots.length > 0)
       .map((weekday) => {
         const frames = weekday.slots
           .map((slot) => ({

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
-import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation } from '../../hooks/useExplorerQueries';
+import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { getArchetypeMeta, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
@@ -22,6 +22,7 @@ import {
 import { validateForPublication, type Issue } from './editor-validation';
 import { saveResultToIssues, publishErrorToIssue } from './save-issues';
 import { BlockersModal } from './widgets/BlockersModal';
+import { VersionHistoryModal } from './widgets/VersionHistoryModal';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
@@ -149,6 +150,27 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const setObjectStatus = useSetObjectStatusMutation(objectId);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
 
+  const versionsQuery = useObjectVersionsQuery(objectId);
+  const restoreVersion = useRestoreObjectVersionMutation(objectId);
+  const [versionsModalOpen, setVersionsModalOpen] = useState(false);
+
+  // Real current version = the highest version_number from the history (the parser does not expose
+  // object.current_version). null while loading ⇒ the nav badge stays "Bientôt disponible" (no fake v12).
+  const currentVersion =
+    versionsQuery.data && versionsQuery.data.length > 0
+      ? Math.max(...versionsQuery.data.map((v) => v.versionNumber))
+      : null;
+
+  async function handleRestoreVersion(versionNumber: number) {
+    try {
+      await restoreVersion.mutateAsync(versionNumber);
+      setVersionsModalOpen(false);
+      setStatusMessage(`Version v${versionNumber} restaurée — une nouvelle version a été créée.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Restauration impossible.');
+    }
+  }
+
   const lifecycleStatus = editor.draft.generalInfo.status || editor.draft.publication.status || 'draft';
   const lifecyclePublishedAt = editor.draft.publication.publishedAt || editor.draft.generalInfo.publishedAt || '';
   const isArchived = lifecycleStatus === 'archived';
@@ -159,15 +181,18 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         status: lifecycleStatus,
         canArchive: resource.permissions.publication.canDirectWrite,
         archiveDisabledReason: resource.permissions.publication.disabledReason,
+        currentVersion,
       }),
-    [lifecycleStatus, resource.permissions.publication.canDirectWrite, resource.permissions.publication.disabledReason],
+    [lifecycleStatus, resource.permissions.publication.canDirectWrite, resource.permissions.publication.disabledReason, currentVersion],
   );
 
   function handleToolSelect(key: EditorToolKey) {
     if (key === 'archive') {
       setArchiveConfirmOpen(true);
+    } else if (key === 'versions') {
+      setVersionsModalOpen(true);
     }
-    // 'versions' and 'import-export' are disabled in tranche B and never fire.
+    // 'import-export' is disabled in this tranche and never fires.
   }
 
   async function handleArchiveConfirm() {
@@ -382,6 +407,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           onGoToSection={scrollToSection}
         />
       </div>
+      <VersionHistoryModal
+        open={versionsModalOpen}
+        onClose={() => setVersionsModalOpen(false)}
+        objectId={objectId}
+        versions={versionsQuery.data ?? []}
+        isLoading={versionsQuery.isLoading}
+        canRestore={resource.permissions.publication.canDirectWrite}
+        restoreDisabledReason={
+          resource.permissions.publication.disabledReason ?? 'Vos droits ne permettent pas de restaurer une version.'
+        }
+        restoringVersion={restoreVersion.isPending ? (restoreVersion.variables ?? null) : null}
+        onRestore={(versionNumber) => void handleRestoreVersion(versionNumber)}
+      />
       <ConfirmDialog
         open={archiveConfirmOpen}
         title={isArchived ? 'Restaurer la fiche' : 'Archiver la fiche'}

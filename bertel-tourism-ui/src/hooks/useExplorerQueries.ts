@@ -43,6 +43,7 @@ import {
   upsertObjectExternalId,
   deleteObjectExternalId,
 } from '../services/object-workspace';
+import { getObjectVersions, restoreObjectVersion } from '../services/object-versions';
 import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
@@ -518,6 +519,38 @@ export function useDeleteObjectPrivateNoteMutation(objectId: string | null) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
         queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+      ]);
+    },
+  });
+}
+
+export function useObjectVersionsQuery(objectId: string | null) {
+  return useQuery({
+    queryKey: ['object-versions', objectId],
+    queryFn: () => getObjectVersions(objectId ?? ''),
+    enabled: Boolean(objectId),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useRestoreObjectVersionMutation(objectId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (versionNumber: number) => {
+      if (!objectId) {
+        throw new Error("Aucune fiche active pour restaurer une version.");
+      }
+      return restoreObjectVersion(objectId, versionNumber);
+    },
+    onSuccess: async () => {
+      if (!objectId) {
+        return;
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['object-versions', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
       ]);
     },
   });

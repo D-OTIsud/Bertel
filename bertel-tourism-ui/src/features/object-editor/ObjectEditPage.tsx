@@ -219,6 +219,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     try {
       const { ok, saveErrors: errors } = await persistDirtyModules();
       if (ok) {
+        setSaveErrors([]);
         setStatusMessage('Brouillon enregistré.');
       } else {
         setSaveErrors(errors);
@@ -251,6 +252,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     try {
       await publishObject.mutateAsync(true);
       editor.setSavedStatus('published');
+      setSaveErrors([]);
       setStatusMessage('Fiche enregistrée et publiée.');
     } catch (error) {
       const issue = publishErrorToIssue(error);

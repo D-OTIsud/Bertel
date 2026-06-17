@@ -13,13 +13,14 @@ describe('buildEditorTools', () => {
     expect(labels.some((l) => l.includes('dupliquer'))).toBe(false);
   });
 
-  it('keeps versions and import-export disabled with a "bientôt" reason (wired in later tranches)', () => {
+  it('keeps versions disabled with a "bientôt" reason but enables import-export (tranche E)', () => {
     const tools = buildEditorTools(base);
     const versions = tools.find((t) => t.key === 'versions')!;
     const io = tools.find((t) => t.key === 'import-export')!;
     expect(versions.disabled).toBe(true);
     expect(versions.disabledReason).toMatch(/bient/i);
-    expect(io.disabled).toBe(true);
+    expect(io.disabled).toBe(false);
+    expect(io.disabledReason).toBeUndefined();
     expect(versions.stat).toBeUndefined(); // no fake version number
   });
 

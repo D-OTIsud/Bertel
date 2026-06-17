@@ -120,7 +120,7 @@ BEGIN
     WITH np AS (
       SELECT
         row_number() OVER () AS idx,
-        api.opening_period_rank(false, COALESCE((e->>'all_years')::boolean,false),
+        api.opening_period_rank(COALESCE((e->>'is_closure')::boolean,false), COALESCE((e->>'all_years')::boolean,false),
                                 NULLIF(e->>'date_start','')::date, NULLIF(e->>'date_end','')::date) AS rank,
         COALESCE((e->>'all_years')::boolean,false) AS all_years,
         NULLIF(e->>'date_start','')::date AS ds,

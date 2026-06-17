@@ -1,8 +1,16 @@
 import type { ObjectWorkspaceOpeningPeriod } from '../../../../services/object-workspace-parser';
+import { decodeCyclicMonthDay } from '../opening-recurrence';
 
 export type OpeningPeriodKind = 'high' | 'low' | 'shut' | 'standard';
 
 const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+// Full French month names for recurrence-aware (cyclic) range labels — these print a
+// month, never the sentinel year (2000) that cyclic periods are stored under.
+const MONTHS_FULL = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+];
 
 export interface OpeningRibbonSegment {
   kind: OpeningPeriodKind;
@@ -28,9 +36,19 @@ export function periodKind(period: ObjectWorkspaceOpeningPeriod): OpeningPeriodK
 }
 
 export function formatPeriodRange(period: ObjectWorkspaceOpeningPeriod): string {
-  if (period.allYears && !period.startDate && !period.endDate) {
+  if (period.recurrence === 'always') {
     return 'Toute l’année';
   }
+  if (period.recurrence === 'cyclic') {
+    // Cyclic dates are stored in the sentinel year — render the month only, never the year.
+    if (!period.startDate || !period.endDate) {
+      return 'Dates non renseignées';
+    }
+    const s = decodeCyclicMonthDay(period.startDate);
+    const e = decodeCyclicMonthDay(period.endDate);
+    return `${MONTHS_FULL[s.month - 1]} → ${MONTHS_FULL[e.month - 1]}`;
+  }
+  // fixed: full calendar dates
   const start = formatShortDate(period.startDate);
   const end = formatShortDate(period.endDate);
   if (start && end) {
@@ -42,7 +60,7 @@ export function formatPeriodRange(period: ObjectWorkspaceOpeningPeriod): string 
   if (end) {
     return `Jusqu’au ${end}`;
   }
-  return period.bucket === 'next-year' ? 'Année suivante' : 'Dates non renseignées';
+  return 'Dates non renseignées';
 }
 
 export function periodWeekSummary(period: ObjectWorkspaceOpeningPeriod): string {
@@ -123,8 +141,9 @@ export function todayWeekdayIndex(): number {
 }
 
 export function currentPeriodIndex(periods: ObjectWorkspaceOpeningPeriod[]): number {
-  const current = periods.findIndex((period) => period.bucket === 'current');
-  return current >= 0 ? current : 0;
+  // First non-closure period is treated as "en cours"; fall back to 0 when empty.
+  const idx = periods.findIndex((period) => !period.isClosure);
+  return idx >= 0 ? idx : 0;
 }
 
 export { MONTHS };

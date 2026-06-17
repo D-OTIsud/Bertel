@@ -141,4 +141,23 @@ describe('ProviderCards — §19 prestataire authoring', () => {
 
     expect(onOpenActor).toHaveBeenCalledWith('a1');
   });
+
+  it('shows a pending-interaction notification badge for an actor with open interactions', () => {
+    render(
+      <ProviderCards
+        relationships={relationships()}
+        canWrite
+        onChange={() => undefined}
+        openCountByActor={{ a1: 2 }}
+      />,
+    );
+    expect(screen.getByLabelText(/2 interaction\(s\) en attente avec Marie Guide/i)).toBeInTheDocument();
+  });
+
+  it('shows no notification badge when the actor has no open interactions', () => {
+    render(
+      <ProviderCards relationships={relationships()} canWrite onChange={() => undefined} openCountByActor={{}} />,
+    );
+    expect(screen.queryByLabelText(/en attente/i)).not.toBeInTheDocument();
+  });
 });

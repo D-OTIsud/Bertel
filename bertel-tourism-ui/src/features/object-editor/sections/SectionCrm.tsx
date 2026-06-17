@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { PanelRightOpen } from 'lucide-react';
 import { Fs, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-workspace-parser';
@@ -24,8 +23,9 @@ function formatShortDate(value: string) {
  * vit dans un TIROIR latéral (EditorCrmDrawer) qui monte la VRAIE section CRM
  * (CrmObjectView ⇄ CrmActorFiche), gaté par la permission PAR OBJET `permissions.crm`
  * (api.user_can_write_crm — JAMAIS le helper page-wide userCanWriteCrmNotes : write-trap).
- * À la fermeture du tiroir, refreshCrm() resynchronise les KPIs ; providerFollowUp est un module
- * READONLY pour la save bar ⇒ replaceModule ne crée pas de dirty fantôme.
+ * Le tiroir s'ouvre depuis le bouton « Fiche CRM » de chaque carte prestataire (deep-link acteur) —
+ * il n'y a plus d'entrée object-wide séparée. À la fermeture, refreshCrm() resynchronise les KPIs ;
+ * providerFollowUp est un module READONLY pour la save bar ⇒ replaceModule ne crée pas de dirty fantôme.
  */
 export function SectionCrm({ editor, permissions, objectId, folded }: SectionProps) {
   const followUp = editor.draft.providerFollowUp;
@@ -35,7 +35,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
   const canWrite = Boolean(access?.canDirectWrite);
   const relationships = editor.draft.relationships;
   const canWriteActors = Boolean(permissions.relationships?.canDirectWrite);
-  // Drawer can open object-wide (actorId null) or directly on a prestataire's fiche (deep-link).
+  // Drawer opens deep-linked on a prestataire's fiche (carte « Fiche CRM ») ; actorId null = fermé.
   const [drawer, setDrawer] = useState<{ open: boolean; actorId: string | null }>({ open: false, actorId: null });
 
   function replaceActors(actors: ObjectWorkspaceActorLinkItem[]) {
@@ -53,6 +53,15 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
     .filter((timestamp) => Number.isFinite(timestamp));
   const last12Months = occurredTimestamps.filter((timestamp) => now - timestamp <= YEAR_MS).length;
   const lastContact = occurredTimestamps.length > 0 ? new Date(Math.max(...occurredTimestamps)).toISOString() : null;
+
+  // Interactions EN ATTENTE (status 'planned' — même prédicat que la chip « En attente » §65/§66)
+  // par acteur ⇒ badge de notification sur la carte du prestataire concerné (§19).
+  const openCountByActor = interactions.reduce<Record<string, number>>((counts, item) => {
+    if (item.status === 'planned' && item.actorId) {
+      counts[item.actorId] = (counts[item.actorId] ?? 0) + 1;
+    }
+    return counts;
+  }, {});
 
   // Resync des KPIs après une session d'écriture dans le tiroir. providerFollowUp est READONLY
   // pour la save bar ⇒ replaceModule ne crée pas de dirty fantôme.
@@ -101,6 +110,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
         canWrite={canWriteActors}
         onChange={replaceActors}
         onOpenActor={objectId ? openActorFiche : undefined}
+        openCountByActor={openCountByActor}
       />
 
       <div className="chip-group__label" style={{ marginTop: 16 }}>Suivi relationnel (CRM)</div>
@@ -130,23 +140,6 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
             )
           }
         />
-      </div>
-
-      <div className="crm-open-row">
-        <button
-          type="button"
-          className="crm-open-cta"
-          disabled={!objectId}
-          title={!objectId ? 'Enregistrez la fiche pour accéder au suivi CRM.' : undefined}
-          onClick={() => setDrawer({ open: true, actorId: null })}
-        >
-          <PanelRightOpen size={16} aria-hidden />
-          <span className="crm-open-cta__text">
-            Ouvrir le suivi CRM
-            <small>Interactions, tâches & fiches prestataires</small>
-          </span>
-          {interactions.length > 0 && <span className="crm-open-cta__count">{interactions.length}</span>}
-        </button>
       </div>
 
       {followUp.interactionsUnavailableReason && (

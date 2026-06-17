@@ -2478,18 +2478,29 @@
 }
 .object-editor .provider-badge--primary svg { color: var(--accent); }
 .object-editor .provider-badge--vis { color: var(--ink-3); }
+/* Notification — l'acteur a des interactions EN ATTENTE (status 'planned'). Palette warn éditeur. */
+.object-editor .provider-card__alert {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  align-self: flex-start;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+  color: #8a5c1d;
+  background: rgba(214, 147, 58, 0.14);
+  border: 1px solid rgba(214, 147, 58, 0.30);
+}
+.object-editor .provider-card__alert svg { color: var(--warn); }
 .object-editor .provider-card__note {
   margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
   padding-left: 11px; border-left: 2px solid var(--line-soft);
 }
 .object-editor .provider-card__actions {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 6px;
   padding-top: 9px; margin-top: 1px;
   border-top: 1px solid var(--line-soft);
 }
 .object-editor .provider-act {
-  display: inline-flex; align-items: center; gap: 5px;
-  height: 30px; padding: 0 11px;
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+  height: 30px; padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -2498,6 +2509,10 @@
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
+/* Actions tiennent sur UNE ligne (flex-wrap: nowrap) : l'icône reste, le libellé rétrécit puis
+   s'ellipse seulement si la carte est vraiment étroite — jamais de retour à la ligne. */
+.object-editor .provider-act svg { flex: none; }
+.object-editor .provider-act__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .object-editor .provider-act:hover { background: var(--surface-2); color: var(--ink); }
 .object-editor .provider-act:focus-visible {
   outline: 0; border-color: var(--accent);
@@ -2528,42 +2543,6 @@
 }
 .object-editor .btn.danger:hover { filter: brightness(1.05); }
 
-/* "Ouvrir le suivi CRM" — a distinct open/navigate CTA, NOT an "+ add" affordance. */
-.object-editor .crm-open-row { margin-top: 4px; }
-.object-editor .crm-open-cta {
-  display: inline-flex; align-items: center; gap: 11px;
-  padding: 11px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: linear-gradient(180deg, var(--surface), var(--bg-tint));
-  color: var(--ink);
-  cursor: pointer; text-align: left;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.04s ease;
-}
-.object-editor .crm-open-cta:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 14px rgba(20, 22, 28, 0.08);
-}
-.object-editor .crm-open-cta:active { transform: translateY(1px); }
-.object-editor .crm-open-cta:focus-visible {
-  outline: 0; border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
-}
-.object-editor .crm-open-cta:disabled {
-  opacity: 0.55; cursor: not-allowed;
-  background: var(--bg-tint); box-shadow: none; border-color: var(--line-soft);
-}
-.object-editor .crm-open-cta > svg { color: var(--accent); flex: none; }
-.object-editor .crm-open-cta__text { display: flex; flex-direction: column; gap: 1px; }
-.object-editor .crm-open-cta__text { font-size: 13.5px; font-weight: 650; }
-.object-editor .crm-open-cta__text small { font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
-.object-editor .crm-open-cta__count {
-  margin-left: 4px;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  color: #fff; background: var(--accent);
-  padding: 2px 8px; border-radius: 999px;
-}
-
 /* §95 — BlockersModal: groupes de blocages par section + séparateur alertes. */
 .object-editor .blockers-modal__body { display: grid; gap: 14px; }
 .object-editor .blockers-modal__intro { margin: 0; font-size: 12px; color: var(--ink-4); }
@@ -2577,3 +2556,4 @@
 .object-editor .blockers-modal__warn-head {
   margin: 0 0 4px; font-size: 11.5px; font-weight: 800; color: var(--ink-3);
 }
+

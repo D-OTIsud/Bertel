@@ -8,11 +8,16 @@
 -- (b) api.save_object_relations gains a real `actors` branch (delete-all + re-insert; role by id or
 --     ref_actor_role.code; visibility mirror of the table CHECK; ≤1 primary per role enforced by
 --     uq_actor_object_role_primary). actor_channel / actor_consent stay OUT of the contract.
+--     §95: the actor-existence pre-check is NO LONGER an EXISTS over public.actor (which, under this
+--     INVOKER fn, was RLS-filtered by ext_actor_read and hid not-yet-linked actors → "Unknown actor_id"
+--     for non-admin editors). Existence is now FK-enforced (actor_object_role.actor_id → actor(id));
+--     authorization stays workspace_assert_can_write_object (object-write). So ANY object editor can
+--     associate ANY existing actor — not just the superadmin.
 -- (c) api.search_actors(p_query): SECURITY DEFINER picker, gated on api.current_user_can_edit_objects()
---     so read-only members cannot enumerate actor PII, scoped to the CALLER-READABLE actor set
---     (authorize-once mirror of ext_actor_read: admin/superuser → all, else self ∪ extended-object
---     actors — picker offers exactly what the INVOKER save path accepts), with LIKE wildcards
---     escaped ('%'/'_'/'\') so '%%' cannot bypass the min-2-char guard.
+--     so read-only members cannot enumerate actor PII. §95: scope is the FULL actor directory for any
+--     editor (was admin/superuser → all, else self ∪ extended) — the save path no longer RLS-filters
+--     existence, so the picker need not be restricted to the caller's own/extended actors. LIKE
+--     wildcards escaped ('%'/'_'/'\') so '%%' cannot bypass the min-2-char guard; LIMIT 20.
 --     Advisor will flag the DEFINER — expected (§36 precedent).
 -- PREREQUISITES: rls_policies.sql (step 6 — also defines api.current_user_can_edit_objects),
 --   object_workspace_safe_write_rpcs.sql (step 7 — helpers + save_object_relations baseline),
@@ -142,15 +147,20 @@ BEGIN
     v_skipped := array_append(v_skipped, 'incoming_relations');
     v_warnings := array_append(v_warnings, 'Incoming relations are read-only here because their source object owns the write.');
   END IF;
-  -- §48: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
+  -- §48/§95: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
   IF p_payload ? 'actors' THEN
     DELETE FROM public.actor_object_role WHERE object_id = p_object_id;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     v_inserted := 0;
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'actors')) AS t(value) LOOP
-      IF internal.workspace_uuid(v_row->>'actor_id') IS NULL
-         OR NOT EXISTS (SELECT 1 FROM public.actor WHERE id = internal.workspace_uuid(v_row->>'actor_id')) THEN
-        RAISE EXCEPTION 'Unknown actor_id: %', v_row->>'actor_id' USING ERRCODE = '23503';
+      -- §95: existence is enforced by actor_object_role.actor_id -> actor(id) FK (RLS-independent).
+      -- Do NOT add an EXISTS over public.actor here: this fn is SECURITY INVOKER, so that probe is
+      -- filtered by ext_actor_read and would HIDE actors the caller cannot READ (e.g. a not-yet-linked
+      -- prestataire), failing the save for any non-admin editor even though they may WRITE the object.
+      -- Authorization is workspace_assert_can_write_object (object-write); api.search_actors bounds the
+      -- offered set. A truly unknown actor_id surfaces as the FK violation (23503).
+      IF internal.workspace_uuid(v_row->>'actor_id') IS NULL THEN
+        RAISE EXCEPTION 'Invalid or missing actor_id: %', COALESCE(v_row->>'actor_id', '(null)') USING ERRCODE = '22023';
       END IF;
       v_id := internal.workspace_uuid(v_row->>'role_id');
       IF v_id IS NULL THEN
@@ -184,8 +194,11 @@ END;
 $$;
 
 -- == 4. picker RPC ==
-CREATE OR REPLACE FUNCTION api.search_actors(p_query text)
-RETURNS TABLE(id uuid, display_name text, first_name text, last_name text)
+-- §95b: RETURNS gender + primary email (actor_channel kind 'email') for the rich picker card.
+-- DROP+CREATE (not CREATE OR REPLACE) because the return-table signature changed (re-apply safe).
+DROP FUNCTION IF EXISTS api.search_actors(text);
+CREATE FUNCTION api.search_actors(p_query text)
+RETURNS TABLE(id uuid, display_name text, first_name text, last_name text, gender text, email text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, api
 AS $fn$
@@ -201,23 +214,22 @@ BEGIN
   END IF;
   -- Escape LIKE wildcards: '%%' must not enumerate the whole table past the length guard.
   v_pattern := '%' || replace(replace(replace(immutable_unaccent(lower(btrim(p_query))), '\', '\\'), '%', '\%'), '_', '\_') || '%';
-  -- §48/§36 authorize-once: DEFINER bypasses actor RLS, so replicate ext_actor_read's scope here —
-  -- the picker must only offer actors the INVOKER save path (RLS-filtered existence check) will accept:
-  -- admin/superuser → all; otherwise self (email-bridged) or actors linked to the caller's extended objects.
+  -- §95: ANY editor (current_user_can_edit_objects gate above) may search the FULL actor directory to
+  -- associate a prestataire — NOT only admin/superuser. The save path (api.save_object_relations) no
+  -- longer RLS-filters actor existence (FK-enforced), so the picker is not restricted to the caller's
+  -- own/extended actors. Bounded by editor rights + min-2-char + LIKE-escape + LIMIT 20.
+  -- (Privacy tradeoff per PO request 2026-06-17 — editors can name-search all actors. See decision log §95.)
+  -- §95b: DEFINER bypasses actor_channel RLS, so the email subquery resolves for any editor.
   RETURN QUERY
-  SELECT a.id, a.display_name, a.first_name, a.last_name
+  SELECT a.id, a.display_name, a.first_name, a.last_name, a.gender,
+    (SELECT ac.value
+       FROM public.actor_channel ac
+       JOIN public.ref_code_contact_kind k ON k.id = ac.kind_id
+      WHERE ac.actor_id = a.id AND lower(k.code) = 'email'
+      ORDER BY ac.is_primary DESC, ac.position NULLS LAST, ac.created_at
+      LIMIT 1) AS email
   FROM public.actor a
-  WHERE (
-      (select auth.role()) IN ('service_role', 'admin')
-      OR api.is_platform_superuser()
-      OR a.id IN (SELECT api.user_actor_ids())
-      OR EXISTS (
-        SELECT 1 FROM public.actor_object_role aor
-        WHERE aor.actor_id = a.id
-          AND aor.object_id IN (SELECT api.current_user_extended_object_ids())
-      )
-    )
-    AND (a.display_name_normalized LIKE v_pattern
+  WHERE (a.display_name_normalized LIKE v_pattern
       OR a.last_name_normalized    LIKE v_pattern
       OR a.first_name_normalized   LIKE v_pattern)
   ORDER BY a.display_name

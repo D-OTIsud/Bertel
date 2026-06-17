@@ -1060,15 +1060,19 @@ BEGIN
     v_skipped := array_append(v_skipped, 'incoming_relations');
     v_warnings := array_append(v_warnings, 'Incoming relations are read-only here because their source object owns the write.');
   END IF;
-  -- §48: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
+  -- §48/§95: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
   IF p_payload ? 'actors' THEN
     DELETE FROM public.actor_object_role WHERE object_id = p_object_id;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     v_inserted := 0;
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'actors')) AS t(value) LOOP
-      IF internal.workspace_uuid(v_row->>'actor_id') IS NULL
-         OR NOT EXISTS (SELECT 1 FROM public.actor WHERE id = internal.workspace_uuid(v_row->>'actor_id')) THEN
-        RAISE EXCEPTION 'Unknown actor_id: %', v_row->>'actor_id' USING ERRCODE = '23503';
+      -- §95: existence is FK-enforced (actor_object_role.actor_id -> actor(id)). Do NOT add an EXISTS
+      -- over public.actor here: this fn is SECURITY INVOKER, so that probe is filtered by ext_actor_read
+      -- and would HIDE actors the caller cannot READ (e.g. a not-yet-linked prestataire), failing the
+      -- save for any non-admin editor even though they may WRITE the object. Authorization is
+      -- workspace_assert_can_write_object; api.search_actors bounds the offered set. Unknown id -> FK 23503.
+      IF internal.workspace_uuid(v_row->>'actor_id') IS NULL THEN
+        RAISE EXCEPTION 'Invalid or missing actor_id: %', COALESCE(v_row->>'actor_id', '(null)') USING ERRCODE = '22023';
       END IF;
       v_id := internal.workspace_uuid(v_row->>'role_id');
       IF v_id IS NULL THEN

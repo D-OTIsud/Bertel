@@ -1393,12 +1393,16 @@ ALTER TABLE actor_object_role ENABLE ROW LEVEL SECURITY;
 ALTER TABLE actor_consent ENABLE ROW LEVEL SECURITY;
 
 -- Actor policies: read via extended access or own actor
+-- §95: + is_platform_superuser arm so this matches api.search_actors' picker scope (admin/superuser
+-- see all actors). The INVOKER save path (api.save_object_relations) no longer RLS-filters actor
+-- existence (FK-enforced), so this policy governs DIRECT PostgREST reads only. §39-wrapped auth fns.
 CREATE POLICY "ext_actor_read" ON actor
   FOR SELECT USING (
-    auth.role() IN ('service_role','admin') OR
-    id = auth.uid() OR
-    EXISTS (SELECT 1 FROM actor_object_role aor 
-            JOIN object o ON o.id = aor.object_id 
+    (select auth.role()) IN ('service_role','admin') OR
+    (select api.is_platform_superuser()) OR
+    id = (select auth.uid()) OR
+    EXISTS (SELECT 1 FROM actor_object_role aor
+            JOIN object o ON o.id = aor.object_id
             WHERE aor.actor_id = actor.id AND api.can_read_extended(o.id))
   );
 CREATE POLICY "admin_actor_write" ON actor

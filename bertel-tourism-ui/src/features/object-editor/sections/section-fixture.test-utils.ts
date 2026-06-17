@@ -260,7 +260,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       unavailableReason: null,
     },
     openings: {
-      periods: [{ recordId: 'op1', order: '1', bucket: 'current', label: 'Standard', seasonTypeCode: 'high_season', startDate: '', endDate: '', allYears: true, closedDays: [], weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '17:00' }] }] }],
+      periods: [{ recordId: 'op1', order: '1', bucket: 'current', label: 'Standard', seasonTypeCode: 'high_season', startDate: '', endDate: '', allYears: true, recurrence: 'always', isClosure: false, closedDays: [], weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '17:00' }] }] }],
       periodTypeOptions: [
         { code: 'high_season', label: 'Haute saison', color: '#176b6a', allYear: false },
         { code: 'mid_season', label: 'Mi-saison', color: '#c08a3e', allYear: false },

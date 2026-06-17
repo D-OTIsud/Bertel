@@ -53,6 +53,8 @@ export function createPeriodDraft(index = 0): ObjectWorkspaceOpeningPeriod {
     startDate: '',
     endDate: '',
     allYears: true,
+    recurrence: 'cyclic',
+    isClosure: false,
     closedDays: [],
     weekdays: OPENING_WEEKDAYS.map(({ code, label }) => ({ code, label: label.toLowerCase(), slots: [] })),
   };

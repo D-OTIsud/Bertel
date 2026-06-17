@@ -12,6 +12,7 @@ import {
   readLegalScalar,
   splitLegalRecords,
   upsertLegalScalar,
+  upsertSiretWithDerivedSiren,
 } from './legal-edit';
 import type {
   ObjectWorkspaceLegalModule,
@@ -160,6 +161,61 @@ describe('upsertLegalScalar', () => {
     const base = module();
     const before = JSON.stringify(base);
     upsertLegalScalar(base, 'siret', '12345678900012');
+    expect(JSON.stringify(base)).toBe(before);
+  });
+});
+
+describe('upsertSiretWithDerivedSiren', () => {
+  test('derives the SIREN from a full SIRET (first 9 digits) in one update', () => {
+    const next = upsertSiretWithDerivedSiren(module(), '44851998300012');
+
+    expect(readLegalScalar(next.records, 'siret')).toBe('44851998300012');
+    expect(readLegalScalar(next.records, 'siren')).toBe('448519983');
+  });
+
+  test('strips non-digits and caps the SIRET at 14 digits before deriving', () => {
+    const next = upsertSiretWithDerivedSiren(module(), 'FR 448-519-983-00012-99');
+
+    expect(readLegalScalar(next.records, 'siret')).toBe('44851998300012');
+    expect(readLegalScalar(next.records, 'siren')).toBe('448519983');
+  });
+
+  test('re-derives the SIREN when the SIRET changes (keeps them consistent)', () => {
+    const first = upsertSiretWithDerivedSiren(module(), '44851998300012');
+    const second = upsertSiretWithDerivedSiren(first, '98765432100019');
+
+    expect(readLegalScalar(second.records, 'siret')).toBe('98765432100019');
+    expect(readLegalScalar(second.records, 'siren')).toBe('987654321');
+  });
+
+  test('does not touch the SIREN when the SIRET has fewer than 9 digits', () => {
+    const base = upsertLegalScalar(module(), 'siren', '123456789');
+    const next = upsertSiretWithDerivedSiren(base, '4485');
+
+    expect(readLegalScalar(next.records, 'siret')).toBe('4485');
+    expect(readLegalScalar(next.records, 'siren')).toBe('123456789');
+  });
+
+  test('clearing the SIRET removes the SIRET row and leaves a standalone SIREN untouched', () => {
+    const withBoth = upsertSiretWithDerivedSiren(module(), '44851998300012');
+    const cleared = upsertSiretWithDerivedSiren(withBoth, '');
+
+    expect(readLegalScalar(cleared.records, 'siret')).toBe('');
+    expect(readLegalScalar(cleared.records, 'siren')).toBe('448519983');
+  });
+
+  test('does not fabricate a SIREN row when siren is absent from the catalog', () => {
+    const base = module({ typeOptions: [option({ code: 'siret', label: 'SIRET', isRequired: true })] });
+    const next = upsertSiretWithDerivedSiren(base, '44851998300012');
+
+    expect(readLegalScalar(next.records, 'siret')).toBe('44851998300012');
+    expect(readLegalScalar(next.records, 'siren')).toBe('');
+  });
+
+  test('does not mutate the input module', () => {
+    const base = module();
+    const before = JSON.stringify(base);
+    upsertSiretWithDerivedSiren(base, '44851998300012');
     expect(JSON.stringify(base)).toBe(before);
   });
 });

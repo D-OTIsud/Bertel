@@ -12,11 +12,16 @@
  */
 
 import {
+  normalizeInseeDigits,
   readLegalRecordScalarValue,
   type ObjectWorkspaceLegalModule,
   type ObjectWorkspaceLegalRecord,
   type ObjectWorkspaceLegalTypeOption,
 } from '../../../services/object-workspace-parser';
+
+/** SIRET = SIREN (9) + NIC (5); the SIREN is the SIRET's first 9 digits. */
+export const SIREN_LENGTH = 9;
+export const SIRET_LENGTH = 14;
 
 /** `ref_legal_type` codes rendered as flat identity fields (rest are "documents"). */
 export const LEGAL_IDENTITY_TYPE_CODES = ['siret', 'siren', 'raison_sociale', 'vat_number'] as const;
@@ -77,6 +82,27 @@ export function upsertLegalScalar(
 
   const created = buildNewDocumentRecord(option);
   return { ...module, records: [...module.records, { ...created, valueJson }] };
+}
+
+/**
+ * Set the SIRET scalar and auto-derive the SIREN from it in ONE module update (composed on the
+ * evolving module, never two separate replaceModule calls — those would clobber each other).
+ *
+ * The SIREN is, by definition, the SIRET's first 9 digits, so deriving keeps the two consistent.
+ * A SIRET shorter than 9 digits leaves the SIREN untouched — clearing the SIRET does not wipe a
+ * standalone SIREN, and a SIREN-only entry (no SIRET) still works. A SIREN row is only written
+ * when 'siren' exists in the catalog (`upsertLegalScalar` never fabricates a type).
+ */
+export function upsertSiretWithDerivedSiren(
+  module: ObjectWorkspaceLegalModule,
+  rawSiret: string,
+): ObjectWorkspaceLegalModule {
+  const siret = normalizeInseeDigits(rawSiret).slice(0, SIRET_LENGTH);
+  const next = upsertLegalScalar(module, 'siret', siret);
+  if (siret.length < SIREN_LENGTH) {
+    return next;
+  }
+  return upsertLegalScalar(next, 'siren', siret.slice(0, SIREN_LENGTH));
 }
 
 /** Partition records into the identity scalars (rendered as fields) and the document rows (repeater). */

@@ -30,10 +30,20 @@ export function ClosureEditModal({ open, mode, draft, onClose, onSave }: Closure
   const [label, setLabel] = useState(draft?.label ?? '');
   const [isRange, setIsRange] = useState(Boolean(draft && draft.endDate !== '' && draft.startDate !== draft.endDate));
   const [recurring, setRecurring] = useState(draft?.recurrence === 'cyclic');
-  const [start, setStart] = useState(draft?.startDate ?? '');
-  const [end, setEnd] = useState(draft?.endDate ?? '');
+  // A cyclic closure is stored under the sentinel year (2000); show the current year in the
+  // <input type="date"> instead. build() re-encodes to the sentinel via slice, so the displayed
+  // year is irrelevant to the saved value.
+  const displayYear = String(new Date().getFullYear());
+  const toDisplay = (iso?: string): string =>
+    draft?.recurrence === 'cyclic' && iso ? `${displayYear}-${iso.slice(5)}` : (iso ?? '');
+  const [start, setStart] = useState(toDisplay(draft?.startDate));
+  const [end, setEnd] = useState(toDisplay(draft?.endDate));
 
-  const canSave = start.length > 0 && (!isRange || end.length > 0);
+  // A non-recurring range with end < start would fail the backend CHECK; block it here.
+  // Cyclic ranges legitimately wrap the year, so the order check is skipped when recurring.
+  const canSave =
+    start.length > 0 &&
+    (!isRange || (end.length > 0 && (recurring || end >= start)));
 
   function build(): ObjectWorkspaceOpeningPeriod {
     const effEnd = isRange ? end : start;

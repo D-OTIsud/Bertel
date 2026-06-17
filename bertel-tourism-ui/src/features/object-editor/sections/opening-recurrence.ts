@@ -17,15 +17,24 @@ export function encodeCyclicDate(month: number, day: number): string {
   return `${OPENING_CYCLIC_SENTINEL_YEAR}-${pad(month)}-${pad(day)}`;
 }
 
-/** Si la fin "wrap" (MM-JJ fin < MM-JJ début), place la fin sur l'année+1. */
+/** Dernier jour réel du mois dans l'année-sentinelle (2000 = bissextile ⇒ février = 29). */
+const lastDayOfMonth = (month: number): number => new Date(OPENING_CYCLIC_SENTINEL_YEAR, month, 0).getDate();
+
+/**
+ * Si la fin "wrap" (MM-JJ fin < MM-JJ début), place la fin sur l'année+1.
+ * Les jours sont bornés au dernier jour réel du mois (un sélecteur peut soumettre
+ * un 31 février — la date ISO invalide qui en résulterait planterait à la sauvegarde).
+ */
 export function encodeCyclicRange(
   startMonth: number, startDay: number, endMonth: number, endDay: number,
 ): { startDate: string; endDate: string } {
-  const startDate = encodeCyclicDate(startMonth, startDay);
-  const wraps = `${pad(endMonth)}${pad(endDay)}` < `${pad(startMonth)}${pad(startDay)}`;
+  const sDay = Math.min(Math.max(Math.trunc(startDay) || 1, 1), lastDayOfMonth(startMonth));
+  const eDay = Math.min(Math.max(Math.trunc(endDay) || 1, 1), lastDayOfMonth(endMonth));
+  const startDate = encodeCyclicDate(startMonth, sDay);
+  const wraps = `${pad(endMonth)}${pad(eDay)}` < `${pad(startMonth)}${pad(sDay)}`;
   const endDate = wraps
-    ? `${OPENING_CYCLIC_SENTINEL_YEAR + 1}-${pad(endMonth)}-${pad(endDay)}`
-    : `${OPENING_CYCLIC_SENTINEL_YEAR}-${pad(endMonth)}-${pad(endDay)}`;
+    ? `${OPENING_CYCLIC_SENTINEL_YEAR + 1}-${pad(endMonth)}-${pad(eDay)}`
+    : `${OPENING_CYCLIC_SENTINEL_YEAR}-${pad(endMonth)}-${pad(eDay)}`;
   return { startDate, endDate };
 }
 
@@ -93,8 +102,9 @@ export function periodsPartialOverlap(a: RecurrencePeriod, b: RecurrencePeriod):
   let inter = 0;
   for (const d of B) if (A.has(d)) inter += 1;
   if (inter === 0) return false; // disjointes
-  if (inter === A.size || inter === B.size) return false; // l'une contenue dans l'autre → tolérée
-  return true; // croisement partiel
+  // strict containment tolérée (la plus étroite gagne) ; fenêtres identiques = conflit
+  if ((inter === A.size && A.size < B.size) || (inter === B.size && B.size < A.size)) return false;
+  return true; // croisement partiel OU fenêtres identiques
 }
 
 export interface PeriodConflict { label: string; }

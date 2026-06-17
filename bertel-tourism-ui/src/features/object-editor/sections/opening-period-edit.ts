@@ -99,15 +99,6 @@ export function addClosedWeekday(closedDays: readonly string[], code: string): s
   return present.has(canonical) ? [...closedDays] : [...closedDays, canonical];
 }
 
-/** Append a valid ISO date; returns null when the date is malformed, no-op when already present. */
-export function addClosedDate(closedDays: readonly string[], iso: string): string[] | null {
-  const trimmed = iso.trim();
-  if (!isValidIsoDate(trimmed)) {
-    return null;
-  }
-  return closedDays.includes(trimmed) ? [...closedDays] : [...closedDays, trimmed];
-}
-
 export interface PeriodValidation {
   canSave: boolean;
   dateError: string | null;

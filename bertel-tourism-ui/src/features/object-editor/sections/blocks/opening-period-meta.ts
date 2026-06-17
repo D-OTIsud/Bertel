@@ -141,9 +141,12 @@ export function todayWeekdayIndex(): number {
 }
 
 export function currentPeriodIndex(periods: ObjectWorkspaceOpeningPeriod[]): number {
-  // First non-closure period is treated as "en cours"; fall back to 0 when empty.
-  const idx = periods.findIndex((period) => !period.isClosure);
-  return idx >= 0 ? idx : 0;
+  // The "en cours" badge tracks the period whose bucket is active; fall back to the first
+  // non-closure period, then 0, so an object without an active bucket still renders.
+  const current = periods.findIndex((period) => !period.isClosure && period.bucket === 'current');
+  if (current >= 0) return current;
+  const firstOpen = periods.findIndex((period) => !period.isClosure);
+  return firstOpen >= 0 ? firstOpen : 0;
 }
 
 export { MONTHS };

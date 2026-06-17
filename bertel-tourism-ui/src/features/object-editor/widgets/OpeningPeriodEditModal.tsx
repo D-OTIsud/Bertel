@@ -135,7 +135,7 @@ export function OpeningPeriodEditModal({
           aria-label="Récurrence"
           value={draft.recurrence}
           options={RECURRENCE_OPTIONS.map((o) => ({ v: o.v, l: o.l }))}
-          onChange={(r) => set({ recurrence: r as ObjectWorkspaceOpeningPeriod['recurrence'] })}
+          onChange={(r) => set({ recurrence: r as ObjectWorkspaceOpeningPeriod['recurrence'], startDate: '', endDate: '' })}
         />
       </Field>
 

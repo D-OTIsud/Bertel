@@ -41,7 +41,8 @@ export function buildEditorTools(input: BuildEditorToolsInput): EditorToolItem[]
       disabledReason: input.currentVersion == null ? SOON : undefined,
       stat: input.currentVersion == null ? undefined : `v${input.currentVersion}`,
     },
-    { key: 'import-export', label: 'Import / export', disabled: true, disabledReason: SOON },
+    // Tranche E — frontend-only tool (JSON/CSV/PDF export + JSON import onto the draft); no gate.
+    { key: 'import-export', label: 'Import / export', disabled: false },
     {
       key: 'archive',
       label: isArchived ? 'Restaurer' : 'Archiver',

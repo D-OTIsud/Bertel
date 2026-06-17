@@ -23,6 +23,14 @@ import { validateForPublication, type Issue } from './editor-validation';
 import { saveResultToIssues, publishErrorToIssue } from './save-issues';
 import { BlockersModal } from './widgets/BlockersModal';
 import { VersionHistoryModal } from './widgets/VersionHistoryModal';
+import { ImportExportModal } from './widgets/ImportExportModal';
+import {
+  serializeObjectJson,
+  serializeObjectCsv,
+  parseImportedObjectJson,
+  type ObjectIoMeta,
+} from './io/object-io-serialize';
+import { downloadTextFile, readFileText, triggerPrint } from './io/object-io-effects';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
@@ -32,6 +40,7 @@ import { buildEditorTools, archiveTargetStatus, type EditorToolKey } from './she
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
+import './editor-print.css';
 
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
@@ -154,6 +163,56 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const restoreVersion = useRestoreObjectVersionMutation(objectId);
   const [versionsModalOpen, setVersionsModalOpen] = useState(false);
 
+  // §E Import / export — frontend-only tool (no backend, no object creation).
+  const [importExportOpen, setImportExportOpen] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const ioMeta: ObjectIoMeta = {
+    objectId,
+    type: resource.type ?? '',
+    name: resource.name ?? editor.draft.generalInfo.name,
+  };
+
+  function handleExportJson() {
+    downloadTextFile(`${objectId}.json`, 'application/json', serializeObjectJson(editor.draft, ioMeta));
+  }
+
+  function handleExportCsv() {
+    downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(editor.draft, ioMeta));
+  }
+
+  function handleExportPdf() {
+    // Close the modal first so the @media print rule (which prints only .edit-main) sees no dialog.
+    setImportExportOpen(false);
+    // Defer to the next frame so the dialog has unmounted before the print dialog opens.
+    requestAnimationFrame(() => triggerPrint());
+  }
+
+  async function handleImportFile(file: File) {
+    setImportError(null);
+    let raw: string;
+    try {
+      raw = await readFileText(file);
+    } catch {
+      setImportError('Le fichier n’a pas pu être lu.');
+      return;
+    }
+    const result = parseImportedObjectJson(raw);
+    if (!result.ok) {
+      setImportError(result.error);
+      return;
+    }
+    // Apply each known module onto the draft — replaceModule marks it dirty by snapshot diff.
+    for (const [key, value] of Object.entries(result.modules)) {
+      editor.replaceModule(
+        key as keyof typeof editor.draft,
+        value as (typeof editor.draft)[keyof typeof editor.draft],
+      );
+    }
+    setImportExportOpen(false);
+    setStatusMessage('Fiche importée dans le brouillon — relisez puis enregistrez.');
+  }
+
   // Real current version = the highest version_number from the history (the parser does not expose
   // object.current_version). null while loading ⇒ the nav badge stays "Bientôt disponible" (no fake v12).
   const currentVersion =
@@ -191,8 +250,10 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       setArchiveConfirmOpen(true);
     } else if (key === 'versions') {
       setVersionsModalOpen(true);
+    } else if (key === 'import-export') {
+      setImportError(null);
+      setImportExportOpen(true);
     }
-    // 'import-export' is disabled in this tranche and never fires.
   }
 
   async function handleArchiveConfirm() {
@@ -446,6 +507,15 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           scrollToSection(num);
           setBlockersModalOpen(false);
         }}
+      />
+      <ImportExportModal
+        open={importExportOpen}
+        onClose={() => setImportExportOpen(false)}
+        onExportJson={handleExportJson}
+        onExportCsv={handleExportCsv}
+        onExportPdf={handleExportPdf}
+        onImportFile={(file) => void handleImportFile(file)}
+        importError={importError}
       />
     </div>
   );

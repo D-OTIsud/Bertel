@@ -1,0 +1,29 @@
+/* === §E Import/export — feuille d'impression (PDF via window.print) ===
+   On masque le shell de l'éditeur (topbar, nav latérale, rail, modales) et on
+   n'imprime que le contenu des sections (.edit-main). Approche minimale, pas
+   d'aperçu dédié — l'utilisateur imprime la fiche telle qu'affichée.
+
+   Sélecteurs vérifiés contre le code réel :
+     - topbar  → .edit-top   (EditorTopbar.tsx)
+     - nav     → .edit-nav   (EditorNav.tsx)
+     - rail    → .edit-side  (EditorRail.tsx)
+     - shell   → .edit-flat > .edit-body > .edit-main (ObjectEditPage.tsx)
+   [role='dialog'] couvre la modale Radix au cas où une impression serait
+   déclenchée modale ouverte (handleExportPdf la ferme avant d'imprimer). */
+@media print {
+  .edit-flat .edit-top,
+  .edit-flat .edit-nav,
+  .edit-flat .edit-side,
+  [role='dialog'] {
+    display: none !important;
+  }
+  .edit-flat .edit-body,
+  .edit-flat .edit-main {
+    display: block;
+    overflow: visible;
+    height: auto;
+  }
+  .edit-main {
+    padding: 0;
+  }
+}

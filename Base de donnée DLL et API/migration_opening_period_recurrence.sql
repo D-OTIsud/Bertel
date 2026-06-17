@@ -1,5 +1,6 @@
 -- =====================================================================
--- migration_opening_period_recurrence.sql  (manifest step 14n)
+-- migration_opening_period_recurrence.sql  (manifest step 14o; decision log §92)
+-- (14n was taken by the §17 membership migration — §91.)
 -- Périodes d'ouverture : récurrence explicite + cascade de priorité.
 --
 -- Modèle (dérivé du triplet existant + 1 booléen is_closure) :

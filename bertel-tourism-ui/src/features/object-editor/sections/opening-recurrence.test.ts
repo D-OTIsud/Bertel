@@ -1,6 +1,6 @@
 import {
   OPENING_CYCLIC_SENTINEL_YEAR,
-  encodeCyclicDate, decodeCyclicMonthDay,
+  encodeCyclicDate, encodeCyclicRange, decodeCyclicMonthDay,
   periodRank,
   periodsPartialOverlap, findPeriodConflicts,
   type RecurrencePeriod,
@@ -22,6 +22,10 @@ describe('cyclic sentinel encoding', () => {
     expect(decodeCyclicMonthDay('2000-05-01')).toEqual({ month: 5, day: 1 });
     expect(decodeCyclicMonthDay('2001-02-15')).toEqual({ month: 2, day: 15 });
   });
+  test('encodeCyclicRange clamps an impossible day to the month last day', () => {
+    expect(encodeCyclicRange(2, 31, 2, 31).startDate).toBe('2000-02-29'); // 2000 is leap
+    expect(encodeCyclicRange(2, 31, 2, 31).endDate).toBe('2000-02-29');
+  });
 });
 
 describe('rank', () => {
@@ -37,6 +41,11 @@ describe('partial overlap (same layer)', () => {
   test('two cyclics crossing => true', () => {
     const a = base({ startDate: '2000-05-01', endDate: '2000-09-30' });
     const b = base({ startDate: '2000-08-01', endDate: '2000-10-31' });
+    expect(periodsPartialOverlap(a, b)).toBe(true);
+  });
+  test('two identical cyclic windows => conflict (true)', () => {
+    const a = base({ startDate: '2000-05-01', endDate: '2000-09-30' });
+    const b = base({ startDate: '2000-05-01', endDate: '2000-09-30' });
     expect(periodsPartialOverlap(a, b)).toBe(true);
   });
   test('nested cyclic (containment) => false', () => {

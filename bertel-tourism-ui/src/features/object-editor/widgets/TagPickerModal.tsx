@@ -5,10 +5,20 @@ import { tagChipStyle } from '../../../utils/explorer-card';
 import { createWorkspaceTag, setWorkspaceTagColor } from '../../../services/object-workspace';
 import type { ObjectWorkspaceTagItem } from '../../../services/object-workspace-parser';
 
-/** Curated swatch palette (hex). The tag's current color is prepended if not already in the set. */
+/**
+ * Curated, on-brand hue anchors (hex). Deliberately muted, not neon: each renders through
+ * tagChipStyle as a soft same-hue chip in harmony with the Explorer's teal/terracotta palette. The
+ * tag's current color is prepended if not already in the set.
+ */
 const TAG_PALETTE = [
-  '#14b8a6', '#f97316', '#3b82f6', '#8b5cf6', '#22c55e',
-  '#f59e0b', '#0ea5e9', '#ef4444', '#a16207', '#64748b',
+  '#176b6a', // teal (brand)
+  '#3a6ea5', // blue
+  '#5b8c5a', // sage green
+  '#b88a3e', // ochre
+  '#c96d3b', // terracotta (brand)
+  '#b15a5a', // dusty rose
+  '#8a6d9e', // plum
+  '#64748b', // slate (neutral)
 ];
 
 function normalizeKey(value: string): string {
@@ -19,24 +29,35 @@ function Swatches({ value, onChange }: { value: string; onChange: (color: string
   const palette = TAG_PALETTE.includes(value) ? TAG_PALETTE : [value, ...TAG_PALETTE];
   return (
     <div className="chip-set" style={{ marginTop: 6 }}>
-      {palette.map((hex) => (
-        <button
-          key={hex}
-          type="button"
-          aria-label={`Couleur ${hex}`}
-          aria-pressed={hex === value}
-          onClick={() => onChange(hex)}
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            cursor: 'pointer',
-            background: hex,
-            outline: hex === value ? '2px solid var(--ink)' : '1px solid var(--line)',
-            outlineOffset: 1,
-          }}
-        />
-      ))}
+      {palette.map((hex) => {
+        // WYSIWYG: the swatch shows the chip's soft tint background + a dot in its dark text color, so
+        // the picked color matches exactly how the tag renders on a card.
+        const { backgroundColor, color } = tagChipStyle(hex);
+        const selected = hex === value;
+        return (
+          <button
+            key={hex}
+            type="button"
+            aria-label={`Couleur ${hex}`}
+            aria-pressed={selected}
+            onClick={() => onChange(hex)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 26,
+              height: 26,
+              borderRadius: 7,
+              cursor: 'pointer',
+              background: backgroundColor,
+              outline: selected ? '2px solid var(--ink)' : '1px solid var(--line)',
+              outlineOffset: 1,
+            }}
+          >
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+          </button>
+        );
+      })}
     </div>
   );
 }

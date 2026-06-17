@@ -1,4 +1,41 @@
-import { formatExplorerCardAddress, normalizeExplorerCard } from './explorer-card';
+import { formatExplorerCardAddress, normalizeExplorerCard, tagChipStyle } from './explorer-card';
+
+function parseHsl(value: string): { h: number; s: number; l: number } {
+  const m = value.match(/^hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)$/);
+  if (!m) {
+    throw new Error(`expected an hsl() string, got: ${value}`);
+  }
+  return { h: Number(m[1]), s: Number(m[2]), l: Number(m[3]) };
+}
+
+// tagChipStyle renders the house "soft chip" (pale same-hue tint bg + dark same-hue text), mirroring
+// the Explorer category chips (bg-*-soft / text-*-2) and the --teal-soft / --teal-2 tokens — NOT a
+// loud, fully-saturated solid fill. Derived purely from the stored hex so every tag is calmed with
+// no data migration.
+describe('tagChipStyle (soft house chip)', () => {
+  it('renders a vivid hex as a pale same-hue tint + dark same-hue text, not a loud solid fill', () => {
+    const style = tagChipStyle('#14b8a6'); // flashy teal-500
+    const bg = parseHsl(style.backgroundColor);
+    const text = parseHsl(style.color);
+    // A light tint background + dark text => large lightness contrast (legible on any card surface).
+    expect(bg.l).toBeGreaterThanOrEqual(90);
+    expect(text.l).toBeLessThanOrEqual(36);
+    // bg + text share the same hue family (within rounding) so the chip reads as one color.
+    expect(Math.abs(bg.h - text.h)).toBeLessThanOrEqual(1);
+    // Still legibly colored, not washed to gray.
+    expect(bg.s).toBeGreaterThanOrEqual(22);
+  });
+
+  it('keeps the neutral slate default calm and low-chroma (reads as a soft gray, not blue)', () => {
+    const bg = parseHsl(tagChipStyle('#64748b').backgroundColor);
+    expect(bg.l).toBeGreaterThanOrEqual(90);
+    expect(bg.s).toBeLessThanOrEqual(14);
+  });
+
+  it('falls back to the slate hue family for an invalid hex', () => {
+    expect(tagChipStyle('not-a-hex')).toEqual(tagChipStyle('#64748b'));
+  });
+});
 
 describe('formatExplorerCardAddress', () => {
   it('removes duplicate legacy city, postcode, and lieu-dit suffixes', () => {

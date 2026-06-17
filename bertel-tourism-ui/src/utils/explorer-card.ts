@@ -219,18 +219,63 @@ function normalizeHexColor(value: unknown): string {
   return HEX_COLOR_RE.test(v) ? v : DEFAULT_TAG_HEX;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** Convert a validated #rrggbb hex to HSL (h in [0,360), s & l in [0,1]). Pure helper. */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  const l = (max + min) / 2;
+  if (delta === 0) {
+    return { h: 0, s: 0, l };
+  }
+  const s = delta / (1 - Math.abs(2 * l - 1));
+  let h: number;
+  if (max === r) {
+    h = ((g - b) / delta) % 6;
+  } else if (max === g) {
+    h = (b - r) / delta + 2;
+  } else {
+    h = (r - g) / delta + 4;
+  }
+  h *= 60;
+  if (h < 0) {
+    h += 360;
+  }
+  return { h, s, l };
+}
+
+function hsl(h: number, s: number, l: number): string {
+  return `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+}
+
+const NEUTRAL_CHROMA_CUTOFF = 0.2; // below this a tag reads as a neutral gray (the slate default)
+
 /**
- * Inline style for a colored §09 tag chip: solid hex fill + a contrast-computed text color
- * (relative luminance) so any palette color stays legible. Shared by the card, map hover and the
- * §09 editor preview/swatches.
+ * Inline style for a colored §09 tag chip. We render the house "soft chip" treatment — a pale
+ * same-hue tint background + a dark, readable same-hue text — mirroring the Explorer category chips
+ * (bg-*-soft / text-*-2) and the --teal-soft / --teal-2 tokens, rather than a loud, fully-saturated
+ * solid fill. Both colors are derived purely from the stored hex (kept as the hue anchor), so every
+ * existing tag is calmed without a data migration and the swatches/previews stay WYSIWYG. Near-gray
+ * inputs (the slate default) stay neutral instead of being pushed toward a color. Shared by the card,
+ * map hover, the §09 editor preview and the filter chips.
  */
 export function tagChipStyle(hex: string): { backgroundColor: string; color: string } {
-  const color = normalizeHexColor(hex);
-  const r = parseInt(color.slice(1, 3), 16);
-  const g = parseInt(color.slice(3, 5), 16);
-  const b = parseInt(color.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return { backgroundColor: color, color: luminance > 0.6 ? '#1f2937' : '#ffffff' };
+  const { h, s } = hexToHsl(normalizeHexColor(hex));
+  const isNeutral = s < NEUTRAL_CHROMA_CUTOFF;
+  const bgSaturation = isNeutral ? clamp(s, 0, 0.1) : clamp(s * 0.55, 0.22, 0.5);
+  const textSaturation = isNeutral ? clamp(s, 0.06, 0.16) : clamp(s * 0.85 + 0.1, 0.32, 0.62);
+  const textLightness = isNeutral ? 0.34 : 0.3;
+  return {
+    backgroundColor: hsl(h, bgSaturation, 0.93),
+    color: hsl(h, textSaturation, textLightness),
+  };
 }
 
 /**

@@ -47,6 +47,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           open
           mode="add"
           draft={createPeriodDraft(periods.length)}
+          existingPeriods={periods}
           periodTypeOptions={openings.periodTypeOptions}
           onClose={() => setAdding(false)}
           onSave={(period) => {
@@ -61,6 +62,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           open
           mode="edit"
           draft={periods[editingIndex]}
+          existingPeriods={periods}
           periodTypeOptions={openings.periodTypeOptions}
           onClose={() => setEditingIndex(null)}
           onSave={(period) => {

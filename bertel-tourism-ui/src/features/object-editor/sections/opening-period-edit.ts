@@ -18,13 +18,6 @@ export const OPENING_WEEKDAYS: readonly { code: string; label: string; short: st
   { code: 'sunday', label: 'Dimanche', short: 'Dim' },
 ];
 
-/** Bucket axis (temporal scope) — mirrors the legacy BUCKET_OPTIONS. */
-export const OPENING_BUCKET_OPTIONS: readonly { v: string; l: string }[] = [
-  { v: 'current', l: 'Courante' },
-  { v: 'next-year', l: 'N+1' },
-  { v: 'undated', l: 'Sans date' },
-];
-
 function labelOf(code: string): string {
   return OPENING_WEEKDAYS.find((day) => day.code === code)?.label ?? code;
 }
@@ -120,24 +113,22 @@ export interface PeriodValidation {
   dateError: string | null;
 }
 
-/** Save gate for the modal: a typed period with coherent dates (when not all-year). The
- *  label is optional (the type names the period); the period TYPE is required. */
+/** Save gate for the modal: coherent dates for the chosen recurrence. The period TYPE is
+ *  now OPTIONAL (it no longer drives the dates — the Récurrence selector does). 'always'
+ *  needs no dates; 'cyclic'/'fixed' need both; only 'fixed' enforces chronological order
+ *  (cyclic ranges legitimately wrap the year — handled by encodeCyclicRange). */
 export function validatePeriodDraft(period: ObjectWorkspaceOpeningPeriod): PeriodValidation {
   const dateError = periodDateError(period);
-  const canSave = period.seasonTypeCode.trim().length > 0 && dateError === null;
+  const canSave = dateError === null;
   return { canSave, dateError };
 }
 
 function periodDateError(period: ObjectWorkspaceOpeningPeriod): string | null {
-  if (period.allYears) {
-    return null;
-  }
+  if (period.recurrence === 'always') return null;
   const hasStart = period.startDate.trim().length > 0;
   const hasEnd = period.endDate.trim().length > 0;
-  if (hasStart !== hasEnd) {
-    return 'Renseignez les deux dates ou activez « Toute l’année ».';
-  }
-  if (hasStart && hasEnd && period.endDate < period.startDate) {
+  if (!hasStart || !hasEnd) return 'Renseignez le début et la fin de la période.';
+  if (period.recurrence === 'fixed' && period.endDate < period.startDate) {
     return 'La date de fin doit être postérieure à la date de début.';
   }
   return null;

@@ -6163,3 +6163,166 @@ CREATE TRIGGER update_user_permission_updated_at
 -- Run audit attachment after all table creations (including late sections).
 SELECT audit.attach_missing_triggers();
 
+-- =====================================================
+-- RGPD Art. 17 — effacement / anonymisation (folded from migration_gdpr_erasure.sql, runbook 14j)
+-- Placed AFTER attach_missing_triggers() ON PURPOSE: gdpr_erasure_log must NOT carry an audit
+-- trigger (matches live, where attach was not re-run after the migration). The RLS read policy
+-- lives in rls_policies.sql (it needs api.is_platform_superuser, defined there). Functions use
+-- plpgsql late binding so referenced tables/functions need not exist at CREATE time.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS gdpr_erasure_log (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_kind  TEXT NOT NULL CHECK (subject_kind IN
+                  ('actor','incident','review','object_legal','contact_channel','user')),
+  subject_id    TEXT NOT NULL,
+  mode          TEXT NOT NULL CHECK (mode IN ('anonymize','delete')),
+  reason        TEXT,
+  performed_by  TEXT,
+  performed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  report        JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+COMMENT ON TABLE gdpr_erasure_log IS
+  'Journal des effacements/anonymisations RGPD (Art. 17). Écrit uniquement par api.rpc_gdpr_erase_subject.';
+ALTER TABLE gdpr_erasure_log ENABLE ROW LEVEL SECURITY;  -- policy gdpr_erasure_log_admin_read in rls_policies.sql
+REVOKE ALL ON gdpr_erasure_log FROM PUBLIC, anon;
+GRANT SELECT ON gdpr_erasure_log TO authenticated;
+GRANT ALL    ON gdpr_erasure_log TO service_role;
+
+-- Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
+-- ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
+CREATE OR REPLACE FUNCTION audit.redact_subject(
+  p_table TEXT, p_match_key TEXT, p_match_val TEXT, p_pii_cols TEXT[]
+) RETURNS INTEGER
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, audit
+AS $$
+DECLARE v_count INTEGER;
+BEGIN
+  UPDATE audit.audit_log
+     SET before_data = before_data - p_pii_cols,
+         after_data  = after_data  - p_pii_cols
+   WHERE table_name = p_table
+     AND ( (row_pk ->> p_match_key) = p_match_val
+        OR (before_data ->> p_match_key) = p_match_val );
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+REVOKE ALL ON FUNCTION audit.redact_subject(TEXT,TEXT,TEXT,TEXT[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION audit.redact_subject(TEXT,TEXT,TEXT,TEXT[]) TO service_role;
+
+CREATE OR REPLACE FUNCTION api.rpc_gdpr_erase_subject(
+  p_subject_kind TEXT, p_subject_id TEXT, p_mode TEXT DEFAULT 'anonymize', p_reason TEXT DEFAULT NULL
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, audit
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_actor UUID; v_report JSONB := '{}'::jsonb; v_media TEXT[] := ARRAY[]::TEXT[];
+  v_photo TEXT; v_int_id UUID; v_task_id TEXT;
+  TOMBSTONE CONSTANT TEXT := '[Donnée effacée]';
+BEGIN
+  IF current_setting('request.jwt.claims', true) IS NOT NULL AND NOT api.is_platform_superuser() THEN
+    RAISE EXCEPTION 'Effacement RGPD réservé aux administrateurs plateforme (référent RGPD / superuser).';
+  END IF;
+  IF p_mode NOT IN ('anonymize','delete') THEN
+    RAISE EXCEPTION 'Mode invalide: % (attendu anonymize|delete)', p_mode;
+  END IF;
+
+  IF p_subject_kind = 'actor' THEN
+    v_actor := p_subject_id::uuid;
+    IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor) THEN
+      RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
+    SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    IF p_mode = 'anonymize' THEN
+      UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
+                       gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
+      UPDATE crm_interaction SET actor_id = NULL,
+             handled_by_actor_id = CASE WHEN handled_by_actor_id = v_actor THEN NULL ELSE handled_by_actor_id END,
+             subject = NULL, body = NULL, source = NULL, extra = NULL
+       WHERE actor_id = v_actor OR handled_by_actor_id = v_actor;
+      UPDATE crm_task SET actor_id = NULL, title = TOMBSTONE, description = NULL, extra = NULL WHERE actor_id = v_actor;
+      DELETE FROM actor_consent WHERE actor_id = v_actor;
+      DELETE FROM actor_channel WHERE actor_id = v_actor;
+      v_report := jsonb_build_object('mode','anonymize','actor', v_actor);
+    ELSE
+      DELETE FROM actor WHERE id = v_actor;
+      v_report := jsonb_build_object('mode','delete','actor', v_actor);
+    END IF;
+    PERFORM audit.redact_subject('actor','id', v_actor::text,
+      ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
+            'display_name_normalized','first_name_normalized','last_name_normalized']);
+    PERFORM audit.redact_subject('actor_channel','actor_id', v_actor::text, ARRAY['value','extra']);
+    PERFORM audit.redact_subject('actor_consent','actor_id', v_actor::text, ARRAY['source']);
+    PERFORM audit.redact_subject('crm_interaction','actor_id', v_actor::text,
+      ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
+    PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
+      ARRAY['title','description','extra','actor_id']);
+
+  ELSIF p_subject_kind = 'incident' THEN
+    IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Signalement introuvable: %', p_subject_id; END IF;
+    SELECT crm_interaction_id, crm_task_id INTO v_int_id, v_task_id FROM incident_report WHERE id = p_subject_id::uuid;
+    UPDATE incident_report SET reporter_email = NULL, reporter_name = NULL, description = NULL,
+           media_urls = NULL, geom = NULL, metadata = NULL WHERE id = p_subject_id::uuid;
+    IF v_int_id IS NOT NULL THEN
+      UPDATE crm_interaction SET subject = NULL, body = NULL, extra = NULL WHERE id = v_int_id;
+      PERFORM audit.redact_subject('crm_interaction','id', v_int_id::text, ARRAY['subject','body','extra']);
+    END IF;
+    PERFORM audit.redact_subject('incident_report','id', p_subject_id,
+      ARRAY['reporter_email','reporter_name','description','media_urls','geom','metadata']);
+    v_report := jsonb_build_object('incident', p_subject_id, 'linked_interaction', v_int_id);
+
+  ELSIF p_subject_kind = 'review' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_review WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Avis introuvable: %', p_subject_id; END IF;
+    SELECT author_avatar_url INTO v_photo FROM object_review WHERE id = p_subject_id::uuid;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    IF p_mode = 'delete' THEN DELETE FROM object_review WHERE id = p_subject_id::uuid;
+    ELSE UPDATE object_review SET author_name = NULL, author_avatar_url = NULL, content = NULL,
+             title = NULL, response = NULL, raw_data = NULL WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('object_review','id', p_subject_id,
+      ARRAY['author_name','author_avatar_url','content','title','response','raw_data']);
+    v_report := jsonb_build_object('review', p_subject_id);
+
+  ELSIF p_subject_kind = 'object_legal' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_legal WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Donnée légale introuvable: %', p_subject_id; END IF;
+    UPDATE object_legal SET value = '{}'::jsonb, note = NULL WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('object_legal','id', p_subject_id, ARRAY['value','note']);
+    v_report := jsonb_build_object('object_legal', p_subject_id);
+
+  ELSIF p_subject_kind = 'contact_channel' THEN
+    IF NOT EXISTS (SELECT 1 FROM contact_channel WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Coordonnée introuvable: %', p_subject_id; END IF;
+    IF p_mode = 'delete' THEN DELETE FROM contact_channel WHERE id = p_subject_id::uuid;
+    ELSE UPDATE contact_channel SET value = TOMBSTONE WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('contact_channel','id', p_subject_id, ARRAY['value']);
+    v_report := jsonb_build_object('contact_channel', p_subject_id);
+
+  ELSIF p_subject_kind = 'user' THEN
+    IF NOT EXISTS (SELECT 1 FROM app_user_profile WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Profil utilisateur introuvable: %', p_subject_id; END IF;
+    UPDATE app_user_profile SET display_name = NULL, avatar_url = NULL, preferences = '{}'::jsonb
+     WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('app_user_profile','id', p_subject_id, ARRAY['display_name','avatar_url','preferences']);
+    v_report := jsonb_build_object('user', p_subject_id,
+                  'note','Supprimer le compte auth.users via l''API Admin Supabase (hors SQL).');
+  ELSE
+    RAISE EXCEPTION 'Type de sujet inconnu: %', p_subject_kind;
+  END IF;
+
+  v_report := v_report || jsonb_build_object('media_to_delete', to_jsonb(v_media));
+  INSERT INTO gdpr_erasure_log(subject_kind, subject_id, mode, reason, performed_by, report)
+  VALUES (p_subject_kind, p_subject_id, p_mode, p_reason,
+          COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), v_uid::text, current_user), v_report);
+  RETURN v_report;
+END;
+$$;
+REVOKE ALL ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) TO authenticated, service_role;
+COMMENT ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) IS
+  'Effacement/anonymisation RGPD Art. 17 d''un sujet. Anonymise (défaut) ou supprime, rédige le journal d''audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.';
+

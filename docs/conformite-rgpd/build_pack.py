@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Build the Bertel RGPD/DPO documentation pack.
+"""Build the Bertel RGPD/DPO documentation pack (DOCX deliverables).
 
-The Markdown sources and DOCX deliverables are generated together so the pack can
-be regenerated after DPO/legal review without hand-editing Word files.
+SOURCE OF TRUTH: the Markdown files (NN_*.md) in this folder. Since the
+2026-06-16 RGPD audit corrections, the .md are edited directly and are the
+canonical text. This script now READS each .md and renders the matching .docx
+into livrables/. It no longer rewrites the .md from the inline f-string
+templates below — those bodies are kept for history/reference only and are NOT
+used by build().
+
+Usage:  pip install python-docx  &&  python build_pack.py
 """
 
 from __future__ import annotations
@@ -1339,40 +1345,22 @@ def markdown_to_docx(markdown: str, out_path: Path, title: str, subtitle: str) -
 
 
 def build() -> None:
+    """Render every .docx from the corrected .md source files (md = source of truth).
+
+    The .md are no longer rewritten here (they carry the 2026-06-16 audit
+    corrections); we only read them and render the .docx deliverables.
+    """
     OUT.mkdir(parents=True, exist_ok=True)
     for doc in DOCUMENTS:
-        markdown = full_markdown(doc)
-        (ROOT / doc.md_name).write_text(markdown, encoding="utf-8")
+        markdown = (ROOT / doc.md_name).read_text(encoding="utf-8")
         markdown_to_docx(markdown, OUT / doc.docx_name, doc.title, doc.subtitle)
-    index = "\n".join(
-        [
-            "# Pack documentaire RGPD/DPO Bertel",
-            "",
-            f"Version : {DATE}",
-            "",
-            "## Livrables",
-            "",
-            *[f"- `{doc.md_name}` + `livrables/{doc.docx_name}` : {doc.subtitle}" for doc in DOCUMENTS],
-            "",
-            "## À valider par le DPO",
-            "",
-            "- confirmation que SPL OTI DU SUD et le référent RGPD repris du dossier badgeuse s'appliquent bien à Bertel ;",
-            "- bases légales par traitement ;",
-            "- durées de conservation, surtout CRM, notes, imports et logs ;",
-            "- sous-traitants, transferts et contrats, notamment confirmation de l'hébergement effectif Bertel ;",
-            "- niveau de risque résiduel de l'AIPD, a priori faible à moyen si les mesures sont appliquées ;",
-            "- mentions d'information et canal d'exercice des droits.",
-            "",
-            OFFICIAL_SOURCES.strip(),
-            "",
-            PROJECT_SOURCES.strip(),
-            "",
-            BADGEUSE_SOURCES.strip(),
-            "",
-        ]
+    index_md = (ROOT / "00_INDEX_PACK_RGPD_DPO.md").read_text(encoding="utf-8")
+    markdown_to_docx(
+        index_md,
+        OUT / "00_INDEX_PACK_RGPD_DPO.docx",
+        "Pack documentaire RGPD/DPO Bertel",
+        "Index des documents, sources et points à valider",
     )
-    (ROOT / "00_INDEX_PACK_RGPD_DPO.md").write_text(index, encoding="utf-8")
-    markdown_to_docx(index, OUT / "00_INDEX_PACK_RGPD_DPO.docx", "Pack documentaire RGPD/DPO Bertel", "Index des documents, sources et points à valider")
 
 
 if __name__ == "__main__":

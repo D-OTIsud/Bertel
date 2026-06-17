@@ -3370,3 +3370,14 @@ GRANT EXECUTE ON FUNCTION api.get_object_map_item(TEXT, TEXT[]) TO authenticated
 -- Dashboard city options — no filter params, corpus-wide distinct city list.
 REVOKE EXECUTE ON FUNCTION api.get_dashboard_city_options()             FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.get_dashboard_city_options()             TO   authenticated, service_role;
+
+-- ---------------------------------------------------------------------
+-- RGPD Art. 17 — gdpr_erasure_log read policy (folded from migration_gdpr_erasure.sql, runbook 14j).
+-- The table + ENABLE RLS + grants + the erasure functions live at the END of schema_unified.sql;
+-- this policy is here because its predicate needs api.is_platform_superuser (defined above in
+-- this file). Writes go only through api.rpc_gdpr_erase_subject (SECURITY DEFINER) ⇒ no write policy.
+-- ---------------------------------------------------------------------
+DROP POLICY IF EXISTS gdpr_erasure_log_admin_read ON gdpr_erasure_log;
+CREATE POLICY gdpr_erasure_log_admin_read ON gdpr_erasure_log
+  FOR SELECT TO authenticated
+  USING ((SELECT api.is_platform_superuser()));   -- §39 : auth wrappé en InitPlan

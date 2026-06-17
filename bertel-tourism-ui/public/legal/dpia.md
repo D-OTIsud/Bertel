@@ -2,9 +2,9 @@
 
 **Plateforme Bertel 3.0 — Système d'Information Touristique (SIT) & CRM**
 
-Dernière mise à jour : 27 mai 2026
-Version du document : 1.0
-Statut : validé par le responsable de traitement
+Dernière mise à jour : 16 juin 2026
+Version du document : 1.1
+Statut : projet — à valider par le responsable de traitement
 
 ---
 
@@ -37,9 +37,25 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 |---|---|---|
 | Responsable du traitement principal | SPL OTI DU SUD | Éditeur et opérateur Bertel |
 | Co-responsables / responsables conjoints | ORG partenaires (autres OTI / SIT) | Responsables de leur scope de publication |
-| Sous-traitant hébergement BDD / Auth | Supabase Inc. (région primaire UE — à documenter parmi `eu-west-1`, `eu-west-3`, `eu-central-1`, `eu-central-2`, `eu-north-1`) | DPA disponible, à signer via PandaDoc depuis le dashboard ; certifié ISO/IEC 27001 ; chiffrement AES-256 au repos et TLS en transit |
-| Sous-traitant hébergement front | OVHcloud (France) | DPA OVHcloud en place ; engagements RGPD publics ; pas de traitement hors UE / US lorsqu'une zone UE est sélectionnée ; certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 (périmètre non-US) |
-| Référent RGPD interne | David Philippe — Manager SI | d.philippe@otisud.com — SPL OTI DU SUD n'a pas désigné de DPO au sens de l'Art. 37 RGPD |
+| Sous-traitant hébergement des données personnelles (base de données, authentification, stockage de fichiers, temps réel) | Supabase Inc. sur Amazon Web Services, région `eu-west-1` (Irlande, UE) — projet « ryycrdhlkmzpxwwwwupy » | DPA à archiver ; certifié ISO/IEC 27001 ; chiffrement au repos (garantie plateforme AWS/Supabase) et TLS en transit. Données dans l'UE. |
+| Sous-traitant hébergement de l'application web (frontend Next.js, conteneur Docker) | OVHcloud (France, UE) | DPA OVHcloud en place ; engagements RGPD publics ; pas de traitement hors UE ; certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 (périmètre non-US). Ces certifications restent valables pour le frontend Bertel. |
+| Sous-traitant authentification (utilisateurs internes uniquement) | Google (Google Ireland Ltd / Google LLC) | Authentification via Google OAuth, UNIQUEMENT pour les utilisateurs internes de l'organisation (agents de l'office) ; les prestataires/acteurs et le public ne s'authentifient jamais via Google. Transfert hors UE potentiel encadré par le EU-US Data Privacy Framework [à confirmer et archiver]. |
+| Référent RGPD interne | David Philippe — Manager SI | d.philippe@otisud.com — SPL OTI DU SUD n'a pas désigné de DPO au sens de l'Art. 37 RGPD. [À VALIDER PAR LE DPO : harmoniser la qualification du référent dans tout le pack ; par défaut employer « référent RGPD interne » partout ; signaler le point d'indépendance Art. 38(6) — cumul des fonctions Manager SI / référent RGPD à arbitrer avec la direction.] |
+
+**Hébergement et localisation des données (toutes dans l'Union européenne) :**
+- Application web (frontend Next.js, conteneur Docker) : OVHcloud, France (UE).
+- Données personnelles (base de données PostgreSQL managée, authentification, stockage de fichiers, temps réel) : Supabase Inc. sur Amazon Web Services, région eu-west-1 (Irlande, UE) — projet « ryycrdhlkmzpxwwwwupy ».
+
+Aucune donnée n'est hébergée hors de l'Union européenne.
+
+**Sous-traitants et destinataires réels :**
+- OVHcloud (France, UE) — hébergement de l'application web (frontend). Contrat de sous-traitance (DPA) OVHcloud à archiver.
+- Supabase Inc. — base de données, authentification, stockage de fichiers, temps réel ; données dans l'UE (AWS eu-west-1, Irlande). DPA à archiver.
+- Google (Google Ireland Ltd / Google LLC) — authentification via Google OAuth, UNIQUEMENT pour les utilisateurs internes de l'organisation (agents de l'office) ; les prestataires/acteurs et le public ne s'authentifient jamais via Google. Transfert hors UE potentiel encadré par le EU-US Data Privacy Framework [à confirmer et archiver].
+- API Adresse / Base Adresse Nationale (data.gouv.fr, France) — géocodage des adresses saisies.
+- Services chargés dans le navigateur du visiteur (reçoivent son adresse IP) : tuiles cartographiques OpenFreeMap + MapLibre, favicons DuckDuckGo, Google Fonts. L'auto-hébergement de ces ressources est recommandé pour limiter ces flux.
+
+Aucun envoi d'e-mail/SMS applicatif n'est en place à ce jour.
 
 ### 1.4 Volumes (ordre de grandeur)
 
@@ -76,8 +92,14 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 | Audit trail | UUID éditeur attaché à chaque action | Agents OTI / ORG partenaires | Non |
 | Contact opérateur | Nom commercial, email, tél, adresse | Prestataires (personnes morales ou physiques) | Variable — pro principalement |
 | Contact CRM | Nom, prénom, email, tél, organisation | Personnes physiques (réseau de l'OTI) | Non |
-| Historique CRM | Demandes, commentaires, comptes-rendus | Personnes physiques (réseau de l'OTI) | Non — appréciation possible |
-| Médias publiés | Photos, vidéos, métadonnées EXIF | Variable | EXIF à neutraliser |
+| Historique CRM | Demandes, commentaires, comptes-rendus, interactions, tâches | Personnes physiques (réseau de l'OTI) | Non — appréciation possible |
+| Données CRM enrichies (JSONB `extra`) | E-mail de l'interlocuteur, humeur brute (`humeur_raw`), sentiment relationnel | Personnes physiques (réseau de l'OTI) | Non — appréciation subjective possible |
+| Portrait d'acteur | Photo de portrait (`actor.photo_url`, image faciale en bucket public) | Personnes physiques (acteurs / prestataires) | Image d'une personne physique — consentement non capté (voir §5.1) |
+| Avis de tiers (`object_review`) | Nom, avatar, contenu de l'avis | Tiers (public ayant laissé un avis) | Non — texte libre |
+| Déclarations d'incident (`incident_report`) | Nom, e-mail, géolocalisation, photos du déclarant ; propagation automatique en CRM | Déclarants (citoyens) | Géolocalisation + texte libre + photos |
+| Données légales opérateur (`object_legal`) | SIRET / SIREN / raison sociale | Prestataires (dont entrepreneurs individuels) | Variable — donnée à caractère personnel pour les entrepreneurs individuels |
+| Présence temps réel (Supabase Realtime / presence) | Identité de l'utilisateur connecté | Agents OTI / ORG partenaires | Non |
+| Médias publiés | Photos, vidéos, métadonnées | Variable | Images : EXIF/IPTC/XMP supprimés à l'upload. Vidéos : métadonnées conteneur (GPS/appareil) NON supprimées (voir §5.1) |
 
 **Pas de données sensibles (Art. 9 RGPD)** en collecte structurée. Pas de données pénales (Art. 10 RGPD). Pas de mineurs identifiés. Pas de profilage automatisé.
 
@@ -91,7 +113,7 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 
 - **Données éditeurs** : seules les données indispensables à l'authentification et à la collaboration multi-ORG sont collectées. Pas de date de naissance, pas d'adresse personnelle, pas de numéro de téléphone privé.
 - **Données opérateurs** : seules les coordonnées de contact professionnel sont publiées. Lorsque l'opérateur est une personne physique (auto-entrepreneur), une vigilance particulière est appliquée : seules les coordonnées qu'il a explicitement déclarées à des fins de publication sont utilisées.
-- **Logs** : durée de conservation des logs Supabase Auth limitée selon la politique du sous-traitant ; logs applicatifs purgés au-delà de 90 jours.
+- **Logs et journal d'audit** : durée de conservation des logs Supabase Auth limitée selon la politique du sous-traitant. Le journal d'audit applicatif (`audit.audit_log`) conserve une copie complète (état avant/après, données personnelles incluses) de chaque modification et suppression sur l'ensemble des tables, attribuée à l'utilisateur, pendant 12 mois glissants (rotation mensuelle des partitions). Aucune purge automatique des logs applicatifs au-delà de 90 jours n'est en place à ce jour ; toute purge ciblée est manuelle (action planifiée, voir §7.1).
 
 ### 4.2 Exactitude (Art. 5.1.d)
 
@@ -102,7 +124,8 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 ### 4.3 Limitation de la conservation (Art. 5.1.e)
 
 - Voir §5 du RGPD ([rgpd.md](rgpd.md)).
-- Anonymisation des comptes inactifs > 24 mois.
+- **Conservation** : aucune purge ni anonymisation automatique des données personnelles n'est en place à ce jour (les seules tâches planifiées concernent le rafraîchissement de vues et la rotation des partitions d'audit à 12 mois). Les durées de conservation indiquées sont des cibles de politique, à appliquer manuellement tant que des purges automatiques ne sont pas implémentées. En particulier, l'anonymisation des comptes inactifs au-delà de 24 mois est une cible de politique non encore automatisée (action planifiée, voir §7.1).
+- **État réel de l'effacement et du journal d'audit** (à connaître pour répondre aux demandes au titre de l'Art. 17) : aucune fonction automatisée d'effacement ou d'anonymisation n'existe à ce jour — un effacement est une opération MANUELLE (suppression ciblée sous contrôle technique). De plus, le journal d'audit (`audit.audit_log`) conserve une copie complète (état avant/après, données personnelles incluses) de chaque modification et suppression sur l'ensemble des tables, attribuée à l'utilisateur, pendant 12 mois glissants. Une donnée supprimée reste donc présente dans le journal d'audit jusqu'à 12 mois ; sa purge ciblée doit être effectuée manuellement lorsque la demande l'exige. Le versioning `object_version` n'est, lui, pas purgé automatiquement.
 - Archivage des sauvegardes : 30 jours glissants (Supabase Cloud).
 
 ### 4.4 Information des personnes (Art. 13)
@@ -119,23 +142,30 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 
 | Mesure | Description | Niveau |
 |---|---|---|
-| Chiffrement en transit | TLS de bout en bout (HTTPS, HSTS) | ✅ En place (TLS Supabase et OVHcloud) |
-| Chiffrement au repos | **AES-256** des données client (Supabase) + sauvegardes chiffrées | ✅ En place (documenté par Supabase) |
-| Authentification forte | Supabase Auth (password + option OAuth), JWT signés | ✅ En place ; MFA pour rôles privilégiés à activer |
-| Contrôle d'accès | RBAC plateforme + RLS PostgreSQL par ORG et par permission | ✅ En place |
-| Cloisonnement multi-ORG | Politiques RLS strictes, vérifications côté API (`api.current_user_*`) | ✅ En place ; audit annuel à programmer |
-| Journalisation | Logs Supabase Auth + audit trail applicatif (`object_version`, `pending_change`) | ✅ En place |
+| Chiffrement en transit | TLS (HTTPS) | ✅ En place (TLS Supabase et OVHcloud). En-tête HSTS applicatif : ❌ non configuré (voir « En-têtes de sécurité ») |
+| Chiffrement au repos | Chiffrement au repos assuré par les plateformes (OVHcloud, AWS/Supabase) | ✅ Garantie plateforme — **il n'y a pas de chiffrement applicatif des colonnes** (ne pas surdéclarer un AES-256 applicatif) |
+| Authentification | Supabase Auth (password + OAuth Google pour les utilisateurs internes uniquement), JWT signés | ✅ En place. MFA : ❌ non déployée (action planifiée, §7.1). Protection « mot de passe compromis » : ❌ désactivée |
+| Contrôle d'accès | RBAC plateforme + RLS PostgreSQL par ORG et par permission | ✅ En place (RLS réelle et robuste) |
+| Cloisonnement multi-ORG | Politiques RLS strictes, vérifications côté API (`api.current_user_*`) | ✅ En place ; à noter : deux vues SECURITY DEFINER sont lisibles par le rôle anonyme (point d'amélioration, voir §7.1) ; audit annuel à programmer |
+| Journalisation | Logs Supabase Auth + journal d'audit applicatif `audit.audit_log` (copie complète avant/après, données personnelles incluses, attribuée à l'utilisateur, 12 mois glissants) + versioning `object_version` (non purgé) | ✅ En place |
 | Gestion des sessions | JWT à durée limitée, refresh token, déconnexion explicite | ✅ En place |
 | Sauvegarde / restauration | Sauvegardes Supabase intégrées ; **PITR** disponible en option (plans Pro / Team / Enterprise — souscription à vérifier pour Bertel) ; tests de restauration trimestriels | 🟡 Plan souscrit + tests à documenter |
 | Mise à jour de sécurité | Application des CVE critiques sous 30j (Next.js, dépendances) | ✅ Pratique en place — procédure à formaliser |
-| Headers de sécurité | CSP, X-Frame-Options, Referrer-Policy | 🟡 À auditer et documenter |
+| En-têtes de sécurité | HSTS, CSP, X-Frame-Options, Referrer-Policy | ❌ Aucun en-tête de sécurité applicatif (HSTS/CSP/X-Frame-Options) n'est configuré (action planifiée, §7.1) |
 | Protection contre l'injection | Requêtes paramétrées (Supabase JS), validation côté serveur | ✅ En place |
-| Métadonnées EXIF des médias | Neutralisation automatique des EXIF (GPS, appareil, date) avant publication via API publique — pipeline `/api/media/upload` (resize ≤ 2000 px + strip métadonnées via sharp) | ✅ En place pour les nouveaux uploads ; backfill des médias antérieurs à planifier |
-| Hébergement Supabase (UE) | Région primaire UE parmi `eu-west-1` Ireland, `eu-west-3` Paris, `eu-central-1` Frankfurt, `eu-central-2` Zurich, `eu-north-1` Stockholm | 🟡 Région retenue pour Bertel à documenter |
+| Métadonnées des médias | Images : ré-encodées à l'upload via le pipeline `/api/media/upload` (resize ≤ 2000 px + strip EXIF/IPTC/XMP via sharp). Vidéos : stockées telles quelles | 🟡 Images : ✅ EXIF/IPTC/XMP supprimés (mesure en place ; backfill des médias antérieurs à planifier). Vidéos : ❌ métadonnées de conteneur (GPS/appareil) NON supprimées (pas de transcodeur serveur — risque résiduel documenté) |
+| Bucket de stockage des médias | Bucket Supabase Storage public et listable ; `media.url` est une chaîne sans clé étrangère → orphelins jamais nettoyés | 🟡 Point d'amélioration — restreindre/nettoyer (action planifiée, §7.1) |
+| Hébergement des données (UE) | Supabase Inc. sur AWS, région `eu-west-1` (Irlande, UE) — projet « ryycrdhlkmzpxwwwwupy » : base de données, authentification, stockage de fichiers, temps réel | ✅ Données dans l'UE |
 | Certification Supabase | **ISO/IEC 27001** (certificat accessible depuis le dashboard Supabase pour les plans Team / Enterprise) | ✅ Documenté par Supabase — copie du certificat à archiver |
-| Hébergement OVHcloud (UE) | Zone de stockage UE : OVHcloud s'engage à ne pas traiter hors UE ni aux États-Unis | ✅ Engagement public OVHcloud — sélection de zone à documenter |
-| Certifications OVHcloud | **ISO/IEC 27001:2022**, **27017:2015**, **27018:2019**, **27701:2019** (périmètre non-US, couvrant VPS, Public Cloud Instances, Managed Relational Database, Object Storage, Managed Web Hosting) | ✅ Documenté par OVHcloud — preuves à archiver |
-| DPA sous-traitants | DPA Supabase (à signer via la procédure PandaDoc depuis le dashboard) ; DPA OVHcloud (en place pour le rôle de sous-traitant) | 🟡 Signature Supabase et archivage des deux DPA — action prioritaire |
+| Hébergement de l'application web (UE) | OVHcloud (France, UE) : frontend Next.js (conteneur Docker). OVHcloud s'engage à ne pas traiter hors UE | ✅ Application web dans l'UE |
+| Certifications OVHcloud | **ISO/IEC 27001:2022**, **27017:2015**, **27018:2019**, **27701:2019** (périmètre non-US, couvrant VPS, Public Cloud Instances, Managed Relational Database, Object Storage, Managed Web Hosting) — valables pour le frontend Bertel | ✅ Documenté par OVHcloud — preuves à archiver |
+| DPA sous-traitants | DPA Supabase ; DPA OVHcloud (en place pour le rôle de sous-traitant) ; le cas échéant, encadrement du flux d'auth Google (EU-US Data Privacy Framework, utilisateurs internes uniquement) | 🟡 Archivage des deux DPA + encadrement du flux Google — action prioritaire |
+
+> **Mesures de sécurité — état réel (à ne pas surdéclarer).** Authentification Supabase Auth + RBAC + RLS PostgreSQL (robuste) ; journalisation d'audit ; séparation client/service-role. À noter : le chiffrement au repos est une garantie des plateformes (OVHcloud, AWS/Supabase), il n'y a pas de chiffrement applicatif des colonnes ; aucun en-tête de sécurité applicatif (HSTS/CSP/X-Frame-Options) n'est configuré ; la MFA n'est pas déployée ; la protection « mot de passe compromis » est désactivée ; deux vues SECURITY DEFINER sont lisibles par le rôle anonyme et les buckets publics sont listables (points d'amélioration identifiés, voir §7.1).
+
+> **Métadonnées des médias.** Les images sont ré-encodées à l'upload, ce qui supprime leurs métadonnées EXIF/IPTC/XMP (GPS, appareil) — mesure en place. Les vidéos sont en revanche stockées telles quelles : leurs métadonnées de conteneur (pouvant contenir GPS/appareil) NE SONT PAS supprimées (limite documentée, pas de transcodeur serveur), à traiter comme un risque résiduel.
+
+> **Photos de portrait d'acteurs et consentement.** La fiche acteur peut porter une photo de portrait (image d'une personne physique) stockée dans un bucket public (seule protection : un chemin de fichier non devinable, ce qui n'est pas un contrôle d'accès). La table `actor_consent` existe mais n'est alimentée par aucun chemin d'écriture : le consentement n'est pas capté à ce jour. Le consentement ne peut donc PAS être présenté comme une mesure en place — c'est une mesure à mettre en œuvre (action planifiée, voir §7.1).
 
 ### 5.2 Mesures organisationnelles
 
@@ -152,7 +182,9 @@ La présente analyse d'impact relative à la protection des données (AIPD / DPI
 
 ## 6. Analyse des risques pour les personnes concernées
 
-Trois familles de risques sont analysées selon la méthode CNIL :
+Trois familles de risques sont analysées selon la méthode CNIL (les trois événements redoutés : accès illégitime, modification non désirée, disparition des données).
+
+> **Méthode et cotation.** Les évaluations de vraisemblance et de gravité ci-dessous sont des appréciations préliminaires. La cotation formelle selon la méthode CNIL (pour chacun des trois événements redoutés : gravité × vraisemblance, avec recensement des sources de risque et des mesures) reste **à compléter** [À VALIDER PAR LE DPO]. Aucune cotation chiffrée définitive n'est arrêtée à ce stade — c'est une action de la révision en cours (voir §7.1).
 
 ### 6.1 Accès illégitime aux données
 
@@ -173,11 +205,11 @@ Trois familles de risques sont analysées selon la méthode CNIL :
 - **Niveau de risque brut :** modéré
 
 **Mesures de mitigation :**
-- Authentification Supabase Auth avec politique de mot de passe ; MFA recommandée pour les rôles `owner` / `super_admin` (à déployer).
-- RLS PostgreSQL avec tests automatisés de non-régression.
-- Audit régulier des permissions et des politiques RLS.
+- Authentification Supabase Auth avec politique de mot de passe ; MFA non déployée à ce jour, à déployer pour les rôles `owner` / `super_admin` (action planifiée, §7.1) ; protection « mot de passe compromis » actuellement désactivée, à activer.
+- RLS PostgreSQL (réelle et robuste) avec tests automatisés de non-régression.
+- Audit régulier des permissions et des politiques RLS ; correction des points d'amélioration identifiés (deux vues SECURITY DEFINER lisibles par le rôle anonyme, buckets publics listables).
 - Veille CVE et application rapide des correctifs.
-- Contrat de sous-traitance (DPA) signé avec Supabase et OVH.
+- Contrat de sous-traitance (DPA) à archiver avec Supabase (données — AWS eu-west-1, Irlande) et OVHcloud (frontend — France) ; encadrement du flux d'auth Google (utilisateurs internes uniquement, EU-US Data Privacy Framework).
 
 **Niveau de risque résiduel :** faible.
 
@@ -201,9 +233,9 @@ Trois familles de risques sont analysées selon la méthode CNIL :
 - **Niveau de risque brut :** modéré
 
 **Mesures de mitigation :**
-- **Audit trail systématique** : chaque modification est tracée dans `object_version` et `pending_change` avec horodatage et identifiant de l'auteur.
-- **Workflow de modération** : les modifications sensibles passent par un état `pending_change` revu avant publication.
-- **Historisation des versions** : permet de revenir à un état antérieur (rollback).
+- **Audit trail systématique** : chaque modification et suppression est tracée dans le journal d'audit `audit.audit_log` (copie complète de l'état avant/après, données personnelles incluses, attribuée à l'e-mail de l'utilisateur, conservée 12 mois glissants) avec horodatage et identifiant de l'auteur. Le versioning `object_version` conserve l'historique des versions et n'est pas purgé automatiquement.
+- **Workflow de modération** : les modifications sensibles passent par un état revu avant publication.
+- **Historisation des versions** : `object_version` permet de revenir à un état antérieur (rollback).
 - **Tests automatisés** : suite EXPLAIN ANALYZE et tests d'intégration sur les fonctions API.
 - **Validation côté serveur** : contraintes PostgreSQL + RLS + vérifications applicatives.
 
@@ -255,21 +287,26 @@ Trois familles de risques sont analysées selon la méthode CNIL :
 | 1 | ✅ **Livré — Neutralisation automatique des métadonnées EXIF** des nouveaux uploads via `/api/media/upload` (sharp, strip EXIF/IPTC/XMP + resize ≤ 2000 px). Reste à planifier : backfill des médias antérieurs. | Livré T2 2026 · Backfill : T4 2026 | Équipe SI |
 | 2 | **Formaliser une convention de responsabilité conjointe** (Art. 26 RGPD) avec chaque ORG partenaire : information des personnes, exercice des droits, sécurité, gestion des incidents / violations, durées de conservation, responsabilités éditoriales, pilotage des sous-traitants | T3 2026 | Référent RGPD + Direction |
 | 3 | **Définir et déployer la règle « pas de données sensibles dans les champs libres CRM »** : mention d'aide à la saisie dans l'UI, formation des éditeurs, contrôle a posteriori | T2 2026 | Référent RGPD + équipe produit |
-| 4 | **Signer et archiver les preuves sous-traitants** : signature du DPA Supabase via la procédure PandaDoc accessible depuis le dashboard ; archivage du DPA OVHcloud, du certificat ISO/IEC 27001 Supabase (dashboard plans Team / Enterprise) et des certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 OVHcloud ; documentation de la région primaire Supabase et de la zone OVH retenues pour Bertel ; revérification annuelle de la liste des sous-traitants ultérieurs | T2 2026 | Référent RGPD |
-| 5 | Activer la MFA Supabase pour les rôles `owner` et `super_admin` | T3 2026 | Référent RGPD + équipe SI |
+| 4 | **Archiver les preuves sous-traitants** : DPA Supabase (données — Supabase Inc. sur AWS `eu-west-1`, Irlande, projet « ryycrdhlkmzpxwwwwupy ») ; DPA OVHcloud (frontend — France) ; certificat ISO/IEC 27001 Supabase et certifications ISO/IEC 27001:2022, 27017:2015, 27018:2019, 27701:2019 OVHcloud ; encadrement documenté du flux d'auth Google OAuth (utilisateurs internes uniquement ; EU-US Data Privacy Framework, à confirmer) ; revérification annuelle de la liste des sous-traitants ultérieurs | T2 2026 | Référent RGPD |
+| 5 | Activer la MFA Supabase pour les rôles `owner` et `super_admin` (non déployée à ce jour) et activer la protection « mot de passe compromis » (actuellement désactivée) | T3 2026 | Référent RGPD + équipe SI |
 | 6 | Mettre en place un export SQL externe hebdomadaire vers stockage chiffré tiers | T3 2026 | Équipe SI |
-| 7 | Auditer et documenter les headers de sécurité (CSP, HSTS, X-Frame-Options, Referrer-Policy) | T2 2026 | Équipe SI |
+| 7 | Configurer les en-têtes de sécurité applicatifs HSTS, CSP, X-Frame-Options, Referrer-Policy (aucun n'est configuré à ce jour) | T2 2026 | Équipe SI |
 | 8 | Industrialiser et documenter les tests de restauration trimestriels | T4 2026 | Équipe SI |
 | 9 | Formaliser le registre des activités de traitement (Art. 30 RGPD) | T2 2026 | Référent RGPD |
 | 10 | Information / formation RGPD des éditeurs ORG partenaires | T3 2026 | Référent RGPD |
+| 11 | **Outiller l'effacement et la conservation** : aucune fonction automatisée d'effacement/anonymisation n'existe (les effacements sont manuels). Définir une procédure documentée de purge ciblée (y compris dans `audit.audit_log`, conservé 12 mois, et `object_version`, non purgé) pour répondre aux demandes Art. 17 ; mettre en œuvre l'anonymisation des comptes inactifs > 24 mois (cible de politique non automatisée) | T3 2026 | Référent RGPD + équipe SI |
+| 12 | **Strip des métadonnées des vidéos** : les images sont strippées à l'upload, pas les vidéos (métadonnées conteneur GPS/appareil conservées, pas de transcodeur serveur) — implémenter un pipeline de strip vidéo (ex. ffmpeg) ou documenter formellement la limite | T4 2026 | Équipe SI |
+| 13 | **Capter le consentement des portraits d'acteurs** : la table `actor_consent` existe mais n'est alimentée par aucun chemin d'écriture ; les portraits sont en bucket public — implémenter la capture du consentement et restreindre l'accès aux portraits | T3 2026 | Référent RGPD + équipe produit |
+| 14 | **Corriger les points d'amélioration de sécurité** (advisors Supabase) : restreindre les deux vues SECURITY DEFINER lisibles par le rôle anonyme ; restreindre/nettoyer les buckets publics listables et les médias orphelins (`media.url` sans clé étrangère) | T3 2026 | Équipe SI |
+| 15 | **Compléter la cotation CNIL** des trois événements redoutés (gravité × vraisemblance, sources de risque, mesures) ; arrêter la cotation chiffrée définitive | T3 2026 | Référent RGPD |
 
 ---
 
 ## 8. Consultation des parties prenantes
 
 - **Personnes concernées** : information par la page RGPD ([rgpd.md](rgpd.md)) accessible publiquement. Les éditeurs sont informés à la création de compte. Les opérateurs et contacts CRM sont informés lors du premier contact.
-- **Référent RGPD interne** : la présente DPIA est rédigée et validée par le référent RGPD interne (David Philippe).
-- **Sous-traitants** : les DPA Supabase et OVH ont été examinés.
+- **Référent RGPD interne** : la présente DPIA est rédigée par le référent RGPD interne (David Philippe) ; elle est à l'état de projet, à valider par le responsable de traitement.
+- **Sous-traitants** : les DPA Supabase (données — AWS eu-west-1, Irlande) et OVHcloud (frontend — France) sont à examiner et à archiver ; le flux d'authentification Google OAuth (utilisateurs internes uniquement) est à encadrer (EU-US Data Privacy Framework, à confirmer).
 - **CSE** : aucun CSE n'est encore en place chez SPL OTI DU SUD. L'organisation s'engage à présenter Bertel et la présente DPIA dès l'installation de l'instance.
 - **Autorité de contrôle (CNIL)** : la consultation préalable (Art. 36 RGPD) n'est pas requise dans la mesure où les risques résiduels sont évalués comme faibles à modérés et maîtrisés.
 
@@ -277,7 +314,9 @@ Trois familles de risques sont analysées selon la méthode CNIL :
 
 ## 9. Validation
 
-**Avis du responsable de traitement :** au regard des éléments documentés à ce stade, le traitement Bertel présente un **niveau de risque résiduel maîtrisé, sous réserve de la mise en œuvre effective des actions correctives identifiées au §7.1**. La présente analyse ne dispense pas :
+**Statut :** projet — à valider par le responsable de traitement.
+
+**Avis du responsable de traitement :** au regard des éléments documentés à ce stade, le traitement Bertel présente un **niveau de risque résiduel à maîtriser, sous réserve de la mise en œuvre effective des actions correctives identifiées au §7.1** (dont la cotation CNIL formelle reste à compléter). La présente analyse ne dispense pas :
 
 - de la **tenue du registre des activités de traitement** (Art. 30 RGPD) ;
 - de la **formalisation des relations avec les ORG partenaires** par une convention de responsabilité conjointe (Art. 26 RGPD) ;
@@ -287,8 +326,8 @@ Aucune consultation préalable de la CNIL (Art. 36 RGPD) n'est requise à ce sta
 
 | Rôle | Nom | Date | Validation |
 |---|---|---|---|
-| Référent RGPD interne | David Philippe | 2026-05-27 | ✅ Validé |
-| Responsable du traitement | SPL OTI DU SUD (représentée par la direction) | 2026-05-27 | ✅ Validé |
+| Référent RGPD interne | David Philippe | 2026-06-16 | 🟡 Projet — à valider |
+| Responsable du traitement | SPL OTI DU SUD (représentée par la direction) | — | 🟡 Projet — à valider |
 
 ---
 
@@ -316,4 +355,4 @@ La présente DPIA fait l'objet d'une **révision annuelle** et est **réévalué
 
 ---
 
-*Document interne — version 1.0 — Dernière mise à jour : 27 mai 2026*
+*Document interne — version 1.1 (projet, à valider) — Dernière mise à jour : 16 juin 2026*

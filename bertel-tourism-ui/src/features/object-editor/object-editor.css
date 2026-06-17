@@ -707,6 +707,86 @@
   padding: 9px 11px;
 }
 
+/* Section 03 — Contacts & web presence: vertical rhythm + grouped subsections.
+   The section breathes by separating "Coordonnées" from "Réseaux sociaux &
+   distribution" with real spacing + a hairline rule, and by rendering each
+   channel as a compact read-only row (edited in a modal) rather than a dense
+   grid of selects/inputs. */
+.object-editor .contacts-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.object-editor .contacts-layout .contacts-notice { margin: 0; }
+
+.object-editor .contacts-group {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.object-editor .contacts-group--web {
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .contacts-group__title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* --ink-2 (not --ink-4): an 11px bold label is "normal" text and must clear
+     WCAG 1.4.3 4.5:1 on --surface; --ink-4/--ink-3 fall short at this size. */
+  color: var(--ink-2);
+}
+.object-editor .contacts-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* Compact read-only display cells (each row is edited via the modal). */
+.object-editor .contact-cell {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-editor .contact-cell--type { font-weight: 600; color: var(--ink-1); }
+/* --ink-2, not --ink-3: 11.5px normal text must clear WCAG 1.4.3 4.5:1 on --surface. */
+.object-editor .contact-cell--role { font-size: 11.5px; color: var(--ink-2); }
+.object-editor .contact-cell--value { display: flex; align-items: center; gap: 7px; }
+.object-editor .contact-cell--value .contact-favicon {
+  flex: none; width: 16px; height: 16px; border-radius: 3px; display: block;
+}
+.object-editor .contact-cell__text {
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ink);
+}
+/* Pencil "edit" action on a display row — matches the .del icon-button footprint. */
+.object-editor .rep-row .rep-edit {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink-3);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.object-editor .rep-row .rep-edit:hover {
+  color: var(--accent-deep);
+  background: var(--accent-tint);
+}
+.object-editor .rep-row .rep-edit:focus-visible {
+  /* Solid ring (not a faint tint shadow) so the focus indicator clears WCAG 2.4.11. */
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 1px;
+  color: var(--accent-deep);
+}
+
 /* Right rail */
 .object-editor .edit-side {
   min-height: 0;

@@ -11,6 +11,17 @@
 import type { ObjectWorkspaceActorLinkItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
 import type { ActorSearchResult } from '../../../services/object-workspace';
 
+/** actor_object_role.visibility vocabulary — shared by the §19 cards (read-only badge) and edit modal. */
+export const ACTOR_VISIBILITY_OPTIONS = [
+  { v: 'public', l: 'Public' },
+  { v: 'private', l: 'Interne' },
+  { v: 'partners', l: 'Partenaires' },
+] as const;
+
+export function actorVisibilityLabel(value: string): string {
+  return ACTOR_VISIBILITY_OPTIONS.find((option) => option.v === value)?.l ?? value;
+}
+
 /**
  * Append a picked actor as a new link, defaulting to the `operator` role (or the first available).
  * Primary only when that role has no primary yet. No-op when the actor already holds that role
@@ -81,6 +92,27 @@ export function setPrimaryActorLink(
   return actors.map((actor, position) =>
     actor.roleCode === role ? { ...actor, isPrimary: position === index } : actor,
   );
+}
+
+/**
+ * Replace the link at `index` with an edited version (from ProviderEditModal) and re-enforce
+ * ≤1 primary per (object, role): if the edited link is primary, clear the flag on same-role
+ * siblings. Role may have changed in the edit, so reconciliation uses the edited role.
+ */
+export function commitActorEdit(
+  actors: ObjectWorkspaceActorLinkItem[],
+  index: number,
+  patched: ObjectWorkspaceActorLinkItem,
+): ObjectWorkspaceActorLinkItem[] {
+  return actors.map((actor, position) => {
+    if (position === index) {
+      return patched;
+    }
+    if (patched.isPrimary && actor.roleCode === patched.roleCode) {
+      return { ...actor, isPrimary: false };
+    }
+    return actor;
+  });
 }
 
 export function removeActorLink(

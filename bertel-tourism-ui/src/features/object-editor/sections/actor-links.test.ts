@@ -1,5 +1,7 @@
 import {
+  actorVisibilityLabel,
   addActorLink,
+  commitActorEdit,
   removeActorLink,
   setActorRole,
   setPrimaryActorLink,
@@ -89,5 +91,45 @@ describe('updateActorLink / removeActorLink', () => {
   test('removeActorLink drops the row at the index', () => {
     const actors = [actor({ id: 'a1' }), actor({ id: 'a2' })];
     expect(removeActorLink(actors, 0).map((item) => item.id)).toEqual(['a2']);
+  });
+});
+
+describe('commitActorEdit', () => {
+  test('replaces the edited row in place', () => {
+    const actors = [actor({ id: 'a1' }), actor({ id: 'a2' })];
+    const patched = { ...actors[1], note: 'Référent', visibility: 'private' };
+    const next = commitActorEdit(actors, 1, patched);
+    expect(next[1]).toMatchObject({ id: 'a2', note: 'Référent', visibility: 'private' });
+    expect(next[0]).toBe(actors[0]);
+  });
+
+  test('clears the primary flag on same-role siblings when the edited row becomes primary', () => {
+    const actors = [
+      actor({ id: 'a1', roleCode: 'operator', isPrimary: true }),
+      actor({ id: 'a2', roleCode: 'operator', isPrimary: false }),
+      actor({ id: 'a3', roleCode: 'guide', roleId: 'r-guide', isPrimary: true }),
+    ];
+    const next = commitActorEdit(actors, 1, { ...actors[1], isPrimary: true });
+    expect(next[0].isPrimary).toBe(false);
+    expect(next[1].isPrimary).toBe(true);
+    expect(next[2].isPrimary).toBe(true); // other role keeps its primary
+  });
+
+  test('does not touch siblings when the edited row is not primary', () => {
+    const actors = [
+      actor({ id: 'a1', roleCode: 'operator', isPrimary: true }),
+      actor({ id: 'a2', roleCode: 'operator', isPrimary: false }),
+    ];
+    const next = commitActorEdit(actors, 1, { ...actors[1], note: 'x' });
+    expect(next[0].isPrimary).toBe(true);
+  });
+});
+
+describe('actorVisibilityLabel', () => {
+  test('maps the visibility code to its French label, falls back to the raw value', () => {
+    expect(actorVisibilityLabel('public')).toBe('Public');
+    expect(actorVisibilityLabel('private')).toBe('Interne');
+    expect(actorVisibilityLabel('partners')).toBe('Partenaires');
+    expect(actorVisibilityLabel('weird')).toBe('weird');
   });
 });

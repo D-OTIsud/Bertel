@@ -18,3 +18,4 @@ export { ChipMultiSelect } from './ChipMultiSelect';
 export { SortableList } from './SortableList';
 export { SortableGrid } from './SortableGrid';
 export { EditorModal } from './EditorModal';
+export { ConfirmDialog } from './ConfirmDialog';

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Chip, ChipSet, Fs, StatCard } from '../primitives';
+import { PanelRightOpen } from 'lucide-react';
+import { Fs, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-workspace-parser';
 import { listObjectCrm } from '../../../services/crm';
@@ -107,30 +108,44 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
         <StatCard label="Interactions / 12 mois" value={String(last12Months)} />
         <StatCard label="Dernier contact" value={lastContact ? formatShortDate(lastContact) : '—'} />
         <StatCard label="Interactions totales" value={String(interactions.length)} />
-        <StatCard label="Sujets distincts" value={String(topics.length)} />
+        <StatCard
+          label="Sujets distincts"
+          value={String(topics.length)}
+          tooltipLabel="Voir les sujets abordés"
+          tooltip={
+            topics.length > 0 ? (
+              <>
+                <span className="stat-card__pop-title">Sujets abordés</span>
+                <ul className="stat-card__pop-list">
+                  {topics.map((topic) => (
+                    <li key={topic.code}>
+                      <span>{topic.name}</span>
+                      <span className="stat-card__pop-count">{topic.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <span>Aucun sujet relevé pour cette fiche.</span>
+            )
+          }
+        />
       </div>
 
-      <div className="chip-group__label" style={{ marginTop: 0 }}>Sujets normalisés (demand_topic) — distribution réelle</div>
-      {topics.length > 0 ? (
-        <ChipSet>
-          {topics.map((topic) => (
-            <Chip key={topic.code} label={`${topic.name} — ${topic.count}`} on />
-          ))}
-        </ChipSet>
-      ) : (
-        <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>Aucun sujet relevé pour cette fiche.</p>
-      )}
-
-      <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
+      <div className="crm-open-row">
         <button
           type="button"
-          className="rep-add"
-          style={{ marginTop: 0 }}
+          className="crm-open-cta"
           disabled={!objectId}
           title={!objectId ? 'Enregistrez la fiche pour accéder au suivi CRM.' : undefined}
           onClick={() => setDrawer({ open: true, actorId: null })}
         >
-          Ouvrir le suivi CRM{interactions.length > 0 ? ` · ${interactions.length}` : ''}
+          <PanelRightOpen size={16} aria-hidden />
+          <span className="crm-open-cta__text">
+            Ouvrir le suivi CRM
+            <small>Interactions, tâches & fiches prestataires</small>
+          </span>
+          {interactions.length > 0 && <span className="crm-open-cta__count">{interactions.length}</span>}
         </button>
       </div>
 

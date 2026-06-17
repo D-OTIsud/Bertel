@@ -100,10 +100,12 @@ BEGIN
   IF array_length(a_days,1) IS NULL OR array_length(b_days,1) IS NULL THEN RETURN false; END IF;
   SELECT count(*) INTO inter FROM unnest(a_days) AS d WHERE d = ANY (b_days);
   IF inter = 0 THEN RETURN false; END IF;                               -- disjointes
-  IF inter = array_length(a_days,1) OR inter = array_length(b_days,1) THEN
-    RETURN false;                                                       -- l'une contenue dans l'autre → tolérée
+  -- STRICTE containment tolérée (la plus étroite gagne) ; fenêtres identiques = conflit.
+  IF (inter = array_length(a_days,1) AND array_length(a_days,1) < array_length(b_days,1))
+     OR (inter = array_length(b_days,1) AND array_length(b_days,1) < array_length(a_days,1)) THEN
+    RETURN false;
   END IF;
-  RETURN true;                                                          -- croisement partiel
+  RETURN true;                                                          -- croisement partiel OU fenêtres identiques
 END;
 $$;
 

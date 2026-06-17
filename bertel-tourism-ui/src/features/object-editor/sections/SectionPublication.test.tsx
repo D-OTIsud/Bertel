@@ -1,10 +1,23 @@
-import { fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionPublication } from './SectionPublication';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import { useSetObjectStatusMutation } from '../../../hooks/useExplorerQueries';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
+
+// §21 fires a lifecycle mutation on confirm — mock the hook so tests assert the
+// confirm flow (open → confirm → mutate) without touching the network.
+jest.mock('../../../hooks/useExplorerQueries', () => ({
+  useSetObjectStatusMutation: jest.fn(),
+}));
+
+const mutateAsync = jest.fn().mockResolvedValue(undefined);
+beforeEach(() => {
+  mutateAsync.mockClear();
+  (useSetObjectStatusMutation as jest.Mock).mockReturnValue({ mutateAsync, isPending: false });
+});
 
 /** Like `allowAll` but the `publication` module is read-only (no publish_object). */
 const denyPublication = new Proxy(
@@ -84,5 +97,47 @@ describe('SectionPublication (§21)', () => {
     expect(screen.queryByText('Motif hors ligne')).not.toBeInTheDocument();
     expect(screen.queryByText('Demande de validation')).not.toBeInTheDocument();
     expect(screen.queryByText('Publication différée')).not.toBeInTheDocument();
+  });
+
+  it('opens a confirmation dialog instead of changing the status immediately', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    expect(screen.queryByText('Archiver la fiche ?')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archiver' }));
+
+    // The action is staged behind an explicit confirmation, not run.
+    expect(screen.getByText('Archiver la fiche ?')).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('cancelling the confirmation closes it and leaves the status unchanged', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dépublier' }));
+    expect(screen.getByText('Dépublier la fiche ?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    expect(screen.queryByText('Dépublier la fiche ?')).not.toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('confirming the dialog runs the lifecycle change for the chosen target', async () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dépublier' }));
+    const dialog = screen.getByRole('dialog');
+    // The confirm resolves the (mocked) mutation in a microtask and then calls
+    // setSavedStatus — wrap it so that state update flushes inside act().
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Dépublier' }));
+    });
+
+    expect(mutateAsync).toHaveBeenCalledWith('hidden');
+    await waitFor(() => expect(result.current.draft.generalInfo.status).toBe('hidden'));
   });
 });

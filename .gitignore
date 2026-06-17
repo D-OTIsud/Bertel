@@ -93,3 +93,8 @@ dbdoc/
 # plans + the decision log; these are per-session research scratch)
 docs/superpowers/plans/.research/
 
+# Root-level scratch / one-off analysis artifacts (Berta import scripts, ad-hoc
+# SQL/CSV/JSON dumps). Convention: throwaway working files are prefixed "_" at the
+# repo root. The durable outputs are committed under docs/research/ + the migrations.
+/_*
+

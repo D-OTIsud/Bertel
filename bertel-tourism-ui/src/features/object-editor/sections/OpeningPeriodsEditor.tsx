@@ -3,6 +3,7 @@ import { ChevronDown, Pencil, Trash2 } from 'lucide-react';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
 import {
   buildRibbonSegments,
+  classifyOpeningSeason,
   formatPeriodRange,
   MONTHS,
   periodKind,
@@ -12,6 +13,7 @@ import {
 } from './blocks/opening-period-meta';
 import { scheduleRowsFromPeriod } from './blocks/opening-schedule';
 import { classifyClosedDays } from './opening-period-edit';
+import { tagChipStyle } from '../../../utils/explorer-card';
 
 /** Read-only per-day hours for the expanded row detail. */
 function periodDayHours(period: ObjectWorkspaceOpeningPeriod): { short: string; text: string; open: boolean }[] {
@@ -72,12 +74,14 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
     () => new Map(periodTypeOptions.map((option) => [option.code, option])),
     [periodTypeOptions],
   );
-  // Colour/label come from the explicit type; legacy untyped periods fall back to the
-  // inferred kind (so old rows still render until they are edited and given a type).
-  const periodColor = (period: ObjectWorkspaceOpeningPeriod): string => {
-    const typed = typeByCode.get(period.seasonTypeCode);
-    return typed?.color || STRIPE_VAR[periodKind(period)];
-  };
+  // Season "étiquette": a coloured chip driven by the explicit type, then label keywords,
+  // and independent of opening hours (classifyOpeningSeason — so a "Haute saison" period with
+  // no fixed hours stays teal instead of greying to 'shut'). The stripe + ribbon reuse the
+  // same hex so the row's colour is consistent; untyped/unclassifiable rows fall back to the
+  // inferred kind tint.
+  const seasonChip = (period: ObjectWorkspaceOpeningPeriod) => classifyOpeningSeason(period, typeByCode);
+  const periodColor = (period: ObjectWorkspaceOpeningPeriod): string =>
+    seasonChip(period)?.hex || STRIPE_VAR[periodKind(period)];
   const periodName = (period: ObjectWorkspaceOpeningPeriod, index: number): string =>
     period.label || typeByCode.get(period.seasonTypeCode)?.label || `Période ${index + 1}`;
 
@@ -165,6 +169,10 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
       <div className="repeater">
         {periods.map((period, index) => {
           const label = periodName(period, index);
+          const chip = seasonChip(period);
+          // Avoid "Haute saison · Haute saison": when the visible name IS the season chip's
+          // label, the coloured chip stands in for the name; otherwise show name then chip.
+          const chipIsName = chip ? chip.label.trim().toLowerCase() === label.trim().toLowerCase() : false;
           const isNow = index === currentIndex;
           const isExpanded = Boolean(expanded[index]);
           const dateClosures = classifyClosedDays(period.closedDays)
@@ -177,17 +185,23 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
                 style={{ gridTemplateColumns: ROW_COLS, alignItems: 'center' }}
               >
                 <span style={{ display: 'block', width: 8, height: 28, borderRadius: 3, background: periodColor(period) }} />
-                <div style={{ minWidth: 0 }}>
-                  <span style={{ fontWeight: 600 }}>{label}</span>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  {!chipIsName && <span style={{ fontWeight: 600 }}>{label}</span>}
+                  {/* Coloured season "étiquette" (haute / mi / hors saison …). */}
+                  {chip && (
+                    <span className="pill" style={{ ...tagChipStyle(chip.hex), fontSize: 11, fontWeight: 600 }}>
+                      {chip.label}
+                    </span>
+                  )}
                   {/* Recurrence layer badge. 'always' is omitted: the range column already
                       reads "Toute l’année", so a second identical chip would be redundant. */}
                   {period.recurrence !== 'always' && (
-                    <span className="pill" style={{ marginLeft: 8, fontSize: 10 }}>
+                    <span className="pill" style={{ fontSize: 10 }}>
                       {RECURRENCE_LABEL[period.recurrence]}
                     </span>
                   )}
                   {isNow && (
-                    <span className="pill ok" style={{ marginLeft: 8, fontSize: 10 }}>
+                    <span className="pill ok" style={{ fontSize: 10 }}>
                       en cours
                     </span>
                   )}

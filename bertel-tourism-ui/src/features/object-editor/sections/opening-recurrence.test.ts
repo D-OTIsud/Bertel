@@ -1,6 +1,7 @@
 import {
   OPENING_CYCLIC_SENTINEL_YEAR,
   encodeCyclicDate, encodeCyclicRange, decodeCyclicMonthDay,
+  decodeCyclicFields, encodeCyclicFields, EMPTY_CYCLIC_FIELDS,
   periodRank,
   periodsPartialOverlap, findPeriodConflicts,
   type RecurrencePeriod,
@@ -25,6 +26,29 @@ describe('cyclic sentinel encoding', () => {
   test('encodeCyclicRange clamps an impossible day to the month last day', () => {
     expect(encodeCyclicRange(2, 31, 2, 31).startDate).toBe('2000-02-29'); // 2000 is leap
     expect(encodeCyclicRange(2, 31, 2, 31).endDate).toBe('2000-02-29');
+  });
+});
+
+describe('cyclic picker fields (modal state)', () => {
+  test('a lone start month encodes nothing yet, but the pick is preserved as fields', () => {
+    const fields = { ...EMPTY_CYCLIC_FIELDS, startMonth: '5' };
+    expect(encodeCyclicFields(fields)).toEqual({ startDate: '', endDate: '' });
+    expect(fields.startMonth).toBe('5'); // the field state itself keeps the chosen month
+  });
+  test('both months default the days (start→1, end→last real day)', () => {
+    expect(encodeCyclicFields({ startMonth: '5', startDay: '', endMonth: '9', endDay: '' }))
+      .toEqual({ startDate: '2000-05-01', endDate: '2000-09-30' });
+    expect(encodeCyclicFields({ startMonth: '2', startDay: '', endMonth: '2', endDay: '' }))
+      .toEqual({ startDate: '2000-02-01', endDate: '2000-02-29' }); // 2000 is leap
+  });
+  test('explicit days are honoured and clamped', () => {
+    expect(encodeCyclicFields({ startMonth: '6', startDay: '10', endMonth: '8', endDay: '20' }))
+      .toEqual({ startDate: '2000-06-10', endDate: '2000-08-20' });
+  });
+  test('decode round-trips an encoded range back to picker strings', () => {
+    expect(decodeCyclicFields('2000-05-01', '2000-09-30'))
+      .toEqual({ startMonth: '5', startDay: '1', endMonth: '9', endDay: '30' });
+    expect(decodeCyclicFields('', '')).toEqual(EMPTY_CYCLIC_FIELDS);
   });
 });
 

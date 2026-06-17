@@ -35,6 +35,47 @@ export function periodKind(period: ObjectWorkspaceOpeningPeriod): OpeningPeriodK
   return 'standard';
 }
 
+export interface OpeningSeasonChip {
+  label: string;
+  /** Hex fed to tagChipStyle for the soft-chip background + readable text. */
+  hex: string;
+}
+
+// Hex equivalents of the --op-* CSS vars, so the season chip (tagChipStyle needs a hex)
+// matches the stripe/ribbon. high = teal, low/hors/mi = amber, shut = neutral grey.
+const SEASON_HEX = { high: '#176b6a', low: '#c08a3e', shut: '#a8a39a' } as const;
+
+function seasonHexFromLabel(label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes('haute') || l.includes('high')) return SEASON_HEX.high;
+  if (l.includes('ferm') || l.includes('clos')) return SEASON_HEX.shut;
+  return SEASON_HEX.low; // basse / hors / mi / moyenne / default
+}
+
+/**
+ * Season "étiquette" classification for the period row — driven by the explicit period TYPE
+ * first, then the label keywords, and DELIBERATELY independent of opening hours. periodKind()
+ * returns 'shut' for ANY hour-less period, which would grey out a "Haute saison" period that
+ * simply has no fixed hours (see the §14 open-without-hours case); the coloured season chip
+ * must survive that. Returns null when not classifiable (caller renders no chip).
+ */
+export function classifyOpeningSeason(
+  period: ObjectWorkspaceOpeningPeriod,
+  typeByCode: ReadonlyMap<string, { label: string; color: string }>,
+): OpeningSeasonChip | null {
+  const typed = typeByCode.get(period.seasonTypeCode);
+  if (typed && typed.label) {
+    return { label: typed.label, hex: typed.color || seasonHexFromLabel(typed.label) };
+  }
+  const l = period.label.toLowerCase();
+  if (l.includes('haute') || l.includes('high')) return { label: period.label, hex: SEASON_HEX.high };
+  if (l.includes('basse') || l.includes('low') || l.includes('hors') || l.includes('mi-') || l.includes('moyenne')) {
+    return { label: period.label, hex: SEASON_HEX.low };
+  }
+  if (l.includes('ferm') || l.includes('clos')) return { label: period.label, hex: SEASON_HEX.shut };
+  return null;
+}
+
 export function formatPeriodRange(period: ObjectWorkspaceOpeningPeriod): string {
   if (period.recurrence === 'always') {
     return 'Toute l’année';

@@ -43,6 +43,50 @@ export function decodeCyclicMonthDay(iso: string): { month: number; day: number 
   return { month: Number(m), day: Number(d) };
 }
 
+/**
+ * Month/day picker state for the cyclic recurrence editor. Held as the modal's OWN
+ * state (not derived from the encoded date) so a partial selection — e.g. only the
+ * start month — stays visible instead of snapping back: the encoded `startDate`/`endDate`
+ * cannot represent a half-chosen range, so deriving the selects from it dropped the pick.
+ */
+export interface CyclicFields {
+  startMonth: string;
+  startDay: string;
+  endMonth: string;
+  endDay: string;
+}
+
+export const EMPTY_CYCLIC_FIELDS: CyclicFields = { startMonth: '', startDay: '', endMonth: '', endDay: '' };
+
+/** Decode sentinel-year ISO dates back into picker strings (empty when the date is unset). */
+export function decodeCyclicFields(startDate: string, endDate: string): CyclicFields {
+  const s = startDate ? decodeCyclicMonthDay(startDate) : null;
+  const e = endDate ? decodeCyclicMonthDay(endDate) : null;
+  return {
+    startMonth: s ? String(s.month) : '',
+    startDay: s ? String(s.day) : '',
+    endMonth: e ? String(e.month) : '',
+    endDay: e ? String(e.day) : '',
+  };
+}
+
+/**
+ * Encode picker strings into a sentinel-year range. Both MONTHS are required; days default
+ * (start → 1, end → last real day of its month). Returns empty dates while incomplete so the
+ * save gate ("Renseignez le début et la fin") stays active until both months are chosen.
+ */
+export function encodeCyclicFields(fields: CyclicFields): { startDate: string; endDate: string } {
+  const { startMonth, startDay, endMonth, endDay } = fields;
+  if (!startMonth || !endMonth) {
+    return { startDate: '', endDate: '' };
+  }
+  const sm = Number(startMonth);
+  const em = Number(endMonth);
+  const sd = startDay ? Number(startDay) : 1;
+  const ed = endDay ? Number(endDay) : lastDayOfMonth(em);
+  return encodeCyclicRange(sm, sd, em, ed);
+}
+
 export function periodRank(p: RecurrencePeriod): number {
   if (p.isClosure) return 4;
   if (p.recurrence === 'fixed' && (p.startDate || p.endDate)) return 3;

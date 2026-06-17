@@ -1,4 +1,4 @@
-import { formatOpeningTime, isOpeningPeriodAllYears } from '../features/object-drawer/utils';
+import { formatOpeningTime } from '../features/object-drawer/utils';
 import type { CrmInteractionReply, ObjectDetail } from '../types/domain';
 
 interface GenericRecord {
@@ -622,6 +622,10 @@ export interface ObjectWorkspaceOpeningPeriod {
   startDate: string;
   endDate: string;
   allYears: boolean;
+  /** Mode de récurrence dérivé/explicite (source de vérité de l'UI). */
+  recurrence: 'always' | 'cyclic' | 'fixed';
+  /** Couche fermeture (prioritaire, surcharge les périodes ouvertes). */
+  isClosure: boolean;
   closedDays: string[];
   weekdays: ObjectWorkspaceOpeningWeekday[];
 }
@@ -2253,6 +2257,25 @@ function buildWorkspaceOpeningWeekdaysFromLegacySchedules(record: GenericRecord)
   return sortWorkspaceOpeningWeekdays(Array.from(weekdaysByCode.values()));
 }
 
+/**
+ * Dérive le mode de récurrence + l'effet "all years" d'un enregistrement de période.
+ * - cyclic : `all_years=true` AVEC dates (stockées en année-sentinelle 2000 côté backend)
+ * - fixed  : `all_years=false` AVEC dates (fenêtre calendaire absolue)
+ * - always : pas de dates (ouvert toute l'année, sans bornes)
+ * `allYears` ressort `true` pour `always`, sinon recopie le drapeau explicite.
+ */
+function deriveOpeningRecurrence(
+  record: GenericRecord,
+  startDate: string,
+  endDate: string,
+): { recurrence: ObjectWorkspaceOpeningPeriod['recurrence']; allYears: boolean } {
+  const allYearsExplicit = record.all_years === true || record.all_years === 'true';
+  const hasDates = Boolean(startDate || endDate);
+  const recurrence: ObjectWorkspaceOpeningPeriod['recurrence'] =
+    allYearsExplicit && hasDates ? 'cyclic' : !allYearsExplicit && hasDates ? 'fixed' : 'always';
+  return { recurrence, allYears: recurrence === 'always' ? true : allYearsExplicit };
+}
+
 function parseWorkspaceOpeningPeriodRecord(
   record: GenericRecord,
   index: number,
@@ -2264,7 +2287,10 @@ function parseWorkspaceOpeningPeriodRecord(
       ? weekdaySlots
       : buildWorkspaceOpeningWeekdaysFromLegacySchedules(record);
 
-  const allYears = isOpeningPeriodAllYears(record);
+  const isClosure = readBoolean(record.is_closure);
+  const startDate = readString(record.date_start, readString(record.start_date));
+  const endDate = readString(record.date_end, readString(record.end_date));
+  const { recurrence, allYears } = deriveOpeningRecurrence(record, startDate, endDate);
 
   return {
     recordId: readString(record.id) || null,
@@ -2272,9 +2298,11 @@ function parseWorkspaceOpeningPeriodRecord(
     bucket,
     label: readString(record.label, readString(record.name, `Periode ${index + 1}`)),
     seasonTypeCode: readString(record.period_type_code),
-    startDate: readString(record.date_start, readString(record.start_date)),
-    endDate: readString(record.date_end, readString(record.end_date)),
+    startDate,
+    endDate,
     allYears,
+    recurrence,
+    isClosure,
     closedDays: readStringList(record.closed_days),
     weekdays: fallbackWeekdays,
   };
@@ -2305,15 +2333,22 @@ function parseWorkspaceOpeningPeriodsFromRaw(raw: Record<string, unknown>): Obje
         slots,
       }));
 
+    const isClosure = readBoolean(record.is_closure);
+    const startDate = readString(record.date_start, readString(record.start_date));
+    const endDate = readString(record.date_end, readString(record.end_date));
+    const { recurrence, allYears } = deriveOpeningRecurrence(record, startDate, endDate);
+
     return {
       recordId: readString(record.id) || null,
       order: String(index + 1),
       bucket: 'undated' as const,
       label: readString(record.label, `Horaire ${index + 1}`),
       seasonTypeCode: readString(record.period_type_code),
-      startDate: readString(record.date_start, readString(record.start_date)),
-      endDate: readString(record.date_end, readString(record.end_date)),
-      allYears: isOpeningPeriodAllYears(record),
+      startDate,
+      endDate,
+      allYears,
+      recurrence,
+      isClosure,
       closedDays: readStringList(record.closed_days),
       weekdays: sortWorkspaceOpeningWeekdays(weekdays),
     };

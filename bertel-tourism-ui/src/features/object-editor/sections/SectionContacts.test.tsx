@@ -30,28 +30,31 @@ function modulesWithContacts(
 }
 
 describe('SectionContacts', () => {
-  it('populates the contact type dropdown from kindOptions', () => {
+  it('populates the contact type dropdown from kindOptions (in the add modal)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts()));
     render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un canal de contact/i })); });
     const kindSelect = screen.getByRole('combobox', { name: 'Type de contact' });
     const labels = within(kindSelect).getAllByRole('option').map((option) => option.textContent);
     expect(labels).toEqual(expect.arrayContaining(['Téléphone', 'E-mail']));
   });
 
-  it('populates the contact role dropdown from roleOptions', () => {
+  it('populates the contact role dropdown from roleOptions (in the add modal)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts()));
     render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un canal de contact/i })); });
     const roleSelect = screen.getByRole('combobox', { name: 'Rôle du contact' });
     const labels = within(roleSelect).getAllByRole('option').map((option) => option.textContent);
     expect(labels).toEqual(expect.arrayContaining(['Accueil', 'Réservation']));
   });
 
-  it('keeps an empty role possible with a clear label', () => {
+  it('keeps an empty role possible with a clear label (in the add modal)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts()));
     render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un canal de contact/i })); });
     const roleSelect = screen.getByRole('combobox', { name: 'Rôle du contact' }) as HTMLSelectElement;
     expect(within(roleSelect).getByRole('option', { name: '— Aucun rôle —' })).toBeInTheDocument();
     expect(roleSelect.value).toBe('');
@@ -64,20 +67,25 @@ describe('SectionContacts', () => {
     expect(screen.getByText(/types de contact ne sont pas disponibles/i)).toBeInTheDocument();
   });
 
-  it('adds a usable editable contact row', () => {
+  it('adds a contact via the modal, not by appending an inline row', () => {
     const { result } = renderHook(() =>
       useObjectEditorState('o1', modulesWithContacts({ objectItems: [contact()] })),
     );
     const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getAllByRole('combobox', { name: 'Type de contact' })).toHaveLength(1);
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Ajouter un canal de contact/i }));
-    });
+    // No inline type selector on the display rows — it lives in the modal now.
+    expect(screen.queryByRole('combobox', { name: 'Type de contact' })).not.toBeInTheDocument();
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un canal de contact/i })); });
+    // The modal opened with exactly one type selector.
+    expect(screen.getByRole('combobox', { name: 'Type de contact' })).toBeInTheDocument();
+
+    act(() => { fireEvent.change(screen.getByLabelText('Valeur du contact'), { target: { value: '0262 49 64 59' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getAllByRole('combobox', { name: 'Type de contact' })).toHaveLength(2);
     expect(result.current.draft.contacts.objectItems).toHaveLength(2);
+    expect(result.current.draft.contacts.objectItems[1].value).toBe('0262 49 64 59');
   });
 
   it('deletes the targeted contact row', () => {
@@ -91,7 +99,7 @@ describe('SectionContacts', () => {
     const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
     act(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: /Supprimer/ })[0]);
     });
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
 
@@ -105,7 +113,7 @@ describe('SectionContacts', () => {
     );
     render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    const del = screen.getByRole('button', { name: 'Supprimer' });
+    const del = screen.getByRole('button', { name: /Supprimer/ });
     expect(del.textContent?.trim()).not.toBe('×');
     expect(del.querySelector('svg')).toBeInTheDocument();
   });
@@ -116,18 +124,18 @@ describe('SectionContacts', () => {
     expect(fixture.contacts.roleOptions.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('marks the contacts module dirty when a value is edited', () => {
+  it('marks the contacts module dirty when a value is edited via the modal', () => {
     const { result } = renderHook(() =>
       useObjectEditorState('o1', modulesWithContacts({ objectItems: [contact()] })),
     );
-    const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
+    render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    act(() => {
-      fireEvent.change(screen.getByDisplayValue('+262 000'), { target: { value: '+262 999' } });
-    });
-    view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Modifier Téléphone' })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Valeur du contact'), { target: { value: '+262 999' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
 
     expect(result.current.dirtySections.contacts).toBe(true);
+    expect(result.current.draft.contacts.objectItems[0].value).toBe('+262 999');
   });
 
   it('shows the platform favicon in front of a URL-valued contact', () => {
@@ -262,8 +270,10 @@ describe('SectionContacts — §48 contact flags', () => {
     expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(false);
   });
 
-  // Fix 1: kind-change must not create a double primary for the destination kind.
-  it('moving a primary row to a kind that already has a primary clears its star (no double primary)', () => {
+  // Editing a row's type (in the modal) to a kind that already has a primary must
+  // still leave exactly one primary for that kind (reconcileContactPrimary mirrors the
+  // saver's order-based dedupe: the edited row wins, the old primary is demoted).
+  it('editing a row to a kind that already has a primary keeps a single primary for that kind', () => {
     const modules = fullModulesFixture();
     modules.contacts.objectItems = [
       { ...modules.contacts.objectItems[0], id: 'c1', kindCode: 'phone', isPrimary: true },
@@ -272,12 +282,16 @@ describe('SectionContacts — §48 contact flags', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    act(() => { fireEvent.change(screen.getAllByLabelText('Type de contact')[0], { target: { value: 'email' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Modifier Téléphone' })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Type de contact'), { target: { value: 'email' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    const items = result.current.draft.contacts.objectItems;
-    expect(items.find((item) => item.id === 'c1')?.isPrimary).toBe(false);
-    expect(items.find((item) => item.id === 'c2')?.isPrimary).toBe(true);
+    const emailPrimaries = result.current.draft.contacts.objectItems.filter(
+      (item) => item.kindCode.toLowerCase() === 'email' && item.isPrimary,
+    );
+    expect(emailPrimaries).toHaveLength(1);
+    expect(emailPrimaries[0].id).toBe('c1');
   });
 
   // Fix 5a: per-kind isolation — setting phone primary must not touch email primary.
@@ -310,7 +324,7 @@ describe('SectionContacts — §48 contact flags', () => {
     expect(result.current.dirtySections.contacts).toBe(false);
   });
 
-  it('renders the §90 web channels group with its kind catalog', () => {
+  it('renders the §90 web channels group and offers its kind catalog in the modal', () => {
     const { result } = renderHook(() =>
       useObjectEditorState('o1', modulesWithContacts({
         webItems: [
@@ -321,21 +335,25 @@ describe('SectionContacts — §48 contact flags', () => {
     render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText(/Réseaux sociaux\s*&\s*distribution/i)).toBeInTheDocument();
+    // The type catalog lives in the modal now — open it from the add button.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: '+ Ajouter un réseau ou canal' })); });
     const webSelect = screen.getByRole('combobox', { name: 'Type de réseau ou canal' });
     const labels = within(webSelect).getAllByRole('option').map((option) => option.textContent);
     expect(labels).toEqual(expect.arrayContaining(['Facebook', 'Instagram', 'Booking.com']));
   });
 
-  it('adds an editable web channel row (§90)', () => {
+  it('adds a web channel via the modal (§90)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithContacts({ webItems: [] })));
     const view = render(<SectionContacts editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByRole('combobox', { name: 'Type de réseau ou canal' })).not.toBeInTheDocument();
     act(() => { fireEvent.click(screen.getByRole('button', { name: '+ Ajouter un réseau ou canal' })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Adresse du réseau ou canal'), { target: { value: 'https://instagram.com/x' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
     view.rerender(<SectionContacts editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getByRole('combobox', { name: 'Type de réseau ou canal' })).toBeInTheDocument();
     expect(result.current.draft.contacts.webItems).toHaveLength(1);
+    expect(result.current.draft.contacts.webItems[0].value).toBe('https://instagram.com/x');
     expect(result.current.dirtySections.contacts).toBe(true);
   });
 });

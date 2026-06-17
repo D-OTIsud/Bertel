@@ -3514,9 +3514,10 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let canonical = false;
   let enrichment = false;
   let objectOwner = false;
+  let isOrgAdmin = directWrite;
   if (!session.demoMode && apiClient) {
     try {
-      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult] = await Promise.allSettled([
+      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult, orgAdminResult] = await Promise.allSettled([
         apiClient.schema('api').rpc('user_can_write_canonical', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_write_enrichment', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_publish_object', { p_object_id: objectId }),
@@ -3525,6 +3526,8 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         // §19 CRM: per-object write gate (publisher-ORG membership + write_crm_notes) — the
         // global userCanWriteCrmNotes() helper is NOT object-scoped and must not be used here.
         apiClient.schema('api').rpc('user_can_write_crm', { p_object_id: objectId }),
+        // §22 external identifiers: admin-only write gate (mirrors the RPC gate exactly).
+        apiClient.schema('api').rpc('current_user_is_org_admin'),
       ]);
 
       canonical =
@@ -3539,6 +3542,9 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canWriteProviderFollowUp =
         providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
       crmWrite = crmResult.status === 'fulfilled' && crmResult.value.error == null && crmResult.value.data === true;
+      isOrgAdmin =
+        directWrite
+        || (orgAdminResult.status === 'fulfilled' && orgAdminResult.value.error == null && orgAdminResult.value.data === true);
 
       canPrepareProposal = directWrite || canonical || enrichment;
       canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
@@ -3548,6 +3554,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canPublishObject = directWrite;
       canWriteProviderFollowUp = directWrite;
       crmWrite = false;
+      isOrgAdmin = directWrite;
     }
   }
 
@@ -3575,10 +3582,12 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       disabledReason: canPublishObject ? null : "Vos droits actuels ne permettent pas de publier ou de depublier cette fiche.",
     },
     syncIdentifiers: {
-      canDirectWrite: false,
+      canDirectWrite: isOrgAdmin,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: "Le module A4 reste en lecture seule tant que l'administration des identifiants externes et des origines n'est pas branchee dans le workspace.",
+      disabledReason: isOrgAdmin
+        ? null
+        : "Réservé aux administrateurs d'organisation — l'administration des identifiants externes nécessite un rôle admin.",
     },
     location: {
       ...directOrBlocked(),
@@ -3941,6 +3950,54 @@ export async function setObjectStatus(objectId: string, status: ObjectLifecycleS
     throw new Error(friendlyStatusError(error));
   }
   return (data as ObjectLifecycleStatus) ?? status;
+}
+
+/**
+ * §22 — admin-gated upsert of one external identifier. The org is server-derived
+ * (api.current_user_org_id), canonical sources are rejected by the RPC, and the table's
+ * admin_* RLS is bypassed (the RPC is SECURITY DEFINER ⇒ the in-function gate is the boundary).
+ * Returns the row id.
+ */
+export async function upsertObjectExternalId(input: {
+  objectId: string;
+  sourceSystem: string;
+  externalId: string;
+  lastSyncedAt: string | null;
+}): Promise<string> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return 'demo-external-id';
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour enregistrer l'identifiant externe.");
+  }
+  const { data, error } = await apiClient.schema('api').rpc('rpc_upsert_object_external_id', {
+    p_object_id: input.objectId,
+    p_source_system: input.sourceSystem,
+    p_external_id: input.externalId,
+    p_last_synced_at: input.lastSyncedAt,
+  });
+  if (error) {
+    throw mapMutationError(error, "Enregistrement de l'identifiant externe impossible.");
+  }
+  return readString(data);
+}
+
+/** §22 — admin-gated delete of one external identifier (must belong to the caller's ORG, non-canonical). */
+export async function deleteObjectExternalId(id: string): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour supprimer l'identifiant externe.");
+  }
+  const { error } = await apiClient.schema('api').rpc('rpc_delete_object_external_id', { p_id: id });
+  if (error) {
+    throw mapMutationError(error, "Suppression de l'identifiant externe impossible.");
+  }
 }
 
 export async function saveObjectWorkspaceGeneralInfo(objectId: string, input: ObjectWorkspaceGeneralInfo): Promise<void> {

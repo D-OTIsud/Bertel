@@ -1,6 +1,10 @@
-import { Fs } from '../primitives';
+import { useState } from 'react';
+import { ConfirmDialog, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceExternalIdentifierItem } from '../../../services/object-workspace-parser';
+import { ExternalIdEditModal } from '../widgets/ExternalIdEditModal';
+import { createExternalIdDraft, isCanonicalSourceSystem } from './external-id-edit';
+import { useUpsertExternalIdMutation, useDeleteExternalIdMutation } from '../../../hooks/useExplorerQueries';
 
 const SOURCE_LABELS: Record<string, string> = {
   OTI: 'ID OTI (canonical)',
@@ -23,11 +27,6 @@ function rowLabel(row: ObjectWorkspaceExternalIdentifierItem) {
   return SOURCE_LABELS[code] ?? row.sourceSystem;
 }
 
-function isCanonicalLocked(row: ObjectWorkspaceExternalIdentifierItem) {
-  const code = sourceCode(row.sourceSystem);
-  return code === 'OTI' || code === 'SU' || row.sourceSystem.toLowerCase().includes('canonical');
-}
-
 function formatWhen(row: ObjectWorkspaceExternalIdentifierItem) {
   if (row.lastSyncedAt) {
     return row.lastSyncedAt.includes('Sync') ? row.lastSyncedAt : `Sync OK · ${row.lastSyncedAt}`;
@@ -35,12 +34,63 @@ function formatWhen(row: ObjectWorkspaceExternalIdentifierItem) {
   return row.updatedAt || row.createdAt || '—';
 }
 
-export function SectionSync({ editor, folded }: SectionProps) {
+type ModalState = { mode: 'add' | 'edit'; item: ObjectWorkspaceExternalIdentifierItem } | null;
+
+export function SectionSync({ editor, permissions, objectId, folded }: SectionProps) {
   const sync = editor.draft.syncIdentifiers;
   const rows = sync.externalIdentifiers;
+  const canManage = permissions.syncIdentifiers.canDirectWrite;
+  const manageReason = permissions.syncIdentifiers.disabledReason ?? 'Réservé aux administrateurs.';
+
+  const upsert = useUpsertExternalIdMutation(objectId ?? null);
+  const remove = useDeleteExternalIdMutation(objectId ?? null);
+  const [modal, setModal] = useState<ModalState>(null);
+  const [pendingDelete, setPendingDelete] = useState<ObjectWorkspaceExternalIdentifierItem | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
   const syncedCount = rows.filter((r) => Boolean(r.lastSyncedAt)).length;
   const pillTone = rows.length === 0 ? 'warn' : syncedCount >= rows.length ? 'ok' : 'warn';
   const pillLabel = rows.length === 0 ? 'Lecture seule' : `${syncedCount} / ${rows.length} synchros`;
+
+  // Optimistically patch the loaded draft so the row reflects immediately; the mutation's
+  // invalidation of ['object-workspace', id] reloads the authoritative snapshot right after.
+  function patchDraftRows(next: ObjectWorkspaceExternalIdentifierItem[]) {
+    editor.replaceModule('syncIdentifiers', { ...sync, externalIdentifiers: next });
+  }
+
+  async function handleSave(item: ObjectWorkspaceExternalIdentifierItem) {
+    setFeedback(null);
+    try {
+      const newId = await upsert.mutateAsync({
+        sourceSystem: item.sourceSystem,
+        externalId: item.externalId,
+        lastSyncedAt: item.lastSyncedAt ? item.lastSyncedAt : null,
+      });
+      const saved: ObjectWorkspaceExternalIdentifierItem = { ...item, id: item.id || newId };
+      const next = item.id
+        ? rows.map((r) => (r.id === item.id ? saved : r))
+        : [...rows, saved];
+      patchDraftRows(next);
+      setModal(null);
+      setFeedback('Identifiant externe enregistré.');
+    } catch (error) {
+      setModal(null);
+      setFeedback(error instanceof Error ? error.message : "Enregistrement impossible.");
+    }
+  }
+
+  async function handleDelete(item: ObjectWorkspaceExternalIdentifierItem) {
+    setFeedback(null);
+    try {
+      await remove.mutateAsync(item.id);
+      patchDraftRows(rows.filter((r) => r.id !== item.id));
+      setPendingDelete(null);
+      setFeedback('Identifiant externe supprimé.');
+    } catch (error) {
+      setPendingDelete(null);
+      setFeedback(error instanceof Error ? error.message : 'Suppression impossible.');
+    }
+  }
 
   return (
     <Fs
@@ -51,24 +101,40 @@ export function SectionSync({ editor, folded }: SectionProps) {
       pill={{ tone: pillTone, label: pillLabel }}
     >
       {rows.length > 0 ? (
-        rows.map((row) => {
-          const editable = !isCanonicalLocked(row);
+        rows.map((rowItem) => {
+          const locked = isCanonicalSourceSystem(rowItem.sourceSystem);
+          const actionsDisabled = !canManage || locked;
+          const actionTitle = locked ? 'Source canonique — verrouillée' : (!canManage ? manageReason : undefined);
           return (
-            <div key={`${row.id}-${row.sourceSystem}`} className="sync-row">
-              <div className="sync-row__src">{sourceCode(row.sourceSystem)}</div>
+            <div key={`${rowItem.id}-${rowItem.sourceSystem}`} className="sync-row">
+              <div className="sync-row__src">{sourceCode(rowItem.sourceSystem)}</div>
               <div>
-                <strong>{rowLabel(row)}</strong>
-                <small>{row.externalId}</small>
+                <strong>{rowLabel(rowItem)}</strong>
+                <small>{rowItem.externalId}</small>
               </div>
-              <span className="sync-row__when">{formatWhen(row)}</span>
-              <button
-                type="button"
-                className="sync-row__btn"
-                title={editable ? 'Modifier (bientôt)' : 'Lecture seule'}
-                disabled
-              >
-                {editable ? '✎' : '🔒'}
-              </button>
+              <span className="sync-row__when">{formatWhen(rowItem)}</span>
+              <div className="sync-row__actions">
+                <button
+                  type="button"
+                  className="sync-row__btn"
+                  aria-label="Modifier cet identifiant"
+                  title={actionTitle ?? 'Modifier'}
+                  disabled={actionsDisabled}
+                  onClick={() => setModal({ mode: 'edit', item: rowItem })}
+                >
+                  {locked ? '🔒' : '✎'}
+                </button>
+                <button
+                  type="button"
+                  className="sync-row__btn"
+                  aria-label="Supprimer cet identifiant"
+                  title={actionTitle ?? 'Supprimer'}
+                  disabled={actionsDisabled}
+                  onClick={() => setPendingDelete(rowItem)}
+                >
+                  🗑
+                </button>
+              </div>
             </div>
           );
         })
@@ -78,9 +144,45 @@ export function SectionSync({ editor, folded }: SectionProps) {
         </p>
       )}
 
-      <button type="button" className="rep-add" style={{ marginTop: 10 }} disabled title="Lecture seule">
+      <button
+        type="button"
+        className="rep-add"
+        style={{ marginTop: 10 }}
+        disabled={!canManage}
+        title={canManage ? undefined : manageReason}
+        onClick={() => setModal({ mode: 'add', item: createExternalIdDraft() })}
+      >
         + Lier un nouvel identifiant externe
       </button>
+
+      {!canManage && (
+        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>{manageReason}</p>
+      )}
+      {feedback && (
+        <p className="muted" role="status" style={{ marginTop: 8, fontSize: 12 }}>{feedback}</p>
+      )}
+
+      {modal && (
+        <ExternalIdEditModal
+          open
+          mode={modal.mode}
+          item={modal.item}
+          onClose={() => setModal(null)}
+          onSave={(item) => void handleSave(item)}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          open
+          title="Supprimer l’identifiant externe"
+          message={`Le lien ${rowLabel(pendingDelete)} (${pendingDelete.externalId}) sera supprimé. Cette action ne supprime pas la fiche source dans le système externe.`}
+          confirmLabel="Supprimer"
+          tone="danger"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => void handleDelete(pendingDelete)}
+        />
+      )}
     </Fs>
   );
 }

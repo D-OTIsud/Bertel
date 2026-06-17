@@ -5371,6 +5371,10 @@ export interface ActorSearchResult {
   displayName: string;
   firstName: string;
   lastName: string;
+  /** Civilité (`Mme`/`M.`/`F`/`M`…) — déjà incluse dans displayName, exposée pour l'avatar/affichage. */
+  gender: string;
+  /** E-mail principal (actor_channel kind 'email') ; '' si l'acteur n'en a pas. §95b picker card. */
+  email: string;
 }
 
 /** §48 — actor picker search via api.search_actors (SECURITY DEFINER, editor-gated and
@@ -5389,6 +5393,8 @@ export async function searchActors(query: string): Promise<ActorSearchResult[]> 
     displayName: readString(row.display_name),
     firstName: readString(row.first_name),
     lastName: readString(row.last_name),
+    gender: readString(row.gender),
+    email: readString(row.email),
   }));
 }
 

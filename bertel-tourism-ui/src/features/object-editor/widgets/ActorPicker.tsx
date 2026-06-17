@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react';
+import { Link2, Mail, Search } from 'lucide-react';
 import { searchActors, type ActorSearchResult } from '../../../services/object-workspace';
 
 interface ActorPickerProps {
   onPick: (actor: ActorSearchResult) => void;
 }
 
+const CIVILITY_RE = /^(mme|mlle|m\.?|mr|monsieur|madame)\s+/i;
+
+/** Avatar initials: prénom+nom, sinon le displayName privé de la civilité. */
+function actorInitials(actor: ActorSearchResult): string {
+  const fromNames = `${actor.firstName.trim()[0] ?? ''}${actor.lastName.trim()[0] ?? ''}`.toUpperCase();
+  if (fromNames) return fromNames;
+  const bare = actor.displayName.replace(CIVILITY_RE, '').trim();
+  return bare.slice(0, 2).toUpperCase() || '?';
+}
+
 /**
- * §48 — actor search picker for §17 (mirrors RelationPicker's `rpick` shell so the §15/§17
- * pickers look identical). Searches via api.search_actors — SECURITY DEFINER, editor-gated
- * and scoped to caller-readable actors server-side. 300ms debounce, min 2 characters.
+ * §48/§95b — actor search picker for §19 (prestataires). Searches via api.search_actors
+ * (SECURITY DEFINER, editor-gated; §95 broadened to the full directory for any editor and now
+ * returns the primary e-mail). 300ms debounce, min 2 characters. Each result is a rich row:
+ * avatar (initials) + civilité/nom/prénom (displayName) + e-mail, with an explicit "Lier" button.
  */
 export function ActorPicker({ onPick }: ActorPickerProps) {
   const [query, setQuery] = useState('');
@@ -39,7 +51,7 @@ export function ActorPicker({ onPick }: ActorPickerProps) {
   return (
     <div className="rpick">
       <div className="rpick__head">
-        <span className="rpick__icon">⌕</span>
+        <span className="rpick__icon" aria-hidden><Search size={15} /></span>
         <input
           className="rpick__input"
           autoFocus
@@ -56,23 +68,33 @@ export function ActorPicker({ onPick }: ActorPickerProps) {
           <div className="rpick__empty">Aucun acteur trouvé.</div>
         )}
         {!loading &&
-          results.map((actor, index) => (
-            <button
-              type="button"
-              key={actor.id}
-              className={`rpick__row${index === 0 ? ' is-hi' : ''}`}
-              onClick={() => onPick(actor)}
-            >
-              <span className="rpick__main">
-                <strong>{actor.displayName}</strong>
-                <small>{[actor.firstName, actor.lastName].filter(Boolean).join(' ')}</small>
+          results.map((actor) => (
+            <div key={actor.id} className="actor-opt">
+              <span className="actor-opt__avatar" aria-hidden>{actorInitials(actor)}</span>
+              <span className="actor-opt__id">
+                <strong className="actor-opt__name">{actor.displayName}</strong>
+                {actor.email ? (
+                  <span className="actor-opt__email">
+                    <Mail size={12} aria-hidden />
+                    <span className="actor-opt__email-val">{actor.email}</span>
+                  </span>
+                ) : (
+                  <span className="actor-opt__email actor-opt__email--empty">Aucun e-mail renseigné</span>
+                )}
               </span>
-              <span className="rpick__suggest">Lier cet acteur</span>
-            </button>
+              <button
+                type="button"
+                className="actor-opt__link"
+                aria-label={`Lier ${actor.displayName}`}
+                onClick={() => onPick(actor)}
+              >
+                <Link2 size={14} aria-hidden /> Lier
+              </button>
+            </div>
           ))}
       </div>
       <div className="rpick__foot">
-        <span>Recherche dans les acteurs visibles par votre organisation</span>
+        <span>Recherche dans l&apos;annuaire des acteurs (éditeurs)</span>
       </div>
     </div>
   );

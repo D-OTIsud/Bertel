@@ -23,6 +23,7 @@ interface EditorTopbarProps {
   onCancel: () => void;
   onPublish: () => void;
   onSaveDraft?: () => void;
+  onShowBlockers?: () => void;
 }
 
 export function EditorTopbar({
@@ -44,6 +45,7 @@ export function EditorTopbar({
   onCancel,
   onPublish,
   onSaveDraft,
+  onShowBlockers,
 }: EditorTopbarProps) {
   const saveLabel = buildEditTopSaveLabel({ statusMessage, dirtyCount, lastSavedAt });
   const saveTitle =
@@ -92,11 +94,20 @@ export function EditorTopbar({
           {dirtyCount === 0 && !statusMessage && <span className="pulse" aria-hidden />}
           {saveLabel}
         </span>
-        <span className={`edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`}>
-          {blockerCount > 0
-            ? `${blockerCount} blocage${blockerCount > 1 ? 's' : ''}`
-            : `${warningCount} alerte${warningCount > 1 ? 's' : ''}`}
-        </span>
+        {(() => {
+          const validationLabel =
+            blockerCount > 0
+              ? `${blockerCount} blocage${blockerCount > 1 ? 's' : ''}`
+              : `${warningCount} alerte${warningCount > 1 ? 's' : ''}`;
+          const validationClass = `edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`;
+          return onShowBlockers ? (
+            <button type="button" className={validationClass} onClick={onShowBlockers}>
+              {validationLabel}
+            </button>
+          ) : (
+            <span className={validationClass}>{validationLabel}</span>
+          );
+        })()}
         <button type="button" className="btn sm" onClick={onPreview}>
           Aperçu fiche
         </button>

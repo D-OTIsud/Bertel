@@ -48,4 +48,20 @@ describe('EditorTopbar', () => {
     render(<EditorTopbar {...baseProps} dirtyCount={0} onSaveDraft={onSaveDraft} />);
     expect(screen.getAllByRole('button', { name: 'Enregistrer' }).at(-1)).toBeDisabled();
   });
+
+  it('keeps Publier clickable even with blockers and calls onPublish', () => {
+    const onPublish = jest.fn();
+    render(<EditorTopbar {...baseProps} blockerCount={3} onPublish={onPublish} />);
+    const publish = screen.getByRole('button', { name: 'Publier' });
+    expect(publish).not.toBeDisabled();
+    fireEvent.click(publish);
+    expect(onPublish).toHaveBeenCalledTimes(1);
+  });
+
+  it('makes the validation chip a button that calls onShowBlockers', () => {
+    const onShowBlockers = jest.fn();
+    render(<EditorTopbar {...baseProps} blockerCount={2} onShowBlockers={onShowBlockers} />);
+    fireEvent.click(screen.getByRole('button', { name: /2 blocages/ }));
+    expect(onShowBlockers).toHaveBeenCalledTimes(1);
+  });
 });

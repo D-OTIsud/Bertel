@@ -2563,3 +2563,17 @@
   color: #fff; background: var(--accent);
   padding: 2px 8px; border-radius: 999px;
 }
+
+/* §95 — BlockersModal: groupes de blocages par section + séparateur alertes. */
+.object-editor .blockers-modal__body { display: grid; gap: 14px; }
+.object-editor .blockers-modal__intro { margin: 0; font-size: 12px; color: var(--ink-4); }
+.object-editor .blockers-group { display: grid; }
+.object-editor .blockers-group__head {
+  margin: 0; font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3);
+}
+.object-editor .issue--static { cursor: default; }
+.object-editor .blockers-modal__warn { border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.object-editor .blockers-modal__warn-head {
+  margin: 0 0 4px; font-size: 11.5px; font-weight: 800; color: var(--ink-3);
+}

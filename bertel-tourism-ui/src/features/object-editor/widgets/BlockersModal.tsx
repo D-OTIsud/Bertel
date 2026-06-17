@@ -70,10 +70,10 @@ export function BlockersModal({
               <h4 className="blockers-group__head">
                 Section {group.num}{group.label ? ` — ${group.label}` : ''}
               </h4>
-              {group.issues.map((issue) => (
+              {group.issues.map((issue, idx) => (
                 <button
                   type="button"
-                  key={issue.message}
+                  key={`${group.num}-${issue.message}-${idx}`}
                   className="issue"
                   onClick={() => onGoToSection(group.num)}
                 >
@@ -93,10 +93,10 @@ export function BlockersModal({
                   <h5 className="blockers-group__head">
                     Section {group.num}{group.label ? ` — ${group.label}` : ''}
                   </h5>
-                  {group.issues.map((issue) => (
+                  {group.issues.map((issue, idx) => (
                     <button
                       type="button"
-                      key={issue.message}
+                      key={`${group.num}-${issue.message}-${idx}`}
                       className="issue"
                       onClick={() => onGoToSection(group.num)}
                     >

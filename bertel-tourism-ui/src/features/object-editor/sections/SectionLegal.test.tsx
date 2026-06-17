@@ -53,6 +53,18 @@ describe('SectionLegal', () => {
     expect(readLegalScalar(result.current.draft.legal.records, 'siret')).toBe('12345678900012');
   });
 
+  it('auto-fills the SIREN from the SIRET (first 9 digits) as the user types', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal({ records: [] })));
+    render(<SectionLegal editor={result.current} permissions={allowAll} />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText('SIRET'), { target: { value: '44851998300012' } });
+    });
+
+    expect(readLegalScalar(result.current.draft.legal.records, 'siret')).toBe('44851998300012');
+    expect(readLegalScalar(result.current.draft.legal.records, 'siren')).toBe('448519983');
+  });
+
   it('adds a legal document via the modal ("Ajouter un document" → "Enregistrer")', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} />);

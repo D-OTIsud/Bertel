@@ -17,6 +17,7 @@ import {
   readLegalReference,
   readLegalScalar,
   upsertLegalScalar,
+  upsertSiretWithDerivedSiren,
   type LegalExpiryTone,
 } from './legal-edit';
 
@@ -148,16 +149,16 @@ export function SectionLegal({ editor, permissions, folded }: SectionProps) {
       {canWrite ? (
         <>
           <div className="grid-2">
-            <Field label="SIRET" hint="14 chiffres = SIREN (9) + NIC (5).">
+            <Field label="SIRET" hint="14 chiffres = SIREN (9) + NIC (5). Le SIREN se remplit automatiquement.">
               <Input
                 value={siret}
                 placeholder="12345678900012"
                 mono
                 aria-label="SIRET"
-                onChange={(value) => setScalar('siret', normalizeInseeDigits(value).slice(0, 14))}
+                onChange={(value) => editor.replaceModule('legal', upsertSiretWithDerivedSiren(legal, value))}
               />
             </Field>
-            <Field label="SIREN" hint="9 chiffres (dérivable du SIRET).">
+            <Field label="SIREN" hint="9 chiffres — renseigné automatiquement depuis le SIRET, modifiable.">
               <Input
                 value={readLegalScalar(legal.records, 'siren')}
                 placeholder="123456789"

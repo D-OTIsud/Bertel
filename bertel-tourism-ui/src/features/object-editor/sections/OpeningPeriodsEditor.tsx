@@ -46,6 +46,13 @@ const STRIPE_VAR: Record<OpeningPeriodKind, string> = {
   standard: 'var(--op-low)',
 };
 
+// Presentational label for the period's recurrence layer (replaces the dropped `bucket` scope).
+const RECURRENCE_LABEL: Record<ObjectWorkspaceOpeningPeriod['recurrence'], string> = {
+  always: 'Toute l’année',
+  cyclic: 'Cyclique',
+  fixed: 'Dates fixes',
+};
+
 // Compact one-line row: stripe · name(+badge) · range · week summary · actions.
 const ROW_COLS = '8px minmax(0, 1.4fr) minmax(0, 1.1fr) minmax(0, 1fr) auto';
 
@@ -172,6 +179,13 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
                 <span style={{ display: 'block', width: 8, height: 28, borderRadius: 3, background: periodColor(period) }} />
                 <div style={{ minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{label}</span>
+                  {/* Recurrence layer badge. 'always' is omitted: the range column already
+                      reads "Toute l’année", so a second identical chip would be redundant. */}
+                  {period.recurrence !== 'always' && (
+                    <span className="pill" style={{ marginLeft: 8, fontSize: 10 }}>
+                      {RECURRENCE_LABEL[period.recurrence]}
+                    </span>
+                  )}
                   {isNow && (
                     <span className="pill ok" style={{ marginLeft: 8, fontSize: 10 }}>
                       en cours

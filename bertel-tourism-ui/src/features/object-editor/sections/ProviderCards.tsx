@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, Pencil, Star, Unlink } from 'lucide-react';
+import { ArrowUpRight, Bell, Pencil, Star, Unlink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { ConfirmDialog } from '../primitives';
 import { ActorPicker } from '../widgets/ActorPicker';
@@ -23,6 +23,11 @@ interface ProviderCardsProps {
   onChange: (actors: ObjectWorkspaceActorLinkItem[]) => void;
   /** Open a prestataire's CRM fiche (e.g. to edit its addresses). */
   onOpenActor?: (actorId: string) => void;
+  /**
+   * Nombre d'interactions EN ATTENTE (status `planned`) par acteur (clé = actor.id). Dérivé du
+   * journal CRM dans SectionCrm. > 0 ⇒ badge de notification sur la carte du prestataire concerné.
+   */
+  openCountByActor?: Record<string, number>;
 }
 
 /**
@@ -33,7 +38,7 @@ interface ProviderCardsProps {
  * l'authoring acteur (hors §17). Persisté par api.save_object_relations (arme actors).
  * Gate : permissions.relationships + actorWriteUnavailableReason (no-write-trap).
  */
-export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }: ProviderCardsProps) {
+export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, openCountByActor = {} }: ProviderCardsProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [detachIndex, setDetachIndex] = useState<number | null>(null);
@@ -60,7 +65,9 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }
         <p className="provider-empty">Aucun prestataire rattaché à cette fiche.</p>
       ) : (
         <div className="provider-grid">
-          {actors.map((actor, index) => (
+          {actors.map((actor, index) => {
+            const openCount = openCountByActor[actor.id] ?? 0;
+            return (
             <article key={`${actor.id}-${actor.roleCode}-${index}`} className="provider-card">
               <div className="provider-card__head">
                 <span className="provider-card__avatar" aria-hidden>{initialsOf(actor.displayName)}</span>
@@ -78,6 +85,16 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }
                     </span>
                   </div>
                 </div>
+                {openCount > 0 && (
+                  <span
+                    className="provider-card__alert"
+                    title={`${openCount} interaction(s) en attente`}
+                    aria-label={`${openCount} interaction(s) en attente avec ${actor.displayName}`}
+                  >
+                    <Bell size={11} aria-hidden />
+                    {openCount}
+                  </span>
+                )}
               </div>
 
               {actor.note.trim() && <p className="provider-card__note">{actor.note}</p>}
@@ -90,7 +107,8 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }
                     title="Ouvrir la fiche CRM du prestataire (interactions, coordonnées, adresses)"
                     onClick={() => onOpenActor(actor.id)}
                   >
-                    <ArrowUpRight size={14} aria-hidden /> Fiche CRM
+                    <ArrowUpRight size={14} aria-hidden />
+                    <span className="provider-act__label">Fiche CRM</span>
                   </button>
                 )}
                 {editable && (
@@ -100,7 +118,8 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }
                     aria-label={`Modifier ${actor.displayName}`}
                     onClick={() => setEditIndex(index)}
                   >
-                    <Pencil size={14} aria-hidden /> Modifier
+                    <Pencil size={14} aria-hidden />
+                    <span className="provider-act__label">Modifier</span>
                   </button>
                 )}
                 {editable && (
@@ -110,12 +129,14 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor }
                     aria-label={`Détacher ${actor.displayName}`}
                     onClick={() => setDetachIndex(index)}
                   >
-                    <Unlink size={14} aria-hidden /> Détacher
+                    <Unlink size={14} aria-hidden />
+                    <span className="provider-act__label">Détacher</span>
                   </button>
                 )}
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
 

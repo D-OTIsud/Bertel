@@ -79,35 +79,57 @@ describe('isValidIsoDate', () => {
 });
 
 describe('validatePeriodDraft', () => {
-  it('blocks save when no period type is selected', () => {
-    expect(validatePeriodDraft(draft({ seasonTypeCode: '', allYears: true })).canSave).toBe(false);
-  });
-
-  it('allows save for a typed all-year period (dates ignored)', () => {
-    const result = validatePeriodDraft(draft({ seasonTypeCode: 'year_round', allYears: true }));
+  // The period TYPE is no longer required for saving — the Récurrence mode drives the gate.
+  it('allows save for an always-year period (no type, no dates)', () => {
+    const result = validatePeriodDraft(draft({ seasonTypeCode: '', recurrence: 'always' }));
     expect(result.canSave).toBe(true);
     expect(result.dateError).toBeNull();
   });
 
-  it('requires both dates when not all-year', () => {
+  it('allows save for a typeless dated period (type optional)', () => {
     const result = validatePeriodDraft(
-      draft({ seasonTypeCode: 'high_season', allYears: false, startDate: '2026-06-01', endDate: '' }),
+      draft({ seasonTypeCode: '', recurrence: 'fixed', startDate: '2026-06-01', endDate: '2026-09-01' }),
     );
-    expect(result.canSave).toBe(false);
-    expect(result.dateError).toMatch(/deux dates/i);
+    expect(result.canSave).toBe(true);
+    expect(result.dateError).toBeNull();
   });
 
-  it('rejects an end date before the start date', () => {
+  it('requires both dates for a cyclic period', () => {
     const result = validatePeriodDraft(
-      draft({ seasonTypeCode: 'high_season', allYears: false, startDate: '2026-09-01', endDate: '2026-06-01' }),
+      draft({ recurrence: 'cyclic', startDate: '2000-06-01', endDate: '' }),
+    );
+    expect(result.canSave).toBe(false);
+    expect(result.dateError).toMatch(/début et la fin/i);
+  });
+
+  it('requires both dates for a fixed period', () => {
+    const result = validatePeriodDraft(
+      draft({ recurrence: 'fixed', startDate: '2026-06-01', endDate: '' }),
+    );
+    expect(result.canSave).toBe(false);
+    expect(result.dateError).toMatch(/début et la fin/i);
+  });
+
+  it('rejects a fixed end date before the start date', () => {
+    const result = validatePeriodDraft(
+      draft({ recurrence: 'fixed', startDate: '2026-09-01', endDate: '2026-06-01' }),
     );
     expect(result.canSave).toBe(false);
     expect(result.dateError).toMatch(/postérieure/i);
   });
 
-  it('allows a coherent typed dated period', () => {
+  it('allows a cyclic range that wraps the year (end month-day before start)', () => {
+    // Cyclic ranges legitimately wrap (e.g. Nov→Feb); chronological order is NOT enforced.
     const result = validatePeriodDraft(
-      draft({ seasonTypeCode: 'high_season', allYears: false, startDate: '2026-06-01', endDate: '2026-09-01' }),
+      draft({ recurrence: 'cyclic', startDate: '2000-11-01', endDate: '2000-02-28' }),
+    );
+    expect(result.canSave).toBe(true);
+    expect(result.dateError).toBeNull();
+  });
+
+  it('allows a coherent fixed dated period', () => {
+    const result = validatePeriodDraft(
+      draft({ recurrence: 'fixed', startDate: '2026-06-01', endDate: '2026-09-01' }),
     );
     expect(result.canSave).toBe(true);
     expect(result.dateError).toBeNull();

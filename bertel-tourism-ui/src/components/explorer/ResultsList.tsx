@@ -48,6 +48,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
   const [hasMounted, setHasMounted] = useState(false);
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
+  const toggleTag = useExplorerStore((state) => state.toggleTag);
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
@@ -137,6 +138,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
               inSelection={inSelection}
               onOpen={() => openDrawer(card.id)}
               onToggleLabel={toggleLabel}
+              onToggleTag={toggleTag}
               onToggleSelect={(event) => {
                 event.preventDefault();
                 event.stopPropagation();

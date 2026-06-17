@@ -74,18 +74,18 @@ type HoverPopupState = {
   city?: string;
   typeLabel?: string;
   openNow?: boolean | null;
-  chips?: { label: string; color?: string }[];
+  chips?: { label: string; color?: string; slug?: string }[];
 };
 
 /**
  * Hover chips: the colored §09 tags first (with their global hex), then neutral labels — deduped,
  * capped at 2. Mirrors the result card's color story so the map tells the same story as the list.
  */
-function buildHoverChips(card: ObjectCard): { label: string; color?: string }[] {
-  const colored = (card.tagChips ?? []).map((chip) => ({ label: chip.label, color: chip.color }));
+function buildHoverChips(card: ObjectCard): { label: string; color?: string; slug?: string }[] {
+  const colored = (card.tagChips ?? []).map((chip) => ({ label: chip.label, color: chip.color, slug: chip.slug }));
   const neutral = (Array.isArray(card.labels) ? card.labels : []).map((label) => ({ label }));
   const seen = new Set<string>();
-  const out: { label: string; color?: string }[] = [];
+  const out: { label: string; color?: string; slug?: string }[] = [];
   for (const chip of [...colored, ...neutral]) {
     const key = chip.label.trim().toLowerCase();
     if (!key || seen.has(key)) continue;
@@ -120,6 +120,7 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
   const selectCard = useExplorerStore((state) => state.selectCard);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
+  const toggleTag = useExplorerStore((state) => state.toggleTag);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
   const [lassoArmed, setLassoArmed] = useState(false);
   const [lassoDrawing, setLassoDrawing] = useState(false);
@@ -607,12 +608,16 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
       )}
     >
       {isColumn ? (
-        <div className="flex h-14 flex-none items-center justify-between border-b border-line bg-surface px-4">
+        <div className="relative flex h-14 flex-none items-center border-b border-line bg-surface px-4">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
             <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>
           </div>
-          <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
+          <div
+            className="map-panel__toolbar absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            role="toolbar"
+            aria-label="Outils carte"
+          >
             {resetZoomButton}
             {lassoButton}
           </div>
@@ -775,15 +780,50 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
                     ) : null}
                     {hoverPopupState.chips && hoverPopupState.chips.length > 0 ? (
                       <span className="map-hover-card__tags">
-                        {hoverPopupState.chips.map((chip) => (
-                          <span
-                            key={chip.label}
-                            className="map-hover-card__tag"
-                            style={chip.color ? tagChipStyle(chip.color) : undefined}
-                          >
-                            {chip.label}
-                          </span>
-                        ))}
+                        {hoverPopupState.chips.map((chip) => {
+                          // A colored §09 tag with a slug → click filters the Explorer. The popup is
+                          // itself a <button>, so this is a role=button <span> (nested <button> is
+                          // invalid) with stopPropagation so it doesn't open the drawer.
+                          if (chip.slug && chip.color) {
+                            const slug = chip.slug;
+                            const color = chip.color;
+                            const filterByTag = () => toggleTag({ slug, name: chip.label, color });
+                            return (
+                              <span
+                                key={chip.label}
+                                role="button"
+                                tabIndex={0}
+                                className="map-hover-card__tag"
+                                style={{ ...tagChipStyle(color), cursor: 'pointer' }}
+                                title={`Filtrer par le tag ${chip.label}`}
+                                aria-label={`Filtrer par le tag ${chip.label}`}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  filterByTag();
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    filterByTag();
+                                  }
+                                }}
+                              >
+                                {chip.label}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span
+                              key={chip.label}
+                              className="map-hover-card__tag"
+                              style={chip.color ? tagChipStyle(chip.color) : undefined}
+                            >
+                              {chip.label}
+                            </span>
+                          );
+                        })}
                       </span>
                     ) : null}
                     <span className="map-hover-card__cta">

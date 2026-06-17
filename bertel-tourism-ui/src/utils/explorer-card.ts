@@ -118,37 +118,16 @@ function readBadgesByKind(card: ObjectCard, predicate: (kind: string) => boolean
     .filter(Boolean);
 }
 
-function readBadgeLabels(card: ObjectCard): string[] {
-  return readBadgesByKind(
-    card,
-    (kind) => !kind.includes('classification') && !kind.includes('ranking') && kind !== 'accessibility_amenity',
-  );
-}
-
-function readClassificationLabels(card: ObjectCard): string[] {
-  // Taxonomy (the métier sub-category) is NOT a label — it shows on the card's metadata line
-  // (type · city · taxonomy), so it is excluded here to avoid a duplicate neutral chip.
-  return readBadgesByKind(card, (kind) => kind.includes('classification') || kind.includes('ranking'));
-}
-
-function readAmenityCodes(card: ObjectCard): string[] {
-  return Array.isArray(card.amenity_codes) ? card.amenity_codes.map((code) => normalizeCode(code)).filter(Boolean) : [];
-}
-
-function hasPetFriendlySignal(card: ObjectCard): boolean {
-  if (card.pet_accepted === true) {
-    return true;
-  }
-  const amenityCodes = readAmenityCodes(card);
-  return amenityCodes.some((code) => code === 'pet_friendly' || code.startsWith('pet_'));
-}
-
-function hasAccessibilitySignal(card: ObjectCard): boolean {
-  const amenityCodes = readAmenityCodes(card);
-  if (amenityCodes.some((code) => code.startsWith('acc_') || code === 'wheelchair_access')) {
-    return true;
-  }
-  return readObjectList(card.badges).some((badge) => normalizeCode(cleanText(badge.kind)).includes('accessibility'));
+/**
+ * Neutral pills = the object's CLASSIFICATIONS & LABELS only: every distinction badge the RPC emits
+ * (kinds classification / ranking / sustainability_label / accessibility_label / custom display-group)
+ * EXCEPT the two non-label families — `sustainability_action` (eco-practices) and
+ * `accessibility_amenity` (equipment), which are filtered server-side via their own params and shown
+ * elsewhere, not as label chips. Taxonomy (the métier sub-category) is excluded too — it shows on the
+ * card's metadata line. Decision 2026-06-16: keep the card chip line to tags + classification + label.
+ */
+function readClassificationAndLabelBadges(card: ObjectCard): string[] {
+  return readBadgesByKind(card, (kind) => kind !== 'sustainability_action' && kind !== 'accessibility_amenity');
 }
 
 function readLabelMatchLabel(card: ObjectCard): string {
@@ -278,14 +257,16 @@ export function normalizeExplorerCard(card: ObjectCard): ObjectCard {
   // §09 tags are the curated COLORED display layer — pulled OUT of the neutral `labels` blend (so a
   // tag never double-renders as a colored chip AND a neutral label / inflates +N) and emitted as a
   // separate colored, position-ordered group via buildTagChips.
+  //
+  // The neutral `labels` line is intentionally limited to the label-match feedback pill +
+  // CLASSIFICATIONS & LABELS (+ the card.labels field). Environment/ambiance tags, sustainability
+  // actions, accessibility amenities, pet-friendly and the accessibility signal are NOT surfaced here
+  // — each has its own dedicated Explorer filter and (where editable) its own editor section.
+  // Decision 2026-06-16.
   const labels = dedupeLabels([
     readLabelMatchLabel(card),
-    ...readClassificationLabels(card),
+    ...readClassificationAndLabelBadges(card),
     ...readLabels(card.labels),
-    ...readBadgeLabels(card),
-    ...readLabels(card.environment_tags),
-    ...(hasPetFriendlySignal(card) ? ['Animaux acceptes'] : []),
-    ...(hasAccessibilitySignal(card) ? ['Accessibilite'] : []),
   ]);
   // Tag chips still dedup against the taxonomy (shown on the metadata line) so a §09 tag never
   // duplicates it — even though taxonomy is no longer rendered as a neutral chip.

@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
 import { FilterColumnGroup } from '../common/FilterColumnGroup';
+import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
@@ -156,6 +157,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const common = useExplorerStore((state) => state.common);
   const cities = common.cities ?? [];
   const labelsAny = common.labelsAny ?? [];
+  const tagsAny = common.tagsAny ?? [];
   const rankedLabelSchemeCode = common.rankedLabelSchemeCode ?? null;
   const statuses = common.statuses ?? [];
   const pmr = common.pmr === true;
@@ -181,6 +183,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
+  const toggleTag = useExplorerStore((state) => state.toggleTag);
+  const clearTags = useExplorerStore((state) => state.clearTags);
   const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
   const toggleHotTaxonomy = useExplorerStore((state) => state.toggleHotTaxonomy);
   const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
@@ -215,6 +219,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if (s.common.openNow) n += 1;
     if (s.common.rankedLabelSchemeCode) n += 1;
     if ((s.common.labelsAny ?? []).length) n += 1;
+    if ((s.common.tagsAny ?? []).length) n += 1;
     if ((s.common.statuses ?? []).length > 0) n += 1;
     if (s.common.polygon) n += 1;
     if (s.common.bbox) n += 1;
@@ -517,6 +522,34 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 <p className="text-[12px] leading-snug text-ink-3">Cliquez une etiquette dans la liste des resultats pour filtrer.</p>
               )}
             </div>
+          </FilterColumnGroup>
+
+          <FilterColumnGroup label="Tags" count={tagsAny.length > 0 ? tagsAny.length : undefined}>
+            {tagsAny.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {tagsAny.map((tag) => (
+                    <button
+                      key={tag.slug}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold transition hover:opacity-90"
+                      style={tag.color ? tagChipStyle(tag.color) : undefined}
+                      aria-label={`Retirer le tag ${tag.name}`}
+                      title={`Retirer le tag ${tag.name}`}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag.name}
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearTags}>
+                  Effacer les tags
+                </button>
+              </div>
+            ) : (
+              <p className="text-[12px] leading-snug text-ink-3">Cliquez un tag colore dans la liste des resultats pour filtrer.</p>
+            )}
           </FilterColumnGroup>
 
           <FilterColumnGroup
@@ -935,6 +968,30 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                       </button>
                     </div>
                   ) : null}
+                </div>
+              </FiltersSubsection>
+            ) : null}
+
+            {tagsAny.length > 0 ? (
+              <FiltersSubsection title="Tags">
+                <div className="flex flex-wrap gap-1.5">
+                  {tagsAny.map((tag) => (
+                    <button
+                      key={tag.slug}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold transition hover:opacity-90"
+                      style={tag.color ? tagChipStyle(tag.color) : undefined}
+                      aria-label={`Retirer le tag ${tag.name}`}
+                      title={`Retirer le tag ${tag.name}`}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag.name}
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                  <button type="button" className="chip" onClick={clearTags}>
+                    Effacer
+                  </button>
                 </div>
               </FiltersSubsection>
             ) : null}

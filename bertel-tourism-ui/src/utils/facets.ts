@@ -64,6 +64,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   petsAccepted: false,
   openNow: false,
   labelsAny: [],
+  tagsAny: [],
   rankedLabelSchemeCode: null,
   // Empty = "use the server default" (published only). Editors get the default
   // broadened in `useExplorerFilters` once their canEditObjects flag is known.
@@ -119,6 +120,7 @@ export function normalizeExplorerFilters(
       sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
       labelsAny: common.labelsAny ?? [],
+      tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
       statuses: common.statuses ?? [],
     },
@@ -213,6 +215,9 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     common.sustainabilityCategoryCodesAny.length > 0 ||
     common.sustainabilityActionCodesAny.length > 0;
   if (hasAccessibilityFilter || hasSustainabilityFilter || common.petsAccepted || Boolean(common.rankedLabelSchemeCode)) {
+    return true;
+  }
+  if (common.tagsAny.length > 0) {
     return true;
   }
   if (hot.taxonomy.length > 0) {
@@ -354,6 +359,12 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 
   if (cleanString(common.lieuDit)) {
     payload.lieu_dit_any = [cleanString(common.lieuDit)];
+  }
+
+  // §09 tag click-to-filter (common scope, all buckets). The live RPC matches ref_tag.slug ANY.
+  const tagSlugs = common.tagsAny.map((tag) => cleanString(tag.slug)).filter(Boolean);
+  if (tagSlugs.length > 0) {
+    payload.tags_any = tagSlugs;
   }
 
   if (bucket === 'HOT') {

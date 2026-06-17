@@ -11,6 +11,7 @@ import {
   MapPinned,
   Settings2,
   ShieldCheck,
+  UserX,
   Users,
   UsersRound,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const allItems: Array<{
   { to: '/audits', label: 'Audits', caption: 'Terrain et incidents', roles: ['super_admin', 'tourism_agent'], icon: ClipboardList },
   { to: '/publications', label: 'Publications', caption: 'Exports et mises en page', roles: ['super_admin', 'tourism_agent'], icon: Files },
   { to: '/team', label: 'Équipe', caption: 'Membres et permissions', roles: ['owner', 'super_admin', 'tourism_agent'], icon: UsersRound },
+  { to: '/rgpd', label: 'RGPD', caption: 'Effacement & droits des personnes', roles: ['owner', 'super_admin'], icon: UserX },
   { to: '/settings', label: 'Settings', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
 ];
 

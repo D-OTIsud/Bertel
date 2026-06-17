@@ -305,6 +305,16 @@ describe('hasServerOnlyFilters', () => {
       ),
     ).toBe(true);
   });
+
+  it('detects tag filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, tagsAny: [{ slug: 'wellness', name: 'Bien-être' }] },
+        }),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('buildBucketRpcFilters', () => {
@@ -374,6 +384,25 @@ describe('buildBucketRpcFilters', () => {
     expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
       label_scheme_ranked: 'LBL_CLEF_VERTE',
     });
+  });
+
+  it('sends selected tag slugs as tags_any for every bucket', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        tagsAny: [
+          { slug: 'wellness', name: 'Bien-être' },
+          { slug: 'panorama', name: 'Panorama' },
+        ],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({ tags_any: ['wellness', 'panorama'] });
+    expect(buildBucketRpcFilters(filters, 'ACT')).toMatchObject({ tags_any: ['wellness', 'panorama'] });
+  });
+
+  it('omits tags_any when no tags are selected', () => {
+    expect(buildBucketRpcFilters(DEFAULT_EXPLORER_FILTERS, 'HOT')).not.toHaveProperty('tags_any');
   });
 
   it('sends both certified and equipment family filters for ranked Tourisme & Handicap', () => {

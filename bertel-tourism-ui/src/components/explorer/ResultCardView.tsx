@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { MapPin, Star } from 'lucide-react';
-import type { BackendObjectTypeCode, ExplorerBucketKey, ObjectCard } from '../../types/domain';
+import type { BackendObjectTypeCode, ExplorerBucketKey, ExplorerTagFilter, ObjectCard } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
  * 2nd/3rd line.
  */
 
-type DisplayChip = { key: string; label: string; color?: string };
+type DisplayChip = { key: string; label: string; color?: string; tagSlug?: string };
 
 function bucketForCardType(type: string): ExplorerBucketKey | null {
   const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
@@ -62,12 +62,36 @@ function ChipPill({
   chip,
   interactive,
   onToggleLabel,
+  onToggleTag,
 }: {
   chip: DisplayChip;
   interactive: boolean;
   onToggleLabel?: (label: string) => void;
+  onToggleTag?: (tag: ExplorerTagFilter) => void;
 }) {
   if (chip.color) {
+    // A colored §09 tag: clickable filter button when the surface is interactive and a tag handler
+    // is wired (cards + map). The §09 editor preview (interactive=false) keeps tags as inert spans.
+    if (interactive && onToggleTag && chip.tagSlug) {
+      const slug = chip.tagSlug;
+      return (
+        <button
+          type="button"
+          data-chip="1"
+          title={chip.label}
+          aria-label={`Filtrer par le tag ${chip.label}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleTag({ slug, name: chip.label, color: chip.color });
+          }}
+          className={cn(CHIP_BASE, 'cursor-pointer transition hover:opacity-90')}
+          style={tagChipStyle(chip.color)}
+        >
+          {chip.label}
+        </button>
+      );
+    }
     return (
       <span data-chip="1" className={CHIP_BASE} style={tagChipStyle(chip.color)} title={chip.label}>
         {chip.label}
@@ -111,12 +135,14 @@ function CardChipRow({
   onRequestExpand,
   interactive,
   onToggleLabel,
+  onToggleTag,
 }: {
   chips: DisplayChip[];
   expanded: boolean;
   onRequestExpand: () => void;
   interactive: boolean;
   onToggleLabel?: (label: string) => void;
+  onToggleTag?: (tag: ExplorerTagFilter) => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const sig = chips.map((c) => c.key).join('|');
@@ -165,7 +191,7 @@ function CardChipRow({
       className={cn('flex min-w-0 items-center gap-1', expanded ? 'flex-wrap' : 'flex-nowrap overflow-hidden')}
     >
       {visible.map((chip) => (
-        <ChipPill key={chip.key} chip={chip} interactive={interactive} onToggleLabel={onToggleLabel} />
+        <ChipPill key={chip.key} chip={chip} interactive={interactive} onToggleLabel={onToggleLabel} onToggleTag={onToggleTag} />
       ))}
       {overflow > 0 ? (
         <button
@@ -198,6 +224,8 @@ interface ResultCardViewProps {
   inSelection?: boolean;
   onOpen?: () => void;
   onToggleLabel?: (label: string) => void;
+  /** Click-to-filter for a colored §09 tag chip (cards + map). Inert when omitted or interactive=false. */
+  onToggleTag?: (tag: ExplorerTagFilter) => void;
   onToggleSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
@@ -209,6 +237,7 @@ export function ResultCardView({
   inSelection = false,
   onOpen,
   onToggleLabel,
+  onToggleTag,
   onToggleSelect,
 }: ResultCardViewProps) {
   const [expanded, setExpanded] = useState(false);
@@ -226,7 +255,7 @@ export function ResultCardView({
   // Classements / labels (neutral) FIRST, then the colored §09 tags.
   const chips: DisplayChip[] = [
     ...neutralLabels.map((label, index) => ({ key: `l${index}-${label}`, label })),
-    ...tagChips.map((tag, index) => ({ key: `t${index}-${tag.slug || tag.label}`, label: tag.label, color: tag.color })),
+    ...tagChips.map((tag, index) => ({ key: `t${index}-${tag.slug || tag.label}`, label: tag.label, color: tag.color, tagSlug: tag.slug })),
   ];
 
   const containerInteractive = interactive && Boolean(onOpen);
@@ -321,6 +350,7 @@ export function ResultCardView({
           onRequestExpand={() => setExpanded(true)}
           interactive={containerInteractive}
           onToggleLabel={onToggleLabel}
+          onToggleTag={onToggleTag}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ObjectCard } from '../../types/domain';
 import { ResultCardView } from './ResultCardView';
 
@@ -47,5 +47,37 @@ describe('ResultCardView', () => {
     render(<ResultCardView card={makeCard()} domId="card-inert" interactive={false} />);
     const root = document.getElementById('card-inert');
     expect(root?.classList.contains('shrink-0')).toBe(true);
+  });
+
+  it('renders a colored tag as a filter button and toggles the tag without opening the card', () => {
+    const onToggleTag = jest.fn();
+    const onOpen = jest.fn();
+    // One tag, no neutral labels → the row never overflows (single chip stays visible in jsdom).
+    render(
+      <ResultCardView
+        card={makeCard({ labels: [], tagChips: [{ label: 'Bien-être', color: '#ec4899', slug: 'wellness' }] })}
+        onOpen={onOpen}
+        onToggleTag={onToggleTag}
+      />,
+    );
+
+    const btn = screen.getByRole('button', { name: 'Filtrer par le tag Bien-être' });
+    fireEvent.click(btn);
+
+    expect(onToggleTag).toHaveBeenCalledWith({ slug: 'wellness', name: 'Bien-être', color: '#ec4899' });
+    // The tag click must not bubble to the card's open handler.
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('keeps tags inert (no filter button) in the non-interactive §09 preview', () => {
+    render(
+      <ResultCardView
+        card={makeCard({ labels: [], tagChips: [{ label: 'Bien-être', color: '#ec4899', slug: 'wellness' }] })}
+        interactive={false}
+        onToggleTag={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Filtrer par le tag Bien-être' })).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import type {
   ExplorerFilters,
   ExplorerBucketKey,
   ExplorerStatusFilter,
+  ExplorerTagFilter,
   GeoPolygon,
   MeetingRoomFilter,
 } from '../types/domain';
@@ -32,6 +33,9 @@ interface ExplorerState extends ExplorerFilters {
   setRankedLabelScheme: (schemeCode: string | null) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
+  /** Toggle a §09 tag in the Explorer filter set (click a colored tag on a card/map). */
+  toggleTag: (tag: ExplorerTagFilter) => void;
+  clearTags: () => void;
   /**
    * Toggle a publication-status entry in the Explorer filter set.
    * Empty array = "let the server use its default (published)".
@@ -219,6 +223,18 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       };
     }),
   clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
+  toggleTag: (tag) =>
+    set((state) => {
+      const slug = String(tag?.slug ?? '').trim();
+      if (!slug) return state;
+      const tagsAny = state.common.tagsAny ?? [];
+      const exists = tagsAny.some((entry) => entry.slug === slug);
+      const next: ExplorerTagFilter[] = exists
+        ? tagsAny.filter((entry) => entry.slug !== slug)
+        : [...tagsAny, { slug, name: String(tag.name ?? '').trim() || slug, color: tag.color }];
+      return { common: { ...state.common, tagsAny: next } };
+    }),
+  clearTags: () => set((state) => ({ common: { ...state.common, tagsAny: [] } })),
   toggleStatus: (status) =>
     set((state) => {
       const statuses = state.common.statuses ?? [];

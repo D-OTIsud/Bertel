@@ -129,6 +129,16 @@ export interface MeetingRoomFilter {
  */
 export type ExplorerStatusFilter = 'published' | 'draft';
 
+/**
+ * An active §09 tag filter. `slug` is the value sent to the RPC (`tags_any`); `name`/`color`
+ * are carried so the sidebar Tags rail can show the tag's display name in its own colour.
+ */
+export interface ExplorerTagFilter {
+  slug: string;
+  name: string;
+  color?: string;
+}
+
 export interface ExplorerCommonFilters {
   search: string;
   cities: string[];
@@ -142,6 +152,8 @@ export interface ExplorerCommonFilters {
   petsAccepted: boolean;
   openNow: boolean;
   labelsAny: string[];
+  /** Active §09 tag filters (click-to-filter on a card/map tag). Sent to the RPC as `tags_any`. */
+  tagsAny: ExplorerTagFilter[];
   rankedLabelSchemeCode: string | null;
   /**
    * Active publication-status filter sent to api.list_object_resources_filtered_page

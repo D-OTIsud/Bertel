@@ -31,7 +31,7 @@ describe('formatExplorerCardAddress', () => {
 });
 
 describe('normalizeExplorerCard', () => {
-  it('splits §09 tags into colored tagChips and keeps the neutral labels blend ordered', () => {
+  it('keeps the neutral blend to classifications + labels and drops environment/pet/accessibility', () => {
     const card = normalizeExplorerCard({
       id: 'obj-1',
       name: 'Chez Frida',
@@ -48,16 +48,15 @@ describe('normalizeExplorerCard', () => {
       amenity_codes: ['pet_friendly', 'acc_pmr_parking'],
     });
 
-    // §09 tags move to tagChips; the taxonomy ('Gite') is NOT a label chip (it shows on the
-    // card's metadata line), so it is excluded from the neutral blend.
-    expect(card.labels).toEqual([
-      '3 étoiles',
-      'Clevacances',
-      'Qualite Tourisme',
-      'Milieu rural',
-      'Animaux acceptes',
-      'Accessibilite',
-    ]);
+    // The neutral line keeps ONLY classifications + labels (decision 2026-06-16): the quality label
+    // and the classement, then the card.labels field. §09 tags move to tagChips.
+    expect(card.labels).toEqual(['Qualite Tourisme', '3 étoiles', 'Clevacances']);
+    // Dropped from the line: environment/ambiance tags, accessibility amenities, the pet-friendly +
+    // accessibility synthetic chips, and the taxonomy ('Gite', shown on the metadata line).
+    expect(card.labels).not.toContain('Milieu rural');
+    expect(card.labels).not.toContain('Places PMR');
+    expect(card.labels).not.toContain('Animaux acceptes');
+    expect(card.labels).not.toContain('Accessibilite');
     expect(card.labels).not.toContain('Gite');
     expect(card.tagChips).toEqual([{ label: 'Vue mer', color: '#0ea5e9', slug: 'vue-mer' }]);
   });

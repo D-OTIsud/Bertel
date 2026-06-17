@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, Bell, Pencil, Star, Unlink } from 'lucide-react';
+import { ArrowUpRight, Bell, Pencil, Star, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { ConfirmDialog } from '../primitives';
 import { ActorPicker } from '../widgets/ActorPicker';
@@ -104,11 +104,11 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
                   <button
                     type="button"
                     className="provider-act"
-                    title="Ouvrir la fiche CRM du prestataire (interactions, coordonnées, adresses)"
+                    aria-label={`Fiche CRM de ${actor.displayName}`}
+                    title="Ouvrir la fiche CRM (interactions, coordonnées, adresses)"
                     onClick={() => onOpenActor(actor.id)}
                   >
-                    <ArrowUpRight size={14} aria-hidden />
-                    <span className="provider-act__label">Fiche CRM</span>
+                    <ArrowUpRight size={15} aria-hidden />
                   </button>
                 )}
                 {editable && (
@@ -116,10 +116,10 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
                     type="button"
                     className="provider-act"
                     aria-label={`Modifier ${actor.displayName}`}
+                    title="Modifier le prestataire"
                     onClick={() => setEditIndex(index)}
                   >
-                    <Pencil size={14} aria-hidden />
-                    <span className="provider-act__label">Modifier</span>
+                    <Pencil size={15} aria-hidden />
                   </button>
                 )}
                 {editable && (
@@ -127,10 +127,10 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
                     type="button"
                     className="provider-act provider-act--danger"
                     aria-label={`Détacher ${actor.displayName}`}
+                    title="Détacher le prestataire"
                     onClick={() => setDetachIndex(index)}
                   >
-                    <Unlink size={14} aria-hidden />
-                    <span className="provider-act__label">Détacher</span>
+                    <Trash2 size={15} aria-hidden />
                   </button>
                 )}
               </div>

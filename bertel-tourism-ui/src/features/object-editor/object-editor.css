@@ -2547,34 +2547,35 @@
   padding-top: 9px; margin-top: 1px;
   border-top: 1px solid var(--line-soft);
 }
+/* Boutons d'action ICÔNE SEULE (libellé via aria-label + title). */
 .object-editor .provider-act {
-  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
-  height: 30px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 30px; padding: 0; flex: none;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   color: var(--ink-2);
-  font-size: 12px; font-weight: 600;
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
-/* Actions tiennent sur UNE ligne (flex-wrap: nowrap) : l'icône reste, le libellé rétrécit puis
-   s'ellipse seulement si la carte est vraiment étroite — jamais de retour à la ligne. */
-.object-editor .provider-act svg { flex: none; }
-.object-editor .provider-act__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.object-editor .provider-act svg { flex: none; color: var(--ink-4); }
 .object-editor .provider-act:hover { background: var(--surface-2); color: var(--ink); }
+.object-editor .provider-act:hover svg { color: inherit; }
 .object-editor .provider-act:focus-visible {
   outline: 0; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-tint);
 }
-.object-editor .provider-act svg { color: var(--ink-4); }
-.object-editor .provider-act:hover svg { color: inherit; }
-.object-editor .provider-act--danger { margin-left: auto; }
-.object-editor .provider-act--danger:hover {
+/* Détacher : bouton destructif ROUGE (poubelle), poussé à droite. */
+.object-editor .provider-act--danger {
+  margin-left: auto;
   color: var(--red); border-color: var(--red);
-  background: rgba(200, 92, 72, 0.08);
 }
-.object-editor .provider-act--danger:hover svg { color: var(--red); }
+.object-editor .provider-act--danger svg { color: var(--red); }
+.object-editor .provider-act--danger:hover {
+  color: #fff; border-color: var(--red);
+  background: var(--red);
+}
+.object-editor .provider-act--danger:hover svg { color: #fff; }
 
 /* Provider edit modal — role + visibility side by side. */
 .object-editor .provider-modal__grid {

@@ -435,6 +435,21 @@
   margin-bottom: 0;
 }
 
+/* §04 body — even vertical rhythm. The languages-spoken group, the translation
+   selectors, and the two long-text fields otherwise butt together (the char
+   counter of one nearly touches the label of the next). A single column gap
+   replaces the per-block margins so each region breathes the same amount. */
+.object-editor #section-04 .fs__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.object-editor #section-04 .desc-selectors { margin-bottom: 0; }
+/* Keep the "Langues parlées" label hugging its own chips as one tight group. */
+.object-editor #section-04 .desc-langs { display: flex; flex-direction: column; gap: 6px; }
+.object-editor #section-04 .desc-langs .chip-group__label { margin: 0; }
+.object-editor #section-04 .desc-langs .lang-field { margin-top: 0; }
+
 /* Char counter */
 .object-editor .char-count {
   display: flex; justify-content: flex-end;
@@ -613,6 +628,9 @@
 }
 /* §04 language chips: clickable body (opens the level modal) + a trailing remove « × ». */
 .object-editor .lang-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+/* The "Choisir / modifier les langues" button shares this row with the language
+   chips — center it instead of inheriting .rep-add's top-anchored offset. */
+.object-editor .lang-field .rep-add { align-self: center; margin-top: 0; }
 .object-editor .lang-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .object-editor .lang-chip { display: inline-flex; align-items: stretch; }
 .object-editor .lang-chip__del {

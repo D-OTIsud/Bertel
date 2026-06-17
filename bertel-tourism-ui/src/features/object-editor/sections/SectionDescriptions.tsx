@@ -84,10 +84,12 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
       folded={folded}
       pill={{ tone: 'ok', label: onOrg ? 'Personnalisée' : 'Par défaut' }}
     >
-      <SpokenLanguagesField
-        characteristics={characteristics}
-        onChange={(next) => editor.replaceModule('characteristics', next)}
-      />
+      <div className="desc-langs">
+        <SpokenLanguagesField
+          characteristics={characteristics}
+          onChange={(next) => editor.replaceModule('characteristics', next)}
+        />
+      </div>
 
       <div className="desc-selectors">
         {scopeTabs.length > 1 ? (
@@ -123,7 +125,7 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
           description_adapted is single-owned by §10 Accessibilité since the §04 hand-off. */}
 
       {readOnly && (
-        <p className="muted" style={{ marginTop: 8 }}>
+        <p className="muted">
           Lecture seule : vos droits ne permettent pas d'éditer la version {missingScope}.
         </p>
       )}

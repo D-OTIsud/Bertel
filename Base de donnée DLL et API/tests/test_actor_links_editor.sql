@@ -46,4 +46,33 @@ BEGIN
   ASSERT (SELECT count(*) FROM actor_object_role WHERE object_id = v_obj) = 0, 'actors branch did not clear';
   RAISE NOTICE 'actor links editor assertions passed (per-command structural + read policy + gated picker + actors round-trip).';
 END$$;
+
+-- ============================ DO #3 — §95: any editor may associate any actor ============================
+-- Regression guard for the 2026-06-17 bug: save_object_relations is SECURITY INVOKER, so an EXISTS over
+-- public.actor for the existence check was RLS-filtered by ext_actor_read and HID not-yet-linked actors,
+-- raising "Unknown actor_id" for any non-admin editor (and the superadmin, whose read policy had no
+-- superuser arm). These are STRUCTURAL asserts (the behavior is RLS-role dependent; the live persona
+-- reproduction is in the session log). They go red if the RLS-gated probe is reintroduced.
+DO $$
+DECLARE
+  v_save_def   text := pg_get_functiondef('api.save_object_relations(text,jsonb)'::regprocedure);
+  v_search_def text := pg_get_functiondef('api.search_actors(text)'::regprocedure);
+  v_read_using text;
+BEGIN
+  -- (1) actors arm must NOT probe public.actor existence (FK actor_object_role.actor_id -> actor(id) enforces it).
+  ASSERT position('FROM public.actor WHERE id' IN v_save_def) = 0,
+    '§95 regression: save_object_relations still RLS-probes public.actor existence in the actors arm';
+  -- (2) picker broadened to the full directory for any editor (no per-caller extended scoping).
+  ASSERT position('current_user_extended_object_ids' IN v_search_def) = 0,
+    '§95 regression: search_actors still scopes the picker by current_user_extended_object_ids';
+  -- (2b) §95b: picker returns the primary e-mail (actor_channel) for the rich result card.
+  ASSERT position('actor_channel' IN v_search_def) > 0,
+    '§95b regression: search_actors lost the actor_channel email subquery';
+  -- (3) ext_actor_read gained the is_platform_superuser arm (matches the picker scope for direct reads).
+  SELECT pg_get_expr(polqual, polrelid) INTO v_read_using
+  FROM pg_policy WHERE polrelid='public.actor'::regclass AND polname='ext_actor_read';
+  ASSERT v_read_using ILIKE '%is_platform_superuser%',
+    '§95: ext_actor_read missing the is_platform_superuser arm';
+  RAISE NOTICE '§95 assertions passed (FK-only actor existence, full-directory picker, superuser read arm).';
+END$$;
 ROLLBACK;

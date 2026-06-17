@@ -46,7 +46,7 @@ export function addActorLink(
       displayName: picked.displayName,
       firstName: picked.firstName,
       lastName: picked.lastName,
-      gender: '',
+      gender: picked.gender ?? '',
       roleId: role.id,
       roleCode: role.code,
       roleLabel: role.label,

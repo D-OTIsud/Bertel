@@ -31,6 +31,7 @@ import {
   type ObjectWorkspacePublicationSelectionItem,
   type ObjectWorkspacePricingModule,
   type ObjectWorkspaceOpeningsModule,
+  type ObjectWorkspaceOpeningPeriod,
   type ObjectWorkspaceOpeningPeriodTypeOption,
   type ObjectWorkspaceSyncIdentifiersModule,
   type ObjectWorkspaceMembershipItem,
@@ -4302,60 +4303,72 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
   }, 'Impossible d enregistrer les tarifs.');
 }
 
+export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
+  return periods.map((period, periodIndex) => {
+    const openTimePeriods = period.weekdays
+      .map((weekday) => {
+        const frames = weekday.slots
+          .map((slot) => ({
+            start_time: toNullableText(slot.start),
+            end_time: toNullableText(slot.end),
+          }))
+          .filter((slot) => slot.start_time || slot.end_time);
+
+        return {
+          closed: false,
+          weekdays: [{ weekday_code: normalizeOpeningWeekdayCode(weekday.code) }],
+          time_frames: frames,
+        };
+      })
+      .filter((timePeriod) => timePeriod.weekdays[0]?.weekday_code);
+    const openCodes = new Set(openTimePeriods.map((timePeriod) => timePeriod.weekdays[0]?.weekday_code));
+    const closedTimePeriods = Array.from(new Set(period.closedDays.map(normalizeOpeningWeekdayCode)))
+      .filter((weekdayCode) => weekdayCode && !openCodes.has(weekdayCode))
+      .map((weekdayCode) => ({
+        closed: true,
+        weekdays: [{ weekday_code: weekdayCode }],
+        time_frames: [],
+      }));
+
+    // recurrence → RPC mapping:
+    //  - always: no dates, treated as all-year (date_start/date_end nulled)
+    //  - cyclic: keep dates, repeats every year (all_years true)
+    //  - fixed: keep dates, one-off span (all_years false)
+    const hasDates = period.recurrence !== 'always';
+    return {
+      id: toRpcUuid(period.recordId),
+      name: toNullableText(period.label),
+      period_type_code: toNullableText(period.seasonTypeCode),
+      date_start: hasDates ? toNullableText(period.startDate) : null,
+      date_end: hasDates ? toNullableText(period.endDate) : null,
+      all_years: period.recurrence === 'fixed' ? false : true,
+      is_closure: period.isClosure,
+      extra: {
+        workspace_order: period.order || String(periodIndex + 1),
+      },
+      schedules: [
+        {
+          schedule_type_code: 'regular',
+          name: 'Horaires',
+          time_periods: [...openTimePeriods, ...closedTimePeriods],
+        },
+      ],
+    };
+  });
+}
+
 export async function saveObjectWorkspaceOpenings(objectId: string, input: ObjectWorkspaceOpeningsModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
     return;
   }
 
-  await callObjectWorkspaceRpc('save_object_openings', objectId, {
-    periods: input.periods.map((period, periodIndex) => {
-      const openTimePeriods = period.weekdays
-        .map((weekday) => {
-          const frames = weekday.slots
-            .map((slot) => ({
-              start_time: toNullableText(slot.start),
-              end_time: toNullableText(slot.end),
-            }))
-            .filter((slot) => slot.start_time || slot.end_time);
-
-          return {
-            closed: false,
-            weekdays: [{ weekday_code: normalizeOpeningWeekdayCode(weekday.code) }],
-            time_frames: frames,
-          };
-        })
-        .filter((timePeriod) => timePeriod.weekdays[0]?.weekday_code);
-      const openCodes = new Set(openTimePeriods.map((timePeriod) => timePeriod.weekdays[0]?.weekday_code));
-      const closedTimePeriods = Array.from(new Set(period.closedDays.map(normalizeOpeningWeekdayCode)))
-        .filter((weekdayCode) => weekdayCode && !openCodes.has(weekdayCode))
-        .map((weekdayCode) => ({
-          closed: true,
-          weekdays: [{ weekday_code: weekdayCode }],
-          time_frames: [],
-        }));
-
-      return {
-        id: toRpcUuid(period.recordId),
-        name: toNullableText(period.label),
-        period_type_code: toNullableText(period.seasonTypeCode),
-        date_start: period.allYears ? null : toNullableText(period.startDate),
-        date_end: period.allYears ? null : toNullableText(period.endDate),
-        all_years: period.allYears,
-        extra: {
-          workspace_bucket: period.bucket,
-          workspace_order: period.order || String(periodIndex + 1),
-        },
-        schedules: [
-          {
-            schedule_type_code: 'regular',
-            name: 'Horaires',
-            time_periods: [...openTimePeriods, ...closedTimePeriods],
-          },
-        ],
-      };
-    }),
-  }, 'Impossible d enregistrer les horaires.');
+  await callObjectWorkspaceRpc(
+    'save_object_openings',
+    objectId,
+    { periods: buildOpeningsPayload(input.periods) },
+    'Impossible d enregistrer les horaires.',
+  );
 }
 
 export async function saveObjectWorkspaceSustainability(

@@ -694,18 +694,48 @@
 .object-editor .policy-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
 .object-editor .btn-link { background: none; border: 0; padding: 0; color: var(--acc); font-size: 12px; cursor: pointer; text-decoration: underline; }
 .object-editor .btn-link:hover { opacity: 0.8; }
+/* "Add" CTA — must read as a real, on-brand action, not a faint placeholder.
+   Resting state carries an accent-tinted fill + solid accent border so it's
+   visible against the surface; hover commits to a full accent fill. Driven by
+   the theme accent tokens, so it adapts across all 6 org palettes. */
 .object-editor .rep-add {
-  display: inline-flex; align-items: center; gap: 6px;
-  align-self: flex-start; margin-top: 6px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1px dashed var(--line-strong);
-  font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 7px;
+  align-self: flex-start; margin-top: 8px;
+  height: 34px; padding: 0 15px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  font-size: 12.5px; font-weight: 650; letter-spacing: 0.01em;
   color: var(--accent-deep);
-  background: transparent;
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  box-shadow: var(--shadow-s);
   cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+              box-shadow 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.object-editor .rep-add:hover { background: var(--accent-tint); border-style: solid; }
+.object-editor .rep-add:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-m);
+  transform: translateY(-1px);
+}
+.object-editor .rep-add:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-s);
+}
+.object-editor .rep-add:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.object-editor .rep-add:disabled {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-4);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
 .object-editor .rep-row .del {
   display: inline-grid; place-items: center;
   width: 32px; height: 32px;

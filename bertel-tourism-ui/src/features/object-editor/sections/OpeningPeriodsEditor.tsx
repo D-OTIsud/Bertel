@@ -18,12 +18,19 @@ import { tagChipStyle } from '../../../utils/explorer-card';
 /** Read-only per-day hours for the expanded row detail. */
 function periodDayHours(period: ObjectWorkspaceOpeningPeriod): { short: string; text: string; open: boolean }[] {
   return scheduleRowsFromPeriod(period).map((row) => {
-    const slots = row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot && (slot.start || slot.end)));
+    // A day is OPEN if it carries any non-null slot; its hours are the slots that have times.
+    // An open day with no times = "ouvert sans horaire" (hôtel/location), NOT "Fermé".
+    const rowOpen = row.slots.some((slot) => slot !== null);
+    const timed = row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot && (slot.start || slot.end)));
     const fmt = (value: string) => (value.length >= 5 ? value.slice(0, 5) : value || '—');
     return {
       short: row.shortLabel ?? row.code,
-      open: slots.length > 0,
-      text: slots.length > 0 ? slots.map((slot) => `${fmt(slot.start)}–${fmt(slot.end)}`).join(' · ') : 'Fermé',
+      open: rowOpen,
+      text: timed.length > 0
+        ? timed.map((slot) => `${fmt(slot.start)}–${fmt(slot.end)}`).join(' · ')
+        : rowOpen
+          ? 'Ouvert · sans horaire'
+          : 'Fermé',
     };
   });
 }

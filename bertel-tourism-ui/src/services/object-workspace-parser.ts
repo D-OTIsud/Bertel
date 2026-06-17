@@ -2209,10 +2209,12 @@ function buildWorkspaceOpeningWeekdaysFromCanonical(value: unknown): ObjectWorks
         return {
           code: normalizedCode,
           label: humanizeWorkspaceWeekday(normalizedCode),
-          slots: normalizedSlots,
+          // open-without-hours sentinel: one empty slot => the day reads as OPEN downstream
+          // (api.get_opening_slots_by_day emits an open day with no frames as []). Closed days
+          // are absent from weekday_slots, so we no longer drop slotless days here.
+          slots: normalizedSlots.length > 0 ? normalizedSlots : [{ start: '', end: '' }],
         };
-      })
-      .filter((weekday) => weekday.slots.length > 0),
+      }),
   );
 }
 

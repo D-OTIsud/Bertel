@@ -5013,34 +5013,46 @@ CREATE OR REPLACE FUNCTION api.get_opening_slots_by_day(p_period_id UUID)
 RETURNS JSONB
 LANGUAGE sql
 STABLE
-
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-  WITH weekdays AS (
-    SELECT id, code, position
-    FROM ref_code_weekday
+  -- §14 "open without hours" (manifest 14p): emit ONLY open days (a weekday with a
+  -- non-closed opening_time_period). An open day with no time frames is rendered as []
+  -- = open without fixed hours (hôtel/location). Closed/absent days are omitted entirely.
+  WITH day_state AS (
+    SELECT
+      w.code,
+      w.position,
+      EXISTS (
+        SELECT 1
+        FROM opening_schedule s
+        JOIN opening_time_period tp          ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        WHERE s.period_id = p_period_id
+          AND tpw.weekday_id = w.id
+          AND tp.closed = FALSE
+      ) AS is_open,
+      (
+        SELECT jsonb_agg(
+                 jsonb_build_object('start', tf.start_time::text, 'end', tf.end_time::text)
+                 ORDER BY tf.start_time
+               )
+        FROM opening_schedule s
+        JOIN opening_time_period tp          ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        JOIN opening_time_frame tf           ON tf.time_period_id = tp.id
+        WHERE s.period_id = p_period_id
+          AND tpw.weekday_id = w.id
+          AND tp.closed = FALSE
+          AND tf.start_time IS NOT NULL
+      ) AS frames
+    FROM ref_code_weekday w
   )
   SELECT COALESCE(
-    jsonb_object_agg(w.code, COALESCE(frames.slots, '[]'::jsonb) ORDER BY w.position),
+    jsonb_object_agg(code, COALESCE(frames, '[]'::jsonb) ORDER BY position)
+      FILTER (WHERE is_open),
     '{}'::jsonb
   )
-  FROM weekdays w
-  LEFT JOIN LATERAL (
-    SELECT jsonb_agg(
-             jsonb_build_object(
-               'start', tf.start_time::text,
-               'end',   tf.end_time::text
-             )
-             ORDER BY tf.start_time
-           ) AS slots
-    FROM opening_schedule s
-    JOIN opening_time_period tp          ON tp.schedule_id = s.id
-    JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
-    JOIN opening_time_frame tf           ON tf.time_period_id = tp.id
-    WHERE s.period_id = p_period_id
-      AND tpw.weekday_id = w.id
-      AND tf.start_time IS NOT NULL
-  ) frames ON true;
+  FROM day_state;
 $$;
 
 -- =====================================================

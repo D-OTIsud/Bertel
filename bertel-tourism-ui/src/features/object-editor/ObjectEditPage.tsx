@@ -16,7 +16,6 @@ import {
   computeNavHint,
   computeOverallCompletion,
   computeSectionCompletions,
-  SCORE_SECTION_NUMS,
   type SectionCompletion,
 } from './editor-completion';
 import { validateForPublication, type Issue } from './editor-validation';
@@ -279,15 +278,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     () => computeSectionCompletions(editor.draft, navItems),
     [editor.draft, navItems],
   );
-  // §64 — score global archétype-aware : on ne compte que les sections réellement rendues
-  // (navItems exclut §07 pour HEB), sinon §07 pèserait dans le dénominateur d'un HEB qui ne le voit plus.
-  const scoredNums = useMemo(
-    () => SCORE_SECTION_NUMS.filter((num) => navItems.some((item) => item.num === num)),
-    [navItems],
-  );
+  // Complétude « perçue visiteur » type-aware (80 % essentiels / 15 % complémentaire / 5 % bonus) —
+  // spec docs/superpowers/specs/2026-06-18-completude-par-type-design.md.
   const overallCompletion = useMemo(
-    () => computeOverallCompletion(editor.draft, scoredNums),
-    [editor.draft, scoredNums],
+    () => computeOverallCompletion(editor.draft, meta.archetype),
+    [editor.draft, meta.archetype],
   );
   const validation = useMemo(
     () => validateForPublication(editor.draft, resource.permissions, meta.archetype),
@@ -462,6 +457,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           objectId={objectId}
           status={editor.draft.generalInfo.status || 'draft'}
           overallCompletion={overallCompletion}
+          publishable={validation.blockers.length === 0}
           sections={sectionCompletions}
           issues={validationIssues}
           historyItems={historyItems}

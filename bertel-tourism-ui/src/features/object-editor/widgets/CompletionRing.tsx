@@ -9,13 +9,15 @@ export interface CompletionRingSection {
 interface CompletionRingProps {
   overall: number;
   sections: CompletionRingSection[];
+  /** Publiable = aucun bloquant de validation. Découplé du % (richesse). Optionnel (rétro-compat). */
+  publishable?: boolean;
 }
 
 function clampPct(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-export function CompletionRing({ overall, sections }: CompletionRingProps) {
+export function CompletionRing({ overall, sections, publishable }: CompletionRingProps) {
   const percent = clampPct(overall);
   const radius = 56;
   const circumference = 2 * Math.PI * radius;
@@ -45,10 +47,18 @@ export function CompletionRing({ overall, sections }: CompletionRingProps) {
               {percent}
               <small>%</small>
             </div>
-            <div className="lbl">prête à publier</div>
+            <div className="lbl">richesse de la fiche</div>
           </div>
         </div>
       </div>
+      {publishable !== undefined && (
+        <div className="completion-card__row completion-card__publish">
+          <span className={`edit-nav__dot ${publishable ? 'ok' : 'warn'}`} />
+          <span className="completion-card__label">
+            {publishable ? 'Publiable' : 'Publication bloquée'}
+          </span>
+        </div>
+      )}
       <div className="completion-card__list">
         {sections.map((section) => (
           <div key={section.label} className="completion-card__row">

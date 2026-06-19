@@ -42,7 +42,7 @@ statut `done`/`planned`**, `first_response_at` 100 % NULL, `resolved_at` sur 1 2
 | Croissance corpus par catégorie | `object.created_at` + familles Explorer | ✅ dérivable rétroactif |
 | Taux de publication | `published_at` | ✅ dérivable |
 | % durable / % accessibilité | `object_sustainability_action.created_at` / amenity accessibilité | ✅ dérivable |
-| **% complétude** | *aucune date stockée* | 🟡 **snapshot forward** (consomme la fn complétude) |
+| **% complétude** | `api.get_dashboard_completeness` **(live)** mais point-in-time | 🟡 **snapshot quotidien obligatoire** (passé non reconstituable) |
 | **% visites terrain** | `interaction_type='visit'` | 🟡 type existe, 0 utilisé → dérivable dès l'usage, pas rétroactif |
 | **Fermetures / mois** | passage `published`→`archived`/`hidden` | 🟠 dérivable de l'audit `object_version` (depuis mars 2026) |
 | **Temps de traitement NET** (moins attente prestataire) | durée passée en statut « attente prestataire » | 🔴 **capture nouvelle** (statut + journal de transitions) |
@@ -110,7 +110,14 @@ suppressions/révocations, rares) ; documenté dans le SQL et affiché en note d
 **Contrat d'honnêteté #2** : `crm_resolved`/`crm_processing_days_raw` ne couvrent que les interactions
 avec `resolved_at` saisi ; les notes importées sans cycle de vie ne sont pas comptées comme « traitées ».
 
-### Brique 2 — `metric_snapshot` + job pg_cron mensuel *(forward, exact ; dépend de la passe complétude)*
+### Brique 2 — `metric_snapshot` + job pg_cron **quotidien** *(forward, exact)*
+
+**Pourquoi une table est obligatoire (vérifié live 2026-06-18).** `api.get_dashboard_completeness`
+existe et tourne, MAIS elle est **point-in-time** : elle score sur le contenu *actuel* des tables
+(nb médias, taxonomie… lus maintenant). `p_updated_at_from/to` ne filtre que *quels objets* entrent
+dans le périmètre, il ne **rembobine pas** l'état passé. → la complétude d'une date passée est
+**non reconstituable** ; seul un enregistrement périodique produit la série. Idem pour l'état NET exact
+des autres KPIs (suppressions/révocations que la dérivée de Brique 1 ne capte pas).
 
 Table générique long-format — **aucun DDL pour de futures métriques** :
 
@@ -118,28 +125,38 @@ Table générique long-format — **aucun DDL pour de futures métriques** :
 metric_snapshot(
   id uuid pk default gen_random_uuid(),
   snapshot_date date not null,
-  scope text not null,          -- 'global' | 'type' | 'category' | 'commune'
+  scope text not null,          -- 'global' | 'type' | 'category' | 'commune' | 'status'
   scope_key text,               -- ex. 'HLO', 'Le Tampon' ; null pour 'global'
-  metric_key text not null,     -- ex. 'completeness_avg'
+  metric_key text not null,     -- ex. 'completeness_avg', 'completeness_complete_pct', 'corpus_count', …
   value numeric not null,
-  denominator integer,
+  denominator integer,          -- ex. 'total' du type (pour recomposer un %)
   captured_at timestamptz not null default now(),
   unique (snapshot_date, scope, scope_key, metric_key)
 )
 ```
 
-Job `api.capture_metric_snapshots()` (modèle `refresh_open_status` ; `gen_random_uuid()`, pas
-`uuid_generate_v4()` — invariant search_path), planifié `cron.schedule('capture-metric-snapshots',
-'0 3 1 * *', …)` (1er du mois). Idempotent via la clé unique (`on conflict do update`).
+Job `api.capture_metric_snapshots(p_date date default current_date)` (modèle `refresh_open_status` ;
+`gen_random_uuid()`, pas `uuid_generate_v4()` — invariant search_path), planifié quotidiennement
+`cron.schedule('capture-metric-snapshots', '0 3 * * *', $$select api.capture_metric_snapshots()$$)`.
+Idempotent via la clé unique (`on conflict (snapshot_date,scope,scope_key,metric_key) do update`) ⇒
+ré-exécution / rattrapage sûrs.
 
-**Dépendance externe (bloquante pour P2)** : la complétude est calculée par la passe
-`2026-06-18-completude-par-type-design.md`. Le job **appelle** la fonction/vue qu'elle exposera
-(p. ex. `api.object_completeness(...)` → ratio par objet, agrégé par type/global ici). Cette spec ne
-fixe NI la formule NI les seuils — seulement l'interface consommée :
-> entrée attendue = un ratio de complétude par objet (0–1 ou 0–100), agrégeable par `object_type`.
+**Panel figé chaque jour (« les différentes stats », décision PO).** Le job appelle les RPC
+instantanées et écrit en lignes :
+- **Complétude** — depuis `api.get_dashboard_completeness(null, ARRAY['published'], '{}', null, null, 0)` :
+  par type → `completeness_avg` (= `avg_score` 0-100) + `completeness_complete_pct` + `denominator=total`.
+- **Corpus net** — count par `type` et par `status` (`corpus_count`), pour l'état net exact.
+- **Classés** — count `granted` (global + par commune : `classified_count`).
+- **Couverture** — `sustainability_count`, `accessibility_count`.
+- **CRM** — backlog ouvert (interactions non résolues à la date), `crm_backlog`.
 
-Tant que la fn n'existe pas, P2 peut snapshoter d'autres métriques d'état net (cf. §4 point ouvert)
-mais sa raison d'être principale (complétude) reste en attente.
+> Volume : quelques dizaines de lignes/jour (~30 k/an) — négligeable.
+
+**Contrat de complétude (CONFIRMÉ live, plus une dépendance bloquante).** La fonction
+`api.get_dashboard_completeness` est **livrée et déployée** (commit `8c415ef`, foldée dans
+`api_views_functions.sql`). Retour JSONB `{rows:[{type,total,avg_score,complete_pct,missing_top_field,
+below_80}]}`. Cette spec ne touche NI la formule NI les seuils (passe parallèle
+`2026-06-18-completude-par-type-design.md`) — elle **consomme** ce contrat. P2 n'est donc plus bloquée.
 
 ### Brique 3 — Cycle de vie CRM + journal de transitions *(forward)*
 
@@ -190,7 +207,8 @@ Pas de champ `closed_at`. Deux options :
 
 - **P1 — Brique 1 + frontend** : tous les graphiques dérivables, rétroactifs. Valeur immédiate, aucun
   schéma nouveau. Closures via audit.
-- **P2 — Brique 2** : `metric_snapshot` + cron mensuel. **Gated** sur la passe complétude parallèle.
+- **P2 — Brique 2** : `metric_snapshot` + cron **quotidien** (complétude + panel KPIs). **Débloquée** —
+  `api.get_dashboard_completeness` est live. Peut démarrer en parallèle de P1.
 - **P3 — Brique 3** : cycle de vie CRM + journal de transitions → temps NET + flux CRM par statut.
 
 ---
@@ -224,7 +242,10 @@ Pas de champ `closed_at`. Deux options :
 1. **Placement précis & maquette** des widgets dans chaque onglet (lot 4 « Activité » à matérialiser).
 2. **Snapshot d'état net des % de couverture** en P2 (capte révocations/suppressions) : à décider —
    la dérivée suffit-elle ? *(le PO traite la complétude en parallèle ; à arbitrer avec lui en P2.)*
-3. **Interface exacte de la fn complétude** (nom, signature, échelle) — fixée par la passe complétude.
+3. ~~Interface de la fn complétude~~ **RÉSOLU** : `api.get_dashboard_completeness` live, contrat figé ci-dessus.
 4. **Remap des statuts CRM importés** (`done`/`planned` → nouveau vocabulaire) — détail de migration P3.
 5. **Périmètre publisher** des séries — global jusqu'au résolveur `publisher_org_any` (lot 5).
-6. **Granularité par défaut** confirmée mensuelle ; quotidien/hebdo dispo via `p_grain` si besoin.
+6. **Granularité** : snapshot Brique 2 = **quotidien** (acté PO) ; séries dérivées Brique 1 rendues au
+   mois par défaut, quotidien/hebdo dispo via `p_grain`.
+7. **Périmètre du panel snapshot** : démarrer publiés (comme le mockup « remplissage ») ou tous statuts ?
+   défaut = publiés pour la complétude, tous statuts pour le corpus net. À confirmer au plan.

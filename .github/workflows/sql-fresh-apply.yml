@@ -246,6 +246,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_metric_snapshot.sql"
 
+      - name: resource facet exposure test (§101 — get_object_resource exposes stay_policy + activity; compose survival, omit-when-empty, ACT/ASC type-gate)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_resource_facet_exposure.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

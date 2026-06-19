@@ -2461,7 +2461,7 @@ IMMUTABLE
 
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-  SELECT api.jsonb_pick_keys(p_payload, ARRAY['legal_records','pet_policy','origins','org_links']);
+  SELECT api.jsonb_pick_keys(p_payload, ARRAY['legal_records','pet_policy','stay_policy','origins','org_links']);
 $$;
 
 CREATE OR REPLACE FUNCTION api.resource_block_itinerary(p_payload JSONB)
@@ -2472,7 +2472,7 @@ IMMUTABLE
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
-    'itinerary_details','itinerary','outgoing_relations','incoming_relations',
+    'itinerary_details','itinerary','activity','outgoing_relations','incoming_relations',
     'fma','fma_occurrences','sustainability_labels','sustainability_actions','sustainability_action_labels'
   ]);
 $$;
@@ -2504,8 +2504,8 @@ AS $$
     'capacity','amenities','environment_tags','payment_methods',
     'prices','discounts','group_policies','classifications','taxonomy','tags',
     'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types',
-    'legal_records','pet_policy','origins','org_links',
-    'itinerary_details','itinerary','outgoing_relations','incoming_relations',
+    'legal_records','pet_policy','stay_policy','origins','org_links',
+    'itinerary_details','itinerary','activity','outgoing_relations','incoming_relations',
     'fma','fma_occurrences','sustainability_labels','sustainability_actions','sustainability_action_labels',
     'render'
   ];
@@ -3196,6 +3196,31 @@ BEGIN
       SELECT jsonb_build_object('pet_policy', to_jsonb(pp) - 'object_id')
       FROM object_pet_policy pp
       WHERE pp.object_id = obj.id
+    ), '{}'::jsonb);
+  END IF;
+
+  -- Stay policy (single) — accommodation check-in / check-out (heure d'arrivée / départ), §85.
+  -- Direct sibling of pet_policy; covered by the object-level read gate at the top of this fn
+  -- (1 row/object, no per-row published flag, so no extra field-gate needed — same as pet_policy).
+  -- Single source here ⇒ get_object_with_deep_data inherits it (its 'object' block is this fn verbatim).
+  -- Key is omitted when no row exists (COALESCE → '{}' merges nothing), like pet_policy.
+  IF v_fields IS NULL OR 'stay_policy' = ANY(v_fields) THEN
+    js := js || COALESCE((
+      SELECT jsonb_build_object('stay_policy', to_jsonb(sp) - 'object_id')
+      FROM object_stay_policy sp
+      WHERE sp.object_id = obj.id
+    ), '{}'::jsonb);
+  END IF;
+
+  -- Activity facet (single) — ACT/ASC commercial-prestation details (object_act): duration,
+  -- participants, difficulty, guide_required, min_age, equipment_provided. Type-gated (only
+  -- ACT/ASC carry object_act per ref_facet_applicability), mirroring the FMA/ITI type-gated blocks.
+  -- Was previously authored-but-API-invisible (same class as room_types pre-§54).
+  IF obj.object_type IN ('ACT','ASC') THEN
+    js := js || COALESCE((
+      SELECT jsonb_build_object('activity', to_jsonb(a) - 'object_id')
+      FROM object_act a
+      WHERE a.object_id = obj.id
     ), '{}'::jsonb);
   END IF;
 

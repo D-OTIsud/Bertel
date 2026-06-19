@@ -21,6 +21,12 @@ vs inscrits en SIT, % hébergements classés).
 
 **Toute la statistique existante (§58) est instantanée.** Cette spec ajoute l'axe du temps.
 
+**Exigence PO (2026-06-18) : comparaison année après année.** La majorité des stats doit être
+**ancrée dans le temps** (figée périodiquement), pas seulement calculable, afin de comparer un mois/
+une période d'une année à l'autre (N vs N+1). → le snapshot quotidien (Brique 2) est le **registre
+historique faisant foi** pour tout le panel de KPIs ; la dérivée (Brique 1) ne sert qu'au **backfill
+rétroactif** (période antérieure aux premiers snapshots) et à la granularité fine à la demande.
+
 ---
 
 ## 1. Constat de disponibilité de la donnée (vérifié live, 2026-06-18)
@@ -150,7 +156,15 @@ instantanées et écrit en lignes :
 - **Couverture** — `sustainability_count`, `accessibility_count`.
 - **CRM** — backlog ouvert (interactions non résolues à la date), `crm_backlog`.
 
-> Volume : quelques dizaines de lignes/jour (~30 k/an) — négligeable.
+> Volume : quelques dizaines de lignes/jour (~30 k/an) — négligeable. **Rétention indéfinie** (le
+> comparatif YoY a besoin de plusieurs années d'historique) ; pas de purge.
+
+**Lecture + comparaison année-après-année.** RPC `api.get_metric_snapshot_series(p_metric_key,
+p_scope, p_scope_key, p_from, p_to, p_grain)` lit le registre. Pour un *stock* (complétude, corpus,
+classés) on prend la valeur au dernier jour de chaque bucket (`grain` mois par défaut) ; pour un *flux*
+on somme. Le mode **YoY** renvoie les séries alignées par position dans l'année (mois 1..12) sur N
+années, pour superposer N / N-1 / N-2. C'est le snapshot — donc figé, reproductible — qui garantit
+qu'un point de l'an dernier ne « bouge » plus quand la donnée courante évolue.
 
 **Contrat de complétude (CONFIRMÉ live, plus une dépendance bloquante).** La fonction
 `api.get_dashboard_completeness` est **livrée et déployée** (commit `8c415ef`, foldée dans
@@ -184,8 +198,12 @@ Décision PO : **répartir par thème** dans les onglets actuels (pas d'onglet d
 | **Qualité** | % complétude dans le temps, objets classés (global + par commune), % hébergements classés, % durable, % accessibilité |
 | **Offre** | croissance corpus par catégorie, taux de publication, ouvertures vs fermetures |
 
+Chaque widget temporel propose un **mode comparaison YoY** (superposition N / N-1 / N-2, séries
+alignées par mois) alimenté par `get_metric_snapshot_series` en mode YoY.
+
 Implémentation : un hook `useDashboardTimeseries(metric, params)` (React Query, modèle
-`useDashboardQuery`), un composant `TimeseriesChart` réutilisable (ligne/aire/barres groupées),
+`useDashboardQuery`), un composant `TimeseriesChart` réutilisable (ligne/aire/barres groupées,
+overlay multi-années),
 `WidgetFrame` existant (états chargement/erreur+retry/**vide**). **Pas de mocks** — `mock-dashboard.ts`
 n'est pas étendu pour ces widgets (principe « real DB data », états vides honnêtes quand 0 donnée,
 ex. itinéraires/événements à 0). Granularité mensuelle par défaut, sélecteur de période réutilisant

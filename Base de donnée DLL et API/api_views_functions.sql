@@ -9200,6 +9200,9 @@ AS $$
               AND NULLIF(btrim(d.description), '') IS NOT NULL
               AND NULLIF(btrim(d.description_chapo), '') IS NOT NULL)                 AS e_desc,
       (SELECT COUNT(*) FROM media m WHERE m.object_id = s.id)                         AS n_photos,
+      -- Cible photos « plein crédit » par type : FMA = 1 (une affiche suffit ; +photos = bonus
+      -- mais l'absence ne pénalise pas l'événement, décision PO 2026-06-18), sinon 4.
+      (CASE WHEN s.object_type = 'FMA' THEN 1 ELSE 4 END)                             AS photo_target,
       CASE
         WHEN s.object_type IN ('HOT','HPA','HLO','CAMP','RVA') THEN
           EXISTS (SELECT 1 FROM object_capacity c JOIN ref_capacity_metric mt ON mt.id = c.metric_id
@@ -9222,19 +9225,19 @@ AS $$
       id, object_type, name,
       ROUND(100.0 * (
         e_name::int + e_subcat::int + e_location::int + e_contact::int + e_desc::int
-        + LEAST(n_photos::numeric / 4.0, 1.0) + e_typeblock::int + e_tags::int
+        + LEAST(n_photos::numeric / photo_target, 1.0) + e_typeblock::int + e_tags::int
       ) / 8.0)::int                                                                  AS score,
       (e_name AND e_subcat AND e_location AND e_contact AND e_desc
-       AND n_photos >= 4 AND e_typeblock AND e_tags)                                 AS complete,
+       AND n_photos >= photo_target AND e_typeblock AND e_tags)                       AS complete,
       ARRAY_REMOVE(ARRAY[
-        CASE WHEN NOT e_name      THEN 'name'        END,
-        CASE WHEN NOT e_subcat    THEN 'subcategory' END,
-        CASE WHEN NOT e_location  THEN 'location'    END,
-        CASE WHEN NOT e_contact   THEN 'contact'     END,
-        CASE WHEN NOT e_desc      THEN 'description' END,
-        CASE WHEN n_photos < 4    THEN 'photos'      END,
-        CASE WHEN NOT e_typeblock THEN 'type_block'  END,
-        CASE WHEN NOT e_tags      THEN 'tags'        END
+        CASE WHEN NOT e_name           THEN 'name'        END,
+        CASE WHEN NOT e_subcat         THEN 'subcategory' END,
+        CASE WHEN NOT e_location       THEN 'location'    END,
+        CASE WHEN NOT e_contact        THEN 'contact'     END,
+        CASE WHEN NOT e_desc           THEN 'description' END,
+        CASE WHEN n_photos < photo_target THEN 'photos'   END,
+        CASE WHEN NOT e_typeblock      THEN 'type_block'  END,
+        CASE WHEN NOT e_tags           THEN 'tags'        END
       ], NULL)                                                                        AS missing_fields
     FROM ess
   ),

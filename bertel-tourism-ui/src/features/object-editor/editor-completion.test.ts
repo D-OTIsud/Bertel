@@ -136,4 +136,20 @@ describe('editor completion — visitor-perceived completeness (80 / 15 / 5)', (
     withDates.event = { ...withDates.event, startDate: '2026-07-01' };
     expect(computeCompletionStatus(withDates, allowAll, 'FMA')).toBe('green');
   });
+
+  it('FMA needs only 1 photo (a poster) for the photo essential — HEB still needs 4', () => {
+    // FMA : une affiche (1 photo) + une date ⇒ complet (cible k=1, pas de pénalité au-delà).
+    const poster = withPhotos(fullModulesFixture(), 1);
+    poster.event = { ...poster.event, startDate: '2026-07-01' };
+    expect(computeCompletionStatus(poster, allowAll, 'FMA')).toBe('green');
+
+    // FMA sans aucune photo ⇒ orange (l'essentiel photos manque).
+    const noPhoto = withPhotos(fullModulesFixture(), 0);
+    noPhoto.event = { ...noPhoto.event, startDate: '2026-07-01' };
+    expect(computeCompletionStatus(noPhoto, allowAll, 'FMA')).toBe('orange');
+
+    // HEB avec une seule photo n'est PAS complet — la cible reste 4.
+    const heb = withPhotos(fullModulesFixture(), 1);
+    expect(computeCompletionStatus(heb, allowAll, 'HEB')).toBe('orange');
+  });
 });

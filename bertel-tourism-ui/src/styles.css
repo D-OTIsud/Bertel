@@ -9993,6 +9993,54 @@ a {
   white-space: nowrap;
 }
 
+.crm-app .actor-address-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 92px minmax(120px, 0.7fr) auto auto;
+  gap: 8px;
+  align-items: end;
+}
+.crm-app .actor-address-row__street { min-width: 0; }
+.crm-app .actor-address-row__action { height: 34px; align-self: end; }
+.crm-app .actor-address-row__message {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1a6b48;
+}
+.crm-app .actor-address-row__message.is-warn { color: #8a5c1d; }
+.crm-app .location-combobox {
+  position: relative;
+}
+.crm-app .location-combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(26, 22, 18, 0.12);
+}
+.crm-app .location-combobox__item {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.crm-app .location-combobox__item:hover,
+.crm-app .location-combobox__item--active {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
 /* Choix de portrait (PO point 4) : vignette + bouton fichier masqué dans un label-bouton. */
 .crm-app .crm-photo-pick { display: flex; align-items: center; gap: 10px; }
 .crm-app .crm-photo-pick__thumb {
@@ -10114,6 +10162,11 @@ a {
   .crm-app .crm-cell.col-last { display: none; }
   .crm-app .crm-rail { grid-template-columns: 1fr; }
   .crm-app .crm-row2 { grid-template-columns: 1fr; }
+  .crm-app .actor-address-row {
+    grid-template-columns: minmax(0, 1fr) 92px;
+    align-items: end;
+  }
+  .crm-app .actor-address-row__street { grid-column: 1 / -1; }
 }
 /* ---------- Responsive fiche acteur (rectif PO v5 point 7) ----------
    Symptôme : sur petit écran les actions du hero (« Nouvelle tâche » / « Nouvelle interaction »)

@@ -815,6 +815,7 @@ describe('listContactKinds', () => {
       { code: 'mobile', name: 'Mobile' },
       { code: 'email', name: 'Email' },
       { code: 'website', name: 'Site web' },
+      { code: 'address', name: 'Adresse' },
     ]);
   });
 

@@ -24,7 +24,7 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ImagePlus, Plus, Trash2, UserRound } from 'lucide-react';
+import { ImagePlus, MapPinCheck, Plus, Trash2, UserRound } from 'lucide-react';
 import {
   deleteActorChannel,
   listContactKinds,
@@ -35,14 +35,68 @@ import {
   type ActorCrmChannel,
   type ObjectAddressSuggestion,
 } from '../../services/crm';
+import { AddressBanCombobox } from '../object-editor/widgets/AddressBanCombobox';
+import { geocodeAddress, type GeocodeHit } from '../object-editor/widgets/geocode-address';
 import { CrmModal } from './CrmModal';
 
 /** kind_code des canaux qui sont des ADRESSES POSTALES (édités dans le bloc « Adresses », pas les canaux). */
 const ADDRESS_KIND = 'address';
+const BAN_CONFIDENT_SCORE = 0.6;
 
 /** Normalise une valeur de canal pour la déduplication (suggestions ⇄ lignes saisies). */
 function normChannelValue(value: string): string {
   return value.trim().toLowerCase();
+}
+
+interface StructuredActorAddress {
+  address1: string;
+  postcode: string;
+  city: string;
+}
+
+function compactAddressPart(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+export function formatActorAddressFromHit(hit: GeocodeHit): string {
+  return composeActorAddressValue({ address1: hit.name, postcode: hit.postcode, city: hit.city });
+}
+
+export function parseActorAddressValue(value: string): StructuredActorAddress {
+  const compact = compactAddressPart(value);
+  if (!compact) {
+    return { address1: '', postcode: '', city: '' };
+  }
+  const match = compact.match(/^(.*?)(?:,\s*|\s+)(\d{5})\s+(.+)$/);
+  if (!match) {
+    return { address1: compact, postcode: '', city: '' };
+  }
+  return {
+    address1: compactAddressPart(match[1].replace(/,$/, '')),
+    postcode: match[2],
+    city: compactAddressPart(match[3]),
+  };
+}
+
+export function composeActorAddressValue(address: StructuredActorAddress): string {
+  const address1 = compactAddressPart(address.address1);
+  const cityLine = compactAddressPart([address.postcode, address.city].filter(Boolean).join(' '));
+  return [address1, cityLine].filter(Boolean).join(', ');
+}
+
+function isStructuredActorAddressValue(value: string): boolean {
+  const address = parseActorAddressValue(value);
+  return Boolean(address.address1 && /^\d{5}$/.test(address.postcode) && address.city);
+}
+
+function isAddressRowDirty(row: ChannelRow): boolean {
+  if (!row.value.trim()) {
+    return false;
+  }
+  if (!row.id || !row.initial) {
+    return true;
+  }
+  return row.value.trim() !== row.initial.value || row.kindCode !== row.initial.kindCode || row.isPrimary !== row.initial.isPrimary;
 }
 
 /**
@@ -104,6 +158,99 @@ function rowsFromChannels(channels: ActorCrmChannel[]): ChannelRow[] {
     deleted: false,
     initial: { kindCode: channel.kindCode, value: channel.value, isPrimary: channel.isPrimary },
   }));
+}
+
+function ActorAddressRow({
+  row,
+  position,
+  onChange,
+  onDelete,
+}: {
+  row: ChannelRow;
+  position: number;
+  onChange: (value: string) => void;
+  onDelete: () => void;
+}) {
+  const [geocoding, setGeocoding] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const address = parseActorAddressValue(row.value);
+  const isStructured = !row.value.trim() || isStructuredActorAddressValue(row.value);
+
+  function applyHit(hit: GeocodeHit) {
+    onChange(formatActorAddressFromHit(hit));
+    setMessage(`Adresse standardisée : ${hit.label}`);
+  }
+
+  async function standardizeAddress() {
+    setGeocoding(true);
+    setMessage(null);
+    try {
+      const hit = await geocodeAddress({
+        address1: address.address1,
+        postcode: address.postcode,
+        city: address.city,
+      });
+      if (!hit) {
+        setMessage('Adresse introuvable.');
+        return;
+      }
+      if (hit.score < BAN_CONFIDENT_SCORE) {
+        setMessage(`Correspondance incertaine : ${hit.label}`);
+        return;
+      }
+      applyHit(hit);
+    } catch {
+      setMessage('API adresse indisponible.');
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
+  return (
+    <div className="actor-address-row">
+      <label className="crm-field actor-address-row__street">
+        Adresse
+        <AddressBanCombobox
+          value={address.address1}
+          onChange={(next) => onChange(composeActorAddressValue({ ...address, address1: next }))}
+          onSelect={applyHit}
+          placeholder="Rue, voie, lieu..."
+          aria-label={`Adresse ${position + 1}`}
+        />
+      </label>
+      <label className="crm-field">
+        Code postal
+        <input aria-label={`Code postal adresse ${position + 1}`} value={address.postcode} readOnly placeholder="974.." />
+      </label>
+      <label className="crm-field">
+        Commune
+        <input aria-label={`Commune adresse ${position + 1}`} value={address.city} readOnly placeholder="Commune" />
+      </label>
+      <button
+        type="button"
+        className="crm-btn sm actor-address-row__action"
+        aria-label={`Standardiser l'adresse ${position + 1}`}
+        disabled={!address.address1.trim() || geocoding}
+        title="Standardiser via la Base Adresse Nationale"
+        onClick={() => void standardizeAddress()}
+      >
+        <MapPinCheck size={12} aria-hidden /> {geocoding ? 'API...' : 'API'}
+      </button>
+      <button
+        type="button"
+        className="crm-btn sm actor-address-row__action"
+        aria-label={`Supprimer l'adresse ${position + 1}`}
+        onClick={onDelete}
+      >
+        <Trash2 size={12} aria-hidden />
+      </button>
+      {(message || !isStructured) && (
+        <p className={isStructured ? 'actor-address-row__message' : 'actor-address-row__message is-warn'} role="status">
+          {message ?? "Adresse à standardiser via l'API adresse."}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function CrmActorEditModal({
@@ -278,6 +425,9 @@ export function CrmActorEditModal({
   const addressEntries = rows
     .map((row, index) => ({ row, index }))
     .filter((entry) => !entry.row.deleted && entry.row.kindCode === ADDRESS_KIND);
+  const invalidAddressEntries = addressEntries.filter(
+    ({ row }) => isAddressRowDirty(row) && !isStructuredActorAddressValue(row.value),
+  );
 
   // Options du select kind (canaux de COMMUNICATION) : vocabulaire hors 'address' + le code
   // courant s'il n'y est pas (catalogue fail-soft → la ligne reste éditable sans perdre son kind).
@@ -306,7 +456,7 @@ export function CrmActorEditModal({
   const liveRows = rows.filter((row) => !row.deleted);
   const hasEmail = liveRows.some((row) => row.kindCode === 'email' && row.value.trim() !== '');
   // Nom affiché composé non vide (au moins un prénom OU un nom) + e-mail présent.
-  const canSubmit = displayName.length > 0 && hasEmail && !saveMutation.isPending;
+  const canSubmit = displayName.length > 0 && hasEmail && invalidAddressEntries.length === 0 && !saveMutation.isPending;
 
   return (
     <CrmModal
@@ -455,7 +605,7 @@ export function CrmActorEditModal({
       </div>
 
       {/* §19 — Adresses postales du prestataire (actor_channel kind 'address'). Plusieurs possibles :
-          on suggère celles des établissements rattachés (un clic) ET on autorise une saisie libre. */}
+          suggestions des établissements rattachés + saisie standardisée via la BAN. */}
       <div className="crm-field">
         Adresses
         {addressSuggestions.length > 0 && (
@@ -480,26 +630,22 @@ export function CrmActorEditModal({
           </div>
         )}
         {addressEntries.map(({ row, index }, position) => (
-          <div key={row.key} className="chan-row chan-row--address">
-            <input
-              aria-label={`Adresse ${position + 1}`}
-              placeholder="Adresse postale (rue, code postal, ville…)"
-              value={row.value}
-              onChange={(event) => patchRow(index, { value: event.target.value })}
-            />
-            <button
-              type="button"
-              className="crm-btn sm"
-              aria-label={`Supprimer l'adresse ${position + 1}`}
-              onClick={() => {
-                if (row.id) patchRow(index, { deleted: true });
-                else setRows((current) => current.filter((_, i) => i !== index));
-              }}
-            >
-              <Trash2 size={12} aria-hidden />
-            </button>
-          </div>
+          <ActorAddressRow
+            key={row.key}
+            row={row}
+            position={position}
+            onChange={(value) => patchRow(index, { value })}
+            onDelete={() => {
+              if (row.id) patchRow(index, { deleted: true });
+              else setRows((current) => current.filter((_, i) => i !== index));
+            }}
+          />
         ))}
+        {invalidAddressEntries.length > 0 && (
+          <p className="crm-field__hint" role="status">
+            Standardisez chaque adresse modifiée avec la Base Adresse Nationale avant d&apos;enregistrer.
+          </p>
+        )}
         <button
           type="button"
           className="crm-btn sm"

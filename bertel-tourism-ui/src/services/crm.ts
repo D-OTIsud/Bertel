@@ -871,6 +871,7 @@ export async function listContactKinds(): Promise<Array<{ code: string; name: st
       { code: 'mobile', name: 'Mobile' },
       { code: 'email', name: 'Email' },
       { code: 'website', name: 'Site web' },
+      { code: 'address', name: 'Adresse' },
     ];
   }
   const client = getSupabaseClient();

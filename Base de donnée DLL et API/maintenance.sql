@@ -189,6 +189,15 @@ BEGIN
         $cron$SELECT audit.maintain_partitions()$cron$
       );
     END IF;
+
+    -- Brique 2 (manifest 14s): registre temporel des stats dashboard, snapshot quotidien.
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'capture-metric-snapshots') THEN
+      PERFORM cron.schedule(
+        'capture-metric-snapshots',
+        '0 3 * * *',
+        $cron$SELECT api.capture_metric_snapshots()$cron$
+      );
+    END IF;
   ELSE
     RAISE NOTICE 'pg_cron extension is not installed; skipping schedule creation.';
   END IF;

@@ -213,13 +213,15 @@ export type CompletionStatus = 'red' | 'orange' | 'green';
 
 /**
  * Cible de photos pour le plein crédit de l'essentiel « photos » (richesse min(n/cible, 1)).
- * Défaut 4 (« 4 photos = 100 % », décision PO 2026-06-18). FMA = 1 : pour un événement / une
- * manifestation, une affiche suffit ; davantage de photos est un plus mais l'absence ne pénalise
- * jamais ce type (décision PO 2026-06-18).
+ * Défaut 4 (« 4 photos = 100 % », décision PO 2026-06-18). Cibles réduites par archétype où peu de
+ * visuels suffisent (décision PO 2026-06-18) : FMA = 1 (une affiche suffit pour un événement) ;
+ * SRV = 2 (OT / commerce / service public — toilettes, borne — peu de visuels). Davantage de photos
+ * reste un plus mais l'absence au-delà de la cible ne pénalise jamais ces types.
  */
 const PHOTO_TARGET = 4;
 const PHOTO_TARGET_BY_ARCHETYPE: Partial<Record<ArchetypeCode, number>> = {
   FMA: 1,
+  SRV: 2,
 };
 function photoTargetFor(archetype: ArchetypeCode): number {
   return PHOTO_TARGET_BY_ARCHETYPE[archetype] ?? PHOTO_TARGET;

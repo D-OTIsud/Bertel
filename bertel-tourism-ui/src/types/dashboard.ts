@@ -153,24 +153,40 @@ export interface DashboardDistinctionOverview {
   by_scheme: DistinctionSchemeRow[];
 }
 
+// ─── §Qualité  Complétude « perçue visiteur » par type (LOCKED — 2026-06-18) ──
+// Sert api.get_dashboard_completeness. Réplique le bundle d'essentiels du modèle
+// éditeur (spec docs/superpowers/specs/2026-06-18-completude-par-type-design.md).
+
+export interface CompletenessBelowObject {
+  id: string;
+  name: string;
+  /** score essentiels 0–100 */
+  score: number;
+  /** clés d'essentiels manquants : name|subcategory|location|contact|description|photos|type_block|tags */
+  missing_fields: string[];
+}
+
+export interface CompletenessRow {
+  type: BackendObjectTypeCode;
+  total: number;
+  /** moyenne du score essentiels 0–100 (richesse perçue visiteur) */
+  avg_score: number;
+  /** % de fiches « complètes visiteur » (tous les essentiels présents, ≥4 photos) */
+  complete_pct: number;
+  /** essentiel le plus manquant sur le type (souvent 'photos') ; '' si aucun manque */
+  missing_top_field: string;
+  /** fiches sous 80, plafonné côté serveur par p_below_limit (pas de troncature silencieuse au-delà) */
+  below_80: CompletenessBelowObject[];
+}
+
+export interface DashboardCompleteness {
+  rows: CompletenessRow[];
+}
+
 // ─── Provisional types — mock-only, NOT locked ───────────────────────────────
 // Used by the UI in Phase 1. Shapes WILL change before Phase 2B SQL is written.
 // Components importing these must only do so via the mock data layer, never
 // by calling a real RPC. The _PROVISIONAL suffix is intentional.
-
-export interface CompletenessRow_PROVISIONAL {
-  type: BackendObjectTypeCode;
-  total: number;
-  avg_score: number;
-  /** e.g. 'image', 'contact', 'opening_times' */
-  missing_top_field: string;
-  below_80: Array<{
-    id: string;
-    name: string;
-    score: number;
-    missing_fields: string[];
-  }>;
-}
 
 export interface CapacityMetricSummary_PROVISIONAL {
   total: number;

@@ -1,6 +1,7 @@
 import type {
   DashboardActualisation,
   DashboardCityDistribution,
+  DashboardCompleteness,
   DashboardDistinctionOverview,
   DashboardScorecards,
   DashboardTypeBreakdown,
@@ -79,14 +80,50 @@ const distinctionOverview: DashboardDistinctionOverview = {
   ],
 };
 
+const completeness: DashboardCompleteness = {
+  rows: [
+    {
+      type: 'HLO',
+      total: 171,
+      avg_score: 96,
+      complete_pct: 63.7,
+      missing_top_field: 'photos',
+      below_80: [
+        { id: 'HLORUN000000001', name: 'Gîte des Hauts', score: 75, missing_fields: ['photos'] },
+        { id: 'HLORUN000000002', name: 'Case créole', score: 63, missing_fields: ['photos', 'description'] },
+      ],
+    },
+    {
+      type: 'RES',
+      total: 90,
+      avg_score: 91,
+      complete_pct: 34.4,
+      missing_top_field: 'photos',
+      below_80: [
+        { id: 'RESRUN000000001', name: 'Le Petit Cari', score: 75, missing_fields: ['photos'] },
+      ],
+    },
+    {
+      type: 'ACT',
+      total: 23,
+      avg_score: 80,
+      complete_pct: 0,
+      missing_top_field: 'type_block',
+      below_80: [
+        { id: 'ACTRUN000000001', name: 'Canyoning Sainte-Suzanne', score: 75, missing_fields: ['type_block'] },
+      ],
+    },
+  ],
+};
+
 export const mockDashboardData = {
   scorecards,
   typeBreakdown,
   cityDistribution,
   actualisation,
   distinctionOverview,
+  completeness,
   // provisional stubs — referenced by service stubs
-  completeness: null,
   capacity: null,
   velocity: null,
   contributors: null,

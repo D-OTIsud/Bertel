@@ -48,6 +48,7 @@ BEGIN
 
   -- idempotence : re-run ⇒ pas de doublon, une seule ligne par clé
   v_again := api.capture_metric_snapshots(DATE '2026-06-18');
+  ASSERT v_again = v_n, 'idempotent re-run returns the same row count';
   ASSERT (SELECT count(*) FROM public.metric_snapshot
           WHERE snapshot_date='2026-06-18' AND scope='global'
             AND metric_key='corpus_count') = 1,

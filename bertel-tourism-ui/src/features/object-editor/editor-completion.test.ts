@@ -152,4 +152,12 @@ describe('editor completion — visitor-perceived completeness (80 / 15 / 5)', (
     const heb = withPhotos(fullModulesFixture(), 1);
     expect(computeCompletionStatus(heb, allowAll, 'HEB')).toBe('orange');
   });
+
+  it('SRV needs only 2 photos (OT / commerce / service public)', () => {
+    const ok = withPhotos(fullModulesFixture(), 2);
+    expect(computeCompletionStatus(ok, allowAll, 'SRV')).toBe('green');
+
+    const thin = withPhotos(fullModulesFixture(), 1);
+    expect(computeCompletionStatus(thin, allowAll, 'SRV')).toBe('orange');
+  });
 });

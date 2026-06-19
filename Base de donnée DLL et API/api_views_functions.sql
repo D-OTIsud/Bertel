@@ -9200,9 +9200,12 @@ AS $$
               AND NULLIF(btrim(d.description), '') IS NOT NULL
               AND NULLIF(btrim(d.description_chapo), '') IS NOT NULL)                 AS e_desc,
       (SELECT COUNT(*) FROM media m WHERE m.object_id = s.id)                         AS n_photos,
-      -- Cible photos « plein crédit » par type : FMA = 1 (une affiche suffit ; +photos = bonus
-      -- mais l'absence ne pénalise pas l'événement, décision PO 2026-06-18), sinon 4.
-      (CASE WHEN s.object_type = 'FMA' THEN 1 ELSE 4 END)                             AS photo_target,
+      -- Cible photos « plein crédit » par type (décision PO 2026-06-18) : FMA = 1 (une affiche
+      -- suffit pour un événement) ; SRV = 2 (OT/commerce/service public — toilettes, borne — peu de
+      -- visuels) ; sinon 4. +photos = bonus mais l'absence au-delà de la cible ne pénalise pas.
+      (CASE WHEN s.object_type = 'FMA' THEN 1
+            WHEN s.object_type IN ('PSV','VIL','COM','SPU') THEN 2
+            ELSE 4 END)                                                               AS photo_target,
       CASE
         WHEN s.object_type IN ('HOT','HPA','HLO','CAMP','RVA') THEN
           EXISTS (SELECT 1 FROM object_capacity c JOIN ref_capacity_metric mt ON mt.id = c.metric_id

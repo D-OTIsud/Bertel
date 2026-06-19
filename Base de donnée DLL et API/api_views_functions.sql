@@ -9309,6 +9309,107 @@ GRANT EXECUTE ON FUNCTION api.get_dashboard_completeness(object_type[], object_s
   TO authenticated, service_role;
 
 -- ─────────────────────────────────────────────────────
+-- Capture daily metric snapshots (Brique 2)
+-- ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.capture_metric_snapshots(p_date date DEFAULT current_date)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $fn$
+DECLARE
+  v_comp jsonb;
+  v_rows integer;
+BEGIN
+  -- 1. Complétude (pool publié) — contrat figé api.get_dashboard_completeness
+  v_comp := api.get_dashboard_completeness(NULL, ARRAY['published']::object_status[],
+                                           '{}'::jsonb, NULL, NULL, 0);
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'type',r->>'type','completeness_avg',(r->>'avg_score')::numeric,(r->>'total')::int
+  FROM jsonb_array_elements(v_comp->'rows') r
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key)
+    DO UPDATE SET value=EXCLUDED.value, denominator=EXCLUDED.denominator, captured_at=now();
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'type',r->>'type','completeness_complete_pct',(r->>'complete_pct')::numeric,(r->>'total')::int
+  FROM jsonb_array_elements(v_comp->'rows') r
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key)
+    DO UPDATE SET value=EXCLUDED.value, denominator=EXCLUDED.denominator, captured_at=now();
+
+  -- moyenne globale pondérée par le nombre de fiches
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','completeness_avg',
+         ROUND(SUM((r->>'avg_score')::numeric*(r->>'total')::numeric)
+               / NULLIF(SUM((r->>'total')::numeric),0),1),
+         SUM((r->>'total')::int)
+  FROM jsonb_array_elements(v_comp->'rows') r
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key)
+    DO UPDATE SET value=EXCLUDED.value, denominator=EXCLUDED.denominator, captured_at=now();
+
+  -- 2. Corpus net (tous statuts, hors ORG) : global / type / statut
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','corpus_count',count(*),NULL FROM object WHERE object_type<>'ORG'
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'type',object_type::text,'corpus_count',count(*),NULL
+  FROM object WHERE object_type<>'ORG' GROUP BY object_type
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'status',status::text,'corpus_count',count(*),NULL
+  FROM object WHERE object_type<>'ORG' GROUP BY status
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  -- 3. Classés (granted) : global + par commune
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','classified_count',count(DISTINCT object_id),NULL
+  FROM object_classification WHERE status='granted'
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'commune',COALESCE(NULLIF(btrim(ol.city),''),'(inconnu)'),'classified_count',
+         count(DISTINCT oc.object_id),NULL
+  FROM object_classification oc
+  JOIN object_location ol ON ol.object_id=oc.object_id AND ol.is_main_location=true
+  WHERE oc.status='granted' GROUP BY 3
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  -- 4. Couverture : durabilité / accessibilité
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','sustainability_count',count(DISTINCT object_id),NULL
+  FROM object_sustainability_action
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','accessibility_count',count(DISTINCT oa.object_id),NULL
+  FROM object_amenity oa
+  JOIN ref_amenity ra ON ra.id=oa.amenity_id
+  JOIN ref_code_amenity_family f ON f.id=ra.family_id
+  WHERE f.code='accessibility'
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  -- 5. Backlog CRM (provisoire jusqu'à Brique 3 : non résolu ET statut <> 'done')
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
+  SELECT p_date,'global','','crm_backlog',count(*),NULL
+  FROM crm_interaction WHERE resolved_at IS NULL AND status::text <> 'done'
+  ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
+
+  SELECT count(*) INTO v_rows FROM public.metric_snapshot WHERE snapshot_date=p_date;
+  RETURN v_rows;
+END$fn$;
+
+COMMENT ON FUNCTION api.capture_metric_snapshots(date) IS
+'Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent).
+Complétude via api.get_dashboard_completeness (pool publié), corpus net (tous statuts), classés
+(granted, global+commune), couverture durable/accessibilité, backlog CRM (provisoire avant Brique 3).
+Exécutée par le cron quotidien capture-metric-snapshots.';
+
+REVOKE ALL ON FUNCTION api.capture_metric_snapshots(date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.capture_metric_snapshots(date) TO service_role;
+
+-- ─────────────────────────────────────────────────────
 -- City options for dashboard filter dropdown
 -- ─────────────────────────────────────────────────────
 -- Returns the full corpus city domain: distinct non-null, non-empty cities from

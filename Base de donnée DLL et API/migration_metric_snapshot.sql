@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.metric_snapshot (
   scope_key     text NOT NULL DEFAULT '', -- '' pour 'global' ; ex. 'HLO', 'Le Tampon', 'published'
   metric_key    text NOT NULL,            -- ex. 'completeness_avg', 'corpus_count', 'classified_count'
   value         numeric NOT NULL,
-  denominator   integer,                  -- ex. 'total' du type (recompose un %)
+  denominator   integer,                  -- 'total' du type pour completeness_* (recompose un %) ; NULL pour les métriques de comptage
   captured_at   timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_metric_snapshot UNIQUE (snapshot_date, scope, scope_key, metric_key)
 );

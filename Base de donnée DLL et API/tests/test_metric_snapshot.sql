@@ -24,4 +24,34 @@ BEGIN
   ASSERT v_dup, 'duplicate (date,scope,scope_key,metric) must violate unique';
   RAISE NOTICE 'metric_snapshot table assertions passed.';
 END$$;
+DO $$
+DECLARE v_n integer; v_corpus numeric; v_again integer;
+BEGIN
+  -- grants : anon ne doit pas exécuter, service_role oui
+  ASSERT NOT has_function_privilege('anon','api.capture_metric_snapshots(date)','EXECUTE'),
+         'anon must NOT execute capture_metric_snapshots';
+
+  v_n := api.capture_metric_snapshots(DATE '2026-06-18');
+  ASSERT v_n > 0, 'capture must write rows';
+
+  -- corpus global = total non-ORG
+  SELECT value INTO v_corpus FROM public.metric_snapshot
+   WHERE snapshot_date='2026-06-18' AND scope='global' AND metric_key='corpus_count';
+  ASSERT v_corpus = (SELECT count(*) FROM object WHERE object_type<>'ORG'),
+         'corpus_count global matches live count';
+
+  -- complétude par type présente (HLO existe en publié)
+  ASSERT EXISTS (SELECT 1 FROM public.metric_snapshot
+                 WHERE snapshot_date='2026-06-18' AND scope='type'
+                   AND metric_key='completeness_avg'),
+         'completeness_avg per type captured';
+
+  -- idempotence : re-run ⇒ pas de doublon, une seule ligne par clé
+  v_again := api.capture_metric_snapshots(DATE '2026-06-18');
+  ASSERT (SELECT count(*) FROM public.metric_snapshot
+          WHERE snapshot_date='2026-06-18' AND scope='global'
+            AND metric_key='corpus_count') = 1,
+         'idempotent re-run keeps one row per key';
+  RAISE NOTICE 'capture_metric_snapshots assertions passed.';
+END$$;
 ROLLBACK;

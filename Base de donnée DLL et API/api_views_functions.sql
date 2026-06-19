@@ -9141,6 +9141,168 @@ is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakd
 by count DESC. ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
 
 -- ─────────────────────────────────────────────────────
+-- §Qualité  Complétude « perçue visiteur » par type
+-- ─────────────────────────────────────────────────────
+-- Réplique côté portefeuille le bundle d'essentiels visiteur du modèle éditeur
+-- (bertel-tourism-ui/.../editor-completion.ts ; spec docs/.../2026-06-18-completude-par-type-design.md) :
+-- 8 essentiels (nom, sous-catégorie, lieu, contact public, descriptif+accroche, photos [richesse
+-- min(n/4,1), 4=plein], équipements/équivalent type, ≥1 tag). Par type : score moyen (richesse 0-100),
+-- % de fiches « complètes visiteur » (tous essentiels présents, ≥4 photos), essentiel le plus manquant,
+-- et la liste des fiches < 80 (plafonnée par p_below_limit, pas de troncature silencieuse au-delà).
+-- NB : le slot 7 exact et le score complet 80/15/5 restent autoritatifs côté éditeur ; cette vue
+-- mesure le bundle essentiels = le signal de pilotage « où sont les trous » (goulot live = photos).
+-- Approximation assumée : n_photos compte toutes les lignes media de l'objet (vidéos/docs inclus) —
+-- filtrage strict au type-photo différé (kind non fiable en base ; cf. invariant média).
+CREATE OR REPLACE FUNCTION api.get_dashboard_completeness(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         JSONB           DEFAULT '{}'::jsonb,
+  p_updated_at_from DATE            DEFAULT NULL,
+  p_updated_at_to   DATE            DEFAULT NULL,
+  p_below_limit     INT             DEFAULT 10
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  WITH filtered_ids AS (
+    SELECT object_id
+    FROM api.get_filtered_object_ids(
+      p_filters,
+      COALESCE(p_types, ARRAY(
+        SELECT t FROM unnest(enum_range(null::object_type)) AS t WHERE t <> 'ORG'
+      )),
+      COALESCE(p_status, ARRAY['published']::object_status[])
+    )
+  ),
+  scoped AS (
+    SELECT o.id, o.object_type, o.name
+    FROM   object o
+    JOIN   filtered_ids f ON f.object_id = o.id
+    WHERE  o.object_type <> 'ORG'
+      AND  (p_updated_at_from IS NULL OR o.updated_at >= p_updated_at_from::timestamptz)
+      AND  (p_updated_at_to   IS NULL OR o.updated_at <  (p_updated_at_to + 1)::timestamptz)
+  ),
+  ess AS (
+    SELECT
+      s.id, s.object_type, s.name,
+      (s.name IS NOT NULL AND btrim(s.name) <> '')                                   AS e_name,
+      EXISTS (SELECT 1 FROM object_taxonomy x WHERE x.object_id = s.id)               AS e_subcat,
+      EXISTS (SELECT 1 FROM object_location l WHERE l.object_id = s.id
+              AND (NULLIF(btrim(l.city), '') IS NOT NULL OR l.code_insee IS NOT NULL
+                   OR (l.latitude IS NOT NULL AND l.longitude IS NOT NULL)))          AS e_location,
+      EXISTS (SELECT 1 FROM contact_channel c WHERE c.object_id = s.id
+              AND c.is_public AND NULLIF(btrim(c.value), '') IS NOT NULL)             AS e_contact,
+      EXISTS (SELECT 1 FROM object_description d WHERE d.object_id = s.id
+              AND d.org_object_id IS NULL
+              AND NULLIF(btrim(d.description), '') IS NOT NULL
+              AND NULLIF(btrim(d.description_chapo), '') IS NOT NULL)                 AS e_desc,
+      (SELECT COUNT(*) FROM media m WHERE m.object_id = s.id)                         AS n_photos,
+      CASE
+        WHEN s.object_type IN ('HOT','HPA','HLO','CAMP','RVA') THEN
+          EXISTS (SELECT 1 FROM object_capacity c JOIN ref_capacity_metric mt ON mt.id = c.metric_id
+                  WHERE c.object_id = s.id AND mt.code = 'max_capacity' AND c.value_integer IS NOT NULL)
+          OR EXISTS (SELECT 1 FROM object_room_type r WHERE r.object_id = s.id)
+        WHEN s.object_type = 'RES' THEN
+          EXISTS (SELECT 1 FROM object_capacity c JOIN ref_capacity_metric mt ON mt.id = c.metric_id
+                  WHERE c.object_id = s.id AND mt.code = 'seats' AND c.value_integer IS NOT NULL)
+          OR EXISTS (SELECT 1 FROM object_menu mn WHERE mn.object_id = s.id)
+        WHEN s.object_type IN ('ASC','ACT') THEN EXISTS (SELECT 1 FROM object_act a WHERE a.object_id = s.id)
+        WHEN s.object_type = 'ITI' THEN EXISTS (SELECT 1 FROM object_iti i WHERE i.object_id = s.id)
+        WHEN s.object_type = 'FMA' THEN EXISTS (SELECT 1 FROM object_fma ev WHERE ev.object_id = s.id)
+        ELSE EXISTS (SELECT 1 FROM object_amenity am WHERE am.object_id = s.id)
+      END                                                                            AS e_typeblock,
+      EXISTS (SELECT 1 FROM tag_link tl WHERE tl.target_table = 'object' AND tl.target_pk = s.id) AS e_tags
+    FROM scoped s
+  ),
+  scored AS (
+    SELECT
+      id, object_type, name,
+      ROUND(100.0 * (
+        e_name::int + e_subcat::int + e_location::int + e_contact::int + e_desc::int
+        + LEAST(n_photos::numeric / 4.0, 1.0) + e_typeblock::int + e_tags::int
+      ) / 8.0)::int                                                                  AS score,
+      (e_name AND e_subcat AND e_location AND e_contact AND e_desc
+       AND n_photos >= 4 AND e_typeblock AND e_tags)                                 AS complete,
+      ARRAY_REMOVE(ARRAY[
+        CASE WHEN NOT e_name      THEN 'name'        END,
+        CASE WHEN NOT e_subcat    THEN 'subcategory' END,
+        CASE WHEN NOT e_location  THEN 'location'    END,
+        CASE WHEN NOT e_contact   THEN 'contact'     END,
+        CASE WHEN NOT e_desc      THEN 'description' END,
+        CASE WHEN n_photos < 4    THEN 'photos'      END,
+        CASE WHEN NOT e_typeblock THEN 'type_block'  END,
+        CASE WHEN NOT e_tags      THEN 'tags'        END
+      ], NULL)                                                                        AS missing_fields
+    FROM ess
+  ),
+  field_gaps AS (
+    SELECT object_type, mf, COUNT(*) AS gaps
+    FROM   scored, LATERAL unnest(missing_fields) AS mf
+    GROUP  BY object_type, mf
+  ),
+  top_gap AS (
+    SELECT DISTINCT ON (object_type) object_type, mf AS missing_top_field
+    FROM   field_gaps
+    ORDER  BY object_type, gaps DESC, mf
+  ),
+  below AS (
+    SELECT object_type,
+           jsonb_agg(
+             jsonb_build_object('id', id, 'name', name, 'score', score,
+                                'missing_fields', to_jsonb(missing_fields))
+             ORDER BY score ASC, name
+           ) FILTER (WHERE rn <= p_below_limit) AS below_80
+    FROM (
+      SELECT id, object_type, name, score, missing_fields,
+             ROW_NUMBER() OVER (PARTITION BY object_type ORDER BY score ASC, name) AS rn
+      FROM   scored
+      WHERE  score < 80
+    ) ranked
+    GROUP BY object_type
+  ),
+  agg AS (
+    SELECT object_type,
+           COUNT(*)                                                                  AS total,
+           ROUND(AVG(score))::int                                                    AS avg_score,
+           ROUND(100.0 * COUNT(*) FILTER (WHERE complete) / NULLIF(COUNT(*), 0), 1)  AS complete_pct
+    FROM   scored
+    GROUP  BY object_type
+  )
+  SELECT jsonb_build_object(
+    'rows', COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'type',              a.object_type::text,
+          'total',             a.total,
+          'avg_score',         a.avg_score,
+          'complete_pct',      a.complete_pct,
+          'missing_top_field', COALESCE(g.missing_top_field, ''),
+          'below_80',          COALESCE(b.below_80, '[]'::jsonb)
+        )
+        ORDER BY a.total DESC
+      ),
+      '[]'::jsonb
+    )
+  )
+  FROM   agg a
+  LEFT   JOIN top_gap g ON g.object_type = a.object_type
+  LEFT   JOIN below   b ON b.object_type = a.object_type;
+$$;
+
+COMMENT ON FUNCTION api.get_dashboard_completeness IS
+'Dashboard Qualité: complétude « perçue visiteur » par type. Réplique le bundle d''essentiels du
+modèle éditeur (8 essentiels, photos en richesse min(n/4,1)). Par type: score moyen 0-100, % fiches
+complètes-visiteur (tous essentiels, >=4 photos), essentiel le plus manquant, liste des fiches <80
+(plafonnée par p_below_limit). Slot 7 type-spécifique par CASE object_type. ORG exclus.
+p_updated_at_from/to bornes DATE inclusives. n_photos = COUNT(media) (approximation: vidéos/docs inclus).';
+
+GRANT EXECUTE ON FUNCTION api.get_dashboard_completeness(object_type[], object_status[], jsonb, date, date, int)
+  TO authenticated, service_role;
+
+-- ─────────────────────────────────────────────────────
 -- City options for dashboard filter dropdown
 -- ─────────────────────────────────────────────────────
 -- Returns the full corpus city domain: distinct non-null, non-empty cities from

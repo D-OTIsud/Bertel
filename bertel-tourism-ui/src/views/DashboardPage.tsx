@@ -7,6 +7,7 @@ import {
   getDashboardTypeBreakdown,
   getDashboardCityDistribution,
   getDashboardActualisation,
+  getDashboardCompleteness,
   getDashboardDistinctionOverview,
   getDashboardFilterOptions,
 } from '../services/dashboard-rpc';
@@ -16,6 +17,7 @@ import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
 import { CommuneDistribution } from '../components/dashboard/CommuneDistribution';
 import { ActualisationTable } from '../components/dashboard/ActualisationTable';
+import { CompletenessTable } from '../components/dashboard/CompletenessTable';
 import { DistinctionOverview } from '../components/dashboard/DistinctionOverview';
 import { DashboardFiltersPanel } from '../components/dashboard/DashboardFiltersPanel';
 import { ActiveFilterStrip } from '../components/dashboard/ActiveFilterStrip';
@@ -46,6 +48,7 @@ export default function DashboardPage() {
   const scorecards = useDashboardQuery('scorecards', filters, getDashboardScorecards);
   const typeBreakdown = useDashboardQuery('type-breakdown', filters, getDashboardTypeBreakdown, activeTab === 'quality');
   const actualisation = useDashboardQuery('actualisation', filters, getDashboardActualisation, activeTab === 'quality');
+  const completeness = useDashboardQuery('completeness', filters, getDashboardCompleteness, activeTab === 'quality');
   const cityDistribution = useDashboardQuery('city-distribution', filters, getDashboardCityDistribution, activeTab === 'offer');
   const distinctions = useDashboardQuery('distinctions', filters, getDashboardDistinctionOverview, activeTab === 'offer');
 
@@ -89,6 +92,14 @@ export default function DashboardPage() {
                 onRetry={() => actualisation.refetch()}
               >
                 {actualisation.data && <ActualisationTable data={actualisation.data} />}
+              </WidgetFrame>
+              <WidgetFrame
+                isPending={completeness.isPending}
+                error={completeness.error}
+                isEmpty={completeness.data?.rows.length === 0}
+                onRetry={() => completeness.refetch()}
+              >
+                {completeness.data && <CompletenessTable data={completeness.data} />}
               </WidgetFrame>
             </section>
           )}

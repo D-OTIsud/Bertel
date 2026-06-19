@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/session-store';
 import type {
   DashboardActualisation,
   DashboardCityDistribution,
+  DashboardCompleteness,
   DashboardDistinctionOverview,
   DashboardFilters,
   DashboardScorecards,
@@ -208,14 +209,22 @@ export async function getDashboardFilterOptions(): Promise<{ cities: string[]; l
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────
 // Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 
-export async function getDashboardCompleteness(filters: DashboardFilters): Promise<unknown> {
+export async function getDashboardCompleteness(
+  filters: DashboardFilters,
+): Promise<DashboardCompleteness> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
     return mockDashboardData.completeness;
   }
-  void filters;
-  throw new Error('RPC get_dashboard_completeness à brancher sur le backend.');
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_completeness', buildRpcParams(filters));
+
+  if (error) throw error;
+  return data as DashboardCompleteness;
 }
 
 export async function getDashboardCapacity(filters: DashboardFilters): Promise<unknown> {

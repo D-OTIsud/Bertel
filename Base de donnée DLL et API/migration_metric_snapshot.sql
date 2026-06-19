@@ -129,4 +129,60 @@ Exécutée par le cron quotidien capture-metric-snapshots.';
 REVOKE ALL ON FUNCTION api.capture_metric_snapshots(date) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.capture_metric_snapshots(date) TO service_role;
 
+CREATE OR REPLACE FUNCTION api.get_metric_snapshot_series(
+  p_metric_key text,
+  p_scope      text DEFAULT 'global',
+  p_scope_key  text DEFAULT '',
+  p_from       date DEFAULT NULL,
+  p_to         date DEFAULT NULL,
+  p_grain      text DEFAULT 'month'
+)
+RETURNS TABLE(bucket date, value numeric, denominator integer)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api
+AS $fn$
+  WITH src AS (
+    SELECT date_trunc(p_grain, snapshot_date)::date AS bucket,
+           snapshot_date, value, denominator,
+           ROW_NUMBER() OVER (PARTITION BY date_trunc(p_grain, snapshot_date)
+                              ORDER BY snapshot_date DESC) AS rn
+    FROM public.metric_snapshot
+    WHERE metric_key = p_metric_key
+      AND scope      = p_scope
+      AND scope_key  = p_scope_key
+      AND (p_from IS NULL OR snapshot_date >= p_from)
+      AND (p_to   IS NULL OR snapshot_date <= p_to)
+  )
+  SELECT bucket, value, denominator FROM src WHERE rn = 1 ORDER BY bucket;
+$fn$;
+
+CREATE OR REPLACE FUNCTION api.get_metric_snapshot_yoy(
+  p_metric_key text,
+  p_scope      text DEFAULT 'global',
+  p_scope_key  text DEFAULT '',
+  p_years      int  DEFAULT 3
+)
+RETURNS TABLE(yr int, mon int, value numeric)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api
+AS $fn$
+  WITH monthly AS (
+    SELECT EXTRACT(YEAR  FROM snapshot_date)::int AS yr,
+           EXTRACT(MONTH FROM snapshot_date)::int AS mon,
+           value,
+           ROW_NUMBER() OVER (PARTITION BY date_trunc('month', snapshot_date)
+                              ORDER BY snapshot_date DESC) AS rn
+    FROM public.metric_snapshot
+    WHERE metric_key = p_metric_key AND scope = p_scope AND scope_key = p_scope_key
+  )
+  SELECT yr, mon, value FROM monthly
+  WHERE rn = 1 AND yr > (EXTRACT(YEAR FROM current_date)::int - p_years)
+  ORDER BY yr, mon;
+$fn$;
+
+REVOKE ALL ON FUNCTION api.get_metric_snapshot_series(text,text,text,date,date,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.get_metric_snapshot_yoy(text,text,text,int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.get_metric_snapshot_series(text,text,text,date,date,text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_metric_snapshot_yoy(text,text,text,int) TO authenticated, service_role;
+
 COMMIT;

@@ -54,4 +54,29 @@ BEGIN
          'idempotent re-run keeps one row per key';
   RAISE NOTICE 'capture_metric_snapshots assertions passed.';
 END$$;
+
+DO $$
+DECLARE v_pts integer; v_yoy integer;
+BEGIN
+  ASSERT has_function_privilege('authenticated',
+    'api.get_metric_snapshot_series(text,text,text,date,date,text)','EXECUTE'),
+    'authenticated must execute get_metric_snapshot_series';
+
+  -- jeu d'essai : 2 jours du même mois + 1 jour l'an précédent
+  INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value) VALUES
+    ('2026-03-10','global','','corpus_count',800),
+    ('2026-03-28','global','','corpus_count',820),  -- dernier du bucket mois
+    ('2025-03-15','global','','corpus_count',700);
+
+  -- série mensuelle : le bucket 2026-03 retient la DERNIÈRE valeur (820)
+  SELECT count(*) INTO v_pts FROM api.get_metric_snapshot_series('corpus_count','global','','2026-01-01','2026-12-31','month');
+  ASSERT v_pts >= 1, 'series returns the 2026-03 bucket';
+  ASSERT (SELECT value FROM api.get_metric_snapshot_series('corpus_count','global','','2026-03-01','2026-03-31','month')
+          LIMIT 1) = 820, 'stock semantics: last snapshot of the month wins';
+
+  -- YoY : 2025 et 2026 présents pour le mois 3
+  SELECT count(*) INTO v_yoy FROM api.get_metric_snapshot_yoy('corpus_count','global','',5) WHERE mon=3;
+  ASSERT v_yoy = 2, 'YoY returns both 2025 and 2026 for month 3';
+  RAISE NOTICE 'get_metric_snapshot_series/_yoy assertions passed.';
+END$$;
 ROLLBACK;

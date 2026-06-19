@@ -211,8 +211,19 @@ export function completionStatusFor(pct: number): SectionCompletionStatus {
 
 export type CompletionStatus = 'red' | 'orange' | 'green';
 
-/** « 4 photos = 100 % » (décision PO 2026-06-18). */
+/**
+ * Cible de photos pour le plein crédit de l'essentiel « photos » (richesse min(n/cible, 1)).
+ * Défaut 4 (« 4 photos = 100 % », décision PO 2026-06-18). FMA = 1 : pour un événement / une
+ * manifestation, une affiche suffit ; davantage de photos est un plus mais l'absence ne pénalise
+ * jamais ce type (décision PO 2026-06-18).
+ */
 const PHOTO_TARGET = 4;
+const PHOTO_TARGET_BY_ARCHETYPE: Partial<Record<ArchetypeCode, number>> = {
+  FMA: 1,
+};
+function photoTargetFor(archetype: ArchetypeCode): number {
+  return PHOTO_TARGET_BY_ARCHETYPE[archetype] ?? PHOTO_TARGET;
+}
 const PHOTO_HINT_TOKENS = ['image', 'photo', 'visuel', 'cover'];
 /** Codes ref de mode de visite (§06 VIS) — distincts des équipements d'accessibilité (§09). */
 const VISIT_MODE_CODES = ['visite_libre', 'visite_guidee', 'audioguide'];
@@ -313,7 +324,7 @@ const ESSENTIAL_DIMENSIONS: VisitorDimension[] = [
     measure: (d) =>
       bool01(hasTranslatableText(d.descriptions.object.chapo) && hasTranslatableText(d.descriptions.object.description)),
   },
-  { id: 'photos', measure: (d) => clamp01(countObjectPhotos(d) / PHOTO_TARGET) },
+  { id: 'photos', measure: (d, a) => clamp01(countObjectPhotos(d) / photoTargetFor(a)) },
   { id: 'typeBlock', measure: (d, a) => measureTypeBlock(d, a) },
   { id: 'tags', measure: (d) => bool01(d.tags.displayed.length > 0) },
 ];
@@ -411,7 +422,12 @@ export function computeSectionCompletions(
 }
 
 /** Short nav hint (design ref: EN/CRE, 4/6) — falls back to percent. */
-export function computeNavHint(num: string, draft: ObjectWorkspaceModules, pct: number): string {
+export function computeNavHint(
+  num: string,
+  draft: ObjectWorkspaceModules,
+  pct: number,
+  archetype?: ArchetypeCode,
+): string {
   if (num === '04') {
     const langs = draft.descriptions.availableLanguages;
     const object = draft.descriptions.object;
@@ -426,9 +442,10 @@ export function computeNavHint(num: string, draft: ObjectWorkspaceModules, pct: 
     }
   }
   if (num === '05') {
+    const target = archetype ? photoTargetFor(archetype) : PHOTO_TARGET;
     const photos = countObjectPhotos(draft);
-    if (photos > 0 && photos < PHOTO_TARGET) {
-      return `${photos}/${PHOTO_TARGET}`;
+    if (photos > 0 && photos < target) {
+      return `${photos}/${target}`;
     }
   }
   if (num === '08') {

@@ -6,7 +6,7 @@ import { useUiStore } from '../../store/ui-store';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
-import { getArchetypeMeta, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
+import { getArchetypeMeta, type ArchetypeCode, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
 import { useObjectEditorState } from './useObjectEditorState';
 import { useUnsavedDraftGuard } from './useUnsavedDraftGuard';
 import { useEditorSave } from './useEditorSave';
@@ -73,6 +73,7 @@ function sectionStateFrom(
   completions: SectionCompletion[],
   validation: { blockers: Issue[]; warnings: Issue[] },
   draft: ObjectWorkspaceModules,
+  archetype: ArchetypeCode,
 ): Record<string, EditorNavSectionState> {
   const blockerSections = new Set(validation.blockers.map((issue) => issue.section));
   const warningSections = new Set(validation.warnings.map((issue) => issue.section));
@@ -84,7 +85,7 @@ function sectionStateFrom(
         : warningSections.has(completion.num)
           ? 'warn'
           : completion.stat;
-      const hint = computeNavHint(completion.num, draft, completion.pct);
+      const hint = computeNavHint(completion.num, draft, completion.pct, archetype);
       return [
         completion.num,
         {
@@ -289,8 +290,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     [editor.draft, meta.archetype, resource.permissions],
   );
   const navSectionState = useMemo(
-    () => sectionStateFrom(sectionCompletions, validation, editor.draft),
-    [sectionCompletions, validation, editor.draft],
+    () => sectionStateFrom(sectionCompletions, validation, editor.draft, meta.archetype),
+    [sectionCompletions, validation, editor.draft, meta.archetype],
   );
   const validationIssues = useMemo(
     () => [...validation.blockers, ...validation.warnings],

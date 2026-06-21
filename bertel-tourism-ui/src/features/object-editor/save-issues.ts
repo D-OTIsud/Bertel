@@ -24,6 +24,7 @@ export const MODULE_LABEL: Record<WorkspaceModuleId, string> = {
   rooms: 'Chambres',
   'meeting-rooms': 'Salles de réunion',
   menus: 'Cartes & menus',
+  cuisine: 'Cuisines proposées',
   activity: 'Activité',
   event: 'Dates & programmation',
   itinerary: 'Itinéraire',

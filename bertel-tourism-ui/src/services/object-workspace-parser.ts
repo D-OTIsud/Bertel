@@ -544,6 +544,17 @@ export interface ObjectWorkspaceMenusModule {
   unavailableReason: string | null;
 }
 
+/**
+ * §06 P1 — « Cuisines proposées » : facette GLOBALE de recherche au niveau objet
+ * (`object_cuisine_type`), découplée des menus. `codes` ordonné par `position`
+ * (la 1ère = cuisine principale). `options` = catalogue complet `ref_code` `cuisine_type`.
+ */
+export interface ObjectWorkspaceCuisineModule {
+  codes: string[];
+  options: WorkspaceReferenceOption[];
+  unavailableReason: string | null;
+}
+
 export interface ObjectWorkspaceActivityModule {
   durationMin: string;
   minParticipants: string;
@@ -1049,6 +1060,7 @@ export interface ObjectWorkspaceModules {
   rooms: ObjectWorkspaceRoomsModule;
   meetingRooms: ObjectWorkspaceMeetingRoomsModule;
   menus: ObjectWorkspaceMenusModule;
+  cuisine: ObjectWorkspaceCuisineModule;
   activity: ObjectWorkspaceActivityModule;
   event: ObjectWorkspaceEventModule;
   itinerary: ObjectWorkspaceItineraryModule;
@@ -1947,6 +1959,19 @@ function parseWorkspaceMeetingRoomsModule(raw: Record<string, unknown>): ObjectW
     items,
     unavailableReason: null,
   };
+}
+
+/**
+ * §06 P1 — parse the object-level cuisine facet from `get_object_resource.cuisine_types`
+ * (now sourced from `object_cuisine_type`, ordered by position). `codes` preserves that order
+ * (1st = principale); `options` seeds the picker from the present rows (the full catalog is
+ * loaded by the enrichment loader `getObjectWorkspaceCuisineModule`).
+ */
+function parseWorkspaceCuisineModule(raw: Record<string, unknown>): ObjectWorkspaceCuisineModule {
+  const rows = readArray(raw.cuisine_types);
+  const codes = rows.map((row) => readString(row.code)).filter(Boolean);
+  const options = dedupeReferenceOptions(rows.map((row) => readNamedReference(row)));
+  return { codes, options, unavailableReason: null };
 }
 
 function parseWorkspaceMenusModule(raw: Record<string, unknown>): ObjectWorkspaceMenusModule {
@@ -3259,6 +3284,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     rooms: parseWorkspaceRoomsModule(raw),
     meetingRooms: parseWorkspaceMeetingRoomsModule(raw),
     menus: parseWorkspaceMenusModule(raw),
+    cuisine: parseWorkspaceCuisineModule(raw),
     activity: parseWorkspaceActivityModule(raw),
     event: parseWorkspaceEventModule(raw),
     itinerary: parseWorkspaceItineraryModule(raw),

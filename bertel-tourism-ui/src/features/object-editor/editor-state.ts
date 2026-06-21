@@ -81,6 +81,7 @@ export const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModu
   rooms: 'rooms',
   'meeting-rooms': 'meetingRooms',
   menus: 'menus',
+  cuisine: 'cuisine',
   activity: 'activity',
   event: 'event',
   itinerary: 'itinerary',

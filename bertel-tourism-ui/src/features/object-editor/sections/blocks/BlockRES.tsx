@@ -22,10 +22,10 @@ function createMenu(index: number, category = { id: '', code: '', label: '' }): 
 
 export function BlockRES({ editor, folded }: SectionProps) {
   const menus = editor.draft.menus;
+  const cuisine = editor.draft.cuisine;
   const openings = editor.draft.openings;
   const capacity = editor.draft.capacityPolicies;
   const firstMenu = menus.items[0];
-  const firstItem = firstMenu?.items[0];
   const activeMenus = menus.items.filter((menu) => menu.active).length;
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
@@ -40,54 +40,42 @@ export function BlockRES({ editor, folded }: SectionProps) {
     <Fs
       num="06"
       title="Cuisine, cartes & service"
-      sub="Cuisines, cartes & menus PDF — capacité groupes en §07, horaires en §14"
+      sub="Cuisines proposées (recherche globale) · cartes & menus — capacité groupes en §07, horaires en §14"
       folded={folded}
       pill={{
         tone: activeMenus > 0 ? 'ok' : 'warn',
         label: activeMenus > 0 ? `${activeMenus} carte(s) active(s)` : 'Aucune carte',
       }}
     >
+      {/* §06 P1 — Bloc A : « Cuisines proposées » est une facette GLOBALE de recherche au niveau
+          objet (object_cuisine_type), INDÉPENDANTE des menus : on peut la renseigner sans aucune
+          carte. (Elle ne vit plus sur le 1er plat du 1er menu — fin du write-trap.) */}
       <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Identité culinaire
+        Cuisines proposées
       </div>
-      {/* §48 single-owner: the group policy is edited in §07 only (last-edit-wins trap otherwise) */}
-      <OwnedElsewhereNote
-        num="07"
-        label="Capacité & accueil"
-        summary={
-          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
-            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
-            : undefined
-        }
-      />
+      <Field label="Types de cuisine" hint="Multi-sélection — la 1ère est la cuisine principale (recherche globale, pas par plat)">
+        {cuisine.unavailableReason ? (
+          <ModuleUnavailableNotice reason={cuisine.unavailableReason} />
+        ) : (
+          <ChipMultiSelect
+            options={cuisine.options}
+            selected={cuisine.codes}
+            modalTitle="Choisir les types de cuisine"
+            searchPlaceholder="Rechercher une cuisine…"
+            onChange={(codes) => editor.replaceModule('cuisine', { ...cuisine, codes })}
+          />
+        )}
+      </Field>
 
-      {/* §46 type-gated menus module — notice INSTEAD of controls when gated.
-          The cuisine chips, the menu repeater and the PDF/notes grid all edit
-          `menus` (cuisine codes live on menus.items[0].items[0]). */}
+      {/* §06 P1 — Bloc B : cartes & menus. La sélection de cuisine a quitté ce bloc (Bloc A).
+          La saisie item-par-item structurée arrive en P2 ; l'upload PDF réel en P3. */}
+      <div className="chip-group__label" style={{ marginTop: 18 }}>
+        Cartes & menus
+      </div>
       {menus.unavailableReason ? (
         <ModuleUnavailableNotice reason={menus.unavailableReason} />
       ) : (
         <>
-          <Field label="Cuisines proposées" hint="Multi-sélection — la 1ère sera la cuisine principale">
-            <ChipMultiSelect
-              options={menus.cuisineTypeOptions}
-              selected={firstItem?.cuisineTypeCodes ?? []}
-              modalTitle="Choisir les types de cuisine"
-              searchPlaceholder="Rechercher une cuisine…"
-              onChange={(codes) => {
-                if (!firstMenu || !firstItem) return;
-                updateMenu(0, {
-                  items: firstMenu.items.map((item, itemIndex) =>
-                    itemIndex === 0 ? { ...item, cuisineTypeCodes: codes } : item,
-                  ),
-                });
-              }}
-            />
-          </Field>
-
-          <div className="chip-group__label" style={{ marginTop: 18 }}>
-            Cartes & menus (PDF)
-          </div>
           <Repeater
             items={menus.items}
             getKey={(item, index) => item.recordId ?? `menu-${index}`}
@@ -130,8 +118,8 @@ export function BlockRES({ editor, folded }: SectionProps) {
           <div className="grid-2" style={{ marginTop: 8 }}>
             <button type="button" className="dropzone" style={{ padding: 12 }} onClick={() => replaceMenus([...menus.items, createMenu(menus.items.length, menus.categoryOptions[0])])}>
               <span className="ico">+</span>
-              <strong>Déposer un PDF de carte</strong>
-              <small>Mise à jour conseillée tous les 3 mois</small>
+              <strong>Ajouter une carte</strong>
+              <small>Saisie structurée (P2) et dépôt de PDF (P3) à venir</small>
             </button>
             <Field label="Notes menu" hint="Description affichée sous le titre de carte">
               <Input
@@ -144,7 +132,16 @@ export function BlockRES({ editor, folded }: SectionProps) {
         </>
       )}
 
-      {/* §48 single-owner: service hours are edited in §14 only (last-edit-wins trap otherwise) */}
+      {/* §48 single-owner: ces concerns vivent ailleurs — pointeurs « géré ailleurs » en bas de §06. */}
+      <OwnedElsewhereNote
+        num="07"
+        label="Capacité & accueil"
+        summary={
+          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
+            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
+            : undefined
+        }
+      />
       <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );

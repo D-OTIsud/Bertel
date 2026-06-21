@@ -1,46 +1,54 @@
-# Design — Cuisine restaurant : modèle niveau-objet, catalogue & correctif éditeur
+# Design — §06 Restaurant « Cuisine, cartes & service » : séparation des 3 concepts
 
 - **Date** : 2026-06-21
-- **Type** : object_type RES (restaurant) — modèle, SQL, éditeur, vocabulaire
-- **Statut** : design approuvé (PO), prêt pour plan d'implémentation
+- **Type** : object_type RES (restaurant) — modèle, SQL, éditeur, upload, vocabulaire
+- **Statut** : design approuvé (PO) — périmètre élargi aux 3 concepts, prêt pour plan d'implémentation
 - **Décision log** : à consigner dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` (prochain §)
 
 ---
 
 ## 1. Problème
 
-L'édition d'une fiche **restaurant** (BlockRES, §06 « Cuisine, cartes & service ») présente 4 défauts signalés par le PO :
+L'édition d'une fiche **restaurant** (BlockRES, §06 « Cuisine, cartes & service ») **confond trois concepts distincts** que le PO veut séparés. Constat live décisif : `135 RES · 0 object_menu · 0 object_menu_item · 0 object_menu_item_cuisine_type` (toute la base — 0 donnée à migrer).
 
-1. **Libellé trompeur** — le titre `Identité culinaire` coiffe en réalité une note « géré en §07 » (politique de groupes / capacité), alors que le vrai champ cuisine est juste en dessous. L'utilisateur lit « identité culinaire gérée en §07 », ce qui est faux.
-2. **Write-trap (bug central)** — choisir une « cuisine proposée » ne l'ajoute pas à la sélection. Les codes cuisine sont stockés sur `menus.items[0].items[0]` (le **premier plat du premier menu**) ; `onChange` fait `if (!firstMenu || !firstItem) return;`. Comme **aucun** restaurant n'a de menu ni de plat, la sélection est silencieusement jetée. Viole l'invariant CLAUDE.md « no silent write-traps ».
-3. **Vocabulaire** — `cuisine_type` `metropolitan` s'affiche « Métropolitaine » ; le PO veut « Française ».
-4. **Catalogue incomplet** — 29 types ; le PO veut l'enrichir (voisins océan Indien, européennes, asiatiques/américaines, formats tendance).
+| # | Concept | C'est quoi | Stocké où (vérifié live) | État éditeur | Verdict |
+|---|---------|-----------|--------------------------|--------------|---------|
+| **1** | **Carte PDF** | Le restaurateur **dépose un PDF** de sa carte | **Aucune colonne document** sur `object_menu`/`object`. Infra `ref_document` (+ `valid_from/valid_to`) + `/api/document/upload` existe (§08/§18) mais **aucun lien** restaurant→document | Dropzone « Déposer un PDF » = **factice** (crée une ligne menu vide) | **Non modélisé + UI mensongère** |
+| **2** | **Carte structurée** | Saisie **item par item** : sections → plats (nom, prix, description, régimes, allergènes) | `object_menu(object_id, category_id, name, description, is_active, visibility, position)` → `object_menu_item(menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position)` + liens dietary/allergen — **support complet**, saver nesté existant | Expose seulement **nom de section + catégorie + actif** ; aucune saisie de plat | **Modélisé + saver OK, UI manquante** |
+| **3** | **Cuisine proposée** | Facette **globale de recherche** (créole, française…), pas liée à un plat | `object_menu_item_cuisine_type` (niveau plat) → cible **`object_cuisine_type`** (niveau objet) | **Write-trap** : bind sur `menus.items[0].items[0]` (1er plat inexistant) → `onChange` no-op silencieux | **Le bug signalé** |
 
-### Constat live décisif
-`135 RES · 0 object_menu · 0 object_menu_item · 0 object_menu_item_cuisine_type` (toute la base).
-⇒ Le champ est un write-trap pour **tous** les restaurants, et **0 donnée cuisine à migrer** : le modèle peut être corrigé proprement.
+Symptômes rapportés par le PO :
+- libellé « Identité culinaire » trompeur (coiffe une note « géré en §07 », pas la cuisine) ;
+- choisir une cuisine ne l'ajoute pas (write-trap pour 100 % des restaurants) ;
+- « Métropolitaine » au lieu de « Française » ;
+- catalogue de cuisine incomplet.
 
-### Cause racine du bug #2
-Le modèle attache la cuisine au **plat** (`object_menu_item_cuisine_type`) puis l'agrège vers l'objet. Déclarer « cuisine créole » exigerait de construire un menu complet avec des plats — absurde pour un attribut de base du restaurant.
+### Cause racine
+Le modèle **dérive** la cuisine du restaurant depuis ses plats, et la carte (PDF vs structurée) n'est pas distinguée. Résultat : la cuisine ne peut être saisie sans construire un menu, le PDF n'est pas câblé, et l'item-par-item n'est pas exposé.
 
----
-
-## 2. Décision
-
-La cuisine devient un **attribut du restaurant** (niveau objet), découplé des menus.
-
-### Approche retenue (parmi 3)
-- **A — Table niveau-objet `object_cuisine_type` (RETENUE).** Modèle correct ; marche sans menu ; 0 donnée à migrer. Coût : 1 table + RLS + ~3 fonctions repointées + 1 petit module front + 1 passe seed.
-- B — Auto-créer un menu/plat caché. Rejetée : pollue le modèle menu, lignes fantômes dans « Cartes & menus ».
-- C — Garder couplé aux menus, champ désactivé-avec-motif. Rejetée : la cuisine ne pourrait pas être saisie seule (mauvaise UX pour un attribut de base).
+### Alternatives écartées (vérifiées)
+- **Réutiliser `object_taxonomy(domain='cuisine_type')`** pour la cuisine : écarté. `object_taxonomy` (826 lignes) ne porte que des domaines `taxonomy_*` (arbre taxonomique §57) ; pas de colonne `position` (donc pas de « cuisine principale ») ; l'y mettre détournerait un autre concept.
+- **Auto-créer un menu/plat caché** pour porter la cuisine : écarté (pollue le modèle menu).
+- **Garder la cuisine couplée aux plats** : écarté (impossible de déclarer une cuisine sans menu).
 
 ---
 
-## 3. Schéma
+## 2. Décision — modèle cible à 3 concepts séparés
 
+§06 se réorganise en **trois blocs indépendants** (chacun fonctionne seul) + les pointeurs §07/§14 en bas :
+
+- **Bloc A — Cuisines proposées** (#3) → table niveau-objet `object_cuisine_type`, découplée des menus.
+- **Bloc B — Carte structurée** (#2) → éditeur item-par-item sur `object_menu`/`object_menu_item` (modèle + saver existants ; UI à construire).
+- **Bloc C — Cartes PDF** (#1) → vrai upload via `ref_document` + table de lien `object_document`, avec dates de validité.
+
+---
+
+## 3. Volet A — Cuisine niveau-objet (#3)
+
+### 3.1 Schéma
 ```sql
 CREATE TABLE IF NOT EXISTS object_cuisine_type (
-  object_id       UUID NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  object_id       TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   cuisine_type_id UUID NOT NULL REFERENCES ref_code_cuisine_type(id) ON DELETE CASCADE,
   position        INT  NOT NULL DEFAULT 1,   -- 1 = cuisine principale
   PRIMARY KEY (object_id, cuisine_type_id)
@@ -48,107 +56,144 @@ CREATE TABLE IF NOT EXISTS object_cuisine_type (
 CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_object ON object_cuisine_type(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_type   ON object_cuisine_type(cuisine_type_id);
 ```
+- `object_id` est **TEXT** (les ids `object` sont TEXT, ex. `RESRUN…` — vérifié live). Forme calquée sur `object_amenity`/`object_environment_tag` (descriptor-link générique), **non** enrôlée dans `ref_facet_registry` (descripteur, pas facette type-spécifique ; gating RES = éditeur, comme amenities/tags).
+- `position` porte « la 1ère = principale » (ordre de sélection).
 
-- **Forme** calquée sur `object_amenity` / `object_environment_tag` (descriptor-link générique `(object_id, ref_id)`). **Non** enrôlée dans `ref_facet_registry` : la cuisine est un descripteur (comme amenities/tags), pas une facette type-spécifique du registre. Le gating « RES uniquement » est porté par l'éditeur (BlockRES = bloc RES), pas par un trigger DB — même précédent que amenities/tags.
-- **`position`** porte « la 1ère = cuisine principale » (ordre de sélection dans le ChipMultiSelect).
+### 3.2 RLS (invariants §38 / per-command)
+- `ENABLE ROW LEVEL SECURITY`.
+- **Lecture** forme split §38 (pas `USING(true)`) :
+  `(EXISTS (SELECT 1 FROM object o WHERE o.id = object_cuisine_type.object_id AND o.status='published')) OR object_cuisine_type.object_id IN (SELECT api.current_user_extended_object_ids())`.
+- **Écriture** per-command `canonical_ins/upd/del_object_cuisine_type` → `api.user_can_write_object_canonical(object_cuisine_type.object_id)` (colonne externe qualifiée — invariant silent-rebinding).
+- `GRANT SELECT ON object_cuisine_type TO anon, authenticated, service_role` ; EXECUTE du prédicat déjà global (gotcha P0.3).
 
-> Note : on suit la *forme* de table d'`object_amenity`, **mais pas** sa policy de lecture héritée `USING(true)` — voir §4 (invariant §38).
+### 3.3 Consommateurs SQL repointés (source unique)
+- `api.get_object_resource` clé objet `cuisine_types` (bloc RES) → lit `object_cuisine_type` directement (ORDER BY `oct.position`). `get_object_with_deep_data` hérite verbatim (memory §101).
+- FMA `associated_restaurants_cuisine_types` → `object_cuisine_type` des restaurants partenaires (`object_relation` `partner_of`).
+- `api.search_restaurants_by_cuisine` / `api.search_events_by_restaurant_cuisine` → repointées sur `object_cuisine_type`. `cuisine_counts` (nb de plats/cuisine) n'a plus de sens au niveau objet → **retiré** (ou réduit à présence ; tranché au plan ; vérifier appelants front).
 
----
+### 3.4 Frontend — module `cuisine` découplé
+- Loader `loadObjectWorkspaceCuisine(objectId)` (selects directs `object_cuisine_type` ordonné par `position` + catalogue `ref_code` `cuisine_type`) → `{ codes, options, unavailableReason? }`, **indépendant** de `menus`.
+- Saver `saveObjectWorkspaceCuisine` : delete-all + reinsert avec `position=index+1` ; garde-fou `unavailableReason` ⇒ no-op.
+- `object-workspace-parser.ts` : nouveau `ObjectWorkspaceCuisineModule` ; `cuisine` ajouté à la draft.
 
-## 4. RLS (invariants CLAUDE.md §38 / per-command)
-
-Sur `object_cuisine_type` :
-
-- `ALTER TABLE … ENABLE ROW LEVEL SECURITY;`
-- **Lecture** — forme split §38 (pas `USING(true)`) :
-  ```
-  (EXISTS (SELECT 1 FROM object o WHERE o.id = object_cuisine_type.object_id AND o.status = 'published'))
-  OR object_cuisine_type.object_id IN (SELECT api.current_user_extended_object_ids())
-  ```
-- **Écriture** — famille per-command (pas de FOR ALL) :
-  `canonical_ins/upd/del_object_cuisine_type` avec prédicat `api.user_can_write_object_canonical(object_cuisine_type.object_id)` (qualifier la colonne externe — invariant silent-rebinding).
-- **Gotcha P0.3** : `GRANT EXECUTE` sur le prédicat d'écriture est déjà global à `anon`/`authenticated` ; ajouter `GRANT SELECT ON object_cuisine_type TO anon, authenticated, service_role`.
-
----
-
-## 5. Consommateurs SQL repointés (source unique de vérité)
-
-Tous lisent désormais `object_cuisine_type` au lieu de l'agrégat menu-plat.
-
-1. **`api.get_object_resource`** — clé objet `cuisine_types` (bloc RES, ~lignes 4257-4274 de `api_views_functions.sql`) :
-   ```sql
-   SELECT jsonb_agg(jsonb_build_object('id',ct.id,'code',ct.code,'name',ct.name,
-                                       'description',ct.description,'position',ct.position)
-                    ORDER BY oct.position, ct.position, ct.name)
-   FROM object_cuisine_type oct
-   JOIN ref_code_cuisine_type ct ON ct.id = oct.cuisine_type_id
-   WHERE oct.object_id = obj.id
-   ```
-   `api.get_object_with_deep_data` hérite verbatim (bloc `object` = `get_object_resource`, memory §101) — **aucune** édition séparée.
-2. **FMA `associated_restaurants_cuisine_types`** (~4310-4333) — lit `object_cuisine_type` des restaurants partenaires (`object_relation` `partner_of`) au lieu de leurs plats.
-3. **`api.search_restaurants_by_cuisine`** (~6006) et **`api.search_events_by_restaurant_cuisine`** (~6119) — repointées sur `object_cuisine_type`. (Vérifier les appelants front ; repointer quoi qu'il en soit pour la cohérence. `cuisine_counts` = nb de plats par cuisine n'a plus de sens au niveau objet → soit supprimé, soit recalculé comme présence 0/1 ; trancher au plan.)
-
-> La clé `cuisine_types` **nichée par menu** (dans le bloc `menus`, ~4127 et ~4194) reste inchangée : elle décrit les plats d'un menu donné et garde son sens si des menus existent un jour. Le bug ne la concerne pas.
+### 3.5 Catalogue `ref_code` `cuisine_type`
+- Renommage : `metropolitan` → `name` « **Française** » (code stable ; description ajustée).
+- **+14 codes** : Océan Indien `mauricienne, malgache, seychelloise, sino_reunionnaise` · Européennes `creperie, pizzeria, savoyarde, grecque` · Asie/Amériques `vietnamienne, coreenne, mexicaine` · Formats `healthy, bar_a_vin, cafe`. (Salon de thé déjà couvert par `patisserie`.) `position` attribuée (créole/française/traditionnelle en tête).
 
 ---
 
-## 6. Frontend — module `cuisine` découplé
+## 4. Volet B — Carte structurée item-par-item (#2)
 
-- **Loader** `loadObjectWorkspaceCuisine(objectId)` (`object-workspace.ts`) : selects directs sur `object_cuisine_type` (codes ordonnés par `position`) + catalogue `ref_code` `domain='cuisine_type'` → `{ codes: string[], options: WorkspaceReferenceOption[], unavailableReason? }`. **Indépendant** du loader `menus` (la cuisine marche sans menu).
-- **Saver** `saveObjectWorkspaceCuisine` : delete-all puis reinsert des `object_cuisine_type` avec `position = index+1` (comme les autres link-tables). Garde-fou `unavailableReason` ⇒ no-op (pas de clobber sur load échoué).
-- **Parser/types** (`object-workspace-parser.ts`) : nouveau `ObjectWorkspaceCuisineModule` ; champ `cuisine` ajouté à la draft de l'éditeur.
-- **BlockRES** : « Cuisines proposées » bind sur `editor.draft.cuisine.codes` / `.options` → **plus de write-trap**. La cuisine ne touche plus `menus.items[0].items[0]`.
+Le modèle (`object_menu` → `object_menu_item` + liens `object_menu_item_dietary_tag`/`_allergen`) et le **saver nesté `saveObjectWorkspaceMenus`** (PostgREST delete+recreate, écrit déjà sections + plats + dietary + allergen + prix) **existent**. Il manque l'**UI** de saisie des plats.
 
----
+### 4.1 Éditeur (BlockRES + nouveaux widgets)
+- **Sections** (`object_menu`) : cartes compactes (nom + catégorie `ref_code_menu_category` + actif/visibility).
+- **Plats** (`object_menu_item`) : par section, « Gérer les plats » → **modale** (préférence PO : compact + modale). La modale liste les plats avec add/edit/remove ; chaque plat éditable = nom, **prix** (+ `currency`, `kind_id`→`ref_code_price_kind`, `unit_id`→`ref_code_price_unit`), **description/contenu**, **régimes** (`dietary_tag`), **allergènes** (`allergen`), `is_available`, `position`.
+- Garde-fou `unavailableReason` (module gated/charge échouée) ⇒ pas de clobber.
 
-## 7. Correctif UX libellé (#1) — réorganisation §06 BlockRES
+### 4.2 Découplage cuisine (cohérence avec Volet A)
+- `ObjectWorkspaceMenuItem` **perd `cuisineTypeCodes`** ; `ObjectWorkspaceMenusModule` perd `cuisineTypeOptions` (déplacés dans le module `cuisine`).
+- Le saver `saveObjectWorkspaceMenus` **n'écrit plus** `object_menu_item_cuisine_type`.
+- `get_object_resource` clés `cuisine_types` **nichées par menu/par plat** : laissées en place (retournent `[]` faute d'écriture) — nettoyage SQL différé (KISS ; pas de churn sur le bloc menus complexe).
 
-Ordre cible :
-1. **« Identité culinaire » → champ « Cuisines proposées »** en premier (la vraie identité culinaire), bind sur le module `cuisine`.
-2. **« Cartes & menus (PDF) »** ensuite (repeater menus inchangé).
-3. Les notes **`OwnedElsewhereNote` §07 (Capacité & accueil)** et **§14 (Horaires)** descendent en bas, regroupées comme pointeurs « géré ailleurs » — plus jamais sous un titre « identité culinaire ».
-
----
-
-## 8. Catalogue `ref_code` `cuisine_type` (#3 + #4)
-
-- **Renommage** : `metropolitan` → `name` « **Française** » (code conservé stable ; 0 donnée). Description ajustée (« Cuisine française »).
-- **+14 codes** (FR, cohérent avec italienne/japonaise/…) :
-  - Océan Indien : `mauricienne` (Mauricienne), `malgache` (Malgache), `seychelloise` (Seychelloise), `sino_reunionnaise` (Sino-réunionnaise).
-  - Européennes : `creperie` (Crêperie), `pizzeria` (Pizzeria), `savoyarde` (Savoyarde), `grecque` (Grecque).
-  - Asie & Amériques : `vietnamienne` (Vietnamienne), `coreenne` (Coréenne), `mexicaine` (Mexicaine / Tex-Mex).
-  - Tendances & formats : `healthy` (Healthy / Poké), `bar_a_vin` (Bar à vin & tapas), `cafe` (Café & brunch).
-- Salon de thé déjà couvert par `patisserie` → non dupliqué.
-- `position` attribuée pour un ordre d'affichage cohérent (créole/française/traditionnelle en tête).
+### 4.3 Hors-scope B
+- Photo par plat (`object_menu_item.media_id` / `object_menu_item_media`) : différée.
+- Cuisine par plat : retirée (la cuisine est globale, Volet A).
 
 ---
 
-## 9. Déploiement & tests
+## 5. Volet C — Cartes PDF (#1)
 
-- **Manifeste step `14t`** : `migration_object_cuisine_type.sql` (table + index + RLS per-command + grants) ; appliqué **live via MCP**, puis **foldé** dans `schema_unified.sql` (table/index) + `rls_policies.sql` (RLS/grants) + `api_views_functions.sql` (fonctions repointées) + seed dans `seeds_data.sql`. Ajout au `docs/SQL_ROLLOUT_RUNBOOK.md` (manifeste + section incrémentale).
-- **Tests SQL** (`Base de donnée DLL et API/tests/test_object_cuisine_type.sql`) : RLS read-gate (anon ne voit pas la cuisine d'un draft ; published OK ; org-member voit son draft), write per-command, `get_object_resource.cuisine_types` lit le niveau objet.
-- **Tests Jest** : loader/saver cuisine (round-trip, ordre `position`, garde-fou `unavailableReason`) ; BlockRES (sélection persistée, plus de no-op).
-- **Gate fresh-apply CI** doit rester vert (fresh == live).
+Vrai upload d'un (ou plusieurs) PDF de carte, attaché **au restaurant** (pas à une section).
+
+### 5.1 Schéma — table de lien générique
+```sql
+CREATE TABLE IF NOT EXISTS object_document (
+  object_id   TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  document_id UUID NOT NULL REFERENCES ref_document(id) ON DELETE CASCADE,
+  role_id     UUID REFERENCES ref_code_document_type(id),  -- ex. 'carte'
+  position    INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (object_id, document_id)
+);
+CREATE INDEX IF NOT EXISTS idx_object_document_object ON object_document(object_id);
+```
+- Générique (réutilisable pour la vision PO « documents par section propriétaire ») ; `role` via la partition existante **`ref_code_document_type`** (aujourd'hui vide).
+- Seed `document_type` : `carte` (+ extensible : `menu_pdf`, `carte_des_vins`…).
+
+### 5.2 Upload (réutilise l'infra §08/§18)
+- `DocumentUploadField` → `uploadDocument({file, objectId, accessToken})` → `POST /api/document/upload` (autorise par objet AS THE CALLER = `user_can_write_object_canonical`, stocke bucket `documents`, crée `ref_document` → `{documentId, url, title}`).
+- Le client insère ensuite `object_document(object_id, document_id, role_id='carte', position)`.
+- Métadonnées de validité éditables : `ref_document.valid_from/valid_to` + `title`. Suppression = delete du lien (+ GC document différé, comme media).
+
+### 5.3 RLS
+- `object_document` : §38 read gate + per-command `canonical_ins/upd/del_object_document` → `user_can_write_object_canonical(object_id)` ; `GRANT SELECT … anon/authenticated/service_role` ; EXECUTE prédicat global.
+- `ref_document` : vérifier que la lecture des lignes liées passe pour `anon` (RLS existante §08/§18) ; sinon aligner.
+
+### 5.4 Consommateur
+- `api.get_object_resource` : nouvelle clé `menu_documents` (RES) → `[{document_id, url, title, valid_from, valid_to, position}]` filtrée par le gate objet. `get_object_with_deep_data` hérite.
+- Drawer public : « Voir la carte (PDF) » (lien `ref_document.url`).
+
+---
+
+## 6. §06 restructure (BlockRES)
+
+Ordre cible, trois blocs visuellement distincts :
+1. **Cuisines proposées** (Volet A) — bind module `cuisine`. Le faux libellé « Identité culinaire » est supprimé (ce bloc EST l'identité culinaire).
+2. **Carte structurée** (Volet B) — sections + modale plats.
+3. **Cartes PDF** (Volet C) — `DocumentUploadField` + liste des cartes (nom, validité, « Voir le PDF », suppression). **Remplace le dropzone factice.**
+4. **Bas** : `OwnedElsewhereNote` §07 (capacité/groupes) + §14 (horaires) — « géré ailleurs », hors du thème cuisine.
+
+---
+
+## 7. Plan d'implémentation phasé (chaque phase livrable seule)
+
+- **P0 — Squelette §06 honnête** (FE pur) : 3 blocs, retrait du dropzone factice + faux libellé, relabel « Cartes & menus (PDF) » → ce que c'est. Aucune perte de fonction (cuisine encore en write-trap mais le bloc est honnête). *Optionnel comme étape séparée — peut fusionner avec P1.*
+- **P1 — Cuisine #3** : `object_cuisine_type` (table+RLS+grants, manifest), repoint `get_object_resource`/FMA/search, catalogue (rename+14), module `cuisine` (loader/saver/parser), Bloc A.
+- **P2 — Carte structurée #2** : UI plats (modale + widgets), retrait cuisine du module menus + saver, parser.
+- **P3 — Carte PDF #1** : `object_document` (table+RLS+seed `document_type`), exposition `get_object_resource.menu_documents`, Bloc C (upload + liste + validité), drawer.
+
+---
+
+## 8. Déploiement & tests
+
+- **Manifeste** (suite après `14s`) :
+  - `14t` `migration_object_cuisine_type.sql` (table + RLS + grants) — P1.
+  - `14u` `migration_object_document.sql` (table + RLS + grants + seed `document_type`) — P3.
+  - `api_views_functions.sql` repointé/étendu (`cuisine_types`, FMA, search, `menu_documents`) — P1 & P3.
+  - Seed catalogue cuisine dans `seeds_data.sql` — P1.
+- Appliqué **live via MCP**, puis **foldé** dans `schema_unified.sql` / `rls_policies.sql` / `api_views_functions.sql` / `seeds_data.sql` ; ajout au `docs/SQL_ROLLOUT_RUNBOOK.md` (manifeste + section incrémentale). Gate **fresh-apply CI** vert.
+- **Tests SQL** : `test_object_cuisine_type.sql` (RLS read-gate anon/published/org-member ; write per-command ; `get_object_resource.cuisine_types` lit niveau objet) ; `test_object_document.sql` (idem + `menu_documents`).
+- **Tests Jest** : module cuisine (round-trip, ordre `position`, garde-fou) ; éditeur plats (add/edit/remove, persistance prix/description/dietary/allergen) ; upload carte PDF (lien créé, validité) ; BlockRES (3 blocs, plus de write-trap).
 - **Décision log** + MCP memory mis à jour.
 
 ---
 
-## 10. Hors-scope (YAGNI)
+## 9. Hors-scope (YAGNI)
 
-- Pas d'enrôlement `ref_facet_registry` (descripteur, pas facette type-spécifique).
-- Pas de trigger DB « RES-only » (gating éditeur suffit, précédent amenities/tags).
-- La clé `cuisine_types` nichée par menu reste telle quelle.
-- i18n des nouveaux codes cuisine : différé (FR-fallback au lancement, cohérent avec la dette i18n existante).
-- Migration de données : aucune (0 lien cuisine).
+- Enrôlement `ref_facet_registry` / trigger « RES-only » pour cuisine ou document (descripteurs ; gating éditeur suffit).
+- Réutilisation `object_taxonomy` pour la cuisine (détournement ; pas de `position`).
+- Cuisine par plat & photo par plat (Volet B) ; nettoyage des clés `cuisine_types` nichées dans `get_object_resource`.
+- i18n des nouveaux codes cuisine / document_type (FR-fallback au lancement).
+- GC des documents/medias orphelins (sweep dédié, déjà différé).
+- Rendu public complet de la carte structurée (le drawer n'affiche pas encore les menus structurés — gap pré-existant).
+- Migration de données : aucune (0 ligne cuisine/menu/document).
 
 ---
 
-## 11. Critères d'acceptation
+## 10. Critères d'acceptation
 
-- Sur une fiche RES sans menu, choisir une/des cuisine(s) → la sélection persiste après save et au rechargement ; la 1ère est principale (`position=1`).
-- `get_object_resource(RES).cuisine_types` reflète la sélection niveau-objet.
-- Le drawer public affiche les cuisines du restaurant sans qu'il ait de menu.
-- « Française » s'affiche (plus « Métropolitaine ») ; les 14 nouveaux types sont sélectionnables.
-- §06 : « Cuisines proposées » en tête, notes §07/§14 en bas, plus de titre « identité culinaire » trompeur.
-- Suite Jest + tests SQL verts ; advisors propres (hors notices §36 attendues) ; gate fresh-apply vert.
+- **A** : sur une fiche RES sans menu, choisir des cuisines → persiste après save/rechargement ; 1ère = `position=1` ; `get_object_resource(RES).cuisine_types` reflète la sélection ; drawer affiche la cuisine sans menu ; « Française » + 14 nouveaux types sélectionnables.
+- **B** : on peut créer une carte structurée — section + plats (nom/prix/description/régimes/allergènes) — qui persiste et se recharge ; le saver n'écrit plus de cuisine par plat.
+- **C** : on peut déposer un PDF de carte (réel upload) attaché au restaurant, avec dates de validité ; il apparaît dans `get_object_resource.menu_documents` et le drawer ; le dropzone factice a disparu.
+- §06 : 3 blocs distincts, notes §07/§14 en bas, plus de libellé « identité culinaire » trompeur.
+- Suites Jest + tests SQL verts ; advisors propres (hors notices §36 attendues) ; gate fresh-apply vert.
+
+---
+
+## 11. Décisions internes actées
+
+- **object_id = TEXT** sur les nouvelles tables (cohérent avec `object.id`).
+- **#1** : table de lien **générique `object_document`** avec `role_id`→`ref_code_document_type` (seed `carte`), PDF attaché au **restaurant** ; plutôt qu'une table mono-usage.
+- **#2** : éditeur plat = nom/prix/description/régimes/allergènes ; photo-par-plat différée ; cuisine-par-plat retirée.
+- **#3** : table dédiée `object_cuisine_type` (pas `object_taxonomy`), avec `position`.
+- **UI** compacte + modale (préférence PO) ; style maison (pas le crème/teal des mockups jetables).

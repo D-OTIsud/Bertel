@@ -30,6 +30,7 @@ import {
   serializeObjectCsv,
   parseImportedObjectJson,
   stripCatalogOptions,
+  restoreCatalogOptions,
   type ObjectIoMeta,
 } from './io/object-io-serialize';
 import { downloadTextFile, readFileText, triggerPrint } from './io/object-io-effects';
@@ -216,10 +217,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return;
     }
     // Apply each known module onto the draft — replaceModule marks it dirty by snapshot diff.
+    // restoreCatalogOptions keeps the live draft's reference catalogs so a v2 export (catalogs
+    // stripped) doesn't blank the dropdowns; file data still wins. A v1 file keeps its catalogs.
     for (const [key, value] of Object.entries(result.modules)) {
+      const moduleKey = key as keyof typeof editor.draft;
       editor.replaceModule(
-        key as keyof typeof editor.draft,
-        value as (typeof editor.draft)[keyof typeof editor.draft],
+        moduleKey,
+        restoreCatalogOptions(value, editor.draft[moduleKey]) as (typeof editor.draft)[keyof typeof editor.draft],
       );
     }
     setImportExportOpen(false);

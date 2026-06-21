@@ -810,4 +810,22 @@ describe('ObjectDetailView', () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText('Booking.com')).toBeInTheDocument();
   });
+
+  it('renders the overview description as Markdown when the resource carries description_md', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-md',
+      name: 'Hotel Markdown',
+      type: 'HOT',
+      raw: {
+        description: 'Texte simple.',
+        description_md: '## Titre vedette\n\nTexte simple.',
+      },
+    } as ObjectDetail;
+
+    renderDetail(data);
+
+    // The *_md sibling is rendered via MarkdownContent → a real <h2>, not the literal "## Titre".
+    expect(screen.getByRole('heading', { name: 'Titre vedette' })).toBeInTheDocument();
+    expect(screen.queryByText('## Titre vedette')).not.toBeInTheDocument();
+  });
 });

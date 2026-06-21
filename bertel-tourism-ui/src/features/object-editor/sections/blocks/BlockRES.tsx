@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import { Plus, UtensilsCrossed } from 'lucide-react';
-import { ChipMultiSelect, Field, Fs, Toggle } from '../../primitives';
+import { Plus } from 'lucide-react';
+import { ChipMultiSelect, Field, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
-import { MenuEditModal } from '../../widgets/MenuItemsModal';
+import { MenuCard } from '../../widgets/MenuCard';
 import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
 
 /** A fresh, empty menu (titled container — no category; sections live on its dishes since §06 P2b). */
@@ -23,45 +22,15 @@ function createMenu(index: number): ObjectWorkspaceMenu {
   };
 }
 
-const MENU_CARD = {
-  display: 'flex', alignItems: 'center', gap: 12,
-  border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px',
-  background: 'var(--surface)', boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-} as const;
-const MENU_ICON = {
-  display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0,
-  borderRadius: 10, background: 'var(--bg-tint)', color: 'var(--ink-2)',
-} as const;
-
-/** A one-line menu summary for the card: the sections present + the dish count. */
-function menuSummary(menu: ObjectWorkspaceMenu): string {
-  if (menu.items.length === 0) return 'Vide — « Modifier » pour composer le menu';
-  const sections = Array.from(new Set(menu.items.map((it) => it.sectionLabel).filter(Boolean)));
-  return `${sections.join(' · ') || 'Sans section'} · ${menu.items.length} plat(s)`;
-}
-
 export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
   const cuisine = editor.draft.cuisine;
   const openings = editor.draft.openings;
   const capacity = editor.draft.capacityPolicies;
   const activeMenus = menus.items.filter((menu) => menu.active).length;
-  // null = closed ; 'new' = creating ; { index } = editing an existing menu.
-  const [editing, setEditing] = useState<'new' | { index: number } | null>(null);
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
     editor.replaceModule('menus', { ...menus, items });
-  }
-  function updateMenu(index: number, patch: Partial<ObjectWorkspaceMenu>) {
-    replaceMenus(menus.items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-  }
-  function saveMenu(savedMenu: ObjectWorkspaceMenu) {
-    if (editing === 'new') {
-      replaceMenus([...menus.items, savedMenu]);
-    } else if (editing) {
-      replaceMenus(menus.items.map((m, i) => (i === editing.index ? savedMenu : m)));
-    }
-    setEditing(null);
   }
 
   return (
@@ -94,9 +63,8 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         )}
       </Field>
 
-      {/* §06 P2b — Bloc B : menus structurés à 3 niveaux. « Ajouter un menu » → modale (titre →
-          sections Entrée/Plat/Dessert… → plats). Chaque menu = un object_menu ; la section vit
-          sur le plat (object_menu_item.section_id). */}
+      {/* §06 P2b/P2c — Bloc B : menus structurés à 3 niveaux, dépliables. Chaque carte-menu se déploie
+          sur ses sections (Entrée/Plat/Dessert…) et ses plats (édition par plat dans une modale). */}
       <div className="chip-group__label" style={{ marginTop: 18 }}>
         Menus
       </div>
@@ -109,45 +77,21 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
               Aucun menu pour le moment. Ajoutez un menu (titre, puis des sections et leurs plats).
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {menus.items.map((menu, index) => (
-                <div key={menu.recordId ?? `menu-${index}`} style={MENU_CARD}>
-                  <span style={{ ...MENU_ICON, opacity: menu.active ? 1 : 0.5 }} aria-hidden>
-                    <UtensilsCrossed size={18} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0, opacity: menu.active ? 1 : 0.55 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2 }}>
-                      {menu.name || 'Menu sans titre'}
-                    </div>
-                    <div
-                      className="muted"
-                      style={{ fontSize: 12, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    >
-                      {menuSummary(menu)}
-                    </div>
-                  </div>
-                  <Toggle label="" on={menu.active} onChange={(active) => updateMenu(index, { active })} />
-                  <button
-                    type="button"
-                    className="pill-mini"
-                    style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--bg-tint)', fontWeight: 600 }}
-                    onClick={() => setEditing({ index })}
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    className="del"
-                    aria-label={`Supprimer le menu ${menu.name || index + 1}`}
-                    onClick={() => replaceMenus(menus.items.filter((_, i) => i !== index))}
-                  >
-                    ×
-                  </button>
-                </div>
+                <MenuCard
+                  key={menu.recordId ?? `menu-${index}`}
+                  menu={menu}
+                  sectionOptions={menus.categoryOptions}
+                  dietaryOptions={menus.dietaryTagOptions}
+                  allergenOptions={menus.allergenOptions}
+                  onChange={(updated) => replaceMenus(menus.items.map((m, i) => (i === index ? updated : m)))}
+                  onDelete={() => replaceMenus(menus.items.filter((_, i) => i !== index))}
+                />
               ))}
             </div>
           )}
-          <button type="button" className="rep-add" style={{ marginTop: 8 }} onClick={() => setEditing('new')}>
+          <button type="button" className="rep-add" style={{ marginTop: 10 }} onClick={() => replaceMenus([...menus.items, createMenu(menus.items.length)])}>
             <Plus size={14} aria-hidden /> Ajouter un menu
           </button>
         </>
@@ -161,18 +105,6 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         objectId={editor.objectId}
         canEdit={permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal}
       />
-
-      {editing !== null && (
-        <MenuEditModal
-          open
-          menu={editing === 'new' ? createMenu(menus.items.length) : menus.items[editing.index]}
-          sectionOptions={menus.categoryOptions}
-          dietaryOptions={menus.dietaryTagOptions}
-          allergenOptions={menus.allergenOptions}
-          onClose={() => setEditing(null)}
-          onSave={saveMenu}
-        />
-      )}
 
       {/* §48 single-owner: ces concerns vivent ailleurs — pointeurs « géré ailleurs » en bas de §06. */}
       <OwnedElsewhereNote

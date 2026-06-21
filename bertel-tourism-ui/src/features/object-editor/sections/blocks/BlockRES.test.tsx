@@ -1,4 +1,4 @@
-import { render, renderHook, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockRES } from './BlockRES';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -47,6 +47,18 @@ describe('BlockRES — §06 P1 cuisine Bloc A (object-level, decoupled)', () => 
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText(/Ajouter un menu \/ une carte/)).toBeInTheDocument();
+  });
+});
+
+describe('BlockRES — §06 P2 carte structurée (item-par-item)', () => {
+  it('opens the dish editor from the "Plats" button of a menu section', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    // Fixture menu1 has 1 dish → button reads "Plats (1)".
+    fireEvent.click(screen.getByRole('button', { name: /Plats \(1\)/ }));
+    expect(screen.getByText(/Plats — Carte midi/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ajouter un plat/ })).toBeInTheDocument();
   });
 });
 

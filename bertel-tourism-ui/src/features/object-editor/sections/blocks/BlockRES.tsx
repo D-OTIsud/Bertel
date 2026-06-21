@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { ChipMultiSelect, Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
-import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
+import { MenuItemsModal } from '../../widgets/MenuItemsModal';
 
-const MENU_COLS = '14px 36px 1fr 90px 90px auto';
+const MENU_COLS = '14px 36px 1fr 90px 96px auto';
 
 function createMenu(index: number, category = { id: '', code: '', label: '' }): ObjectWorkspaceMenu {
   return {
@@ -27,6 +29,8 @@ export function BlockRES({ editor, folded }: SectionProps) {
   const capacity = editor.draft.capacityPolicies;
   const firstMenu = menus.items[0];
   const activeMenus = menus.items.filter((menu) => menu.active).length;
+  const [itemsModalIndex, setItemsModalIndex] = useState<number | null>(null);
+  const itemsModalMenu = itemsModalIndex == null ? null : menus.items[itemsModalIndex];
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
     editor.replaceModule('menus', { ...menus, items });
@@ -34,6 +38,11 @@ export function BlockRES({ editor, folded }: SectionProps) {
 
   function updateMenu(index: number, patch: Partial<ObjectWorkspaceMenu>) {
     replaceMenus(menus.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function saveMenuItems(index: number, items: ObjectWorkspaceMenuItem[]) {
+    updateMenu(index, { items });
+    setItemsModalIndex(null);
   }
 
   return (
@@ -104,7 +113,14 @@ export function BlockRES({ editor, folded }: SectionProps) {
                     });
                   }}
                 />
-                <span className="pill-mini">{menu.active ? 'Actif' : 'Inactif'}</span>
+                <button
+                  type="button"
+                  className="pill-mini"
+                  style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--surface)' }}
+                  onClick={() => setItemsModalIndex(index)}
+                >
+                  Plats ({menu.items.length})
+                </button>
                 <div className="rep-row__act">
                   <Toggle label="" on={menu.active} onChange={(active) => updateMenu(index, { active })} />
                   <button type="button" className="del" onClick={() => replaceMenus(menus.items.filter((_, i) => i !== index))}>
@@ -130,6 +146,19 @@ export function BlockRES({ editor, folded }: SectionProps) {
             </Field>
           </div>
         </>
+      )}
+
+      {itemsModalMenu && (
+        <MenuItemsModal
+          open
+          menuName={itemsModalMenu.name}
+          items={itemsModalMenu.items}
+          dietaryOptions={menus.dietaryTagOptions}
+          allergenOptions={menus.allergenOptions}
+          priceUnitOptions={menus.priceUnitOptions}
+          onClose={() => setItemsModalIndex(null)}
+          onSave={(items) => saveMenuItems(itemsModalIndex as number, items)}
+        />
       )}
 
       {/* §48 single-owner: ces concerns vivent ailleurs — pointeurs « géré ailleurs » en bas de §06. */}

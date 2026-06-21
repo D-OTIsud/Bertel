@@ -271,3 +271,77 @@ describe('restoreCatalogOptions', () => {
     expect(restoreCatalogOptions('x' as unknown, {})).toBe('x');
   });
 });
+
+describe('non-convention catalogs (Task 7)', () => {
+  it('strips characteristics.amenityGroups (pure catalog), keeps selectedAmenityCodes', () => {
+    const modules = {
+      characteristics: {
+        amenityGroups: [{ familyCode: 'climate', options: [{ id: 'a', code: 'heating' }] }],
+        selectedAmenityCodes: ['heating'],
+        languageOptions: [{ id: 'l', code: 'fr' }],
+      },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.characteristics.amenityGroups).toEqual([]);
+    expect(stripped.characteristics.languageOptions).toEqual([]);
+    expect(stripped.characteristics.selectedAmenityCodes).toEqual(['heating']);
+  });
+
+  it('restores amenityGroups from the draft (file selection wins)', () => {
+    const incoming = { amenityGroups: [], selectedAmenityCodes: ['heating'] };
+    const draft = { amenityGroups: [{ familyCode: 'climate', options: [{ id: 'a' }] }], selectedAmenityCodes: ['OLD'] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.amenityGroups).toEqual([{ familyCode: 'climate', options: [{ id: 'a' }] }]);
+    expect(merged.selectedAmenityCodes).toEqual(['heating']);
+  });
+
+  it('projects sustainability to actions carrying data, drops empty categories', () => {
+    const modules = {
+      sustainability: {
+        categories: [
+          { code: 'CAT_A', actions: [
+            { code: 'MA_1', selected: true, note: '', documentId: '' },
+            { code: 'MA_2', selected: false, note: '', documentId: '' },
+          ] },
+          { code: 'CAT_B', actions: [
+            { code: 'MA_3', selected: false, note: '', documentId: '' },
+          ] },
+        ],
+      },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.sustainability.categories).toHaveLength(1);
+    expect(stripped.sustainability.categories[0].code).toBe('CAT_A');
+    expect(stripped.sustainability.categories[0].actions.map((a: any) => a.code)).toEqual(['MA_1']);
+  });
+
+  it('keeps a sustainability action that has only a note (no selected)', () => {
+    const modules = {
+      sustainability: { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: false, note: 'x', documentId: '' }] }] },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.sustainability.categories[0].actions).toHaveLength(1);
+  });
+
+  it('re-merges the full sustainability vocabulary from the draft, file selection wins', () => {
+    const incoming = { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: true, note: 'kept', documentId: '' }] }] };
+    const draft = {
+      categories: [{ code: 'CAT_A', actions: [
+        { code: 'MA_1', selected: false, note: '', documentId: '', label: 'Action 1' },
+        { code: 'MA_2', selected: true, note: 'stale', documentId: '', label: 'Action 2' },
+      ] }],
+    };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    const actions = merged.categories[0].actions;
+    expect(actions).toHaveLength(2); // full vocabulary restored
+    expect(actions[0]).toMatchObject({ code: 'MA_1', selected: true, note: 'kept', label: 'Action 1' });
+    // MA_2 not in the file ⇒ reset to unselected (file wins fully)
+    expect(actions[1]).toMatchObject({ code: 'MA_2', selected: false, note: '', label: 'Action 2' });
+  });
+
+  it('keeps the file sustainability as-is when the draft has no vocabulary', () => {
+    const incoming = { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: true }] }] };
+    const merged = restoreCatalogOptions(incoming, { categories: null }) as Record<string, any>;
+    expect(merged.categories[0].actions[0].code).toBe('MA_1');
+  });
+});

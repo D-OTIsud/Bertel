@@ -2,6 +2,8 @@ import {
   serializeObjectJson,
   serializeObjectCsv,
   parseImportedObjectJson,
+  stripCatalogOptions,
+  restoreCatalogOptions,
   type ObjectExportEnvelope,
 } from './object-io-serialize';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
@@ -172,5 +174,58 @@ describe('parseImportedObjectJson', () => {
       expect('generalInfo' in result.modules).toBe(false);
       expect('location' in result.modules).toBe(true);
     }
+  });
+});
+
+describe('stripCatalogOptions', () => {
+  it('empties *Options arrays but keeps object data', () => {
+    const modules = {
+      menus: {
+        categoryOptions: [{ id: 'a', code: 'drinks', label: 'Boissons' }],
+        allergenOptions: [{ id: 'b', code: 'gluten', label: 'Gluten' }],
+        items: [{ id: 'm1', name: 'Menu midi' }],
+        unavailableReason: 'Module non applicable au type HLO.',
+      },
+      characteristics: {
+        languageOptions: [{ id: 'l', code: 'fr', label: 'Français' }],
+        selectedAmenityCodes: ['wifi', 'parking'],
+      },
+    } as unknown as ObjectWorkspaceModules;
+
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.menus.categoryOptions).toEqual([]);
+    expect(stripped.menus.allergenOptions).toEqual([]);
+    expect(stripped.menus.items).toEqual([{ id: 'm1', name: 'Menu midi' }]);
+    expect(stripped.menus.unavailableReason).toBe('Module non applicable au type HLO.');
+    expect(stripped.characteristics.languageOptions).toEqual([]);
+    expect(stripped.characteristics.selectedAmenityCodes).toEqual(['wifi', 'parking']);
+  });
+
+  it('empties taxonomy domains[].nodes but keeps the assignment', () => {
+    const modules = {
+      taxonomy: {
+        domains: [
+          {
+            domain: 'taxonomy_hlo',
+            nodes: [{ id: 'n1', code: 'auberge' }, { id: 'n2', code: 'studio' }],
+            assignment: { recordId: 'r1', nodeId: 'n1', code: 'auberge' },
+          },
+        ],
+        unavailableReason: null,
+      },
+    } as unknown as ObjectWorkspaceModules;
+
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.taxonomy.domains[0].nodes).toEqual([]);
+    expect(stripped.taxonomy.domains[0].assignment).toEqual({ recordId: 'r1', nodeId: 'n1', code: 'auberge' });
+    expect(stripped.taxonomy.domains[0].domain).toBe('taxonomy_hlo');
+  });
+
+  it('does not mutate the input', () => {
+    const modules = {
+      menus: { categoryOptions: [{ id: 'a' }], items: [] },
+    } as unknown as ObjectWorkspaceModules;
+    stripCatalogOptions(modules);
+    expect((modules as unknown as Record<string, any>).menus.categoryOptions).toHaveLength(1);
   });
 });

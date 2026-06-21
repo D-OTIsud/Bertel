@@ -4254,23 +4254,17 @@ BEGIN
       ), '[]'::jsonb)
     );
 
-    -- Types de cuisine au niveau de l'objet (tous les menus de cet objet)
+    -- §06 P1 : cuisine NIVEAU-OBJET (object_cuisine_type), découplée des menus.
+    -- La cuisine proposée est un attribut du restaurant, lu en direct (plus d'agrégat menu-plat).
     js := js || jsonb_build_object(
       'cuisine_types', COALESCE((
         SELECT jsonb_agg(
           jsonb_build_object('id', ct.id, 'code', ct.code, 'name', ct.name, 'description', ct.description, 'position', ct.position)
-          ORDER BY ct.position, ct.name, ct.code
+          ORDER BY oct.position, ct.position, ct.name
         )
-        FROM (
-          SELECT DISTINCT ct.id, ct.code, ct.name, ct.description, ct.position
-          FROM object_menu m2
-          JOIN object_menu_item mi2 ON mi2.menu_id = m2.id AND mi2.is_available = TRUE
-          JOIN object_menu_item_cuisine_type mct2 ON mct2.menu_item_id = mi2.id
-          JOIN ref_code_cuisine_type ct ON ct.id = mct2.cuisine_type_id
-          WHERE m2.object_id = obj.id
-            AND m2.is_active = TRUE
-            AND (v_can_read_extended OR m2.visibility IS NULL OR m2.visibility = 'public')
-        ) ct
+        FROM object_cuisine_type oct
+        JOIN ref_code_cuisine_type ct ON ct.id = oct.cuisine_type_id
+        WHERE oct.object_id = obj.id
       ), '[]'::jsonb),
       'dietary_tags', COALESCE((
         SELECT jsonb_agg(
@@ -4316,18 +4310,16 @@ BEGIN
           ORDER BY ct.position, ct.name, ct.code
         )
         FROM (
+          -- §06 P1 : cuisine niveau-objet des restaurants partenaires (object_cuisine_type)
           SELECT DISTINCT ct.id, ct.code, ct.name, ct.description, ct.position
           FROM object_relation r
           JOIN ref_object_relation_type rt ON rt.id = r.relation_type_id
           JOIN object o_restaurant ON o_restaurant.id = r.target_object_id AND o_restaurant.object_type = 'RES'
-          JOIN object_menu m ON m.object_id = o_restaurant.id
-                             AND m.is_active = TRUE
-                             AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
-          JOIN object_menu_item mi ON mi.menu_id = m.id AND mi.is_available = TRUE
-          JOIN object_menu_item_cuisine_type mct ON mct.menu_item_id = mi.id
-          JOIN ref_code_cuisine_type ct ON ct.id = mct.cuisine_type_id
+          JOIN object_cuisine_type oct ON oct.object_id = o_restaurant.id
+          JOIN ref_code_cuisine_type ct ON ct.id = oct.cuisine_type_id
           WHERE r.source_object_id = obj.id
             AND rt.code = 'partner_of'  -- restaurants partenaires
+            AND (v_can_read_extended OR o_restaurant.status = 'published')
         ) ct
       ), '[]'::jsonb)
     );

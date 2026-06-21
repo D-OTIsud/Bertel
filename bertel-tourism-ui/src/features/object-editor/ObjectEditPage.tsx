@@ -223,7 +223,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       const moduleKey = key as keyof typeof editor.draft;
       editor.replaceModule(
         moduleKey,
-        restoreCatalogOptions(value, editor.draft[moduleKey]) as (typeof editor.draft)[keyof typeof editor.draft],
+        restoreCatalogOptions(value, editor.draft[moduleKey], moduleKey as string) as (typeof editor.draft)[keyof typeof editor.draft],
       );
     }
     setImportExportOpen(false);

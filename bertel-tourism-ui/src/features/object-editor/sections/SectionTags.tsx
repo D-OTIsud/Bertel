@@ -33,6 +33,24 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
 
   const previewCard = buildPreviewCardFromDraft(editor, typeCode);
 
+  // The add control lives in the preview column (under "Aperçu carte") so it reads as the section's
+  // primary call-to-action — a real `rep-add` button (the editor-wide "+ Ajouter…" affordance),
+  // not the bare text link it used to be.
+  const addControl = writable ? (
+    <button
+      type="button"
+      className="rep-add"
+      onClick={() => setModal({ open: true, mode: 'add', editTag: null })}
+      style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
+    >
+      + Ajouter un tag
+    </button>
+  ) : (
+    <p className="muted" style={{ marginTop: 12 }}>
+      {disabledReason ?? 'Lecture seule.'}
+    </p>
+  );
+
   function setModule(next: ObjectWorkspaceTagsModule) {
     editor.replaceModule('tags', next);
   }
@@ -83,7 +101,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
 
           {displayed.length === 0 ? (
             <p style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-              Aucun tag affiché.{writable ? ' Ajoutez-en un ci-dessous.' : ''}
+              Aucun tag affiché.{writable ? ' Ajoutez-en un avec le bouton ci-contre.' : ''}
             </p>
           ) : (
             <SortableList
@@ -135,20 +153,6 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
             />
           )}
 
-          {writable ? (
-            <button
-              type="button"
-              onClick={() => setModal({ open: true, mode: 'add', editTag: null })}
-              style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer', marginTop: 10 }}
-            >
-              Ajouter un tag
-            </button>
-          ) : (
-            <p className="muted" style={{ marginTop: 10 }}>
-              {disabledReason ?? 'Lecture seule.'}
-            </p>
-          )}
-
           <p className="muted" style={{ marginTop: 12, fontSize: 11.5 }}>
             Les classements certifiés (étoiles, labels) priment sur ces tags dans l’espace limité de la carte.
           </p>
@@ -162,6 +166,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
             </span>
           </div>
           <ResultCardView card={previewCard} interactive={false} />
+          {addControl}
         </div>
       </div>
 

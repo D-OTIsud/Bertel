@@ -46,6 +46,22 @@ describe('SectionTags', () => {
     expect(result.current.dirtySections.tags).toBe(true);
   });
 
+  it('renders "Ajouter un tag" as a real add button (rep-add affordance), not bare text', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionTags editor={result.current} permissions={allowAll} objectId="o1" />);
+    const addBtn = screen.getByRole('button', { name: /Ajouter un tag/i });
+    expect(addBtn).toHaveClass('rep-add');
+  });
+
+  it('places the add button alongside the "Aperçu carte" preview (after it in DOM order)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionTags editor={result.current} permissions={allowAll} objectId="o1" />);
+    const preview = screen.getByText('Aperçu carte');
+    const addBtn = screen.getByRole('button', { name: /Ajouter un tag/i });
+    // The button now lives in the preview column, rendered after the preview heading.
+    expect(preview.compareDocumentPosition(addBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('reorders displayed tags via drag handles (no up/down arrow buttons)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionTags editor={result.current} permissions={allowAll} />);

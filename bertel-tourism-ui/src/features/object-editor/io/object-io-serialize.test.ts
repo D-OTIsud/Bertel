@@ -229,3 +229,45 @@ describe('stripCatalogOptions', () => {
     expect((modules as unknown as Record<string, any>).menus.categoryOptions).toHaveLength(1);
   });
 });
+
+describe('restoreCatalogOptions', () => {
+  it('refills an empty *Options from the draft, keeps file data', () => {
+    const incoming = { categoryOptions: [], items: [{ id: 'm1' }] };
+    const draft = { categoryOptions: [{ id: 'a', code: 'drinks' }], items: [{ id: 'OLD' }] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.categoryOptions).toEqual([{ id: 'a', code: 'drinks' }]);
+    expect(merged.items).toEqual([{ id: 'm1' }]); // file data wins
+  });
+
+  it('keeps a non-empty imported *Options (v1 file with catalogs)', () => {
+    const incoming = { categoryOptions: [{ id: 'fromFile' }], items: [] };
+    const draft = { categoryOptions: [{ id: 'fromDraft' }], items: [] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.categoryOptions).toEqual([{ id: 'fromFile' }]);
+  });
+
+  it('restores taxonomy domains[].nodes per domain, keeps the file assignment', () => {
+    const incoming = { domains: [{ domain: 'taxonomy_hlo', nodes: [], assignment: { nodeId: 'NEW' } }] };
+    const draft = {
+      domains: [{ domain: 'taxonomy_hlo', nodes: [{ id: 'n1' }, { id: 'n2' }], assignment: { nodeId: 'OLD' } }],
+    };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.domains[0].nodes).toEqual([{ id: 'n1' }, { id: 'n2' }]);
+    expect(merged.domains[0].assignment).toEqual({ nodeId: 'NEW' }); // file wins
+  });
+
+  it('round-trips strip→restore back to the populated draft catalogs', () => {
+    const draftModule = {
+      categoryOptions: [{ id: 'a' }, { id: 'b' }],
+      items: [{ id: 'm1' }],
+    };
+    const stripped = (stripCatalogOptions({ menus: draftModule } as any) as any).menus;
+    const restored = restoreCatalogOptions(stripped, draftModule) as Record<string, any>;
+    expect(restored.categoryOptions).toEqual([{ id: 'a' }, { id: 'b' }]);
+    expect(restored.items).toEqual([{ id: 'm1' }]);
+  });
+
+  it('passes through a non-object value unchanged', () => {
+    expect(restoreCatalogOptions('x' as unknown, {})).toBe('x');
+  });
+});

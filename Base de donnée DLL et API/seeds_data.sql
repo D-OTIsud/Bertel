@@ -426,7 +426,7 @@ ON CONFLICT DO NOTHING;
 -- Types de cuisine
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('cuisine_type','creole', 'Créole', 'Cuisine créole réunionnaise traditionnelle'),
-('cuisine_type','metropolitan', 'Métropolitaine', 'Cuisine française métropolitaine'),
+('cuisine_type','metropolitan', 'Française', 'Cuisine française (hexagone)'),
 ('cuisine_type','traditional', 'Traditionnelle', 'Cuisine terroir et traditionnelle'),
 ('cuisine_type','gourmet', 'Gastronomique', 'Cuisine gastronomique de qualité'),
 ('cuisine_type','fusion', 'Fusion', 'Cuisine fusion créole-moderne'),
@@ -453,7 +453,22 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('cuisine_type','glacier', 'Glacier', 'Glaces artisanales'),
 ('cuisine_type','seafood', 'Fruits de mer', 'Cuisine fruits de mer et poisson'),
 ('cuisine_type','indian', 'Indienne', 'Cuisine indienne et tamoule'),
-('cuisine_type','chinese', 'Chinoise', 'Cuisine chinoise traditionnelle')
+('cuisine_type','chinese', 'Chinoise', 'Cuisine chinoise traditionnelle'),
+-- §06 P1 — ajouts catalogue cuisine (voisins océan Indien, européennes, asie/amériques, formats)
+('cuisine_type','mauricienne', 'Mauricienne', 'Cuisine mauricienne'),
+('cuisine_type','malgache', 'Malgache', 'Cuisine malgache (Madagascar)'),
+('cuisine_type','seychelloise', 'Seychelloise', 'Cuisine des Seychelles'),
+('cuisine_type','sino_reunionnaise', 'Sino-réunionnaise', 'Cuisine chinoise réunionnaise (métisse)'),
+('cuisine_type','creperie', 'Crêperie', 'Crêpes et galettes'),
+('cuisine_type','pizzeria', 'Pizzeria', 'Pizzas'),
+('cuisine_type','savoyarde', 'Savoyarde', 'Cuisine savoyarde et montagnarde'),
+('cuisine_type','grecque', 'Grecque', 'Cuisine grecque'),
+('cuisine_type','vietnamienne', 'Vietnamienne', 'Cuisine vietnamienne'),
+('cuisine_type','coreenne', 'Coréenne', 'Cuisine coréenne'),
+('cuisine_type','mexicaine', 'Mexicaine', 'Cuisine mexicaine et Tex-Mex'),
+('cuisine_type','healthy', 'Healthy / Poké', 'Cuisine healthy, bowls et poké'),
+('cuisine_type','bar_a_vin', 'Bar à vin & tapas', 'Bar à vin, planches et tapas'),
+('cuisine_type','cafe', 'Café & brunch', 'Café, brunch et petite restauration')
 ON CONFLICT DO NOTHING;
 
 -- Catégories de menu

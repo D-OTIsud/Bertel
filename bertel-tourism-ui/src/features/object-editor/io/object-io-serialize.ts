@@ -11,7 +11,7 @@ export interface ObjectIoMeta {
 /** Versioned export wrapper. `format`/`version` let the importer assert the shape. */
 export interface ObjectExportEnvelope {
   format: 'bertel-object';
-  version: 1;
+  version: 2;
   objectId: string;
   type: string;
   exportedAt: string;
@@ -42,7 +42,7 @@ function csvEscape(value: unknown): string {
 export function serializeObjectJson(draft: ObjectWorkspaceModules, meta: ObjectIoMeta): string {
   const envelope: ObjectExportEnvelope = {
     format: 'bertel-object',
-    version: 1,
+    version: 2,
     objectId: meta.objectId,
     type: meta.type,
     exportedAt: new Date().toISOString(),

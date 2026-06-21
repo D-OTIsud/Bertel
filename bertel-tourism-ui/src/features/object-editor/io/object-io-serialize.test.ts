@@ -63,7 +63,7 @@ describe('serializeObjectJson', () => {
   it('produces a versioned envelope carrying objectId, type and the modules', () => {
     const env = JSON.parse(serializeObjectJson(makeDraft(), META)) as ObjectExportEnvelope;
     expect(env.format).toBe('bertel-object');
-    expect(env.version).toBe(1);
+    expect(env.version).toBe(2);
     expect(env.objectId).toBe('HOTRUN000000000A');
     expect(env.type).toBe('HOT');
     expect(typeof env.exportedAt).toBe('string');

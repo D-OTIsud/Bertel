@@ -1610,9 +1610,11 @@ function parseWorkspaceCharacteristicsModule(raw: Record<string, unknown>): Obje
       languageId: readString(record.id, readString(record.code)),
       code: readString(record.code),
       label: readString(record.name, readString(record.code)),
+      // §101 : niveau de maîtrise exposé par get_object_resource (languages[].level = {code,name}|null).
+      // levelId reste '' (résolu par l'enrichissement éditeur via languageLevelOptions, autoritaire).
       levelId: '',
-      levelCode: '',
-      levelLabel: '',
+      levelCode: readString((record.level as { code?: unknown } | undefined)?.code),
+      levelLabel: readString((record.level as { name?: unknown } | undefined)?.name),
     }))
     .filter((item) => item.code && item.label);
 
@@ -1734,10 +1736,30 @@ function parseWorkspaceCapacityPoliciesModule(raw: Record<string, unknown>): Obj
   };
 }
 
-function parseWorkspaceDistinctionsModule(): ObjectWorkspaceDistinctionsModule {
+function parseWorkspaceDistinctionsModule(raw: Record<string, unknown>): ObjectWorkspaceDistinctionsModule {
+  // §101 : get_object_resource émet désormais accessibility_labels (forme ObjectWorkspaceDistinctionItem,
+  // tous statuts). L'enrichissement éditeur reste autoritaire (overrider) ; ceci sert le drawer / le
+  // fallback consommateur. schemeId/documentUrl/documentTitle restent résolus loader-side (le bloc
+  // n'émet que document_id, comme §08).
+  const accessibilityLabels = readArray(raw.accessibility_labels).map((record) => ({
+    recordId: readString(record.id) || null,
+    schemeId: '',
+    schemeCode: readString(record.scheme),
+    schemeLabel: readString(record.scheme_name),
+    valueId: readString(record.value_id),
+    valueCode: readString(record.value),
+    valueLabel: readString(record.value_name),
+    status: readString(record.status),
+    awardedAt: readString(record.awarded_at),
+    validUntil: readString(record.valid_until),
+    disabilityTypesCovered: readArray(record.disability_types_covered).map((d) => readString(d)).filter(Boolean),
+    documentId: readString(record.document_id),
+    documentUrl: '',
+    documentTitle: '',
+  }));
   return {
     distinctionGroups: [],
-    accessibilityLabels: [],
+    accessibilityLabels,
     accessibilityAmenityCoverage: [],
     schemeOptions: [],
     unavailableReason: null,
@@ -1821,7 +1843,24 @@ function parseWorkspacePricingModule(raw: Record<string, unknown>): ObjectWorksp
     ),
     prices,
     discounts,
-    promotions: [],
+    // §101 : promotions liées exposées par get_object_resource (junction {promotion_id, promotion}).
+    // L'enrichissement éditeur reste autoritaire (même filtre RLS public+actif) ; ceci est le
+    // chemin consommateur / fallback.
+    promotions: readArray(raw.promotions).map((record) => {
+      const p = readRecord(record.promotion);
+      return {
+        promotionId: readString(record.promotion_id, readString(p.id)),
+        code: readString(p.code),
+        name: readString(p.name),
+        discountType: readString(p.discount_type),
+        discountValue: readString(p.discount_value),
+        currency: readString(p.currency),
+        validFrom: readString(p.valid_from),
+        validTo: readString(p.valid_to),
+        isActive: p.is_active === true,
+        isPublic: p.is_public === true,
+      };
+    }),
     promotionsUnavailableReason: null,
     unavailableReason: null,
   };
@@ -3232,7 +3271,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       secondaryTypes: readStringList(raw.secondary_types),
     },
     taxonomy: parseWorkspaceTaxonomyModule(raw),
-    distinctions: parseWorkspaceDistinctionsModule(),
+    distinctions: parseWorkspaceDistinctionsModule(raw),
     publication: {
       status: readString(raw.status, 'draft'),
       publishedAt: readString(raw.published_at),

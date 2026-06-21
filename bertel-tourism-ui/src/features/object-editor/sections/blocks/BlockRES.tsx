@@ -4,6 +4,7 @@ import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 import { MenuItemsModal } from '../../widgets/MenuItemsModal';
+import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
 
 const MENU_COLS = '14px 36px 1fr 90px 96px auto';
 
@@ -22,7 +23,7 @@ function createMenu(index: number, category = { id: '', code: '', label: '' }): 
   };
 }
 
-export function BlockRES({ editor, folded }: SectionProps) {
+export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
   const cuisine = editor.draft.cuisine;
   const openings = editor.draft.openings;
@@ -134,8 +135,8 @@ export function BlockRES({ editor, folded }: SectionProps) {
           <div className="grid-2" style={{ marginTop: 8 }}>
             <button type="button" className="dropzone" style={{ padding: 12 }} onClick={() => replaceMenus([...menus.items, createMenu(menus.items.length, menus.categoryOptions[0])])}>
               <span className="ico">+</span>
-              <strong>Ajouter une carte</strong>
-              <small>Saisie structurée (P2) et dépôt de PDF (P3) à venir</small>
+              <strong>Ajouter une carte / section</strong>
+              <small>Puis « Plats » pour saisir les entrées, plats, desserts…</small>
             </button>
             <Field label="Notes menu" hint="Description affichée sous le titre de carte">
               <Input
@@ -147,6 +148,16 @@ export function BlockRES({ editor, folded }: SectionProps) {
           </div>
         </>
       )}
+
+      {/* §06 P3 — Bloc C : cartes PDF téléchargeables, attachées au restaurant (object_document).
+          Vrai upload (réutilise /api/document/upload) avec dates de validité — remplace le dropzone factice. */}
+      <div className="chip-group__label" style={{ marginTop: 18 }}>
+        Cartes PDF (téléchargeables)
+      </div>
+      <MenuPdfCartes
+        objectId={editor.objectId}
+        canEdit={permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal}
+      />
 
       {itemsModalMenu && (
         <MenuItemsModal

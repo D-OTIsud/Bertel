@@ -4175,6 +4175,11 @@ BEGIN
                                      SELECT jsonb_build_object('id', c.id, 'code', c.code, 'name', c.name, 'description', c.description, 'position', c.position, 'icon_url', c.icon_url)
                                      FROM ref_code_menu_category c WHERE c.id = m.category_id
                                    ),
+                                   -- §06 P2b — section du PLAT (Entrée/Plat/Dessert…), portée par object_menu_item.section_id
+                                   'section', (
+                                     SELECT jsonb_build_object('id', sc.id, 'code', sc.code, 'name', sc.name, 'description', sc.description, 'position', sc.position, 'icon_url', sc.icon_url)
+                                     FROM ref_code_menu_category sc WHERE sc.id = mi.section_id
+                                   ),
                                    'unit', (
                                      SELECT jsonb_build_object('id', u.id, 'code', u.code, 'name', u.name, 'position', u.position, 'icon_url', u.icon_url)
                                      FROM ref_code_price_unit u WHERE u.id = mi.unit_id
@@ -4230,6 +4235,8 @@ BEGIN
                                    ), '[]'::jsonb)
                               )
                               ORDER BY
+                                -- §06 P2b — grouper d'abord par SECTION du plat (Entrée→Plat→Dessert…)
+                                (SELECT sc.position FROM ref_code_menu_category sc WHERE sc.id = mi.section_id) NULLS LAST,
                                 mi.is_available DESC,
                                 NULLIF((to_jsonb(mi)->>'position'),'')::int NULLS LAST,
                                 (SELECT c2.position FROM ref_code_menu_category c2 WHERE c2.id = m.category_id) NULLS LAST,

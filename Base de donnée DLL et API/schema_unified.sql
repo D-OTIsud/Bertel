@@ -5370,12 +5370,16 @@ CREATE TABLE IF NOT EXISTS object_menu_item (
   media_id UUID REFERENCES media(id) ON DELETE SET NULL,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   position INTEGER DEFAULT 0,
+  -- §06 P2b — la SECTION (Entrée/Plat/Dessert…) vit au niveau du plat (3-niveaux Menu→Section→Plat).
+  -- object_menu = le menu (titre) ; object_menu.category_id devient un conteneur optionnel.
+  section_id UUID REFERENCES ref_code_menu_category(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_object_menu_item_menu_id ON object_menu_item(menu_id);
 CREATE INDEX IF NOT EXISTS idx_object_menu_item_position ON object_menu_item(position);
+CREATE INDEX IF NOT EXISTS idx_object_menu_item_section ON object_menu_item(section_id);
 
 DROP TRIGGER IF EXISTS update_object_menu_item_updated_at ON object_menu_item;
 CREATE TRIGGER update_object_menu_item_updated_at

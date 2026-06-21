@@ -345,3 +345,20 @@ describe('non-convention catalogs (Task 7)', () => {
     expect(merged.categories[0].actions[0].code).toBe('MA_1');
   });
 });
+
+describe('restoreCatalogOptions — taxonomy edge cases', () => {
+  it('keeps the incoming domains untouched when the draft has no domains array', () => {
+    const incoming = { domains: [{ domain: 'taxonomy_hlo', nodes: [], assignment: { nodeId: 'NEW' } }] };
+    const merged = restoreCatalogOptions(incoming, { domains: null }) as Record<string, any>;
+    expect(merged.domains[0].nodes).toEqual([]);
+    expect(merged.domains[0].assignment).toEqual({ nodeId: 'NEW' });
+  });
+
+  it('leaves an incoming domain unchanged when no draft domain matches its code', () => {
+    const incoming = { domains: [{ domain: 'taxonomy_hlo', nodes: [], assignment: { nodeId: 'NEW' } }] };
+    const draft = { domains: [{ domain: 'taxonomy_other', nodes: [{ id: 'n1' }] }] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.domains[0].nodes).toEqual([]); // no matching domain code ⇒ not restored
+    expect(merged.domains[0].assignment).toEqual({ nodeId: 'NEW' });
+  });
+});

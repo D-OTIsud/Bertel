@@ -2870,7 +2870,7 @@ async function getObjectWorkspaceMenusModule(
   const itemRowsResult = menuIds.length > 0
     ? await client
         .from('object_menu_item')
-        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position')
+        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position, section_id')
         .in('menu_id', menuIds)
         .order('position', { ascending: true })
     : { data: [], error: null };
@@ -2970,6 +2970,7 @@ async function getObjectWorkspaceMenusModule(
     const menuId = readString(row.menu_id);
     const kind = kindById.get(readString(row.kind_id));
     const unit = unitById.get(readString(row.unit_id));
+    const section = categoryById.get(readString(row.section_id));
     const legacyMediaId = readString(row.media_id);
     const item: ObjectWorkspaceMenuItem = {
       recordId: itemId || null,
@@ -2989,6 +2990,9 @@ async function getObjectWorkspaceMenusModule(
       dietaryTagCodes: tagCodesByItem.get(itemId) ?? [],
       allergenCodes: allergenCodesByItem.get(itemId) ?? [],
       cuisineTypeCodes: cuisineCodesByItem.get(itemId) ?? [],
+      sectionCode: section?.code ?? '',
+      sectionId: readString(row.section_id),
+      sectionLabel: section?.label ?? '',
     };
     itemsByMenuId.set(menuId, [...(itemsByMenuId.get(menuId) ?? []), item]);
   }
@@ -5040,6 +5044,8 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
         media_id: mediaIds[0] ?? null,
         is_available: item.available,
         position: toNullableInteger(item.position),
+        // §06 P2b — section du plat (menu_category) ; même catalogue que la catégorie de menu.
+        section_id: item.sectionCode ? categoryIdByCode.get(item.sectionCode.toLowerCase()) ?? null : null,
       };
       const { data: itemData, error: itemError } = await client.from('object_menu_item').insert(itemPayload).select('id').single();
       if (itemError) {

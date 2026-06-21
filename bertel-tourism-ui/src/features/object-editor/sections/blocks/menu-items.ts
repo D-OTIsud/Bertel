@@ -6,8 +6,8 @@
  */
 import type { ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';
 
-/** A fresh, empty dish row. `position` is 1-based; codes blank (the saver tolerates empties). */
-export function createMenuItem(index: number): ObjectWorkspaceMenuItem {
+/** A fresh, empty dish row in a given section. `position` is 1-based; codes blank (saver tolerates empties). */
+export function createMenuItem(index: number, sectionCode = '', sectionLabel = ''): ObjectWorkspaceMenuItem {
   return {
     recordId: null,
     name: '',
@@ -26,6 +26,9 @@ export function createMenuItem(index: number): ObjectWorkspaceMenuItem {
     dietaryTagCodes: [],
     allergenCodes: [],
     cuisineTypeCodes: [], // vestigial (cuisine is object-level since §06 P1); never authored here
+    sectionCode,
+    sectionId: '',
+    sectionLabel,
   };
 }
 
@@ -56,4 +59,37 @@ export function toggleItemCode(codes: string[], code: string): string[] {
 /** Drop fully-blank dishes (no name AND no price) — keeps a save from persisting empty rows. */
 export function pruneBlankItems(items: ObjectWorkspaceMenuItem[]): ObjectWorkspaceMenuItem[] {
   return items.filter((item) => item.name.trim() !== '' || item.price.trim() !== '');
+}
+
+/**
+ * §06 P2b — group a menu's flat dish list into ordered SECTIONS (Entrée/Plat/Dessert…), preserving
+ * each dish's flat index (needed for in-place edits). `extra` adds empty sections the user opened but
+ * hasn't filled yet. Section order follows `sectionOrder` (the menu_category catalog order); unknown
+ * sections fall to the end.
+ */
+export interface MenuSectionGroup {
+  code: string;
+  label: string;
+  dishes: { item: ObjectWorkspaceMenuItem; index: number }[];
+}
+
+export function groupItemsBySection(
+  items: ObjectWorkspaceMenuItem[],
+  sectionOrder: { code: string; label: string }[],
+  extra: { code: string; label: string }[] = [],
+): MenuSectionGroup[] {
+  const labelByCode = new Map(sectionOrder.map((s) => [s.code, s.label]));
+  const rank = new Map(sectionOrder.map((s, i) => [s.code, i]));
+  const byCode = new Map<string, MenuSectionGroup>();
+  const ensure = (code: string, label: string) => {
+    if (!byCode.has(code)) byCode.set(code, { code, label: labelByCode.get(code) ?? label, dishes: [] });
+    return byCode.get(code)!;
+  };
+  for (const e of extra) ensure(e.code, e.label);
+  items.forEach((item, index) => {
+    ensure(item.sectionCode, item.sectionLabel).dishes.push({ item, index });
+  });
+  return Array.from(byCode.values()).sort(
+    (a, b) => (rank.get(a.code) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.code) ?? Number.MAX_SAFE_INTEGER),
+  );
 }

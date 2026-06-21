@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { ChipMultiSelect, Field, Fs, Input, Repeater, Select, Toggle } from '../../primitives';
+import { Plus } from 'lucide-react';
+import { ChipMultiSelect, Field, Fs, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
-import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
-import { MenuItemsModal } from '../../widgets/MenuItemsModal';
+import { MenuEditModal } from '../../widgets/MenuItemsModal';
 import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
 
-const MENU_COLS = '14px 36px 1fr 90px 96px auto';
-
-function createMenu(index: number, category = { id: '', code: '', label: '' }): ObjectWorkspaceMenu {
+/** A fresh, empty menu (titled container — no category; sections live on its dishes since §06 P2b). */
+function createMenu(index: number): ObjectWorkspaceMenu {
   return {
     recordId: null,
-    categoryId: category.id,
-    categoryCode: category.code,
-    categoryLabel: category.label,
+    categoryId: '',
+    categoryCode: '',
+    categoryLabel: '',
     name: '',
     description: '',
     active: true,
@@ -23,43 +23,48 @@ function createMenu(index: number, category = { id: '', code: '', label: '' }): 
   };
 }
 
+const MENU_CARD = {
+  display: 'flex', alignItems: 'center', gap: 10,
+  border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px',
+} as const;
+
 export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
   const cuisine = editor.draft.cuisine;
   const openings = editor.draft.openings;
   const capacity = editor.draft.capacityPolicies;
-  const firstMenu = menus.items[0];
   const activeMenus = menus.items.filter((menu) => menu.active).length;
-  const [itemsModalIndex, setItemsModalIndex] = useState<number | null>(null);
-  const itemsModalMenu = itemsModalIndex == null ? null : menus.items[itemsModalIndex];
+  // null = closed ; 'new' = creating ; { index } = editing an existing menu.
+  const [editing, setEditing] = useState<'new' | { index: number } | null>(null);
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
     editor.replaceModule('menus', { ...menus, items });
   }
-
   function updateMenu(index: number, patch: Partial<ObjectWorkspaceMenu>) {
-    replaceMenus(menus.items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+    replaceMenus(menus.items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
-
-  function saveMenuItems(index: number, items: ObjectWorkspaceMenuItem[]) {
-    updateMenu(index, { items });
-    setItemsModalIndex(null);
+  function saveMenu(savedMenu: ObjectWorkspaceMenu) {
+    if (editing === 'new') {
+      replaceMenus([...menus.items, savedMenu]);
+    } else if (editing) {
+      replaceMenus(menus.items.map((m, i) => (i === editing.index ? savedMenu : m)));
+    }
+    setEditing(null);
   }
 
   return (
     <Fs
       num="06"
       title="Cuisine, cartes & service"
-      sub="Cuisines proposées (recherche globale) · cartes & menus — capacité groupes en §07, horaires en §14"
+      sub="Cuisines proposées (recherche globale) · menus (titre → sections → plats) · cartes PDF — capacité groupes en §07, horaires en §14"
       folded={folded}
       pill={{
         tone: activeMenus > 0 ? 'ok' : 'warn',
-        label: activeMenus > 0 ? `${activeMenus} carte(s) active(s)` : 'Aucune carte',
+        label: activeMenus > 0 ? `${activeMenus} menu(s) actif(s)` : 'Aucun menu',
       }}
     >
-      {/* §06 P1 — Bloc A : « Cuisines proposées » est une facette GLOBALE de recherche au niveau
-          objet (object_cuisine_type), INDÉPENDANTE des menus : on peut la renseigner sans aucune
-          carte. (Elle ne vit plus sur le 1er plat du 1er menu — fin du write-trap.) */}
+      {/* §06 P1 — Bloc A : « Cuisines proposées » = facette GLOBALE de recherche au niveau objet
+          (object_cuisine_type), INDÉPENDANTE des menus. Fin du write-trap. */}
       <div className="chip-group__label" style={{ marginTop: 0 }}>
         Cuisines proposées
       </div>
@@ -77,80 +82,56 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         )}
       </Field>
 
-      {/* §06 P1 — Bloc B : cartes & menus. La sélection de cuisine a quitté ce bloc (Bloc A).
-          La saisie item-par-item structurée arrive en P2 ; l'upload PDF réel en P3. */}
+      {/* §06 P2b — Bloc B : menus structurés à 3 niveaux. « Ajouter un menu » → modale (titre →
+          sections Entrée/Plat/Dessert… → plats). Chaque menu = un object_menu ; la section vit
+          sur le plat (object_menu_item.section_id). */}
       <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Cartes & menus
+        Menus
       </div>
       {menus.unavailableReason ? (
         <ModuleUnavailableNotice reason={menus.unavailableReason} />
       ) : (
         <>
-          <Repeater
-            items={menus.items}
-            getKey={(item, index) => item.recordId ?? `menu-${index}`}
-            columns={MENU_COLS}
-            addLabel="Ajouter un menu / une carte"
-            onAdd={() => replaceMenus([...menus.items, createMenu(menus.items.length, menus.categoryOptions[0])])}
-            renderRow={(menu, index) => (
-              <>
-                <span className="rep-row__handle" aria-hidden />
-                <div className="sync-row__src">PDF</div>
-                <div>
-                  <Input value={menu.name} placeholder="Nom de la carte" onChange={(name) => updateMenu(index, { name })} />
-                  {menu.description && (
-                    <div style={{ fontSize: 10.5, color: 'var(--ink-4)', marginTop: 3 }}>{menu.description}</div>
-                  )}
-                </div>
-                <Select
-                  value={menu.categoryCode}
-                  options={menus.categoryOptions.map((option) => ({ v: option.code, l: option.label }))}
-                  onChange={(categoryCode) => {
-                    const opt = menus.categoryOptions.find((o) => o.code === categoryCode);
-                    updateMenu(index, {
-                      categoryCode,
-                      categoryId: opt?.id ?? menu.categoryId,
-                      categoryLabel: opt?.label ?? menu.categoryLabel,
-                    });
-                  }}
-                />
-                <button
-                  type="button"
-                  className="pill-mini"
-                  style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--surface)' }}
-                  onClick={() => setItemsModalIndex(index)}
-                >
-                  Plats ({menu.items.length})
-                </button>
-                <div className="rep-row__act">
+          {menus.items.length === 0 ? (
+            <p className="muted" style={{ fontSize: 12 }}>
+              Aucun menu pour le moment. Ajoutez un menu (titre, puis des sections et leurs plats).
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {menus.items.map((menu, index) => (
+                <div key={menu.recordId ?? `menu-${index}`} style={MENU_CARD}>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontSize: 13 }}>{menu.name || 'Menu sans titre'}</strong>
+                    <div className="muted" style={{ fontSize: 11.5 }}>{menu.items.length} plat(s)</div>
+                  </div>
                   <Toggle label="" on={menu.active} onChange={(active) => updateMenu(index, { active })} />
-                  <button type="button" className="del" onClick={() => replaceMenus(menus.items.filter((_, i) => i !== index))}>
+                  <button
+                    type="button"
+                    className="pill-mini"
+                    style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--surface)' }}
+                    onClick={() => setEditing({ index })}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    className="del"
+                    aria-label={`Supprimer le menu ${menu.name || index + 1}`}
+                    onClick={() => replaceMenus(menus.items.filter((_, i) => i !== index))}
+                  >
                     ×
                   </button>
                 </div>
-              </>
-            )}
-          />
-
-          <div className="grid-2" style={{ marginTop: 8 }}>
-            <button type="button" className="dropzone" style={{ padding: 12 }} onClick={() => replaceMenus([...menus.items, createMenu(menus.items.length, menus.categoryOptions[0])])}>
-              <span className="ico">+</span>
-              <strong>Ajouter une carte / section</strong>
-              <small>Puis « Plats » pour saisir les entrées, plats, desserts…</small>
-            </button>
-            <Field label="Notes menu" hint="Description affichée sous le titre de carte">
-              <Input
-                value={firstMenu?.description ?? ''}
-                placeholder="FR · pages · date de mise à jour"
-                onChange={(description) => firstMenu && updateMenu(0, { description })}
-              />
-            </Field>
-          </div>
+              ))}
+            </div>
+          )}
+          <button type="button" className="rep-add" style={{ marginTop: 8 }} onClick={() => setEditing('new')}>
+            <Plus size={14} aria-hidden /> Ajouter un menu
+          </button>
         </>
       )}
 
-      {/* §06 P3 — Bloc C : cartes PDF téléchargeables, attachées au restaurant (object_document).
-          Vrai upload (réutilise /api/document/upload) avec dates de validité — remplace le dropzone factice. */}
+      {/* §06 P3 — Bloc C : cartes PDF téléchargeables, attachées au restaurant (object_document). */}
       <div className="chip-group__label" style={{ marginTop: 18 }}>
         Cartes PDF (téléchargeables)
       </div>
@@ -159,16 +140,16 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         canEdit={permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal}
       />
 
-      {itemsModalMenu && (
-        <MenuItemsModal
+      {editing !== null && (
+        <MenuEditModal
           open
-          menuName={itemsModalMenu.name}
-          items={itemsModalMenu.items}
+          menu={editing === 'new' ? createMenu(menus.items.length) : menus.items[editing.index]}
+          sectionOptions={menus.categoryOptions}
           dietaryOptions={menus.dietaryTagOptions}
           allergenOptions={menus.allergenOptions}
           priceUnitOptions={menus.priceUnitOptions}
-          onClose={() => setItemsModalIndex(null)}
-          onSave={(items) => saveMenuItems(itemsModalIndex as number, items)}
+          onClose={() => setEditing(null)}
+          onSave={saveMenu}
         />
       )}
 

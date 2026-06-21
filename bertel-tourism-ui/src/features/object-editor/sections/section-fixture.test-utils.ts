@@ -236,7 +236,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       priceKindOptions: [{ id: 'dish', code: 'dish', label: 'Plat' }],
       priceUnitOptions: [{ id: 'unit', code: 'unit', label: 'Unité' }],
       mediaOptions: [],
-      items: [{ recordId: 'menu1', categoryId: 'carte', categoryCode: 'carte', categoryLabel: 'Carte', name: 'Carte midi', description: '', active: true, visibility: 'public', position: '1', items: [{ recordId: 'mi1', name: 'Cari', description: '', price: '18', currency: 'EUR', kindId: 'dish', kindCode: 'dish', kindLabel: 'Plat', unitId: 'unit', unitCode: 'unit', unitLabel: 'Unité', mediaIds: [], available: true, position: '1', dietaryTagCodes: [], allergenCodes: [], cuisineTypeCodes: ['creole'] }] }],
+      items: [{ recordId: 'menu1', categoryId: 'carte', categoryCode: 'carte', categoryLabel: 'Carte', name: 'Carte midi', description: '', active: true, visibility: 'public', position: '1', items: [{ recordId: 'mi1', name: 'Cari', description: '', price: '18', currency: 'EUR', kindId: 'dish', kindCode: 'dish', kindLabel: 'Plat', unitId: 'unit', unitCode: 'unit', unitLabel: 'Unité', mediaIds: [], available: true, position: '1', dietaryTagCodes: [], allergenCodes: [], cuisineTypeCodes: ['creole'], sectionCode: 'main', sectionId: 'main', sectionLabel: 'Plats principaux' }] }],
       unavailableReason: null,
     },
     cuisine: {

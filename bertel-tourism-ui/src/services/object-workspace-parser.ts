@@ -517,6 +517,10 @@ export interface ObjectWorkspaceMenuItem {
   dietaryTagCodes: string[];
   allergenCodes: string[];
   cuisineTypeCodes: string[];
+  // §06 P2b — section du plat (Entrée/Plat/Dessert…), object_menu_item.section_id → ref_code menu_category
+  sectionCode: string;
+  sectionId: string;
+  sectionLabel: string;
 }
 
 export interface ObjectWorkspaceMenu {
@@ -1992,6 +1996,7 @@ function parseWorkspaceMenusModule(raw: Record<string, unknown>): ObjectWorkspac
       items: readArray(record.items ?? record.menu_items ?? record.object_menu_items).map<ObjectWorkspaceMenuItem>((item, itemIndex) => {
         const kind = readNamedReference(item.kind, readString(item.kind_code));
         const unit = readNamedReference(item.unit, readString(item.unit_code));
+        const section = readNamedReference(item.section, readString(item.section_code));
 
         return {
           recordId: readString(item.id) || null,
@@ -2011,6 +2016,9 @@ function parseWorkspaceMenusModule(raw: Record<string, unknown>): ObjectWorkspac
           dietaryTagCodes: readReferenceCodes(item.dietary_tags ?? item.menu_item_dietary_tags, 'dietary_tag'),
           allergenCodes: readReferenceCodes(item.allergens ?? item.menu_item_allergens, 'allergen'),
           cuisineTypeCodes: readReferenceCodes(item.cuisine_types ?? item.menu_item_cuisine_types, 'cuisine_type'),
+          sectionCode: section.code,
+          sectionId: readString(item.section_id, section.id),
+          sectionLabel: section.label,
         };
       }),
     };

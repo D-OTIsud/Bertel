@@ -5427,6 +5427,18 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_type ON object_menu_item_c
 -- Indexes for menu item media
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_item ON object_menu_item_media(menu_item_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_media ON object_menu_item_media(media_id);
+
+-- §06 P1 — Cuisine NIVEAU-OBJET (« cuisines proposées »), descriptor-link comme object_amenity.
+-- Découplé des menus : un restaurant déclare sa/ses cuisine(s) sans avoir de menu. position 1 = principale.
+-- RLS + grants dans rls_policies.sql (migration_object_cuisine_type.sql, manifest 14t).
+CREATE TABLE IF NOT EXISTS object_cuisine_type (
+  object_id       TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  cuisine_type_id UUID NOT NULL REFERENCES ref_code_cuisine_type(id) ON DELETE CASCADE,
+  position        INT  NOT NULL DEFAULT 1,
+  PRIMARY KEY (object_id, cuisine_type_id)
+);
+CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_object ON object_cuisine_type(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_type   ON object_cuisine_type(cuisine_type_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_position ON object_menu_item_media(position);
 
 DROP TRIGGER IF EXISTS update_object_menu_item_media_updated_at ON object_menu_item_media;

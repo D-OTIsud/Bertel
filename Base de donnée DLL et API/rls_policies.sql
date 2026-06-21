@@ -3385,3 +3385,30 @@ DROP POLICY IF EXISTS gdpr_erasure_log_admin_read ON gdpr_erasure_log;
 CREATE POLICY gdpr_erasure_log_admin_read ON gdpr_erasure_log
   FOR SELECT TO authenticated
   USING ((SELECT api.is_platform_superuser()));   -- §39 : auth wrappé en InitPlan
+
+-- ---------------------------------------------------------------------
+-- §06 P1 — object_cuisine_type (cuisine niveau-objet). Folded from
+-- migration_object_cuisine_type.sql (manifest 14t). §38 split read gate + per-command
+-- canonical write family (NO FOR ALL). Outer column qualified (silent-rebinding gotcha).
+-- ---------------------------------------------------------------------
+ALTER TABLE object_cuisine_type ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS read_object_cuisine_type ON object_cuisine_type;
+CREATE POLICY read_object_cuisine_type ON object_cuisine_type FOR SELECT USING (
+  (EXISTS (SELECT 1 FROM object o WHERE o.id = object_cuisine_type.object_id AND o.status = 'published'))
+  OR object_cuisine_type.object_id IN (SELECT api.current_user_extended_object_ids())
+);
+
+DROP POLICY IF EXISTS canonical_ins_object_cuisine_type ON object_cuisine_type;
+CREATE POLICY canonical_ins_object_cuisine_type ON object_cuisine_type FOR INSERT
+  WITH CHECK (api.user_can_write_object_canonical(object_cuisine_type.object_id));
+DROP POLICY IF EXISTS canonical_upd_object_cuisine_type ON object_cuisine_type;
+CREATE POLICY canonical_upd_object_cuisine_type ON object_cuisine_type FOR UPDATE
+  USING (api.user_can_write_object_canonical(object_cuisine_type.object_id))
+  WITH CHECK (api.user_can_write_object_canonical(object_cuisine_type.object_id));
+DROP POLICY IF EXISTS canonical_del_object_cuisine_type ON object_cuisine_type;
+CREATE POLICY canonical_del_object_cuisine_type ON object_cuisine_type FOR DELETE
+  USING (api.user_can_write_object_canonical(object_cuisine_type.object_id));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON object_cuisine_type TO authenticated, service_role;
+GRANT SELECT ON object_cuisine_type TO anon;

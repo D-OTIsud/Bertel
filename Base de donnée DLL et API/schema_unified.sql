@@ -5439,6 +5439,24 @@ CREATE TABLE IF NOT EXISTS object_cuisine_type (
 );
 CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_object ON object_cuisine_type(object_id);
 CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_type   ON object_cuisine_type(cuisine_type_id);
+
+-- §06 P3 — Carte PDF (document) attachée à l'objet : lien générique object↔ref_document, role-codé
+-- (ref_code_document_type ; 'carte' = restaurant). Titre + validité (de quand à quand) portés par le
+-- LIEN (object_document est canonical-write ; ref_document est admin-write ⇒ l'éditeur ne peut y écrire).
+-- url depuis ref_document (lecture publique). RLS + grants dans rls_policies.sql
+-- (migration_object_document.sql, manifest 14u). Upload via POST /api/media|document/upload.
+CREATE TABLE IF NOT EXISTS object_document (
+  object_id   TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  document_id UUID NOT NULL REFERENCES ref_document(id) ON DELETE CASCADE,
+  role_id     UUID REFERENCES ref_code_document_type(id),
+  title       TEXT,
+  valid_from  DATE,
+  valid_to    DATE,
+  position    INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (object_id, document_id)
+);
+CREATE INDEX IF NOT EXISTS idx_object_document_object ON object_document(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_document_role   ON object_document(role_id);
 CREATE INDEX IF NOT EXISTS idx_menu_item_media_position ON object_menu_item_media(position);
 
 DROP TRIGGER IF EXISTS update_object_menu_item_media_updated_at ON object_menu_item_media;

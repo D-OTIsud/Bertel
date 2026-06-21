@@ -3412,3 +3412,30 @@ CREATE POLICY canonical_del_object_cuisine_type ON object_cuisine_type FOR DELET
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON object_cuisine_type TO authenticated, service_role;
 GRANT SELECT ON object_cuisine_type TO anon;
+
+-- ---------------------------------------------------------------------
+-- §06 P3 — object_document (carte PDF du restaurant). Folded from
+-- migration_object_document.sql (manifest 14u). §38 split read gate + per-command canonical
+-- write family (NO FOR ALL). Outer column qualified.
+-- ---------------------------------------------------------------------
+ALTER TABLE object_document ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS read_object_document ON object_document;
+CREATE POLICY read_object_document ON object_document FOR SELECT USING (
+  (EXISTS (SELECT 1 FROM object o WHERE o.id = object_document.object_id AND o.status = 'published'))
+  OR object_document.object_id IN (SELECT api.current_user_extended_object_ids())
+);
+
+DROP POLICY IF EXISTS canonical_ins_object_document ON object_document;
+CREATE POLICY canonical_ins_object_document ON object_document FOR INSERT
+  WITH CHECK (api.user_can_write_object_canonical(object_document.object_id));
+DROP POLICY IF EXISTS canonical_upd_object_document ON object_document;
+CREATE POLICY canonical_upd_object_document ON object_document FOR UPDATE
+  USING (api.user_can_write_object_canonical(object_document.object_id))
+  WITH CHECK (api.user_can_write_object_canonical(object_document.object_id));
+DROP POLICY IF EXISTS canonical_del_object_document ON object_document;
+CREATE POLICY canonical_del_object_document ON object_document FOR DELETE
+  USING (api.user_can_write_object_canonical(object_document.object_id));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON object_document TO authenticated, service_role;
+GRANT SELECT ON object_document TO anon;

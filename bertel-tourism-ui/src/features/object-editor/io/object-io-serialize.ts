@@ -195,15 +195,16 @@ function stripSustainabilityCatalog(module: unknown): unknown {
   if (!isObject(module) || !Array.isArray(module.categories)) {
     return stripModuleCatalogs(module);
   }
-  const base = stripModuleCatalogs(module) as Record<string, unknown>;
-  base.categories = (module.categories as unknown[])
-    .map((cat) =>
-      isObject(cat) && Array.isArray(cat.actions)
-        ? { ...cat, actions: (cat.actions as unknown[]).filter(actionHasData) }
-        : cat,
-    )
-    .filter((cat) => !isObject(cat) || !Array.isArray(cat.actions) || (cat.actions as unknown[]).length > 0);
-  return base;
+  return {
+    ...(stripModuleCatalogs(module) as Record<string, unknown>),
+    categories: (module.categories as unknown[])
+      .map((cat) =>
+        isObject(cat) && Array.isArray(cat.actions)
+          ? { ...cat, actions: (cat.actions as unknown[]).filter(actionHasData) }
+          : cat,
+      )
+      .filter((cat) => !isObject(cat) || !Array.isArray(cat.actions) || (cat.actions as unknown[]).length > 0),
+  };
 }
 
 /** Import: rebuild the full vocabulary from the live draft, overlaying the file's selection
@@ -252,6 +253,10 @@ function restoreSustainabilityCatalog(incoming: unknown, draftModule: unknown): 
 }
 
 export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown): T {
+  // Routing mirror of stripCatalogOptions (which keys on 'sustainability'): a top-level
+  // `categories` array is unique to the sustainability module in ObjectWorkspaceModules
+  // (verified against object-workspace-parser.ts). If a future module gains a top-level
+  // `categories` array, route by module key here instead of by structure.
   if (isObject(incoming) && Array.isArray((incoming as Record<string, unknown>).categories)) {
     return restoreSustainabilityCatalog(incoming, draftModule) as T;
   }

@@ -89,7 +89,7 @@ Trois axes distincts qu'il faut traiter séparément : **(3.1)** quelles colonne
 | `object_place_description.description_chapo` / `description_adapted` | aucune (place.chapo non éditée) | strip-on-read seulement |
 | `object_room_type.description` (RoomEditModal) | `<Textarea>` | **swap** → `MarkdownEditor` |
 | `object_menu(_item).description` | **aucune** (l'éditeur menus édite `name` / items, pas un descriptif menu) | strip-on-read seulement |
-| `object_iti_stage.description` (§16) | **`<Input>` mono-ligne** | swap → `MarkdownEditor` = **changement de layout** (à valider) |
+| `object_iti_stage.description` (§16) | **`<Input>` mono-ligne** | swap → `MarkdownEditor` = **changement de layout §16 (validé PO 2026-06-21)** |
 | `object_iti_info.*` (5 champs) | textareas (bloc ITI) | swap → `MarkdownEditor` |
 | `object_location.direction` (§02) | `<Textarea>` | **swap** → `MarkdownEditor` |
 
@@ -171,7 +171,7 @@ DB (colonnes texte = Markdown)                         ← source unique
 **Compatibilité ascendante — la v1 affirmait à tort « strip = no-op sur l'existant »** [R]. Les ~840 lignes de prose live ont été saisies en texte libre et contiennent des marqueurs **fortuits** (`- ` listes, `*Promo*`, `#1`, `> 15 ans`, `1.`, underscores, `[texte]`). Après bascule, la clé plate les **réinterprète** → régression silencieuse possible (`10€ - 15€`, `#1 du quartier`). **Mitigations cumulées** :
 1. règles **ancrées en début de ligne + espace requis + marqueurs émis seulement** (§5) → réduit massivement les faux positifs (`Lun - Ven`, `fichier_2024_final`, `#1` survivent) ;
 2. **gate de vérification pré-déploiement** : exécuter le strip proposé sur un **snapshot de toutes les colonnes en périmètre**, **diff input/output**, trier chaque ligne modifiée ;
-3. décision documentée (accepter+documenter, ou échapper les marqueurs fortuits à la migration). La revendication de compat est **conditionnée** à ce gate, pas postulée.
+3. décision documentée. **Décision PO 2026-06-21** : on retient (1)+(2) — règles ancrées + gate de diff + tri des lignes modifiées ; **pas** de migration d'échappement des marqueurs fortuits (mute 840 lignes + complique l'édition). La revendication de compat est **conditionnée** à ce gate, pas postulée.
 
 **Colonnes `*_normalized` générées [R]** : `object_description.description_normalized` / `description_chapo_normalized` (+ index trigram GIN, schema_unified.sql:1361-1362,668) sont **GENERATED STORED** sur les colonnes en périmètre → contiendront les marqueurs une fois la colonne en Markdown. Soit **redéfinir** la génération sur `internal.strip_markdown(...)` (autorisé car `IMMUTABLE`), soit documenter qu'elles portent du Markdown (et stripper à la requête). Pas de fuite active aujourd'hui (index inutilisés) mais à traiter pour la qualité de recherche future.
 
@@ -199,9 +199,9 @@ DB (colonnes texte = Markdown)                         ← source unique
 - **Rollback** : le strip est **additif en lecture** (pas de changement de données, sauf colonnes `*_normalized` si redéfinies) → rollback = redéployer les corps de RPC antérieurs. Vérifier qu'aucun changement de **signature/type de retour** n'impose un `DROP`+`CREATE` (sinon le séquencer).
 - MAJ `lot1_mapping_decisions.md` (décision §105) + proposition d'invariant CLAUDE.md (§13).
 
-## 12. Phasage proposé [R] (chaque étape livrable et vérifiable seule)
+## 12. Phasage (verrouillé PO 2026-06-21) [R] (chaque étape livrable et vérifiable seule)
 
-**Le PO doit arbitrer un point de périmètre** (voir « Pour la relecture » plus bas) : la **famille `object_description`** a des surfaces réelles ; le **type-spécifique** demande des surfaces neuves. Phasage recommandé :
+**Décision PO : livrer la famille `object_description` d'abord** (phases 1–4 = **1ʳᵉ livraison**), puis le **type-spécifique** (phases 5–7 = **2ᵈᵉ livraison**, son propre plan). Conséquence sur la phase 2 : la 1ʳᵉ livraison ne strip que les lecteurs plats de la **famille `object_description`** (cartes, carte, InDesign — qui lisent `description_chapo`/`description`/`description_edition`) ; le strip GPX/KML (`build_iti_track`, `export_itinerary_gpx`) et `get_object_room_types` part avec la 2ᵈᵉ livraison (ils lisent des colonnes de type qui ne recevront du Markdown qu'en phase 6). Le strip restant un *no-op* tant qu'aucun Markdown n'est écrit, cet ordre est sûr.
 
 1. **Socle SQL** : `strip_markdown` + `strip_markdown_jsonb` + tests SQL + **gate diff** sur données live. *(aucune RPC modifiée — isolé)*
 2. **Voies plates** : wrapper `strip_markdown` dans `get_object_card`, `get_object_cards_batch`, `get_object_map_item` (→ map view), `export_publication_indesign`, `export_itinerary_gpx`/`build_iti_track` (+ wrappers batch). Tests anti-fuite. *(protège les tiers AVANT toute écriture Markdown)*
@@ -230,8 +230,8 @@ DB (colonnes texte = Markdown)                         ← source unique
 
 Vérifié sur le code : **aucune** prose en périmètre n'est lue par — `get_dashboard_completeness` (présence seule, n'émet pas le texte), la recherche plein-texte (vecteurs `name`/`city`, pas de tsvector sur `description`), le cache image de couverture, `refresh_open_status`, `get_media_for_web`, `get_object_reviews`, les données acteur/org. Côté frontend, `ResultCardView`/`MapPanel`/métadonnées SEO ne lisent **aucune** prose en périmètre (ils consomment les clés plates des cartes). `get_object_with_deep_data` hérite `*_md` par embarquement verbatim de `get_object_resource` (assertion, pas de code). L'export **CSV** OUTILS ne contient aucune colonne de description.
 
-## Pour la relecture PO — points d'arbitrage
+## Décisions PO (verrouillées 2026-06-21)
 
-1. **Phasage / périmètre type-spécifique** : la famille `object_description` (Descriptif, Accroche, mobile/éditorial, adaptée) a des surfaces réelles et constitue le cœur livrable (phases 1–4). Le **type-spécifique** (rooms/menus/places/iti/direction) implique des surfaces d'édition/rendu en partie **neuves** (phases 5–6). **OK pour livrer la famille `object_description` d'abord et enchaîner le type-spécifique**, ou tout faire d'un bloc ?
-2. **ITI stage** : passer le descriptif d'étape d'un `<Input>` mono-ligne à un éditeur bloc = **changement de layout** §16. OK ?
-3. **Données live** : on conditionne la compat à un **diff de vérification** avant déploiement (et on triera les lignes modifiées). OK comme garde-fou ?
+1. **Phasage** → **famille `object_description` d'abord** (phases 1–4, 1ʳᵉ livraison), type-spécifique en suite (phases 5–7, plan séparé).
+2. **ITI stage** → **oui**, passer le descriptif d'étape à un éditeur bloc Markdown (changement de layout §16 assumé) — fait partie de la 2ᵈᵉ livraison.
+3. **Données live** → règles strip **ancrées** + **diff de vérification** pré-déploiement + tri des lignes modifiées ; **pas** de migration d'échappement.

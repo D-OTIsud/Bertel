@@ -1,74 +1,38 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MenuEditModal } from './MenuItemsModal';
-import type { ObjectWorkspaceMenu } from '../../../services/object-workspace-parser';
+import { DishEditModal } from './MenuItemsModal';
+import { createMenuItem } from '../sections/blocks/menu-items';
 
-const SECTIONS = [
-  { id: 'entree', code: 'entree', label: 'Entrées' },
-  { id: 'main', code: 'main', label: 'Plats' },
-];
 const DIETARY = [{ id: 'd1', code: 'vegan', label: 'Végan' }];
 const ALLERGEN = [{ id: 'a1', code: 'gluten', label: 'Gluten' }];
 
-function baseMenu(items: ObjectWorkspaceMenu['items'] = []): ObjectWorkspaceMenu {
-  return {
-    recordId: null, categoryId: '', categoryCode: '', categoryLabel: '',
-    name: '', description: '', active: true, visibility: 'public', position: '1', items,
-  };
-}
+describe('DishEditModal (§06 P2c — single dish)', () => {
+  it('edits a dish and returns it on save', () => {
+    const onSave = jest.fn();
+    const dish = { ...createMenuItem(0, 'entree', 'Entrées'), name: 'Samoussas', price: '6' };
+    render(
+      <DishEditModal open dish={dish} sectionLabel="Entrées" dietaryOptions={DIETARY} allergenOptions={ALLERGEN} onClose={() => {}} onSave={onSave} />,
+    );
 
-function renderModal(onSave = jest.fn(), menu = baseMenu()) {
-  render(
-    <MenuEditModal
-      open
-      menu={menu}
-      sectionOptions={SECTIONS}
-      dietaryOptions={DIETARY}
-      allergenOptions={ALLERGEN}
-      onClose={() => {}}
-      onSave={onSave}
-    />,
-  );
-  return onSave;
-}
-
-describe('MenuEditModal (§06 P2b — Menu → Sections → Plats)', () => {
-  it('builds a menu: title, a section, then a dish in that section', () => {
-    const onSave = renderModal();
-
-    fireEvent.change(screen.getByPlaceholderText('Nom du menu'), { target: { value: 'Carte midi' } });
-
-    // add the "Entrées" section
-    fireEvent.change(screen.getByLabelText('Choisir une section'), { target: { value: 'entree' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
-
-    // add a dish to it
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat à « Entrées »/ }));
-    fireEvent.change(screen.getByPlaceholderText('ex. Cari poulet'), { target: { value: 'Samoussas' } });
-
+    expect(screen.getByText('Plat — Entrées')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Prix du plat'), { target: { value: '7.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Végan' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMenu;
-    expect(saved.name).toBe('Carte midi');
-    expect(saved.items).toHaveLength(1);
-    expect(saved.items[0]).toMatchObject({ name: 'Samoussas', sectionCode: 'entree', sectionLabel: 'Entrées' });
+    const saved = onSave.mock.calls[0][0];
+    expect(saved).toMatchObject({ name: 'Samoussas', price: '7.5', sectionCode: 'entree', dietaryTagCodes: ['vegan'] });
   });
 
-  it('groups existing dishes under their section and prunes blanks', () => {
-    const menu = baseMenu([
-      { recordId: 'mi1', name: 'Bouchons', description: '', price: '6', currency: 'EUR', kindId: '', kindCode: '', kindLabel: '', unitId: '', unitCode: '', unitLabel: '', mediaIds: [], available: true, position: '1', dietaryTagCodes: [], allergenCodes: [], cuisineTypeCodes: [], sectionCode: 'entree', sectionId: 'entree', sectionLabel: 'Entrées' },
-    ]);
-    const onSave = renderModal(jest.fn(), menu);
+  it('offers a delete action only for an existing dish', () => {
+    const onDelete = jest.fn();
+    const { rerender } = render(
+      <DishEditModal open dish={createMenuItem(0, 'main', 'Plats')} sectionLabel="Plats" dietaryOptions={[]} allergenOptions={[]} onClose={() => {}} onSave={() => {}} />,
+    );
+    expect(screen.queryByRole('button', { name: /Supprimer ce plat/ })).not.toBeInTheDocument();
 
-    expect(screen.getByText('Entrées')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Bouchons')).toBeInTheDocument();
-
-    // add a second, blank dish in Entrées → pruned on save
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat à « Entrées »/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
-
-    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMenu;
-    expect(saved.items).toHaveLength(1);
-    expect(saved.items[0].name).toBe('Bouchons');
+    rerender(
+      <DishEditModal open dish={createMenuItem(0, 'main', 'Plats')} sectionLabel="Plats" dietaryOptions={[]} allergenOptions={[]} onClose={() => {}} onSave={() => {}} onDelete={onDelete} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Supprimer ce plat/ }));
+    expect(onDelete).toHaveBeenCalled();
   });
 });

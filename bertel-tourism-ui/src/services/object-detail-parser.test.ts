@@ -36,6 +36,21 @@ describe('parseObjectDetail', () => {
     expect(phone).toMatchObject({ displayValue: '+262 262 00 00 00', iconUrl: '' });
   });
 
+  it('exposes raw Markdown *_md siblings from the resource payload', () => {
+    const parsed = parseObjectDetail({
+      id: 'X',
+      type: 'HLO',
+      description: 'Plain.',
+      description_md: '## H\n**b**',
+      description_adapted: 'A',
+      description_adapted_md: '*a*',
+    } as Record<string, unknown>);
+    expect(parsed.text.descriptionMd).toBe('## H\n**b**');
+    expect(parsed.text.adaptedDescriptionMd).toBe('*a*');
+    // absent *_md → empty string, not undefined
+    expect(parsed.text.chapoMd).toBe('');
+  });
+
   it('normalizes the canonical backend surface into shared detail sections', () => {
     const raw = {
       id: 'LOIRUN000000000W',

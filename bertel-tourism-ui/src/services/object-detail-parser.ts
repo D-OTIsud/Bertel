@@ -105,6 +105,12 @@ export interface ParsedTextSection {
   adaptedDescription: string;
   mobileDescription: string;
   editorialDescription: string;
+  /** Raw Markdown siblings (API `*_md` keys) — rendered via MarkdownContent; '' when absent. */
+  descriptionMd: string;
+  chapoMd: string;
+  adaptedDescriptionMd: string;
+  mobileDescriptionMd: string;
+  editorialDescriptionMd: string;
   descriptions: DescriptionEntry[];
   places: PlaceItem[];
   privateNote: PrivateNoteEntry | null;
@@ -726,6 +732,12 @@ function parseText(raw: Record<string, unknown>): ParsedTextSection {
       objectDescriptionRecord.description_edition,
       primaryEntry?.editorialDescription,
     ),
+    // Raw Markdown siblings come from the resource's top-level `*_md` keys (get_object_resource).
+    descriptionMd: pickFirstText(raw.description_md),
+    chapoMd: pickFirstText(raw.description_chapo_md),
+    adaptedDescriptionMd: pickFirstText(raw.description_adapted_md),
+    mobileDescriptionMd: pickFirstText(raw.description_mobile_md),
+    editorialDescriptionMd: pickFirstText(raw.description_edition_md),
     descriptions: descriptionEntries,
     places: parsePlaceItems(raw.places),
     privateNote: privateNotes[0] ?? null,

@@ -12,4 +12,14 @@ describe('MarkdownEditor (render smoke)', () => {
     expect(screen.getByRole('button', { name: 'Liste à puces' })).toBeInTheDocument();
     expect(screen.getByLabelText('Description adaptée — FR')).toBeInTheDocument();
   });
+
+  it('inline variant hides heading and list controls but keeps inline marks', async () => {
+    render(<MarkdownEditor value="" ariaLabel="Accroche — FR" onChange={() => {}} variant="inline" />);
+    // editor mounts async (immediatelyRender:false) — await the toolbar before asserting absence
+    expect(await screen.findByRole('button', { name: 'Gras' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lien' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Titre' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Liste à puces' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Citation' })).toBeNull();
+  });
 });

@@ -24,7 +24,6 @@ function renderModal(onSave = jest.fn(), menu = baseMenu()) {
       sectionOptions={SECTIONS}
       dietaryOptions={DIETARY}
       allergenOptions={ALLERGEN}
-      priceUnitOptions={[]}
       onClose={() => {}}
       onSave={onSave}
     />,

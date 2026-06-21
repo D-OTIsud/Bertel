@@ -147,7 +147,6 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
           sectionOptions={menus.categoryOptions}
           dietaryOptions={menus.dietaryTagOptions}
           allergenOptions={menus.allergenOptions}
-          priceUnitOptions={menus.priceUnitOptions}
           onClose={() => setEditing(null)}
           onSave={saveMenu}
         />

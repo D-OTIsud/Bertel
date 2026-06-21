@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { EditorModal, Field, Input, Textarea, ReferenceSelect, Chip, ChipSet, Toggle } from '../primitives';
+// `ReferenceSelect` is still used by the "Ajouter une section" picker below.
 import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
 import { createMenuItem, groupItemsBySection, pruneBlankItems, removeMenuItem, toggleItemCode, updateMenuItem } from '../sections/blocks/menu-items';
 
@@ -11,7 +12,6 @@ interface MenuEditModalProps {
   sectionOptions: WorkspaceReferenceOption[];
   dietaryOptions: WorkspaceReferenceOption[];
   allergenOptions: WorkspaceReferenceOption[];
-  priceUnitOptions: WorkspaceReferenceOption[];
   onClose: () => void;
   onSave: (menu: ObjectWorkspaceMenu) => void;
 }
@@ -21,7 +21,6 @@ const CARD = {
   display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-tint)',
 } as const;
 const ROW_HEAD = { display: 'grid', gridTemplateColumns: '1fr 36px', gap: 8, alignItems: 'end' } as const;
-const COL2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } as const;
 const SECTION_HEAD = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   margin: '14px 0 8px', paddingTop: 12, borderTop: '1px solid var(--line)',
@@ -34,13 +33,12 @@ const ICON_BTN = {
 
 /** One dish: name, price (+unit), description/contenu, dietary tags, allergens, availability. */
 function DishCard({
-  item, index, dietaryOptions, allergenOptions, priceUnitOptions, onPatch, onRemove,
+  item, index, dietaryOptions, allergenOptions, onPatch, onRemove,
 }: {
   item: ObjectWorkspaceMenuItem;
   index: number;
   dietaryOptions: WorkspaceReferenceOption[];
   allergenOptions: WorkspaceReferenceOption[];
-  priceUnitOptions: WorkspaceReferenceOption[];
   onPatch: (patch: Partial<ObjectWorkspaceMenuItem>) => void;
   onRemove: () => void;
 }) {
@@ -54,7 +52,7 @@ function DishCard({
           <Trash2 size={15} aria-hidden />
         </button>
       </div>
-      <div style={COL2}>
+      <div style={{ maxWidth: 160 }}>
         <Field label="Prix">
           <Input
             type="number"
@@ -63,16 +61,6 @@ function DishCard({
             suffix={item.currency === 'EUR' ? '€' : item.currency}
             aria-label={`Prix du plat ${index + 1}`}
             onChange={(price) => onPatch({ price })}
-          />
-        </Field>
-        <Field label="Unité">
-          <ReferenceSelect
-            value={item.unitCode}
-            options={priceUnitOptions}
-            allowEmpty
-            emptyLabel="— Unité —"
-            aria-label={`Unité du plat ${index + 1}`}
-            onChange={(code, opt) => onPatch({ unitCode: code, unitId: opt?.id ?? '', unitLabel: opt?.label ?? '' })}
           />
         </Field>
       </div>
@@ -113,7 +101,7 @@ function DishCard({
  * are pruned on save. The menus saver persists everything; cuisine is NOT authored per dish (§06 P1).
  */
 export function MenuEditModal({
-  open, menu, sectionOptions, dietaryOptions, allergenOptions, priceUnitOptions, onClose, onSave,
+  open, menu, sectionOptions, dietaryOptions, allergenOptions, onClose, onSave,
 }: MenuEditModalProps) {
   const [name, setName] = useState(menu.name);
   const [items, setItems] = useState<ObjectWorkspaceMenuItem[]>(menu.items);
@@ -167,7 +155,6 @@ export function MenuEditModal({
               index={index}
               dietaryOptions={dietaryOptions}
               allergenOptions={allergenOptions}
-              priceUnitOptions={priceUnitOptions}
               onPatch={(patch) => patchDish(index, patch)}
               onRemove={() => removeDish(index)}
             />

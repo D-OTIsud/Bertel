@@ -420,6 +420,42 @@ BEGIN
 END;
 $$;
 
+-- Plain-text derivation for Markdown-canonical description columns (manifest 14v).
+-- Strips the editor's Markdown subset (headings, emphasis, lists, blockquotes, links, images,
+-- escapes) and returns clean plain text. NULL→NULL (STRICT). Idempotent.
+-- Consumers: get_object_card (card subtitle), get_object_resource (plain_description),
+--            get_object_with_deep_data, ranked_label_search snippet.
+-- Order is load-bearing: must be defined before get_object_card (~line 2006) in this file.
+CREATE OR REPLACE FUNCTION api.strip_markdown(md text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+STRICT
+SET search_path = pg_catalog
+AS $fn$
+  WITH s0  AS (SELECT md AS t),
+  -- order is load-bearing. Protect escaped asterisks (\*) with a sentinel BEFORE emphasis so a
+  -- literal '\*' survives as '*' instead of being eaten by the italic/bold rules. (Other escapes
+  -- like \#, \-, \> are naturally safe: the backslash sits before the line-start marker, so the
+  -- anchored block rules don't fire; the generic unescape at s9 then drops the backslash.)
+  sp  AS (SELECT replace(t, '\*', chr(1))                                  AS t FROM s0),  -- protect \*
+  s1  AS (SELECT regexp_replace(t, '!\[[^\]]*\]\([^)]*\)', '', 'g')        AS t FROM sp),  -- images first
+  s2  AS (SELECT regexp_replace(t, '\[([^\]]*)\]\([^)]*\)', '\1', 'g')     AS t FROM s1),  -- links -> label
+  s3  AS (SELECT regexp_replace(t, '\*\*([^*]+)\*\*', '\1', 'g')           AS t FROM s2),  -- bold
+  s4  AS (SELECT regexp_replace(t, '\*([^*\n]+)\*', '\1', 'g')             AS t FROM s3),  -- italic (paired)
+  s5  AS (SELECT regexp_replace(t, '^[ \t]*#{1,6}[ \t]+', '', 'gn')        AS t FROM s4),  -- headings (space req)
+  s6  AS (SELECT regexp_replace(t, '^[ \t]*(?:> ?)+', '', 'gn')            AS t FROM s5),  -- blockquote (nested)
+  s7  AS (SELECT regexp_replace(t, '^[ \t]*[-*+][ \t]+', '', 'gn')         AS t FROM s6),  -- bullets (space req)
+  s8  AS (SELECT regexp_replace(t, '^[ \t]*\d+\.[ \t]+', '', 'gn')         AS t FROM s7),  -- ordered (multi-digit)
+  s9  AS (SELECT regexp_replace(t, '\\([\\`_{}\[\]()#+.!>-])', '\1', 'g')  AS t FROM s8),  -- escapes (\* via sentinel)
+  sr  AS (SELECT replace(t, chr(1), '*')                                   AS t FROM s9),  -- restore literal *
+  s10 AS (SELECT regexp_replace(t, '\n{3,}', E'\n\n', 'g')                 AS t FROM sr)   -- collapse blanks
+  SELECT btrim(t) FROM s10;
+$fn$;
+
+REVOKE ALL ON FUNCTION api.strip_markdown(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.strip_markdown(text) TO anon, authenticated, service_role;
+
 -- I18N Helper: Get translation from EAV i18n_translation table with fallback
 -- Usage: api.i18n_get_text('object_description', 'desc-uuid-123', 'description', 'en', 'fr')
 -- Returns: Translated text from i18n_translation table with fallback support
@@ -3031,11 +3067,21 @@ BEGIN
       'languages',
       COALESCE((
       SELECT jsonb_agg(
-               jsonb_build_object('code', rl.code, 'name', rl.name)
+               jsonb_build_object(
+                 'code', rl.code,
+                 'name', rl.name,
+                 -- §101 : niveau de maîtrise (level_id NULLABLE) ; LEFT JOIN + CASE ⇒ additif,
+                 -- ne droppe pas une langue sans niveau ; 'level' = null (pas omis) si absent.
+                 'level', CASE WHEN lvl.id IS NULL THEN NULL
+                          ELSE jsonb_build_object('code', lvl.code,
+                                                  'name', COALESCE(api.i18n_pick_strict(lvl.name_i18n, lang, 'fr'), lvl.name))
+                          END
+               )
                ORDER BY rl.name, rl.code
              )
       FROM object_language ol
       JOIN ref_language rl ON rl.id = ol.language_id
+      LEFT JOIN ref_code_language_level lvl ON lvl.id = ol.level_id
       WHERE ol.object_id = obj.id
       ), '[]'::jsonb)
     );
@@ -3226,6 +3272,25 @@ BEGIN
     ), '{}'::jsonb);
   END IF;
 
+  -- Zones (communes desservies) — §41/§103/§101 P3 : object_zone était éditeur-only (select
+  -- direct) ; désormais émis pour l'API consommateur. Garde objet en tête suffit (pas de
+  -- visibilité par ligne). N'émet QUE les communes de l'objet ; le catalogue ref_commune reste
+  -- loader-owned. LEFT JOIN : une commune is_active=false ne doit pas dropper la zone.
+  IF v_fields IS NULL OR 'object_zone' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'object_zone',
+      COALESCE((
+        SELECT jsonb_agg(
+                 jsonb_build_object('insee_commune', z.insee_commune, 'position', z.position, 'name', rc.name)
+                 ORDER BY z.position, z.insee_commune
+               )
+        FROM object_zone z
+        LEFT JOIN ref_commune rc ON rc.insee_code = z.insee_commune
+        WHERE z.object_id = obj.id
+      ), '[]'::jsonb)
+    );
+  END IF;
+
   -- Prices (enriched) + nested periods as JSON array
   IF v_fields IS NULL OR 'prices' = ANY(v_fields) THEN
     js := js || jsonb_build_object(
@@ -3405,6 +3470,40 @@ BEGIN
       FROM tag_link tl
       JOIN ref_tag t ON t.id = tl.tag_id
       WHERE tl.target_table = 'object' AND tl.target_pk = obj.id
+      ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- Promotions liées — §101 : promotion_object était éditeur-only. GARDE §49 LOAD-BEARING : le
+  -- DEFINER bypasse la RLS, donc on réplique le filtre champ is_public AND is_active (le select
+  -- loader ne renvoyait que ça via la policy). Omettre = fuite de promos privées/inactives.
+  IF v_fields IS NULL OR 'promotions' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'promotions',
+      COALESCE((
+        SELECT jsonb_agg(
+                 jsonb_build_object(
+                   'promotion_id', p.id,
+                   'promotion', jsonb_build_object(
+                     'id', p.id,
+                     'code', p.code,
+                     'name', COALESCE(api.i18n_pick_strict(p.name_i18n, lang, 'fr'), p.name),
+                     'discount_type', p.discount_type,
+                     'discount_value', p.discount_value,
+                     'currency', p.currency,
+                     'valid_from', p.valid_from,
+                     'valid_to', p.valid_to,
+                     'is_active', p.is_active,
+                     'is_public', p.is_public
+                   )
+                 )
+                 ORDER BY p.valid_from NULLS LAST, p.name
+               )
+        FROM promotion_object po
+        JOIN promotion p ON p.id = po.promotion_id
+        WHERE po.object_id = obj.id
+          AND p.is_public = TRUE
+          AND p.is_active = TRUE
       ), '[]'::jsonb)
     );
   END IF;
@@ -3690,6 +3789,28 @@ BEGIN
                    FROM object_room_type_bed rb
                    JOIN ref_code_bed_type bt ON bt.id = rb.bed_type_id
                    WHERE rb.room_type_id = rt.id
+                 ), '[]'::jsonb),
+                 -- Room media — §101/§59 : object_room_type_media était éditeur-only. GARDE §49
+                 -- LOAD-BEARING : DEFINER bypasse la RLS ⇒ répliquer is_published + visibility
+                 -- (NULL ≈ public). Une chambre publiée peut porter un média privé/non-publié.
+                 'media', COALESCE((
+                   SELECT jsonb_agg(
+                            jsonb_build_object(
+                              'id', m.id,
+                              'url', m.url,
+                              'title', COALESCE(api.i18n_pick_strict(m.title_i18n, lang, 'fr'), m.title),
+                              'credit', m.credit,
+                              'is_main', m.is_main,
+                              'is_published', m.is_published,
+                              'position', rtm.position
+                            )
+                            ORDER BY rtm.position NULLS LAST
+                          )
+                   FROM object_room_type_media rtm
+                   JOIN media m ON m.id = rtm.media_id
+                   WHERE rtm.room_type_id = rt.id
+                     AND m.is_published = TRUE
+                     AND (v_can_read_extended OR m.visibility IS NULL OR m.visibility = 'public')
                  ), '[]'::jsonb)
                )
                ORDER BY rt.position NULLS LAST, rt.name, rt.id
@@ -3809,10 +3930,53 @@ BEGIN
       FROM object_classification oc
       JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
       JOIN ref_classification_value cv ON cv.id = oc.value_id
-      -- Partition: only sustainability and accessibility label schemes here.
+      -- Partition: ONLY sustainability label schemes here (§101 : accessibility sorti dans son
+      -- propre bloc 'accessibility_labels' ci-dessous ; narrow obligatoire sinon double-emit).
       -- All other schemes (official_classification, quality_label, etc.) go to 'classifications' block above.
       WHERE oc.object_id = obj.id
-        AND sc.display_group IN ('sustainability_labels', 'accessibility_labels')
+        AND sc.display_group = 'sustainability_labels'
+      ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- Accessibility labels — §101 : sortis de 'sustainability_labels' (où ils ridaient avant) dans
+  -- leur propre clé pour l'éditeur §10. Forme = ObjectWorkspaceDistinctionItem (clés scheme/value,
+  -- pas *_code). TOUS les statuts (l'éditeur voit requested/granted/suspended/expired ; la fn
+  -- publique get_object_resource_adapted garde granted-only). Garde objet en tête suffit (status
+  -- est une donnée, pas une garde). Fall-through misc (clé hors strip-list) ⇒ deep_data hérite.
+  IF v_fields IS NULL OR 'accessibility_labels' = ANY(v_fields) THEN
+    js := js || jsonb_build_object(
+      'accessibility_labels',
+      COALESCE((
+        SELECT jsonb_agg(
+                 jsonb_build_object(
+                   'id',          oc.id,
+                   'scheme',      sc.code,
+                   'scheme_name', COALESCE(api.i18n_pick_strict(sc.name_i18n, lang, 'fr'), sc.name),
+                   'value',       cv.code,
+                   'value_name',  COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name),
+                   'value_id',    cv.id,
+                   'status',      oc.status,
+                   'awarded_at',  oc.awarded_at,
+                   'valid_until', oc.valid_until,
+                   'document_id', oc.document_id,
+                   'disability_types_covered', COALESCE((
+                     SELECT jsonb_agg(cv2.metadata->>'disability_type' ORDER BY cv2.position NULLS LAST)
+                     FROM ref_classification_scheme s2
+                     CROSS JOIN unnest(oc.subvalue_ids) AS sv(uid)
+                     JOIN ref_classification_value cv2 ON cv2.id = sv.uid
+                     WHERE s2.id = oc.scheme_id
+                       AND s2.code = 'LBL_TOURISME_HANDICAP'
+                       AND cv2.metadata->>'disability_type' IS NOT NULL
+                   ), '[]'::jsonb)
+                 )
+                 ORDER BY sc.position NULLS LAST, cv.position NULLS LAST, cv.code
+               )
+        FROM object_classification oc
+        JOIN ref_classification_scheme sc ON sc.id = oc.scheme_id
+        JOIN ref_classification_value cv ON cv.id = oc.value_id
+        WHERE oc.object_id = obj.id
+          AND sc.display_group = 'accessibility_labels'
       ), '[]'::jsonb)
     );
   END IF;

@@ -336,7 +336,7 @@ describe('non-convention catalogs (Task 7)', () => {
     expect(actions).toHaveLength(2); // full vocabulary restored
     expect(actions[0]).toMatchObject({ code: 'MA_1', selected: true, note: 'kept', label: 'Action 1' });
     // MA_2 not in the file ⇒ reset to unselected (file wins fully)
-    expect(actions[1]).toMatchObject({ code: 'MA_2', selected: false, note: '', label: 'Action 2' });
+    expect(actions[1]).toMatchObject({ code: 'MA_2', selected: false, note: '', documentId: '', label: 'Action 2' });
   });
 
   it('keeps the file sustainability as-is when the draft has no vocabulary', () => {

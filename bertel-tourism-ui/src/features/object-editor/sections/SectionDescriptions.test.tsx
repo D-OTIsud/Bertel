@@ -4,8 +4,14 @@ import { SectionDescriptions } from './SectionDescriptions';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
 
-// Field has no htmlFor/id wiring so getByLabelText is unavailable.
-// Accroche Textarea is selected via data-testid="chapo-textarea".
+// The Descriptif/Accroche are now MarkdownEditorLazy (TipTap, async + ProseMirror — unreliable in
+// jsdom). Mock it as a plain textarea that forwards value + onChange and exposes ariaLabel, so the
+// section's wiring (patchField → module) is testable and getByLabelText(/^Accroche|^Descriptif/) works.
+jest.mock('../../../components/markdown/MarkdownEditorLazy', () => ({
+  MarkdownEditorLazy: ({ value, onChange, ariaLabel, disabled }: { value: string; onChange: (md: string) => void; ariaLabel: string; disabled?: boolean }) => (
+    <textarea aria-label={ariaLabel} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
 
 const emptyField = () => ({ baseValue: '', values: {} as Record<string, string> });
 const scope = (over = {}) => ({
@@ -86,7 +92,7 @@ describe('SectionDescriptions', () => {
     expect(result.current.dirtySections.descriptions).toBe(false);
 
     // A real edit still dirties the module.
-    fireEvent.change(screen.getByTestId('chapo-textarea'), { target: { value: 'Nouvelle accroche' } });
+    fireEvent.change(screen.getByLabelText(/^Accroche/), { target: { value: 'Nouvelle accroche' } });
     expect(result.current.dirtySections.descriptions).toBe(true);
   });
 
@@ -95,7 +101,7 @@ describe('SectionDescriptions', () => {
     render(<SectionDescriptions editor={result.current} permissions={bothLayers} />);
     fireEvent.click(screen.getByText(/Personnalis/));
     // Field has no htmlFor association — select Accroche via data-testid.
-    const accroche = screen.getByTestId('chapo-textarea') as HTMLTextAreaElement;
+    const accroche = screen.getByLabelText(/^Accroche/) as HTMLTextAreaElement;
     fireEvent.change(accroche, { target: { value: 'Accroche OTI propre' } });
     expect(result.current.draft.descriptions.orgOverlay?.chapo.baseValue).toBe('Accroche OTI propre');
     expect(result.current.draft.descriptions.object.chapo.baseValue).toBe('');

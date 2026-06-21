@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Fs, Field, Textarea, LangTabs, ScopeTabs } from '../primitives';
+import { Fs, Field, LangTabs, ScopeTabs } from '../primitives';
+import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDescriptionScope } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -101,24 +102,31 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
       </div>
 
       <Field label="Accroche" required={!onOrg} hint={hint('≤ 160 caractères — accroche courte affichée en tête de la fiche', 'chapo')}>
-        <Textarea
+        <MarkdownEditorLazy
           value={readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage)}
-          onChange={(v) => patchField('chapo', v)}
-          placeholder={fallback('chapo')}
+          onChange={(md) => patchField('chapo', md)}
           disabled={readOnly}
-          data-testid="chapo-textarea"
-          count max={160} rows={5}
+          ariaLabel={`Accroche — ${resolveLanguageLabel(active, characteristics.languageOptions)}`}
+          variant="inline"
         />
+        {(() => {
+          const len = readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage).length;
+          return <div className={`char-count${len > 160 ? ' over' : ''}`}>{len} / 160 caractères</div>;
+        })()}
       </Field>
 
       <Field label="Descriptif" required={!onOrg} hint={hint('Texte principal de la fiche détail', 'description')}>
-        <Textarea
+        <MarkdownEditorLazy
           value={readTranslatableField(activeScopeData.description, active, descriptions.localLanguage)}
-          onChange={(v) => patchField('description', v)}
-          placeholder={fallback('description')}
+          onChange={(md) => patchField('description', md)}
           disabled={readOnly}
-          rich count max={2000} rows={12}
+          ariaLabel={`Descriptif — ${resolveLanguageLabel(active, characteristics.languageOptions)}`}
+          variant="block"
         />
+        {(() => {
+          const len = readTranslatableField(activeScopeData.description, active, descriptions.localLanguage).length;
+          return <div className={`char-count${len > 2000 ? ' over' : ''}`}>{len} / 2000 caractères</div>;
+        })()}
       </Field>
 
       {/* « Descriptif du plan d'accès » moved to §02 Localisation (object_location.direction);

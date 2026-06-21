@@ -485,6 +485,13 @@ INSERT INTO ref_code (domain, code, name, description) VALUES
 ('menu_category','menu_degustation','Menu dégustation','Menus gastronomiques dégustation')
 ON CONFLICT DO NOTHING;
 
+-- §06 P3 — Types de document (object_document.role_id) ; « carte » = carte/menu PDF d'un restaurant
+INSERT INTO ref_code (domain, code, name, description) VALUES
+('document_type','carte','Carte / menu (PDF)','Carte ou menu téléchargeable d''un restaurant'),
+('document_type','brochure','Brochure','Brochure ou dépliant'),
+('document_type','certificat','Certificat','Certificat ou attestation')
+ON CONFLICT DO NOTHING;
+
 -- Tags alimentaires
 INSERT INTO ref_code (domain, code, name, description) VALUES
 ('dietary_tag','vegetarian', 'Végétarien', 'Sans viande ni poisson'),

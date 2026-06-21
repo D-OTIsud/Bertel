@@ -2450,7 +2450,8 @@ AS $$
   SELECT api.jsonb_pick_keys(p_payload, ARRAY[
     'capacity','amenities','environment_tags','payment_methods',
     'prices','discounts','group_policies','classifications','taxonomy','tags',
-    'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types'
+    'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types',
+    'menu_documents'
   ]);
 $$;
 
@@ -2504,6 +2505,7 @@ AS $$
     'capacity','amenities','environment_tags','payment_methods',
     'prices','discounts','group_policies','classifications','taxonomy','tags',
     'menus','cuisine_types','dietary_tags','allergens','associated_restaurants_cuisine_types',
+    'menu_documents',
     'legal_records','pet_policy','stay_policy','origins','org_links',
     'itinerary_details','itinerary','activity','outgoing_relations','incoming_relations',
     'fma','fma_occurrences','sustainability_labels','sustainability_actions','sustainability_action_labels',
@@ -4297,6 +4299,31 @@ BEGIN
             AND m2.is_active = TRUE
             AND (v_can_read_extended OR m2.visibility IS NULL OR m2.visibility = 'public')
         ) al
+      ), '[]'::jsonb)
+    );
+  END IF;
+
+  -- §06 P3 : cartes PDF du restaurant (object_document role 'carte' → ref_document).
+  -- Titre/validité portés par le LIEN (object_document) ; url depuis ref_document (lecture publique).
+  IF obj.object_type = 'RES' THEN
+    js := js || jsonb_build_object(
+      'menu_documents', COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'document_id', d.id,
+            'url', d.url,
+            'title', COALESCE(NULLIF(od.title, ''), d.title),
+            'valid_from', od.valid_from,
+            'valid_to', od.valid_to,
+            'position', od.position
+          )
+          ORDER BY od.position, d.title
+        )
+        FROM object_document od
+        JOIN ref_document d ON d.id = od.document_id
+        JOIN ref_code_document_type rt ON rt.id = od.role_id
+        WHERE od.object_id = obj.id
+          AND rt.code = 'carte'
       ), '[]'::jsonb)
     );
   END IF;

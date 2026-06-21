@@ -8,6 +8,7 @@ import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import { Input } from '@/components/ui/input';
 import { StatusPill } from '../common/StatusPill';
+import { CreateObjectButton } from '../../features/object-editor/create/CreateObjectButton';
 
 function pageLabelFromPath(pathname: string | null): string {
   if (!pathname || pathname === '/') return 'Accueil';
@@ -113,6 +114,7 @@ export function TopBar() {
         </label>
 
         <div className="flex items-center gap-2">
+          <CreateObjectButton />
           {networkStatus !== 'connected' ? (
             <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
           ) : null}

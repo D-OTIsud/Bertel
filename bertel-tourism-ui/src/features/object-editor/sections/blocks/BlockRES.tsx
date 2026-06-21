@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ChipMultiSelect, Field, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 import { MenuCard } from '../../widgets/MenuCard';
+import { MenuEditModal } from '../../widgets/MenuEditModal';
 import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
 
 /** A fresh, empty menu (titled container — no category; sections live on its dishes since §06 P2b). */
@@ -28,9 +30,22 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const openings = editor.draft.openings;
   const capacity = editor.draft.capacityPolicies;
   const activeMenus = menus.items.filter((menu) => menu.active).length;
+  // null = closed ; 'new' = creating ; { index } = editing an existing menu.
+  const [editing, setEditing] = useState<'new' | { index: number } | null>(null);
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
     editor.replaceModule('menus', { ...menus, items });
+  }
+  function updateMenu(index: number, patch: Partial<ObjectWorkspaceMenu>) {
+    replaceMenus(menus.items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+  function saveMenu(saved: ObjectWorkspaceMenu) {
+    if (editing === 'new') {
+      replaceMenus([...menus.items, saved]);
+    } else if (editing) {
+      replaceMenus(menus.items.map((m, i) => (i === editing.index ? saved : m)));
+    }
+    setEditing(null);
   }
 
   return (
@@ -63,8 +78,9 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         )}
       </Field>
 
-      {/* §06 P2b/P2c — Bloc B : menus structurés à 3 niveaux, dépliables. Chaque carte-menu se déploie
-          sur ses sections (Entrée/Plat/Dessert…) et ses plats (édition par plat dans une modale). */}
+      {/* §06 P2b/P2c — Bloc B : menus structurés à 3 niveaux. Les cartes-menus sont des affichages
+          DÉPLIABLES (lecture) ; la création/édition se fait dans une MODALE (titre → sections → plats,
+          édition par plat). Chaque menu = un object_menu ; la section vit sur le plat (section_id). */}
       <div className="chip-group__label" style={{ marginTop: 18 }}>
         Menus
       </div>
@@ -83,15 +99,14 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
                   key={menu.recordId ?? `menu-${index}`}
                   menu={menu}
                   sectionOptions={menus.categoryOptions}
-                  dietaryOptions={menus.dietaryTagOptions}
-                  allergenOptions={menus.allergenOptions}
-                  onChange={(updated) => replaceMenus(menus.items.map((m, i) => (i === index ? updated : m)))}
+                  onEdit={() => setEditing({ index })}
                   onDelete={() => replaceMenus(menus.items.filter((_, i) => i !== index))}
+                  onToggleActive={(active) => updateMenu(index, { active })}
                 />
               ))}
             </div>
           )}
-          <button type="button" className="rep-add" style={{ marginTop: 10 }} onClick={() => replaceMenus([...menus.items, createMenu(menus.items.length)])}>
+          <button type="button" className="rep-add" style={{ marginTop: 10 }} onClick={() => setEditing('new')}>
             <Plus size={14} aria-hidden /> Ajouter un menu
           </button>
         </>
@@ -105,6 +120,18 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         objectId={editor.objectId}
         canEdit={permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal}
       />
+
+      {editing !== null && (
+        <MenuEditModal
+          open
+          menu={editing === 'new' ? createMenu(menus.items.length) : menus.items[editing.index]}
+          sectionOptions={menus.categoryOptions}
+          dietaryOptions={menus.dietaryTagOptions}
+          allergenOptions={menus.allergenOptions}
+          onClose={() => setEditing(null)}
+          onSave={saveMenu}
+        />
+      )}
 
       {/* §48 single-owner: ces concerns vivent ailleurs — pointeurs « géré ailleurs » en bas de §06. */}
       <OwnedElsewhereNote

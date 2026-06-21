@@ -1,14 +1,7 @@
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
-import type { ObjectWorkspaceModules } from '../../../../services/object-workspace-parser';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockRES } from './BlockRES';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
-
-/** Reactive harness: re-renders BlockRES when the editor draft changes (needed for replaceModule flows). */
-function Harness({ modules }: { modules: ObjectWorkspaceModules }) {
-  const editor = useObjectEditorState('o1', modules);
-  return <BlockRES editor={editor} permissions={allowAll} />;
-}
 
 /**
  * §06 P1 — « Cuisines proposées » (Bloc A) is an OBJECT-LEVEL facet (object_cuisine_type),
@@ -57,8 +50,8 @@ describe('BlockRES — §06 P1 cuisine Bloc A (object-level, decoupled)', () => 
   });
 });
 
-describe('BlockRES — §06 menus dépliables (P2b/P2c)', () => {
-  it('lists existing menus as collapsible cards with a summary, expandable to the dishes', () => {
+describe('BlockRES — §06 menus : carte dépliable (lecture) + modale (édition)', () => {
+  it('shows collapsible read-only cards; expand reveals dishes; the pencil opens the edit modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
@@ -68,19 +61,23 @@ describe('BlockRES — §06 menus dépliables (P2b/P2c)', () => {
     expect(screen.queryByText('Cari')).not.toBeInTheDocument(); // collapsed
 
     fireEvent.click(screen.getByRole('button', { name: 'Déployer le menu' }));
-    expect(screen.getByText('Cari')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Modifier Cari/ })).toBeInTheDocument();
+    expect(screen.getByText('Cari')).toBeInTheDocument(); // read-only view
+    expect(screen.queryByRole('button', { name: /Modifier Cari/ })).not.toBeInTheDocument(); // no per-dish icon in the card
+
+    // editing is done in the modal, opened from the card's "Modifier le menu".
+    fireEvent.click(screen.getByRole('button', { name: /Modifier le menu/ }));
+    expect(screen.getByText(/Menu — Carte midi/)).toBeInTheDocument(); // MenuEditModal
   });
 
-  it('adds a new, auto-expanded menu from "Ajouter un menu"', () => {
+  it('opens the create modal from "Ajouter un menu"', () => {
     const modules = fullModulesFixture();
     modules.menus.items = [];
-    render(<Harness modules={modules} />);
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText(/Aucun menu pour le moment/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Ajouter un menu/ }));
-    // the fresh menu auto-expands → its title input is visible
-    expect(screen.getByPlaceholderText('Nom du menu')).toBeInTheDocument();
+    expect(screen.getByText(/Menu — Sans titre/)).toBeInTheDocument(); // MenuEditModal (new)
   });
 });
 

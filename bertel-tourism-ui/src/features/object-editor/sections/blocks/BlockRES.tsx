@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, UtensilsCrossed } from 'lucide-react';
 import { ChipMultiSelect, Field, Fs, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
@@ -24,9 +24,21 @@ function createMenu(index: number): ObjectWorkspaceMenu {
 }
 
 const MENU_CARD = {
-  display: 'flex', alignItems: 'center', gap: 10,
-  border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px',
+  display: 'flex', alignItems: 'center', gap: 12,
+  border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px',
+  background: 'var(--surface)', boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
 } as const;
+const MENU_ICON = {
+  display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0,
+  borderRadius: 10, background: 'var(--bg-tint)', color: 'var(--ink-2)',
+} as const;
+
+/** A one-line menu summary for the card: the sections present + the dish count. */
+function menuSummary(menu: ObjectWorkspaceMenu): string {
+  if (menu.items.length === 0) return 'Vide — « Modifier » pour composer le menu';
+  const sections = Array.from(new Set(menu.items.map((it) => it.sectionLabel).filter(Boolean)));
+  return `${sections.join(' · ') || 'Sans section'} · ${menu.items.length} plat(s)`;
+}
 
 export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
@@ -100,15 +112,25 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {menus.items.map((menu, index) => (
                 <div key={menu.recordId ?? `menu-${index}`} style={MENU_CARD}>
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ fontSize: 13 }}>{menu.name || 'Menu sans titre'}</strong>
-                    <div className="muted" style={{ fontSize: 11.5 }}>{menu.items.length} plat(s)</div>
+                  <span style={{ ...MENU_ICON, opacity: menu.active ? 1 : 0.5 }} aria-hidden>
+                    <UtensilsCrossed size={18} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0, opacity: menu.active ? 1 : 0.55 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2 }}>
+                      {menu.name || 'Menu sans titre'}
+                    </div>
+                    <div
+                      className="muted"
+                      style={{ fontSize: 12, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {menuSummary(menu)}
+                    </div>
                   </div>
                   <Toggle label="" on={menu.active} onChange={(active) => updateMenu(index, { active })} />
                   <button
                     type="button"
                     className="pill-mini"
-                    style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--surface)' }}
+                    style={{ cursor: 'pointer', border: '1px solid var(--line)', background: 'var(--bg-tint)', fontWeight: 600 }}
                     onClick={() => setEditing({ index })}
                   >
                     Modifier

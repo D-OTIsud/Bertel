@@ -55,8 +55,9 @@ describe('BlockRES — §06 P2b menus 3-niveaux (Menu → Sections → Plats)', 
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
-    // Fixture menu1 = "Carte midi" with 1 dish.
+    // Fixture menu1 = "Carte midi" with 1 dish in "Plats principaux".
     expect(screen.getByText('Carte midi')).toBeInTheDocument();
+    expect(screen.getByText(/Plats principaux · 1 plat\(s\)/)).toBeInTheDocument(); // card summary
     fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
     expect(screen.getByText(/Menu — Carte midi/)).toBeInTheDocument(); // modal title
     expect(screen.getByDisplayValue('Carte midi')).toBeInTheDocument(); // editable menu title

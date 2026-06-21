@@ -2073,11 +2073,11 @@ AS $$
         NULLIF(ol.city, '')
       )
     ),
-    'description',  LEFT(COALESCE(
+    'description',  LEFT(regexp_replace(api.strip_markdown(COALESCE(
       api.i18n_pick(d.description_chapo_i18n, api.pick_lang(p_lang_prefs), 'fr'),
       d.description_chapo,
-      LEFT(d.description, 200)
-    ), 200),
+      d.description
+    )), '\s+', ' ', 'g'), 200),
     'taxonomy', api.get_object_taxonomy_compact(o.id, p_lang_prefs),
     'tags', api.get_object_tags_compact(o.id, p_lang_prefs),
     'amenity_codes', api.get_object_amenity_codes_compact(o.id),
@@ -2379,11 +2379,11 @@ AS $$
             NULLIF(b.city, '')
           )
         ),
-        'description', LEFT(COALESCE(
+        'description', LEFT(regexp_replace(api.strip_markdown(COALESCE(
           api.i18n_pick(b.description_chapo_i18n, lang.code, 'fr'),
           b.description_chapo,
-          LEFT(b.description, 200)
-        ), 200),
+          b.description
+        )), '\s+', ' ', 'g'), 200),
         'taxonomy', COALESCE(taxonomy.payload, '[]'::jsonb),
         'tags', COALESCE(tags.payload, '[]'::jsonb),
         'amenity_codes', COALESCE(to_jsonb(b.cached_amenity_codes), '[]'::jsonb),
@@ -2836,30 +2836,22 @@ BEGIN
         LIMIT 1
       )
       SELECT jsonb_build_object(
-        'description', 
-        CASE 
-          WHEN api.i18n_pick(d.description_i18n, lang, 'fr') IS NOT NULL 
-          THEN api.i18n_pick(d.description_i18n, lang, 'fr')
-          ELSE d.description
-        END,
+        'description',
+        api.strip_markdown(COALESCE(api.i18n_pick(d.description_i18n, lang, 'fr'), d.description)),
+        'description_md',
+        COALESCE(api.i18n_pick(d.description_i18n, lang, 'fr'), d.description),
         'description_chapo',
-        CASE 
-          WHEN api.i18n_pick(d.description_chapo_i18n, lang, 'fr') IS NOT NULL 
-          THEN api.i18n_pick(d.description_chapo_i18n, lang, 'fr')
-          ELSE d.description_chapo
-        END,
+        api.strip_markdown(COALESCE(api.i18n_pick(d.description_chapo_i18n, lang, 'fr'), d.description_chapo)),
+        'description_chapo_md',
+        COALESCE(api.i18n_pick(d.description_chapo_i18n, lang, 'fr'), d.description_chapo),
         'description_mobile',
-        CASE 
-          WHEN api.i18n_pick(d.description_mobile_i18n, lang, 'fr') IS NOT NULL 
-          THEN api.i18n_pick(d.description_mobile_i18n, lang, 'fr')
-          ELSE d.description_mobile
-        END,
+        api.strip_markdown(COALESCE(api.i18n_pick(d.description_mobile_i18n, lang, 'fr'), d.description_mobile)),
+        'description_mobile_md',
+        COALESCE(api.i18n_pick(d.description_mobile_i18n, lang, 'fr'), d.description_mobile),
         'description_edition',
-        CASE 
-          WHEN api.i18n_pick(d.description_edition_i18n, lang, 'fr') IS NOT NULL 
-          THEN api.i18n_pick(d.description_edition_i18n, lang, 'fr')
-          ELSE d.description_edition
-        END,
+        api.strip_markdown(COALESCE(api.i18n_pick(d.description_edition_i18n, lang, 'fr'), d.description_edition)),
+        'description_edition_md',
+        COALESCE(api.i18n_pick(d.description_edition_i18n, lang, 'fr'), d.description_edition),
         'description_offre_hors_zone',
         CASE 
           WHEN api.i18n_pick(d.description_offre_hors_zone_i18n, lang, 'fr') IS NOT NULL 
@@ -2873,11 +2865,9 @@ BEGIN
           ELSE d.sanitary_measures
         END,
         'description_adapted',
-        CASE 
-          WHEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr') IS NOT NULL 
-          THEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr')
-          ELSE d.description_adapted
-        END,
+        api.strip_markdown(COALESCE(api.i18n_pick(d.description_adapted_i18n, lang, 'fr'), d.description_adapted)),
+        'description_adapted_md',
+        COALESCE(api.i18n_pick(d.description_adapted_i18n, lang, 'fr'), d.description_adapted),
         'visibility', d.visibility,
         'position', d.position,
         'created_at', d.created_at,
@@ -2901,30 +2891,22 @@ BEGIN
         SELECT jsonb_agg(
           jsonb_build_object(
             'id', d.id,
-            'description', 
-            CASE 
-              WHEN api.i18n_pick(d.description_i18n, lang, 'fr') IS NOT NULL 
-              THEN api.i18n_pick(d.description_i18n, lang, 'fr')
-              ELSE d.description
-            END,
+            'description',
+            api.strip_markdown(COALESCE(api.i18n_pick(d.description_i18n, lang, 'fr'), d.description)),
+            'description_md',
+            COALESCE(api.i18n_pick(d.description_i18n, lang, 'fr'), d.description),
             'description_chapo',
-            CASE 
-              WHEN api.i18n_pick(d.description_chapo_i18n, lang, 'fr') IS NOT NULL 
-              THEN api.i18n_pick(d.description_chapo_i18n, lang, 'fr')
-              ELSE d.description_chapo
-            END,
+            api.strip_markdown(COALESCE(api.i18n_pick(d.description_chapo_i18n, lang, 'fr'), d.description_chapo)),
+            'description_chapo_md',
+            COALESCE(api.i18n_pick(d.description_chapo_i18n, lang, 'fr'), d.description_chapo),
             'description_mobile',
-            CASE 
-              WHEN api.i18n_pick(d.description_mobile_i18n, lang, 'fr') IS NOT NULL 
-              THEN api.i18n_pick(d.description_mobile_i18n, lang, 'fr')
-              ELSE d.description_mobile
-            END,
+            api.strip_markdown(COALESCE(api.i18n_pick(d.description_mobile_i18n, lang, 'fr'), d.description_mobile)),
+            'description_mobile_md',
+            COALESCE(api.i18n_pick(d.description_mobile_i18n, lang, 'fr'), d.description_mobile),
             'description_edition',
-            CASE 
-              WHEN api.i18n_pick(d.description_edition_i18n, lang, 'fr') IS NOT NULL 
-              THEN api.i18n_pick(d.description_edition_i18n, lang, 'fr')
-              ELSE d.description_edition
-            END,
+            api.strip_markdown(COALESCE(api.i18n_pick(d.description_edition_i18n, lang, 'fr'), d.description_edition)),
+            'description_edition_md',
+            COALESCE(api.i18n_pick(d.description_edition_i18n, lang, 'fr'), d.description_edition),
             'description_offre_hors_zone',
             CASE 
               WHEN api.i18n_pick(d.description_offre_hors_zone_i18n, lang, 'fr') IS NOT NULL 
@@ -2938,11 +2920,9 @@ BEGIN
               ELSE d.sanitary_measures
             END,
             'description_adapted',
-            CASE 
-              WHEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr') IS NOT NULL 
-              THEN api.i18n_pick(d.description_adapted_i18n, lang, 'fr')
-              ELSE d.description_adapted
-            END,
+            api.strip_markdown(COALESCE(api.i18n_pick(d.description_adapted_i18n, lang, 'fr'), d.description_adapted)),
+            'description_adapted_md',
+            COALESCE(api.i18n_pick(d.description_adapted_i18n, lang, 'fr'), d.description_adapted),
             'visibility', d.visibility,
             'position', d.position,
             'created_at', d.created_at,
@@ -5039,7 +5019,7 @@ AS $$
       o.name AS object_name,
       po.page_number,
       po.workflow_status,
-      COALESCE(po.custom_print_text, od.description_edition, od.description) AS print_text,
+      COALESCE(po.custom_print_text, api.strip_markdown(od.description_edition), api.strip_markdown(od.description)) AS print_text,
       ol.address1,
       ol.postcode,
       ol.city,
@@ -7043,11 +7023,11 @@ AS $$
         NULLIF(ol.city, '')
       )
     ),
-    'description', LEFT(COALESCE(
+    'description', LEFT(regexp_replace(api.strip_markdown(COALESCE(
       api.i18n_pick(d.description_chapo_i18n, api.pick_lang(p_lang_prefs), 'fr'),
       d.description_chapo,
-      LEFT(d.description, 200)
-    ), 200),
+      d.description
+    )), '\s+', ' ', 'g'), 200),
     'rating', o.cached_rating,
     'price', CASE
       WHEN o.cached_min_price IS NOT NULL THEN jsonb_build_object('amount', o.cached_min_price, 'currency', 'EUR')
@@ -8806,7 +8786,13 @@ BEGIN
     'open_now', o.cached_is_open_now,
 
     -- Prefer description_adapted, fallback to description
-    'description', COALESCE(
+    'description', api.strip_markdown(COALESCE(
+      api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
+      d.description_adapted,
+      api.i18n_pick(d.description_i18n, lang, 'fr'),
+      d.description
+    )),
+    'description_md', COALESCE(
       api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
       d.description_adapted,
       api.i18n_pick(d.description_i18n, lang, 'fr'),
@@ -8814,7 +8800,13 @@ BEGIN
     ),
 
     -- Prefer description_adapted (short) for chapo, fallback to description_chapo
-    'description_chapo', COALESCE(
+    'description_chapo', api.strip_markdown(COALESCE(
+      api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
+      d.description_adapted,
+      api.i18n_pick(d.description_chapo_i18n, lang, 'fr'),
+      d.description_chapo
+    )),
+    'description_chapo_md', COALESCE(
       api.i18n_pick(d.description_adapted_i18n, lang, 'fr'),
       d.description_adapted,
       api.i18n_pick(d.description_chapo_i18n, lang, 'fr'),

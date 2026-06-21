@@ -372,11 +372,11 @@ AS $$
             NULLIF(b.city, '')
           )
         ),
-        'description', LEFT(COALESCE(
+        'description', LEFT(regexp_replace(api.strip_markdown(COALESCE(
           api.i18n_pick(b.description_chapo_i18n, lang.code, 'fr'),
           b.description_chapo,
-          LEFT(b.description, 200)
-        ), 200),
+          b.description
+        )), '\s+', ' ', 'g'), 200),
         'taxonomy', COALESCE(taxonomy.payload, '[]'::jsonb),
         'tags', COALESCE(tags.payload, '[]'::jsonb),
         'amenity_codes', COALESCE(to_jsonb(b.cached_amenity_codes), '[]'::jsonb),

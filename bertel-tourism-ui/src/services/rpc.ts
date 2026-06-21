@@ -463,3 +463,58 @@ export async function listPublicationBoard(): Promise<PublicationCard[]> {
   if (useSessionStore.getState().demoMode) return mockPublicationCards;
   return [];
 }
+
+// --- Object creation (B1, decision log §105) ------------------------------------
+// Réunion-only platform: new objects carry the 'RUN' region prefix in their generated
+// id (e.g. HOTRUN…), matching every existing object, instead of the RPC's 'GEN' fallback.
+export const DEFAULT_REGION_CODE = 'RUN';
+
+function mapCreateObjectError(message: string): Error {
+  if (/NO_AUTH_CONTEXT|not[ _-]*authenticat/i.test(message)) {
+    return new Error('Session expirée — reconnectez-vous pour créer une fiche.');
+  }
+  if (/FORBIDDEN/i.test(message)) {
+    return new Error(
+      "Vous n'avez pas la permission de créer une fiche (un rattachement à une organisation active et la permission « create_object » sont requis).",
+    );
+  }
+  if (/INVALID_OBJECT_TYPE/i.test(message)) {
+    return new Error("Type de fiche invalide.");
+  }
+  if (/MISSING_REQUIRED_FIELD/i.test(message)) {
+    return new Error('Le nom de la fiche est obligatoire.');
+  }
+  return new Error("Impossible de créer la fiche pour le moment.");
+}
+
+/**
+ * Create a brand-new object via the live `api.rpc_create_object` RPC and return its
+ * generated id. The RPC forces `status='draft'` + `created_by=auth.uid()` and auto-attaches
+ * the creator's ORG as publisher (trigger), so the creator can immediately author the new
+ * object in the full-page editor. This is the ONLY object-creation write path.
+ */
+export async function createObject(input: { type: string; name: string }): Promise<string> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return `DEMO-${input.type}-${Date.now()}`;
+  }
+
+  const client = getApiClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour créer la fiche.');
+  }
+
+  const { data, error } = await client.schema('api').rpc('rpc_create_object', {
+    p_object_type: input.type,
+    p_name: input.name,
+    p_region_code: DEFAULT_REGION_CODE,
+  });
+
+  if (error) {
+    throw mapCreateObjectError(error.message ?? '');
+  }
+  if (typeof data !== 'string' || data.length === 0) {
+    throw new Error('La création a échoué (aucun identifiant renvoyé).');
+  }
+  return data;
+}

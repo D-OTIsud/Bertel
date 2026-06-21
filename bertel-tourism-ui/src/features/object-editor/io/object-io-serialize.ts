@@ -81,14 +81,14 @@ export function parseImportedObjectJson(raw: string): ImportParseResult {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { ok: false, error: 'Fichier JSON invalide : le contenu n\'a pas pu etre lu.' };
+    return { ok: false, error: 'Fichier JSON invalide : le contenu n’a pas pu être lu.' };
   }
   if (!isObject(parsed)) {
-    return { ok: false, error: 'Fichier JSON invalide : un objet d\'export etait attendu.' };
+    return { ok: false, error: 'Fichier JSON invalide : un objet d’export était attendu.' };
   }
   const modulesRaw = (parsed as Record<string, unknown>).modules;
   if (!isObject(modulesRaw)) {
-    return { ok: false, error: 'Fichier JSON invalide : aucun bloc "modules" exploitable.' };
+    return { ok: false, error: 'Fichier JSON invalide : aucun bloc « modules » exploitable.' };
   }
 
   const modules: Partial<ObjectWorkspaceModules> = {};
@@ -103,7 +103,7 @@ export function parseImportedObjectJson(raw: string): ImportParseResult {
   }
 
   if (Object.keys(modules).length === 0) {
-    return { ok: false, error: 'Fichier JSON invalide : aucun module reconnu a importer.' };
+    return { ok: false, error: 'Fichier JSON invalide : aucun module reconnu à importer.' };
   }
   return { ok: true, modules };
 }

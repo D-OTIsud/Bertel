@@ -46,6 +46,12 @@ describe('SectionTags', () => {
     expect(result.current.dirtySections.tags).toBe(true);
   });
 
+  it('no longer offers an on-the-fly « Couleur » recolor button on tag rows (recolor is admin-only, future list-admin page)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionTags editor={result.current} permissions={allowAll} objectId="o1" />);
+    expect(screen.queryByRole('button', { name: /Couleur/i })).not.toBeInTheDocument();
+  });
+
   it('renders "Ajouter un tag" as a real add button (rep-add affordance), not bare text', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionTags editor={result.current} permissions={allowAll} objectId="o1" />);

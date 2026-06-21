@@ -12,13 +12,15 @@ import type { ObjectWorkspaceTagItem, ObjectWorkspaceTagsModule } from '../../..
  *
  * Tags are the curated COLORED display layer shown on Explorer cards + the map. The list IS the
  * priority order (drag to reorder → tag_link.position, which the card now honors). Color is GLOBAL
- * per tag (ref_tag.color, hex) — shown read-only on each chip and edited in the modal (api.set_tag_color).
- * "Ajouter un tag" opens a modal to search existing tags or create a new one (dedup-guarded,
- * api.create_tag). The right pane is the REAL Explorer card (shared ResultCardView) built from the
- * live draft, so reorder/recolor/add/remove are reflected truthfully and instantly.
+ * per tag (ref_tag.color, hex) and is chosen ONCE, at creation, in the "Ajouter un tag" modal —
+ * shown read-only on each chip afterwards. Editing/recoloring an existing tag is an admin action
+ * that lives in the (future) list-administration page, NOT here: there is deliberately no on-the-fly
+ * recolor control in the editor, because the color is global (a recolor would silently affect every
+ * object carrying that tag). The right pane is the REAL Explorer card (shared ResultCardView) built
+ * from the live draft, so reorder/add/remove are reflected truthfully and instantly.
  */
 
-type ModalState = { open: boolean; mode: 'add' | 'color'; editTag: ObjectWorkspaceTagItem | null };
+type ModalState = { open: boolean };
 
 function sameTag(a: ObjectWorkspaceTagItem, b: ObjectWorkspaceTagItem): boolean {
   return a.tagId && b.tagId ? a.tagId === b.tagId : a.slug === b.slug;
@@ -29,7 +31,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
   const displayed = module.displayed;
   const writable = permissions?.tags?.canDirectWrite ?? false;
   const disabledReason = permissions?.tags?.disabledReason ?? null;
-  const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', editTag: null });
+  const [modal, setModal] = useState<ModalState>({ open: false });
 
   const previewCard = buildPreviewCardFromDraft(editor, typeCode);
 
@@ -40,7 +42,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
     <button
       type="button"
       className="rep-add"
-      onClick={() => setModal({ open: true, mode: 'add', editTag: null })}
+      onClick={() => setModal({ open: true })}
       style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
     >
       + Ajouter un tag
@@ -74,14 +76,6 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
     });
   }
 
-  function recolor(tagId: string, color: string) {
-    setModule({
-      ...module,
-      displayed: displayed.map((t) => (t.tagId === tagId ? { ...t, color } : t)),
-      library: module.library.map((t) => (t.tagId === tagId ? { ...t, color } : t)),
-    });
-  }
-
   return (
     <Fs
       num="11"
@@ -90,7 +84,17 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
       folded={folded}
       pill={{ tone: 'ok', label: `${displayed.length} affichée(s)` }}
     >
-      <div className="grid-2-1" style={{ marginBottom: 4 }}>
+      {/* 50/50 split (list ↔ preview): self-contained responsive grid via auto-fit + minmax —
+          two equal columns when wide, single column under ~580px — so we don't override the
+          shared .grid-2-1 (2fr 1fr) used elsewhere, nor fight its mobile media query. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 12,
+          marginBottom: 4,
+        }}
+      >
         <div>
           <div className="chip-group__label" style={{ marginTop: 0 }}>
             Tags affichés en priorité
@@ -108,7 +112,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
               items={displayed}
               getId={(t) => t.tagId || t.slug}
               onReorder={(next) => setModule({ ...module, displayed: next })}
-              columns="14px 1fr auto auto"
+              columns="14px 1fr auto"
               renderItem={(tag, index) => (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
@@ -128,15 +132,6 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
                       {tag.label}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={!writable}
-                    style={{ fontSize: 11 }}
-                    onClick={() => setModal({ open: true, mode: 'color', editTag: tag })}
-                  >
-                    Couleur
-                  </button>
                   <div className="rep-row__act">
                     <button
                       type="button"
@@ -172,14 +167,11 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
 
       <TagPickerModal
         open={modal.open}
-        mode={modal.mode}
         anchorObjectId={objectId}
         library={module.library}
         displayed={displayed}
-        editTag={modal.editTag}
-        onClose={() => setModal((m) => ({ ...m, open: false }))}
+        onClose={() => setModal({ open: false })}
         onAdd={addTag}
-        onRecolor={recolor}
       />
     </Fs>
   );

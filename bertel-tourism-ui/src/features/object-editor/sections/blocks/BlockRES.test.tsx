@@ -46,19 +46,31 @@ describe('BlockRES — §06 P1 cuisine Bloc A (object-level, decoupled)', () => 
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getByText(/Ajouter un menu \/ une carte/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ajouter un menu/ })).toBeInTheDocument();
   });
 });
 
-describe('BlockRES — §06 P2 carte structurée (item-par-item)', () => {
-  it('opens the dish editor from the "Plats" button of a menu section', () => {
+describe('BlockRES — §06 P2b menus 3-niveaux (Menu → Sections → Plats)', () => {
+  it('lists existing menus and opens the menu editor on "Modifier"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
-    // Fixture menu1 has 1 dish → button reads "Plats (1)".
-    fireEvent.click(screen.getByRole('button', { name: /Plats \(1\)/ }));
-    expect(screen.getByText(/Plats — Carte midi/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ajouter un plat/ })).toBeInTheDocument();
+    // Fixture menu1 = "Carte midi" with 1 dish.
+    expect(screen.getByText('Carte midi')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+    expect(screen.getByText(/Menu — Carte midi/)).toBeInTheDocument(); // modal title
+    expect(screen.getByDisplayValue('Carte midi')).toBeInTheDocument(); // editable menu title
+  });
+
+  it('opens an empty menu editor from "Ajouter un menu"', () => {
+    const modules = fullModulesFixture();
+    modules.menus.items = [];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(/Aucun menu pour le moment/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un menu/ }));
+    expect(screen.getByText(/Menu — Sans titre/)).toBeInTheDocument();
   });
 });
 

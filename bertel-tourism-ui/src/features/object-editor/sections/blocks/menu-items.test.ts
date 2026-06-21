@@ -1,4 +1,4 @@
-import { addMenuItem, createMenuItem, pruneBlankItems, removeMenuItem, toggleItemCode, updateMenuItem } from './menu-items';
+import { addMenuItem, createMenuItem, groupItemsBySection, pruneBlankItems, removeMenuItem, toggleItemCode, updateMenuItem } from './menu-items';
 
 describe('menu-items helpers (§06 P2)', () => {
   it('createMenuItem returns an empty 1-based dish with EUR + available + empty codes', () => {
@@ -47,5 +47,23 @@ describe('menu-items helpers (§06 P2)', () => {
     const priced = updateMenuItem([createMenuItem(1)], 0, { price: '12' })[0];
     const blank = createMenuItem(2);
     expect(pruneBlankItems([named, priced, blank])).toEqual([named, priced]);
+  });
+
+  it('createMenuItem stamps the section it was created in', () => {
+    const item = createMenuItem(0, 'entree', 'Entrées');
+    expect(item).toMatchObject({ sectionCode: 'entree', sectionLabel: 'Entrées' });
+  });
+
+  it('groupItemsBySection orders sections by the catalog and keeps each dish flat index', () => {
+    const order = [{ code: 'entree', label: 'Entrées' }, { code: 'main', label: 'Plats' }, { code: 'dessert', label: 'Desserts' }];
+    const items = [
+      createMenuItem(0, 'main', 'Plats'),
+      createMenuItem(1, 'entree', 'Entrées'),
+      createMenuItem(2, 'main', 'Plats'),
+    ];
+    const groups = groupItemsBySection(items, order, [{ code: 'dessert', label: 'Desserts' }]);
+    expect(groups.map((g) => g.code)).toEqual(['entree', 'main', 'dessert']); // catalog order, incl. empty extra
+    expect(groups[1].dishes.map((d) => d.index)).toEqual([0, 2]); // flat indices preserved for in-place edits
+    expect(groups[2].dishes).toHaveLength(0); // the empty extra section
   });
 });

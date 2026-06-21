@@ -1,15 +1,27 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MenuItemsModal } from './MenuItemsModal';
+import { MenuEditModal } from './MenuItemsModal';
+import type { ObjectWorkspaceMenu } from '../../../services/object-workspace-parser';
 
+const SECTIONS = [
+  { id: 'entree', code: 'entree', label: 'Entrées' },
+  { id: 'main', code: 'main', label: 'Plats' },
+];
 const DIETARY = [{ id: 'd1', code: 'vegan', label: 'Végan' }];
 const ALLERGEN = [{ id: 'a1', code: 'gluten', label: 'Gluten' }];
 
-function renderModal(onSave = jest.fn()) {
+function baseMenu(items: ObjectWorkspaceMenu['items'] = []): ObjectWorkspaceMenu {
+  return {
+    recordId: null, categoryId: '', categoryCode: '', categoryLabel: '',
+    name: '', description: '', active: true, visibility: 'public', position: '1', items,
+  };
+}
+
+function renderModal(onSave = jest.fn(), menu = baseMenu()) {
   render(
-    <MenuItemsModal
+    <MenuEditModal
       open
-      menuName="Carte midi"
-      items={[]}
+      menu={menu}
+      sectionOptions={SECTIONS}
       dietaryOptions={DIETARY}
       allergenOptions={ALLERGEN}
       priceUnitOptions={[]}
@@ -20,34 +32,44 @@ function renderModal(onSave = jest.fn()) {
   return onSave;
 }
 
-describe('MenuItemsModal (§06 P2 structured carte)', () => {
-  it('adds a dish and returns it on save', () => {
+describe('MenuEditModal (§06 P2b — Menu → Sections → Plats)', () => {
+  it('builds a menu: title, a section, then a dish in that section', () => {
     const onSave = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat/ }));
-    fireEvent.change(screen.getByPlaceholderText('ex. Cari poulet'), { target: { value: 'Bouchons' } });
+
+    fireEvent.change(screen.getByPlaceholderText('Nom du menu'), { target: { value: 'Carte midi' } });
+
+    // add the "Entrées" section
+    fireEvent.change(screen.getByLabelText('Choisir une section'), { target: { value: 'entree' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+
+    // add a dish to it
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat à « Entrées »/ }));
+    fireEvent.change(screen.getByPlaceholderText('ex. Cari poulet'), { target: { value: 'Samoussas' } });
+
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    const saved = onSave.mock.calls[0][0];
-    expect(saved).toHaveLength(1);
-    expect(saved[0]).toMatchObject({ name: 'Bouchons', currency: 'EUR', available: true });
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMenu;
+    expect(saved.name).toBe('Carte midi');
+    expect(saved.items).toHaveLength(1);
+    expect(saved.items[0]).toMatchObject({ name: 'Samoussas', sectionCode: 'entree', sectionLabel: 'Entrées' });
   });
 
-  it('prunes a blank dish on save (no name, no price)', () => {
-    const onSave = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat/ }));
+  it('groups existing dishes under their section and prunes blanks', () => {
+    const menu = baseMenu([
+      { recordId: 'mi1', name: 'Bouchons', description: '', price: '6', currency: 'EUR', kindId: '', kindCode: '', kindLabel: '', unitId: '', unitCode: '', unitLabel: '', mediaIds: [], available: true, position: '1', dietaryTagCodes: [], allergenCodes: [], cuisineTypeCodes: [], sectionCode: 'entree', sectionId: 'entree', sectionLabel: 'Entrées' },
+    ]);
+    const onSave = renderModal(jest.fn(), menu);
+
+    expect(screen.getByText('Entrées')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Bouchons')).toBeInTheDocument();
+
+    // add a second, blank dish in Entrées → pruned on save
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat à « Entrées »/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(onSave).toHaveBeenCalledWith([]);
-  });
-
-  it('toggles a dietary tag onto the dish', () => {
-    const onSave = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Ajouter un plat/ }));
-    fireEvent.change(screen.getByPlaceholderText('ex. Cari poulet'), { target: { value: 'Salade' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Végan' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
-
-    expect(onSave.mock.calls[0][0][0].dietaryTagCodes).toEqual(['vegan']);
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMenu;
+    expect(saved.items).toHaveLength(1);
+    expect(saved.items[0].name).toBe('Bouchons');
   });
 });

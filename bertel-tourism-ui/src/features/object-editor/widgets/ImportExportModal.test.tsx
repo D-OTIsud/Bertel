@@ -59,17 +59,7 @@ describe('ImportExportModal', () => {
   });
 
   it('annonce que l’export reflète la base, pas l’écran', () => {
-    render(
-      <ImportExportModal
-        open
-        onClose={() => {}}
-        onExportJson={() => {}}
-        onExportCsv={() => {}}
-        onExportPdf={() => {}}
-        onImportFile={() => {}}
-        importError={null}
-      />,
-    );
+    setup();
     expect(screen.getByText(/telle qu.?enregistrée en base/i)).toBeInTheDocument();
   });
 });

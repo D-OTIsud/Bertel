@@ -178,8 +178,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       if (editor.isDirty) {
         setStatusMessage(`Export basé sur la fiche enregistrée — vos modifications non sauvegardées n'y figurent pas.`);
       }
-      const meta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
-      downloadTextFile(`${objectId}.json`, 'application/json', serializeObjectJson(stripCatalogOptions(ws.modules), meta));
+      const ioMeta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
+      downloadTextFile(`${objectId}.json`, 'application/json', serializeObjectJson(stripCatalogOptions(ws.modules), ioMeta));
     } catch (error) {
       setStatusMessage(error instanceof Error ? `Export impossible : ${error.message}` : 'Export impossible.');
     }
@@ -188,8 +188,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   async function handleExportCsv() {
     try {
       const ws = await getObjectWorkspaceResource(objectId, langPrefs);
-      const meta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
-      downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(ws.modules, meta));
+      const ioMeta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
+      downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(ws.modules, ioMeta));
     } catch (error) {
       setStatusMessage(error instanceof Error ? `Export impossible : ${error.message}` : 'Export impossible.');
     }

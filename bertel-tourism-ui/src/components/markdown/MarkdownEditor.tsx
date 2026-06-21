@@ -15,6 +15,8 @@ type MarkdownEditorProps = {
   onChange: (markdown: string) => void;
   disabled?: boolean;
   ariaLabel: string;
+  /** 'block' (default): full subset incl. headings/lists/quote. 'inline': bold/italic/link only (teasers). */
+  variant?: 'block' | 'inline';
 };
 
 type ToolBtnProps = {
@@ -57,18 +59,23 @@ function setLink(editor: Editor): void {
   editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, variant }: { editor: Editor; variant: 'block' | 'inline' }) {
+  const block = variant !== 'inline';
   return (
     <div className="md-editor__toolbar" role="toolbar" aria-label="Mise en forme">
-      <ToolBtn label="Titre" active={editor.isActive('heading', { level: 2 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-        <Heading2 size={16} aria-hidden />
-      </ToolBtn>
-      <ToolBtn label="Sous-titre" active={editor.isActive('heading', { level: 3 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-        <Heading3 size={16} aria-hidden />
-      </ToolBtn>
-      <span className="md-editor__sep" aria-hidden />
+      {block && (
+        <>
+          <ToolBtn label="Titre" active={editor.isActive('heading', { level: 2 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+            <Heading2 size={16} aria-hidden />
+          </ToolBtn>
+          <ToolBtn label="Sous-titre" active={editor.isActive('heading', { level: 3 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+            <Heading3 size={16} aria-hidden />
+          </ToolBtn>
+          <span className="md-editor__sep" aria-hidden />
+        </>
+      )}
       <ToolBtn label="Gras" active={editor.isActive('bold')}
         onClick={() => editor.chain().focus().toggleBold().run()}>
         <BoldIcon size={16} aria-hidden />
@@ -78,18 +85,22 @@ function Toolbar({ editor }: { editor: Editor }) {
         <ItalicIcon size={16} aria-hidden />
       </ToolBtn>
       <span className="md-editor__sep" aria-hidden />
-      <ToolBtn label="Liste à puces" active={editor.isActive('bulletList')}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}>
-        <List size={16} aria-hidden />
-      </ToolBtn>
-      <ToolBtn label="Liste numérotée" active={editor.isActive('orderedList')}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-        <ListOrdered size={16} aria-hidden />
-      </ToolBtn>
-      <ToolBtn label="Citation" active={editor.isActive('blockquote')}
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-        <Quote size={16} aria-hidden />
-      </ToolBtn>
+      {block && (
+        <>
+          <ToolBtn label="Liste à puces" active={editor.isActive('bulletList')}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List size={16} aria-hidden />
+          </ToolBtn>
+          <ToolBtn label="Liste numérotée" active={editor.isActive('orderedList')}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered size={16} aria-hidden />
+          </ToolBtn>
+          <ToolBtn label="Citation" active={editor.isActive('blockquote')}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quote size={16} aria-hidden />
+          </ToolBtn>
+        </>
+      )}
       <ToolBtn label="Lien" active={editor.isActive('link')} onClick={() => setLink(editor)}>
         <LinkIcon size={16} aria-hidden />
       </ToolBtn>
@@ -109,7 +120,7 @@ function Toolbar({ editor }: { editor: Editor }) {
 /** TipTap WYSIWYG bound to a Markdown string. Constrained to the §10 subset:
  *  H2/H3, bold, italic, bullet/ordered lists, blockquote, links. No raw HTML in or out
  *  (Markdown.configure({ html: false })). value/onChange are Markdown — the canonical store. */
-export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, disabled, ariaLabel, variant = 'block' }: MarkdownEditorProps) {
   // Keep onChange in a ref so the once-bound onUpdate callback never calls a stale closure
   // (the parent passes a fresh arrow each render — e.g. one closing over the active language).
   const onChangeRef = useRef(onChange);
@@ -120,7 +131,10 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3] },
+        heading: variant === 'inline' ? false : { levels: [2, 3] },
+        bulletList: variant === 'inline' ? false : undefined,
+        orderedList: variant === 'inline' ? false : undefined,
+        blockquote: variant === 'inline' ? false : undefined,
         codeBlock: false,
         code: false,
         horizontalRule: false,
@@ -163,7 +177,7 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel }: Markdow
 
   return (
     <div className="md-editor">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} variant={variant} />
       <EditorContent editor={editor} />
     </div>
   );

@@ -111,8 +111,12 @@ export function parseImportedObjectJson(raw: string): ImportParseResult {
 /** Catalog/option arrays are editor-load reference data (dropdown choices), NOT object
  *  data. They follow the `*Options` naming convention; taxonomy nests its catalog under
  *  `domains[].nodes` (the object's own choice lives in `domains[].assignment`). */
+
+/** Pure catalog keys that don't follow the `*Options` convention (object data lives elsewhere). */
+const EXTRA_CATALOG_KEYS = new Set<string>(['amenityGroups']);
+
 function isCatalogKey(key: string): boolean {
-  return key.endsWith('Options');
+  return key.endsWith('Options') || EXTRA_CATALOG_KEYS.has(key);
 }
 
 function stripModuleCatalogs(module: unknown): unknown {
@@ -138,7 +142,7 @@ function stripModuleCatalogs(module: unknown): unknown {
 export function stripCatalogOptions(modules: ObjectWorkspaceModules): ObjectWorkspaceModules {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(modules)) {
-    out[key] = stripModuleCatalogs(value);
+    out[key] = key === 'sustainability' ? stripSustainabilityCatalog(value) : stripModuleCatalogs(value);
   }
   return out as unknown as ObjectWorkspaceModules;
 }
@@ -174,6 +178,82 @@ function restoreModuleCatalogs(incoming: unknown, draftModule: unknown): unknown
   return out;
 }
 
+/** A sustainability action carries data when selected, annotated, or document-linked. */
+function actionHasData(action: unknown): boolean {
+  return (
+    isObject(action) &&
+    (action.selected === true ||
+      (typeof action.note === 'string' && action.note !== '') ||
+      (typeof action.documentId === 'string' && action.documentId !== ''))
+  );
+}
+
+/** Sustainability nests the V5 vocabulary as categories[].actions[] with the object's data
+ *  (selected/note/documentId) on each action. Export keeps only actions carrying data and
+ *  drops categories left empty. */
+function stripSustainabilityCatalog(module: unknown): unknown {
+  if (!isObject(module) || !Array.isArray(module.categories)) {
+    return stripModuleCatalogs(module);
+  }
+  const base = stripModuleCatalogs(module) as Record<string, unknown>;
+  base.categories = (module.categories as unknown[])
+    .map((cat) =>
+      isObject(cat) && Array.isArray(cat.actions)
+        ? { ...cat, actions: (cat.actions as unknown[]).filter(actionHasData) }
+        : cat,
+    )
+    .filter((cat) => !isObject(cat) || !Array.isArray(cat.actions) || (cat.actions as unknown[]).length > 0);
+  return base;
+}
+
+/** Import: rebuild the full vocabulary from the live draft, overlaying the file's selection
+ *  per (categoryCode, actionCode); actions absent from the file reset to unselected (file wins).
+ *  If the draft carries no vocabulary, keep the file's selected-only set (data preserved). */
+function restoreSustainabilityCatalog(incoming: unknown, draftModule: unknown): unknown {
+  if (!isObject(incoming)) {
+    return incoming;
+  }
+  const out = restoreModuleCatalogs(incoming, draftModule) as Record<string, unknown>;
+  const draftCategories =
+    isObject(draftModule) && Array.isArray(draftModule.categories) ? (draftModule.categories as unknown[]) : null;
+  if (!draftCategories) {
+    return out;
+  }
+  const fileByCategory = new Map<unknown, Map<unknown, Record<string, unknown>>>();
+  for (const cat of Array.isArray(incoming.categories) ? (incoming.categories as unknown[]) : []) {
+    if (!isObject(cat)) continue;
+    const actions = new Map<unknown, Record<string, unknown>>();
+    for (const action of Array.isArray(cat.actions) ? (cat.actions as unknown[]) : []) {
+      if (isObject(action) && 'code' in action) actions.set(action.code, action);
+    }
+    fileByCategory.set(cat.code, actions);
+  }
+  out.categories = draftCategories.map((cat) => {
+    if (!isObject(cat) || !Array.isArray(cat.actions)) return cat;
+    const fileActions = fileByCategory.get(cat.code) ?? new Map<unknown, Record<string, unknown>>();
+    return {
+      ...cat,
+      actions: (cat.actions as unknown[]).map((action) => {
+        if (!isObject(action) || !('code' in action)) return action;
+        const fileAction = fileActions.get(action.code);
+        if (!fileAction) {
+          return { ...action, selected: false, note: '', documentId: '' };
+        }
+        return {
+          ...action,
+          selected: fileAction.selected === true,
+          note: typeof fileAction.note === 'string' ? fileAction.note : '',
+          documentId: typeof fileAction.documentId === 'string' ? fileAction.documentId : '',
+        };
+      }),
+    };
+  });
+  return out;
+}
+
 export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown): T {
+  if (isObject(incoming) && Array.isArray((incoming as Record<string, unknown>).categories)) {
+    return restoreSustainabilityCatalog(incoming, draftModule) as T;
+  }
   return restoreModuleCatalogs(incoming, draftModule) as T;
 }

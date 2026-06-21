@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
+import { useSessionStore } from '../../store/session-store';
+import { getObjectWorkspaceResource } from '../../services/object-workspace';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -27,6 +29,7 @@ import {
   serializeObjectJson,
   serializeObjectCsv,
   parseImportedObjectJson,
+  stripCatalogOptions,
   type ObjectIoMeta,
 } from './io/object-io-serialize';
 import { downloadTextFile, readFileText, triggerPrint } from './io/object-io-effects';
@@ -146,6 +149,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const router = useRouter();
   const openDrawer = useUiStore((state) => state.openDrawer);
   const editor = useObjectEditorState(objectId, resource.modules);
+  const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
@@ -167,18 +171,27 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const ioMeta: ObjectIoMeta = {
-    objectId,
-    type: resource.type ?? '',
-    name: resource.name ?? editor.draft.generalInfo.name,
-  };
-
-  function handleExportJson() {
-    downloadTextFile(`${objectId}.json`, 'application/json', serializeObjectJson(editor.draft, ioMeta));
+  async function handleExportJson() {
+    try {
+      const ws = await getObjectWorkspaceResource(objectId, langPrefs);
+      if (editor.isDirty) {
+        setStatusMessage(`Export basé sur la fiche enregistrée — vos modifications non sauvegardées n'y figurent pas.`);
+      }
+      const meta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
+      downloadTextFile(`${objectId}.json`, 'application/json', serializeObjectJson(stripCatalogOptions(ws.modules), meta));
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? `Export impossible : ${error.message}` : 'Export impossible.');
+    }
   }
 
-  function handleExportCsv() {
-    downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(editor.draft, ioMeta));
+  async function handleExportCsv() {
+    try {
+      const ws = await getObjectWorkspaceResource(objectId, langPrefs);
+      const meta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
+      downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(ws.modules, meta));
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? `Export impossible : ${error.message}` : 'Export impossible.');
+    }
   }
 
   function handleExportPdf() {
@@ -508,8 +521,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       <ImportExportModal
         open={importExportOpen}
         onClose={() => setImportExportOpen(false)}
-        onExportJson={handleExportJson}
-        onExportCsv={handleExportCsv}
+        onExportJson={() => void handleExportJson()}
+        onExportCsv={() => void handleExportCsv()}
         onExportPdf={handleExportPdf}
         onImportFile={(file) => void handleImportFile(file)}
         importError={importError}

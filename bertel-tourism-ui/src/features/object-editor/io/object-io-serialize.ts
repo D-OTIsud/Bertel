@@ -140,7 +140,7 @@ export function stripCatalogOptions(modules: ObjectWorkspaceModules): ObjectWork
   for (const [key, value] of Object.entries(modules)) {
     out[key] = stripModuleCatalogs(value);
   }
-  return out as ObjectWorkspaceModules;
+  return out as unknown as ObjectWorkspaceModules;
 }
 
 /** Inverse of stripCatalogOptions for the import path: file data wins, but an emptied

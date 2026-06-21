@@ -55,7 +55,7 @@ export function ImportExportModal({
           <div className="ed-modal__body io-modal">
             <section className="io-modal__group">
               <h4 className="io-modal__heading">Exporter</h4>
-              <p className="io-modal__hint">Télécharge la fiche courante (telle qu’affichée à l’écran).</p>
+              <p className="io-modal__hint">Télécharge la fiche telle qu’enregistrée en base (vos modifications non sauvegardées ne sont pas incluses).</p>
               <div className="io-modal__actions">
                 <button type="button" className="btn" onClick={onExportJson}>Exporter en JSON</button>
                 <button type="button" className="btn" onClick={onExportCsv}>Exporter en CSV</button>

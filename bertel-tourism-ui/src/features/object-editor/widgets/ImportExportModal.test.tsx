@@ -57,4 +57,19 @@ describe('ImportExportModal', () => {
     setup({ importError: 'Fichier JSON invalide : aucun module reconnu à importer.' });
     expect(screen.getByRole('alert')).toHaveTextContent(/aucun module reconnu/i);
   });
+
+  it('annonce que l’export reflète la base, pas l’écran', () => {
+    render(
+      <ImportExportModal
+        open
+        onClose={() => {}}
+        onExportJson={() => {}}
+        onExportCsv={() => {}}
+        onExportPdf={() => {}}
+        onImportFile={() => {}}
+        importError={null}
+      />,
+    );
+    expect(screen.getByText(/telle qu.?enregistrée en base/i)).toBeInTheDocument();
+  });
 });

@@ -18,7 +18,7 @@
 - **Strip rules are line-anchored** (`^…` with Postgres `gn` flags), require the trailing space, match only the markers the editor emits (`*`/`**`), and run images→links→emphasis→headings→quote→lists→escapes→blank-lines. Idempotent; STRICT (NULL→NULL).
 - **No data migration**; backward-compat on existing rows is verified by a **diff gate** (Task 2), not assumed. No `*_plain`/`*_md` columns added.
 - **Commit discipline (project):** commit directly to `master`, only your own hunks (the PO edits shared files like `object-editor.css` in parallel via Cursor — never `git add -A`, never amend, no co-author trailer). The PO pushes.
-- **Deploy integrity:** every SQL change is folded into `Base de donnée DLL et API/schema_unified.sql` and/or `api_views_functions.sql`, added to `docs/SQL_ROLLOUT_RUNBOOK.md` (next manifest id **14v**), and covered by the CI fresh-apply gate. After applying functions to live: `NOTIFY pgrst, 'reload schema';`.
+- **Deploy integrity:** every SQL change is folded into `Base de donnée DLL et API/schema_unified.sql` and/or `api_views_functions.sql`, added to `docs/SQL_ROLLOUT_RUNBOOK.md` (next manifest id **14w**), and covered by the CI fresh-apply gate. After applying functions to live: `NOTIFY pgrst, 'reload schema';`.
 - **SQL verification in this repo:** there is no local `psql`. Apply/verify via the Supabase MCP (`execute_sql` / `apply_migration`) against live, or the Node `pg` harness (`.tmp_pgapply/`, pooler creds in `.env.schemaspy`). SQL test files use `DO $$ … RAISE EXCEPTION …$$` assertions runnable via `execute_sql`.
 - **Frontend verification:** `cd bertel-tourism-ui && npx jest <file>` (targeted), `npx tsc --noEmit`, `npm run build` (build excludes `*.test.*`).
 
@@ -32,7 +32,7 @@
 - Modify: `Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql` — mirror the cards_batch strip.
 - Not modified: `schema_unified.sql` — `api.*` helpers do not live there (e.g. `api.i18n_pick` is in `api_views_functions.sql:336`); folding the function there would NOT satisfy fresh-apply ordering.
 - Create: `bertel-tourism-ui/tests/test_strip_markdown.sql`, `bertel-tourism-ui/tests/test_markdown_descriptions_api.sql`.
-- Modify: `docs/SQL_ROLLOUT_RUNBOOK.md` — manifest 14v.
+- Modify: `docs/SQL_ROLLOUT_RUNBOOK.md` — manifest 14w.
 
 **Frontend**
 - Modify: `bertel-tourism-ui/src/components/markdown/MarkdownEditor.tsx` — add `variant?: 'block'|'inline'`.
@@ -98,7 +98,7 @@ Expected: FAIL — `function api.strip_markdown(unknown) does not exist`.
 - [ ] **Step 3: Write the implementation** — append to `migration_markdown_strip_descriptions.sql`
 
 ```sql
--- migration_markdown_strip_descriptions.sql (manifest 14v)
+-- migration_markdown_strip_descriptions.sql (manifest 14w)
 -- Markdown descriptions, Delivery 1: api.strip_markdown derives the plain ("sans styles")
 -- text from the Markdown-canonical description columns. See spec 2026-06-21.
 BEGIN;
@@ -150,7 +150,7 @@ Expected: `NOTICE: test_strip_markdown OK` (no ASSERT failure).
 git add "Base de donnée DLL et API/migration_markdown_strip_descriptions.sql" \
         "Base de donnée DLL et API/api_views_functions.sql" \
         bertel-tourism-ui/tests/test_strip_markdown.sql
-git commit -m "feat(api): api.strip_markdown — plain-text derivation for Markdown descriptions (14v)"
+git commit -m "feat(api): api.strip_markdown — plain-text derivation for Markdown descriptions (14w)"
 ```
 
 ---
@@ -178,7 +178,7 @@ WHERE d.description_chapo IS NOT NULL
 
 - [ ] **Step 2: Triage**
 
-Expected: the result set is the exhaustive list of rows whose flat read changes after Delivery 1. Eyeball each: a change like `« - point »` → `« point »` (a pseudo-list flattened) is acceptable; a change that destroys meaning (e.g. an `*` that was multiplication) must be noted. If any unacceptable change exists, record it and fix the source row (edit the data) — do NOT weaken the strip rules without re-running Task 1 tests. Record the count + verdict in `docs/SQL_ROLLOUT_RUNBOOK.md` under the 14v entry.
+Expected: the result set is the exhaustive list of rows whose flat read changes after Delivery 1. Eyeball each: a change like `« - point »` → `« point »` (a pseudo-list flattened) is acceptable; a change that destroys meaning (e.g. an `*` that was multiplication) must be noted. If any unacceptable change exists, record it and fix the source row (edit the data) — do NOT weaken the strip rules without re-running Task 1 tests. Record the count + verdict in `docs/SQL_ROLLOUT_RUNBOOK.md` under the 14w entry.
 
 - [ ] **Step 3: Commit the runbook note** (folded later in Task 11; no code commit here).
 
@@ -700,13 +700,13 @@ git commit -m "feat(drawer): render description fields as Markdown via *_md"
 
 **Files:**
 - Modify: `Base de donnée DLL et API/schema_unified.sql` (confirm `api.strip_markdown` folded — Task 1) + the RPC bodies (cards/map/indesign/resource/adapted) reflect the live versions.
-- Modify: `docs/SQL_ROLLOUT_RUNBOOK.md` (manifest 14v: list `migration_markdown_strip_descriptions.sql` in dependency order — after the base `api_views_functions.sql` step, with the `cards_batch` DEFINER caveat note).
+- Modify: `docs/SQL_ROLLOUT_RUNBOOK.md` (manifest 14w: list `migration_markdown_strip_descriptions.sql` in dependency order — after the base `api_views_functions.sql` step, with the `cards_batch` DEFINER caveat note).
 
 - [ ] **Step 1: Fold the RPC edits**
 
 Ensure every RPC body changed in Tasks 3–6 is identical between live, `api_views_functions.sql`, and (for cards_batch) `migration_cards_batch_authorize_definer.sql`. Confirm `api.strip_markdown` is defined in `api_views_functions.sql` **before its first consumer** (Task 1 Step 5) — NOT in `schema_unified.sql` — so the manifest step-5 fresh apply creates it before the RPCs.
 
-- [ ] **Step 2: Add the manifest/runbook entry (14v)** documenting: the function, the RPC re-creations, the Task 2 diff verdict, and that `strip_markdown_jsonb` + the type-specific readers are Delivery 2.
+- [ ] **Step 2: Add the manifest/runbook entry (14w)** documenting: the function, the RPC re-creations, the Task 2 diff verdict, and that `strip_markdown_jsonb` + the type-specific readers are Delivery 2.
 
 - [ ] **Step 3: Run the fresh-apply gate**
 
@@ -720,14 +720,14 @@ Run `NOTIFY pgrst, 'reload schema';` on live. Re-run `test_strip_markdown.sql` +
 
 ```bash
 git add docs/SQL_ROLLOUT_RUNBOOK.md
-git commit -m "chore(deploy): manifest 14v for Markdown strip (delivery 1)"
+git commit -m "chore(deploy): manifest 14w for Markdown strip (delivery 1)"
 ```
 
 ---
 
 ## Decision-log update (do as the final step)
 
-Add decision **§105** to `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`: Markdown for the `object_description` family — `api.strip_markdown` plain-on-read + `*_md` siblings; editor legs never stripped; flat readers wrapped; `strip_markdown` placed in `api` (not `internal`) for `i18n_pick` parity; `strip_markdown_jsonb` + type-specific readers deferred to Delivery 2. Propose the CLAUDE.md invariant from spec §13 (adjusting `internal.strip_markdown` → `api.strip_markdown`).
+Add decision **§106** to `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`: Markdown for the `object_description` family — `api.strip_markdown` plain-on-read + `*_md` siblings; editor legs never stripped; flat readers wrapped; `strip_markdown` placed in `api` (not `internal`) for `i18n_pick` parity; `strip_markdown_jsonb` + type-specific readers deferred to Delivery 2. Propose the CLAUDE.md invariant from spec §13 (adjusting `internal.strip_markdown` → `api.strip_markdown`).
 
 ---
 

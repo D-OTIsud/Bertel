@@ -1,4 +1,4 @@
--- migration_markdown_strip_descriptions.sql (manifest 14v)
+-- migration_markdown_strip_descriptions.sql (manifest 14w)
 -- Markdown descriptions, Delivery 1: api.strip_markdown derives the plain ("sans styles")
 -- text from the Markdown-canonical description columns. See spec 2026-06-21.
 BEGIN;

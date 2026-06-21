@@ -420,7 +420,7 @@ BEGIN
 END;
 $$;
 
--- Plain-text derivation for Markdown-canonical description columns (manifest 14v).
+-- Plain-text derivation for Markdown-canonical description columns (manifest 14w).
 -- Strips the editor's Markdown subset (headings, emphasis, lists, blockquotes, links, images,
 -- escapes) and returns clean plain text. NULL→NULL (STRICT). Idempotent.
 -- Consumers: get_object_card (card subtitle), get_object_resource (plain_description),

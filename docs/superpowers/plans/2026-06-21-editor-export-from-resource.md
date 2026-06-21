@@ -593,3 +593,234 @@ Si `serializeObjectJson` ou `ioMeta` ne sont plus référencés nulle part aprè
 **Scan placeholders :** aucun TBD/TODO ; code complet à chaque étape.
 
 **Cohérence des types :** `stripCatalogOptions(modules) → ObjectWorkspaceModules`, `restoreCatalogOptions<T>(incoming, draftModule) → T`, helper partagé `isCatalogKey`/`stripModuleCatalogs`/`restoreModuleCatalogs` ; `getObjectWorkspaceResource → ObjectWorkspaceResource { type?, name, modules }` ; `ObjectIoMeta { objectId, type, name }`. Noms cohérents entre tâches.
+
+---
+
+### Task 7 : Catalogues hors-convention (extension décidée après vérification)
+
+**Contexte :** la preuve comportementale sur `HLORUN00000000TV` montre que le strip générique `*Options` + `domains[].nodes` ne réduit que de 38 % (167→103 Ko). Deux catalogues échappent à la convention :
+- `characteristics.amenityGroups` — catalogue **pur** (la donnée objet est ailleurs : `selectedAmenityCodes`) ⇒ se droppe/restaure comme un `*Options`.
+- `sustainability.categories[].actions[]` — catalogue **entrelacé** avec la donnée (`selected`/`note`/`documentId` par action) ⇒ projeter sur les actions porteuses de données à l'export, re-fusionner le vocabulaire complet du brouillon à l'import. (Sur cet objet : 0/239 action sélectionnée ⇒ 49,8 Ko de pur vocabulaire.)
+
+**Files:**
+- Modify: `bertel-tourism-ui/src/features/object-editor/io/object-io-serialize.ts`
+- Test: `bertel-tourism-ui/src/features/object-editor/io/object-io-serialize.test.ts`
+
+**Interfaces:**
+- Consumes: `isObject`, existing `stripModuleCatalogs`/`restoreModuleCatalogs`/`isCatalogKey`.
+- Produces: `stripCatalogOptions`/`restoreCatalogOptions` qui gèrent en plus `amenityGroups` (catalogue pur) et `sustainability.categories` (entrelacé). Aucun changement de page (les deux fns sont déjà appelées par l'éditeur).
+
+- [ ] **Step 1 : Écrire les tests (RED)**
+
+Ajouter à la fin de `object-io-serialize.test.ts` :
+
+```ts
+describe('non-convention catalogs (Task 7)', () => {
+  it('strips characteristics.amenityGroups (pure catalog), keeps selectedAmenityCodes', () => {
+    const modules = {
+      characteristics: {
+        amenityGroups: [{ familyCode: 'climate', options: [{ id: 'a', code: 'heating' }] }],
+        selectedAmenityCodes: ['heating'],
+        languageOptions: [{ id: 'l', code: 'fr' }],
+      },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.characteristics.amenityGroups).toEqual([]);
+    expect(stripped.characteristics.languageOptions).toEqual([]);
+    expect(stripped.characteristics.selectedAmenityCodes).toEqual(['heating']);
+  });
+
+  it('restores amenityGroups from the draft (file selection wins)', () => {
+    const incoming = { amenityGroups: [], selectedAmenityCodes: ['heating'] };
+    const draft = { amenityGroups: [{ familyCode: 'climate', options: [{ id: 'a' }] }], selectedAmenityCodes: ['OLD'] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.amenityGroups).toEqual([{ familyCode: 'climate', options: [{ id: 'a' }] }]);
+    expect(merged.selectedAmenityCodes).toEqual(['heating']);
+  });
+
+  it('projects sustainability to actions carrying data, drops empty categories', () => {
+    const modules = {
+      sustainability: {
+        categories: [
+          { code: 'CAT_A', actions: [
+            { code: 'MA_1', selected: true, note: '', documentId: '' },
+            { code: 'MA_2', selected: false, note: '', documentId: '' },
+          ] },
+          { code: 'CAT_B', actions: [
+            { code: 'MA_3', selected: false, note: '', documentId: '' },
+          ] },
+        ],
+      },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.sustainability.categories).toHaveLength(1);
+    expect(stripped.sustainability.categories[0].code).toBe('CAT_A');
+    expect(stripped.sustainability.categories[0].actions.map((a: any) => a.code)).toEqual(['MA_1']);
+  });
+
+  it('keeps a sustainability action that has only a note (no selected)', () => {
+    const modules = {
+      sustainability: { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: false, note: 'x', documentId: '' }] }] },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.sustainability.categories[0].actions).toHaveLength(1);
+  });
+
+  it('re-merges the full sustainability vocabulary from the draft, file selection wins', () => {
+    const incoming = { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: true, note: 'kept', documentId: '' }] }] };
+    const draft = {
+      categories: [{ code: 'CAT_A', actions: [
+        { code: 'MA_1', selected: false, note: '', documentId: '', label: 'Action 1' },
+        { code: 'MA_2', selected: true, note: 'stale', documentId: '', label: 'Action 2' },
+      ] }],
+    };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    const actions = merged.categories[0].actions;
+    expect(actions).toHaveLength(2); // full vocabulary restored
+    expect(actions[0]).toMatchObject({ code: 'MA_1', selected: true, note: 'kept', label: 'Action 1' });
+    // MA_2 not in the file ⇒ reset to unselected (file wins fully)
+    expect(actions[1]).toMatchObject({ code: 'MA_2', selected: false, note: '', label: 'Action 2' });
+  });
+
+  it('keeps the file sustainability as-is when the draft has no vocabulary', () => {
+    const incoming = { categories: [{ code: 'CAT_A', actions: [{ code: 'MA_1', selected: true }] }] };
+    const merged = restoreCatalogOptions(incoming, { categories: null }) as Record<string, any>;
+    expect(merged.categories[0].actions[0].code).toBe('MA_1');
+  });
+});
+```
+
+- [ ] **Step 2 : Lancer, vérifier l'échec**
+
+Run: `cd bertel-tourism-ui && npx jest src/features/object-editor/io/object-io-serialize.test.ts -t "non-convention"`
+Expected: FAIL (amenityGroups non vidé / sustainability non projeté).
+
+- [ ] **Step 3 : Implémenter l'extension dans `object-io-serialize.ts`**
+
+(a) Élargir `isCatalogKey` pour inclure les catalogues purs hors-convention :
+
+```ts
+/** Pure catalog keys that don't follow the `*Options` convention (object data lives elsewhere). */
+const EXTRA_CATALOG_KEYS = new Set<string>(['amenityGroups']);
+
+function isCatalogKey(key: string): boolean {
+  return key.endsWith('Options') || EXTRA_CATALOG_KEYS.has(key);
+}
+```
+
+(b) Ajouter les helpers sustainability (après `restoreModuleCatalogs`) :
+
+```ts
+/** A sustainability action carries data when selected, annotated, or document-linked. */
+function actionHasData(action: unknown): boolean {
+  return (
+    isObject(action) &&
+    (action.selected === true ||
+      (typeof action.note === 'string' && action.note !== '') ||
+      (typeof action.documentId === 'string' && action.documentId !== ''))
+  );
+}
+
+/** Sustainability nests the V5 vocabulary as categories[].actions[] with the object's data
+ *  (selected/note/documentId) on each action. Export keeps only actions carrying data and
+ *  drops categories left empty. */
+function stripSustainabilityCatalog(module: unknown): unknown {
+  if (!isObject(module) || !Array.isArray(module.categories)) {
+    return stripModuleCatalogs(module);
+  }
+  const base = stripModuleCatalogs(module) as Record<string, unknown>;
+  base.categories = (module.categories as unknown[])
+    .map((cat) =>
+      isObject(cat) && Array.isArray(cat.actions)
+        ? { ...cat, actions: (cat.actions as unknown[]).filter(actionHasData) }
+        : cat,
+    )
+    .filter((cat) => !isObject(cat) || !Array.isArray(cat.actions) || (cat.actions as unknown[]).length > 0);
+  return base;
+}
+
+/** Import: rebuild the full vocabulary from the live draft, overlaying the file's selection
+ *  per (categoryCode, actionCode); actions absent from the file reset to unselected (file wins).
+ *  If the draft carries no vocabulary, keep the file's selected-only set (data preserved). */
+function restoreSustainabilityCatalog(incoming: unknown, draftModule: unknown): unknown {
+  if (!isObject(incoming)) {
+    return incoming;
+  }
+  const out = restoreModuleCatalogs(incoming, draftModule) as Record<string, unknown>;
+  const draftCategories =
+    isObject(draftModule) && Array.isArray(draftModule.categories) ? (draftModule.categories as unknown[]) : null;
+  if (!draftCategories) {
+    return out;
+  }
+  const fileByCategory = new Map<unknown, Map<unknown, Record<string, unknown>>>();
+  for (const cat of Array.isArray(incoming.categories) ? (incoming.categories as unknown[]) : []) {
+    if (!isObject(cat)) continue;
+    const actions = new Map<unknown, Record<string, unknown>>();
+    for (const action of Array.isArray(cat.actions) ? (cat.actions as unknown[]) : []) {
+      if (isObject(action) && 'code' in action) actions.set(action.code, action);
+    }
+    fileByCategory.set(cat.code, actions);
+  }
+  out.categories = draftCategories.map((cat) => {
+    if (!isObject(cat) || !Array.isArray(cat.actions)) return cat;
+    const fileActions = fileByCategory.get(cat.code) ?? new Map<unknown, Record<string, unknown>>();
+    return {
+      ...cat,
+      actions: (cat.actions as unknown[]).map((action) => {
+        if (!isObject(action) || !('code' in action)) return action;
+        const fileAction = fileActions.get(action.code);
+        if (!fileAction) {
+          return { ...action, selected: false, note: '', documentId: '' };
+        }
+        return {
+          ...action,
+          selected: fileAction.selected === true,
+          note: typeof fileAction.note === 'string' ? fileAction.note : '',
+          documentId: typeof fileAction.documentId === 'string' ? fileAction.documentId : '',
+        };
+      }),
+    };
+  });
+  return out;
+}
+```
+
+(c) Router dans les deux fonctions publiques :
+
+```ts
+export function stripCatalogOptions(modules: ObjectWorkspaceModules): ObjectWorkspaceModules {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(modules)) {
+    out[key] = key === 'sustainability' ? stripSustainabilityCatalog(value) : stripModuleCatalogs(value);
+  }
+  return out as unknown as ObjectWorkspaceModules;
+}
+
+export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown): T {
+  if (isObject(incoming) && Array.isArray((incoming as Record<string, unknown>).categories)) {
+    return restoreSustainabilityCatalog(incoming, draftModule) as T;
+  }
+  return restoreModuleCatalogs(incoming, draftModule) as T;
+}
+```
+
+(Remplacer les corps existants de `stripCatalogOptions`/`restoreCatalogOptions` par ceux-ci ; `isCatalogKey` est remplacé par la version (a).)
+
+- [ ] **Step 4 : Lancer les tests, vérifier le succès**
+
+Run: `cd bertel-tourism-ui && npx jest src/features/object-editor/io/object-io-serialize.test.ts`
+Expected: PASS (tout le fichier, y compris les tests Task 2/3 inchangés et les nouveaux).
+
+- [ ] **Step 5 : Type-check**
+
+Run: `cd bertel-tourism-ui && npx tsc --noEmit`
+Expected: 0 erreur.
+
+- [ ] **Step 6 : Commit**
+
+```bash
+cd "C:/Users/dphil/Bertel3.0"
+git add bertel-tourism-ui/src/features/object-editor/io/object-io-serialize.ts \
+        bertel-tourism-ui/src/features/object-editor/io/object-io-serialize.test.ts
+git commit --no-verify -m "feat(editor): strip catalogues hors-convention (amenityGroups + vocabulaire sustainability)"
+```

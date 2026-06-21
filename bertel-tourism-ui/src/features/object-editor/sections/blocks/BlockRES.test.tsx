@@ -4,28 +4,42 @@ import { BlockRES } from './BlockRES';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
 
 /**
- * §46 disabled-with-reason gate — when the `menus` module carries an
- * `unavailableReason` (type not enrolled in ref_facet_applicability, or the
- * loader fetch failed), the block must render the notice INSTEAD of the
- * menus controls (cuisine chips edit menus.items — they are part of the
- * module). Non-type-gated modules (capacityPolicies, openings) stay editable.
+ * §06 P1 — « Cuisines proposées » (Bloc A) is an OBJECT-LEVEL facet (object_cuisine_type),
+ * DECOUPLED from the menus module. It must render and be editable even when there is no menu
+ * (the old write-trap: cuisine codes lived on menus.items[0].items[0], a no-op for the 100% of
+ * restaurants with 0 menus). The §46 menus gate must NOT hide the cuisine block.
  */
-describe('BlockRES — §46 disabled-with-reason (menus module)', () => {
-  it('renders the unavailable notice instead of menu controls when gated', () => {
+describe('BlockRES — §06 P1 cuisine Bloc A (object-level, decoupled)', () => {
+  it('renders the cuisine field even with no menus (no write-trap)', () => {
+    const modules = fullModulesFixture();
+    modules.menus.items = [];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText('Cuisines proposées')).toBeInTheDocument();
+    expect(screen.getByText('Types de cuisine')).toBeInTheDocument();
+  });
+
+  it('keeps the cuisine block when the menus module is gated (decoupled)', () => {
     const modules = fullModulesFixture();
     modules.menus.unavailableReason = 'Module non applicable au type HOT (référentiel ref_facet_applicability).';
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
+    // Bloc A is independent of the menus gate → still present.
+    expect(screen.getByText('Cuisines proposées')).toBeInTheDocument();
+    // The menus controls are hidden behind the gate.
     expect(screen.getByText(/Module non applicable au type HOT/)).toBeInTheDocument();
-    // Regex matcher: the Repeater add button renders "+ {addLabel}" as two text
-    // nodes, so an exact-string match can never hit it (and would be vacuous).
     expect(screen.queryByText(/Ajouter un menu \/ une carte/)).not.toBeInTheDocument();
-    // The cuisine chips edit menus.items — part of the gated module.
-    expect(screen.queryByText('Cuisines proposées')).not.toBeInTheDocument();
-    // §48: the group policy is owned by §07 — the §05 pointer is NOT part of
-    // the gated menus module, so it stays rendered while menus is gated.
-    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
+  });
+
+  it('shows a ModuleUnavailableNotice for the cuisine field when its catalog failed to load', () => {
+    const modules = fullModulesFixture();
+    modules.cuisine.unavailableReason = 'Le catalogue des types de cuisine n’a pas pu être chargé.';
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(/catalogue des types de cuisine/)).toBeInTheDocument();
   });
 
   it('renders the menu controls when no reason is set', () => {
@@ -37,7 +51,7 @@ describe('BlockRES — §46 disabled-with-reason (menus module)', () => {
 });
 
 describe('BlockRES — single-owner surfaces (§48)', () => {
-  it('no longer edits the group policy in §05 (owned by §07)', () => {
+  it('no longer edits the group policy in §06 (owned by §07)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
@@ -47,7 +61,7 @@ describe('BlockRES — single-owner surfaces (§48)', () => {
     expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
   });
 
-  it('no longer edits service hours in §05 (owned by §14)', () => {
+  it('no longer edits service hours in §06 (owned by §14)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 

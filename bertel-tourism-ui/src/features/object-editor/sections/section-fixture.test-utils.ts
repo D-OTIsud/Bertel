@@ -239,6 +239,11 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       items: [{ recordId: 'menu1', categoryId: 'carte', categoryCode: 'carte', categoryLabel: 'Carte', name: 'Carte midi', description: '', active: true, visibility: 'public', position: '1', items: [{ recordId: 'mi1', name: 'Cari', description: '', price: '18', currency: 'EUR', kindId: 'dish', kindCode: 'dish', kindLabel: 'Plat', unitId: 'unit', unitCode: 'unit', unitLabel: 'Unité', mediaIds: [], available: true, position: '1', dietaryTagCodes: [], allergenCodes: [], cuisineTypeCodes: ['creole'] }] }],
       unavailableReason: null,
     },
+    cuisine: {
+      codes: ['creole'],
+      options: [{ id: 'creole', code: 'creole', label: 'Créole' }, { id: 'metropolitan', code: 'metropolitan', label: 'Française' }],
+      unavailableReason: null,
+    },
     activity: { durationMin: '120', minParticipants: '2', maxParticipants: '12', difficultyLevel: 'facile', guideRequired: true, minAge: '8', equipmentProvided: 'Casque', unavailableReason: null },
     event: { startDate: '', endDate: '', startTime: '', endTime: '', recurring: false, recurrenceText: '', occurrences: [], unavailableReason: null },
     itinerary: {

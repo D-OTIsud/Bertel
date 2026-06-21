@@ -46,6 +46,7 @@ import {
   type ObjectWorkspaceMeetingRoomsModule,
   type ObjectWorkspaceMenuItem,
   type ObjectWorkspaceMenusModule,
+  type ObjectWorkspaceCuisineModule,
   type ObjectWorkspaceSustainabilityModule,
   type ObjectWorkspaceTagItem,
   type ObjectWorkspaceTagsModule,
@@ -75,7 +76,7 @@ import { listObjectCrm } from './crm';
 // without importing from object-workspace-parser directly.
 export { normalizeTagColor } from './object-workspace-parser';
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'cuisine' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
 
 export interface ObjectWorkspaceModuleAccess {
   canDirectWrite: boolean;
@@ -109,6 +110,7 @@ export interface ObjectWorkspacePermissions {
   rooms: ObjectWorkspaceModuleAccess;
   meetingRooms: ObjectWorkspaceModuleAccess;
   menus: ObjectWorkspaceModuleAccess;
+  cuisine: ObjectWorkspaceModuleAccess;
   activity: ObjectWorkspaceModuleAccess;
   event: ObjectWorkspaceModuleAccess;
   itinerary: ObjectWorkspaceModuleAccess;
@@ -2786,6 +2788,49 @@ async function getObjectWorkspaceMeetingRoomsModule(
   };
 }
 
+/**
+ * §06 P1 — enrich the object-level cuisine facet: the FULL `ref_code` `cuisine_type` catalog (so
+ * empty/new objects can ADD cuisines, not just display existing ones) + the object's
+ * `object_cuisine_type` links (authoritative codes, ordered by position). Direct PostgREST under
+ * `read_object_cuisine_type`. Decoupled from the menus load — cuisine works without any menu. On
+ * catalog-read failure → `unavailableReason` ⇒ the saver skips persistence (no clobber). Mirrors
+ * the §41 zones / §42 enrichment precedent.
+ */
+async function getObjectWorkspaceCuisineModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCuisineModule,
+): Promise<ObjectWorkspaceCuisineModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les cuisines.' };
+  }
+
+  const [catalogResult, linksResult] = await Promise.allSettled([
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'cuisine_type').order('position', { ascending: true }),
+    client.from('object_cuisine_type').select('cuisine_type_id, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (catalogResult.status !== 'fulfilled' || catalogResult.value.error != null) {
+    return { ...baseModule, unavailableReason: 'Le catalogue des types de cuisine n’a pas pu être chargé.' };
+  }
+  const options = dedupeReferenceOptions(
+    (catalogResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+  );
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+
+  let codes = baseModule.codes;
+  if (linksResult.status === 'fulfilled' && linksResult.value.error == null) {
+    codes = (linksResult.value.data ?? [])
+      .map((row) => codeById.get(readString((row as Record<string, unknown>).cuisine_type_id)))
+      .filter((code): code is string => Boolean(code));
+  }
+  return { codes, options, unavailableReason: null };
+}
+
 async function getObjectWorkspaceMenusModule(
   objectId: string,
   baseModule: ObjectWorkspaceMenusModule,
@@ -3628,6 +3673,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     rooms: directOrBlocked(),
     meetingRooms: directOrBlocked(),
     menus: directOrBlocked(),
+    cuisine: directOrBlocked(),
     activity: directOrBlocked(),
     event: directOrBlocked(),
     itinerary: {
@@ -3838,6 +3884,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     roomsModule,
     meetingRoomsModule,
     menusModule,
+    cuisineModule,
     activityModule,
     eventModule,
     itineraryModule,
@@ -3851,6 +3898,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
     getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
+    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine),
     getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
@@ -3866,6 +3914,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     rooms: roomsModule,
     meetingRooms: meetingRoomsModule,
     menus: menusModule,
+    cuisine: cuisineModule,
     activity: activityModule,
     event: eventModule,
     itinerary: itineraryModule,
@@ -4799,6 +4848,57 @@ export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: O
       if (equipmentError) {
         throw mapMutationError(equipmentError, 'Impossible de sauvegarder les equipements MICE.');
       }
+    }
+  }
+}
+
+/**
+ * §06 P1 — persist the object-level cuisine facet. Resolve codes → `ref_code` ids, then delete-all +
+ * insert `object_cuisine_type` with position = order index (1st = principale). Direct PostgREST under
+ * the per-command `canonical_*` policies. Guard: `unavailableReason` set ⇒ throw before any write
+ * (a degraded load must not clobber). Mirrors the saveObjectWorkspaceCapacityPolicies guard.
+ */
+export async function saveObjectWorkspaceCuisine(objectId: string, input: ObjectWorkspaceCuisineModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les cuisines.');
+  }
+
+  const catalog = await client.from('ref_code').select('id, code').eq('domain', 'cuisine_type');
+  if (catalog.error) {
+    throw mapMutationError(catalog.error, 'Impossible de charger le catalogue des cuisines.');
+  }
+  const idByCode = new Map(
+    (catalog.data ?? []).map((row) => [
+      readString((row as Record<string, unknown>).code),
+      readString((row as Record<string, unknown>).id),
+    ]),
+  );
+
+  const uniqueCodes = Array.from(new Set(input.codes.filter(Boolean)));
+  const rows = uniqueCodes.map((code, index) => {
+    const id = idByCode.get(code);
+    if (!id) {
+      throw new Error(`Type de cuisine inconnu : ${code}`);
+    }
+    return { object_id: objectId, cuisine_type_id: id, position: index + 1 };
+  });
+
+  const del = await client.from('object_cuisine_type').delete().eq('object_id', objectId);
+  if (del.error) {
+    throw mapMutationError(del.error, 'Impossible de réinitialiser les cuisines.');
+  }
+  if (rows.length > 0) {
+    const ins = await client.from('object_cuisine_type').insert(rows);
+    if (ins.error) {
+      throw mapMutationError(ins.error, "Impossible d'enregistrer les cuisines.");
     }
   }
 }

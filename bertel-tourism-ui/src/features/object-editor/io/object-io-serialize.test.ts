@@ -362,3 +362,54 @@ describe('restoreCatalogOptions — taxonomy edge cases', () => {
     expect(merged.domains[0].assignment).toEqual({ nodeId: 'NEW' });
   });
 });
+
+describe('§104 catalogs — cuisine.options + tags.library', () => {
+  it('strips cuisine.options (catalog) but keeps cuisine.codes', () => {
+    const modules = {
+      cuisine: { codes: ['creole'], options: [{ id: 'a', code: 'creole', label: 'Créole' }, { id: 'b', code: 'thai', label: 'Thaï' }] },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.cuisine.options).toEqual([]);
+    expect(stripped.cuisine.codes).toEqual(['creole']);
+  });
+
+  it('strips tags.library (catalog) but keeps tags.displayed', () => {
+    const modules = {
+      tags: { displayed: [{ tagId: 't1', slug: 'food' }], library: [{ tagId: 't2', slug: 'family' }] },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.tags.library).toEqual([]);
+    expect(stripped.tags.displayed).toEqual([{ tagId: 't1', slug: 'food' }]);
+  });
+
+  it('does NOT strip a generic top-level `options` outside the cuisine module', () => {
+    const modules = {
+      somethingElse: { options: [{ id: 'x' }], data: 1 },
+    } as unknown as ObjectWorkspaceModules;
+    const stripped = stripCatalogOptions(modules) as unknown as Record<string, any>;
+    expect(stripped.somethingElse.options).toEqual([{ id: 'x' }]);
+  });
+
+  it('restores cuisine.options from the draft (moduleKey-scoped), keeps the file codes', () => {
+    const incoming = { codes: ['creole'], options: [] };
+    const draft = { codes: ['OLD'], options: [{ id: 'a', code: 'creole' }] };
+    const merged = restoreCatalogOptions(incoming, draft, 'cuisine') as Record<string, any>;
+    expect(merged.options).toEqual([{ id: 'a', code: 'creole' }]);
+    expect(merged.codes).toEqual(['creole']);
+  });
+
+  it('does NOT restore a generic `options` without the cuisine moduleKey', () => {
+    const incoming = { options: [] };
+    const draft = { options: [{ id: 'a' }] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.options).toEqual([]); // unscoped ⇒ left empty (only refilled for cuisine)
+  });
+
+  it('restores tags.library globally without a moduleKey', () => {
+    const incoming = { displayed: [{ tagId: 't1' }], library: [] };
+    const draft = { displayed: [], library: [{ tagId: 't2' }] };
+    const merged = restoreCatalogOptions(incoming, draft) as Record<string, any>;
+    expect(merged.library).toEqual([{ tagId: 't2' }]);
+    expect(merged.displayed).toEqual([{ tagId: 't1' }]);
+  });
+});

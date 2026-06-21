@@ -112,20 +112,33 @@ export function parseImportedObjectJson(raw: string): ImportParseResult {
  *  data. They follow the `*Options` naming convention; taxonomy nests its catalog under
  *  `domains[].nodes` (the object's own choice lives in `domains[].assignment`). */
 
-/** Pure catalog keys that don't follow the `*Options` convention (object data lives elsewhere). */
-const EXTRA_CATALOG_KEYS = new Set<string>(['amenityGroups']);
+/** Pure catalog keys that don't follow the `*Options` convention but whose name is specific
+ *  enough to treat globally (object data lives under other keys, e.g. `selected*Codes`,
+ *  `displayed`). `amenityGroups` = characteristics/rooms amenity catalog; `library` = the
+ *  pickable-but-unassigned tags (the object's tags are `tags.displayed`). */
+const EXTRA_CATALOG_KEYS = new Set<string>(['amenityGroups', 'library']);
 
-function isCatalogKey(key: string): boolean {
-  return key.endsWith('Options') || EXTRA_CATALOG_KEYS.has(key);
+/** Per-module catalog keys whose NAME is too generic to treat globally. `cuisine.options` =
+ *  the full cuisine-type catalog (§104); the object's choice is `cuisine.codes`. Scoped by
+ *  module so a future module's data `options` is never stripped by accident. */
+const MODULE_CATALOG_KEYS: Record<string, readonly string[]> = {
+  cuisine: ['options'],
+};
+
+function isCatalogKey(key: string, moduleKey?: string): boolean {
+  if (key.endsWith('Options') || EXTRA_CATALOG_KEYS.has(key)) {
+    return true;
+  }
+  return Boolean(moduleKey && MODULE_CATALOG_KEYS[moduleKey]?.includes(key));
 }
 
-function stripModuleCatalogs(module: unknown): unknown {
+function stripModuleCatalogs(module: unknown, moduleKey?: string): unknown {
   if (!isObject(module)) {
     return module;
   }
   const out: Record<string, unknown> = { ...module };
   for (const key of Object.keys(out)) {
-    if (isCatalogKey(key) && Array.isArray(out[key])) {
+    if (isCatalogKey(key, moduleKey) && Array.isArray(out[key])) {
       out[key] = [];
     }
   }
@@ -142,7 +155,7 @@ function stripModuleCatalogs(module: unknown): unknown {
 export function stripCatalogOptions(modules: ObjectWorkspaceModules): ObjectWorkspaceModules {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(modules)) {
-    out[key] = key === 'sustainability' ? stripSustainabilityCatalog(value) : stripModuleCatalogs(value);
+    out[key] = key === 'sustainability' ? stripSustainabilityCatalog(value) : stripModuleCatalogs(value, key);
   }
   return out as unknown as ObjectWorkspaceModules;
 }
@@ -150,7 +163,7 @@ export function stripCatalogOptions(modules: ObjectWorkspaceModules): ObjectWork
 /** Inverse of stripCatalogOptions for the import path: file data wins, but an emptied
  *  catalog is refilled from the live draft so dropdowns stay populated. A v1 file (catalogs
  *  present) keeps its own. */
-function restoreModuleCatalogs(incoming: unknown, draftModule: unknown): unknown {
+function restoreModuleCatalogs(incoming: unknown, draftModule: unknown, moduleKey?: string): unknown {
   if (!isObject(incoming)) {
     return incoming;
   }
@@ -160,7 +173,7 @@ function restoreModuleCatalogs(incoming: unknown, draftModule: unknown): unknown
   for (const key of Object.keys(out)) {
     const importedEmpty = Array.isArray(out[key]) && (out[key] as unknown[]).length === 0;
     const draftHas = Array.isArray(draft[key]) && (draft[key] as unknown[]).length > 0;
-    if (isCatalogKey(key) && importedEmpty && draftHas) {
+    if (isCatalogKey(key, moduleKey) && importedEmpty && draftHas) {
       out[key] = draft[key];
     }
   }
@@ -252,7 +265,7 @@ function restoreSustainabilityCatalog(incoming: unknown, draftModule: unknown): 
   return out;
 }
 
-export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown): T {
+export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown, moduleKey?: string): T {
   // Routing mirror of stripCatalogOptions (which keys on 'sustainability'): a top-level
   // `categories` array is unique to the sustainability module in ObjectWorkspaceModules
   // (verified against object-workspace-parser.ts). If a future module gains a top-level
@@ -260,5 +273,5 @@ export function restoreCatalogOptions<T>(incoming: T, draftModule: unknown): T {
   if (isObject(incoming) && Array.isArray((incoming as Record<string, unknown>).categories)) {
     return restoreSustainabilityCatalog(incoming, draftModule) as T;
   }
-  return restoreModuleCatalogs(incoming, draftModule) as T;
+  return restoreModuleCatalogs(incoming, draftModule, moduleKey) as T;
 }

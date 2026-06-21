@@ -1,7 +1,7 @@
 /**
  * §06 P2 — pure helpers for the structured carte editor (object_menu_item). The menus saver
  * (`saveObjectWorkspaceMenus`) already persists item name/price/kind/unit/description/dietary/
- * allergen; this module supplies the item factory + immutable list edits used by MenuItemsModal.
+ * allergen; this module supplies the item factory + immutable list edits used by MenuEditModal / DishEditModal.
  * Cuisine-per-dish is intentionally NOT authored here — cuisine is a global object-level facet (§06 P1).
  */
 import type { ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';

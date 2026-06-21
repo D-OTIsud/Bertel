@@ -108,6 +108,10 @@ interface PreviewData {
   summary: string;
   description: string;
   adaptedDescription: string;
+  /** Raw Markdown siblings of the three rendered fields; '' when the field has no `*_md`. */
+  summaryMd: string;
+  descriptionMd: string;
+  adaptedDescriptionMd: string;
   location: DetailLocation | null;
   amenities: ParsedAmenityItem[];
   capacities: CapacityItem[];
@@ -291,6 +295,17 @@ function buildPreviewData(data: ObjectDetail, parsed: ParsedObjectDetail): Previ
       parsed.text.adaptedDescription ||
       parsed.text.mobileDescription ||
       parsed.text.editorialDescription,
+    summaryMd:
+      parsed.text.chapoMd ||
+      parsed.text.descriptionMd ||
+      parsed.text.adaptedDescriptionMd ||
+      parsed.text.mobileDescriptionMd ||
+      parsed.text.editorialDescriptionMd,
+    descriptionMd: parsed.text.descriptionMd || parsed.text.chapoMd,
+    adaptedDescriptionMd:
+      parsed.text.adaptedDescriptionMd ||
+      parsed.text.mobileDescriptionMd ||
+      parsed.text.editorialDescriptionMd,
     location: parsed.location,
     amenities: parsed.taxonomy.amenityItems,
     capacities: parsed.operations.capacities,
@@ -1215,13 +1230,12 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
     return null;
   }
 
-  // Only the canonical adapted field is genuinely Markdown-authored. `preview.adaptedDescription`
-  // falls back to mobile/editorial (plain prose) when the adapted field is empty — so compare
-  // against the RAW field to avoid Markdown-rendering plain prose (stray #/*/- would mis-render).
-  const adaptedText = parsed.text.adaptedDescription;
-  const renderCopy = (text: string, className: string) =>
-    text && text === adaptedText
-      ? <MarkdownContent markdown={text} className={className} />
+  // Render the Markdown sibling (*_md) when present, else plain text. The md is passed explicitly
+  // per call site (no fragile reverse-mapping by string equality). When a field has no *_md (it was
+  // never Markdown-authored), md is '' and the plain text renders as a <p>.
+  const renderCopy = (text: string, md: string, className: string) =>
+    md
+      ? <MarkdownContent markdown={md} className={className} />
       : <p className={className}>{text}</p>;
 
   return (
@@ -1229,16 +1243,16 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
       <div className="detail-overview">
         <div className="detail-overview__copy">
           {summary && renderCopy(
-            summary,
+            summary, preview.summaryMd,
             `detail-overview__lead${!expanded && showToggle ? ' detail-overview__lead--clamped' : ''}`,
           )}
           {showExtendedText && (
             <>
               <span className="detail-overview__separator" aria-hidden="true" />
-              {renderCopy(fullText, 'detail-overview__body')}
+              {renderCopy(fullText, preview.descriptionMd, 'detail-overview__body')}
             </>
           )}
-          {expanded && alternateText && renderCopy(alternateText, 'detail-overview__support')}
+          {expanded && alternateText && renderCopy(alternateText, preview.adaptedDescriptionMd, 'detail-overview__support')}
         </div>
         {showToggle && (
           <button

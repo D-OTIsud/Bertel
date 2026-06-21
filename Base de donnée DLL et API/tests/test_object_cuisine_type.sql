@@ -79,7 +79,8 @@ BEGIN
   -- ---------- get_object_resource reads object-level cuisine ----------
   PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
   SET LOCAL ROLE anon;
-    ASSERT (SELECT jsonb_array_length(api.get_object_resource(v_pub)->'cuisine_types')) = 1,
+    -- get_object_resource RETURNS json (not jsonb) ⇒ cast before jsonb_array_length.
+    ASSERT (SELECT jsonb_array_length((api.get_object_resource(v_pub))::jsonb -> 'cuisine_types')) = 1,
            'get_object_resource(RES).cuisine_types must reflect object_cuisine_type';
   RESET ROLE;
 

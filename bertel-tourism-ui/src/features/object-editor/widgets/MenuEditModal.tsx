@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { EditorModal, Field, Input, ReferenceSelect } from '../primitives';
-import { DishEditModal } from './MenuItemsModal';
+import { DishEditModal } from './DishEditModal';
 import { createMenuItem, groupItemsBySection, pruneBlankItems, removeMenuItem, updateMenuItem } from '../sections/blocks/menu-items';
 import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
 

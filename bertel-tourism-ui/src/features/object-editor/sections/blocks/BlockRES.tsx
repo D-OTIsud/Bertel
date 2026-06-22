@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { ChipMultiSelect, Field, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
-import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
+import { ModuleUnavailableNotice } from './block-notes';
 import { MenuCard } from '../../widgets/MenuCard';
 import { MenuEditModal } from '../../widgets/MenuEditModal';
 import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
@@ -27,8 +27,6 @@ function createMenu(index: number): ObjectWorkspaceMenu {
 export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
   const cuisine = editor.draft.cuisine;
-  const openings = editor.draft.openings;
-  const capacity = editor.draft.capacityPolicies;
   const activeMenus = menus.items.filter((menu) => menu.active).length;
   // null = closed ; 'new' = creating ; { index } = editing an existing menu.
   const [editing, setEditing] = useState<'new' | { index: number } | null>(null);
@@ -52,7 +50,7 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
     <Fs
       num="06"
       title="Cuisine, cartes & service"
-      sub="Cuisines proposées (recherche globale) · menus (titre → sections → plats) · cartes PDF — capacité groupes en §07, horaires en §14"
+      sub="Cuisines proposées (recherche globale) · menus (titre → sections → plats) · cartes"
       folded={folded}
       pill={{
         tone: activeMenus > 0 ? 'ok' : 'warn',
@@ -132,18 +130,6 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
           onSave={saveMenu}
         />
       )}
-
-      {/* §48 single-owner: ces concerns vivent ailleurs — pointeurs « géré ailleurs » en bas de §06. */}
-      <OwnedElsewhereNote
-        num="07"
-        label="Capacité & accueil"
-        summary={
-          capacity.groupPolicy.minSize || capacity.groupPolicy.maxSize
-            ? `Groupes ${capacity.groupPolicy.minSize || '—'}–${capacity.groupPolicy.maxSize || '—'} pers.`
-            : undefined
-        }
-      />
-      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );
 }

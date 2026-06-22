@@ -106,8 +106,10 @@ Grants : `REVOKE … FROM PUBLIC, anon` ; `GRANT EXECUTE … TO authenticated, s
 **Invariant projet** : `gen_random_uuid()` (jamais `uuid_generate_v4()` sous search_path restreint).
 
 **c) Déploiement / intégrité**
-- Plier la table + le RPC dans `schema_unified.sql`.
-- Ajouter la migration au **manifest** + `docs/SQL_ROLLOUT_RUNBOOK.md` (invariant deploy-integrity : DB fraîche == live).
+- **NE PAS plier dans `schema_unified.sql`** : la policy RLS référence `api.is_platform_superuser`, **définie dans
+  `rls_policies.sql`** (appliqué APRÈS `schema_unified.sql`). Folder ici casserait la passe fresh-apply (fonction
+  introuvable). On suit donc le modèle **`migration_gdpr_erasure.sql`** : migration autonome **listée dans le
+  manifest + `docs/SQL_ROLLOUT_RUNBOOK.md` en ordre de dépendance** (après `rls_policies.sql`).
 - Test CI `Base de donnée DLL et API/tests/test_object_hard_delete.sql`.
 
 **Pré-requis à vérifier au plan** : `api.is_platform_superuser` doit être **appelable en RPC PostgREST** par
@@ -193,4 +195,4 @@ ajouter le grant (ou exposer un mince wrapper `api`) pour que le front puisse la
   (superuser-only, établissements, archived requis, confirmation par nom) + route `/api/objects/delete` (sweep
   `media` + `documents`) ; journal immuable `object_deletion_log`. Toute nouvelle voie de suppression d'objet
   passe par ce RPC, jamais un `DELETE` direct. »
-- Manifest + `SQL_ROLLOUT_RUNBOOK.md` mis à jour avec 14x.
+- Manifest + `SQL_ROLLOUT_RUNBOOK.md` mis à jour avec 14x (migration autonome, ordre de dépendance après `rls_policies.sql` ; **non foldée** dans `schema_unified.sql` — cf. §4.c).

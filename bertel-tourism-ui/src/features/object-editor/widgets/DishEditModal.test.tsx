@@ -2,6 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { DishEditModal } from './DishEditModal';
 import { createMenuItem } from '../sections/blocks/menu-items';
 
+// MarkdownEditorLazy is dynamic/SSR-false + TipTap — mock it to a plain textarea.
+jest.mock('../../../components/markdown/MarkdownEditorLazy', () => ({
+  MarkdownEditorLazy: ({ value, onChange, ariaLabel }: { value: string; onChange: (md: string) => void; ariaLabel: string }) => (
+    <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
+
 const DIETARY = [{ id: 'd1', code: 'vegan', label: 'Végan' }];
 const ALLERGEN = [{ id: 'a1', code: 'gluten', label: 'Gluten' }];
 

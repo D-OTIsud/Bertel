@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { EditorModal, Field, Input, Textarea, Chip, ChipSet, Toggle } from '../primitives';
+import { EditorModal, Field, Input, Chip, ChipSet, Toggle } from '../primitives';
+import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import type { ObjectWorkspaceMenuItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
 import { toggleItemCode } from '../sections/blocks/menu-items';
 
@@ -53,7 +54,12 @@ export function DishEditModal({
       </div>
 
       <Field label="Description / ingrédients">
-        <Textarea value={draft.description} rows={3} onChange={(description) => set({ description })} />
+        <MarkdownEditorLazy
+          value={draft.description}
+          onChange={(description) => set({ description })}
+          ariaLabel="Description du plat"
+          variant="inline"
+        />
       </Field>
 
       {dietaryOptions.length > 0 && (

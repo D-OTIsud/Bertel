@@ -1,0 +1,56 @@
+-- Migration: Markdown D2 — dish description (object_menu_item.description)
+-- Manifest id: 15b
+-- Decision log: §110
+-- Date: 2026-06-22
+--
+-- Summary:
+-- Four body-only edits inside existing functions / the search builder (CREATE OR REPLACE, signatures unchanged):
+--
+--   1. api.get_object_resource — menus items block (~line 4345 in api_views_functions.sql):
+--      BEFORE: (to_jsonb(mi) - 'menu_id')
+--              jsonb_build_object( 'category', ...
+--      AFTER:  (to_jsonb(mi) - 'menu_id' - 'description')
+--              jsonb_build_object(
+--                -- §110 dish description is Markdown-canonical: stripped flat + raw _md sibling.
+--                'description', api.strip_markdown(mi.description),
+--                'description_md', mi.description,
+--                'category', ...
+--
+--   2. api.get_object_resource — render-line (~line 4991 in api_views_functions.sql):
+--      BEFORE: CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(mi.description, 50) || '...'
+--      AFTER:  -- §110 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
+--              CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(api.strip_markdown(mi.description), 50) || '...'
+--
+--   3. api.refresh_object_filter_caches — doc_d search tsvector in schema_unified.sql (~line 4667):
+--      BEFORE: string_agg(DISTINCT mi.description, ' ')
+--      AFTER:  string_agg(DISTINCT api.strip_markdown(mi.description), ' ')
+--
+--   4. api.refresh_object_filter_caches — same doc_d edit in migration_global_search_document.sql (~line 143):
+--      Byte-identical edit as (3) above. Both copies must stay in sync.
+--
+-- All edits are folded into the source files listed above (canonical sources).
+-- get_object_resource is body-only (lives only in api_views_functions.sql, NOT in schema_unified.sql).
+-- The search builder refresh_object_filter_caches exists in BOTH schema_unified.sql AND
+-- migration_global_search_document.sql — both copies carry the strip_markdown wrap.
+--
+-- Deploy:
+--   1. Deploy api.get_object_resource via:
+--      node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
+--   2. Deploy api.refresh_object_filter_caches (both schema_unified + migration_global_search_document
+--      edits are already the same function body) via Supabase MCP execute_sql.
+--   3. NOTIFY pgrst, 'reload schema';
+--   4. Run the one-time backfill to re-index all objects:
+--      SELECT api.refresh_object_filter_caches(o.id) FROM object o;
+--
+-- Backfill note:
+-- Idempotent (IS DISTINCT FROM guard inside the function => only changed rows written).
+-- Re-index every object so existing dish descriptions are stripped in search_document.
+-- SELECT api.refresh_object_filter_caches(o.id) FROM object o;
+--
+-- SQL contract test: Base de donnée DLL et API/tests/test_dish_description_markdown.sql
+--
+-- No DDL change — description column in object_menu_item is unchanged (plain text, no i18n).
+-- No data migration needed — existing rows are stripped on the fly by api.strip_markdown in the
+-- resource function. The search tsvector is updated by the backfill above.
+-- The editor loads menu items via a direct PostgREST select (no resource raw-leg),
+-- so the editor leg is already raw and requires no change.

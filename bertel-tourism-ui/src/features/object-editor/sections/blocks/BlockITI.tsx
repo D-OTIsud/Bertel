@@ -4,6 +4,7 @@ import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellF
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
 import { formatDurationShort, stepMetric } from './iti-metrics';
+import { ItiTraceMap } from '../../widgets/ItiTraceMap';
 
 const STAGE_COLS = '14px 28px 1fr 90px 80px auto';
 
@@ -77,24 +78,14 @@ export function BlockITI({ editor, folded }: SectionProps) {
         <ModuleUnavailableNotice reason={itinerary.unavailableReason} />
       ) : (
         <>
-          <div className="grid-1-2" style={{ marginBottom: 14 }}>
-            {/* §48: no GPX upload pipeline; object_iti.geom has no write path in the nested RPC.
-                The dropzone is disabled-with-reason instead of an inviting drop target. */}
-            <div className="dropzone" aria-disabled="true" style={{ opacity: 0.62, cursor: 'not-allowed' }}>
-              <span className="ico">GPX</span>
-              <strong>{itinerary.geometrySummary || 'Aucune trace importée'}</strong>
-              <small>
-                Import GPX/KML indisponible dans l&apos;éditeur — la géométrie est gérée par l&apos;import de données.
-                {' '}{itinerary.sectionsCount} section(s) · {itinerary.profilesCount} profil(s)
-              </small>
-            </div>
-            {/* §111: the « Type de tracé / Boucle » strip moved into « Infos pratiques » (a boolean
-                like is_child_friendly); the map gets the full width. B1 swaps this placeholder for
-                the real MapLibre trace map. */}
-            <div className="map-mini" style={{ minHeight: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-4)', fontSize: 11 }}>
-              {itinerary.distanceKm ? `${itinerary.distanceKm} km` : 'Aperçu carte'}
-            </div>
-          </div>
+          {/* §111 B1: real GPX/KML import (drag&drop + button) + MapLibre trace map. The import calls
+              api.set_itinerary_track, which writes object_iti.geom and auto-derives the metrics fed
+              back into the steppers below. The « Boucle » strip moved to « Infos pratiques ». */}
+          <ItiTraceMap
+            objectId={editor.objectId}
+            initialTrack={itinerary.trackGeojson}
+            onMetrics={(m) => patch({ distanceKm: m.distanceKm, elevationPositiveM: m.elevationGain, elevationNegativeM: m.elevationLoss })}
+          />
 
           <div className="grid-4" style={{ marginBottom: 14 }}>
             <StatCard

@@ -617,6 +617,8 @@ export interface ObjectWorkspaceItineraryModule {
   requiredEquipment: string;
   infoPlaces: string;
   childFriendly: boolean;
+  /** §111 itinerary_details.track_geojson — the trace geometry for the editor MapLibre map (null = no trace yet). */
+  trackGeojson: { type: string; coordinates: number[][] } | null;
   stages: ObjectWorkspaceItineraryStageSummary[];
   sectionsCount: number;
   profilesCount: number;
@@ -2177,6 +2179,11 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
   ].filter(Boolean).join(' · ');
 
   const infoRecord = readRecord(details.info);
+  const trackGeojsonRaw = details.track_geojson;
+  const trackGeojson =
+    trackGeojsonRaw && typeof trackGeojsonRaw === 'object' && 'coordinates' in (trackGeojsonRaw as object)
+      ? (trackGeojsonRaw as { type: string; coordinates: number[][] })
+      : null;
 
   return {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
@@ -2197,6 +2204,7 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     requiredEquipment: readString(infoRecord.required_equipment),
     infoPlaces: readString(infoRecord.info_places),
     childFriendly: readBoolean(infoRecord.is_child_friendly),
+    trackGeojson,
     stages,
     sectionsCount: readArray(details.sections).length,
     profilesCount: readArray(details.profiles).length,

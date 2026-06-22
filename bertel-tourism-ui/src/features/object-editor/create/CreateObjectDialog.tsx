@@ -1,15 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentType } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import {
+  BedDouble,
+  UtensilsCrossed,
+  Mountain,
+  Route,
+  PartyPopper,
+  Landmark,
+  Store,
+  Check,
+  Loader2,
+  type LucideProps,
+} from 'lucide-react';
+import type { ArchetypeCode } from '../archetypes';
 import { createObject } from '../../../services/rpc';
 import {
   buildCreateTypeOptions,
@@ -24,11 +35,29 @@ interface CreateObjectDialogProps {
   onCreated: (id: string) => void;
 }
 
+type ArchetypeVisual = { color: string; deep: string; Icon: ComponentType<LucideProps> };
+
 /**
- * Thin object-creation dialog (B1, §105): pick a type + name, then `createObject` over the
- * live RPC. It deliberately collects ONLY the two fields the RPC requires — all other
- * authoring happens in the full-page editor, which loads the freshly-created object. One
- * authoring surface, one place to fix.
+ * Per-archetype icon + accent, matching the app's real accent palette (styles.css
+ * `.acc-*` → object-detail / object-editor). Selecting a type colours the whole
+ * dialog (tile, CTA, focus ring) with the same accent the editor will use, so the
+ * choice reads consistently end to end. FMA shares the RES orange (as in archetypes.ts),
+ * differentiated by its icon.
+ */
+const ARCHETYPE_VISUAL: Record<ArchetypeCode, ArchetypeVisual> = {
+  HEB: { color: '#176b6a', deep: '#0d4f4e', Icon: BedDouble },
+  RES: { color: '#c96d3b', deep: '#93501f', Icon: UtensilsCrossed },
+  ASC: { color: '#1e7491', deep: '#0e5872', Icon: Mountain },
+  ITI: { color: '#2a7a45', deep: '#1a5a30', Icon: Route },
+  FMA: { color: '#c96d3b', deep: '#93501f', Icon: PartyPopper },
+  VIS: { color: '#6c4f8a', deep: '#4d3866', Icon: Landmark },
+  SRV: { color: '#a45330', deep: '#7a3b20', Icon: Store },
+};
+
+/**
+ * Object-creation dialog (B1, §107): pick a type + name, then `createObject` over the
+ * live RPC. It deliberately collects ONLY the two fields the RPC requires; everything
+ * else is authored in the full-page editor that opens next. One authoring surface.
  */
 export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDialogProps) {
   const groups = useMemo(() => buildCreateTypeOptions(), []);
@@ -38,6 +67,8 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
   const [error, setError] = useState<string | null>(null);
 
   const validation = validateCreateObjectInput({ type, name });
+  const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
+  const accent = selectedArchetype ? ARCHETYPE_VISUAL[selectedArchetype] : null;
 
   function reset() {
     setType('');
@@ -68,35 +99,57 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Créer une fiche</DialogTitle>
-          <DialogDescription>
-            Choisissez un type et un nom. Vous compléterez la fiche dans l&apos;éditeur juste après.
+      <DialogContent showClose={!busy} className="max-w-2xl gap-0 overflow-hidden p-0">
+        <DialogHeader className="space-y-1 border-b border-line/70 px-6 pb-4 pt-6 text-left">
+          <DialogTitle className="text-[19px] font-semibold tracking-tight text-ink">
+            Créer une fiche
+          </DialogTitle>
+          <DialogDescription className="text-[13px] text-ink-3">
+            Choisissez un type, nommez la fiche. Vous complétez le reste dans l&apos;éditeur juste après.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
-          <fieldset className="grid gap-3">
-            <legend className="text-sm font-semibold text-ink">Type de fiche</legend>
-            {groups.map((group) => (
-              <div key={group.archetype} className="grid gap-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
-                  {group.codeName}
-                  <span className="ml-2 font-normal normal-case text-ink-3/80">{group.family}</span>
-                </p>
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={group.codeName}>
+        <div className="max-h-[46vh] space-y-5 overflow-y-auto px-6 py-5">
+          {groups.map((group) => {
+            const v = ARCHETYPE_VISUAL[group.archetype];
+            const Icon = v.Icon;
+            return (
+              <section key={group.archetype}>
+                <div className="mb-2.5 flex items-center gap-2.5">
+                  <span
+                    className="grid h-7 w-7 flex-none place-items-center rounded-lg"
+                    style={{ backgroundColor: `${v.color}1f`, color: v.color }}
+                  >
+                    <Icon className="h-[15px] w-[15px]" strokeWidth={2.25} />
+                  </span>
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                    <h3 className="text-[13.5px] font-semibold tracking-tight text-ink">{group.codeName}</h3>
+                    <span className="truncate text-[12px] text-ink-3">{group.family}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={group.codeName}>
                   {group.types.map((option) => {
                     const selected = type === option.code;
                     return (
                       <label
                         key={option.code}
                         className={[
-                          'cursor-pointer rounded-shell border px-3 py-1.5 text-sm font-medium transition-colors',
+                          'group/tile relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 will-change-transform',
                           selected
-                            ? 'border-primary bg-primary/10 text-ink'
-                            : 'border-line bg-surface text-ink-3 hover:bg-surface2 hover:text-ink',
+                            ? 'shadow-sm'
+                            : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
                         ].join(' ')}
+                        style={
+                          selected
+                            ? {
+                                borderColor: v.color,
+                                backgroundColor: `${v.color}14`,
+                                color: v.deep,
+                                boxShadow: `0 0 0 3px ${v.color}24`,
+                              }
+                            : undefined
+                        }
                       >
                         <input
                           type="radio"
@@ -107,17 +160,22 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
                           aria-label={option.label}
                           className="sr-only"
                         />
-                        {option.label}
+                        <span className="truncate">{option.label}</span>
+                        {selected ? (
+                          <Check className="ml-auto h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
+                        ) : null}
                       </label>
                     );
                   })}
                 </div>
-              </div>
-            ))}
-          </fieldset>
+              </section>
+            );
+          })}
+        </div>
 
-          <div className="grid gap-1.5">
-            <label htmlFor="create-object-name" className="text-sm font-semibold text-ink">
+        <div className="space-y-4 border-t border-line/70 px-6 pb-6 pt-5">
+          <div className="space-y-1.5">
+            <label htmlFor="create-object-name" className="block text-[13px] font-semibold text-ink">
               Nom de la fiche
             </label>
             <input
@@ -127,25 +185,55 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
               maxLength={MAX_OBJECT_NAME_LENGTH}
               onChange={(event) => setName(event.target.value)}
               placeholder="ex. Hôtel des Cimes"
-              className="h-10 rounded-shell border border-line bg-surface px-3 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              autoComplete="off"
+              className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow placeholder:text-ink-3/70"
+              style={accent ? { boxShadow: undefined } : undefined}
+              onFocus={(e) => {
+                if (accent) e.currentTarget.style.boxShadow = `0 0 0 3px ${accent.color}24`;
+                e.currentTarget.style.borderColor = accent ? accent.color : 'var(--ink-3, #9ca3af)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = '';
+                e.currentTarget.style.borderColor = '';
+              }}
             />
           </div>
 
           {error ? (
-            <p role="alert" className="rounded-shell border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p
+              role="alert"
+              className="rounded-xl border px-3.5 py-2.5 text-[13px]"
+              style={{ borderColor: '#e6b8b0', backgroundColor: '#fbf1ef', color: '#9a3b2a' }}
+            >
               {error}
             </p>
           ) : null}
-        </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose} disabled={busy}>
-            Annuler
-          </Button>
-          <Button type="button" onClick={handleCreate} disabled={!validation.ok || busy}>
-            {busy ? 'Création…' : 'Créer la fiche'}
-          </Button>
-        </DialogFooter>
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={busy}
+              className="h-10 rounded-xl border border-line bg-surface px-4 text-[13.5px] font-semibold text-ink-2 transition-colors hover:bg-surface2 hover:text-ink disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!validation.ok || busy}
+              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:cursor-not-allowed disabled:opacity-100"
+              style={
+                validation.ok && accent
+                  ? { backgroundColor: accent.color }
+                  : { backgroundColor: '#dcd8d1', color: '#8a857c' }
+              }
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {busy ? 'Création…' : 'Créer la fiche'}
+            </button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

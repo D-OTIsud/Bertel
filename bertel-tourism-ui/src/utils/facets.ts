@@ -298,6 +298,12 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const normalizedFilters = normalizeExplorerFilters(filters);
   const { common } = normalizedFilters;
 
+  // §109 — broaden text search to the aggregated search_document by default (Explorer).
+  // Editor object pickers pass searchScope='name' to keep name/city-only matching.
+  if (cleanString(common.search) && common.searchScope !== 'name') {
+    payload.search_mode = 'global';
+  }
+
   if (common.openNow) {
     payload.open_now = true;
   }

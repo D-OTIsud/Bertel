@@ -46,6 +46,9 @@ export function buildObjectSearchFilters(query: string, buckets?: ExplorerBucket
       ...DEFAULT_EXPLORER_FILTERS.common,
       search: query.trim(),
       statuses: ['published', 'draft'],
+      // §109 — keep object linking (duplicate-name hint, RelationPicker) name/city-focused;
+      // do NOT broaden to the global search_document the Explorer uses.
+      searchScope: 'name',
     },
   };
 }

@@ -318,6 +318,27 @@ describe('hasServerOnlyFilters', () => {
 });
 
 describe('buildBucketRpcFilters', () => {
+  it('emits search_mode=global by default when a search term is present (Explorer)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi' },
+    });
+    expect(buildBucketRpcFilters(filters, 'all').search_mode).toBe('global');
+  });
+
+  it('does NOT broaden when searchScope=name (editor object pickers)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi', searchScope: 'name' },
+    });
+    expect(buildBucketRpcFilters(filters, 'all')).not.toHaveProperty('search_mode');
+  });
+
+  it('does not emit search_mode when there is no search term', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: '   ' },
+    });
+    expect(buildBucketRpcFilters(filters, 'all')).not.toHaveProperty('search_mode');
+  });
+
   it('uses the canonical accessibility family for broad PMR filtering', () => {
     const filters = buildFilters({
       common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true },

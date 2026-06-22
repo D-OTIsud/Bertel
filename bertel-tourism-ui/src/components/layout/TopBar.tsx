@@ -102,7 +102,7 @@ export function TopBar() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher une fiche, une ville ou une action..."
+            placeholder="Rechercher : nom, ville, équipement, plat, label..."
             className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <kbd className="hidden shrink-0 rounded-[6px] border border-line bg-surface px-1.5 py-px font-sans text-[11px] text-ink-3 sm:inline-block">

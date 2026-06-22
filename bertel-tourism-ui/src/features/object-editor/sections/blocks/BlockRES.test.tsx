@@ -81,22 +81,29 @@ describe('BlockRES — §06 menus : carte dépliable (lecture) + modale (éditio
   });
 });
 
-describe('BlockRES — single-owner surfaces (§48)', () => {
-  it('no longer edits the group policy in §06 (owned by §07)', () => {
+describe('BlockRES — §06 ne porte ni l’édition ni les pointeurs §07/§14 (bruit retiré)', () => {
+  it('does not edit the group policy in §06 (owned by §07)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText('Capacité groupe min')).not.toBeInTheDocument();
     expect(screen.queryByText('Capacité groupe max')).not.toBeInTheDocument();
     expect(screen.queryByText('Groupes uniquement')).not.toBeInTheDocument();
-    expect(screen.getByText(/Géré dans la section 07/)).toBeInTheDocument();
   });
 
-  it('no longer edits service hours in §06 (owned by §14)', () => {
+  it('does not edit service hours in §06 (owned by §14)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockRES editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText('Copier')).not.toBeInTheDocument(); // ScheduleEditor header gone
-    expect(screen.getByText(/Géré dans la section 14/)).toBeInTheDocument();
+  });
+
+  it('no longer renders the §07/§14 "géré ailleurs" pointer notes (noise removed per PO 2026-06-22)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+
+    // Cuisine/cartes/service section must not echo capacity (§07) or hours (§14) — they are noise here.
+    expect(screen.queryByText(/Géré dans la section 07/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Géré dans la section 14/)).not.toBeInTheDocument();
   });
 });

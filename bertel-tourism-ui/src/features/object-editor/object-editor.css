@@ -2664,3 +2664,6 @@
   margin: 8px 0 0; font-size: 11px; color: var(--ink-4);
 }
 
+/* §108 — modale de suppression définitive */
+.delete-modal__warning { color: var(--text, #1f2937); line-height: 1.5; margin-bottom: 1rem; }
+.delete-modal__error { color: var(--danger, #b91c1c); margin-top: 0.75rem; font-size: 0.875rem; }

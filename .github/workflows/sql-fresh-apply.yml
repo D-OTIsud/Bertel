@@ -251,6 +251,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_resource_facet_exposure.sql"
 
+      - name: global search test (§109 14y — search_document: amenities/dishes/dietary/description surface in global mode, name mode not broadened, private menu excluded, relevance ranking)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_global_search.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

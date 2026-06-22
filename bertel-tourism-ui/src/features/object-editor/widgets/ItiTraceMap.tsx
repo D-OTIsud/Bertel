@@ -7,17 +7,19 @@ import { REUNION_MAP_CENTER } from './location-coords';
 import { parseTrackFile, type TrackLineString } from '../sections/blocks/gpx-import';
 import { saveObjectWorkspaceItineraryTrack } from '../../../services/object-workspace';
 
-export interface ItiTraceMetrics {
+export interface ItiTraceImport {
   distanceKm: string;
   elevationGain: string;
   elevationLoss: string;
+  /** The imported trace geometry (null on clear) — flows into the draft so the stage map sees it too. */
+  trackGeojson: { type: string; coordinates: number[][] } | null;
 }
 
 interface ItiTraceMapProps {
   objectId: string;
   initialTrack: { type: string; coordinates: number[][] } | null;
-  /** Called after a successful import/clear with the server-derived metrics, to fill the steppers. */
-  onMetrics: (metrics: ItiTraceMetrics) => void;
+  /** Called after a successful import/clear with the server-derived metrics AND the geometry. */
+  onImported: (result: ItiTraceImport) => void;
 }
 
 function bbox(coords: number[][]): [number, number, number, number] | null {
@@ -39,7 +41,7 @@ function bbox(coords: number[][]): [number, number, number, number] | null {
  * that renders the trace. Importing parses the file client-side (single merged LineString, elevation
  * preserved), then api.set_itinerary_track stores the geometry and returns the auto-derived metrics.
  */
-export function ItiTraceMap({ objectId, initialTrack, onMetrics }: ItiTraceMapProps) {
+export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapProps) {
   const mapRef = useRef<MapRef>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [track, setTrack] = useState<{ type: string; coordinates: number[][] } | null>(initialTrack);
@@ -70,7 +72,7 @@ export function ItiTraceMap({ objectId, initialTrack, onMetrics }: ItiTraceMapPr
       const line: TrackLineString = parseTrackFile(text, file.name);
       const metrics = await saveObjectWorkspaceItineraryTrack(objectId, line);
       setTrack(line);
-      onMetrics({ distanceKm: metrics.distanceKm, elevationGain: metrics.elevationGain, elevationLoss: metrics.elevationLoss });
+      onImported({ distanceKm: metrics.distanceKm, elevationGain: metrics.elevationGain, elevationLoss: metrics.elevationLoss, trackGeojson: line });
       fitToTrack(line.coordinates);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import impossible.');
@@ -85,7 +87,7 @@ export function ItiTraceMap({ objectId, initialTrack, onMetrics }: ItiTraceMapPr
     try {
       await saveObjectWorkspaceItineraryTrack(objectId, null);
       setTrack(null);
-      onMetrics({ distanceKm: '', elevationGain: '', elevationLoss: '' });
+      onImported({ distanceKm: '', elevationGain: '', elevationLoss: '', trackGeojson: null });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Suppression impossible.');
     } finally {

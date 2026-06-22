@@ -84,7 +84,12 @@ export function BlockITI({ editor, folded }: SectionProps) {
           <ItiTraceMap
             objectId={editor.objectId}
             initialTrack={itinerary.trackGeojson}
-            onMetrics={(m) => patch({ distanceKm: m.distanceKm, elevationPositiveM: m.elevationGain, elevationNegativeM: m.elevationLoss })}
+            onImported={(r) => patch({
+              distanceKm: r.distanceKm,
+              elevationPositiveM: r.elevationGain,
+              elevationNegativeM: r.elevationLoss,
+              trackGeojson: r.trackGeojson,
+            })}
           />
 
           <div className="grid-4" style={{ marginBottom: 14 }}>

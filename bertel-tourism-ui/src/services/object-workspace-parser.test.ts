@@ -851,4 +851,13 @@ describe('descriptions org overlay', () => {
     } } as unknown as import('../types/domain').ObjectDetail;
     expect(parseObjectWorkspace(detail, ['fr']).descriptions.orgOverlay).toBeNull();
   });
+
+  it('parses a place description base from description_raw (stripped flat key ignored)', () => {
+    const detail = { raw: { places: [{ id: 'p1', name: 'Point de RDV', descriptions: [{
+      id: 'd1', description: 'Voir le volcan actif.', description_raw: 'Voir le **volcan** actif.',
+      description_md: 'Voir le **volcan** actif.', description_i18n: null, visibility: 'public',
+    }] }] } } as unknown as import('./object-detail-parser').ObjectDetail;
+    const modules = parseObjectWorkspace(detail, ['fr']);
+    expect(modules.descriptions.places[0].description.baseValue).toBe('Voir le **volcan** actif.');
+  });
 });

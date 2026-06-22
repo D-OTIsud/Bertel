@@ -1,0 +1,50 @@
+-- Migration: Markdown D2 -- sub-place description (object_place_description)
+-- Manifest id: 15c
+-- Decision log: §110
+-- Date: 2026-06-22
+--
+-- Summary:
+-- One body-only edit inside api.get_object_resource (CREATE OR REPLACE, signature unchanged):
+--
+--   api.get_object_resource -- places block (~line 3878 in api_views_functions.sql):
+--     BEFORE: 'descriptions', COALESCE((
+--               SELECT jsonb_agg((to_jsonb(pd) - 'place_id')  <-- leaks all raw prose + *_i18n columns
+--                        ORDER BY ...
+--     AFTER:  'descriptions', COALESCE((
+--               SELECT jsonb_agg(
+--                        -- §110 Markdown: explicit override
+--                        (to_jsonb(pd) - 'place_id'
+--                                      - 'description'         - 'description_i18n'
+--                                      - 'description_chapo'   - 'description_chapo_i18n'
+--                                      - 'description_mobile'  - 'description_mobile_i18n'
+--                                      - 'description_edition' - 'description_edition_i18n'
+--                                      - 'description_adapted' - 'description_adapted_i18n')
+--                        || jsonb_build_object(
+--                          'description',          api.strip_markdown(COALESCE(api.i18n_pick(...), pd.description)),
+--                          'description_md',       COALESCE(api.i18n_pick(...), pd.description),
+--                          'description_raw',      pd.description,      -- editor round-trip base
+--                          'description_chapo',    api.strip_markdown(COALESCE(...)),
+--                          'description_chapo_md', COALESCE(...),
+--                          'description_chapo_raw', pd.description_chapo,
+--                          ... (same pattern for mobile/edition/adapted)
+--                        )
+--                        ORDER BY ...
+--
+-- The three keys per field are:
+--   <col>          = api.strip_markdown(resolved)   -- flat readers, cards, exports
+--   <col>_md       = resolved raw                   -- rich readers, public drawer
+--   <col>_raw      = pd.<col> (raw scalar)           -- editor loader base (parseDescriptionScope,
+--                                                       scope='place', bypasses stripped flat key)
+--
+-- No schema_unified.sql fold needed: api.get_object_resource body lives ONLY in api_views_functions.sql.
+-- Folded: api_views_functions.sql (canonical source, updated in place).
+--
+-- Deploy:
+--   1. Deploy api.get_object_resource via:
+--      node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
+--      (get the current line range from api_views_functions.sql with grep for CREATE OR REPLACE FUNCTION api.get_object_resource)
+--   2. NOTIFY pgrst, 'reload schema';
+--   3. Run Base de donnee DLL et API/tests/test_place_description_markdown.sql via MCP execute_sql.
+--      Expected: RAISE EXCEPTION 'ROLLBACK_OK' surfaces, no assertion errors.
+--
+-- Rollback: redeploy the previous get_object_resource body (remove the §110 block).

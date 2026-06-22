@@ -1,6 +1,6 @@
 -- Migration: Markdown D2 — room description (object_room_type.description)
 -- Manifest id: 15a
--- Decision log: §110
+-- Decision log: §112
 -- Date: 2026-06-22
 --
 -- Summary:
@@ -11,7 +11,7 @@
 --              jsonb_build_object( 'amenities', ...
 --      AFTER:  (to_jsonb(rt) - 'object_id' - 'description_i18n')
 --              jsonb_build_object(
---                -- §110 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
+--                -- §112 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
 --                'description', api.strip_markdown(COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description)),
 --                'description_md', COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description),
 --                'amenities', ...

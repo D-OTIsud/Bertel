@@ -4,7 +4,7 @@ BEGIN
   SELECT id INTO v_obj FROM object WHERE status='published' AND object_type <> 'ORG' ORDER BY created_at LIMIT 1;
   INSERT INTO object_place (object_id, label, position) VALUES (v_obj, 'ZZ Point de RDV', 0) RETURNING id INTO v_place;
   -- Two-language fixture: FR base scalar + an EN translation map. The EN i18n map is the
-  -- editor's per-language leg — §110 C1 asserts it survives RAW (the prior subtract-*_i18n
+  -- editor's per-language leg — §112 C1 asserts it survives RAW (the prior subtract-*_i18n
   -- form NULLed it on the next §16 save).
   -- i18n maps carry an explicit 'fr' (so the FR flat resolution is deterministic — api.i18n_pick
   -- otherwise falls back to any available language) PLUS an 'en' translation = the editor leg.

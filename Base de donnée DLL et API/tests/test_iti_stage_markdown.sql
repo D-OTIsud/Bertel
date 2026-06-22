@@ -1,4 +1,4 @@
--- §110 Markdown D2 phase F — object_iti_stage.description (inline tier).
+-- §112 Markdown D2 phase F — object_iti_stage.description (inline tier).
 -- Asserts: get_object_resource itinerary_details.stages strips the flat description + emits raw
 -- description_md; the 4 flat exports (KML, GPX via build_iti_track, GPX via export_itinerary_gpx,
 -- GeoJSON) carry the plain stage description and NEVER the markdown link URL.
@@ -8,7 +8,7 @@
 -- cache trigger for the txn — `regenerate_iti_track_cache()` calls a non-existent
 -- ST_AsGPX(..., NULL, NULL) overload on a geom insert (42883), which blocks building a track
 -- fixture. Both, plus every insert, roll back via the ROLLBACK_OK exception (no persisted change).
--- (The ST_AsGPX trigger bug is unrelated to §110 and is tracked separately.)
+-- (The ST_AsGPX trigger bug is unrelated to §112 and is tracked separately.)
 DO $$
 DECLARE
   v_obj text; v_res jsonb; v_stage_j jsonb; v_kml text; v_gpx text; v_gpx2 text; v_geo json;
@@ -30,7 +30,7 @@ BEGIN
   ASSERT v_stage_j IS NOT NULL, 'stage not in resource itinerary_details';
   ASSERT v_stage_j->>'description' = v_plain, format('resource flat not stripped: %s', v_stage_j->>'description');
   ASSERT v_stage_j->>'description_md' = v_md, 'resource description_md not raw';
-  -- §110 I1: the stage editor is a plain string (never reads i18n) → the raw description_i18n
+  -- §112 I1: the stage editor is a plain string (never reads i18n) → the raw description_i18n
   -- must be subtracted from the resource block (no raw per-language Markdown in the payload/CSV).
   ASSERT NOT (v_stage_j ? 'description_i18n'), 'description_i18n leaked into resource stages block';
 

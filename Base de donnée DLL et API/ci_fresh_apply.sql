@@ -149,6 +149,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 14m    migration_object_web_channel.sql  (§90 object-scoped réseaux sociaux + distribution OTA: object_web_channel — composite FK (kind_id,kind_domain)->ref_code(id,domain) for social_network|distribution_channel; §49 split read gate + per-command canonical write + updated_at/audit triggers; get_object_resource web_channels key folded in api_views_functions.sql; editor §03 read/write via direct PostgREST; retires §20) =='
 \ir migration_object_web_channel.sql
 
+\echo '== 15e    migration_iti_section06_vocab.sql  (§111 Section 06 ITI editor vocab: ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind ref_code partitions + house RLS + seeds; idempotent, self-contained) =='
+\ir migration_iti_section06_vocab.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

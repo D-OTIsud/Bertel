@@ -1,7 +1,16 @@
+import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockITI } from './BlockITI';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
+
+// react-map-gl/maplibre needs WebGL (absent in jsdom) — stub it for the §06 trace map.
+jest.mock('react-map-gl/maplibre', () => ({
+  Map: ({ children }: { children?: ReactNode }) => <div data-testid="iti-trace-map">{children}</div>,
+  Source: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  Layer: () => null,
+  NavigationControl: () => null,
+}));
 
 /**
  * §48 honesty sweep on the ITI block: the GPX dropzone has no upload pipeline and
@@ -11,24 +20,26 @@ import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
  * retained for the future seasonality feature.
  */
 describe('BlockITI — honest controls (§48)', () => {
-  it('renders the GPX zone as disabled-with-reason, not as a drop invitation', () => {
+  it('§111 B1: renders the real GPX/KML import zone (the §48 disabled-with-reason placeholder is gone)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockITI editor={result.current} permissions={allowAll} />);
 
-    expect(screen.queryByText('Déposer un fichier GPX ou KML')).not.toBeInTheDocument();
-    expect(screen.getByText(/import de données/i)).toBeInTheDocument();
-    expect(screen.getByText(/import de données/i).closest('.dropzone')).toHaveAttribute('aria-disabled', 'true');
+    // the §48 "géométrie gérée par l'import de données" disabled placeholder no longer exists
+    expect(screen.queryByText(/import de données/i)).not.toBeInTheDocument();
+    // the import is now actionable (set_itinerary_track pipeline)
+    expect(screen.getByRole('button', { name: 'Importer un fichier' })).toBeInTheDocument();
   });
 
-  it('renders honest empty-trace pill and empty-state text when no geometry', () => {
+  it('renders the honest empty-trace pill and the import prompt when no geometry', () => {
     const modules = fullModulesFixture();
     modules.itinerary.geometrySummary = '';
+    modules.itinerary.trackGeojson = null;
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     render(<BlockITI editor={result.current} permissions={allowAll} />);
 
-    // The dropzone inner text still says "Aucune trace importée"
-    expect(screen.getByText('Aucune trace importée')).toBeInTheDocument();
-    // The pill must be the honest "no trace" label, not the stale "Trace verrouillée"
+    // the import zone invites a drop when there is no trace
+    expect(screen.getByText('Glissez un fichier GPX / KML')).toBeInTheDocument();
+    // the pill must be the honest "no trace" label
     expect(screen.getByText('Aucune trace — import requis')).toBeInTheDocument();
   });
 
@@ -54,13 +65,13 @@ describe('BlockITI — honest controls (§48)', () => {
     expect(screen.getByText('Non applicable')).toBeInTheDocument();
   });
 
-  it('renders the stages repeater add button and GPX disabled zone when NOT gated', () => {
+  it('renders the stages repeater add button and the GPX import zone when NOT gated', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockITI editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText(/Ajouter une étape \/ un POI/)).toBeInTheDocument();
-    // Disabled-with-reason text is present (not "Déposer un fichier GPX ou KML")
-    expect(screen.getByText(/import de données/i)).toBeInTheDocument();
+    // the real import zone is present (B1 replaced the §48 disabled-with-reason placeholder)
+    expect(screen.getByRole('button', { name: 'Importer un fichier' })).toBeInTheDocument();
   });
 });
 

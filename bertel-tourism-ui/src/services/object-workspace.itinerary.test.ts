@@ -25,6 +25,7 @@ const baseInput: ObjectWorkspaceItineraryModule = {
   requiredEquipment: '',
   infoPlaces: '',
   childFriendly: false,
+  trackGeojson: null,
   stages: [],
   sectionsCount: 0,
   profilesCount: 0,

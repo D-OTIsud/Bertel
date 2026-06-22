@@ -5361,6 +5361,33 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
   }
 }
 
+/**
+ * §111 Persist an imported GPX/KML trace via api.set_itinerary_track: writes object_iti.geom (2D) and
+ * auto-derives distance / elevation / profile server-side (PostGIS). Pass null to clear the trace.
+ * Returns the server-derived metrics (as strings, for the steppers). No-op in demo mode.
+ */
+export async function saveObjectWorkspaceItineraryTrack(
+  objectId: string,
+  geojson: { type: string; coordinates: number[][] } | null,
+): Promise<{ distanceKm: string; elevationGain: string; elevationLoss: string; hasElevation: boolean }> {
+  if (useSessionStore.getState().demoMode) {
+    return { distanceKm: '', elevationGain: '', elevationLoss: '', hasElevation: false };
+  }
+  const result = await callObjectWorkspaceRpc(
+    'set_itinerary_track',
+    objectId,
+    { geojson: geojson ?? null },
+    'Impossible d enregistrer le trace importe.',
+  );
+  const toStr = (v: unknown): string => (v == null ? '' : String(v));
+  return {
+    distanceKm: toStr(result.distance_km),
+    elevationGain: toStr(result.elevation_gain),
+    elevationLoss: toStr(result.elevation_loss),
+    hasElevation: result.has_3d === true,
+  };
+}
+
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
 }

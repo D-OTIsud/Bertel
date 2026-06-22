@@ -273,6 +273,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       requiredEquipment: 'Chaussures de marche',
       infoPlaces: '',
       childFriendly: true,
+      trackGeojson: { type: 'LineString', coordinates: [[55.5, -21, 100], [55.51, -21, 150]] },
       stages: [{ recordId: 'st1', name: 'Départ', description: 'Parking', position: '1' }],
       sectionsCount: 1,
       profilesCount: 1,

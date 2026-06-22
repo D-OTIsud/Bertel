@@ -39,10 +39,9 @@ type ArchetypeVisual = { color: string; deep: string; Icon: ComponentType<Lucide
 
 /**
  * Per-archetype icon + accent, matching the app's real accent palette (styles.css
- * `.acc-*` → object-detail / object-editor). Selecting a type colours the whole
- * dialog (tile, CTA, focus ring) with the same accent the editor will use, so the
- * choice reads consistently end to end. FMA shares the RES orange (as in archetypes.ts),
- * differentiated by its icon.
+ * `.acc-*` → object-detail / object-editor). Selecting a type colours the tile + the
+ * "Créer" CTA with the same accent the editor will use, so the choice reads consistently
+ * end to end. FMA shares the RES orange (as in archetypes.ts), differentiated by its icon.
  */
 const ARCHETYPE_VISUAL: Record<ArchetypeCode, ArchetypeVisual> = {
   HEB: { color: '#176b6a', deep: '#0d4f4e', Icon: BedDouble },
@@ -55,9 +54,10 @@ const ARCHETYPE_VISUAL: Record<ArchetypeCode, ArchetypeVisual> = {
 };
 
 /**
- * Object-creation dialog (B1, §107): pick a type + name, then `createObject` over the
- * live RPC. It deliberately collects ONLY the two fields the RPC requires; everything
- * else is authored in the full-page editor that opens next. One authoring surface.
+ * Object-creation dialog (B1, §107): name the fiche, pick a type, then `createObject`
+ * over the live RPC. It deliberately collects ONLY the two fields the RPC requires;
+ * everything else is authored in the full-page editor that opens next. One authoring
+ * surface. Flow top-to-bottom: name (fixed) → type (scrollable) → create.
  */
 export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDialogProps) {
   const groups = useMemo(() => buildCreateTypeOptions(), []);
@@ -105,100 +105,103 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
             Créer une fiche
           </DialogTitle>
           <DialogDescription className="text-[13px] text-ink-3">
-            Choisissez un type, nommez la fiche. Vous complétez le reste dans l&apos;éditeur juste après.
+            Nommez la fiche, puis choisissez son type. Vous complétez le reste dans l&apos;éditeur juste après.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[46vh] space-y-5 overflow-y-auto px-6 py-5">
-          {groups.map((group) => {
-            const v = ARCHETYPE_VISUAL[group.archetype];
-            const Icon = v.Icon;
-            return (
-              <section key={group.archetype}>
-                <div className="mb-2.5 flex items-center gap-2.5">
-                  <span
-                    className="grid h-7 w-7 flex-none place-items-center rounded-lg"
-                    style={{ backgroundColor: `${v.color}1f`, color: v.color }}
-                  >
-                    <Icon className="h-[15px] w-[15px]" strokeWidth={2.25} />
-                  </span>
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-                    <h3 className="text-[13.5px] font-semibold tracking-tight text-ink">{group.codeName}</h3>
-                    <span className="truncate text-[12px] text-ink-3">{group.family}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={group.codeName}>
-                  {group.types.map((option) => {
-                    const selected = type === option.code;
-                    return (
-                      <label
-                        key={option.code}
-                        className={[
-                          'group/tile relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 will-change-transform',
-                          selected
-                            ? 'shadow-sm'
-                            : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
-                        ].join(' ')}
-                        style={
-                          selected
-                            ? {
-                                borderColor: v.color,
-                                backgroundColor: `${v.color}14`,
-                                color: v.deep,
-                                boxShadow: `0 0 0 3px ${v.color}24`,
-                              }
-                            : undefined
-                        }
-                      >
-                        <input
-                          type="radio"
-                          name="create-object-type"
-                          value={option.code}
-                          checked={selected}
-                          onChange={() => setType(option.code)}
-                          aria-label={option.label}
-                          className="sr-only"
-                        />
-                        <span className="truncate">{option.label}</span>
-                        {selected ? (
-                          <Check className="ml-auto h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
-                        ) : null}
-                      </label>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+        {/* 1 · Name first */}
+        <div className="border-b border-line/70 px-6 py-4">
+          <label htmlFor="create-object-name" className="mb-1.5 block text-[13px] font-semibold text-ink">
+            Nom de la fiche
+          </label>
+          <input
+            id="create-object-name"
+            type="text"
+            value={name}
+            maxLength={MAX_OBJECT_NAME_LENGTH}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="ex. Hôtel des Cimes"
+            autoComplete="off"
+            autoFocus
+            className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow placeholder:text-ink-3/70 focus:border-ink-3 focus:ring-2 focus:ring-ink-3/25"
+          />
         </div>
 
-        <div className="space-y-4 border-t border-line/70 px-6 pb-6 pt-5">
-          <div className="space-y-1.5">
-            <label htmlFor="create-object-name" className="block text-[13px] font-semibold text-ink">
-              Nom de la fiche
-            </label>
-            <input
-              id="create-object-name"
-              type="text"
-              value={name}
-              maxLength={MAX_OBJECT_NAME_LENGTH}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="ex. Hôtel des Cimes"
-              autoComplete="off"
-              className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow placeholder:text-ink-3/70"
-              style={accent ? { boxShadow: undefined } : undefined}
-              onFocus={(e) => {
-                if (accent) e.currentTarget.style.boxShadow = `0 0 0 3px ${accent.color}24`;
-                e.currentTarget.style.borderColor = accent ? accent.color : 'var(--ink-3, #9ca3af)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.boxShadow = '';
-                e.currentTarget.style.borderColor = '';
-              }}
-            />
-          </div>
+        {/* 2 · Type — the scrollable region (clearly the main content) */}
+        <div className="flex items-baseline justify-between px-6 pb-1.5 pt-4">
+          <p className="text-[13px] font-semibold text-ink">Type de fiche</p>
+          <p className="text-[12px] text-ink-3">{groups.reduce((n, g) => n + g.types.length, 0)} types</p>
+        </div>
+        <div className="relative min-h-0">
+          <div className="max-h-[40vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">
+            {groups.map((group) => {
+              const v = ARCHETYPE_VISUAL[group.archetype];
+              const Icon = v.Icon;
+              return (
+                <section key={group.archetype}>
+                  <div className="mb-2.5 flex items-center gap-2.5">
+                    <span
+                      className="grid h-7 w-7 flex-none place-items-center rounded-lg"
+                      style={{ backgroundColor: `${v.color}1f`, color: v.color }}
+                    >
+                      <Icon className="h-[15px] w-[15px]" strokeWidth={2.25} />
+                    </span>
+                    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                      <h3 className="text-[13.5px] font-semibold tracking-tight text-ink">{group.codeName}</h3>
+                      <span className="truncate text-[12px] text-ink-3">{group.family}</span>
+                    </div>
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={group.codeName}>
+                    {group.types.map((option) => {
+                      const selected = type === option.code;
+                      return (
+                        <label
+                          key={option.code}
+                          className={[
+                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 will-change-transform',
+                            selected
+                              ? 'shadow-sm'
+                              : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
+                          ].join(' ')}
+                          style={
+                            selected
+                              ? {
+                                  borderColor: v.color,
+                                  backgroundColor: `${v.color}14`,
+                                  color: v.deep,
+                                  boxShadow: `0 0 0 3px ${v.color}24`,
+                                }
+                              : undefined
+                          }
+                        >
+                          <input
+                            type="radio"
+                            name="create-object-type"
+                            value={option.code}
+                            checked={selected}
+                            onChange={() => setType(option.code)}
+                            aria-label={option.label}
+                            className="sr-only"
+                          />
+                          <span className="truncate">{option.label}</span>
+                          {selected ? (
+                            <Check className="ml-auto h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
+                          ) : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+          {/* scroll affordance: fade hints there is more below */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-background to-transparent" />
+        </div>
+
+        {/* 3 · Footer */}
+        <div className="space-y-3 border-t border-line/70 px-6 pb-6 pt-4">
           {error ? (
             <p
               role="alert"
@@ -222,7 +225,7 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
               type="button"
               onClick={handleCreate}
               disabled={!validation.ok || busy}
-              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:cursor-not-allowed disabled:opacity-100"
+              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:cursor-not-allowed"
               style={
                 validation.ok && accent
                   ? { backgroundColor: accent.color }

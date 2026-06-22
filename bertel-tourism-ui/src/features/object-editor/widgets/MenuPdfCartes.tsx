@@ -14,6 +14,10 @@ import {
 interface MenuPdfCartesProps {
   objectId: string;
   canEdit: boolean;
+  /** Bump to force a reload (e.g. after the extraction modal uploads a new carte). */
+  reloadToken?: number;
+  /** Hide the inline file picker — adding now goes through the « Ajouter une carte » modal. */
+  hideUploader?: boolean;
 }
 
 const ROW = {
@@ -32,7 +36,7 @@ const ICON_BTN = {
  * object, edit its label + validity window (de quand à quand) on the link, view or detach it. Replaces
  * the old fake dropzone. Validity/title persist on object_document (canonical-write); url from ref_document.
  */
-export function MenuPdfCartes({ objectId, canEdit }: MenuPdfCartesProps) {
+export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader = false }: MenuPdfCartesProps) {
   const [cartes, setCartes] = useState<CarteDocument[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,9 +63,9 @@ export function MenuPdfCartes({ objectId, canEdit }: MenuPdfCartesProps) {
     }
     void reload();
     return () => { alive = false; };
-    // objectId is the only input; reload is stable enough for this immediate-write surface.
+    // objectId + reloadToken drive reloads; reload is stable enough for this immediate-write surface.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objectId]);
+  }, [objectId, reloadToken]);
 
   function patchLocal(documentId: string, patch: Partial<CarteDocument>) {
     setCartes((list) => list.map((c) => (c.documentId === documentId ? { ...c, ...patch } : c)));
@@ -154,7 +158,7 @@ export function MenuPdfCartes({ objectId, canEdit }: MenuPdfCartesProps) {
 
       {error && <p role="alert" className="media-upload-field__error" style={{ fontSize: 12 }}>{error}</p>}
 
-      {canEdit && accessToken && (
+      {!hideUploader && canEdit && accessToken && (
         <DocumentUploadField objectId={objectId} accessToken={accessToken} onUploaded={(doc) => onUploaded(doc.documentId)} />
       )}
     </div>

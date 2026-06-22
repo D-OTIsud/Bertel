@@ -69,6 +69,20 @@ export async function extractMenuFromImages(
   return payload as ExtractResult;
 }
 
+/** Read a browser File into {mime, base64} for the extraction request (images only). */
+export function readFileAsBase64(file: File): Promise<ExtractImage> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('lecture du fichier impossible'));
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      const comma = result.indexOf(',');
+      resolve({ mime: file.type || 'image/jpeg', base64: comma >= 0 ? result.slice(comma + 1) : result });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /** Pure: commit the dietary codes the human accepted (per dish) into the draft menu, immutably. */
 export function applyDietarySuggestions(menu: ObjectWorkspaceMenu, acceptedByDish: string[][]): ObjectWorkspaceMenu {
   return {

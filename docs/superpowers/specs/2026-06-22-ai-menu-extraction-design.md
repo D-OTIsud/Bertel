@@ -34,6 +34,17 @@ Contraintes produit explicites :
 
 ---
 
+## 2bis. Raffinement adopté à l'implémentation (2026-06-22)
+
+Découvert pendant le build (un rasteriseur PDF natif côté serveur entre en conflit avec le `canvas` natif déjà tiré par jsdom des tests) — refinement adopté, **plus simple et plus sûr** :
+
+- **La route reçoit directement les octets d'images** (`images: [{mime, base64}]`), PAS des `documentId` à télécharger. ⇒ la route ne fetch **aucune URL** : **la surface SSRF disparaît** (plus besoin de la garde « documentIds résolus serveur »). La route ré-encode quand même chaque image via `processImage` (resize ≤ 2000 px + strip EXIF) avant de l'envoyer au tiers IA — privacy + coût.
+- **La rasterisation PDF se fait CÔTÉ CLIENT** (pdf.js navigateur) dans la modale : le PDF est converti en images page-par-page dans le navigateur, et seules des images atteignent la route. ⇒ aucun rasteriseur natif serveur. Le PDF original reste stocké comme **carte téléchargeable** (décision D4 inchangée) via `/api/document/upload` (qui accepte déjà images ET PDF).
+
+Le reste du design (autorisation-en-tant-qu'appelant, clé Vault service_role-only, régimes suggérés/allergènes humains, injection brouillon) est inchangé. Les §5.1/§7 ci-dessous se lisent avec ce raffinement.
+
+---
+
 ## 3. Architecture & flux
 
 ### 3.1 Vue d'ensemble

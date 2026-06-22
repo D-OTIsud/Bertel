@@ -1,4 +1,4 @@
-export type EditorToolKey = 'versions' | 'import-export' | 'archive' | 'delete';
+export type EditorToolKey = 'versions' | 'import-export' | 'archive';
 
 export interface EditorToolItem {
   key: EditorToolKey;
@@ -18,8 +18,6 @@ export interface BuildEditorToolsInput {
   archiveDisabledReason?: string | null;
   /** object.current_version (from the versions query). When set, the history tool is enabled. */
   currentVersion?: number | null;
-  /** §108: hard delete (superuser-only). When falsy the delete tool is omitted entirely. */
-  canHardDelete?: boolean;
 }
 
 const SOON = 'Bientôt disponible';
@@ -35,7 +33,7 @@ export function archiveTargetStatus(status: string, publishedAt: string): 'archi
 /** Single source of truth for the OUTILS group. Duplicate tool intentionally absent (PO, 2026-06-17). */
 export function buildEditorTools(input: BuildEditorToolsInput): EditorToolItem[] {
   const isArchived = input.status === 'archived';
-  const tools: EditorToolItem[] = [
+  return [
     {
       key: 'versions',
       label: 'Versions / historique',
@@ -53,17 +51,4 @@ export function buildEditorTools(input: BuildEditorToolsInput): EditorToolItem[]
       disabledReason: input.canArchive ? undefined : (input.archiveDisabledReason ?? 'Lecture seule — publication.'),
     },
   ];
-  // §108 — suppression définitive : superuser-only, et seulement sur une fiche déjà archivée.
-  if (input.canHardDelete) {
-    tools.push({
-      key: 'delete',
-      label: 'Supprimer définitivement',
-      danger: true,
-      disabled: !isArchived,
-      disabledReason: isArchived
-        ? undefined
-        : "Archivez d'abord la fiche avant de pouvoir la supprimer définitivement.",
-    });
-  }
-  return tools;
 }

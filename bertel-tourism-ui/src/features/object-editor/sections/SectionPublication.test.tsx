@@ -13,6 +13,12 @@ jest.mock('../../../hooks/useExplorerQueries', () => ({
   useSetObjectStatusMutation: jest.fn(),
 }));
 
+// §108 — the hard-delete button loads a session token + the modal posts to the delete route.
+// Mock both so §21 visibility tests never touch the network.
+jest.mock('../../../lib/supabase', () => ({ getApiClient: () => null }));
+jest.mock('../../../services/object-delete', () => ({ requestObjectDeletion: jest.fn() }));
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
 const mutateAsync = jest.fn().mockResolvedValue(undefined);
 beforeEach(() => {
   mutateAsync.mockClear();
@@ -29,6 +35,23 @@ const denyPublication = new Proxy(
         : { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: true, disabledReason: null },
   },
 ) as ObjectWorkspacePermissions;
+
+/** Like `allowAll` but the `delete` capability is denied (non-superuser). */
+const denyDelete = new Proxy(
+  {},
+  {
+    get: (_t, prop) =>
+      prop === 'delete'
+        ? { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: 'Réservé aux administrateurs plateforme.' }
+        : { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: true, disabledReason: null },
+  },
+) as ObjectWorkspacePermissions;
+
+/** A fixture whose lifecycle status is `archived` (the only state where hard-delete is offered). */
+function archivedModulesFixture() {
+  const modules = fullModulesFixture();
+  return { ...modules, generalInfo: { ...modules.generalInfo, status: 'archived' } };
+}
 
 /** §21 mounts a mutation hook, so it must render inside a QueryClientProvider. */
 function renderSection(ui: ReactElement) {
@@ -139,5 +162,38 @@ describe('SectionPublication (§21)', () => {
 
     expect(mutateAsync).toHaveBeenCalledWith('hidden');
     await waitFor(() => expect(result.current.draft.generalInfo.status).toBe('hidden'));
+  });
+
+  it('offers "Supprimer définitivement" next to Restaurer for a superuser on an archived fiche', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    expect(screen.getByRole('button', { name: 'Restaurer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Supprimer définitivement/ })).toBeInTheDocument();
+  });
+
+  it('does not offer hard-delete unless the fiche is archived', () => {
+    // fullModulesFixture is "published" → no delete button even for a superuser.
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    expect(screen.queryByRole('button', { name: /Supprimer définitivement/ })).not.toBeInTheDocument();
+  });
+
+  it('hides hard-delete from a non-superuser even on an archived fiche', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={denyDelete} objectId="o1" />);
+
+    expect(screen.getByRole('button', { name: 'Restaurer' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Supprimer définitivement/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the type-the-name confirmation modal when hard-delete is clicked', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', archivedModulesFixture()));
+    renderSection(<SectionPublication editor={result.current} permissions={allowAll} objectId="o1" />);
+
+    expect(screen.queryByText('Supprimer définitivement la fiche')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Supprimer définitivement/ }));
+    expect(screen.getByText('Supprimer définitivement la fiche')).toBeInTheDocument();
   });
 });

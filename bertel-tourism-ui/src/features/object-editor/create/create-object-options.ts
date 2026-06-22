@@ -9,6 +9,32 @@ import { TYPE_ARCHETYPES, TYPE_LABEL, ARCHETYPE_META, type ArchetypeCode } from 
 
 export const MAX_OBJECT_NAME_LENGTH = 200;
 
+/**
+ * Properly-accented French display labels for the picker. The shared `TYPE_LABEL`
+ * is intentionally unaccented (used as stable codes across the app); the create
+ * picker is a user-facing surface, so it shows real French. Falls back to TYPE_LABEL.
+ */
+const CREATE_TYPE_LABELS: Record<string, string> = {
+  HOT: 'Hôtel',
+  HPA: 'Hébergement plein air',
+  HLO: 'Hébergement loisir',
+  CAMP: 'Camping',
+  RVA: 'Résidence vacances',
+  RES: 'Restaurant',
+  ITI: 'Itinéraire',
+  FMA: 'Fête / manifestation',
+  ASC: 'Activité',
+  ACT: 'Activité encadrée',
+  LOI: 'Loisir',
+  PCU: 'Patrimoine',
+  PNA: 'Site naturel',
+  PRD: 'Producteur',
+  PSV: 'Prestataire',
+  VIL: 'Ville',
+  COM: 'Commerce',
+  SPU: 'Service public',
+};
+
 export interface CreateTypeOption {
   code: string;
   label: string;
@@ -26,7 +52,7 @@ export function buildCreateTypeOptions(): CreateTypeGroup[] {
   const byArchetype = new Map<ArchetypeCode, CreateTypeOption[]>();
   for (const [code, meta] of Object.entries(TYPE_ARCHETYPES)) {
     const list = byArchetype.get(meta.archetype) ?? [];
-    list.push({ code, label: TYPE_LABEL[code] ?? code });
+    list.push({ code, label: CREATE_TYPE_LABELS[code] ?? TYPE_LABEL[code] ?? code });
     byArchetype.set(meta.archetype, list);
   }
   return [...byArchetype.entries()]

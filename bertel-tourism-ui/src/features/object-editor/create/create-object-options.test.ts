@@ -19,7 +19,7 @@ describe('buildCreateTypeOptions', () => {
     const heb = buildCreateTypeOptions().find((g) => g.archetype === 'HEB');
     expect(heb?.codeName).toBeTruthy();
     expect(heb?.family).toBeTruthy();
-    expect(heb?.types.find((t) => t.code === 'HOT')?.label).toBe('Hotel');
+    expect(heb?.types.find((t) => t.code === 'HOT')?.label).toBe('Hôtel');
   });
 });
 

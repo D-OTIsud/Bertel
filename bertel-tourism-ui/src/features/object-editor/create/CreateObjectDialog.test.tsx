@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 function selectTypeAndName(name: string) {
-  fireEvent.click(screen.getByRole('radio', { name: /^Hotel$/i }));
+  fireEvent.click(screen.getByRole('radio', { name: /^Hôtel$/i }));
   fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: name } });
 }
 

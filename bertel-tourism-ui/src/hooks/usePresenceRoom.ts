@@ -13,8 +13,21 @@ interface TrackPayload {
   onlineSince: number;
 }
 
-interface UsePresenceRoomOptions {
+interface UsePresenceRoomOptions<TExtra extends Record<string, unknown> = Record<string, never>> {
   enabled?: boolean;
+  /**
+   * Extra presence payload merged into the tracked self member (e.g. the editor's active
+   * section / editing flag). Re-tracked on change WITHOUT resubscribing the channel. Keep it
+   * referentially stable in the caller (memoise) so it only re-tracks when values change.
+   */
+  trackExtra?: TExtra;
+  /**
+   * Custom broadcast event names to listen for on this room (e.g. ['object:saved']).
+   * Must be referentially stable across renders (defined as a module constant).
+   */
+  subscribeEvents?: readonly string[];
+  /** Called for each incoming custom broadcast registered via `subscribeEvents`. */
+  onEvent?: (event: string, payload: unknown) => void;
 }
 
 interface LockEntry extends FieldLock {
@@ -24,23 +37,29 @@ interface LockEntry extends FieldLock {
 export const PRESENCE_LOCK_TTL_MS = 15000;
 const demoPalette = ['#ff7b54', '#4cb3ff', '#78c67a', '#ffbd59'];
 
-export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions = {}) {
-  const { enabled = true } = options;
+export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<string, never>>(
+  roomKey: string,
+  options: UsePresenceRoomOptions<TExtra> = {},
+) {
+  const { enabled = true, trackExtra, subscribeEvents, onEvent } = options;
   const userId = useSessionStore((state) => state.userId);
   const userName = useSessionStore((state) => state.userName);
   const avatar = useSessionStore((state) => state.avatar);
   const demoMode = useSessionStore((state) => state.demoMode);
-  const [peers, setPeers] = useState<PresenceMember[]>([]);
+  const [peers, setPeers] = useState<(PresenceMember & Partial<TExtra>)[]>([]);
   const [lockedFieldEntries, setLockedFieldEntries] = useState<Record<string, LockEntry>>({});
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const subscribedRef = useRef(false);
   const typingTimers = useRef<Record<string, number>>({});
   const lockExpiryTimerRef = useRef<number | null>(null);
   const demoLockTimersRef = useRef<Record<string, number>>({});
   // Captured once when the editor mounts: when the current user opened this room.
   const sessionStartRef = useRef(Date.now());
 
-  const me = useMemo<PresenceMember>(
+  // Stable identity — the channel (re)subscribes only when this changes, NOT on every
+  // trackExtra update (which would churn the realtime connection on each scroll).
+  const meIdentity = useMemo<PresenceMember>(
     () => ({
       userId: userId ?? 'anonymous',
       name: userName || 'Utilisateur',
@@ -50,6 +69,20 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     }),
     [avatar, userId, userName],
   );
+
+  // The full tracked/returned self member = identity + caller-supplied extra.
+  const me = useMemo(
+    () => ({ ...meIdentity, ...(trackExtra ?? {}) }) as PresenceMember & Partial<TExtra>,
+    [meIdentity, trackExtra],
+  );
+
+  // Latest payload + callbacks read inside effects without forcing a resubscribe.
+  const mePayloadRef = useRef(me);
+  mePayloadRef.current = me;
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+  const subscribeEventsRef = useRef(subscribeEvents);
+  subscribeEventsRef.current = subscribeEvents;
 
   useEffect(() => {
     const clearLockExpiryTimer = () => {
@@ -100,12 +133,13 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     }
 
     if (demoMode) {
+      const self = mePayloadRef.current;
       const otherPeers = mockPresence
-        .filter((item) => item.userId !== me.userId)
+        .filter((item) => item.userId !== self.userId)
         .slice(0, 2)
         // Stagger the mock editors a few minutes apart so the duration label has something to show.
         .map((item, index) => ({ ...item, onlineSince: sessionStartRef.current - (index + 1) * 7 * 60_000 }));
-      const demoPeers = [me, ...otherPeers];
+      const demoPeers = [self, ...otherPeers] as (PresenceMember & Partial<TExtra>)[];
       setPeers(demoPeers);
       return () => {
         clearLockExpiryTimer();
@@ -115,7 +149,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
 
     const client = getSupabaseClient();
     if (!client || !userId) {
-      setPeers(enabled ? [me] : []);
+      setPeers(enabled ? [mePayloadRef.current] : []);
       return () => {
         clearLockExpiryTimer();
         clearDemoLockTimers();
@@ -132,16 +166,13 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     channelRef.current = channel;
 
     channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState<TrackPayload>();
+      const state = channel.presenceState<TrackPayload & Partial<TExtra>>();
       const nextPeers = Object.values(state)
         .flat()
         .map((item, index) => ({
-          userId: item.userId,
-          name: item.name,
-          avatar: item.avatar,
+          ...item,
           color: item.color || demoPalette[index % demoPalette.length],
-          onlineSince: item.onlineSince,
-        }));
+        })) as (PresenceMember & Partial<TExtra>)[];
 
       setPeers(nextPeers);
       let nextLocksToSweep: Record<string, LockEntry> | null = null;
@@ -199,9 +230,18 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
       }, 1600);
     });
 
+    // Caller-registered custom broadcast events (e.g. 'object:saved'). The handler is read
+    // from a ref so a changing onEvent identity never resubscribes the channel.
+    (subscribeEventsRef.current ?? []).forEach((eventName) => {
+      channel.on('broadcast', { event: eventName }, ({ payload }) => {
+        onEventRef.current?.(eventName, payload);
+      });
+    });
+
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await channel.track(me);
+        subscribedRef.current = true;
+        await channel.track(mePayloadRef.current);
       }
     });
 
@@ -209,12 +249,21 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
       Object.values(typingTimers.current).forEach((timer) => window.clearTimeout(timer));
       clearLockExpiryTimer();
       clearDemoLockTimers();
+      subscribedRef.current = false;
       void channel.untrack();
       void channel.unsubscribe();
       void client.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [demoMode, enabled, me, roomKey, userId]);
+  }, [demoMode, enabled, meIdentity, roomKey, userId]);
+
+  // Push presence-payload updates (active section / editing flag) without resubscribing.
+  useEffect(() => {
+    if (!enabled || demoMode || !subscribedRef.current || !channelRef.current) {
+      return;
+    }
+    void channelRef.current.track(mePayloadRef.current);
+  }, [me, demoMode, enabled]);
 
   async function lockField(field: string) {
     if (!enabled) {
@@ -286,6 +335,14 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     });
   }
 
+  /** Send a custom broadcast event to the room (no-op in demo / when disabled). */
+  async function broadcast(event: string, payload: unknown) {
+    if (!enabled || demoMode) {
+      return;
+    }
+    await channelRef.current?.send({ type: 'broadcast', event, payload });
+  }
+
   const lockedFields = Object.fromEntries(
     Object.entries(lockedFieldEntries).map(([field, entry]) => [field, { field, userId: entry.userId, name: entry.name }]),
   ) as Record<string, FieldLock>;
@@ -298,5 +355,6 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     lockField,
     unlockField,
     announceTyping,
+    broadcast,
   };
 }

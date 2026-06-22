@@ -32,4 +32,23 @@ describe('usePresenceRoom', () => {
 
     expect(result.current.lockedFields.description).toBeUndefined();
   });
+
+  it('merges trackExtra into the tracked self member', () => {
+    const { result } = renderHook(() =>
+      usePresenceRoom('room:test', { enabled: true, trackExtra: { activeSection: '06', editing: true } }),
+    );
+
+    expect(result.current.me.activeSection).toBe('06');
+    expect(result.current.me.editing).toBe(true);
+  });
+
+  it('exposes a broadcast that is a safe no-op in demo mode', async () => {
+    const { result } = renderHook(() => usePresenceRoom('room:test', { enabled: true }));
+
+    await act(async () => {
+      await result.current.broadcast('object:saved', { userId: 'x', name: 'X', at: 1 });
+    });
+
+    expect(typeof result.current.broadcast).toBe('function');
+  });
 });

@@ -37,7 +37,12 @@ function StageList({
             <span className="rep-row__handle" aria-hidden />
             <div className="wp-num">{index + 1}</div>
             <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
-            <Input value={stage.description} onChange={(description) => updateStage(index, { description })} />
+            <MarkdownCellField
+              variant="inline"
+              value={stage.description}
+              onChange={(description) => updateStage(index, { description })}
+              ariaLabel={`Description de l'etape ${index + 1}`}
+            />
             <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />
             <span />
           </div>

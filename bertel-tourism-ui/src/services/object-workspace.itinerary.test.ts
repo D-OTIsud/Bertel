@@ -19,6 +19,7 @@ const baseInput: ObjectWorkspaceItineraryModule = {
   practiceCodes: [],
   difficultyOptions: [],
   openStatusOptions: [],
+  stageKindOptions: [],
   access: '',
   ambiance: '',
   recommendedParking: '',

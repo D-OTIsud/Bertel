@@ -4,11 +4,12 @@ import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockITI } from './BlockITI';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
 
-// react-map-gl/maplibre needs WebGL (absent in jsdom) — stub it for the §06 trace map.
+// react-map-gl/maplibre needs WebGL (absent in jsdom) — stub it for the §06 trace map + stage modal.
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children }: { children?: ReactNode }) => <div data-testid="iti-trace-map">{children}</div>,
   Source: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Layer: () => null,
+  Marker: ({ children }: { children?: ReactNode }) => <div data-testid="iti-stage-marker">{children}</div>,
   NavigationControl: () => null,
 }));
 
@@ -134,5 +135,25 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     // cancel closes it
     fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
     expect(screen.queryByText("Pratiques de l'itinéraire")).not.toBeInTheDocument();
+  });
+
+  it('§C1: renders stages as cards with the explicit type label + a Modifier action (no D/A guess)', () => {
+    render(<ItiHarness />);
+    // the stage name from the fixture
+    expect(screen.getByText('Belvédère du Maïdo')).toBeInTheDocument();
+    // explicit type + GPS-point meta (replaces the old position-derived D/A)
+    expect(screen.getByText(/Panorama · point GPS/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
+  });
+
+  it('§C2: Modifier opens the detailed stage modal (type select, name, corridor slider)', () => {
+    render(<ItiHarness />);
+    expect(screen.queryByText("Étape / point d'intérêt")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
+    expect(screen.getByText("Étape / point d'intérêt")).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: "Type d'étape" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Belvédère du Maïdo')).toBeInTheDocument();
+    // corridor slider present because the fixture has an imported trace
+    expect(screen.getByLabelText('Largeur du corridor en mètres')).toBeInTheDocument();
   });
 });

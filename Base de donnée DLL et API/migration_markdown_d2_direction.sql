@@ -1,0 +1,29 @@
+-- Migration: Markdown D2 — plan d'accès (object_location.direction)
+-- Manifest id: 14y
+-- Decision log: §110
+-- Date: 2026-06-22
+--
+-- Summary:
+-- Two edits inside api.get_object_resource (BODY-ONLY, CREATE OR REPLACE, signature unchanged):
+--
+--   1. Main-location address block (~line 2735 in api_views_functions.sql):
+--      BEFORE: 'direction',      ol.direction
+--      AFTER:  'direction',      api.strip_markdown(ol.direction),
+--              'direction_md',   ol.direction
+--
+--   2. Sub-place location block (~line 3891 in api_views_functions.sql):
+--      BEFORE: 'direction',  ol.direction
+--      AFTER:  'direction',  api.strip_markdown(ol.direction),
+--              'direction_md', ol.direction
+--
+-- Both edits are folded into api_views_functions.sql (the canonical source for get_object_resource).
+-- schema_unified.sql carries DDL only (no get_object_resource body), so no fold there.
+--
+-- The controller deploys the full function body via:
+--   node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
+-- followed by: NOTIFY pgrst, 'reload schema';
+--
+-- SQL contract test: Base de donnée DLL et API/tests/test_direction_markdown.sql
+--
+-- No DDL change — direction column remains plain TEXT (no i18n).
+-- No data migration needed — existing rows are stripped on the fly by api.strip_markdown.

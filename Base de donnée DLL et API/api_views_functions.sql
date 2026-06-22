@@ -2732,7 +2732,9 @@ BEGIN
           'city',           ol.city,
           'code_insee',     ol.code_insee,
           'lieu_dit',       ol.lieu_dit,
-          'direction',      ol.direction
+          -- §110 Markdown contract: flat key stripped, raw Markdown in the _md sibling (plain text, no i18n).
+          'direction',      api.strip_markdown(ol.direction),
+          'direction_md',   ol.direction
         )
       )
       FROM object_location ol
@@ -3888,7 +3890,9 @@ BEGIN
                      'address1',   ol.address1,
                      'postcode',   ol.postcode,
                      'city',       ol.city,
-                     'direction',  ol.direction
+                     -- §110 Markdown contract: same strip + _md sibling for place-keyed locations.
+                     'direction',  api.strip_markdown(ol.direction),
+                     'direction_md', ol.direction
                    )
                    FROM object_location ol
                    WHERE ol.place_id = p.id

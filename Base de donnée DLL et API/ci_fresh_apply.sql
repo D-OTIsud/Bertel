@@ -152,6 +152,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 15e    migration_iti_section06_vocab.sql  (§111 Section 06 ITI editor vocab: ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind ref_code partitions + house RLS + seeds; idempotent, self-contained) =='
 \ir migration_iti_section06_vocab.sql
 
+\echo '== 16a    migration_ai_provider_config.sql  (AI provider config for §06 carte extraction: app_ai_provider_config table + Vault-backed key + super-admin RPCs upsert/list/set_active/delete + service_role-only get_active_ai_provider_secret; needs api.is_platform_superuser + supabase_vault; self-contained, CREATE TABLE IF NOT EXISTS idempotent) =='
+\ir migration_ai_provider_config.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

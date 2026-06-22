@@ -946,7 +946,7 @@ CREATE OR REPLACE FUNCTION api.get_filtered_object_ids(
   p_status object_status[],
   p_search TEXT DEFAULT NULL
 )
-RETURNS TABLE(object_id TEXT, label_rank INTEGER, label_match JSONB)
+RETURNS TABLE(object_id TEXT, label_rank INTEGER, label_match JSONB, relevance REAL)
 LANGUAGE sql
 STABLE
 -- SECURITY DEFINER: required because this function accesses internal.mv_filtered_objects
@@ -1158,7 +1158,8 @@ AS $$
       m.cached_environment_tags,
       m.cached_language_codes,
       m.cached_classification_codes,
-      m.cached_taxonomy_codes
+      m.cached_taxonomy_codes,
+      m.search_document
     FROM internal.mv_filtered_objects m
     CROSS JOIN params
     WHERE params.use_mv
@@ -1181,7 +1182,8 @@ AS $$
       o.cached_environment_tags,
       o.cached_language_codes,
       o.cached_classification_codes,
-      o.cached_taxonomy_codes
+      o.cached_taxonomy_codes,
+      o.search_document
     FROM object o
     CROSS JOIN params
     LEFT JOIN LATERAL (
@@ -1224,7 +1226,21 @@ AS $$
         'evidence_count', sustainability_evidence.evidence_count
       )
       ELSE NULL::jsonb
-    END AS label_match
+    END AS label_match,
+    -- relevance (§109): weighted ts_rank over name/city (A) + the global search_document
+    -- (B/C/D) when search_mode='global'. 0 when no search term ⇒ callers' ORDER BY relevance
+    -- becomes a no-op tiebreaker and the legacy ordering is preserved.
+    CASE
+      WHEN p_search IS NULL THEN 0::real
+      ELSE ts_rank(
+        setweight(src.name_search_vector, 'A')
+        || setweight(COALESCE(src.city_search_vector, ''::tsvector), 'A')
+        || CASE WHEN (params.filters->>'search_mode') = 'global'
+                THEN COALESCE(src.search_document, ''::tsvector)
+                ELSE ''::tsvector END,
+        plainto_tsquery('french', api.norm_search(p_search))
+      )
+    END AS relevance
   FROM source_rows src
   CROSS JOIN params
   LEFT JOIN LATERAL (
@@ -1305,7 +1321,14 @@ AS $$
     AND (
       p_search IS NULL OR
       src.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)) OR
-      (src.city_search_vector IS NOT NULL AND src.city_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)))
+      (src.city_search_vector IS NOT NULL AND src.city_search_vector @@ plainto_tsquery('french', api.norm_search(p_search))) OR
+      -- §109 global mode: also match the aggregated search_document (équipements, tags,
+      -- environnement, taxonomie, labels, menus/plats/régimes/allergènes/cuisines, prose).
+      (
+        (params.filters->>'search_mode') = 'global'
+        AND src.search_document IS NOT NULL
+        AND src.search_document @@ plainto_tsquery('french', api.norm_search(p_search))
+      )
     )
     AND (params.city_any IS NULL OR COALESCE(src.city_normalized, '') = ANY(params.city_any))
     AND (params.lieu_dit_any IS NULL OR COALESCE(src.lieu_dit_normalized, '') = ANY(params.lieu_dit_any))
@@ -5880,14 +5903,16 @@ BEGIN
       o.updated_at_source,
       -- label_rank: 0 = exact label, 1 = equivalent evidence; always 0 when no label_scheme_ranked filter
       fids.label_rank,
-      fids.label_match
+      fids.label_match,
+      -- relevance (§109): full-text rank; 0 when no search term (ordering then identical to legacy)
+      fids.relevance
     FROM api.get_filtered_object_ids(v_filters, v_types, v_status, v_search) fids
     JOIN object o ON o.id = fids.object_id
   ),
   paged AS (
-    SELECT f.*, ROW_NUMBER() OVER (ORDER BY f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
+    SELECT f.*, ROW_NUMBER() OVER (ORDER BY f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
     FROM filt f
-    ORDER BY f.label_rank, f.name_normalized NULLS LAST, f.id
+    ORDER BY f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id
     OFFSET v_offset LIMIT v_limit
   ),
   raw_data AS (

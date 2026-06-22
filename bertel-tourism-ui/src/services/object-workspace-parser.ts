@@ -610,6 +610,13 @@ export interface ObjectWorkspaceItineraryModule {
   difficultyOptions: WorkspaceReferenceOption[];
   /** §111 ref_code domain iti_open_status — labels for the open/partially_closed/warning/closed select. */
   openStatusOptions: WorkspaceReferenceOption[];
+  /** §111 object_iti_info — infos pratiques (grouped visually with the is_loop toggle in §06). */
+  access: string;
+  ambiance: string;
+  recommendedParking: string;
+  requiredEquipment: string;
+  infoPlaces: string;
+  childFriendly: boolean;
   stages: ObjectWorkspaceItineraryStageSummary[];
   sectionsCount: number;
   profilesCount: number;
@@ -2169,6 +2176,8 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     readString(itinerary.geom, readString(raw.geom)) ? 'geometrie presente' : '',
   ].filter(Boolean).join(' · ');
 
+  const infoRecord = readRecord(details.info);
+
   return {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
     durationMin: readString(itinerary.duration_min, readString(raw.duration_min, readString(raw.total_duration_min))),
@@ -2182,6 +2191,12 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     practiceCodes: readReferenceCodes(practiceRecords, 'practice'),
     difficultyOptions: [],
     openStatusOptions: [],
+    access: readString(infoRecord.access),
+    ambiance: readString(infoRecord.ambiance),
+    recommendedParking: readString(infoRecord.recommended_parking),
+    requiredEquipment: readString(infoRecord.required_equipment),
+    infoPlaces: readString(infoRecord.info_places),
+    childFriendly: readBoolean(infoRecord.is_child_friendly),
     stages,
     sectionsCount: readArray(details.sections).length,
     profilesCount: readArray(details.profiles).length,

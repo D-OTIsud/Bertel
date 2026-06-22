@@ -5262,6 +5262,35 @@ export function buildItineraryStagesPayload(
   }));
 }
 
+/**
+ * §111 Pure builder for the `info` payload of api.save_object_itinerary_nested (object_iti_info —
+ * the §06 « Infos pratiques » block). Maps the editor fields to the RPC columns. Returns null when
+ * the module did not load (unavailableReason) so a failed load cannot delete/clobber existing info.
+ * Empty strings become NULL server-side (NULLIF in the RPC); the row is upserted, never partial.
+ */
+export function buildItineraryInfoPayload(
+  input: ObjectWorkspaceItineraryModule,
+): {
+  access: string;
+  ambiance: string;
+  recommended_parking: string;
+  required_equipment: string;
+  info_places: string;
+  is_child_friendly: boolean;
+} | null {
+  if (input.unavailableReason != null) {
+    return null;
+  }
+  return {
+    access: input.access,
+    ambiance: input.ambiance,
+    recommended_parking: input.recommendedParking,
+    required_equipment: input.requiredEquipment,
+    info_places: input.infoPlaces,
+    is_child_friendly: input.childFriendly,
+  };
+}
+
 export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -5314,11 +5343,19 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
   // did not load, so a partial/failed load cannot clobber existing stages. Only `stages` is sent —
   // sections / profiles / associated objects / geom are out of scope (Phase 1; geom stays read-only).
   const stagesPayload = buildItineraryStagesPayload(input);
+  const infoPayload = buildItineraryInfoPayload(input);
+  const nestedPayload: Record<string, unknown> = {};
   if (stagesPayload !== null) {
+    nestedPayload.stages = stagesPayload;
+  }
+  if (infoPayload !== null) {
+    nestedPayload.info = infoPayload;
+  }
+  if (Object.keys(nestedPayload).length > 0) {
     await callObjectWorkspaceRpc(
       'save_object_itinerary_nested',
       objectId,
-      { stages: stagesPayload },
+      nestedPayload,
       'Impossible de sauvegarder les etapes itineraire.',
     );
   }

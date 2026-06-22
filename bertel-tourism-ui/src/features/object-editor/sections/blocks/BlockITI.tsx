@@ -71,13 +71,11 @@ export function BlockITI({ editor, folded }: SectionProps) {
                 {' '}{itinerary.sectionsCount} section(s) · {itinerary.profilesCount} profil(s)
               </small>
             </div>
-            <div className="grid-2-1" style={{ alignItems: 'center' }}>
-              <div className="map-mini" style={{ minHeight: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-4)', fontSize: 11 }}>
-                {itinerary.distanceKm ? `${itinerary.distanceKm} km` : 'Aperçu carte'}
-              </div>
-              <Field label="Type de tracé">
-                <Toggle label="Boucle" on={itinerary.loop} onChange={(loop) => patch({ loop })} />
-              </Field>
+            {/* §111: the « Type de tracé / Boucle » strip moved into « Infos pratiques » (a boolean
+                like is_child_friendly); the map gets the full width. B1 swaps this placeholder for
+                the real MapLibre trace map. */}
+            <div className="map-mini" style={{ minHeight: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-4)', fontSize: 11 }}>
+              {itinerary.distanceKm ? `${itinerary.distanceKm} km` : 'Aperçu carte'}
             </div>
           </div>
 
@@ -149,6 +147,32 @@ export function BlockITI({ editor, folded }: SectionProps) {
                 ))}
               </ChipSet>
             </Field>
+          </div>
+
+          {/* §111 B5: Infos pratiques (object_iti_info) — previously editable nowhere.
+              The is_loop toggle lives here too (a boolean characteristic, like is_child_friendly),
+              though it persists in object_iti, not object_iti_info. */}
+          <div className="chip-group__label">Infos pratiques</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
+            <Field label="Accès" hint="Comment rejoindre le départ">
+              <Input value={itinerary.access} onChange={(access) => patch({ access })} />
+            </Field>
+            <Field label="Ambiance">
+              <Input value={itinerary.ambiance} onChange={(ambiance) => patch({ ambiance })} />
+            </Field>
+            <Field label="Parking conseillé">
+              <Input value={itinerary.recommendedParking} onChange={(recommendedParking) => patch({ recommendedParking })} />
+            </Field>
+            <Field label="Équipement requis">
+              <Input value={itinerary.requiredEquipment} onChange={(requiredEquipment) => patch({ requiredEquipment })} />
+            </Field>
+            <Field label="Informations sur les lieux">
+              <Input value={itinerary.infoPlaces} onChange={(infoPlaces) => patch({ infoPlaces })} />
+            </Field>
+          </div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14 }}>
+            <Toggle label="Tracé en boucle" on={itinerary.loop} onChange={(loop) => patch({ loop })} />
+            <Toggle label="Adapté aux enfants" on={itinerary.childFriendly} onChange={(childFriendly) => patch({ childFriendly })} />
           </div>
 
           <div className="chip-group__label">Étapes & points d'intérêt sur le parcours</div>

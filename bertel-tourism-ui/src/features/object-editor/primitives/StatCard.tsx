@@ -28,34 +28,40 @@ export function StatCard({ label, value, suffix, hasStep, onStep, tooltip, toolt
           </span>
         )}
       </div>
-      <div className="stat-card__row">
-        <span className="stat-card__value">
+      {/* §111: when steppers are shown, lay out − [value] + on one line (not value + stacked buttons). */}
+      <div className="stat-card__row" style={hasStep ? { display: 'flex', alignItems: 'center', gap: 6 } : undefined}>
+        {hasStep && (
+          <button
+            type="button"
+            className="icbtn"
+            disabled={!interactive}
+            tabIndex={interactive ? 0 : -1}
+            aria-hidden={!interactive}
+            aria-label={interactive ? `Diminuer ${label}` : undefined}
+            onClick={interactive ? () => onStep(-1) : undefined}
+          >
+            −
+          </button>
+        )}
+        <span
+          className="stat-card__value"
+          style={hasStep ? { flex: 1, textAlign: 'center', fontSize: 19 } : undefined}
+        >
           {value}
           {suffix && <small className="stat-card__suffix"> {suffix}</small>}
         </span>
         {hasStep && (
-          <div className="stat-card__step" aria-hidden={!interactive}>
-            <button
-              type="button"
-              className="icbtn"
-              disabled={!interactive}
-              tabIndex={interactive ? 0 : -1}
-              aria-label={interactive ? `Diminuer ${label}` : undefined}
-              onClick={interactive ? () => onStep(-1) : undefined}
-            >
-              −
-            </button>
-            <button
-              type="button"
-              className="icbtn"
-              disabled={!interactive}
-              tabIndex={interactive ? 0 : -1}
-              aria-label={interactive ? `Augmenter ${label}` : undefined}
-              onClick={interactive ? () => onStep(1) : undefined}
-            >
-              +
-            </button>
-          </div>
+          <button
+            type="button"
+            className="icbtn"
+            disabled={!interactive}
+            tabIndex={interactive ? 0 : -1}
+            aria-hidden={!interactive}
+            aria-label={interactive ? `Augmenter ${label}` : undefined}
+            onClick={interactive ? () => onStep(1) : undefined}
+          >
+            +
+          </button>
         )}
       </div>
     </div>

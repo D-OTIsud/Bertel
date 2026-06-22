@@ -7,7 +7,7 @@ import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import { Input } from '@/components/ui/input';
-import { StatusPill } from '../common/StatusPill';
+import { LivePresenceIndicator } from './LivePresenceIndicator';
 import { CreateObjectButton } from '../../features/object-editor/create/CreateObjectButton';
 
 function pageLabelFromPath(pathname: string | null): string {
@@ -31,14 +31,11 @@ export function TopBar() {
   const pageLabel = pageLabelFromPath(pathname);
   const search = useExplorerStore((state) => state.common.search);
   const setSearch = useExplorerStore((state) => state.setSearch);
-  const networkStatus = useUiStore((state) => state.networkStatus);
-  const liveUsersCount = useUiStore((state) => state.liveUsersCount);
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const drawerDirty = useObjectDrawerStore((state) =>
     drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
-  const networkTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
 
   const [now, setNow] = useState(() => new Date());
   const [isMounted, setIsMounted] = useState(false);
@@ -115,12 +112,7 @@ export function TopBar() {
 
         <div className="flex items-center gap-2">
           <CreateObjectButton />
-          {networkStatus !== 'connected' ? (
-            <StatusPill tone={networkTone}>{networkStatus}</StatusPill>
-          ) : null}
-          <StatusPill tone={networkTone}>
-            {liveUsersCount} live
-          </StatusPill>
+          <LivePresenceIndicator />
           <button
             type="button"
             className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink hover:bg-surface2 sm:inline-flex"

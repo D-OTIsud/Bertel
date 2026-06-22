@@ -3143,7 +3143,7 @@ async function getObjectWorkspaceItineraryModule(
     return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger l itineraire.' };
   }
 
-  const [itiResult, practiceRefsResult, practicesResult, stagesResult] = await Promise.allSettled([
+  const [itiResult, practiceRefsResult, practicesResult, stagesResult, difficultyRefsResult, openStatusRefsResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
@@ -3152,6 +3152,9 @@ async function getObjectWorkspaceItineraryModule(
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_practice').order('position', { ascending: true }),
     client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
     client.from('object_iti_stage').select('id, name, description, position, geom').eq('object_id', objectId).order('position', { ascending: true }),
+    // §111 vocab for the Difficulté / Statut d'ouverture selects (replaces the free-text write-traps)
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_open_status').order('position', { ascending: true }),
   ]);
 
   if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
@@ -3165,6 +3168,12 @@ async function getObjectWorkspaceItineraryModule(
   const practiceOptions = practiceRefsResult.status === 'fulfilled' && practiceRefsResult.value.error == null
     ? dedupeReferenceOptions((practiceRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
     : baseModule.practiceOptions;
+  const difficultyOptions = difficultyRefsResult.status === 'fulfilled' && difficultyRefsResult.value.error == null
+    ? dedupeReferenceOptions((difficultyRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+    : baseModule.difficultyOptions;
+  const openStatusOptions = openStatusRefsResult.status === 'fulfilled' && openStatusRefsResult.value.error == null
+    ? dedupeReferenceOptions((openStatusRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+    : baseModule.openStatusOptions;
   const practiceById = optionMapById(practiceOptions);
   const practiceCodes = practicesResult.status === 'fulfilled' && practicesResult.value.error == null
     ? ((practicesResult.value.data ?? []) as Record<string, unknown>[])
@@ -3194,6 +3203,8 @@ async function getObjectWorkspaceItineraryModule(
     statusNote: readString(row.status_note, baseModule.statusNote),
     practiceOptions,
     practiceCodes,
+    difficultyOptions,
+    openStatusOptions,
     stages,
     geometrySummary: row.geom ? 'geometrie presente' : baseModule.geometrySummary,
     traceEditable: false,

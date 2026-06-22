@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Field, Fs, Input, StatCard, Toggle } from '../../primitives';
+import { Chip, ChipSet, Field, Fs, Input, ReferenceSelect, StatCard, Toggle } from '../../primitives';
 import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
@@ -112,11 +112,23 @@ export function BlockITI({ editor, folded }: SectionProps) {
           </div>
 
           <div className="grid-3" style={{ marginBottom: 14 }}>
-            <Field label="Difficulté" hint="Échelle locale ou SAC">
-              <Input value={itinerary.difficultyLevel} onChange={(difficultyLevel) => patch({ difficultyLevel })} />
+            <Field label="Difficulté" hint="Niveau 1 (très facile) à 5 (très difficile)">
+              <ReferenceSelect
+                value={itinerary.difficultyLevel}
+                options={itinerary.difficultyOptions}
+                onChange={(difficultyLevel) => patch({ difficultyLevel })}
+                allowEmpty
+                emptyLabel="Non renseigné"
+                aria-label="Difficulté"
+              />
             </Field>
             <Field label="Statut d'ouverture">
-              <Input value={itinerary.openStatus} onChange={(openStatus) => patch({ openStatus })} />
+              <ReferenceSelect
+                value={itinerary.openStatus}
+                options={itinerary.openStatusOptions}
+                onChange={(openStatus) => patch({ openStatus })}
+                aria-label="Statut d'ouverture"
+              />
             </Field>
             <Field label="Pratiques">
               <ChipSet>

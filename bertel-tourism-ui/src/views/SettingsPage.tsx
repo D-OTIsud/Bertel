@@ -11,6 +11,7 @@ import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schema
 import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl, readFileAsDataUrl } from '../lib/theme';
 import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
+import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
@@ -551,6 +552,12 @@ export default function SettingsPage() {
           <span>Source logo: {logoSourceLabel}</span>
         </div>
       </article>
+
+      {role === 'super_admin' && (
+        <article className="panel-card">
+          <AiProviderSettings />
+        </article>
+      )}
     </section>
   );
 }

@@ -606,6 +606,10 @@ export interface ObjectWorkspaceItineraryModule {
   statusNote: string;
   practiceOptions: WorkspaceReferenceOption[];
   practiceCodes: string[];
+  /** §111 ref_code domain iti_difficulty — labels for the 1-5 difficulty select. */
+  difficultyOptions: WorkspaceReferenceOption[];
+  /** §111 ref_code domain iti_open_status — labels for the open/partially_closed/warning/closed select. */
+  openStatusOptions: WorkspaceReferenceOption[];
   stages: ObjectWorkspaceItineraryStageSummary[];
   sectionsCount: number;
   profilesCount: number;
@@ -2176,6 +2180,8 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     statusNote: readString(itinerary.status_note),
     practiceOptions: dedupeReferenceOptions(practiceRecords.map((practice) => readNamedReference(practice.practice ?? practice))),
     practiceCodes: readReferenceCodes(practiceRecords, 'practice'),
+    difficultyOptions: [],
+    openStatusOptions: [],
     stages,
     sectionsCount: readArray(details.sections).length,
     profilesCount: readArray(details.profiles).length,

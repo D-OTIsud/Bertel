@@ -257,6 +257,16 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       statusNote: '',
       practiceOptions: [{ id: 'walk', code: 'walk', label: 'Randonnée' }],
       practiceCodes: ['walk'],
+      difficultyOptions: [
+        { id: '1', code: '1', label: 'Très facile' },
+        { id: '3', code: '3', label: 'Moyen' },
+        { id: '5', code: '5', label: 'Très difficile' },
+      ],
+      openStatusOptions: [
+        { id: 'open', code: 'open', label: 'Ouvert' },
+        { id: 'partially_closed', code: 'partially_closed', label: 'Partiellement fermé' },
+        { id: 'closed', code: 'closed', label: 'Fermé' },
+      ],
       stages: [{ recordId: 'st1', name: 'Départ', description: 'Parking', position: '1' }],
       sectionsCount: 1,
       profilesCount: 1,

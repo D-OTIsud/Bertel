@@ -4344,9 +4344,12 @@ BEGIN
                    'items', COALESCE((
                      SELECT jsonb_agg(
                               (
-                                (to_jsonb(mi) - 'menu_id')
+                                (to_jsonb(mi) - 'menu_id' - 'description')
                               )
                               || jsonb_build_object(
+                                   -- §110 dish description is Markdown-canonical: stripped flat + raw _md sibling.
+                                   'description', api.strip_markdown(mi.description),
+                                   'description_md', mi.description,
                                    'category', (
                                      SELECT jsonb_build_object('id', c.id, 'code', c.code, 'name', c.name, 'description', c.description, 'position', c.position, 'icon_url', c.icon_url)
                                      FROM ref_code_menu_category c WHERE c.id = m.category_id
@@ -4986,7 +4989,8 @@ BEGIN
             ' - ' || api.render_format_currency(mi.price, mi.currency, v_render_locale) ||
             CASE WHEN u.name IS NOT NULL AND trim(u.name) <> '' THEN ' ' || lower(u.name) ELSE '' END
           ELSE '' END ||
-          CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(mi.description, 50) || '...)' ELSE '' END AS line_text,
+          -- §110 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
+          CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(api.strip_markdown(mi.description), 50) || '...)' ELSE '' END AS line_text,
           mi.is_available,
           NULLIF((to_jsonb(mi)->>'position'),'')::int AS position_order,
           (SELECT c2.position FROM ref_code_menu_category c2 WHERE c2.id = m.category_id) AS category_position,

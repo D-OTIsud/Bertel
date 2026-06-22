@@ -4664,7 +4664,7 @@ BEGIN
           FROM object_description d
           WHERE d.object_id = p_object_id AND d.org_object_id IS NULL
             AND (d.visibility IS NULL OR d.visibility = 'public')), '')
-        || ' ' || COALESCE((SELECT string_agg(DISTINCT mi.description, ' ')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT api.strip_markdown(mi.description), ' ')
           FROM object_menu m JOIN object_menu_item mi ON mi.menu_id = m.id
           WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')
             AND mi.description IS NOT NULL), '')

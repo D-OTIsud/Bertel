@@ -8,6 +8,7 @@ import {
   updateActorLink,
 } from './actor-links';
 import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-workspace-parser';
+import type { ActorSearchResult } from '../../../services/object-workspace';
 
 const ROLE_OPTIONS = [
   { id: 'r-op', code: 'operator', label: 'Exploitant' },
@@ -33,7 +34,14 @@ function actor(partial: Partial<ObjectWorkspaceActorLinkItem> & { id: string }):
   };
 }
 
-const picked = { id: 'a-new', displayName: 'Nouvelle SARL', firstName: 'Jean', lastName: 'Payet' };
+const picked: ActorSearchResult = {
+  id: 'a-new',
+  displayName: 'Nouvelle SARL',
+  firstName: 'Jean',
+  lastName: 'Payet',
+  gender: '',
+  email: '',
+};
 
 describe('addActorLink', () => {
   test('appends a new operator link, primary when the role has no primary yet', () => {

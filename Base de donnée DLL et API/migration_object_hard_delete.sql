@@ -96,19 +96,34 @@ BEGIN
      AND ( m.object_id = p_object_id
         OR m.place_id IN (SELECT op.id FROM object_place op WHERE op.object_id = p_object_id) );
 
-  -- 7. Documents = lignes ref_document PARTAGÉES via object_document. On ne retient que les
-  --    ref_document qui ne seront plus liés à AUCUN autre objet après cette suppression.
-  SELECT coalesce(array_agg(od.document_id), '{}'::uuid[]),
+  -- 7. Documents = lignes ref_document (catalogue, url UNIQUE) que CET objet référence par l'UN des
+  --    SIX chemins : object_document (lien CASCADE) + 4 colonnes object-keyed SET NULL
+  --    (object_classification / object_legal / object_sustainability_action / object_iti.status_document_id).
+  --    On collecte tout ref_document référencé par l'objet, puis on ne supprime (ligne + fichier) que
+  --    ceux qui ne survivront à AUCUN autre référent — un AUTRE objet (mêmes 5 tables, object_id<>) OU
+  --    tout acteur (actor_consent, jamais lié à l'objet). Sinon on SET-NULL un pointeur vivant et on
+  --    efface un fichier en usage ailleurs. (Émettre les orphelins dans report ⇒ le GC peut les reprendre.)
+  WITH candidate AS (
+    SELECT document_id        AS id FROM object_document             WHERE object_id = p_object_id AND document_id IS NOT NULL
+    UNION SELECT document_id          FROM object_classification        WHERE object_id = p_object_id AND document_id IS NOT NULL
+    UNION SELECT document_id          FROM object_legal                 WHERE object_id = p_object_id AND document_id IS NOT NULL
+    UNION SELECT document_id          FROM object_sustainability_action WHERE object_id = p_object_id AND document_id IS NOT NULL
+    UNION SELECT status_document_id   FROM object_iti                   WHERE object_id = p_object_id AND status_document_id IS NOT NULL
+  ),
+  orphan AS (
+    SELECT c.id FROM candidate c
+    WHERE NOT EXISTS (SELECT 1 FROM object_document             x WHERE x.document_id        = c.id AND x.object_id <> p_object_id)
+      AND NOT EXISTS (SELECT 1 FROM object_classification        x WHERE x.document_id        = c.id AND x.object_id <> p_object_id)
+      AND NOT EXISTS (SELECT 1 FROM object_legal                 x WHERE x.document_id        = c.id AND x.object_id <> p_object_id)
+      AND NOT EXISTS (SELECT 1 FROM object_sustainability_action x WHERE x.document_id        = c.id AND x.object_id <> p_object_id)
+      AND NOT EXISTS (SELECT 1 FROM object_iti                   x WHERE x.status_document_id = c.id AND x.object_id <> p_object_id)
+      AND NOT EXISTS (SELECT 1 FROM actor_consent               x WHERE x.document_id        = c.id)
+  )
+  SELECT coalesce(array_agg(o.id), '{}'::uuid[]),
          coalesce(array_agg(rd.url), '{}'::text[])
     INTO v_doc_ids, v_docs
-    FROM object_document od
-    JOIN ref_document rd ON rd.id = od.document_id
-   WHERE od.object_id = p_object_id
-     AND NOT EXISTS (
-       SELECT 1 FROM object_document od2
-        WHERE od2.document_id = od.document_id
-          AND od2.object_id <> p_object_id
-     );
+    FROM orphan o
+    JOIN ref_document rd ON rd.id = o.id;
 
   -- 8. Journaliser (même transaction que le DELETE).
   INSERT INTO object_deletion_log(

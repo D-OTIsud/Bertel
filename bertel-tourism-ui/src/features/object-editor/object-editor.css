@@ -2667,3 +2667,9 @@
 /* §108 — modale de suppression définitive */
 .delete-modal__warning { color: var(--text, #1f2937); line-height: 1.5; margin-bottom: 1rem; }
 .delete-modal__error { color: var(--danger, #b91c1c); margin-top: 0.75rem; font-size: 0.875rem; }
+
+/* MarkdownCellField — compact repeater-cell Markdown surface (near .adapted-desc) */
+.md-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.md-cell__preview { font-size: .85rem; max-height: 4.5em; overflow: hidden; }
+.md-cell__empty { font-size: .85rem; }
+.md-cell__btn { align-self: flex-start; }

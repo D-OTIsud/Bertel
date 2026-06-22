@@ -274,7 +274,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       infoPlaces: '',
       childFriendly: true,
       trackGeojson: { type: 'LineString', coordinates: [[55.5, -21, 100], [55.51, -21, 150]] },
-      stages: [{ recordId: 'st1', name: 'Départ', description: 'Parking', position: '1' }],
+      stages: [{ recordId: 'st1', name: 'Départ', description: 'Parking', position: '1', kind: 'depart', lng: '55.5', lat: '-21', mediaIds: [] }],
       sectionsCount: 1,
       profilesCount: 1,
       geometrySummary: 'Trace GPX',

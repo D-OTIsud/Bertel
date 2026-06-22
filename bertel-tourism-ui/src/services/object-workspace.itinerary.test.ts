@@ -73,14 +73,18 @@ describe('buildItineraryStagesPayload', () => {
   // (delete + reinsert). The editor manages stages (BlockITI / SectionPlaces add/edit/remove),
   // so module.stages is the source of truth; the guard below avoids clobbering on a failed load.
   const stages = [
-    { recordId: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1' },
-    { recordId: null, name: 'Nouvelle etape', description: '', position: '2' },
+    { recordId: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1', kind: 'panorama', lng: '55.5', lat: '-21', mediaIds: ['m1', 'm2'] },
+    { recordId: null, name: 'Nouvelle etape', description: '', position: '2', kind: '', lng: '', lat: '', mediaIds: [] },
   ];
 
-  it('maps managed stages to the RPC shape — recordId becomes id, new rows omit id', () => {
+  it('maps managed stages to the RPC shape — recordId→id, kind→extra.kind, lng/lat + media preserved', () => {
     expect(buildItineraryStagesPayload({ ...baseInput, stages })).toEqual([
-      { id: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1' },
-      { name: 'Nouvelle etape', description: '', position: '2' },
+      {
+        id: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1',
+        extra: { kind: 'panorama' }, lng: '55.5', lat: '-21',
+        media: [{ media_id: 'm1', position: 0 }, { media_id: 'm2', position: 1 }],
+      },
+      { name: 'Nouvelle etape', description: '', position: '2', extra: {}, media: [] },
     ]);
   });
 
@@ -97,7 +101,7 @@ describe('buildItineraryStagesPayload', () => {
   it('keeps raw Markdown in the stage save payload (D2 phase F)', () => {
     const RAW = '## Sommet **panoramique** au [refuge](https://ex.re)';
     const module = { unavailableReason: null,
-      stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1' }] } as Parameters<typeof buildItineraryStagesPayload>[0];
+      stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1', kind: '', lng: '', lat: '', mediaIds: [] }] } as Parameters<typeof buildItineraryStagesPayload>[0];
     const payload = buildItineraryStagesPayload(module);
     expect(payload![0].description).toBe(RAW);
   });

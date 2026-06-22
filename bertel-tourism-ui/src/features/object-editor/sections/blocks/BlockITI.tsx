@@ -211,7 +211,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
               patch({
                 stages: [
                   ...itinerary.stages,
-                  { recordId: null, name: '', description: '', position: String(itinerary.stages.length + 1) },
+                  { recordId: null, name: '', description: '', position: String(itinerary.stages.length + 1), kind: '', lng: '', lat: '', mediaIds: [] },
                 ],
               })
             }

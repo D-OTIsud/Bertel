@@ -593,6 +593,13 @@ export interface ObjectWorkspaceItineraryStageSummary {
   name: string;
   description: string;
   position: string;
+  /** §111 C: stage type code (ref_code iti_stage_kind), stored in object_iti_stage.extra.kind. */
+  kind: string;
+  /** §111 C: stage GPS point (object_iti_stage.geom), surfaced as lng/lat strings. '' = no point. */
+  lng: string;
+  lat: string;
+  /** §111 C: linked media ids (object_iti_stage_media) — preserved across the RPC delete+reinsert. */
+  mediaIds: string[];
 }
 
 export interface ObjectWorkspaceItineraryModule {
@@ -2165,12 +2172,19 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     ...readArray(raw.practices ?? raw.object_practices),
     ...readArray(details.practices),
   ];
-  const stages = readArray(details.stages ?? itinerary.stages ?? raw.stages).map((stage, index) => ({
-    recordId: readString(stage.id) || null,
-    name: readString(stage.name, `Etape ${index + 1}`),
-    description: readString(stage.description),
-    position: readString(stage.position, String(index + 1)),
-  }));
+  const stages = readArray(details.stages ?? itinerary.stages ?? raw.stages).map((stage, index) => {
+    const extra = readRecord(stage.extra);
+    return {
+      recordId: readString(stage.id) || null,
+      name: readString(stage.name, `Etape ${index + 1}`),
+      description: readString(stage.description),
+      position: readString(stage.position, String(index + 1)),
+      kind: readString(extra.kind),
+      lng: readString(stage.lng),
+      lat: readString(stage.lat),
+      mediaIds: readArray(stage.media).map((m) => readString(readRecord(m).media_id)).filter(Boolean),
+    };
+  });
 
   const geometrySummary = [
     readString(itinerary.track_format, readString(details.track_format)),

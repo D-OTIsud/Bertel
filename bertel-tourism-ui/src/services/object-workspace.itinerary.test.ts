@@ -1,4 +1,4 @@
-import { buildItineraryUpsertPayload, buildItineraryStagesPayload } from './object-workspace';
+import { buildItineraryUpsertPayload, buildItineraryStagesPayload, buildItineraryInfoPayload } from './object-workspace';
 import type { ObjectWorkspaceItineraryModule } from './object-workspace-parser';
 
 // Pins the object_iti WRITE contract to the REAL columns after the greenfield retype
@@ -17,6 +17,14 @@ const baseInput: ObjectWorkspaceItineraryModule = {
   statusNote: '',
   practiceOptions: [],
   practiceCodes: [],
+  difficultyOptions: [],
+  openStatusOptions: [],
+  access: '',
+  ambiance: '',
+  recommendedParking: '',
+  requiredEquipment: '',
+  infoPlaces: '',
+  childFriendly: false,
   stages: [],
   sectionsCount: 0,
   profilesCount: 0,
@@ -91,5 +99,30 @@ describe('buildItineraryStagesPayload', () => {
       stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1' }] } as Parameters<typeof buildItineraryStagesPayload>[0];
     const payload = buildItineraryStagesPayload(module);
     expect(payload![0].description).toBe(RAW);
+  });
+});
+
+describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
+  it('maps the Infos pratiques editor fields to the RPC columns', () => {
+    expect(buildItineraryInfoPayload({
+      ...baseInput,
+      access: 'Depuis le col',
+      ambiance: 'Forêt',
+      recommendedParking: 'Aire belvédère',
+      requiredEquipment: 'Chaussures',
+      infoPlaces: 'Source à mi-parcours',
+      childFriendly: true,
+    })).toEqual({
+      access: 'Depuis le col',
+      ambiance: 'Forêt',
+      recommended_parking: 'Aire belvédère',
+      required_equipment: 'Chaussures',
+      info_places: 'Source à mi-parcours',
+      is_child_friendly: true,
+    });
+  });
+
+  it('returns null when the module did not load (no clobber of existing info)', () => {
+    expect(buildItineraryInfoPayload({ ...baseInput, access: 'x', unavailableReason: 'Le live ne fournit pas le detail.' })).toBeNull();
   });
 });

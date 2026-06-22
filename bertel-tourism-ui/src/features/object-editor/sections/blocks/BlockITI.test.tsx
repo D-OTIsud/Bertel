@@ -100,4 +100,16 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     fireEvent.click(screen.getByLabelText('Augmenter Distance'));
     expect(screen.getByText('9.0')).toBeInTheDocument();
   });
+
+  it('§B5: renders the Infos pratiques block with the relocated Boucle + child-friendly toggles', () => {
+    render(<ItiHarness />);
+    expect(screen.getByText('Infos pratiques')).toBeInTheDocument();
+    // object_iti_info field round-trips its value
+    expect(screen.getByDisplayValue('Depuis le parking du col')).toBeInTheDocument();
+    // is_loop is now grouped here as a boolean characteristic, next to is_child_friendly
+    expect(screen.getByText('Tracé en boucle')).toBeInTheDocument();
+    expect(screen.getByText('Adapté aux enfants')).toBeInTheDocument();
+    // the old "Type de tracé" strip is gone
+    expect(screen.queryByText('Type de tracé')).not.toBeInTheDocument();
+  });
 });

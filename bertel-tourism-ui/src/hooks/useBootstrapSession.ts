@@ -27,6 +27,29 @@ async function fetchCanEditObjects(): Promise<boolean> {
   }
 }
 
+// Resolves the user's "can create a fiche" capability from `api.user_can_create_object()`
+// (active ORG membership AND the `create_object` permission). Strictly narrower than
+// canEditObjects. Returns false on any error so the "Créer une fiche" CTA stays hidden
+// by default (fail-closed); the RPC re-checks server-side anyway.
+async function fetchCanCreateObjects(): Promise<boolean> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    return false;
+  }
+
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('user_can_create_object');
+    if (error) {
+      console.warn('user_can_create_object unavailable, hiding create CTA.', error);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn('user_can_create_object threw, hiding create CTA.', err);
+    return false;
+  }
+}
+
 // Resolves the current user's active organisation (id + name) for UI labels.
 // Returns nulls when unavailable — the label degrades to a generic string.
 async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string | null }> {
@@ -164,6 +187,11 @@ export function useBootstrapSession() {
         return;
       }
 
+      const canCreateObjects = await fetchCanCreateObjects();
+      if (cancelled) {
+        return;
+      }
+
       const activeOrg = await fetchActiveOrg();
       if (cancelled) {
         return;
@@ -186,6 +214,7 @@ export function useBootstrapSession() {
         avatar: initialsFromName(userName),
         langPrefs,
         canEditObjects,
+        canCreateObjects,
         orgId: activeOrg.orgId,
         orgName: activeOrg.orgName,
         adminRank,

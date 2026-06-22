@@ -806,7 +806,7 @@ BEGIN
             replace(replace(replace(stg.name,'&','&amp;'),'<','&lt;'),'>','&gt;'),
             'Étape ' || stg.position::text
           ) AS nm,
-          stg.description AS desc_raw,
+          api.strip_markdown(stg.description) AS desc_raw,  -- §110 flat export
           (CASE WHEN ST_SRID(stg.geom::geometry) = 0
                 THEN ST_SetSRID(stg.geom::geometry,4326)
                 ELSE stg.geom::geometry
@@ -869,7 +869,7 @@ BEGIN
             replace(replace(replace(stg.name,'&','&amp;'),'<','&lt;'),'>','&gt;'),
             'Étape ' || stg.position::text
           ) AS nm,
-          stg.description AS desc_raw,
+          api.strip_markdown(stg.description) AS desc_raw,  -- §110 flat export
           (CASE WHEN ST_SRID(stg.geom::geometry) = 0
                 THEN ST_SetSRID(stg.geom::geometry,4326)
                 ELSE stg.geom::geometry
@@ -4176,9 +4176,12 @@ BEGIN
         ), '[]'::jsonb),
         'stages', COALESCE((
           SELECT jsonb_agg(
-                   (to_jsonb(st) - 'object_id')
+                   (to_jsonb(st) - 'object_id' - 'description')
                    ||
                    jsonb_build_object(
+                     -- §110 stage description Markdown-canonical (inline): stripped flat + raw _md.
+                     'description', api.strip_markdown(st.description),
+                     'description_md', st.description,
                      'media', COALESCE((
                        SELECT jsonb_agg((to_jsonb(sm) - 'stage_id')
                                 ORDER BY
@@ -7680,7 +7683,7 @@ BEGIN
         ST_Y(geom::geometry),
         ST_X(geom::geometry),
         replace(replace(COALESCE(name, 'Stage ' || position), '&', '&amp;'), '<', '&lt;'),
-        replace(replace(COALESCE(description, ''), '&', '&amp;'), '<', '&lt;')
+        replace(replace(COALESCE(api.strip_markdown(description), ''), '&', '&amp;'), '<', '&lt;')  -- §110 flat export
       ),
       E'\n'
       ORDER BY position
@@ -7820,7 +7823,7 @@ BEGIN
       'properties', json_build_object(
         'stage_id', id,
         'name', name,
-        'description', description,
+        'description', api.strip_markdown(description),  -- §110 flat export
         'position', position
       )
     )

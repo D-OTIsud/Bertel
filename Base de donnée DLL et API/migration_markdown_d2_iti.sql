@@ -1,0 +1,23 @@
+-- migration_markdown_d2_iti.sql
+-- Manifest id: 15d   §110  Markdown Delivery 2 — ITI stage description (inline tier)
+--
+-- This is a DOCUMENTATION migration. It identifies the functions that must be
+-- (re-)deployed to make object_iti_stage.description Markdown-canonical.
+-- All bodies live in api_views_functions.sql — no standalone DDL here.
+--
+-- Deploy order (after Tasks B/C/D/E have been applied):
+--   1. api.get_object_resource    — resource stages block: to_jsonb(st) - 'description'
+--                                   + 'description' strip + 'description_md' raw
+--   2. api.build_iti_track        — KML + GPX branches: stg.description → strip_markdown()
+--   3. api.export_itinerary_gpx   — waypoint <desc>: COALESCE(description,'') → strip_markdown()
+--   4. api.get_itinerary_track_geojson — properties.description → strip_markdown()
+--
+-- After deploy: NOTIFY pgrst, 'reload schema';
+-- Test: Base de donnée DLL et API/tests/test_iti_stage_markdown.sql
+--
+-- Business rule (§110):
+--   object_iti_stage.description is Markdown-canonical (inline tier: bold/italic/link only).
+--   FLAT readers (KML, GPX, GeoJSON, export paths) receive api.strip_markdown(description).
+--   RICH readers (get_object_resource) receive stripped flat key + description_md (raw Markdown).
+--   Editor legs are NEVER stripped — the editor direct-select re-supplies the raw column value.
+--   NOTE: export_itineraries_gpx_batch delegates to export_itinerary_gpx — no own change needed.

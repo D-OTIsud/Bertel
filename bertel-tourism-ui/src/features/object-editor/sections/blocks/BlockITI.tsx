@@ -1,4 +1,5 @@
 import { Chip, ChipSet, Field, Fs, Input, StatCard, Toggle } from '../../primitives';
+import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
 
@@ -123,7 +124,12 @@ export function BlockITI({ editor, folded }: SectionProps) {
                 <div className="wp-num">{index === 0 ? 'D' : index === itinerary.stages.length - 1 ? 'A' : index + 1}</div>
                 <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
                 <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />
-                <Input value={stage.description} onChange={(description) => updateStage(index, { description })} />
+                <MarkdownCellField
+                  variant="inline"
+                  value={stage.description}
+                  onChange={(description) => updateStage(index, { description })}
+                  ariaLabel={`Description de l'etape ${index + 1}`}
+                />
                 <div className="rep-row__act">
                   <button
                     type="button"

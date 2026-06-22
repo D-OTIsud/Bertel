@@ -9,7 +9,9 @@ import {
   applyDietarySuggestions,
   readFileAsBase64,
   type ExtractResult,
+  type ExtractImage,
 } from '../../../services/menu-extract';
+import { rasterizePdfToImages } from '../../../lib/pdf-rasterize';
 
 interface Props {
   open: boolean;
@@ -29,12 +31,13 @@ interface ModalFile {
   name: string;
   isPdf: boolean;
   status: 'uploading' | 'ready' | 'error';
-  mime?: string;
-  base64?: string;
+  /** Analyzable images: one for an image file, one-per-page for a (client-rasterized) PDF. */
+  images?: ExtractImage[];
   error?: string;
 }
 
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp';
+const MAX_ANALYZE_IMAGES = 8;
 
 function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : 'Erreur inattendue.';
@@ -71,9 +74,9 @@ export function MenuExtractModal({
   }, [allowedDietary]);
 
   const analyzableImages = files
-    .filter((f) => f.status === 'ready' && f.base64)
-    .map((f) => ({ mime: f.mime ?? 'image/jpeg', base64: f.base64 ?? '' }));
-  const hasPdf = files.some((f) => f.isPdf);
+    .filter((f) => f.status === 'ready')
+    .flatMap((f) => f.images ?? [])
+    .slice(0, MAX_ANALYZE_IMAGES);
   const canAnalyze = phase === 'collect' && confirmed && analyzableImages.length > 0;
 
   async function addFiles(fileList: FileList) {
@@ -86,14 +89,9 @@ export function MenuExtractModal({
         const uploaded = await uploadDocument({ file, objectId, accessToken });
         await linkObjectCarte(objectId, uploaded.documentId, Math.floor(performance.now()));
         onCarteUploaded?.();
-        let mime: string | undefined;
-        let base64: string | undefined;
-        if (!isPdf) {
-          const read = await readFileAsBase64(file);
-          mime = read.mime;
-          base64 = read.base64;
-        }
-        setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'ready', mime, base64 } : f)));
+        // PDFs are rasterized to page images in the browser; an image becomes a single image.
+        const images = isPdf ? await rasterizePdfToImages(file) : [await readFileAsBase64(file)];
+        setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'ready', images } : f)));
       } catch (err) {
         setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'error', error: errMsg(err) } : f)));
       }
@@ -151,7 +149,7 @@ export function MenuExtractModal({
         <>
           <Field
             label="Fichiers (images de la carte ou PDF)"
-            hint="Astuce : pour l'analyse IA, importez des images (JPEG/PNG). Un PDF est conservé comme carte téléchargeable."
+            hint="Images (JPEG/PNG) ou PDF — tous analysés par l'IA. Chaque fichier est aussi conservé comme carte téléchargeable."
           >
             <input
               type="file"
@@ -172,18 +170,12 @@ export function MenuExtractModal({
                   {f.isPdf ? <FileText size={14} aria-hidden /> : <ImageIcon size={14} aria-hidden />}
                   <span>{f.name}</span>
                   {f.status === 'uploading' && <span className="muted">· envoi…</span>}
-                  {f.status === 'ready' && f.isPdf && <span className="muted">· carte (non analysée)</span>}
+                  {f.status === 'ready' && f.isPdf && <span className="muted">· carte · {f.images?.length ?? 0} page(s)</span>}
                   {f.status === 'ready' && !f.isPdf && <span className="muted">· prête</span>}
                   {f.status === 'error' && <span role="alert" style={{ color: 'var(--danger, #c00)' }}>· {f.error}</span>}
                 </li>
               ))}
             </ul>
-          )}
-
-          {hasPdf && analyzableImages.length === 0 && (
-            <p className="muted" style={{ fontSize: 12 }}>
-              Un PDF a été ajouté comme carte téléchargeable. Pour générer un menu, importez aussi les images de la carte.
-            </p>
           )}
 
           <Field label="Titre du menu généré">

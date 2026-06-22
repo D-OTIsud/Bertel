@@ -30,6 +30,9 @@ BEGIN
   ASSERT v_stage_j IS NOT NULL, 'stage not in resource itinerary_details';
   ASSERT v_stage_j->>'description' = v_plain, format('resource flat not stripped: %s', v_stage_j->>'description');
   ASSERT v_stage_j->>'description_md' = v_md, 'resource description_md not raw';
+  -- §110 I1: the stage editor is a plain string (never reads i18n) → the raw description_i18n
+  -- must be subtracted from the resource block (no raw per-language Markdown in the payload/CSV).
+  ASSERT NOT (v_stage_j ? 'description_i18n'), 'description_i18n leaked into resource stages block';
 
   -- Flat exports: plain text present, link URL never leaked
   v_kml := api.build_iti_track(v_obj, 'kml', TRUE);

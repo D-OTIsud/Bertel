@@ -7,7 +7,9 @@
 --
 -- Deploy order (after Tasks B/C/D/E have been applied):
 --   1. api.get_object_resource    — resource stages block: to_jsonb(st) - 'description'
---                                   + 'description' strip + 'description_md' raw
+--                                   - 'description_i18n' (§110 I1: stage editor is a plain string,
+--                                   never reads i18n → keep raw per-language Markdown out of the
+--                                   resource/selection-CSV) + 'description' strip + 'description_md' raw
 --   2. api.build_iti_track        — KML + GPX branches: stg.description → strip_markdown()
 --   3. api.export_itinerary_gpx   — waypoint <desc>: COALESCE(description,'') → strip_markdown()
 --   4. api.get_itinerary_track_geojson — properties.description → strip_markdown()

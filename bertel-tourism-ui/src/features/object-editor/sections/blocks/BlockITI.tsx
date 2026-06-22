@@ -177,7 +177,8 @@ export function BlockITI({ editor, folded }: SectionProps) {
               <Input value={itinerary.infoPlaces} onChange={(infoPlaces) => patch({ infoPlaces })} />
             </Field>
           </div>
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 14 }}>
+          {/* §111: côte à côte, not full-width stacked bars. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
             <Toggle label="Tracé en boucle" on={itinerary.loop} onChange={(loop) => patch({ loop })} />
             <Toggle label="Adapté aux enfants" on={itinerary.childFriendly} onChange={(childFriendly) => patch({ childFriendly })} />
           </div>

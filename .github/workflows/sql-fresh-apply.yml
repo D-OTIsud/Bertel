@@ -266,6 +266,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_set_itinerary_track.sql"
 
+      - name: ITI stage geom roundtrip test (§111 — save_object_itinerary_nested persists stage geom + kind; get_object_resource emits track_geojson + stage lng/lat)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_stage_geom_roundtrip.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

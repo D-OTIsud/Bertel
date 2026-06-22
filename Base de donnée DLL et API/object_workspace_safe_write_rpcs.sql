@@ -785,7 +785,7 @@ CREATE OR REPLACE FUNCTION api.save_object_itinerary_nested(p_object_id text, p_
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY INVOKER
-SET search_path = public, api, internal
+SET search_path = public, api, internal, extensions  -- extensions: PostGIS ST_MakePoint/ST_SetSRID for stage geom (§111)
 AS $$
 DECLARE
   v_counts jsonb := '{}'::jsonb;
@@ -844,19 +844,14 @@ BEGIN
   END IF;
 
   IF p_payload ? 'stages' THEN
-    IF EXISTS (
-      SELECT 1 FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'stages')) AS t(value)
-      WHERE value ? 'geom'
-    ) THEN
-      v_skipped := array_append(v_skipped, 'object_iti_stage.geom');
-      v_warnings := array_append(v_warnings, 'Stage geometry was skipped; geometry validation is not enabled for this RPC.');
-    END IF;
+    -- §111 Section 06 ITI: the stage GPS point is now persisted (was skipped). The editor
+    -- sends lng/lat (a point inside the trace corridor); extra.kind carries the stage type.
     DELETE FROM public.object_iti_stage WHERE object_id = p_object_id;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     v_inserted := 0;
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'stages')) AS t(value) LOOP
       INSERT INTO public.object_iti_stage (
-        id, object_id, name, description, position, name_i18n, description_i18n, extra
+        id, object_id, name, description, position, name_i18n, description_i18n, extra, geom
       )
       VALUES (
         COALESCE(internal.workspace_uuid(v_row->>'id'), gen_random_uuid()),
@@ -866,7 +861,10 @@ BEGIN
         COALESCE(NULLIF(v_row->>'position', '')::integer, v_inserted),
         CASE WHEN jsonb_typeof(v_row->'name_i18n') = 'object' THEN v_row->'name_i18n' ELSE NULL END,
         CASE WHEN jsonb_typeof(v_row->'description_i18n') = 'object' THEN v_row->'description_i18n' ELSE NULL END,
-        internal.workspace_jsonb_object(v_row->'extra')
+        internal.workspace_jsonb_object(v_row->'extra'),
+        CASE WHEN NULLIF(v_row->>'lng', '') IS NOT NULL AND NULLIF(v_row->>'lat', '') IS NOT NULL
+             THEN ST_SetSRID(ST_MakePoint((v_row->>'lng')::float8, (v_row->>'lat')::float8), 4326)::geography
+             ELSE NULL END
       )
       RETURNING id INTO v_stage_id;
 

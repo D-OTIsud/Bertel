@@ -4143,6 +4143,12 @@ BEGIN
           FROM object_iti_info ii
           WHERE ii.object_id = obj.id
         ), '{}'::jsonb),
+        -- §111 Section 06 ITI: trace as GeoJSON for the editor/drawer MapLibre map
+        -- (PostGIS lives in extensions; this fn's search_path omits it, hence the schema qualifier).
+        'track_geojson', (
+          SELECT extensions.ST_AsGeoJSON(i.geom::extensions.geometry)::jsonb
+          FROM object_iti i WHERE i.object_id = obj.id AND i.geom IS NOT NULL
+        ),
         'profiles', COALESCE((
           SELECT jsonb_agg(to_jsonb(ip) - 'object_id'
                  ORDER BY
@@ -4176,12 +4182,15 @@ BEGIN
         ), '[]'::jsonb),
         'stages', COALESCE((
           SELECT jsonb_agg(
-                   (to_jsonb(st) - 'object_id' - 'description')
+                   (to_jsonb(st) - 'object_id' - 'description' - 'geom')
                    ||
                    jsonb_build_object(
                      -- §110 stage description Markdown-canonical (inline): stripped flat + raw _md.
                      'description', api.strip_markdown(st.description),
                      'description_md', st.description,
+                     -- §111 stage GPS point as lng/lat (the raw geom hex is not consumable by the map)
+                     'lng', extensions.ST_X(st.geom::extensions.geometry),
+                     'lat', extensions.ST_Y(st.geom::extensions.geometry),
                      'media', COALESCE((
                        SELECT jsonb_agg((to_jsonb(sm) - 'stage_id')
                                 ORDER BY

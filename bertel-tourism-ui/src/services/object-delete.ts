@@ -13,6 +13,8 @@ export interface DeleteObjectResult {
   mediaDeleted: string[];
   documentsDeleted: string[];
   storageError: string | null;
+  /** True when the object was deleted but file cleanup was skipped (service-role key absent). */
+  storageSkipped: boolean;
 }
 
 export async function requestObjectDeletion(input: DeleteObjectInput): Promise<DeleteObjectResult> {

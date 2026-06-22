@@ -10417,3 +10417,213 @@ a {
   border-left: 3px solid var(--line, #e3e3e3); color: var(--ink-2, #555);
 }
 .md-content a { color: var(--accent, #1d6fb8); text-decoration: underline; }
+
+/* ============================================================
+   App sidebar — expand-on-hover overlay (sidebar redesign 2026-06-22)
+   Rail stays 64px in the .app-shell grid track (no reflow); the panel
+   grows to --sidebar-w-expanded on hover/focus-within and floats over
+   the workspace. Pure CSS, Bertel tokens only, no new dependency.
+   ============================================================ */
+:root {
+  --sidebar-w-expanded: 280px; /* matches the `rail` spacing token */
+}
+
+.app-sidebar {
+  position: relative;
+  width: var(--sidebar-w);
+  height: 100%;
+  z-index: 40; /* above .app-shell__viewport (2); below drawers/dialogs (>=50) */
+}
+
+.app-sidebar__panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 14px 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+  transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms ease,
+              border-radius 200ms ease;
+}
+
+.app-sidebar__panel:hover,
+.app-sidebar__panel:focus-within {
+  width: var(--sidebar-w-expanded);
+  box-shadow: var(--shadow-m);
+  border-radius: 0 14px 14px 0;
+}
+
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+.app-sidebar__logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--surface-2);
+  overflow: hidden;
+  color: var(--teal);
+  font-family: 'Sora', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+.app-sidebar__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+}
+
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-sidebar__item {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border-radius: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.app-sidebar__item:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.app-sidebar__item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.app-sidebar__item--active,
+.app-sidebar__item--active:hover {
+  background: var(--teal);
+  color: #fff;
+}
+
+.app-sidebar__iconbox {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.app-sidebar__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.app-sidebar__dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-brand);
+}
+
+.app-sidebar__label {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 150ms ease, transform 150ms ease;
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.app-sidebar__panel:hover .app-sidebar__label,
+.app-sidebar__panel:focus-within .app-sidebar__label {
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: 60ms;
+}
+
+.app-sidebar__divider {
+  height: 1px;
+  background: var(--line);
+  margin: 8px;
+}
+
+.app-sidebar__footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-sidebar__profile {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 11px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  color: var(--ink);
+  transition: background-color 150ms ease;
+}
+.app-sidebar__profile:hover {
+  background: var(--surface-2);
+}
+.app-sidebar__profile:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.app-sidebar__avatarbox {
+  width: 40px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.app-sidebar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-brand), var(--accent-brand-strong));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: 'Sora', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+}
+.app-sidebar__profile-name {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar__panel,
+  .app-sidebar__label,
+  .app-sidebar__item,
+  .app-sidebar__profile {
+    transition: none;
+  }
+}

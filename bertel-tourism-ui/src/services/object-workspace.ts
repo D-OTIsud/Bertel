@@ -3143,7 +3143,10 @@ async function getObjectWorkspaceItineraryModule(
     return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger l itineraire.' };
   }
 
-  const [itiResult, practiceRefsResult, practicesResult, stagesResult, difficultyRefsResult, openStatusRefsResult] = await Promise.allSettled([
+  // §111 C: stages come from baseModule (parser of get_object_resource.itinerary_details.stages),
+  // which now carries kind / lng / lat / mediaIds — richer than a direct object_iti_stage select
+  // (lng/lat need ST_X/ST_Y, only available server-side). No stage re-fetch here.
+  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
@@ -3151,7 +3154,6 @@ async function getObjectWorkspaceItineraryModule(
       .maybeSingle(),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_practice').order('position', { ascending: true }),
     client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
-    client.from('object_iti_stage').select('id, name, description, position, geom').eq('object_id', objectId).order('position', { ascending: true }),
     // §111 vocab for the Difficulté / Statut d'ouverture selects (replaces the free-text write-traps)
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_open_status').order('position', { ascending: true }),
@@ -3180,14 +3182,7 @@ async function getObjectWorkspaceItineraryModule(
         .map((entry) => practiceById.get(readString(entry.practice_id))?.code ?? '')
         .filter(Boolean)
     : baseModule.practiceCodes;
-  const stages = stagesResult.status === 'fulfilled' && stagesResult.value.error == null
-    ? ((stagesResult.value.data ?? []) as Record<string, unknown>[]).map((stage, index) => ({
-        recordId: readString(stage.id) || null,
-        name: readString(stage.name, `Etape ${index + 1}`),
-        description: readString(stage.description),
-        position: readString(stage.position, String(index + 1)),
-      }))
-    : baseModule.stages;
+  const stages = baseModule.stages;
 
   // object_iti.duration_min is stored in minutes (greenfield retype from duration_hours); read it
   // directly — no hours->minutes round-trip. elevation_loss carries descent (was unavailable before).
@@ -5250,15 +5245,29 @@ export function buildItineraryUpsertPayload(objectId: string, input: ObjectWorks
  */
 export function buildItineraryStagesPayload(
   input: ObjectWorkspaceItineraryModule,
-): Array<{ id?: string; name: string; description: string; position: string }> | null {
+): Array<{
+  id?: string;
+  name: string;
+  description: string;
+  position: string;
+  extra: Record<string, string>;
+  lng?: string;
+  lat?: string;
+  media: Array<{ media_id: string; position: number }>;
+}> | null {
   if (input.unavailableReason != null) {
     return null;
   }
+  // §111 C: also carry kind (extra.kind), the GPS point (lng/lat), and the linked media so the
+  // RPC delete+reinsert preserves them — sending only name/description would wipe stage geom + photos.
   return input.stages.map((stage) => ({
     ...(stage.recordId ? { id: stage.recordId } : {}),
     name: stage.name,
     description: stage.description,
     position: stage.position,
+    extra: (stage.kind ? { kind: stage.kind } : {}) as Record<string, string>,
+    ...(stage.lng && stage.lat ? { lng: stage.lng, lat: stage.lat } : {}),
+    media: stage.mediaIds.map((mediaId, mediaIndex) => ({ media_id: mediaId, position: mediaIndex })),
   }));
 }
 

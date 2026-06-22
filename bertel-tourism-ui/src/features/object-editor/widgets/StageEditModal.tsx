@@ -64,7 +64,7 @@ export function StageEditModal({ open, stage, stageKindOptions, trackGeojson, on
     <EditorModal
       open={open}
       title="Étape / point d'intérêt"
-      size="lg"
+      size="xl"
       onClose={onClose}
       onSave={() => onSave(draft)}
       saveDisabled={draft.name.trim() === ''}
@@ -96,7 +96,7 @@ export function StageEditModal({ open, stage, stageKindOptions, trackGeojson, on
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>Position sur la carte</div>
-          <div className="map-mini" style={{ minHeight: 200, overflow: 'hidden' }}>
+          <div className="map-mini" style={{ minHeight: 360, overflow: 'hidden' }}>
             <Map
               reuseMaps
               mapStyle={DEFAULT_APP_MAP_STYLE}

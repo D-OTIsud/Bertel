@@ -29,4 +29,13 @@ describe('useGlobalPresence', () => {
     expect(state.liveMembers[0].userId).toBe('u1');
     expect(state.networkStatus).toBe('offline');
   });
+
+  it('with no userId (guest), publishes an empty roster and offline', () => {
+    (getSupabaseClient as jest.Mock).mockReturnValue(null);
+    useSessionStore.setState({ demoMode: false, userId: null, userName: '', avatar: '--' });
+    renderHook(() => useGlobalPresence());
+    const state = useUiStore.getState();
+    expect(state.liveMembers).toEqual([]);
+    expect(state.networkStatus).toBe('offline');
+  });
 });

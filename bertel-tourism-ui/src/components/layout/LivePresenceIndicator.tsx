@@ -65,6 +65,11 @@ export function LivePresenceIndicator() {
       onMouseLeave={() => {
         if (!pinned) setOpen(false);
       }}
+      onBlur={(event) => {
+        if (!pinned && !containerRef.current?.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
     >
       {networkStatus !== 'connected' ? (
         <span className={`status-pill status-pill--${net.tone}`} title={net.description}>

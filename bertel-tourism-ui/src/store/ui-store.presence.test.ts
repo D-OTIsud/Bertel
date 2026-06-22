@@ -1,6 +1,10 @@
 import { useUiStore } from './ui-store';
 
 describe('ui-store live presence slice', () => {
+  beforeEach(() => {
+    useUiStore.setState({ liveMembers: [] });
+  });
+
   it('defaults to an empty roster', () => {
     expect(useUiStore.getState().liveMembers).toEqual([]);
   });

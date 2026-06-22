@@ -55,4 +55,18 @@ describe('LivePresenceIndicator', () => {
     render(<LivePresenceIndicator />);
     expect(screen.getByText('Hors ligne')).toBeInTheDocument();
   });
+
+  it('closes the panel when keyboard focus leaves it', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <LivePresenceIndicator />
+        <button type="button">ailleurs</button>
+      </>,
+    );
+    await user.tab(); // focus the indicator trigger -> onFocus opens the panel
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.tab(); // focus moves to the sibling button -> onBlur closes
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

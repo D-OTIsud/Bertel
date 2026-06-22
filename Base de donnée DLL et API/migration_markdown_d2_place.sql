@@ -1,6 +1,6 @@
 -- Migration: Markdown D2 -- sub-place description (object_place_description)
 -- Manifest id: 15c
--- Decision log: §110
+-- Decision log: §112
 -- Date: 2026-06-22
 --
 -- Summary:
@@ -12,8 +12,8 @@
 --                        ORDER BY ...
 --     AFTER:  'descriptions', COALESCE((
 --               SELECT jsonb_agg(
---                        -- §110 Markdown: explicit override. ONLY the flat scalar prose keys are
---                        -- dropped (the || override re-emits them stripped). §110 C1 fix: the raw
+--                        -- §112 Markdown: explicit override. ONLY the flat scalar prose keys are
+--                        -- dropped (the || override re-emits them stripped). §112 C1 fix: the raw
 --                        -- *_i18n maps are NOT subtracted — the place editor loads from THIS block
 --                        -- and reads them for its per-language values (editor leg; subtracting them
 --                        -- NULLed translations on the next §16 save).
@@ -50,4 +50,4 @@
 --   3. Run Base de donnee DLL et API/tests/test_place_description_markdown.sql via MCP execute_sql.
 --      Expected: RAISE EXCEPTION 'ROLLBACK_OK' surfaces, no assertion errors.
 --
--- Rollback: redeploy the previous get_object_resource body (remove the §110 block).
+-- Rollback: redeploy the previous get_object_resource body (remove the §112 block).

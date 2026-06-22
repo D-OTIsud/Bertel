@@ -806,7 +806,7 @@ BEGIN
             replace(replace(replace(stg.name,'&','&amp;'),'<','&lt;'),'>','&gt;'),
             'Étape ' || stg.position::text
           ) AS nm,
-          api.strip_markdown(stg.description) AS desc_raw,  -- §110 flat export
+          api.strip_markdown(stg.description) AS desc_raw,  -- §112 flat export
           (CASE WHEN ST_SRID(stg.geom::geometry) = 0
                 THEN ST_SetSRID(stg.geom::geometry,4326)
                 ELSE stg.geom::geometry
@@ -869,7 +869,7 @@ BEGIN
             replace(replace(replace(stg.name,'&','&amp;'),'<','&lt;'),'>','&gt;'),
             'Étape ' || stg.position::text
           ) AS nm,
-          api.strip_markdown(stg.description) AS desc_raw,  -- §110 flat export
+          api.strip_markdown(stg.description) AS desc_raw,  -- §112 flat export
           (CASE WHEN ST_SRID(stg.geom::geometry) = 0
                 THEN ST_SetSRID(stg.geom::geometry,4326)
                 ELSE stg.geom::geometry
@@ -2732,7 +2732,7 @@ BEGIN
           'city',           ol.city,
           'code_insee',     ol.code_insee,
           'lieu_dit',       ol.lieu_dit,
-          -- §110 Markdown contract: flat key stripped, raw Markdown in the _md sibling (plain text, no i18n).
+          -- §112 Markdown contract: flat key stripped, raw Markdown in the _md sibling (plain text, no i18n).
           'direction',      api.strip_markdown(ol.direction),
           'direction_md',   ol.direction
         )
@@ -3775,7 +3775,7 @@ BEGIN
                (to_jsonb(rt) - 'object_id' - 'description_i18n')
                ||
                jsonb_build_object(
-                 -- §110 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
+                 -- §112 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
                  'description',
                  api.strip_markdown(COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description)),
                  'description_md',
@@ -3877,8 +3877,8 @@ BEGIN
                jsonb_build_object(
                  'descriptions', COALESCE((
                    SELECT jsonb_agg(
-                            -- §110 Markdown: strip the flat prose keys (the || override below wins),
-                            -- emit *_md (raw resolved) + *_raw (raw scalar base). §110 C1 fix: the place
+                            -- §112 Markdown: strip the flat prose keys (the || override below wins),
+                            -- emit *_md (raw resolved) + *_raw (raw scalar base). §112 C1 fix: the place
                             -- editor loads from THIS block and reads the raw *_i18n maps for its
                             -- per-language values, so the *_i18n columns are an editor leg and must NOT
                             -- be subtracted (only the flat scalar keys are dropped).
@@ -3926,7 +3926,7 @@ BEGIN
                      'address1',   ol.address1,
                      'postcode',   ol.postcode,
                      'city',       ol.city,
-                     -- §110 Markdown contract: same strip + _md sibling for place-keyed locations.
+                     -- §112 Markdown contract: same strip + _md sibling for place-keyed locations.
                      'direction',  api.strip_markdown(ol.direction),
                      'direction_md', ol.direction
                    )
@@ -4185,13 +4185,13 @@ BEGIN
         ), '[]'::jsonb),
         'stages', COALESCE((
           SELECT jsonb_agg(
-                   -- §110 I1 fix: subtract the raw description_i18n too (the ITI stage editor model
+                   -- §112 I1 fix: subtract the raw description_i18n too (the ITI stage editor model
                    -- is a plain string and never reads it, so it is not an editor leg — keep raw
                    -- per-language Markdown out of the resource/selection-CSV).
                    (to_jsonb(st) - 'object_id' - 'description' - 'description_i18n' - 'geom')
                    ||
                    jsonb_build_object(
-                     -- §110 stage description Markdown-canonical (inline): stripped flat + raw _md.
+                     -- §112 stage description Markdown-canonical (inline): stripped flat + raw _md.
                      'description', api.strip_markdown(st.description),
                      'description_md', st.description,
                      -- §111 stage GPS point as lng/lat (the raw geom hex is not consumable by the map)
@@ -4393,7 +4393,7 @@ BEGIN
                                 (to_jsonb(mi) - 'menu_id' - 'description')
                               )
                               || jsonb_build_object(
-                                   -- §110 dish description is Markdown-canonical: stripped flat + raw _md sibling.
+                                   -- §112 dish description is Markdown-canonical: stripped flat + raw _md sibling.
                                    'description', api.strip_markdown(mi.description),
                                    'description_md', mi.description,
                                    'category', (
@@ -5035,7 +5035,7 @@ BEGIN
             ' - ' || api.render_format_currency(mi.price, mi.currency, v_render_locale) ||
             CASE WHEN u.name IS NOT NULL AND trim(u.name) <> '' THEN ' ' || lower(u.name) ELSE '' END
           ELSE '' END ||
-          -- §110 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
+          -- §112 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
           CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(api.strip_markdown(mi.description), 50) || '...)' ELSE '' END AS line_text,
           mi.is_available,
           NULLIF((to_jsonb(mi)->>'position'),'')::int AS position_order,
@@ -7698,7 +7698,7 @@ BEGIN
         ST_Y(geom::geometry),
         ST_X(geom::geometry),
         replace(replace(COALESCE(name, 'Stage ' || position), '&', '&amp;'), '<', '&lt;'),
-        replace(replace(COALESCE(api.strip_markdown(description), ''), '&', '&amp;'), '<', '&lt;')  -- §110 flat export
+        replace(replace(COALESCE(api.strip_markdown(description), ''), '&', '&amp;'), '<', '&lt;')  -- §112 flat export
       ),
       E'\n'
       ORDER BY position
@@ -7940,7 +7940,7 @@ BEGIN
       'properties', json_build_object(
         'stage_id', id,
         'name', name,
-        'description', api.strip_markdown(description),  -- §110 flat export
+        'description', api.strip_markdown(description),  -- §112 flat export
         'position', position
       )
     )

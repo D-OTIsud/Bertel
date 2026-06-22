@@ -1,6 +1,6 @@
 -- Migration: Markdown D2 — dish description (object_menu_item.description)
 -- Manifest id: 15b
--- Decision log: §110
+-- Decision log: §112
 -- Date: 2026-06-22
 --
 -- Summary:
@@ -11,14 +11,14 @@
 --              jsonb_build_object( 'category', ...
 --      AFTER:  (to_jsonb(mi) - 'menu_id' - 'description')
 --              jsonb_build_object(
---                -- §110 dish description is Markdown-canonical: stripped flat + raw _md sibling.
+--                -- §112 dish description is Markdown-canonical: stripped flat + raw _md sibling.
 --                'description', api.strip_markdown(mi.description),
 --                'description_md', mi.description,
 --                'category', ...
 --
 --   2. api.get_object_resource — render-line (~line 4991 in api_views_functions.sql):
 --      BEFORE: CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(mi.description, 50) || '...'
---      AFTER:  -- §110 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
+--      AFTER:  -- §112 strip Markdown BEFORE LEFT so markers don't eat the 50-char budget / leak.
 --              CASE WHEN mi.description IS NOT NULL THEN ' (' || LEFT(api.strip_markdown(mi.description), 50) || '...'
 --
 --   3. api.refresh_object_filter_caches — doc_d search tsvector in schema_unified.sql (~line 4667):

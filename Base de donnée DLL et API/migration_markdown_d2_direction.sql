@@ -1,6 +1,6 @@
 -- Migration: Markdown D2 — plan d'accès (object_location.direction)
 -- Manifest id: 14z
--- Decision log: §110
+-- Decision log: §112
 -- Date: 2026-06-22
 --
 -- Summary:

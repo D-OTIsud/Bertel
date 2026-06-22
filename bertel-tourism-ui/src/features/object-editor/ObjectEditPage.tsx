@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
@@ -23,6 +23,8 @@ import {
 import { validateForPublication, type Issue } from './editor-validation';
 import { saveResultToIssues, publishErrorToIssue } from './save-issues';
 import { BlockersModal } from './widgets/BlockersModal';
+import { DeleteObjectModal } from './widgets/DeleteObjectModal';
+import { getApiClient } from '../../lib/supabase';
 import { VersionHistoryModal } from './widgets/VersionHistoryModal';
 import { ImportExportModal } from './widgets/ImportExportModal';
 import {
@@ -172,6 +174,15 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // §108 — hard-delete modal + session access token (needed to call the /api/objects/delete route).
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    const client = getApiClient();
+    if (!client) return;
+    void client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
+  }, []);
+
   async function handleExportJson() {
     try {
       const ws = await getObjectWorkspaceResource(objectId, langPrefs);
@@ -258,8 +269,9 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         canArchive: resource.permissions.publication.canDirectWrite,
         archiveDisabledReason: resource.permissions.publication.disabledReason,
         currentVersion,
+        canHardDelete: resource.permissions.delete.canDirectWrite,
       }),
-    [lifecycleStatus, resource.permissions.publication.canDirectWrite, resource.permissions.publication.disabledReason, currentVersion],
+    [lifecycleStatus, resource.permissions.publication.canDirectWrite, resource.permissions.publication.disabledReason, currentVersion, resource.permissions.delete.canDirectWrite],
   );
 
   function handleToolSelect(key: EditorToolKey) {
@@ -270,7 +282,14 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     } else if (key === 'import-export') {
       setImportError(null);
       setImportExportOpen(true);
+    } else if (key === 'delete') {
+      setDeleteModalOpen(true);
     }
+  }
+
+  function handleObjectDeleted() {
+    setDeleteModalOpen(false);
+    router.push('/explorer');
   }
 
   async function handleArchiveConfirm() {
@@ -508,6 +527,14 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         tone={isArchived ? 'default' : 'danger'}
         onCancel={() => setArchiveConfirmOpen(false)}
         onConfirm={() => void handleArchiveConfirm()}
+      />
+      <DeleteObjectModal
+        open={deleteModalOpen}
+        objectId={objectId}
+        objectName={resource.name}
+        accessToken={accessToken}
+        onClose={() => setDeleteModalOpen(false)}
+        onDeleted={handleObjectDeleted}
       />
       <BlockersModal
         open={blockersModalOpen}

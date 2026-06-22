@@ -85,10 +85,16 @@ BEGIN
     RAISE EXCEPTION 'NAME_MISMATCH: le nom de confirmation ne correspond pas';
   END IF;
 
-  -- 6. Collecte AVANT suppression : URLs des médias object-keyed (CASCADE les supprimera).
-  SELECT coalesce(array_agg(url), '{}'::text[])
+  -- 6. Collecte AVANT suppression : URLs des médias supprimés par CASCADE. `media` est une table
+  --    XOR (object_id OU place_id) : les médias object-keyed partent via object_id CASCADE, et les
+  --    médias place-keyed des sous-lieux de l'objet partent via object_place→media.place_id CASCADE.
+  --    On collecte les DEUX, sinon les fichiers Storage des médias de sous-lieux orphelineraient.
+  SELECT coalesce(array_agg(m.url), '{}'::text[])
     INTO v_media
-    FROM media WHERE object_id = p_object_id AND url IS NOT NULL;
+    FROM media m
+   WHERE m.url IS NOT NULL
+     AND ( m.object_id = p_object_id
+        OR m.place_id IN (SELECT op.id FROM object_place op WHERE op.object_id = p_object_id) );
 
   -- 7. Documents = lignes ref_document PARTAGÉES via object_document. On ne retient que les
   --    ref_document qui ne seront plus liés à AUCUN autre objet après cette suppression.

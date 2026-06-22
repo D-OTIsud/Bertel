@@ -12,6 +12,7 @@ DECLARE
   v_plain_uid uuid := '00000000-0000-4000-a000-0000000000c2';  -- tourism_agent (PAS superuser)
   v_pub_role  uuid;
   v_media_type uuid;
+  v_place_id  uuid;
   v_doc_id    uuid := gen_random_uuid();
   v_result    jsonb;
   v_obj_left  int;
@@ -38,6 +39,10 @@ BEGIN
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES (v_obj, v_org, v_pub_role);
   INSERT INTO media (object_id, media_type_id, url)
     VALUES (v_obj, v_media_type, 'https://x/storage/v1/object/public/media/'||v_obj||'/a.jpg');
+  -- media XOR : un média de SOUS-LIEU (place-keyed) doit aussi être collecté pour le balayage Storage.
+  INSERT INTO object_place (object_id, label) VALUES (v_obj, 'Sous-lieu test') RETURNING id INTO v_place_id;
+  INSERT INTO media (place_id, media_type_id, url)
+    VALUES (v_place_id, v_media_type, 'https://x/storage/v1/object/public/media/'||v_obj||'/p.jpg');
   INSERT INTO ref_document (id, url)
     VALUES (v_doc_id, 'https://x/storage/v1/object/public/documents/'||v_obj||'/d.pdf');
   INSERT INTO object_document (object_id, document_id) VALUES (v_obj, v_doc_id);
@@ -48,7 +53,8 @@ BEGIN
     v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
     RAISE EXCEPTION 'GUARD FAILED: non-superuser deleted an object';
   EXCEPTION WHEN raise_exception THEN
-    ASSERT POSITION('FORBIDDEN' IN SQLERRM) > 0, 'expected FORBIDDEN, got: '||SQLERRM;
+    -- Spécifiquement la garde superuser, pas FORBIDDEN_ORG (qui contient aussi « FORBIDDEN »).
+    ASSERT POSITION('administrateurs plateforme' IN SQLERRM) > 0, 'expected superuser FORBIDDEN, got: '||SQLERRM;
   END;
 
   -- ========== superuser pour la suite ==========
@@ -83,11 +89,11 @@ BEGIN
   -- ========== 5. happy path ==========
   v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
   ASSERT (v_result->>'deleted')::boolean,                          'expected deleted=true';
-  ASSERT jsonb_array_length(v_result->'media_to_delete') = 1,      'expected 1 media url';
+  ASSERT jsonb_array_length(v_result->'media_to_delete') = 2,      'expected 2 media urls (object-keyed + place-keyed)';
   ASSERT jsonb_array_length(v_result->'documents_to_delete') = 1,  'expected 1 document url';
 
-  SELECT count(*) INTO v_obj_left   FROM object          WHERE id = v_obj;        ASSERT v_obj_left   = 0, 'object gone';
-  SELECT count(*) INTO v_media_left FROM media           WHERE object_id = v_obj; ASSERT v_media_left = 0, 'media cascade-gone';
+  SELECT count(*) INTO v_obj_left   FROM object          WHERE id = v_obj;          ASSERT v_obj_left   = 0, 'object gone';
+  SELECT count(*) INTO v_media_left FROM media           WHERE object_id = v_obj OR place_id = v_place_id; ASSERT v_media_left = 0, 'object+place media cascade-gone';
   SELECT count(*) INTO v_link_left  FROM object_org_link WHERE object_id = v_obj; ASSERT v_link_left  = 0, 'org_link cascade-gone';
   SELECT count(*) INTO v_doc_left   FROM ref_document    WHERE id = v_doc_id;     ASSERT v_doc_left   = 0, 'orphan ref_document deleted';
   SELECT count(*) INTO v_log_count  FROM object_deletion_log WHERE object_id = v_obj; ASSERT v_log_count = 1, 'one deletion log row';

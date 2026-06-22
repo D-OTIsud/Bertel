@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { usePresenceRoom } from '../../../hooks/usePresenceRoom';
 import type { PresenceMember } from '../../../types/domain';
+import { formatPresenceDuration, initials } from '../../../lib/presence';
 
 interface PresenceRailProps {
   objectId: string;
 }
 
-const MINUTE_MS = 60_000;
-const HOUR_MS = 60 * MINUTE_MS;
 // Minute-granular label, so a 30s refresh keeps it accurate without churning renders.
 const TICK_MS = 30_000;
 // How long the "X a quitté la page" snackbar stays up.
@@ -27,38 +26,6 @@ export function computeDepartedPeers(
   return previous.filter((peer) => peer.userId !== selfUserId && !presentIds.has(peer.userId));
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-/**
- * Human-readable "how long this editor has been in the room" label.
- * Returns null when the join time is unknown (e.g. an older client that did not broadcast it).
- */
-export function formatPresenceDuration(onlineSince: number | undefined, now: number): string | null {
-  if (onlineSince == null || !Number.isFinite(onlineSince)) {
-    return null;
-  }
-
-  const elapsedMs = Math.max(0, now - onlineSince);
-  const totalMinutes = Math.floor(elapsedMs / MINUTE_MS);
-
-  if (totalMinutes < 1) {
-    return "à l'instant";
-  }
-  if (elapsedMs < HOUR_MS) {
-    return `depuis ${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(elapsedMs / HOUR_MS);
-  const minutes = totalMinutes - hours * 60;
-  return minutes === 0 ? `depuis ${hours} h` : `depuis ${hours} h ${minutes} min`;
-}
 
 export function PresenceRail({ objectId }: PresenceRailProps) {
   const { peers, me, typingUsers } = usePresenceRoom(`room:${objectId}`);

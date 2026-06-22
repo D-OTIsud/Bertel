@@ -5,7 +5,6 @@ import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { usePresenceRoom } from '../hooks/usePresenceRoom';
 import { useExplorerStore } from '../store/explorer-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -36,7 +35,6 @@ export default function ExplorerPage() {
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   const cardsQuery = useExplorerCardsQuery();
   const referencesQuery = useExplorerReferencesQuery();
-  usePresenceRoom('room:explorer', { syncGlobalStatus: true });
 
   const cards = cardsQuery.data ?? [];
   const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;

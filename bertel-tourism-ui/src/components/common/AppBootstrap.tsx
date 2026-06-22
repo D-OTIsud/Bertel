@@ -2,11 +2,11 @@
 
 import { useBootstrapSession } from '@/hooks/useBootstrapSession';
 import { useCardCacheBootstrap } from '@/hooks/useCardCacheBootstrap';
-import { useNetworkMonitor } from '@/hooks/useNetworkMonitor';
+import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 
 export function AppBootstrap() {
   useBootstrapSession();
-  useNetworkMonitor();
+  useGlobalPresence();
   useCardCacheBootstrap();
 
   return null;

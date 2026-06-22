@@ -1,4 +1,5 @@
-import { Chip, ChipSet, Field, Fs, Input, ReferenceSelect, StatCard, Toggle } from '../../primitives';
+import { useState } from 'react';
+import { Chip, ChipSet, EditorModal, Field, Fs, Input, ReferenceSelect, StatCard, Toggle } from '../../primitives';
 import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
@@ -30,10 +31,26 @@ function repHeader(columns: string, labels: string[]) {
 
 export function BlockITI({ editor, folded }: SectionProps) {
   const itinerary = editor.draft.itinerary;
+  // §111 B4: practices are edited in a modal (button → modal), like the other multi-selects.
+  const [practicesOpen, setPracticesOpen] = useState(false);
+  const [practicesDraft, setPracticesDraft] = useState<string[]>([]);
 
   function patch(patchValue: Partial<typeof itinerary>) {
     editor.patchModule('itinerary', patchValue);
   }
+
+  function openPractices() {
+    setPracticesDraft(itinerary.practiceCodes);
+    setPracticesOpen(true);
+  }
+
+  function togglePracticeDraft(code: string) {
+    setPracticesDraft((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  }
+
+  const selectedPracticeLabels = itinerary.practiceOptions
+    .filter((option) => itinerary.practiceCodes.includes(option.code))
+    .map((option) => option.label);
 
   function updateStage(index: number, patchValue: Partial<(typeof itinerary.stages)[number]>) {
     patch({
@@ -129,23 +146,17 @@ export function BlockITI({ editor, folded }: SectionProps) {
               />
             </Field>
             <Field label="Pratiques">
-              <ChipSet>
-                {itinerary.practiceOptions.map((option) => (
-                  <Chip
-                    key={option.code}
-                    label={option.label}
-                    on={itinerary.practiceCodes.includes(option.code)}
-                    onClick={() => {
-                      const selected = itinerary.practiceCodes.includes(option.code);
-                      patch({
-                        practiceCodes: selected
-                          ? itinerary.practiceCodes.filter((code) => code !== option.code)
-                          : [...itinerary.practiceCodes, option.code],
-                      });
-                    }}
-                  />
-                ))}
-              </ChipSet>
+              <button
+                type="button"
+                className="select"
+                style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                onClick={openPractices}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedPracticeLabels.length > 0 ? 'inherit' : 'var(--ink-4)' }}>
+                  {selectedPracticeLabels.length > 0 ? selectedPracticeLabels.join(', ') : 'Ajouter des pratiques'}
+                </span>
+                <span aria-hidden style={{ color: 'var(--accent)', fontWeight: 600 }}>+</span>
+              </button>
             </Field>
           </div>
 
@@ -223,6 +234,27 @@ export function BlockITI({ editor, folded }: SectionProps) {
           <Field label="Note de fermeture saisonnière" hint="Affiché en bandeau quand le sentier est fermé">
             <Input value={itinerary.statusNote} onChange={(statusNote) => patch({ statusNote })} />
           </Field>
+
+          <EditorModal
+            open={practicesOpen}
+            title="Pratiques de l'itinéraire"
+            onClose={() => setPracticesOpen(false)}
+            onSave={() => {
+              patch({ practiceCodes: practicesDraft });
+              setPracticesOpen(false);
+            }}
+          >
+            <ChipSet>
+              {itinerary.practiceOptions.map((option) => (
+                <Chip
+                  key={option.code}
+                  label={option.label}
+                  on={practicesDraft.includes(option.code)}
+                  onClick={() => togglePracticeDraft(option.code)}
+                />
+              ))}
+            </ChipSet>
+          </EditorModal>
         </>
       )}
     </Fs>

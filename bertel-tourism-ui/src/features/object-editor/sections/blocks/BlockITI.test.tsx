@@ -112,4 +112,16 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     // the old "Type de tracé" strip is gone
     expect(screen.queryByText('Type de tracé')).not.toBeInTheDocument();
   });
+
+  it('§B4: practices are edited via a summary button → modal (not an inline chip wall)', () => {
+    render(<ItiHarness />);
+    // the summary button shows the selected practice; the modal is closed
+    expect(screen.queryByText("Pratiques de l'itinéraire")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Randonnée'));
+    // modal opens with the picker
+    expect(screen.getByText("Pratiques de l'itinéraire")).toBeInTheDocument();
+    // cancel closes it
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.queryByText("Pratiques de l'itinéraire")).not.toBeInTheDocument();
+  });
 });

@@ -35,6 +35,10 @@ export function CreateObjectButton() {
           setOpen(false);
           router.push(`/objects/${id}/edit`);
         }}
+        onOpenExisting={(id) => {
+          setOpen(false);
+          router.push(`/objects/${id}/edit`);
+        }}
       />
     </>
   );

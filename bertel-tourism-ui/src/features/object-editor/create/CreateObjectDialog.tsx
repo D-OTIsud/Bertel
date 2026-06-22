@@ -18,21 +18,28 @@ import {
   Store,
   Check,
   Loader2,
+  Info,
+  ChevronRight,
   type LucideProps,
 } from 'lucide-react';
-import type { ArchetypeCode } from '../archetypes';
+import { getArchetypeMeta, type ArchetypeCode } from '../archetypes';
+import { useObjectSearch } from '../useObjectSearch';
 import { createObject } from '../../../services/rpc';
 import {
   buildCreateTypeOptions,
   validateCreateObjectInput,
+  createTypeLabel,
   MAX_OBJECT_NAME_LENGTH,
 } from './create-object-options';
+import { splitDuplicateMatches } from './duplicate-hint';
 
 interface CreateObjectDialogProps {
   open: boolean;
   onClose: () => void;
   /** Called with the new object id once creation succeeds (caller navigates to the editor). */
   onCreated: (id: string) => void;
+  /** Called when the user opens an existing similar fiche from the duplicate hint. */
+  onOpenExisting?: (id: string) => void;
 }
 
 type ArchetypeVisual = { color: string; deep: string; Icon: ComponentType<LucideProps> };
@@ -40,8 +47,8 @@ type ArchetypeVisual = { color: string; deep: string; Icon: ComponentType<Lucide
 /**
  * Per-archetype icon + accent, matching the app's real accent palette (styles.css
  * `.acc-*` → object-detail / object-editor). Selecting a type colours the tile + the
- * "Créer" CTA with the same accent the editor will use, so the choice reads consistently
- * end to end. FMA shares the RES orange (as in archetypes.ts), differentiated by its icon.
+ * "Créer" CTA with the same accent the editor will use. FMA shares the RES orange
+ * (as in archetypes.ts), differentiated by its icon.
  */
 const ARCHETYPE_VISUAL: Record<ArchetypeCode, ArchetypeVisual> = {
   HEB: { color: '#176b6a', deep: '#0d4f4e', Icon: BedDouble },
@@ -53,13 +60,22 @@ const ARCHETYPE_VISUAL: Record<ArchetypeCode, ArchetypeVisual> = {
   SRV: { color: '#a45330', deep: '#7a3b20', Icon: Store },
 };
 
+const NEUTRAL_ACCENT = '#8a857c';
+
+/** Accent colour for a raw object-type code, via its archetype. */
+function typeColor(typeCode: string): string {
+  const archetype = getArchetypeMeta(typeCode)?.archetype;
+  return archetype ? ARCHETYPE_VISUAL[archetype].color : NEUTRAL_ACCENT;
+}
+
 /**
  * Object-creation dialog (B1, §107): name the fiche, pick a type, then `createObject`
  * over the live RPC. It deliberately collects ONLY the two fields the RPC requires;
- * everything else is authored in the full-page editor that opens next. One authoring
- * surface. Flow top-to-bottom: name (fixed) → type (scrollable) → create.
+ * everything else is authored in the full-page editor that opens next. As the name is
+ * typed, existing fiches with a close name are surfaced (type + location) so an
+ * accidental duplicate is caught early; a same name elsewhere stays legitimate.
  */
-export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDialogProps) {
+export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }: CreateObjectDialogProps) {
   const groups = useMemo(() => buildCreateTypeOptions(), []);
   const [type, setType] = useState('');
   const [name, setName] = useState('');
@@ -69,6 +85,10 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
   const validation = validateCreateObjectInput({ type, name });
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
   const accent = selectedArchetype ? ARCHETYPE_VISUAL[selectedArchetype] : null;
+
+  const { results: similar, loading: searching } = useObjectSearch(name, { debounceMs: 300, limit: 6 });
+  const matches = splitDuplicateMatches(name, similar);
+  const showMatches = name.trim().length >= 2 && matches.length > 0;
 
   function reset() {
     setType('');
@@ -81,6 +101,12 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
     if (busy) return;
     reset();
     onClose();
+  }
+
+  function handleOpenExisting(id: string) {
+    if (busy) return;
+    reset();
+    onOpenExisting?.(id);
   }
 
   async function handleCreate() {
@@ -125,6 +151,54 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
             autoFocus
             className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow placeholder:text-ink-3/70 focus:border-ink-3 focus:ring-2 focus:ring-ink-3/25"
           />
+
+          {showMatches ? (
+            <div
+              className="mt-2.5 overflow-hidden rounded-xl border"
+              style={{ borderColor: '#ecd9ad', backgroundColor: '#fdf7ea' }}
+            >
+              <div className="flex items-center gap-1.5 px-3 pb-1 pt-2 text-[12px] font-semibold" style={{ color: '#8a6d1f' }}>
+                <Info className="h-3.5 w-3.5" strokeWidth={2.25} />
+                {matches.length} fiche{matches.length > 1 ? 's' : ''} au nom proche
+                <span className="ml-auto font-normal" style={{ color: '#a98c3f' }}>
+                  même nom ailleurs = OK
+                </span>
+              </div>
+              <ul className="max-h-[136px] overflow-y-auto px-1.5 pb-1.5">
+                {matches.map((match) => (
+                  <li key={match.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenExisting(match.id)}
+                      className="group/dup flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/70"
+                    >
+                      <span className="h-2 w-2 flex-none rounded-full" style={{ backgroundColor: typeColor(match.type) }} />
+                      <span className="flex-none text-[11.5px] font-medium" style={{ color: typeColor(match.type) }}>
+                        {createTypeLabel(match.type)}
+                      </span>
+                      <span className="truncate text-[13px] font-medium text-ink">{match.name}</span>
+                      {match.exact ? (
+                        <span
+                          className="flex-none rounded-md px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide"
+                          style={{ backgroundColor: '#f1e0ad', color: '#7a5e12' }}
+                        >
+                          identique
+                        </span>
+                      ) : null}
+                      {match.city ? (
+                        <span className="ml-auto flex-none truncate text-[12px] text-ink-3">{match.city}</span>
+                      ) : null}
+                      <ChevronRight className="h-3.5 w-3.5 flex-none text-ink-3/60 transition-transform group-hover/dup:translate-x-0.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : searching && name.trim().length >= 2 ? (
+            <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-3">
+              <Loader2 className="h-3 w-3 animate-spin" /> Vérification des fiches existantes…
+            </p>
+          ) : null}
         </div>
 
         {/* 2 · Type — the scrollable region (clearly the main content) */}
@@ -133,7 +207,7 @@ export function CreateObjectDialog({ open, onClose, onCreated }: CreateObjectDia
           <p className="text-[12px] text-ink-3">{groups.reduce((n, g) => n + g.types.length, 0)} types</p>
         </div>
         <div className="relative min-h-0">
-          <div className="max-h-[40vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">
+          <div className="max-h-[38vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">
             {groups.map((group) => {
               const v = ARCHETYPE_VISUAL[group.archetype];
               const Icon = v.Icon;

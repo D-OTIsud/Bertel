@@ -35,6 +35,11 @@ const CREATE_TYPE_LABELS: Record<string, string> = {
   SPU: 'Service public',
 };
 
+/** Accented French label for a single object-type code (picker + duplicate hint). */
+export function createTypeLabel(code: string): string {
+  return CREATE_TYPE_LABELS[code] ?? TYPE_LABEL[code] ?? code;
+}
+
 export interface CreateTypeOption {
   code: string;
   label: string;
@@ -52,7 +57,7 @@ export function buildCreateTypeOptions(): CreateTypeGroup[] {
   const byArchetype = new Map<ArchetypeCode, CreateTypeOption[]>();
   for (const [code, meta] of Object.entries(TYPE_ARCHETYPES)) {
     const list = byArchetype.get(meta.archetype) ?? [];
-    list.push({ code, label: CREATE_TYPE_LABELS[code] ?? TYPE_LABEL[code] ?? code });
+    list.push({ code, label: createTypeLabel(code) });
     byArchetype.set(meta.archetype, list);
   }
   return [...byArchetype.entries()]

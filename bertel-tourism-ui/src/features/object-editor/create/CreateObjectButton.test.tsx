@@ -1,5 +1,6 @@
 const push = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+jest.mock('../useObjectSearch', () => ({ useObjectSearch: () => ({ results: [], loading: false }) }));
 
 import { render, screen } from '@testing-library/react';
 import { CreateObjectButton } from './CreateObjectButton';

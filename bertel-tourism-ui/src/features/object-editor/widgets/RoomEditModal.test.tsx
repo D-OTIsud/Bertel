@@ -2,6 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { RoomEditModal } from './RoomEditModal';
 import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule } from '../../../services/object-workspace-parser';
 
+// MarkdownEditorLazy is dynamic/SSR-false + TipTap — mock it to a plain textarea.
+jest.mock('../../../components/markdown/MarkdownEditorLazy', () => ({
+  MarkdownEditorLazy: ({ value, onChange, ariaLabel }: { value: string; onChange: (md: string) => void; ariaLabel: string }) => (
+    <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
+
 const room: ObjectWorkspaceRoomTypeItem = {
   recordId: 'r1', code: 'std', name: 'Chambre standard', nameTranslations: {},
   description: '', descriptionTranslations: {}, capacityAdults: '2', capacityChildren: '0',

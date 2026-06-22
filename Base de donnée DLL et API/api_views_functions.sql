@@ -3772,9 +3772,14 @@ BEGIN
       'room_types',
       COALESCE((
       SELECT jsonb_agg(
-               (to_jsonb(rt) - 'object_id')
+               (to_jsonb(rt) - 'object_id' - 'description_i18n')
                ||
                jsonb_build_object(
+                 -- §110 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
+                 'description',
+                 api.strip_markdown(COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description)),
+                 'description_md',
+                 COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description),
                  'amenities', COALESCE((
                    SELECT jsonb_agg(
                             jsonb_build_object('code', a.code, 'name', a.name, 'icon_url', a.icon_url)
@@ -7341,7 +7346,8 @@ BEGIN
         'id', rt.id,
         'code', rt.code,
         'name', COALESCE(api.i18n_pick_strict(rt.name_i18n, v_lang, 'fr'), rt.name),
-        'description', COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description),
+        'description', api.strip_markdown(COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description)),
+        'description_md', COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description),
         'capacity_adults', rt.capacity_adults,
         'capacity_children', rt.capacity_children,
         'capacity_total', rt.capacity_total,

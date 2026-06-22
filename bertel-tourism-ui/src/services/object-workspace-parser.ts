@@ -1091,7 +1091,7 @@ function readArray(value: unknown): GenericRecord[] {
   return Array.isArray(value) ? value.filter(isRecord) as GenericRecord[] : [];
 }
 
-function readString(value: unknown, fallback = ''): string {
+export function readString(value: unknown, fallback = ''): string {
   if (typeof value === 'string') {
     return value;
   }

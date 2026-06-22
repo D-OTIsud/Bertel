@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Trash2, Search, Lock, Plus, ChevronDown, ChevronRight, ImagePlus, X, Film, FileText } from 'lucide-react';
-import { EditorModal, ReferenceSelect, Field, Input, Textarea, Toggle, Chip, ChipSet } from '../primitives';
+import { EditorModal, ReferenceSelect, Field, Input, Toggle, Chip, ChipSet } from '../primitives';
+import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import { fold } from '../../../components/ui/pickers/fold';
 import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule, WorkspaceMediaOption } from '../../../services/object-workspace-parser';
 import {
@@ -199,7 +200,14 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       </div>
 
       <SectionLabel>Description</SectionLabel>
-      <Field label="Description"><Textarea value={draft.description} rows={3} onChange={(description) => set({ description })} /></Field>
+      <Field label="Description">
+        <MarkdownEditorLazy
+          value={draft.description}
+          onChange={(description) => set({ description })}
+          ariaLabel="Description de la chambre"
+          variant="block"
+        />
+      </Field>
 
       <SectionLabel>Photos &amp; médias{linkedMedia.length > 0 ? ` (${linkedMedia.length})` : ''}</SectionLabel>
       {/* Rattache des photos de l'établissement à cette chambre (object_room_type_media). Les

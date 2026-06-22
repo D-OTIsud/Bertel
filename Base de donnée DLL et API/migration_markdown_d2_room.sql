@@ -1,0 +1,39 @@
+-- Migration: Markdown D2 — room description (object_room_type.description)
+-- Manifest id: 15a
+-- Decision log: §110
+-- Date: 2026-06-22
+--
+-- Summary:
+-- Two body-only edits inside existing functions (CREATE OR REPLACE, signatures unchanged):
+--
+--   1. api.get_object_resource — room_types block (~line 3775 in api_views_functions.sql):
+--      BEFORE: (to_jsonb(rt) - 'object_id')
+--              jsonb_build_object( 'amenities', ...
+--      AFTER:  (to_jsonb(rt) - 'object_id' - 'description_i18n')
+--              jsonb_build_object(
+--                -- §110 Markdown: strip flat description, drop raw i18n, emit raw _md sibling.
+--                'description', api.strip_markdown(COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description)),
+--                'description_md', COALESCE(api.i18n_pick(rt.description_i18n, lang, 'fr'), rt.description),
+--                'amenities', ...
+--
+--   2. api.get_object_room_types — getter (~line 7344 in api_views_functions.sql):
+--      BEFORE: 'description', COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description),
+--      AFTER:  'description', api.strip_markdown(COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description)),
+--              'description_md', COALESCE(api.i18n_pick_strict(rt.description_i18n, v_lang, 'fr'), rt.description),
+--
+-- Both edits are folded into api_views_functions.sql (the canonical source).
+-- There is no schema_unified.sql fold for get_object_resource (body-only function, lives only in api_views_functions.sql).
+-- get_object_room_types is also defined only in api_views_functions.sql.
+--
+-- Deploy:
+--   1. Deploy api.get_object_resource via:
+--      node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
+--   2. Deploy api.get_object_room_types (smaller function) via Supabase MCP execute_sql.
+--   3. NOTIFY pgrst, 'reload schema';
+--
+-- SQL contract test: Base de donnée DLL et API/tests/test_room_description_markdown.sql
+--
+-- No DDL change — description / description_i18n columns are unchanged.
+-- No data migration needed — existing rows are stripped on the fly by api.strip_markdown.
+-- The editor loads room types via a direct PostgREST select (object-workspace.ts direct select),
+-- so the editor leg is already raw and requires no change.

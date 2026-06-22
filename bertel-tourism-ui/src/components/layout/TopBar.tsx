@@ -84,7 +84,7 @@ export function TopBar() {
         </div>
       ) : null}
 
-      <header className="grid h-14 flex-none grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-[rgba(255,253,248,0.72)] px-5 backdrop-blur-xl">
+      <header className="relative z-40 grid h-14 flex-none grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-[rgba(255,253,248,0.72)] px-5 backdrop-blur-xl">
         <div className="flex items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
           <button
             type="button"

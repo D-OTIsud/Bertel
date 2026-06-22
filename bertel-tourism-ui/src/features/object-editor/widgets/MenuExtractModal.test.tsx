@@ -10,6 +10,9 @@ jest.mock('../../../services/menu-extract', () => {
   const actual = jest.requireActual('../../../services/menu-extract');
   return { ...actual, extractMenuFromImages: jest.fn(), readFileAsBase64: jest.fn(async () => ({ mime: 'image/jpeg', base64: 'XXXX' })) };
 });
+jest.mock('../../../lib/pdf-rasterize', () => ({
+  rasterizePdfToImages: jest.fn(async () => [{ mime: 'image/jpeg', base64: 'PG1' }, { mime: 'image/jpeg', base64: 'PG2' }]),
+}));
 
 import { extractMenuFromImages } from '../../../services/menu-extract';
 
@@ -49,6 +52,12 @@ function setup(onInject = jest.fn()) {
 function addImage() {
   const input = screen.getByLabelText('Ajouter des fichiers de carte');
   const file = new File(['data'], 'menu.jpg', { type: 'image/jpeg' });
+  fireEvent.change(input, { target: { files: [file] } });
+}
+
+function addPdf() {
+  const input = screen.getByLabelText('Ajouter des fichiers de carte');
+  const file = new File(['%PDF-1.4'], 'menu.pdf', { type: 'application/pdf' });
   fireEvent.change(input, { target: { files: [file] } });
 }
 
@@ -95,6 +104,22 @@ describe('MenuExtractModal', () => {
     const injected = (onInject as jest.Mock).mock.calls[0][0] as ObjectWorkspaceMenu;
     expect(injected.items[0].dietaryTagCodes).toEqual(['vegetarian']);
     expect(injected.items[0].allergenCodes).toEqual([]);
+  });
+
+  it('rasterizes a PDF client-side so it becomes analyzable (page images are sent)', async () => {
+    (extractMenuFromImages as jest.Mock).mockResolvedValue({ menu: MENU, suggestedDietaryByDish: [[]], truncated: false });
+    setup();
+    addPdf();
+    expect(await screen.findByText(/menu\.pdf/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/2 page\(s\)/)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: /Analyser et créer un menu/ }));
+
+    expect(await screen.findByText('Cari poulet')).toBeInTheDocument();
+    const call = (extractMenuFromImages as jest.Mock).mock.calls[0][0];
+    expect(call.images).toHaveLength(2);
+    expect(call.images[0].base64).toBe('PG1');
   });
 
   it('surfaces a provider error without leaving the analyzing state stuck', async () => {

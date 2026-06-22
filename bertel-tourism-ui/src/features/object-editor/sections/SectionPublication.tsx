@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { Archive, EyeOff, Globe, RotateCcw, type LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Archive, EyeOff, Globe, RotateCcw, Trash2, type LucideIcon } from 'lucide-react';
 import { Chip, ChipSet, ConfirmDialog, Field, Fs, Select } from '../primitives';
 import type { SectionProps } from './section-types';
 import { useSetObjectStatusMutation } from '../../../hooks/useExplorerQueries';
+import { getApiClient } from '../../../lib/supabase';
+import { DeleteObjectModal } from '../widgets/DeleteObjectModal';
 import { computeStatusActions, STATUS_ACTION_CONFIRM, type StatusAction, type StatusActionKind } from './status-actions';
 
 const VISIBILITY_OPTIONS = [
@@ -50,6 +53,21 @@ export function SectionPublication({ editor, permissions, objectId, folded }: Se
   // The lifecycle change the user clicked, held until they confirm (or cancel) in the modal.
   const [pendingAction, setPendingAction] = useState<StatusAction | null>(null);
   const actions = computeStatusActions(status, publishedAt);
+
+  // §108 — suppression définitive : action terminale du cycle de vie, à côté de « Restaurer ».
+  // Superuser-only (permissions.delete) ET seulement sur une fiche archivée — la garde dure est le RPC.
+  const router = useRouter();
+  const canHardDelete = permissions.delete.canDirectWrite;
+  const canDeleteHere = canHardDelete && status === 'archived' && !!objectId;
+  const objectName = generalInfo.name ?? '';
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    if (!canHardDelete) return;
+    const client = getApiClient();
+    if (!client) return;
+    void client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
+  }, [canHardDelete]);
 
   async function runAction(target: Parameters<typeof setStatus.mutateAsync>[0]) {
     setError(null);
@@ -111,6 +129,17 @@ export function SectionPublication({ editor, permissions, objectId, folded }: Se
                   </button>
                 );
               })}
+              {canDeleteHere && (
+                <button
+                  type="button"
+                  className="btn danger"
+                  disabled={setStatus.isPending}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 size={14} aria-hidden />
+                  Supprimer définitivement
+                </button>
+              )}
             </div>
             <p className="lifecycle-actions__hint">Chaque changement de statut demande une confirmation avant d'être appliqué.</p>
           </>
@@ -163,6 +192,21 @@ export function SectionPublication({ editor, permissions, objectId, folded }: Se
             const target = pendingAction.target;
             setPendingAction(null);
             void runAction(target);
+          }}
+        />
+      )}
+
+      {/* §108 — suppression définitive (irréversible) : modale de confirmation par saisie du nom. */}
+      {objectId && (
+        <DeleteObjectModal
+          open={deleteOpen}
+          objectId={objectId}
+          objectName={objectName}
+          accessToken={accessToken}
+          onClose={() => setDeleteOpen(false)}
+          onDeleted={() => {
+            setDeleteOpen(false);
+            router.push('/explorer');
           }}
         />
       )}

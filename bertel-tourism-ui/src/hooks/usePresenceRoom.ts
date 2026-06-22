@@ -3,7 +3,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { mockPresence } from '../data/mock';
 import { getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import { useUiStore } from '../store/ui-store';
 import type { FieldLock, PresenceMember } from '../types/domain';
 
 interface TrackPayload {
@@ -16,7 +15,6 @@ interface TrackPayload {
 
 interface UsePresenceRoomOptions {
   enabled?: boolean;
-  syncGlobalStatus?: boolean;
 }
 
 interface LockEntry extends FieldLock {
@@ -27,13 +25,11 @@ export const PRESENCE_LOCK_TTL_MS = 15000;
 const demoPalette = ['#ff7b54', '#4cb3ff', '#78c67a', '#ffbd59'];
 
 export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions = {}) {
-  const { enabled = true, syncGlobalStatus = false } = options;
+  const { enabled = true } = options;
   const userId = useSessionStore((state) => state.userId);
   const userName = useSessionStore((state) => state.userName);
   const avatar = useSessionStore((state) => state.avatar);
   const demoMode = useSessionStore((state) => state.demoMode);
-  const setNetworkStatus = useUiStore((state) => state.setNetworkStatus);
-  const setLiveUsersCount = useUiStore((state) => state.setLiveUsersCount);
   const [peers, setPeers] = useState<PresenceMember[]>([]);
   const [lockedFieldEntries, setLockedFieldEntries] = useState<Record<string, LockEntry>>({});
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -111,10 +107,6 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
         .map((item, index) => ({ ...item, onlineSince: sessionStartRef.current - (index + 1) * 7 * 60_000 }));
       const demoPeers = [me, ...otherPeers];
       setPeers(demoPeers);
-      if (syncGlobalStatus) {
-        setLiveUsersCount(demoPeers.length);
-        setNetworkStatus(navigator.onLine ? 'degraded' : 'offline');
-      }
       return () => {
         clearLockExpiryTimer();
         clearDemoLockTimers();
@@ -124,10 +116,6 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
     const client = getSupabaseClient();
     if (!client || !userId) {
       setPeers(enabled ? [me] : []);
-      if (syncGlobalStatus) {
-        setLiveUsersCount(1);
-        setNetworkStatus('offline');
-      }
       return () => {
         clearLockExpiryTimer();
         clearDemoLockTimers();
@@ -166,9 +154,6 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
       });
       if (nextLocksToSweep !== null) {
         scheduleLockSweep(nextLocksToSweep);
-      }
-      if (syncGlobalStatus) {
-        setLiveUsersCount(nextPeers.length);
       }
     });
 
@@ -216,18 +201,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        if (syncGlobalStatus) {
-          setNetworkStatus('connected');
-        }
         await channel.track(me);
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (syncGlobalStatus) {
-          setNetworkStatus('degraded');
-        }
-      } else if (status === 'CLOSED') {
-        if (syncGlobalStatus) {
-          setNetworkStatus('offline');
-        }
       }
     });
 
@@ -240,7 +214,7 @@ export function usePresenceRoom(roomKey: string, options: UsePresenceRoomOptions
       void client.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [demoMode, enabled, me, roomKey, setLiveUsersCount, setNetworkStatus, syncGlobalStatus, userId]);
+  }, [demoMode, enabled, me, roomKey, userId]);
 
   async function lockField(field: string) {
     if (!enabled) {

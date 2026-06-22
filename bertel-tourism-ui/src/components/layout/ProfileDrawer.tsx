@@ -34,7 +34,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const sessionStatus = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
   const networkStatus = useUiStore((state) => state.networkStatus);
-  const liveUsersCount = useUiStore((state) => state.liveUsersCount);
+  const liveMembers = useUiStore((state) => state.liveMembers);
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
   const statusTone = networkStatus === 'connected' ? 'green' : networkStatus === 'degraded' ? 'orange' : 'red';
@@ -75,7 +75,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
 
           <div className="profile-drawer__status">
             <StatusPill tone={statusTone}>{networkStatus}</StatusPill>
-            <StatusPill tone="neutral">{liveUsersCount} live</StatusPill>
+            <StatusPill tone="neutral">{liveMembers.length} live</StatusPill>
             <span className="profile-drawer__mode">
               {networkStatus === 'connected' ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
               {demoMode ? 'Demo workspace' : 'Secure workspace'}

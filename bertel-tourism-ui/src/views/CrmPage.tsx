@@ -89,10 +89,9 @@ export default function CrmPage() {
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   const canWriteQuery = useQuery({ queryKey: ['crm-can-write'], queryFn: userCanWriteCrmNotes });
-  // syncGlobalStatus: true alimente le badge « X live » du header (présence) ; on garde le hook
-  // pour cet effet + typingUsers, mais on n'affiche plus « X collaborateur(s) en ligne » sous le
-  // titre (doublon du badge header — rectif PO).
-  const { typingUsers } = usePresenceRoom('crm:tasks', { syncGlobalStatus: true });
+  // Salon de présence du CRM : on n'en garde que l'indicateur « est en train d'écrire ».
+  // Le compteur « X live » du header est désormais alimenté par useGlobalPresence (site-wide).
+  const { typingUsers } = usePresenceRoom('crm:tasks');
 
   const canWrite = canWriteQuery.data === true;
   // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).

@@ -77,7 +77,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const { data, isError, error, isLoading } = useObjectWorkspaceQuery(objectId);
   const { peers, typingUsers } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
-    { enabled: Boolean(objectId), syncGlobalStatus: false },
+    { enabled: Boolean(objectId) },
   );
   const role = useSessionStore((state) => state.role);
   const canEdit = role !== null;

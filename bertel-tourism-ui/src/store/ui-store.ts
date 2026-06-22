@@ -7,14 +7,12 @@ interface UiState {
   drawerObjectId: string | null;
   mapLayer: MapLayerMode;
   networkStatus: NetworkStatus;
-  liveUsersCount: number;
   liveMembers: PresenceMember[];
   markerStyles: Record<ObjectTypeCode, MarkerStyle>;
   openDrawer: (objectId: string) => void;
   closeDrawer: () => void;
   setMapLayer: (layer: MapLayerMode) => void;
   setNetworkStatus: (status: NetworkStatus) => void;
-  setLiveUsersCount: (count: number) => void;
   setLivePresence: (members: PresenceMember[]) => void;
   setMarkerStyles: (styles: unknown) => void;
   setMarkerColor: (type: ObjectTypeCode, color: string) => void;
@@ -31,14 +29,12 @@ export const useUiStore = create<UiState>()(
       drawerObjectId: null,
       mapLayer: 'satellite',
       networkStatus: 'connected',
-      liveUsersCount: 3,
       liveMembers: [],
       markerStyles: defaultMarkerStyles,
       openDrawer: (objectId) => set({ drawerObjectId: objectId }),
       closeDrawer: () => set({ drawerObjectId: null }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
       setNetworkStatus: (status) => set({ networkStatus: status }),
-      setLiveUsersCount: (count) => set({ liveUsersCount: count }),
       setLivePresence: (members) => set({ liveMembers: members }),
       setMarkerStyles: (styles) => set({ markerStyles: coerceMarkerStyles(styles) }),
       setMarkerColor: (type, color) =>

@@ -2,6 +2,7 @@ import { Chip, ChipSet, Field, Fs, Input, StatCard, Toggle } from '../../primiti
 import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
+import { formatDurationShort, stepMetric } from './iti-metrics';
 
 const STAGE_COLS = '14px 28px 1fr 90px 80px auto';
 
@@ -81,10 +82,33 @@ export function BlockITI({ editor, folded }: SectionProps) {
           </div>
 
           <div className="grid-4" style={{ marginBottom: 14 }}>
-            <StatCard label="Distance" value={itinerary.distanceKm || '0'} suffix="km" hasStep />
-            <StatCard label="Durée a/r" value={itinerary.durationMin ? `${Math.round(Number(itinerary.durationMin) / 60)} h` : '—'} hasStep />
-            <StatCard label="Dénivelé +" value={itinerary.elevationPositiveM || '0'} suffix="m" hasStep />
-            <StatCard label="Dénivelé −" value={itinerary.elevationNegativeM || itinerary.elevationPositiveM || '0'} suffix="m" hasStep />
+            <StatCard
+              label="Distance"
+              value={itinerary.distanceKm || '0'}
+              suffix="km"
+              hasStep
+              onStep={(delta) => patch({ distanceKm: stepMetric(itinerary.distanceKm, delta, { step: 0.5, decimals: 1 }) })}
+            />
+            <StatCard
+              label="Durée a/r"
+              value={formatDurationShort(itinerary.durationMin)}
+              hasStep
+              onStep={(delta) => patch({ durationMin: stepMetric(itinerary.durationMin, delta, { step: 15 }) })}
+            />
+            <StatCard
+              label="Dénivelé +"
+              value={itinerary.elevationPositiveM || '0'}
+              suffix="m"
+              hasStep
+              onStep={(delta) => patch({ elevationPositiveM: stepMetric(itinerary.elevationPositiveM, delta, { step: 10 }) })}
+            />
+            <StatCard
+              label="Dénivelé −"
+              value={itinerary.elevationNegativeM || '0'}
+              suffix="m"
+              hasStep
+              onStep={(delta) => patch({ elevationNegativeM: stepMetric(itinerary.elevationNegativeM, delta, { step: 10 }) })}
+            />
           </div>
 
           <div className="grid-3" style={{ marginBottom: 14 }}>

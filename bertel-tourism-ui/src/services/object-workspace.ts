@@ -90,6 +90,8 @@ export interface ObjectWorkspacePermissions {
   taxonomy: ObjectWorkspaceModuleAccess;
   publication: ObjectWorkspaceModuleAccess;
   syncIdentifiers: ObjectWorkspaceModuleAccess;
+  /** §108 — suppression définitive : superuser plateforme uniquement. */
+  delete: ObjectWorkspaceModuleAccess;
   location: ObjectWorkspaceModuleAccess & {
     canEditPlaces: boolean;
     canEditZones: boolean;
@@ -3564,9 +3566,10 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let enrichment = false;
   let objectOwner = false;
   let isOrgAdmin = directWrite;
+  let isPlatformSuperuser = directWrite;
   if (!session.demoMode && apiClient) {
     try {
-      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult, orgAdminResult] = await Promise.allSettled([
+      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult, orgAdminResult, superuserResult] = await Promise.allSettled([
         apiClient.schema('api').rpc('user_can_write_canonical', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_write_enrichment', { p_object_id: objectId }),
         apiClient.schema('api').rpc('user_can_publish_object', { p_object_id: objectId }),
@@ -3577,6 +3580,8 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
         apiClient.schema('api').rpc('user_can_write_crm', { p_object_id: objectId }),
         // §22 external identifiers: admin-only write gate (mirrors the RPC gate exactly).
         apiClient.schema('api').rpc('current_user_is_org_admin'),
+        // §108 : garde de suppression définitive (mirroir exact de api.rpc_delete_object).
+        apiClient.schema('api').rpc('is_platform_superuser'),
       ]);
 
       canonical =
@@ -3594,6 +3599,9 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       isOrgAdmin =
         directWrite
         || (orgAdminResult.status === 'fulfilled' && orgAdminResult.value.error == null && orgAdminResult.value.data === true);
+      isPlatformSuperuser =
+        directWrite
+        || (superuserResult.status === 'fulfilled' && superuserResult.value.error == null && superuserResult.value.data === true);
 
       canPrepareProposal = directWrite || canonical || enrichment;
       canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
@@ -3604,6 +3612,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canWriteProviderFollowUp = directWrite;
       crmWrite = false;
       isOrgAdmin = directWrite;
+      isPlatformSuperuser = directWrite;
     }
   }
 
@@ -3637,6 +3646,14 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       disabledReason: isOrgAdmin
         ? null
         : "Réservé aux administrateurs d'organisation — l'administration des identifiants externes nécessite un rôle admin.",
+    },
+    delete: {
+      canDirectWrite: isPlatformSuperuser,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: isPlatformSuperuser
+        ? null
+        : 'Réservé aux administrateurs plateforme — la suppression définitive est limitée au superadmin.',
     },
     location: {
       ...directOrBlocked(),

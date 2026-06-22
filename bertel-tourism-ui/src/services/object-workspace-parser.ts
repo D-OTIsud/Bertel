@@ -590,6 +590,8 @@ export interface ObjectWorkspaceEventModule {
 
 export interface ObjectWorkspaceItineraryStageSummary {
   recordId: string | null;
+  /** §111 C: client-only stable id for DnD keying of not-yet-saved stages (recordId is null). Not persisted. */
+  uid?: string;
   name: string;
   description: string;
   position: string;
@@ -617,6 +619,8 @@ export interface ObjectWorkspaceItineraryModule {
   difficultyOptions: WorkspaceReferenceOption[];
   /** §111 ref_code domain iti_open_status — labels for the open/partially_closed/warning/closed select. */
   openStatusOptions: WorkspaceReferenceOption[];
+  /** §111 ref_code domain iti_stage_kind — labels for the stage type select (depart/etape/POI/…). */
+  stageKindOptions: WorkspaceReferenceOption[];
   /** §111 object_iti_info — infos pratiques (grouped visually with the is_loop toggle in §06). */
   access: string;
   ambiance: string;
@@ -2212,6 +2216,7 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     practiceCodes: readReferenceCodes(practiceRecords, 'practice'),
     difficultyOptions: [],
     openStatusOptions: [],
+    stageKindOptions: [],
     access: readString(infoRecord.access),
     ambiance: readString(infoRecord.ambiance),
     recommendedParking: readString(infoRecord.recommended_parking),

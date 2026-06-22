@@ -1,33 +1,17 @@
-import { useState } from 'react';
-import { Chip, ChipSet, EditorModal, Field, Fs, Input, ReferenceSelect, StatCard, Toggle } from '../../primitives';
-import { MarkdownCellField } from '../../../../components/markdown/MarkdownCellField';
+import { useRef, useState } from 'react';
+import { Chip, ChipSet, EditorModal, Field, Fs, Input, ReferenceSelect, SortableList, StatCard, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
 import { formatDurationShort, stepMetric } from './iti-metrics';
 import { ItiTraceMap } from '../../widgets/ItiTraceMap';
+import { StageEditModal } from '../../widgets/StageEditModal';
+import type { ObjectWorkspaceItineraryStageSummary } from '../../../../services/object-workspace-parser';
 
-const STAGE_COLS = '14px 28px 1fr 90px 80px auto';
+// handle · type/position badge · name+meta · actions
+const STAGE_CARD_COLS = '14px 30px 1fr auto';
 
-function repHeader(columns: string, labels: string[]) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: columns,
-        gap: 8,
-        padding: '6px 12px',
-        fontSize: 10,
-        fontWeight: 700,
-        color: 'var(--ink-4)',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-      }}
-    >
-      {labels.map((label, index) => (
-        <span key={`${label}-${index}`}>{label}</span>
-      ))}
-    </div>
-  );
+function stageDndId(stage: ObjectWorkspaceItineraryStageSummary, index: number): string {
+  return stage.recordId ?? stage.uid ?? `stage-${index}`;
 }
 
 export function BlockITI({ editor, folded }: SectionProps) {
@@ -35,9 +19,23 @@ export function BlockITI({ editor, folded }: SectionProps) {
   // §111 B4: practices are edited in a modal (button → modal), like the other multi-selects.
   const [practicesOpen, setPracticesOpen] = useState(false);
   const [practicesDraft, setPracticesDraft] = useState<string[]>([]);
+  // §111 C: index of the stage being edited in the StageEditModal (null = closed).
+  const [editingStage, setEditingStage] = useState<number | null>(null);
+  const tmpUid = useRef(0);
 
   function patch(patchValue: Partial<typeof itinerary>) {
     editor.patchModule('itinerary', patchValue);
+  }
+
+  function addStage() {
+    const next = itinerary.stages.length;
+    patch({
+      stages: [
+        ...itinerary.stages,
+        { recordId: null, uid: `tmp-${tmpUid.current++}`, name: '', description: '', position: String(next + 1), kind: '', lng: '', lat: '', mediaIds: [] },
+      ],
+    });
+    setEditingStage(next);
   }
 
   function openPractices() {
@@ -178,46 +176,59 @@ export function BlockITI({ editor, folded }: SectionProps) {
           </div>
 
           <div className="chip-group__label">Étapes & points d'intérêt sur le parcours</div>
-          {repHeader(STAGE_COLS, ['', '', "Nom de l'étape", 'Position', 'Description'])}
-          <div className="repeater wp-rep">
-            {itinerary.stages.map((stage, index) => (
-              <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: STAGE_COLS }}>
-                <span className="rep-row__handle" aria-hidden />
-                <div className="wp-num">{index === 0 ? 'D' : index === itinerary.stages.length - 1 ? 'A' : index + 1}</div>
-                <Input value={stage.name} onChange={(name) => updateStage(index, { name })} />
-                <Input value={stage.position} mono onChange={(position) => updateStage(index, { position })} />
-                <MarkdownCellField
-                  variant="inline"
-                  value={stage.description}
-                  onChange={(description) => updateStage(index, { description })}
-                  ariaLabel={`Description de l'etape ${index + 1}`}
-                />
-                <div className="rep-row__act">
-                  <button
-                    type="button"
-                    className="del"
-                    onClick={() => patch({ stages: itinerary.stages.filter((_, i) => i !== index) })}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="rep-add"
-            onClick={() =>
-              patch({
-                stages: [
-                  ...itinerary.stages,
-                  { recordId: null, name: '', description: '', position: String(itinerary.stages.length + 1), kind: '', lng: '', lat: '', mediaIds: [] },
-                ],
-              })
-            }
-          >
+          {itinerary.stages.length > 0 && (
+            <SortableList
+              items={itinerary.stages}
+              getId={(stage) => stageDndId(stage, itinerary.stages.indexOf(stage))}
+              onReorder={(next) => patch({ stages: next.map((stage, i) => ({ ...stage, position: String(i + 1) })) })}
+              columns={STAGE_CARD_COLS}
+              renderItem={(stage, index) => {
+                const kindLabel = itinerary.stageKindOptions.find((option) => option.code === stage.kind)?.label ?? 'Étape';
+                const meta = [
+                  kindLabel,
+                  stage.lng && stage.lat ? 'point GPS' : null,
+                  stage.mediaIds.length > 0 ? `${stage.mediaIds.length} photo(s)` : null,
+                ].filter(Boolean).join(' · ');
+                return (
+                  <>
+                    <div className="wp-num" aria-hidden>{index + 1}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {stage.name || `Étape ${index + 1}`}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{meta}</div>
+                    </div>
+                    <div className="rep-row__act" style={{ display: 'flex', gap: 6 }}>
+                      <button type="button" className="btn sm" onClick={() => setEditingStage(index)}>Modifier</button>
+                      <button
+                        type="button"
+                        className="del"
+                        aria-label={`Supprimer ${stage.name || `l'étape ${index + 1}`}`}
+                        onClick={() => patch({ stages: itinerary.stages.filter((_, i) => i !== index) })}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </>
+                );
+              }}
+            />
+          )}
+          <button type="button" className="rep-add" onClick={addStage}>
             + Ajouter une étape / un POI
           </button>
+
+          {editingStage != null && itinerary.stages[editingStage] && (
+            <StageEditModal
+              key={stageDndId(itinerary.stages[editingStage], editingStage)}
+              open
+              stage={itinerary.stages[editingStage]}
+              stageKindOptions={itinerary.stageKindOptions}
+              trackGeojson={itinerary.trackGeojson}
+              onSave={(updated) => { updateStage(editingStage, updated); setEditingStage(null); }}
+              onClose={() => setEditingStage(null)}
+            />
+          )}
 
           {/* §48: TRAIL_SEASON mock removed (§34 pattern — inert hardcoded constant, no onChange).
               SeasonPicker primitive retained for the future per-object seasonality profile feature.

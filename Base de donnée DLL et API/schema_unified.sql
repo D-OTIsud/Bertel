@@ -4263,28 +4263,25 @@ ON internal.mv_filtered_objects(updated_at, id);
 -- Triggers for cached GPX/KML generation
 -- =====================================================
 
--- Regenerate GPX/KML when itinerary geometry changes
+-- Invalidate the GPX/KML cache when itinerary geometry changes.
+-- (The previous body called ST_AsGPX(3, geom, 15, 1, NULL, NULL) — ST_AsGPX is NOT installed in
+-- this PostGIS — and ST_AsKML(3, geom, 15, NULL) — no such signature: it crashed on EVERY geom
+-- write. It never fired because object_iti had 0 rows. The read path — api.get_object_resource /
+-- api.build_iti_track — already recomputes the track on demand via COALESCE(cached, build), so the
+-- cache is a pure optimization: invalidate here, recompute lazily on read. §111 Section 06 ITI.)
 CREATE OR REPLACE FUNCTION regenerate_iti_track_cache()
-RETURNS TRIGGER 
+RETURNS TRIGGER
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
-  IF (TG_OP = 'INSERT' AND NEW.geom IS NOT NULL)
+  IF NEW.geom IS NULL THEN
+    NEW.cached_gpx := NULL;
+    NEW.cached_kml := NULL;
+    NEW.cached_gpx_generated_at := NULL;
+  ELSIF (TG_OP = 'INSERT')
      OR (TG_OP = 'UPDATE' AND NEW.geom IS DISTINCT FROM OLD.geom) THEN
-    -- Generate GPX (track only, stages added separately by export function)
-    NEW.cached_gpx := CASE 
-      WHEN NEW.geom IS NOT NULL 
-      THEN ST_AsGPX(3, NEW.geom::geometry, 15, 1, NULL, NULL)
-      ELSE NULL
-    END;
-    
-    -- Generate KML
-    NEW.cached_kml := CASE 
-      WHEN NEW.geom IS NOT NULL 
-      THEN ST_AsKML(3, NEW.geom::geometry, 15, NULL)
-      ELSE NULL
-    END;
-    
+    NEW.cached_gpx := NULL;
+    NEW.cached_kml := NULL;
     NEW.cached_gpx_generated_at := NOW();
   END IF;
   RETURN NEW;

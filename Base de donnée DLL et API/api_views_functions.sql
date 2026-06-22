@@ -7764,6 +7764,108 @@ AS $$
   WHERE object_id = p_object_id;
 $$;
 
+-- =====================================================================
+-- §111 Section 06 ITI editor — ingest the imported GPX/KML trace (client-parsed
+-- to a GeoJSON LineString) and auto-derive metrics. Writes object_iti.geom (2D;
+-- the trigger invalidates the GPX/KML cache), computes distance_km (ST_Length),
+-- elevation_gain/loss (from the 3D Z values, before Force2D), and rebuilds
+-- object_iti_profile (sampled, bounded ~300 points). p_payload = { geojson: <LineString|null> }.
+-- SECURITY INVOKER + workspace_assert_can_write_object gate, like every canonical write.
+-- =====================================================================
+CREATE OR REPLACE FUNCTION api.set_itinerary_track(p_object_id text, p_payload jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, api, internal, extensions
+AS $$
+DECLARE
+  v_geojson jsonb;
+  v_geom    geography;
+  v_g2d     geometry;
+  v_type    text;
+  v_dist_km numeric;
+  v_gain    integer;
+  v_loss    integer;
+  v_has3d   boolean := false;
+  v_pts     integer := 0;
+BEGIN
+  PERFORM internal.workspace_assert_can_write_object(p_object_id);
+  p_payload := COALESCE(p_payload, '{}'::jsonb);
+  v_geojson := p_payload->'geojson';
+
+  -- Effacement du tracé
+  IF v_geojson IS NULL OR v_geojson = 'null'::jsonb THEN
+    INSERT INTO public.object_iti (object_id, geom, distance_km, elevation_gain, elevation_loss)
+      VALUES (p_object_id, NULL, NULL, NULL, NULL)
+      ON CONFLICT (object_id) DO UPDATE
+        SET geom = NULL, distance_km = NULL, elevation_gain = NULL, elevation_loss = NULL, updated_at = now();
+    DELETE FROM public.object_iti_profile WHERE object_id = p_object_id;
+    RETURN jsonb_build_object('success', true, 'distance_km', NULL, 'elevation_gain', NULL,
+                              'elevation_loss', NULL, 'profile_points', 0, 'has_3d', false);
+  END IF;
+
+  -- Parse + validation (un seul LineString ; les segments sont fusionnés côté client)
+  v_g2d := ST_SetSRID(ST_GeomFromGeoJSON(v_geojson::text), 4326);
+  v_type := ST_GeometryType(v_g2d);
+  IF v_type <> 'ST_LineString' THEN
+    RAISE EXCEPTION 'Itinerary track must be a single LineString (got %); merge track segments client-side.', v_type
+      USING ERRCODE = '22023';
+  END IF;
+  v_has3d := ST_NDims(v_g2d) >= 3;
+  -- La colonne object_iti.geom est 2D : on stocke le tracé en 2D, l'altitude vit dans
+  -- elevation_gain/loss + object_iti_profile (calculés depuis les Z avant Force2D).
+  v_geom := ST_Force2D(v_g2d)::geography;
+  v_dist_km := round((ST_Length(v_geom)::numeric) / 1000.0, 2);
+
+  IF v_has3d THEN
+    SELECT COALESCE(SUM(CASE WHEN dz > 0 THEN dz END), 0)::integer,
+           COALESCE(SUM(CASE WHEN dz < 0 THEN -dz END), 0)::integer
+      INTO v_gain, v_loss
+    FROM (
+      SELECT ST_Z((dp).geom) - LAG(ST_Z((dp).geom)) OVER (ORDER BY (dp).path[1]) AS dz
+      FROM ST_DumpPoints(v_g2d) AS dp
+    ) d;
+
+    DELETE FROM public.object_iti_profile WHERE object_id = p_object_id;
+    INSERT INTO public.object_iti_profile (id, object_id, position_m, elevation_m)
+    SELECT gen_random_uuid(), p_object_id, round(pos_m::numeric, 2), round(z::numeric, 2)
+    FROM (
+      SELECT idx, z, pos_m,
+             row_number() OVER (ORDER BY idx) AS rn,
+             count(*) OVER () AS n
+      FROM (
+        SELECT idx, z, SUM(seg) OVER (ORDER BY idx) AS pos_m
+        FROM (
+          SELECT idx, z,
+                 COALESCE(ST_Distance(pt::geography, LAG(pt) OVER (ORDER BY idx)::geography), 0) AS seg
+          FROM (
+            SELECT (dp).path[1] AS idx, ST_Z((dp).geom) AS z, (dp).geom AS pt
+            FROM ST_DumpPoints(v_g2d) AS dp
+          ) s0
+        ) s1
+      ) s2
+    ) r
+    WHERE n <= 300 OR rn = 1 OR rn = n OR (rn % GREATEST((n / 300), 1)) = 0;
+    GET DIAGNOSTICS v_pts = ROW_COUNT;
+  ELSE
+    v_gain := NULL; v_loss := NULL;
+    DELETE FROM public.object_iti_profile WHERE object_id = p_object_id;
+  END IF;
+
+  INSERT INTO public.object_iti (object_id, geom, distance_km, elevation_gain, elevation_loss)
+  VALUES (p_object_id, v_geom, v_dist_km, v_gain, v_loss)
+  ON CONFLICT (object_id) DO UPDATE
+    SET geom = EXCLUDED.geom, distance_km = EXCLUDED.distance_km,
+        elevation_gain = EXCLUDED.elevation_gain, elevation_loss = EXCLUDED.elevation_loss,
+        updated_at = now();
+
+  RETURN jsonb_build_object('success', true, 'distance_km', v_dist_km, 'elevation_gain', v_gain,
+                            'elevation_loss', v_loss, 'profile_points', v_pts, 'has_3d', v_has3d);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION api.set_itinerary_track(text, jsonb) TO authenticated, service_role;
+
 -- Get track with stages as GeoJSON FeatureCollection
 CREATE OR REPLACE FUNCTION api.get_itinerary_track_geojson(
   p_object_id TEXT,

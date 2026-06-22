@@ -2673,3 +2673,56 @@
 .md-cell__preview { font-size: .85rem; max-height: 4.5em; overflow: hidden; }
 .md-cell__empty { font-size: .85rem; }
 .md-cell__btn { align-self: flex-start; }
+
+/* ====================================================================
+ * Collaborative presence — save-bar roster + per-section badges + conflict banner
+ * (§ editor collaborative presence design, 2026-06-22)
+ * ==================================================================== */
+
+/* Save-bar avatar band (everyone on the fiche) */
+.object-editor .editor-roster { display: inline-flex; align-items: center; gap: 8px; }
+.object-editor .editor-roster__stack { display: inline-flex; }
+.object-editor .editor-roster__chip {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: .68rem; font-weight: 700; color: #fff;
+  border: 2px solid var(--surface); margin-left: -8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.object-editor .editor-roster__chip:first-child { margin-left: 0; }
+.object-editor .editor-roster__chip.is-self { outline: 2px solid var(--accent); outline-offset: -2px; }
+.object-editor .editor-roster__count {
+  font-size: .72rem; font-weight: 600; color: var(--text-soft, #64748b); white-space: nowrap;
+}
+
+/* Per-section presence badge — floats at the top-right of each section card */
+.object-editor .edit-section-host { position: relative; }
+.object-editor .edit-section-host__badge {
+  position: absolute; top: 12px; right: 16px; z-index: 4; pointer-events: none;
+}
+.object-editor .section-presence { display: inline-flex; align-items: center; gap: 6px; pointer-events: auto; }
+.object-editor .section-presence__stack { display: inline-flex; }
+.object-editor .section-presence__chip {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  font-size: .64rem; font-weight: 700; color: #fff;
+  border: 2px solid var(--surface); margin-left: -8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.object-editor .section-presence__chip:first-child { margin-left: 0; }
+.object-editor .section-presence__chip.is-overflow { background: var(--text-soft, #64748b); }
+.object-editor .section-presence__editing {
+  font-size: .66rem; font-weight: 600; color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint, rgba(0, 0, 0, .05)); border-radius: 999px; padding: 1px 7px;
+}
+
+/* Conflict banner — a peer saved while you have the fiche open */
+.object-editor .peer-saved-banner {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--warn-tint, #fff7ed);
+  border-bottom: 1px solid var(--warn-line, #fed7aa);
+  color: var(--text, #1f2937);
+}
+.object-editor .peer-saved-banner__text { flex: 1 1 320px; font-size: .85rem; line-height: 1.4; }
+.object-editor .peer-saved-banner__actions { display: inline-flex; gap: 8px; }

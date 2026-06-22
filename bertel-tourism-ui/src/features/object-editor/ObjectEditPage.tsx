@@ -38,6 +38,9 @@ import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-regist
 import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
+import { useEditorPresence } from './presence/useEditorPresence';
+import { SectionPresenceBadge } from './widgets/SectionPresenceBadge';
+import { PeerSavedBanner } from './widgets/PeerSavedBanner';
 import { ConfirmDialog } from './primitives';
 import { buildEditorTools, archiveTargetStatus, type EditorToolKey } from './shell/editor-tools';
 import type { HistoryRailItem } from './widgets/HistoryRail';
@@ -292,6 +295,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const sectionNums = useMemo(() => sections.map((section) => section.num), [sections]);
   const { mainRef, activeNum, scrollToSection } = useEditorScrollSpy(sectionNums);
   const dirtyCount = Object.values(editor.dirtySections).filter(Boolean).length;
+  // Realtime collaboration: who else is on this fiche, on which section, and the
+  // "a peer just saved" conflict signal (§ collab presence design).
+  const presence = useEditorPresence({
+    objectId,
+    activeSection: activeNum,
+    dirtySections: editor.dirtySections,
+  });
   const sectionCompletions = useMemo(
     () => computeSectionCompletions(editor.draft, navItems),
     [editor.draft, navItems],
@@ -333,6 +343,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     editor.commitModules(
       result.saved.flatMap((m) => (m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]])),
     );
+
+    // Tell the other editors of this fiche so they can reload before clobbering.
+    if (result.saved.length > 0) {
+      presence.broadcastSaved(result.saved);
+    }
 
     const issues = saveResultToIssues(result);
     if (result.failed.length > 0) {
@@ -420,6 +435,15 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     openDrawer(objectId);
   }
 
+  /** Reload to pull a peer's just-saved changes. The unsaved-draft guard warns first
+   *  so a local in-progress draft is never silently discarded. */
+  function handleReloadFromPeer() {
+    if (!confirmLeave()) {
+      return;
+    }
+    window.location.reload();
+  }
+
   const lastSavedAt = editor.draft.syncIdentifiers.objectUpdatedAt;
   const lastUpdatedSource = editor.draft.syncIdentifiers.objectUpdatedAtSource;
   const typeCode = resource.type ?? '';
@@ -440,6 +464,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         saving={saving}
         savingDraft={savingDraft}
         statusMessage={statusMessage}
+        roster={presence.roster}
         onModeChange={setMode}
         onPreview={openPreviewDrawer}
         onCancel={exitToExplorer}
@@ -448,6 +473,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         onShowBlockers={
           validation.blockers.length > 0 || validation.warnings.length > 0 ? showBlockers : undefined
         }
+      />
+      <PeerSavedBanner
+        notice={presence.savedNotice}
+        onReload={handleReloadFromPeer}
+        onDismiss={presence.dismissSavedNotice}
       />
       <div className="edit-body">
         <EditorNav
@@ -460,15 +490,21 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         />
         <main ref={mainRef} className="edit-main">
           {sections.map(({ num, Component }) => (
-            <Component
-              key={num}
-              editor={editor}
-              permissions={resource.permissions}
-              objectId={objectId}
-              typeCode={typeCode}
-              archetype={meta.archetype}
-              folded={mode === 'rapide' && !MODE_ESSENTIAL.has(num)}
-            />
+            <div key={num} className="edit-section-host">
+              {(presence.peersBySection[num]?.length ?? 0) > 0 && (
+                <div className="edit-section-host__badge">
+                  <SectionPresenceBadge peers={presence.peersBySection[num]} />
+                </div>
+              )}
+              <Component
+                editor={editor}
+                permissions={resource.permissions}
+                objectId={objectId}
+                typeCode={typeCode}
+                archetype={meta.archetype}
+                folded={mode === 'rapide' && !MODE_ESSENTIAL.has(num)}
+              />
+            </div>
           ))}
         </main>
         <EditorRail

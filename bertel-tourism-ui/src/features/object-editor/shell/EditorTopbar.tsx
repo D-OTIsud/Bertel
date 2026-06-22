@@ -1,6 +1,8 @@
 import { ChevronLeft } from 'lucide-react';
 import type { EditorMode } from './EditorTopbar.types';
 import { buildEditTopSaveLabel } from './format-last-object-update';
+import { EditorPresenceRoster } from '../widgets/EditorPresenceRoster';
+import type { RosterEntry } from '../presence/editor-presence';
 
 export type { EditorMode } from './EditorTopbar.types';
 
@@ -18,6 +20,8 @@ interface EditorTopbarProps {
   savingDraft?: boolean;
   publishDisabled?: boolean;
   statusMessage?: string | null;
+  /** Live presence roster (everyone on the fiche) for the save-bar band. */
+  roster?: RosterEntry[];
   onModeChange: (mode: EditorMode) => void;
   onPreview: () => void;
   onCancel: () => void;
@@ -40,6 +44,7 @@ export function EditorTopbar({
   savingDraft = false,
   publishDisabled = false,
   statusMessage = null,
+  roster = [],
   onModeChange,
   onPreview,
   onCancel,
@@ -71,6 +76,7 @@ export function EditorTopbar({
         </div>
       </div>
       <div className="edit-top__right">
+        <EditorPresenceRoster roster={roster} />
         <div className="mode-tog">
           <button
             type="button"

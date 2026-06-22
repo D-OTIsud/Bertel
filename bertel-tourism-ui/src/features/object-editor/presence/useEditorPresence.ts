@@ -16,6 +16,25 @@ import {
 const SAVED_EVENT = 'object:saved';
 // Module constant ⇒ referentially stable, so usePresenceRoom never resubscribes on it.
 const SUBSCRIBE_EVENTS = [SAVED_EVENT] as const;
+// Demo-only: sections the mock editors are scattered onto so the showcase shows badges.
+const DEMO_SHOWCASE_SECTIONS = ['06', '13', '03'];
+
+/**
+ * Demo showcase: give the mock editors (which have no real `activeSection`) a section so
+ * the per-section badges are visible without a second live client. No-op for real peers
+ * (anyone who already carries an activeSection) and the current user.
+ */
+function scatterDemoPeers(peers: readonly EditorPeer[], selfId: string): EditorPeer[] {
+  let placed = 0;
+  return peers.map((peer) => {
+    if (peer.activeSection || peer.userId === selfId) {
+      return peer;
+    }
+    const section = DEMO_SHOWCASE_SECTIONS[placed % DEMO_SHOWCASE_SECTIONS.length];
+    placed += 1;
+    return { ...peer, activeSection: section, editing: placed % 2 === 1 };
+  });
+}
 
 interface EditorPresenceExtra extends Record<string, unknown> {
   activeSection: string;
@@ -53,6 +72,7 @@ export function useEditorPresence({
 }: UseEditorPresenceArgs): UseEditorPresenceResult {
   const selfId = useSessionStore((state) => state.userId) ?? 'anonymous';
   const userName = useSessionStore((state) => state.userName);
+  const demoMode = useSessionStore((state) => state.demoMode);
   const [savedEvent, setSavedEvent] = useState<PeerSavedEvent | null>(null);
 
   const editing = hasUnsavedEdits(dirtySections);
@@ -81,8 +101,15 @@ export function useEditorPresence({
     onEvent: handleEvent,
   });
 
-  const roster = useMemo(() => computeRoster(peers, selfId), [peers, selfId]);
-  const peersBySection = useMemo(() => groupPeersBySection(peers, selfId), [peers, selfId]);
+  const displayPeers = useMemo(
+    () => (demoMode ? scatterDemoPeers(peers, selfId) : peers),
+    [peers, demoMode, selfId],
+  );
+  const roster = useMemo(() => computeRoster(displayPeers, selfId), [displayPeers, selfId]);
+  const peersBySection = useMemo(
+    () => groupPeersBySection(displayPeers, selfId),
+    [displayPeers, selfId],
+  );
   const savedNotice = useMemo(() => derivePeerSavedNotice(savedEvent, selfId), [savedEvent, selfId]);
 
   const dismissSavedNotice = useCallback(() => setSavedEvent(null), []);

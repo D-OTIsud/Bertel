@@ -95,4 +95,30 @@ describe('useEditorPresence', () => {
     act(() => lastOptions?.onEvent?.('object:saved', { userId: 'me', name: 'Moi', at: 5 }));
     expect(result.current.savedNotice).toBeNull();
   });
+
+  it('scatters mock editors onto sections in demo mode so badges are visible', () => {
+    useSessionStore.setState({ userId: 'me', userName: 'Moi', demoMode: true });
+    setRoom([
+      peer({ userId: 'me', activeSection: '01' }),
+      peer({ userId: 'u1', name: 'Jean' }),
+      peer({ userId: 'u2', name: 'Lina' }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
+    );
+
+    const placed = Object.values(result.current.peersBySection).flat();
+    expect(placed.map((p) => p.userId).sort()).toEqual(['u1', 'u2']);
+  });
+
+  it('does not synthesize sections for section-less peers outside demo mode', () => {
+    setRoom([peer({ userId: 'me', activeSection: '01' }), peer({ userId: 'u1', name: 'Jean' })]);
+
+    const { result } = renderHook(() =>
+      useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
+    );
+
+    expect(result.current.peersBySection).toEqual({});
+  });
 });

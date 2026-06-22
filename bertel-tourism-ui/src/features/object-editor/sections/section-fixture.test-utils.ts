@@ -274,6 +274,13 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         { id: 'panorama', code: 'panorama', label: 'Panorama' },
         { id: 'arrivee', code: 'arrivee', label: 'Arrivée' },
       ],
+      assocRoleOptions: [
+        { id: 'role-sur', code: 'sur_le_parcours', label: 'Sur le parcours' },
+        { id: 'role-resto', code: 'restauration', label: 'Restauration' },
+      ],
+      associatedObjects: [
+        { associatedObjectId: 'RES1', roleId: 'role-resto', note: '', targetName: 'Snack du Maïdo', targetType: 'RES' },
+      ],
       access: 'Depuis le parking du col',
       ambiance: 'Forêt et points de vue',
       recommendedParking: 'Aire du belvédère',

@@ -156,4 +156,13 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     // corridor slider present because the fixture has an imported trace
     expect(screen.getByLabelText('Largeur du corridor en mètres')).toBeInTheDocument();
   });
+
+  it('§C3: renders the objets liés block with the linked object, its role label, and an add button', () => {
+    render(<ItiHarness />);
+    expect(screen.getByText('Objets liés')).toBeInTheDocument();
+    // the linked object from the fixture + its role resolved from the role id
+    expect(screen.getByText('Snack du Maïdo')).toBeInTheDocument();
+    expect(screen.getByText(/Restauration/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Ajouter un objet lié' })).toBeInTheDocument();
+  });
 });

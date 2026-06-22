@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ChipMultiSelect, Field, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import type { ObjectWorkspaceMenu } from '../../../../services/object-workspace-parser';
+import { getSupabaseClient } from '../../../../lib/supabase';
 import { ModuleUnavailableNotice } from './block-notes';
 import { MenuCard } from '../../widgets/MenuCard';
 import { MenuEditModal } from '../../widgets/MenuEditModal';
 import { MenuPdfCartes } from '../../widgets/MenuPdfCartes';
+import { MenuExtractModal } from '../../widgets/MenuExtractModal';
 
 /** A fresh, empty menu (titled container — no category; sections live on its dishes since §06 P2b). */
 function createMenu(index: number): ObjectWorkspaceMenu {
@@ -28,8 +30,24 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
   const menus = editor.draft.menus;
   const cuisine = editor.draft.cuisine;
   const activeMenus = menus.items.filter((menu) => menu.active).length;
+  const canEditCartes = permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal;
   // null = closed ; 'new' = creating ; { index } = editing an existing menu.
   const [editing, setEditing] = useState<'new' | { index: number } | null>(null);
+  // §06 « Ajouter une carte » modal (upload carte + optional AI extraction → draft menu).
+  const [extractOpen, setExtractOpen] = useState(false);
+  const [cartesReloadToken, setCartesReloadToken] = useState(0);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const client = getSupabaseClient();
+    if (client) {
+      client.auth.getSession().then(({ data }) => {
+        if (alive) setAccessToken(data.session?.access_token ?? null);
+      });
+    }
+    return () => { alive = false; };
+  }, []);
 
   function replaceMenus(items: ObjectWorkspaceMenu[]) {
     editor.replaceModule('menus', { ...menus, items });
@@ -110,14 +128,24 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
         </>
       )}
 
-      {/* §06 P3 — Bloc C : cartes PDF téléchargeables, attachées au restaurant (object_document). */}
+      {/* §06 P3 — Bloc C : cartes (images/PDF) téléchargeables + ajout via modale « Ajouter une carte »
+          (upload du fichier comme carte + extraction IA optionnelle → menu brouillon). */}
       <div className="chip-group__label" style={{ marginTop: 18 }}>
-        Cartes PDF (téléchargeables)
+        Cartes (téléchargeables)
       </div>
-      <MenuPdfCartes
-        objectId={editor.objectId}
-        canEdit={permissions.menus.canDirectWrite || permissions.menus.canPrepareProposal}
-      />
+      <MenuPdfCartes objectId={editor.objectId} canEdit={canEditCartes} reloadToken={cartesReloadToken} hideUploader />
+      {canEditCartes && (
+        <button
+          type="button"
+          className="rep-add"
+          style={{ marginTop: 10 }}
+          disabled={!accessToken}
+          title={accessToken ? undefined : 'Session en cours de chargement…'}
+          onClick={() => setExtractOpen(true)}
+        >
+          <Plus size={14} aria-hidden /> Ajouter une carte
+        </button>
+      )}
 
       {editing !== null && (
         <MenuEditModal
@@ -128,6 +156,19 @@ export function BlockRES({ editor, permissions, folded }: SectionProps) {
           allergenOptions={menus.allergenOptions}
           onClose={() => setEditing(null)}
           onSave={saveMenu}
+        />
+      )}
+
+      {extractOpen && accessToken && (
+        <MenuExtractModal
+          open
+          objectId={editor.objectId}
+          accessToken={accessToken}
+          allowedSections={menus.categoryOptions}
+          allowedDietary={menus.dietaryTagOptions}
+          onClose={() => setExtractOpen(false)}
+          onInject={(menu) => replaceMenus([...menus.items, menu])}
+          onCarteUploaded={() => setCartesReloadToken((t) => t + 1)}
         />
       )}
     </Fs>

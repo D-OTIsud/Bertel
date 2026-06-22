@@ -81,6 +81,14 @@ describe('BlockRES — §06 menus : carte dépliable (lecture) + modale (éditio
   });
 });
 
+describe('BlockRES — §06 cartes : ajout via modale', () => {
+  it('renders an "Ajouter une carte" button (replaces the inline file picker)', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockRES editor={result.current} permissions={allowAll} />);
+    expect(screen.getByRole('button', { name: /Ajouter une carte/ })).toBeInTheDocument();
+  });
+});
+
 describe('BlockRES — §06 ne porte ni l’édition ni les pointeurs §07/§14 (bruit retiré)', () => {
   it('does not edit the group policy in §06 (owned by §07)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));

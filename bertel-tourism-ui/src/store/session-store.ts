@@ -26,6 +26,15 @@ interface SessionState {
    */
   canEditObjects: boolean;
   /**
+   * Capability flag: TRUE if the current user can CREATE objects — i.e. has an
+   * active ORG membership AND the `create_object` permission. Source of truth is
+   * the SQL helper `api.user_can_create_object()`, resolved once at session
+   * bootstrap. Strictly narrower than `canEditObjects` (which is true for anyone
+   * who can edit *something*). Gates the "Créer une fiche" CTA so only users who
+   * can actually create a fiche see it; the RPC re-checks server-side.
+   */
+  canCreateObjects: boolean;
+  /**
    * The current user's active organisation id and display name, resolved at
    * session bootstrap via `api.current_user_active_org()`. Used for UI labels
    * (e.g. scope switch "Mon organisation · <orgName>"). Degrades to null when
@@ -55,6 +64,7 @@ interface SessionState {
     avatar: string;
     langPrefs: string[];
     canEditObjects: boolean;
+    canCreateObjects: boolean;
     orgId: string | null;
     orgName: string | null;
     adminRank: number | null;
@@ -79,6 +89,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   // Real auth: must wait for the SQL capability check to resolve before
   // broadening the Explorer.
   canEditObjects: env.demoMode,
+  canCreateObjects: env.demoMode,
   orgId: env.demoMode ? 'ORG-DEMO' : null,
   orgName: env.demoMode ? 'OTI du Sud' : null,
   adminRank: null,
@@ -91,13 +102,14 @@ export const useSessionStore = create<SessionState>((set) => ({
     void useCardCacheStore.getState().clear();
     set({
       role,
-      // In demo mode the capability flag tracks the role: tourism_agent
-      // is treated as a read-only persona, super_admin/owner can edit.
+      // In demo mode the capability flags track the role: tourism_agent
+      // is treated as a read-only persona, super_admin/owner can edit + create.
       canEditObjects: role !== 'tourism_agent',
+      canCreateObjects: role !== 'tourism_agent',
     });
   },
   setLangPrefs: (langPrefs) => set({ langPrefs }),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, orgId, orgName, adminRank, adminRoleCode }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode }) =>
     set({
       status: 'ready',
       role,
@@ -107,6 +119,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       avatar,
       langPrefs,
       canEditObjects,
+      canCreateObjects,
       orgId,
       orgName,
       adminRank,
@@ -125,6 +138,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
+      canCreateObjects: false,
       orgId: null,
       orgName: null,
       adminRank: null,
@@ -142,6 +156,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       userName: '',
       avatar: '--',
       canEditObjects: false,
+      canCreateObjects: false,
       orgId: null,
       orgName: null,
       adminRank: null,

@@ -141,6 +141,14 @@ export interface ExplorerTagFilter {
 
 export interface ExplorerCommonFilters {
   search: string;
+  /**
+   * §109 — search breadth. 'global' (the Explorer default) matches the aggregated
+   * `object.search_document` (équipements, tags, plats de menu, régimes, labels,
+   * description…) in addition to name/city, and ranks by relevance. 'name' keeps the
+   * legacy name/city-only matching — used by the editor object pickers (duplicate-name
+   * hint, RelationPicker) so linking objects stays name-focused. Undefined ⇒ global.
+   */
+  searchScope?: 'name' | 'global';
   cities: string[];
   lieuDit: string;
   pmr: boolean;

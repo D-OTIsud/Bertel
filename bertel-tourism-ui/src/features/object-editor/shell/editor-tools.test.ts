@@ -56,6 +56,27 @@ describe('buildEditorTools', () => {
     expect(versions.stat).toBeUndefined();
     expect(versions.disabledReason).toMatch(/bient/i);
   });
+
+  it('omits the delete tool when canHardDelete is falsy (default)', () => {
+    const keys = buildEditorTools(base).map((t) => t.key);
+    expect(keys).not.toContain('delete');
+  });
+
+  it('appends a danger delete tool for a superuser', () => {
+    const tools = buildEditorTools({ status: 'archived', canArchive: true, canHardDelete: true });
+    const del = tools.find((t) => t.key === 'delete')!;
+    expect(del.label).toBe('Supprimer définitivement');
+    expect(del.danger).toBe(true);
+    expect(del.disabled).toBe(false);
+    expect(tools[tools.length - 1].key).toBe('delete'); // dernier
+  });
+
+  it("disables the delete tool with an \"archivez d'abord\" reason when not archived", () => {
+    const del = buildEditorTools({ status: 'published', canArchive: true, canHardDelete: true })
+      .find((t) => t.key === 'delete')!;
+    expect(del.disabled).toBe(true);
+    expect(del.disabledReason).toMatch(/archivez/i);
+  });
 });
 
 describe('archiveTargetStatus', () => {

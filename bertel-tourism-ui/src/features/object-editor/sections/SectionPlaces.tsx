@@ -1,4 +1,5 @@
-import { Chip, ChipSet, Fs, Input, Repeater, Select, Textarea } from '../primitives';
+import { Chip, ChipSet, Fs, Input, Repeater, Select } from '../primitives';
+import { MarkdownCellField } from '../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
@@ -138,10 +139,11 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
           <>
             <span className="rep-row__handle" style={{ marginTop: 6 }} aria-hidden />
             <Input value={place.label} placeholder="Nom du sous-lieu" onChange={(label) => updatePlace(index, { label })} />
-            <Textarea
+            <MarkdownCellField
+              variant="block"
               value={readTranslatableField(place.description, descriptions.activeLanguage, descriptions.localLanguage)}
-              rows={2}
               onChange={(value) => updatePlace(index, { description: value })}
+              ariaLabel={`Description du sous-lieu — ${place.label || `lieu ${index + 1}`}`}
             />
             <Select
               value={place.visibility}

@@ -1320,19 +1320,25 @@ function parseDescriptionScope(params: {
   placeId?: string | null;
   label: string;
 }): ObjectWorkspaceDescriptionScope {
+  // §110 Markdown: for the PLACE scope the resource's flat prose keys are STRIPPED (plain text),
+  // so the raw scalar base comes from the *_raw siblings get_object_resource now emits. The object/
+  // org scopes (canonical_description / org_description) carry the raw scalar in the flat key (editor-
+  // only keys, never stripped), so they keep reading the flat key.
+  const base = (raw: unknown, flat: unknown) => (params.scope === 'place' ? (raw ?? flat) : flat);
+
   return {
     recordId: readString(params.record.id) || null,
     scope: params.scope,
     placeId: params.placeId ?? null,
     label: params.label,
-    // No 'public' default — keep a NULL DB visibility as '' so saves don't widen it
+    // No 'public' default -- keep a NULL DB visibility as '' so saves don't widen it
     // (the 8t read gate treats NULL as extended-scope-only). INSERTs default at the call site.
     visibility: readString(params.record.visibility),
-    description: toTranslatableField(params.record.description, params.record.description_i18n),
-    chapo: toTranslatableField(params.record.description_chapo, params.record.description_chapo_i18n),
-    adaptedDescription: toTranslatableField(params.record.description_adapted, params.record.description_adapted_i18n),
-    mobileDescription: toTranslatableField(params.record.description_mobile, params.record.description_mobile_i18n),
-    editorialDescription: toTranslatableField(params.record.description_edition, params.record.description_edition_i18n),
+    description: toTranslatableField(base(params.record.description_raw, params.record.description), params.record.description_i18n),
+    chapo: toTranslatableField(base(params.record.description_chapo_raw, params.record.description_chapo), params.record.description_chapo_i18n),
+    adaptedDescription: toTranslatableField(base(params.record.description_adapted_raw, params.record.description_adapted), params.record.description_adapted_i18n),
+    mobileDescription: toTranslatableField(base(params.record.description_mobile_raw, params.record.description_mobile), params.record.description_mobile_i18n),
+    editorialDescription: toTranslatableField(base(params.record.description_edition_raw, params.record.description_edition), params.record.description_edition_i18n),
   };
 }
 

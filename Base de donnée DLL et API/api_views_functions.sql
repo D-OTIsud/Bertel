@@ -3876,7 +3876,35 @@ BEGIN
                ||
                jsonb_build_object(
                  'descriptions', COALESCE((
-                   SELECT jsonb_agg((to_jsonb(pd) - 'place_id')
+                   SELECT jsonb_agg(
+                            -- §110 Markdown: strip flat prose keys, drop raw *_i18n, emit *_md (raw resolved)
+                            -- + *_raw (raw scalar base for the editor loader, which round-trips raw Markdown).
+                            (
+                              to_jsonb(pd)
+                              - 'place_id'
+                              - 'description'         - 'description_i18n'
+                              - 'description_chapo'   - 'description_chapo_i18n'
+                              - 'description_mobile'  - 'description_mobile_i18n'
+                              - 'description_edition' - 'description_edition_i18n'
+                              - 'description_adapted' - 'description_adapted_i18n'
+                            )
+                            || jsonb_build_object(
+                              'description',          api.strip_markdown(COALESCE(api.i18n_pick(pd.description_i18n, lang, 'fr'), pd.description)),
+                              'description_md',       COALESCE(api.i18n_pick(pd.description_i18n, lang, 'fr'), pd.description),
+                              'description_raw',      pd.description,
+                              'description_chapo',    api.strip_markdown(COALESCE(api.i18n_pick(pd.description_chapo_i18n, lang, 'fr'), pd.description_chapo)),
+                              'description_chapo_md', COALESCE(api.i18n_pick(pd.description_chapo_i18n, lang, 'fr'), pd.description_chapo),
+                              'description_chapo_raw', pd.description_chapo,
+                              'description_mobile',   api.strip_markdown(COALESCE(api.i18n_pick(pd.description_mobile_i18n, lang, 'fr'), pd.description_mobile)),
+                              'description_mobile_md', COALESCE(api.i18n_pick(pd.description_mobile_i18n, lang, 'fr'), pd.description_mobile),
+                              'description_mobile_raw', pd.description_mobile,
+                              'description_edition',  api.strip_markdown(COALESCE(api.i18n_pick(pd.description_edition_i18n, lang, 'fr'), pd.description_edition)),
+                              'description_edition_md', COALESCE(api.i18n_pick(pd.description_edition_i18n, lang, 'fr'), pd.description_edition),
+                              'description_edition_raw', pd.description_edition,
+                              'description_adapted',  api.strip_markdown(COALESCE(api.i18n_pick(pd.description_adapted_i18n, lang, 'fr'), pd.description_adapted)),
+                              'description_adapted_md', COALESCE(api.i18n_pick(pd.description_adapted_i18n, lang, 'fr'), pd.description_adapted),
+                              'description_adapted_raw', pd.description_adapted
+                            )
                             ORDER BY
                               NULLIF((to_jsonb(pd)->>'position'),'')::int NULLS LAST,
                               NULLIF((to_jsonb(pd)->>'language'),'') NULLS LAST,

@@ -78,81 +78,80 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
     .filter((item) => item.to !== '/team' || teamVisible);
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
+  const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Parametres';
 
   return (
-    <aside
-      className="flex flex-col items-center gap-1 border-r border-line bg-[rgba(255,253,248,0.72)] px-0 py-3.5 backdrop-blur-xl"
-      style={{ width: 'var(--sidebar-w)' }}
-      aria-label="Navigation principale"
-    >
-      <div className="mb-3.5 grid h-[38px] w-[38px] place-items-center overflow-hidden rounded-[11px] bg-surface2">
-        {logoUrl ? (
-          <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-1" />
-        ) : (
-          <span className="font-display text-sm font-bold text-teal">{brandName.slice(0, 1)}</span>
-        )}
-      </div>
+    <aside className="app-sidebar" aria-label="Navigation principale">
+      <div className="app-sidebar__panel">
+        <div className="app-sidebar__brand">
+          <span className="app-sidebar__logo">
+            {logoUrl ? <img src={logoUrl} alt={brandName} /> : brandName.slice(0, 1)}
+          </span>
+          <span className="app-sidebar__label app-sidebar__brand-name">{brandName}</span>
+        </div>
 
-      <nav className="flex flex-col items-center gap-1" aria-label="Modules">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActivePath(pathname, item.to);
-          return (
-            <Link
-              key={item.to}
-              href={item.to}
-              title={item.label}
-              className={cn(
-                'grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
-                active && 'bg-teal text-white hover:bg-teal hover:text-white',
-              )}
-            >
-              <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            </Link>
-          );
-        })}
-      </nav>
+        <nav className="app-sidebar__nav" aria-label="Modules">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActivePath(pathname, item.to);
+            return (
+              <Link
+                key={item.to}
+                href={item.to}
+                title={item.label}
+                aria-current={active ? 'page' : undefined}
+                className={cn('app-sidebar__item', active && 'app-sidebar__item--active')}
+              >
+                <span className="app-sidebar__iconbox">
+                  <Icon className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+                </span>
+                <span className="app-sidebar__label">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div className="my-2 h-px w-6 bg-line" />
+        <div className="app-sidebar__divider" />
 
-      <Link
-        href="/settings"
-        title="Parametres"
-        className={cn(
-          'grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink',
-          isActivePath(pathname, '/settings') && 'bg-teal text-white hover:bg-teal hover:text-white',
-        )}
-      >
-        <Settings2 className="h-[18px] w-[18px]" strokeWidth={1.8} />
-      </Link>
-
-      <div className="mt-auto flex flex-col items-center gap-1">
-        <button
-          type="button"
-          title="Aide"
-          className="grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
-          aria-label="Aide"
+        <Link
+          href="/settings"
+          title="Parametres"
+          aria-current={isActivePath(pathname, '/settings') ? 'page' : undefined}
+          className={cn('app-sidebar__item', isActivePath(pathname, '/settings') && 'app-sidebar__item--active')}
         >
-          <CircleHelp className="h-[18px] w-[18px]" strokeWidth={1.8} />
-        </button>
-        <button
-          type="button"
-          title="Notifications"
-          className="relative grid h-10 w-10 place-items-center rounded-[11px] text-ink-3 transition-colors hover:bg-surface2 hover:text-ink"
-          aria-label="Notifications"
-        >
-          <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange" aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          className="mt-1 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-orange to-orange-2 font-display text-[13px] font-bold text-white shadow-s"
-          aria-label={`Profil ${userLabel}`}
-          title={userLabel}
-        >
-          {initials}
-        </button>
+          <span className="app-sidebar__iconbox">
+            <Settings2 className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+          </span>
+          <span className="app-sidebar__label">{settingsLabel}</span>
+        </Link>
+
+        <div className="app-sidebar__footer">
+          <button type="button" className="app-sidebar__item" aria-label="Aide" title="Aide">
+            <span className="app-sidebar__iconbox">
+              <CircleHelp className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+            </span>
+            <span className="app-sidebar__label">Aide</span>
+          </button>
+          <button type="button" className="app-sidebar__item" aria-label="Notifications" title="Notifications">
+            <span className="app-sidebar__iconbox">
+              <Bell className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+              <span className="app-sidebar__dot" aria-hidden />
+            </span>
+            <span className="app-sidebar__label">Notifications</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="app-sidebar__profile"
+            aria-label={`Profil ${userLabel}`}
+            title={userLabel}
+          >
+            <span className="app-sidebar__avatarbox">
+              <span className="app-sidebar__avatar">{initials}</span>
+            </span>
+            <span className="app-sidebar__label app-sidebar__profile-name">{userLabel}</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

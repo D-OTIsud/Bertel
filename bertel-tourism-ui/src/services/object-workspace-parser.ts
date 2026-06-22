@@ -1215,7 +1215,8 @@ function parseLocationRecord(value: unknown): ObjectWorkspaceLocationForm {
     city: readString(record.city),
     codeInsee: readString(record.code_insee),
     lieuDit: readString(record.lieu_dit),
-    direction: readString(record.direction),
+    // §110: public `direction` is now strip_markdown'd; the editor round-trips RAW, so prefer direction_md.
+    direction: readString(record.direction_md, readString(record.direction)),
     latitude: readString(record.latitude, readString(record.lat)),
     longitude: readString(record.longitude, readString(record.lon)),
     zoneTouristique: readString(record.zone_touristique),
@@ -1228,7 +1229,7 @@ function buildLocationLabel(location: ObjectWorkspaceLocationForm): string {
   return [streetLine, location.address3, location.lieuDit, cityLine].filter(Boolean).join(' · ');
 }
 
-function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocationForm {
+export function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocationForm {
   const addressRecord = readRecord(raw.address);
   const locationRecord = readRecord(raw.location);
   const candidates = [
@@ -1272,7 +1273,12 @@ function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocatio
     ),
     city: pickFirstText(parsed.city, addressRecord.city, mainLocationRecord.city, locationRecord.city, raw.city),
     lieuDit: pickFirstText(parsed.lieuDit, addressRecord.lieu_dit, mainLocationRecord.lieu_dit, raw.lieu_dit),
-    direction: pickFirstText(parsed.direction, addressRecord.direction, mainLocationRecord.direction, raw.direction),
+    direction: pickFirstText(
+      parsed.direction,
+      readString(addressRecord.direction_md, readString(addressRecord.direction)),
+      readString(mainLocationRecord.direction_md, readString(mainLocationRecord.direction)),
+      readString(raw.direction_md, readString(raw.direction)),
+    ),
     latitude: pickFirstText(
       parsed.latitude,
       locationRecord.latitude,

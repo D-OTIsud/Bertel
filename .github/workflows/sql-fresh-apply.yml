@@ -261,6 +261,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_section06_vocab.sql"
 
+      - name: set_itinerary_track test (§111 — GPX/KML trace ingestion: 2D store + auto distance/elevation/profile + cache-invalidate trigger fix + workspace gate)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_set_itinerary_track.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

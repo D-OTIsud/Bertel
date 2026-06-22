@@ -5,6 +5,7 @@ import { ModuleUnavailableNotice } from './block-notes';
 import { formatDurationShort, stepMetric } from './iti-metrics';
 import { ItiTraceMap } from '../../widgets/ItiTraceMap';
 import { StageEditModal } from '../../widgets/StageEditModal';
+import { AssociatedObjectModal } from '../../widgets/AssociatedObjectModal';
 import type { ObjectWorkspaceItineraryStageSummary } from '../../../../services/object-workspace-parser';
 
 // handle · type/position badge · name+meta · actions
@@ -21,6 +22,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
   const [practicesDraft, setPracticesDraft] = useState<string[]>([]);
   // §111 C: index of the stage being edited in the StageEditModal (null = closed).
   const [editingStage, setEditingStage] = useState<number | null>(null);
+  const [assocOpen, setAssocOpen] = useState(false);
   const tmpUid = useRef(0);
 
   function patch(patchValue: Partial<typeof itinerary>) {
@@ -229,6 +231,46 @@ export function BlockITI({ editor, folded }: SectionProps) {
               onClose={() => setEditingStage(null)}
             />
           )}
+
+          {/* §111 C3: objets liés — existing tourism objects attached to the itinerary with a role. */}
+          <div className="chip-group__label" style={{ marginTop: 14 }}>Objets liés</div>
+          {itinerary.associatedObjects.length > 0 && (
+            <div className="repeater">
+              {itinerary.associatedObjects.map((assoc, index) => {
+                const roleLabel = itinerary.assocRoleOptions.find((option) => option.id === assoc.roleId)?.label ?? '';
+                return (
+                  <div key={`${assoc.associatedObjectId}-${index}`} className="rep-row" style={{ gridTemplateColumns: '34px 1fr auto' }}>
+                    <span className={`rpick__type type-${assoc.targetType.toLowerCase()}`}>{assoc.targetType}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {assoc.targetName || assoc.associatedObjectId}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{[roleLabel, assoc.note].filter(Boolean).join(' · ')}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="del"
+                      aria-label={`Détacher ${assoc.targetName || assoc.associatedObjectId}`}
+                      onClick={() => patch({ associatedObjects: itinerary.associatedObjects.filter((_, i) => i !== index) })}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <button type="button" className="rep-add" onClick={() => setAssocOpen(true)}>
+            + Ajouter un objet lié
+          </button>
+
+          <AssociatedObjectModal
+            open={assocOpen}
+            objectId={editor.objectId}
+            roleOptions={itinerary.assocRoleOptions}
+            onSave={(assoc) => { patch({ associatedObjects: [...itinerary.associatedObjects, assoc] }); setAssocOpen(false); }}
+            onClose={() => setAssocOpen(false)}
+          />
 
           {/* §48: TRAIL_SEASON mock removed (§34 pattern — inert hardcoded constant, no onChange).
               SeasonPicker primitive retained for the future per-object seasonality profile feature.

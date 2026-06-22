@@ -604,6 +604,15 @@ export interface ObjectWorkspaceItineraryStageSummary {
   mediaIds: string[];
 }
 
+export interface ObjectWorkspaceItineraryAssocSummary {
+  associatedObjectId: string;
+  /** ref_iti_assoc_role id (UUID). */
+  roleId: string;
+  note: string;
+  targetName: string;
+  targetType: string;
+}
+
 export interface ObjectWorkspaceItineraryModule {
   distanceKm: string;
   durationMin: string;
@@ -621,6 +630,10 @@ export interface ObjectWorkspaceItineraryModule {
   openStatusOptions: WorkspaceReferenceOption[];
   /** §111 ref_code domain iti_stage_kind — labels for the stage type select (depart/etape/POI/…). */
   stageKindOptions: WorkspaceReferenceOption[];
+  /** §111 C3 ref_iti_assoc_role — roles for the « objets liés » select (sur_le_parcours/a_proximite/…). */
+  assocRoleOptions: WorkspaceReferenceOption[];
+  /** §111 C3 object_iti_associated_object — objets liés (existing tourism objects + a role). */
+  associatedObjects: ObjectWorkspaceItineraryAssocSummary[];
   /** §111 object_iti_info — infos pratiques (grouped visually with the is_loop toggle in §06). */
   access: string;
   ambiance: string;
@@ -2190,6 +2203,18 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     };
   });
 
+  const associatedObjects = readArray(details.associated_objects).map((entry) => {
+    const rec = readRecord(entry);
+    const target = readRecord(rec.target);
+    return {
+      associatedObjectId: readString(rec.associated_object_id),
+      roleId: readString(rec.role_id),
+      note: readString(rec.note),
+      targetName: readString(target.name),
+      targetType: readString(target.type),
+    };
+  }).filter((entry) => entry.associatedObjectId !== '');
+
   const geometrySummary = [
     readString(itinerary.track_format, readString(details.track_format)),
     readString(itinerary.track, readString(details.track)) ? 'trace presente' : '',
@@ -2217,6 +2242,8 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     difficultyOptions: [],
     openStatusOptions: [],
     stageKindOptions: [],
+    assocRoleOptions: [],
+    associatedObjects,
     access: readString(infoRecord.access),
     ambiance: readString(infoRecord.ambiance),
     recommendedParking: readString(infoRecord.recommended_parking),

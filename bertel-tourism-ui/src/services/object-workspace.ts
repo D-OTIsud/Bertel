@@ -3146,7 +3146,7 @@ async function getObjectWorkspaceItineraryModule(
   // §111 C: stages come from baseModule (parser of get_object_resource.itinerary_details.stages),
   // which now carries kind / lng / lat / mediaIds — richer than a direct object_iti_stage select
   // (lng/lat need ST_X/ST_Y, only available server-side). No stage re-fetch here.
-  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult, stageKindRefsResult] = await Promise.allSettled([
+  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult, stageKindRefsResult, assocRoleRefsResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
@@ -3158,6 +3158,8 @@ async function getObjectWorkspaceItineraryModule(
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_open_status').order('position', { ascending: true }),
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_stage_kind').order('position', { ascending: true }),
+    // §111 C3 roles for the linked-objects select (ref_iti_assoc_role — a standalone table, not ref_code)
+    client.from('ref_iti_assoc_role').select('id, code, name, position').order('position', { ascending: true }),
   ]);
 
   if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
@@ -3180,6 +3182,9 @@ async function getObjectWorkspaceItineraryModule(
   const stageKindOptions = stageKindRefsResult.status === 'fulfilled' && stageKindRefsResult.value.error == null
     ? dedupeReferenceOptions((stageKindRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
     : baseModule.stageKindOptions;
+  const assocRoleOptions = assocRoleRefsResult.status === 'fulfilled' && assocRoleRefsResult.value.error == null
+    ? dedupeReferenceOptions((assocRoleRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+    : baseModule.assocRoleOptions;
   const practiceById = optionMapById(practiceOptions);
   const practiceCodes = practicesResult.status === 'fulfilled' && practicesResult.value.error == null
     ? ((practicesResult.value.data ?? []) as Record<string, unknown>[])
@@ -3205,6 +3210,8 @@ async function getObjectWorkspaceItineraryModule(
     difficultyOptions,
     openStatusOptions,
     stageKindOptions,
+    assocRoleOptions,
+    associatedObjects: baseModule.associatedObjects,
     stages,
     geometrySummary: row.geom ? 'geometrie presente' : baseModule.geometrySummary,
     traceEditable: false,
@@ -5305,6 +5312,25 @@ export function buildItineraryInfoPayload(
   };
 }
 
+/**
+ * §111 C3 Pure builder for the `associated_objects` payload of api.save_object_itinerary_nested
+ * (object_iti_associated_object — objets liés). null when the module did not load (the RPC
+ * delete+reinserts, so a failed load must not wipe existing links). An empty array intentionally
+ * clears all links. role_id is the ref_iti_assoc_role UUID (from the loaded data or the role select).
+ */
+export function buildItineraryAssociatedObjectsPayload(
+  input: ObjectWorkspaceItineraryModule,
+): Array<{ associated_object_id: string; role_id: string; note: string }> | null {
+  if (input.unavailableReason != null) {
+    return null;
+  }
+  return input.associatedObjects.map((entry) => ({
+    associated_object_id: entry.associatedObjectId,
+    role_id: entry.roleId,
+    note: entry.note,
+  }));
+}
+
 export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -5358,12 +5384,16 @@ export async function saveObjectWorkspaceItinerary(objectId: string, input: Obje
   // sections / profiles / associated objects / geom are out of scope (Phase 1; geom stays read-only).
   const stagesPayload = buildItineraryStagesPayload(input);
   const infoPayload = buildItineraryInfoPayload(input);
+  const assocPayload = buildItineraryAssociatedObjectsPayload(input);
   const nestedPayload: Record<string, unknown> = {};
   if (stagesPayload !== null) {
     nestedPayload.stages = stagesPayload;
   }
   if (infoPayload !== null) {
     nestedPayload.info = infoPayload;
+  }
+  if (assocPayload !== null) {
+    nestedPayload.associated_objects = assocPayload;
   }
   if (Object.keys(nestedPayload).length > 0) {
     await callObjectWorkspaceRpc(

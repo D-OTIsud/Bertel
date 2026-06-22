@@ -1,4 +1,4 @@
-import { buildItineraryUpsertPayload, buildItineraryStagesPayload, buildItineraryInfoPayload } from './object-workspace';
+import { buildItineraryUpsertPayload, buildItineraryStagesPayload, buildItineraryInfoPayload, buildItineraryAssociatedObjectsPayload } from './object-workspace';
 import type { ObjectWorkspaceItineraryModule } from './object-workspace-parser';
 
 // Pins the object_iti WRITE contract to the REAL columns after the greenfield retype
@@ -20,6 +20,8 @@ const baseInput: ObjectWorkspaceItineraryModule = {
   difficultyOptions: [],
   openStatusOptions: [],
   stageKindOptions: [],
+  assocRoleOptions: [],
+  associatedObjects: [],
   access: '',
   ambiance: '',
   recommendedParking: '',
@@ -130,5 +132,23 @@ describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
 
   it('returns null when the module did not load (no clobber of existing info)', () => {
     expect(buildItineraryInfoPayload({ ...baseInput, access: 'x', unavailableReason: 'Le live ne fournit pas le detail.' })).toBeNull();
+  });
+});
+
+describe('buildItineraryAssociatedObjectsPayload (§111 C3 — object_iti_associated_object)', () => {
+  it('maps linked objects to the RPC shape (role_id is the ref_iti_assoc_role UUID)', () => {
+    expect(buildItineraryAssociatedObjectsPayload({
+      ...baseInput,
+      associatedObjects: [
+        { associatedObjectId: 'RES1', roleId: 'role-uuid-1', note: 'à mi-parcours', targetName: 'Snack', targetType: 'RES' },
+      ],
+    })).toEqual([
+      { associated_object_id: 'RES1', role_id: 'role-uuid-1', note: 'à mi-parcours' },
+    ]);
+  });
+
+  it('returns [] when there are no links (intentional clear) and null when the module did not load', () => {
+    expect(buildItineraryAssociatedObjectsPayload(baseInput)).toEqual([]);
+    expect(buildItineraryAssociatedObjectsPayload({ ...baseInput, unavailableReason: 'x' })).toBeNull();
   });
 });

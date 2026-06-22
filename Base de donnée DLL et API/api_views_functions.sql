@@ -3877,16 +3877,19 @@ BEGIN
                jsonb_build_object(
                  'descriptions', COALESCE((
                    SELECT jsonb_agg(
-                            -- §110 Markdown: strip flat prose keys, drop raw *_i18n, emit *_md (raw resolved)
-                            -- + *_raw (raw scalar base for the editor loader, which round-trips raw Markdown).
+                            -- §110 Markdown: strip the flat prose keys (the || override below wins),
+                            -- emit *_md (raw resolved) + *_raw (raw scalar base). §110 C1 fix: the place
+                            -- editor loads from THIS block and reads the raw *_i18n maps for its
+                            -- per-language values, so the *_i18n columns are an editor leg and must NOT
+                            -- be subtracted (only the flat scalar keys are dropped).
                             (
                               to_jsonb(pd)
                               - 'place_id'
-                              - 'description'         - 'description_i18n'
-                              - 'description_chapo'   - 'description_chapo_i18n'
-                              - 'description_mobile'  - 'description_mobile_i18n'
-                              - 'description_edition' - 'description_edition_i18n'
-                              - 'description_adapted' - 'description_adapted_i18n'
+                              - 'description'
+                              - 'description_chapo'
+                              - 'description_mobile'
+                              - 'description_edition'
+                              - 'description_adapted'
                             )
                             || jsonb_build_object(
                               'description',          api.strip_markdown(COALESCE(api.i18n_pick(pd.description_i18n, lang, 'fr'), pd.description)),
@@ -4182,7 +4185,10 @@ BEGIN
         ), '[]'::jsonb),
         'stages', COALESCE((
           SELECT jsonb_agg(
-                   (to_jsonb(st) - 'object_id' - 'description' - 'geom')
+                   -- §110 I1 fix: subtract the raw description_i18n too (the ITI stage editor model
+                   -- is a plain string and never reads it, so it is not an editor leg — keep raw
+                   -- per-language Markdown out of the resource/selection-CSV).
+                   (to_jsonb(st) - 'object_id' - 'description' - 'description_i18n' - 'geom')
                    ||
                    jsonb_build_object(
                      -- §110 stage description Markdown-canonical (inline): stripped flat + raw _md.

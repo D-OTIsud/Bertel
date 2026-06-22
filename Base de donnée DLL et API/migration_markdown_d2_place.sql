@@ -12,13 +12,17 @@
 --                        ORDER BY ...
 --     AFTER:  'descriptions', COALESCE((
 --               SELECT jsonb_agg(
---                        -- §110 Markdown: explicit override
+--                        -- §110 Markdown: explicit override. ONLY the flat scalar prose keys are
+--                        -- dropped (the || override re-emits them stripped). §110 C1 fix: the raw
+--                        -- *_i18n maps are NOT subtracted — the place editor loads from THIS block
+--                        -- and reads them for its per-language values (editor leg; subtracting them
+--                        -- NULLed translations on the next §16 save).
 --                        (to_jsonb(pd) - 'place_id'
---                                      - 'description'         - 'description_i18n'
---                                      - 'description_chapo'   - 'description_chapo_i18n'
---                                      - 'description_mobile'  - 'description_mobile_i18n'
---                                      - 'description_edition' - 'description_edition_i18n'
---                                      - 'description_adapted' - 'description_adapted_i18n')
+--                                      - 'description'
+--                                      - 'description_chapo'
+--                                      - 'description_mobile'
+--                                      - 'description_edition'
+--                                      - 'description_adapted')
 --                        || jsonb_build_object(
 --                          'description',          api.strip_markdown(COALESCE(api.i18n_pick(...), pd.description)),
 --                          'description_md',       COALESCE(api.i18n_pick(...), pd.description),
@@ -30,11 +34,10 @@
 --                        )
 --                        ORDER BY ...
 --
--- The three keys per field are:
---   <col>          = api.strip_markdown(resolved)   -- flat readers, cards, exports
---   <col>_md       = resolved raw                   -- rich readers, public drawer
---   <col>_raw      = pd.<col> (raw scalar)           -- editor loader base (parseDescriptionScope,
---                                                       scope='place', bypasses stripped flat key)
+-- Per field, the public keys are <col> (stripped) + <col>_md (resolved raw); the editor legs are
+-- <col>_raw (raw scalar base, read by parseDescriptionScope scope='place') AND the kept raw
+-- <col>_i18n map (per-language values). Only <col> (flat scalar) is dropped from to_jsonb so the
+-- stripped override wins; <col>_i18n stays raw (no flat consumer resolves it).
 --
 -- No schema_unified.sql fold needed: api.get_object_resource body lives ONLY in api_views_functions.sql.
 -- Folded: api_views_functions.sql (canonical source, updated in place).

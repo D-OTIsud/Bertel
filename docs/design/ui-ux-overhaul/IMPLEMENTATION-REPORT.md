@@ -112,3 +112,73 @@ Jest 255/1779 verts · `next build` exit 0 · typecheck sans nouvelle erreur · 
 - **Sous-types SRV/VIS** (3.2) : nécessitent des champs de store (`vis.subtypes`/`srv.subtypes`) + filtrage RPC par sous-type calqué sur `hot.subtypes` + UI → passe ciblée.
 - **Méta riches par type sur la carte** (3.1) : distance/dates/cuisine absentes du payload carte → projection backend (RPC `list_objects`/`get_object_cards_batch`).
 - **Anneau de composition des clusters + distinctions dans la popup carte** (3.3) : enrichissements (le cluster actuel est une bulle de densité ; la popup a déjà des chips). Valeur moindre.
+
+---
+
+## Phase 6 — Éditeur (polish) ⏳ (cœur livré, 2026-06-23)
+
+### 6.1 — Barre d'enregistrement re-priorisée ✅ (`<commit 6.1/6.2>`)
+- `EditorTopbar` : « Enregistrer » redevient l'**action primaire** (`.btn primary`, teal + anneau de focus global), « Publier » un acte **secondaire distinct** (`.btn`) avec son libellé occupé propre « Publication… ». Ordre repositionné. TDD (2 tests + 6 existants).
+
+### 6.2 — Correctif clobber BlockASC ✅ (même commit)
+- Fin du **double-binding** : `durationMin` et `equipmentProvided` étaient écrits par DEUX contrôles chacun (write-trap last-edit-wins). Suppression du grid-3 secondaire + écho ChipSet ; `equipmentProvided` édité par UN champ texte (vide = non fourni) ; `difficultyLevel` remonté dans le bloc primaire. TDD (2 tests).
+
+### Vérifié
+Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** par la règle globale de Phase 1 (object-editor.css ne l'override pas).
+
+### Restant (différé avec raison)
+- **Disclosure §07 Capacité / §16 Lieux** (6.2) : restructuration des sections denses en disclosures — refactor de composant volumineux, valeur de densité ; passe ciblée.
+- **Nav contiguë libellée + roving tabindex** (6.3) : réécriture d'`EditorNav` ; le focus-visible est déjà couvert (Phase 1). 
+- **Cibles tactiles 44px** (6.3) : bump risqué dans un layout desktop dense (décalage de mise en page) — nécessite une revue par contrôle ; le responsive a déjà ses media queries (1120/760 px).
+
+---
+
+## Phase 4 — Présentation type-aware (Drawer) ⏳ (4.1 livré, 2026-06-23)
+
+### 4.1 — Fiche Événement : bloc « Prochaines dates » ✅
+- Comble « un événement (FMA) sans dates nulle part » (audit P0 §2b) : `EventOccurrencesSection` rend les occurrences **réelles** (`parsed.itinerary.fmaOccurrences`, champs `start_at`/`end_at`/`state`) en tête de la fiche → l'événement mène par le quand. Logique pure TDD (`event-occurrences.ts`, 6 tests) ; format FR, plage « Du … au … », occurrence annulée ; **jamais de date fabriquée**. Injecté dans `GenericDetailView` (que FMA utilise) → null pour les autres types. Intégration vérifiée (drawer FMA vs SRV).
+
+### Restant (différé avec raison)
+- **Fiche Restaurant (4.2)** : bloc cuisine + menu structuré — le modèle §104 existe ; la donnée (cuisine/menu/régimes) n'est pas sur le payload drawer actuel ⇒ extension du parser/RPC + bloc. Passe ciblée.
+- **Fiche Activité (ASC) / Itinéraire réel (4.3)** : `object_act` non surfacé ; étapes ITI réelles (au lieu d'interpolées) ⇒ extension parser + blocs.
+- **Vue config-driven (ARCHETYPE_SECTIONS) remplaçant les 6 clones** : refactor architectural d'un fichier de 3588 lignes, fort risque sur une surface très utilisée ⇒ passe dédiée spec→plan→impl. La consolidation `DRAWER_TYPE_LABELS`/`CLASSIFICATION_SCHEME_LABELS` sur `labels.ts` en fait partie.
+- **Retrait des contrôles dead-end** (Modifier/Voir versions sur surface read-only) : passe de nettoyage.
+
+---
+
+## Phase 5 — Dashboard / CRM / secondaires ⏳ (5.3 partiel, 2026-06-23)
+
+### 5.3 — Nettoyage du login ✅ (partiel)
+- **Retrait du texte de debug public** (`Supabase URL: …` + « Mode demo ») sur la page de connexion (fuite d'info + aspect cassé) ; import `env` retiré. Accents FR rétablis (h1, lead, note, panneau démo).
+- Ajout de `.muted` (top-level) : la classe était **utilisée app-wide mais non définie** (texte non atténué partout) — corrige aussi de nombreux composants.
+
+### Restant (différé avec raison)
+- **5.1 Bandeau dashboard hiérarchisé** (remplacer la grille hero-metric 6×) + **5.2 dé-modalisation CRM** (acteur en drawer) : refontes de composants volumineux ; valeur de hiérarchie/UX. Passe ciblée.
+- **Unification Team/RGPD sur le vocabulaire maison** : absorbée par la Phase 7.4 (Team) ; RGPD reste.
+- **Pages stub honnêtes** (`EmptyState mode=coming-soon`) : `EmptyState` est livré (Phase 1.2) et prêt à câbler.
+
+---
+
+## Phase 7 — Paramètres (console admin) ⏳ (7.3 P0 livré, 2026-06-23)
+
+### 7.3 — Fournisseurs IA : correction du P0 boutons nus ✅
+- `AiProviderSettings` utilisait `.btn`/`.pill-mini`, classes définies **uniquement** sous `.crm-app` ⇒ boutons natifs nus sur `/settings`. Portage sur le vocabulaire de l'app principale : `.primary-button` (Enregistrer), `.ghost-button` (Activer/Modifier/Supprimer/Nouveau/Tester), `.badge badge--ok` (pastille « actif »). Test composant vert (5).
+
+### Restant (différé avec raison)
+- **7.1 Hub à rail** (`/settings` en console à panneaux par périmètre) + **7.2 Apparence/Marqueurs** (maître-détail) + **7.4 Team intégré** + **7.5 Listes & référentiels** (nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` + UI) : Phase la plus back-end (RPC + RLS + tests) ; chaque module = sa propre passe spec→plan→impl (cf. phase-7-parametres.md). 7.5 exige du nouveau back-end.
+
+---
+
+## Synthèse de session (2026-06-23)
+
+**Livré + vérifié + committé sur `master`** (Jest tout vert à chaque porte, build exit 0, vérif navigateur en mode démo, revue adversariale Phases 1 & 2) :
+- **Phase 1** ✅ (fondations a11y/perf/thème + EmptyState) — `4423c82`
+- **Phase 2** ✅ (taxonomie unifiée + résolveurs de libellés) — `87f251d`
+- **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur) — `28b75bd`, `6e3465b`, + 3.2
+- **Phase 6** ✅ cœur (6.1 barre save re-priorisée · 6.2 clobber BlockASC)
+- **Phase 4.1** ✅ (fiche Événement : dates)
+- **Phase 5.3** ✅ partiel (login propre) · **Phase 7.3** ✅ (P0 boutons IA)
+
+**Principes tenus** : TDD (≈+90 tests ajoutés, 0 régression — la suite est passée d'environ 1728 à ≈1800 verts) ; aucune donnée fabriquée (méta absentes du payload documentées comme bloquant back-end, jamais inventées) ; aucun write-trap introduit ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.
+
+**Différés** : voir les blocs « Restant » de chaque phase. Les plus lourds (drawer config-driven 3588 lignes, dashboard/CRM, console settings + éditeur de référentiels back-end) sont des passes spec→plan→impl dédiées, sciemment hors d'une seule session sans-régression. Le mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) reste activable pour la vérif navigateur des phases suivantes.

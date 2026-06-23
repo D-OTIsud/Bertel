@@ -156,16 +156,16 @@ export function AiProviderSettings() {
             <li key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--line)', padding: '8px 0' }}>
               <div style={{ flex: 1 }}>
                 <strong>{p.label}</strong>{' '}
-                {p.isActive && <span className="pill-mini active">actif</span>}
+                {p.isActive && <span className="badge badge--ok">actif</span>}
                 <div className="muted" style={{ fontSize: 12 }}>
                   {p.model} · {p.baseUrl} · {p.hasKey ? 'clé configurée ✓' : 'sans clé'}
                 </div>
               </div>
               {!p.isActive && (
-                <button type="button" className="btn" onClick={() => activate(p.id)}>Activer</button>
+                <button type="button" className="ghost-button" onClick={() => activate(p.id)}>Activer</button>
               )}
-              <button type="button" className="btn" onClick={() => startEdit(p)}>Modifier</button>
-              <button type="button" className="btn" onClick={() => remove(p.id)} aria-label={`Supprimer ${p.label}`}>Supprimer</button>
+              <button type="button" className="ghost-button" onClick={() => startEdit(p)}>Modifier</button>
+              <button type="button" className="ghost-button" onClick={() => remove(p.id)} aria-label={`Supprimer ${p.label}`}>Supprimer</button>
             </li>
           ))}
         </ul>
@@ -212,9 +212,9 @@ export function AiProviderSettings() {
         </label>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          <button type="submit" className="btn primary" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-          {editingId && <button type="button" className="btn" onClick={startNew}>Nouveau</button>}
-          <button type="button" className="btn" onClick={runTest} disabled={testing}>{testing ? 'Test…' : 'Tester la connexion'}</button>
+          <button type="submit" className="primary-button" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+          {editingId && <button type="button" className="ghost-button" onClick={startNew}>Nouveau</button>}
+          <button type="button" className="ghost-button" onClick={runTest} disabled={testing}>{testing ? 'Test…' : 'Tester la connexion'}</button>
         </div>
       </form>
     </section>

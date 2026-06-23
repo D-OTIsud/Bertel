@@ -349,6 +349,9 @@ textarea::placeholder {
 }
 .distinction-highlight__label { font-weight: 700; font-size: 14px; }
 
+/* ---- Texte atténué (utilisé app-wide mais non défini auparavant) ---- */
+.muted { color: var(--text-muted); }
+
 /* ---- Badges d'état (refonte UI/UX 2026-06) ---- */
 .badge {
   display: inline-flex;

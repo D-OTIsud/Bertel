@@ -238,14 +238,14 @@ export default function SettingsPage() {
         <h2>Session, langues et branding</h2>
         <p>
           {demoMode
-            ? 'Mode demo actif explicitement. Les roles peuvent etre simules pour designer l interface et tester le white-label.'
-            : 'En mode normal, le role UI vient de la session Supabase et le branding peut etre synchronise via RPC sur la base principale.'}
+            ? 'Mode démo actif explicitement. Les rôles peuvent être simulés pour concevoir l’interface et tester le white-label.'
+            : 'En mode normal, le rôle UI vient de la session Supabase et le branding peut être synchronisé via RPC sur la base principale.'}
         </p>
       </article>
 
       <article className="panel-card panel-card--wide">
         <div className="panel-heading">
-          <h2>Role actif</h2>
+          <h2>Rôle actif</h2>
         </div>
         {demoMode ? (
           <div className="chip-grid">
@@ -257,8 +257,8 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="stack-list">
-            <span>Role issu de la session: {role ?? 'non charge'}</span>
-            <span>Statut session: {status}</span>
+            <span>Rôle issu de la session : {role ?? 'non chargé'}</span>
+            <span>Statut session : {status}</span>
             {errorMessage ? <span>{errorMessage}</span> : null}
           </div>
         )}
@@ -541,15 +541,17 @@ export default function SettingsPage() {
         </div>
       </article>
 
+      {/* 7.1 : carte d'état lisible « Diagnostic » à la place du dump « Runtime » de
+          debug — l'URL Supabase brute n'est plus exposée (juste configurée/non). */}
       <article className="panel-card">
         <div className="panel-heading">
-          <h2>Runtime</h2>
+          <h2>Diagnostic</h2>
         </div>
         <div className="stack-list">
-          <span>Mode demo explicite: {demoMode ? 'oui' : 'non'}</span>
-          <span>Supabase URL: {env.supabaseUrl || 'a renseigner'}</span>
-          <span>Marque active: {theme.brandName}</span>
-          <span>Source logo: {logoSourceLabel}</span>
+          <span>Mode démo : {demoMode ? 'actif' : 'inactif'}</span>
+          <span>Base Supabase : {env.supabaseUrl ? 'configurée' : 'à renseigner'}</span>
+          <span>Marque active : {theme.brandName}</span>
+          <span>Source du logo : {logoSourceLabel}</span>
         </div>
       </article>
 

@@ -1,4 +1,4 @@
-import { Chip, ChipSet, Fs, Input, Repeater, Select } from '../primitives';
+import { Chip, ChipSet, Disclosure, Fs, Input, Repeater, Select } from '../primitives';
 import { MarkdownCellField } from '../../../components/markdown/MarkdownCellField';
 import type { SectionProps } from './section-types';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -134,6 +134,12 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
       folded={folded}
       pill={{ tone: 'ok', label: `${descriptions.places.length + itinerary.stages.length} lieu(x)` }}
     >
+      {/* 6.2 : divulgation progressive — le détail des sous-lieux se replie. */}
+      <Disclosure
+        title="Sous-lieux"
+        summary={`${descriptions.places.length} sous-lieu(x)`}
+        defaultOpen={descriptions.places.length > 0}
+      >
       <Repeater
         items={descriptions.places}
         getKey={(place, index) => `${place.placeId ?? place.recordId ?? 'place'}-${index}`}
@@ -148,12 +154,12 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
               variant="block"
               value={readTranslatableField(place.description, descriptions.activeLanguage, descriptions.localLanguage)}
               onChange={(value) => updatePlace(index, { description: value })}
-              ariaLabel={`Description du sous-lieu — ${place.label || `lieu ${index + 1}`}`}
+              ariaLabel={`Description du sous-lieu (${place.label || `lieu ${index + 1}`})`}
             />
             <Select
               value={place.visibility}
               options={place.visibility === ''
-                ? [{ v: '', l: '— Visibilité non définie —' }, ...PLACE_VISIBILITY_OPTIONS]
+                ? [{ v: '', l: 'Visibilité non définie' }, ...PLACE_VISIBILITY_OPTIONS]
                 : PLACE_VISIBILITY_OPTIONS}
               onChange={(visibility) => updatePlace(index, { visibility })}
             />
@@ -163,6 +169,7 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
           </>
         )}
       />
+      </Disclosure>
 
       {/* §48 §46 gate: the stage area edits the `itinerary` module exclusively — show
           the notice instead when the module is unavailable for this object type. The

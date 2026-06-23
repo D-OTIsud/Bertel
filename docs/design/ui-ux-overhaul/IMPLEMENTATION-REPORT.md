@@ -126,10 +126,13 @@ Jest 255/1779 verts · `next build` exit 0 · typecheck sans nouvelle erreur · 
 ### Vérifié
 Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** par la règle globale de Phase 1 (object-editor.css ne l'override pas).
 
+### 6.2 — Divulgation progressive §07/§16 ✅
+- Nouvelle primitive **`Disclosure`** (repliable accessible : aria-expanded/aria-controls, defaultOpen ; head ≥44px) — TDD 4 tests, réutilisable. §07 Capacité (détail des métriques replié, StatCards en résumé) + §16 sous-lieux (répéteur replié). Tirets cadratins de ces sections retirés au passage.
+
 ### Restant (différé avec raison)
-- **Disclosure §07 Capacité / §16 Lieux** (6.2) : restructuration des sections denses en disclosures — refactor de composant volumineux, valeur de densité ; passe ciblée.
+- **§16 Étapes ITI + Communes en disclosures** (6.2) : les 2 autres blocs §16 sont conditionnels (notice/StageList, zones) — primitive `Disclosure` désormais dispo, à appliquer dans une passe ciblée.
 - **Nav contiguë libellée + roving tabindex** (6.3) : réécriture d'`EditorNav` ; le focus-visible est déjà couvert (Phase 1). 
-- **Cibles tactiles 44px** (6.3) : bump risqué dans un layout desktop dense (décalage de mise en page) — nécessite une revue par contrôle ; le responsive a déjà ses media queries (1120/760 px).
+- **Cibles tactiles 44px généralisées** (6.3) : bump risqué dans un layout desktop dense — le nouveau head de Disclosure est déjà à 44px ; le responsive a ses media queries (1120/760 px).
 
 ---
 

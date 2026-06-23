@@ -58,6 +58,17 @@ describe('EditorTopbar', () => {
     expect(onPublish).toHaveBeenCalledTimes(1);
   });
 
+  it('6.1 : Enregistrer est l’action primaire, Publier un acte secondaire', () => {
+    render(<EditorTopbar {...baseProps} dirtyCount={2} />);
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toHaveClass('primary');
+    expect(screen.getByRole('button', { name: 'Publier' })).not.toHaveClass('primary');
+  });
+
+  it('6.1 : le libellé occupé de Publier est « Publication… »', () => {
+    render(<EditorTopbar {...baseProps} publishing />);
+    expect(screen.getByRole('button', { name: 'Publication…' })).toBeInTheDocument();
+  });
+
   it('makes the validation chip a button that calls onShowBlockers', () => {
     const onShowBlockers = jest.fn();
     render(<EditorTopbar {...baseProps} blockerCount={2} onShowBlockers={onShowBlockers} />);

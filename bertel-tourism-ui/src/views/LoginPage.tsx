@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { env } from '../lib/env';
 import { getPostLoginPath, isSafeInternalPath } from '../lib/auth-routing';
 import { loginEmailSchema, type LoginFormValues } from '../lib/schemas';
 import { signInWithGoogle, signInWithEmailPassword } from '../services/auth';
@@ -84,9 +83,9 @@ export default function LoginPage() {
     <section className="auth-page">
       <div className="auth-hero">
         <span className="eyebrow">{brandName}</span>
-        <h1>Connexion a la plateforme tourisme & CRM</h1>
+        <h1>Connexion à la plateforme tourisme &amp; CRM</h1>
         <p>
-          Authentification principale via Google, session geree par Supabase, et adaptation automatique de l interface selon le role.
+          Authentification principale via Google, session gérée par Supabase, et adaptation automatique de l’interface selon le rôle.
         </p>
         {logoUrl ? <img src={logoUrl} alt={brandName} className="theme-preview-card__logo" /> : null}
       </div>
@@ -151,20 +150,16 @@ export default function LoginPage() {
             </Button>
 
             <p className="auth-note">
-              Assurez-vous que le provider Google est actif dans Supabase Auth et que l URL de redirection de cette application est autorisee.
+              Assurez-vous que le provider Google est actif dans Supabase Auth et que l’URL de redirection de cette application est autorisée.
             </p>
-            <div className="stack-list auth-runtime-list">
-              <span>Supabase URL: {env.supabaseUrl || 'non configure'}</span>
-              <span>Mode demo: non</span>
-            </div>
           </>
         ) : (
           <>
             <div className="panel-card">
-              <p>Le mode demo est actif. Vous pouvez entrer dans l application sans OAuth pour travailler le design et les parcours.</p>
+              <p>Le mode démo est actif. Vous pouvez entrer dans l’application sans OAuth pour travailler le design et les parcours.</p>
             </div>
             <Button type="button" className="w-full" onClick={() => setGuest(null)}>
-              Revenir a l ecran d accueil demo
+              Revenir à l’écran d’accueil démo
             </Button>
           </>
         )}

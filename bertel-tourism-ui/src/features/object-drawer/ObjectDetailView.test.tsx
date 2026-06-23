@@ -75,6 +75,24 @@ describe('ObjectDetailView', () => {
     });
   });
 
+  it('4.1 : affiche le bloc « Prochaines dates » d’un événement (FMA)', () => {
+    const data: ObjectDetail = {
+      id: 'evt-1',
+      name: 'Fete de la vanille',
+      type: 'FMA',
+      raw: { fma_occurrences: [{ id: 'o1', start_at: '2026-07-14', end_at: '2026-07-18', state: 'scheduled' }] },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.getByText('Prochaines dates')).toBeInTheDocument();
+    expect(screen.getByText(/Du .* au /)).toBeInTheDocument();
+  });
+
+  it('4.1 : aucun bloc dates pour un type sans occurrences', () => {
+    const data: ObjectDetail = { id: 's-1', name: 'Office de tourisme', type: 'SRV', raw: {} } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.queryByText('Prochaines dates')).not.toBeInTheDocument();
+  });
+
   it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',

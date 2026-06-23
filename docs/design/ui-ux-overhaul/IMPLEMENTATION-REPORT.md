@@ -181,21 +181,28 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 ### 7.3 — Fournisseurs IA : correction du P0 boutons nus ✅
 - `AiProviderSettings` utilisait `.btn`/`.pill-mini`, classes définies **uniquement** sous `.crm-app` ⇒ boutons natifs nus sur `/settings`. Portage sur le vocabulaire de l'app principale : `.primary-button` (Enregistrer), `.ghost-button` (Activer/Modifier/Supprimer/Nouveau/Tester), `.badge badge--ok` (pastille « actif »). Test composant vert (5).
 
+### 7.1 — Socle (label + diagnostic) ✅ (partiel)
+- **Fin du split EN/FR** : libellé de nav « Settings » → « Paramètres » (FR accentué) ; TopBar/ProfileDrawer accentués (vérifié navigateur). 
+- **Carte « Diagnostic »** remplace le dump debug « Runtime » : l'URL Supabase brute n'est plus exposée (configurée/à renseigner) ; accents FR de la section session/rôle.
+
 ### Restant (différé avec raison)
-- **7.1 Hub à rail** (`/settings` en console à panneaux par périmètre) + **7.2 Apparence/Marqueurs** (maître-détail) + **7.4 Team intégré** + **7.5 Listes & référentiels** (nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` + UI) : Phase la plus back-end (RPC + RLS + tests) ; chaque module = sa propre passe spec→plan→impl (cf. phase-7-parametres.md). 7.5 exige du nouveau back-end.
+- **7.1 Hub à rail complet** (`/settings` en console à panneaux par périmètre, état d'onglet en URL) : restructuration d'une page de 565 lignes, sections super-admin-gated peu vérifiables au navigateur ⇒ passe ciblée. Le label + le diagnostic (les P0/P2 visibles) sont faits.
+- **7.2 Apparence/Marqueurs** (maître-détail) + **7.4 Team intégré** (portage shadcn→maison + retrait route `/team`) + **7.5 Listes & référentiels** (nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` + UI) : modules volumineux ; 7.5 exige du **nouveau back-end**. Chaque module = sa propre passe spec→plan→impl (cf. phase-7-parametres.md).
 
 ---
 
 ## Synthèse de session (2026-06-23)
 
-**Livré + vérifié + committé sur `master`** (Jest tout vert à chaque porte, build exit 0, vérif navigateur en mode démo, revue adversariale Phases 1 & 2) :
-- **Phase 1** ✅ (fondations a11y/perf/thème + EmptyState) — `4423c82`
-- **Phase 2** ✅ (taxonomie unifiée + résolveurs de libellés) — `87f251d`
-- **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur) — `28b75bd`, `6e3465b`, + 3.2
-- **Phase 6** ✅ cœur (6.1 barre save re-priorisée · 6.2 clobber BlockASC)
-- **Phase 4.1** ✅ (fiche Événement : dates)
-- **Phase 5.3** ✅ partiel (login propre) · **Phase 7.3** ✅ (P0 boutons IA)
+**Livré + vérifié + committé sur `master`** (Jest tout vert à chaque porte — passée de **1728 à 1811**, build exit 0, vérif navigateur en mode démo, revue adversariale Phases 1 & 2) :
+- **Phase 1** ✅ (fondations a11y/perf/thème + EmptyState)
+- **Phase 2** ✅ (taxonomie unifiée + résolveurs de libellés)
+- **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur)
+- **Phase 4** ✅ blocs type-spécifiques **complets** (4.1 Événement/dates · 4.2 Restaurant/cuisine+menu · 4.3 Itinéraire/étapes réelles + Activité/object_act) + dead-ends retirés (S12). Reste : consolidation des 6 clones (refactor).
+- **Phase 5** ✅ partiel (5.1 hiérarchie dashboard · 5.3 login + pages stub honnêtes · anti-pattern side-stripe)
+- **Phase 6** ✅ cœur (6.1 barre save · 6.2 clobber BlockASC + divulgation progressive §07/§16 via primitive `Disclosure`)
+- **Phase 7** partiel (7.3 P0 boutons IA · 7.1 libellé « Paramètres » + carte Diagnostic)
+- **Transverse** : fausses affordances Explorer honnêtes, `.muted` ajouté, ~24 commits.
 
-**Principes tenus** : TDD (≈+90 tests ajoutés, 0 régression — la suite est passée d'environ 1728 à ≈1800 verts) ; aucune donnée fabriquée (méta absentes du payload documentées comme bloquant back-end, jamais inventées) ; aucun write-trap introduit ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.
+**Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.
 
-**Différés** : voir les blocs « Restant » de chaque phase. Les plus lourds (drawer config-driven 3588 lignes, dashboard/CRM, console settings + éditeur de référentiels back-end) sont des passes spec→plan→impl dédiées, sciemment hors d'une seule session sans-régression. Le mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) reste activable pour la vérif navigateur des phases suivantes.
+**Différés (passes dédiées spec→plan→impl)** : **vue drawer config-driven** (consolidation des 6 clones, 3588 l.) ; **CRM dé-modalisation** (985 l.) ; **console settings rail 7.1 + 7.2 Marqueurs + 7.4 Team + 7.5 éditeur de référentiels** (7.5 = nouveaux RPC back-end) ; sous-types SRV/VIS + méta carte (RPC) ; nav-roving/44px généralisé ; balayage des `—` existants ; suppression des 10 `Object*Panel.tsx` morts. Volumineux ou nécessitant du nouveau back-end — les bâcler violerait « vérification avant assertion » et « aucune régression ». Mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) activable pour la vérif navigateur des suites.

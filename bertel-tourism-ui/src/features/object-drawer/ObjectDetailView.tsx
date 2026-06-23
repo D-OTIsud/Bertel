@@ -36,6 +36,7 @@ import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { buildEventOccurrenceRows } from './event-occurrences';
+import { buildRestaurantMenuData } from './restaurant-menu';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
@@ -3309,6 +3310,50 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
   );
 }
 
+/**
+ * Bloc « Cuisine & carte » d'un restaurant (impl. 4.2). Cuisine + carte/menu
+ * structurée (sections → plats + prix + régimes), depuis le payload réel
+ * (`menus`/`cuisine_types`). Rendu seulement si la donnée existe (§104).
+ */
+function RestaurantMenuSection({ raw }: { raw: Record<string, unknown> }) {
+  const { cuisines, menus } = useMemo(() => buildRestaurantMenuData(raw), [raw]);
+  if (cuisines.length === 0 && menus.length === 0) {
+    return null;
+  }
+  return (
+    <Section id="detail-section-menu" title="Cuisine & carte" kicker="Au menu">
+      {cuisines.length > 0 ? (
+        <div className="detail-cuisine-row">
+          {cuisines.map((cuisine) => (
+            <span key={cuisine} className="detail-cuisine-chip">{cuisine}</span>
+          ))}
+        </div>
+      ) : null}
+      {menus.map((menu) => (
+        <div key={menu.key} className="detail-menu">
+          {menus.length > 1 ? <h4 className="detail-menu__title">{menu.title}</h4> : null}
+          {menu.sections.map((section) => (
+            <div key={section.name} className="detail-menu__section">
+              <span className="detail-menu__section-name">{section.name}</span>
+              <ul className="detail-menu__dishes">
+                {section.dishes.map((dish) => (
+                  <li key={dish.key} className="detail-menu__dish">
+                    <span className="detail-menu__dish-name">{dish.name}</span>
+                    {dish.dietary.length > 0 ? (
+                      <span className="detail-menu__dish-diet">{dish.dietary.join(' · ')}</span>
+                    ) : null}
+                    {dish.price ? <span className="detail-menu__dish-price">{dish.price}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ))}
+    </Section>
+  );
+}
+
 function RestaurantDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
@@ -3332,6 +3377,8 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
           <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
+        // 4.2 : cuisine + carte/menu en tête (les équipements ne sont pas en tête).
+        <RestaurantMenuSection key="menu" raw={raw} />,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
         <WeekScheduleSection key="schedule" openings={preview.openings} />,
         <PricingAndOpeningsSection

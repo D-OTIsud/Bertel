@@ -84,17 +84,10 @@ import {
   type TaxonomyGroup,
 } from './utils';
 import { measureAmenitiesLineClamp } from './amenities-line-clamp';
-import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta } from '../object-editor/archetypes';
+import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta, type ArchetypeCode } from '../object-editor/archetypes';
 
-const ACCOMMODATION_TYPES = new Set(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
-const RESTAURANT_TYPES = new Set(['RES']);
 // §48: FMA is no longer rendered as an itinerary — events fall through to GenericDetailView
 // (no trail/GPX panels); the editor gives them BlockFMA (object_fma dates/occurrences).
-const ITINERARY_TYPES = new Set(['ITI']);
-const ACTIVITY_TYPES = new Set(['ASC']);
-const VISITABLE_TYPES = new Set(['LOI', 'PCU', 'PRD']);
-const NATURAL_TYPES = new Set(['PNA']);
-const SERVICE_TYPES = new Set(['PSV', 'SRV', 'VIL', 'COM', 'SPU']);
 
 interface DetailViewProps {
   data: ObjectDetail;
@@ -157,6 +150,11 @@ export function buildDetailTabItems(preview: PreviewData, parsed: ParsedObjectDe
   ).length;
   const notesCount = preview.privateNotes.length;
 
+  // Onglets = sections réellement rendues (Phase 4) : « Aperçu » est toujours présent
+  // (l'aperçu se rend toujours) ; les autres n'apparaissent QUE si leur section a du
+  // contenu — fini l'onglet « Tarifs (0) » qui défile vers une ancre inexistante. Les
+  // sections de type (menu/dates/étapes/faits) sont data-gated en amont et n'ont pas
+  // d'onglet propre, par parité avec le comportement historique.
   return [
     { id: 'detail-section-overview', label: 'Aperçu' },
     { id: 'detail-section-amenities', label: 'Équipements', count: amenitiesCount },
@@ -164,7 +162,7 @@ export function buildDetailTabItems(preview: PreviewData, parsed: ParsedObjectDe
     { id: 'detail-section-hero', label: 'Médias', count: mediaCount },
     { id: 'detail-section-legal', label: 'Légal', count: legalCount },
     { id: 'detail-section-notes', label: 'Activité', count: notesCount },
-  ];
+  ].filter((tab) => tab.count === undefined || tab.count > 0);
 }
 
 function DetailTabs({ items }: { items: DetailTabItem[] }) {
@@ -3253,45 +3251,6 @@ function DetailScaffold({
   );
 }
 
-function AccommodationDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <RoomList key="rooms" rooms={preview.roomTypes} />,
-        <MeetingRoomList key="meetings" rooms={preview.meetingRooms} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
-  );
-}
-
 /**
  * Bloc « Cuisine & carte » d'un restaurant (impl. 4.2). Cuisine + carte/menu
  * structurée (sections → plats + prix + régimes), depuis le payload réel
@@ -3336,85 +3295,6 @@ function RestaurantMenuSection({ raw }: { raw: Record<string, unknown> }) {
   );
 }
 
-function RestaurantDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        // 4.2 : cuisine + carte/menu en tête (les équipements ne sont pas en tête).
-        <RestaurantMenuSection key="menu" raw={raw} />,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <WeekScheduleSection key="schedule" openings={preview.openings} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
-  );
-}
-
-function ItineraryDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <ItineraryStatsSection itinerary={preview.itinerary} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        <WaypointListSection key="waypoints" stages={buildItineraryStages(parsed.itinerary.details)} />,
-        <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
-  );
-}
-
 /**
  * Bloc « Fiche activité » (impl. 4.3) — faits d'une activité encadrée (object_act :
  * durée, participants, âge, niveau, encadrement, équipement). Rendu seulement si
@@ -3436,120 +3316,6 @@ function ActivityFactsSection({ raw }: { raw: Record<string, unknown> }) {
         ))}
       </dl>
     </Section>
-  );
-}
-
-function ActivityDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        // 4.3 : faits d'activité (object_act) en tête, avant les équipements.
-        <ActivityFactsSection key="activity" raw={raw} />,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
-  );
-}
-
-function VisitableDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <WeekScheduleSection key="schedule" openings={preview.openings} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
-  );
-}
-
-function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
-  const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
-  const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
-  const canSeeActors = useActorVisibility(preview.organizations);
-  const taxonomyGroups = useMemo(
-    () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
-    [preview.taxonomyGroups],
-  );
-  const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
-  const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
-
-  return (
-    <DetailScaffold
-      data={data}
-      preview={preview}
-      tabItems={tabItems}
-      mainSections={[
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
-    />
   );
 }
 
@@ -3578,7 +3344,56 @@ function EventOccurrencesSection({ occurrences }: { occurrences: Array<Record<st
   );
 }
 
-function GenericDetailView({ data, raw }: DetailViewProps) {
+export
+
+/**
+ * Phase 4 — vue de fiche pilotée par configuration. Remplace les 7 gabarits clonés
+ * (un par type) par UNE vue + une table `ARCHETYPE_SECTIONS` keyée par archétype
+ * (registre unique `TYPE_ARCHETYPES`). Chaque clone ne différait QUE par sa liste
+ * `mainSections` ; on l'exprime ici en tokens de section. L'aside est invariant
+ * (`buildAsideSections`), tout comme la chaîne de hooks/memos de préparation.
+ *
+ * Alignements sur le registre d'archétypes (déjà actés §48/§57, plus de dérive de
+ * gabarits) : ACT → archétype ASC ⇒ disposition Activité (faits object_act) ; PNA →
+ * archétype VIS ⇒ gagne un WeekScheduleSection (data-gated : null sans horaires). Tous
+ * les blocs spécifiques d'un type sont data-gated (rendent null hors de leur donnée),
+ * donc une section listée pour un archétype reste vide si l'objet n'a pas la donnée.
+ */
+type DrawerSectionKind =
+  | 'apercu'
+  | 'apercu-iti'
+  | 'events'
+  | 'rooms'
+  | 'meetingRooms'
+  | 'restaurantMenu'
+  | 'waypoints'
+  | 'itineraryPractical'
+  | 'activityFacts'
+  | 'amenities'
+  | 'weekSchedule'
+  | 'pricing'
+  | 'legal'
+  | 'notes';
+
+// Queue commune « équipements → (horaires) → tarifs → légal → notes ».
+const TAIL_WITH_SCHEDULE: DrawerSectionKind[] = ['amenities', 'weekSchedule', 'pricing', 'legal', 'notes'];
+const TAIL_NO_SCHEDULE: DrawerSectionKind[] = ['amenities', 'pricing', 'legal', 'notes'];
+
+// Exhaustif sur ArchetypeCode (pas de fallback silencieux d'archétype — invariant §46).
+const ARCHETYPE_SECTIONS: Record<ArchetypeCode, DrawerSectionKind[]> = {
+  HEB: ['apercu', 'amenities', 'rooms', 'meetingRooms', 'pricing', 'legal', 'notes'],
+  RES: ['apercu', 'restaurantMenu', ...TAIL_WITH_SCHEDULE],
+  ITI: ['apercu-iti', 'waypoints', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
+  ASC: ['apercu', 'activityFacts', ...TAIL_NO_SCHEDULE],
+  VIS: ['apercu', ...TAIL_WITH_SCHEDULE],
+  SRV: ['apercu', ...TAIL_WITH_SCHEDULE],
+  FMA: ['events', 'apercu', ...TAIL_WITH_SCHEDULE],
+};
+
+// Type sans archétype résolu (chaîne vide / inconnue) : disposition générique.
+const FALLBACK_DRAWER_SECTIONS = ARCHETYPE_SECTIONS.SRV;
+
+function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
   const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
@@ -3590,60 +3405,67 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
   const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
   const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
 
+  const archetype = getArchetypeMeta(data.type);
+  const kinds = (archetype && ARCHETYPE_SECTIONS[archetype.archetype]) ?? FALLBACK_DRAWER_SECTIONS;
+
+  const renderKind = (kind: DrawerSectionKind): ReactNode => {
+    switch (kind) {
+      case 'apercu':
+        return (
+          <ApercuRegion key="apercu">
+            <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+            <OverviewSection preview={preview} />
+            <TaxonomySection groups={taxonomyGroups} />
+          </ApercuRegion>
+        );
+      case 'apercu-iti':
+        return (
+          <ApercuRegion key="apercu">
+            <ItineraryStatsSection itinerary={preview.itinerary} />
+            <OverviewSection preview={preview} />
+            <TaxonomySection groups={taxonomyGroups} />
+          </ApercuRegion>
+        );
+      case 'events':
+        return <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />;
+      case 'rooms':
+        return <RoomList key="rooms" rooms={preview.roomTypes} />;
+      case 'meetingRooms':
+        return <MeetingRoomList key="meetings" rooms={preview.meetingRooms} />;
+      case 'restaurantMenu':
+        return <RestaurantMenuSection key="menu" raw={raw} />;
+      case 'waypoints':
+        return <WaypointListSection key="waypoints" stages={buildItineraryStages(parsed.itinerary.details)} />;
+      case 'itineraryPractical':
+        return <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />;
+      case 'activityFacts':
+        return <ActivityFactsSection key="activity" raw={raw} />;
+      case 'amenities':
+        return <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />;
+      case 'weekSchedule':
+        return <WeekScheduleSection key="schedule" openings={preview.openings} />;
+      case 'pricing':
+        return <PricingAndOpeningsSection key="pricing" prices={preview.prices} sectionId="detail-section-pricing" />;
+      case 'legal':
+        return <LegalSection key="legal" records={parsed.internal.legalRecords} />;
+      case 'notes':
+        return <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <DetailScaffold
       data={data}
       preview={preview}
       tabItems={tabItems}
-      mainSections={[
-        // 4.1 : un événement (FMA) mène par ses dates ; null pour les autres types.
-        <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />,
-        <ApercuRegion key="apercu">
-          <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} />
-          <TaxonomySection groups={taxonomyGroups} />
-        </ApercuRegion>,
-        <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
-        <WeekScheduleSection key="schedule" openings={preview.openings} />,
-        <PricingAndOpeningsSection
-          key="pricing"
-          prices={preview.prices}
-          sectionId="detail-section-pricing"
-        />,
-        <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-        <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
-      ]}
+      mainSections={kinds.map(renderKind)}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
   );
 }
 
 export function ObjectDetailView({ data, raw }: DetailViewProps) {
-  const objectType = (data.type ?? '').toUpperCase();
-
-  if (ACCOMMODATION_TYPES.has(objectType)) {
-    return <AccommodationDetailView data={data} raw={raw} />;
-  }
-  if (RESTAURANT_TYPES.has(objectType)) {
-    return <RestaurantDetailView data={data} raw={raw} />;
-  }
-  if (ITINERARY_TYPES.has(objectType)) {
-    return <ItineraryDetailView data={data} raw={raw} />;
-  }
-  if (ACTIVITY_TYPES.has(objectType)) {
-    return <ActivityDetailView data={data} raw={raw} />;
-  }
-  if (VISITABLE_TYPES.has(objectType)) {
-    return <VisitableDetailView data={data} raw={raw} />;
-  }
-  if (NATURAL_TYPES.has(objectType)) {
-    return <NaturalSiteDetailView data={data} raw={raw} />;
-  }
-  if (SERVICE_TYPES.has(objectType)) {
-    return <GenericDetailView data={data} raw={raw} />;
-  }
-
-  return <GenericDetailView data={data} raw={raw} />;
+  return <ConfigDrivenDetailView data={data} raw={raw} />;
 }
-
-

@@ -37,6 +37,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { cn } from '@/lib/utils';
 import { buildEventOccurrenceRows } from './event-occurrences';
 import { buildRestaurantMenuData } from './restaurant-menu';
+import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
+import { buildActivityFacts } from './activity-facts';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
@@ -2860,48 +2862,28 @@ function WeekScheduleSection({ openings }: { openings: OpeningItem[] }) {
   );
 }
 
-function WaypointListSection({ itinerary }: { itinerary: ItinerarySummary | null }) {
-  if (!itinerary) {
+/**
+ * Étapes RÉELLES de l'itinéraire (impl. 4.3) — depuis `object_iti_stage` (nom,
+ * type, description). Remplace l'ancienne fabrication par interpolation de
+ * distances. Rendu seulement si des étapes réelles existent (sinon null).
+ */
+function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
+  if (stages.length === 0) {
     return null;
   }
-  const stages = itinerary.stagesCount;
-  const sections = itinerary.sectionsCount;
-  const count = Math.max(stages, sections);
-  if (count < 2) {
-    return null;
-  }
-
-  const points: Array<{ num: string; name: string; meta: string }> = [];
-  const distanceKm = Number.parseFloat(itinerary.distanceKm || '');
-  const elevation = itinerary.elevationGain ? `+${itinerary.elevationGain} m` : '';
-
-  points.push({ num: 'D', name: 'Départ', meta: ['0.0 km', elevation].filter(Boolean).join(' · ') });
-  const interior = Math.max(0, count - 2);
-  for (let i = 1; i <= interior; i++) {
-    const fraction = i / (interior + 1);
-    const distLabel = Number.isFinite(distanceKm) && distanceKm > 0
-      ? `${(fraction * distanceKm).toFixed(1)} km`
-      : `Étape ${i}`;
-    points.push({ num: String(i + 1), name: `Étape ${i + 1}`, meta: distLabel });
-  }
-  points.push({
-    num: 'A',
-    name: 'Arrivée',
-    meta: Number.isFinite(distanceKm) && distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—',
-  });
-
   return (
-    <Section title="Profil & étapes">
+    <Section id="detail-section-stages" title="Étapes de l'itinéraire" kicker="Le parcours">
       <ol className="detail-waypoints">
-        {points.map((wp, idx) => (
-          <li key={`wp-${idx}`} className="detail-waypoint">
+        {stages.map((stage, idx) => (
+          <li key={stage.key} className="detail-waypoint">
             <span className="detail-waypoint__num" aria-hidden>
-              {wp.num}
+              {idx + 1}
             </span>
             <div className="detail-waypoint__body">
-              <strong className="detail-waypoint__name">{wp.name}</strong>
+              <strong className="detail-waypoint__name">{stage.name}</strong>
+              {stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
             </div>
-            <span className="detail-waypoint__meta">{wp.meta}</span>
+            {stage.kindLabel ? <span className="detail-waypoint__meta">{stage.kindLabel}</span> : null}
           </li>
         ))}
       </ol>
@@ -3417,7 +3399,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
           <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
-        <WaypointListSection key="waypoints" itinerary={preview.itinerary} />,
+        <WaypointListSection key="waypoints" stages={buildItineraryStages(parsed.itinerary.details)} />,
         <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
         <PricingAndOpeningsSection
@@ -3430,6 +3412,30 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
       ]}
       asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
     />
+  );
+}
+
+/**
+ * Bloc « Fiche activité » (impl. 4.3) — faits d'une activité encadrée (object_act :
+ * durée, participants, âge, niveau, encadrement, équipement). Rendu seulement si
+ * la donnée existe ; ne fabrique rien.
+ */
+function ActivityFactsSection({ raw }: { raw: Record<string, unknown> }) {
+  const facts = useMemo(() => buildActivityFacts(raw), [raw]);
+  if (facts.length === 0) {
+    return null;
+  }
+  return (
+    <Section id="detail-section-activity" title="Fiche activité" kicker="L'activité">
+      <dl className="detail-facts">
+        {facts.map((fact) => (
+          <div key={fact.label} className="detail-facts__row">
+            <dt className="detail-facts__label">{fact.label}</dt>
+            <dd className="detail-facts__value">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Section>
   );
 }
 
@@ -3456,6 +3462,8 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
           <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
+        // 4.3 : faits d'activité (object_act) en tête, avant les équipements.
+        <ActivityFactsSection key="activity" raw={raw} />,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
         <PricingAndOpeningsSection
           key="pricing"

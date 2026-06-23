@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5.3 · Unification design system &amp; pages secondaires · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .stage-block { margin-bottom:26px; }
+  .stage-block:last-child { margin-bottom:0; }
+  .block-kick { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--teal); margin-bottom:10px; }
+
+  .perm-wrap { display:flex; flex-wrap:wrap; gap:6px; }
+
+  /* Carte de confirmation dangereuse (motif ConfirmDialog) */
+  .confirm {
+    max-width:420px; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r-md); box-shadow:var(--shadow-m); padding:20px; margin-top:14px;
+  }
+  .confirm__top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .confirm__ic { width:38px; height:38px; border-radius:10px; background:var(--danger-soft); color:var(--danger); display:flex; align-items:center; justify-content:center; }
+  .confirm__title { font-weight:800; }
+  .confirm__txt { font-size:14px; color:var(--ink-2); margin:6px 0 16px; }
+  .confirm__bar { display:flex; gap:10px; justify-content:flex-end; }
+
+  /* Carte de connexion */
+  .login {
+    max-width:380px; margin:0 auto; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--r-lg); box-shadow:var(--shadow-m); padding:30px 28px;
+  }
+  .login__brand { font-family:'Sora', sans-serif; font-weight:700; font-size:22px; color:var(--teal); text-align:center; }
+  .login__sub { text-align:center; color:var(--muted); font-size:14px; margin:4px 0 22px; }
+  .login .field { margin-bottom:14px; }
+  .login .btn--primary { width:100%; justify-content:center; margin-top:6px; }
+  .login__foot { text-align:center; font-size:13px; margin-top:16px; }
+
+  .page-header { display:flex; align-items:center; justify-content:space-between; gap:14px; padding-bottom:14px; margin-bottom:4px; border-bottom:1px solid var(--line-soft); }
+  .page-header h2 { font-size:20px; }
+  .ann-note { display:flex; gap:10px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface-2); font-size:13px; color:var(--ink-2); margin-top:14px; }
+  .ann-note .material-symbols-outlined { color:var(--info); }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 5 · Implémentation 5.3</span>
+    <h1>Unification design system &amp; pages secondaires</h1>
+    <p class="lead">Team et RGPD sont construits dans un vocabulaire Tailwind/shadcn étranger (on dirait un autre produit) ; les pages stub (audits/modération/publications) affichent en production un hero au-dessus d'une liste vide avec des boutons inertes ; la page de connexion laisse fuiter du texte de debug. On porte tout sur le vocabulaire maison et on assainit ces surfaces.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- A · Team rebâti en vocabulaire maison -->
+    <div class="stage-block">
+      <div class="block-kick">A · Team · vocabulaire maison</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">composants shadcn importés, look « autre produit »</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+      <div class="panel">
+        <div class="panel__head">
+          <h2>Membres de l'équipe</h2>
+          <button class="btn btn--primary"><span class="material-symbols-outlined">person_add</span> Inviter</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>Membre</th><th>Rôle</th><th>Permissions</th><th style="text-align:right">Actions</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Marie Robert</b><div class="micro muted">m.robert@otisud.re</div></td>
+              <td><span class="badge badge--info">Administratrice d'ORG</span></td>
+              <td><span class="perm-wrap"><span class="chip">Publier</span><span class="chip">Éditer canonique</span><span class="chip">CRM</span></span></td>
+              <td style="text-align:right"><button class="btn btn--sm btn--secondary">Modifier</button> <button class="btn btn--sm btn--danger">Retirer</button></td>
+            </tr>
+            <tr>
+              <td><b>Jean-Paul Hoarau</b><div class="micro muted">jp.hoarau@otisud.re</div></td>
+              <td><span class="badge badge--ok">Éditeur</span></td>
+              <td><span class="perm-wrap"><span class="chip">Éditer enrichissement</span></span></td>
+              <td style="text-align:right"><button class="btn btn--sm btn--secondary">Modifier</button> <button class="btn btn--sm btn--danger">Retirer</button></td>
+            </tr>
+            <tr>
+              <td><b>Sylvie Fontaine</b><div class="micro muted">s.fontaine@otisud.re</div></td>
+              <td><span class="badge">Lecture seule</span></td>
+              <td><span class="muted small">Aucune permission d'écriture</span></td>
+              <td style="text-align:right"><button class="btn btn--sm btn--secondary">Modifier</button> <button class="btn btn--sm btn--danger">Retirer</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="confirm" role="alertdialog" aria-label="Confirmer le retrait">
+        <div class="confirm__top">
+          <span class="confirm__ic"><span class="material-symbols-outlined">warning</span></span>
+          <span class="confirm__title">Retirer Sylvie Fontaine&nbsp;?</span>
+        </div>
+        <p class="confirm__txt">Elle perdra immédiatement l'accès à la plateforme. Cette action est réversible en la réinvitant.</p>
+        <div class="confirm__bar">
+          <button class="btn btn--secondary">Annuler</button>
+          <button class="btn btn--danger"><span class="material-symbols-outlined">person_remove</span> Retirer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B · Page stub honnête -->
+    <div class="stage-block">
+      <div class="block-kick">B · Page stub honnête</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">hero + liste vide + boutons morts en prod</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+      <div class="panel">
+        <div class="panel__body">
+          <div class="page-header">
+            <div>
+              <h2>Modération</h2>
+              <p class="micro muted" style="margin-top:2px">Avis et signalements des contributeurs</p>
+            </div>
+            <span class="badge badge--warn">À venir</span>
+          </div>
+          <div class="empty">
+            <span class="empty__icon"><span class="material-symbols-outlined">construction</span></span>
+            <div class="empty__title">Disponible au lot 4</div>
+            <div class="empty__text">La modération des avis arrive avec le lot 4. Aucune action n'est disponible pour le moment ; cette page ne présente plus de boutons inactifs.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C · Connexion assainie -->
+    <div class="stage-block">
+      <div class="block-kick">C · Connexion assainie</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">texte de debug visible · accents manquants</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+      <div class="login">
+        <div class="login__brand">Bertel</div>
+        <div class="login__sub">Connexion à la plateforme</div>
+        <div class="field"><label>E-mail</label><input class="input" type="email" placeholder="vous@otisud.re"></div>
+        <div class="field"><label>Mot de passe</label><input class="input" type="password" placeholder="••••••••"></div>
+        <button class="btn btn--primary">Se connecter</button>
+        <div class="login__foot"><a href="#">Mot de passe oublié&nbsp;?</a></div>
+      </div>
+      <p class="muted small" style="text-align:center;margin-top:12px">Aucun texte de runtime/debug n'est exposé sur cette surface publique ; tous les libellés sont accentués.</p>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">On porte Team et RGPD sur le système maison (panel/btn/chip), on rend les pages stub honnêtes en production (EmptyState « à venir » plutôt que des UIs de démo inertes), et on nettoie la connexion publique.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Team et RGPD passent des composants Tailwind/shadcn au vocabulaire maison (<code>.panel .btn .badge .chip .table</code>) : un seul langage visuel.</li>
+          <li>Rôles affichés en libellés FR (« Administratrice d'ORG », « Éditeur », « Lecture seule »), pas des codes.</li>
+          <li>Confirmation de retrait via un <code>ConfirmDialog</code> thémé maison (bouton <code>.btn--danger</code>), plus la boîte shadcn.</li>
+          <li>Pages stub (audits/modération/publications) : rendu <code>EmptyState</code> « à venir » en prod, sans boutons morts ni liste vide trompeuse.</li>
+          <li>Connexion : retrait du texte de debug runtime ; tous les libellés accentués (« Connexion à la plateforme »).</li>
+        </ul>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/team/*</code>, <code>src/views/TeamAdminPage.tsx</code> : portage vocabulaire maison.</li>
+          <li><code>src/views/RgpdErasurePage.tsx</code> : portage vocabulaire maison.</li>
+          <li>Pages stub : rendre l'EmptyState « à venir » en production au lieu des UIs de démo inertes.</li>
+          <li><code>src/views/LoginPage.tsx</code> : retirer le texte de debug (ligne 156) ; accentuer les libellés.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Un seul vocabulaire visuel dans toute l'app (plus de split design-system).</li>
+          <li>Aucun module inerte / d'apparence morte en production.</li>
+          <li>Aucun texte de debug sur une surface publique.</li>
+          <li>Tous les libellés français correctement accentués sur les surfaces maison.</li>
+          <li>Confirmation dangereuse via le ConfirmDialog maison, bouton <code>danger</code>.</li>
+          <li>Tab clavier : anneau de focus visible sur tableaux, boutons, champs de connexion.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">palette</span>
+          <span>L'objectif est qu'aucune page ne « ressemble à un autre produit » : Team, RGPD, stubs et connexion adoptent les mêmes tokens et composants que l'explorateur et l'éditeur.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

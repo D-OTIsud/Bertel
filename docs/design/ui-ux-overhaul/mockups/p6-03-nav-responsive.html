@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6.3 · Navigation éditeur &amp; responsive · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .layout { display: grid; grid-template-columns: 260px 1fr; gap: 22px; align-items: start; }
+
+  /* ---- nav éditeur groupée ---- */
+  .enav { padding: 12px; }
+  .enav__root { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 4px 10px 10px; }
+  .enav__group { margin-bottom: 14px; }
+  .enav__title { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--teal-deep); padding: 4px 10px; }
+  .enav__item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; min-height: 44px; border: 0; background: none;
+    border-radius: var(--r-sm); color: var(--ink-2); font: inherit;
+    font-weight: 600; font-size: 14px; cursor: pointer; text-align: left;
+  }
+  .enav__item:hover { background: var(--surface-2); }
+  .enav__item.is-on { background: var(--teal-tint); color: var(--teal-deep); }
+  .enav__item.is-focus { outline: 2px solid var(--ring); outline-offset: -2px; }
+  .enav__item.is-disabled { cursor: not-allowed; }
+  .enav__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+  .enav__dot.ok { background: var(--ok); box-shadow: none; }
+  .enav__dot.warn { background: var(--warn); box-shadow: none; }
+  .enav__dot.req { background: var(--danger); box-shadow: none; }
+  .enav__label { flex: 1; min-width: 0; }
+  .enav__stat { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .enav__stat.req { color: var(--danger); }
+  .enav__reason { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+
+  /* ---- corps éditeur (placeholder) ---- */
+  .ebody { padding: 18px; min-height: 420px; }
+  .ebody__field { margin-bottom: 14px; }
+  .ph { height: 12px; border-radius: 6px; background: var(--surface-2); }
+  .ph.lg { height: 38px; }
+
+  /* ---- frame tablette ---- */
+  .tablet { margin-top: 30px; max-width: 420px; }
+  .tablet__chrome {
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: var(--surface); box-shadow: var(--shadow-m); overflow: hidden;
+  }
+  .tablet__bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); }
+  .seg {
+    display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-pill);
+    overflow: hidden; background: var(--surface);
+  }
+  .seg button { border: 0; background: none; font: inherit; font-weight: 600; font-size: 13px; padding: 8px 12px; min-height: 44px; cursor: pointer; color: var(--muted); }
+  .seg button.is-on { background: var(--teal); color: #fff; }
+  .tablet__select {
+    flex: 1; display: flex; align-items: center; gap: 8px; min-height: 44px;
+    padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
+    background: var(--surface); font-weight: 600; font-size: 13px;
+  }
+  .tablet__select .material-symbols-outlined { margin-left: auto; color: var(--muted); }
+  .tablet__body { padding: 16px; }
+
+  .touch-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 4px 10px; border-radius: var(--r-pill); margin-top: 12px; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 6 · Implémentation 6.3</span>
+    <h1>Navigation éditeur &amp; responsive</h1>
+    <p class="lead">La nav latérale aligne aujourd'hui des numéros non contigus (01..22 avec des trous), sans anneau de focus ni navigation clavier, et l'éditeur n'a aucune mise en page responsive. On passe à des libellés groupés contigus, on ajoute le focus + le roving clavier, on rend visibles les raisons de désactivation et on replie la nav sous 1024 px.</p>
+  </div>
+
+  <div class="mock-stage">
+    <div class="layout">
+
+      <!-- ===== nav desktop ===== -->
+      <nav class="panel enav" aria-label="Sections de la fiche">
+        <div class="enav__root">Sections de la fiche</div>
+
+        <div class="enav__group">
+          <div class="enav__title">Identité</div>
+          <button class="enav__item is-on"><span class="enav__dot ok"></span><span class="enav__label">Présentation</span><span class="enav__stat">4/4</span></button>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Description</span></button>
+          <button class="enav__item"><span class="enav__dot warn"></span><span class="enav__label">Contacts &amp; web</span><span class="enav__stat">2/3</span></button>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Médias</span><span class="enav__stat">6/6</span></button>
+        </div>
+
+        <div class="enav__group">
+          <div class="enav__title">Caractéristiques</div>
+          <button class="enav__item is-focus"><span class="enav__dot warn"></span><span class="enav__label">Capacité &amp; accueil</span><span class="enav__stat">4/6</span></button>
+          <button class="enav__item"><span class="enav__dot req"></span><span class="enav__label">Accessibilité</span><span class="enav__stat req">À compléter</span></button>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Équipements</span></button>
+        </div>
+
+        <div class="enav__group">
+          <div class="enav__title">Tarifs &amp; ouverture</div>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Tarifs &amp; extras</span><span class="enav__stat">3/3</span></button>
+          <button class="enav__item"><span class="enav__dot warn"></span><span class="enav__label">Horaires &amp; saisons</span><span class="enav__stat">1/2</span></button>
+        </div>
+
+        <div class="enav__group">
+          <div class="enav__title">Liens &amp; territoire</div>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Relations</span></button>
+          <button class="enav__item"><span class="enav__dot warn"></span><span class="enav__label">Lieux &amp; étapes</span><span class="enav__stat">2/3</span></button>
+          <button class="enav__item is-disabled"><span class="enav__dot"></span><span class="enav__label">Itinéraire<span class="enav__reason">Réservé aux fiches de type Itinéraire</span></span></button>
+        </div>
+
+        <div class="enav__group">
+          <div class="enav__title">Gestion</div>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Juridique</span></button>
+          <button class="enav__item"><span class="enav__dot warn"></span><span class="enav__label">Suivi prestataire</span></button>
+          <button class="enav__item"><span class="enav__dot ok"></span><span class="enav__label">Publication</span></button>
+        </div>
+      </nav>
+
+      <!-- ===== corps ===== -->
+      <div class="panel ebody">
+        <div class="row between" style="margin-bottom:16px">
+          <h2>Capacité &amp; accueil</h2>
+          <span class="badge badge--warn">4/6 renseignés</span>
+        </div>
+        <div class="ebody__field"><div class="ph" style="width:30%;margin-bottom:6px"></div><div class="ph lg"></div></div>
+        <div class="ebody__field"><div class="ph" style="width:24%;margin-bottom:6px"></div><div class="ph lg"></div></div>
+        <div class="ebody__field"><div class="ph" style="width:38%;margin-bottom:6px"></div><div class="ph lg"></div></div>
+        <p class="muted small" style="margin-top:18px">Le corps reflète l'item de nav actif (scroll-spy). Le roving clavier déplace le focus d'un item à l'autre via ↑ / ↓ sans Tab à répétition.</p>
+      </div>
+
+    </div>
+
+    <div class="legend">
+      <span><span class="enav__dot ok"></span> Complet</span>
+      <span><span class="enav__dot warn"></span> Partiel</span>
+      <span><span class="enav__dot req"></span> Bloqueur</span>
+      <span><span class="enav__dot"></span> Vide / non applicable</span>
+    </div>
+
+    <!-- ===== tablette ===== -->
+    <div class="tablet">
+      <div class="row" style="margin-bottom:8px"><span class="tag-after">Tablette &lt; 1024 px</span><span class="muted small" style="margin-left:8px">nav repliée en haut, corps pleine largeur</span></div>
+      <div class="tablet__chrome">
+        <div class="tablet__bar">
+          <div class="seg">
+            <button class="is-on">Sections</button>
+            <button>Outils</button>
+          </div>
+          <div class="tablet__select">
+            <span class="enav__dot warn"></span> Capacité &amp; accueil
+            <span class="material-symbols-outlined">expand_more</span>
+          </div>
+        </div>
+        <div class="tablet__body">
+          <div class="row between" style="margin-bottom:12px">
+            <h3>Capacité &amp; accueil</h3>
+            <span class="badge badge--warn">4/6</span>
+          </div>
+          <div class="ebody__field"><div class="ph" style="width:40%;margin-bottom:6px"></div><div class="ph lg"></div></div>
+          <div class="ebody__field"><div class="ph" style="width:30%;margin-bottom:6px"></div><div class="ph lg"></div></div>
+        </div>
+      </div>
+      <span class="touch-note"><span class="material-symbols-outlined" style="font-size:16px">touch_app</span> Cibles tactiles ≥ 44 px (items de nav, segment, sélecteur)</span>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Refonte de la nav (libellés groupés contigus) + clavier + raisons visibles + mise en page responsive. Le numéro de section reste l'ancre interne, il n'est plus affiché.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Abandon des chips numériques non contigus au profit de <b>libellés groupés</b> (Identité / Caractéristiques / Tarifs &amp; ouverture / Liens &amp; territoire / Gestion).</li>
+          <li>Indices de complétude (« 4/6 ») et pastille de bloqueur (point rouge) par item.</li>
+          <li><code>:focus-visible</code> + <b>roving clavier</b> (↑/↓) entre les items de nav.</li>
+          <li>Les raisons de désactivation sortent du <code>title</code> et deviennent du <b>texte visible</b> en muted sous le libellé.</li>
+          <li>Responsive : sous ~1024 px la nav se replie en sélecteur / segment en haut, le corps passe en pleine largeur ; cibles tactiles ≥ 44 px.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/object-editor/shell/EditorNav.tsx</code> : libellés groupés, suppression de <code>edit-nav__num</code>, focus + roving, raison visible au lieu de <code>title</code>.</li>
+          <li><code>section-config.ts</code> : groupes contigus + libellés + raison de désactivation par item.</li>
+          <li><code>object-editor.css</code> : media queries (&lt; 1024 px), nav repliée, cibles 44 px, <code>:focus-visible</code>.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>La nav se lit comme contiguë (plus de numéros à trous).</li>
+          <li>Roving clavier + anneau de focus visible.</li>
+          <li>Utilisable en largeur tablette (nav repliée, corps pleine largeur).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

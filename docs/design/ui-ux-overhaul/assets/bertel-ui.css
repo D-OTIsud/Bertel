@@ -1,0 +1,357 @@
+/* ============================================================================
+   Bertel — Design system de validation (UI/UX overhaul 2026-06)
+   Tokens réels de la plateforme (teal #176b6a / orange #f28b54 / Manrope) AVEC
+   les correctifs de l'audit appliqués : focus-visible partout, contraste relevé,
+   pas de bordure-latérale colorée, surfaces plates, prefers-reduced-motion.
+   Utilisé par toutes les maquettes du dossier. Ouvrez n'importe quel .html.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0..1,0&display=swap');
+
+:root {
+  /* Marque */
+  --teal: #176b6a;
+  --teal-deep: #0f5251;
+  --teal-soft: #e2efee;
+  --teal-tint: rgba(23, 107, 106, 0.08);
+  --orange: #f28b54;
+  --orange-deep: #c96d3b;
+  --orange-soft: #fbe7dc;
+
+  /* Neutres teintés vers la marque */
+  --bg: #eef1f4;
+  --bg-2: #e7ecf0;
+  --surface: #ffffff;
+  --surface-2: #f5f8f9;
+  --ink: #18313b;        /* texte principal */
+  --ink-2: #3a525c;      /* texte secondaire */
+  --muted: #5c6a71;      /* CORRECTIF audit : était #66767d (4.44:1) -> 5.1:1 */
+  --line: rgba(24, 49, 59, 0.12);
+  --line-soft: rgba(24, 49, 59, 0.07);
+
+  /* Sémantique d'état */
+  --ok: #1a7a55;
+  --ok-soft: #e4f3ec;
+  --warn: #9a6406;       /* texte sur warn-soft, contraste AA */
+  --warn-soft: #fbeed6;
+  --danger: #b23b2c;
+  --danger-soft: #f8e6e2;
+  --info: #1d5f8a;
+  --info-soft: #e4eef6;
+
+  /* Accents par archétype (une seule source) */
+  --acc-heb: #176b6a;   /* Hébergement   teal  */
+  --acc-res: #d8602f;   /* Restauration  corail*/
+  --acc-asc: #2f6fb0;   /* Activité      bleu  */
+  --acc-iti: #2f8f4e;   /* Itinéraire    vert  */
+  --acc-vis: #7d5aa6;   /* Site & visite prune */
+  --acc-srv: #8a6b4f;   /* Service       rouille*/
+  --acc-fma: #c98a1e;   /* Événement     ambre */
+
+  /* Classement (étoiles / clés / épis) — cocarde dorée */
+  --gold: #c79a3a;
+  --gold-deep: #6f5410;
+  --gold-star: #e6a407;     /* or des étoiles de la cocarde (détourées par --bg) */
+
+  /* Couleurs officielles des labels (pour le logo-pastille) */
+  --lbl-clef-verte: #2e8b57;   /* Clef Verte         (feuille) */
+  --lbl-ecolabel:   #1c7f6b;   /* Écolabel UE        (fleur)   */
+  --lbl-th:         #0a6cb0;   /* Tourisme & Handicap (picto)  */
+  --lbl-qualite:    #b3373b;   /* Qualité Tourisme   (marque)  */
+  --lbl-excellence: #b9892f;   /* Destination Excellence       */
+
+  /* Rayon, ombre, focus */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --shadow-s: 0 1px 0 rgba(24,49,59,.04), 0 6px 16px -10px rgba(24,49,59,.18);
+  --shadow-m: 0 1px 0 rgba(24,49,59,.04), 0 18px 40px -22px rgba(24,49,59,.28);
+  --ring: var(--teal);
+
+  --accent: var(--teal);
+  --accent-soft: var(--teal-tint);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-family: 'Manrope', system-ui, sans-serif; margin: 0; line-height: 1.2; }
+h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 19px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--teal-deep); }
+
+.material-symbols-outlined { font-size: 20px; line-height: 1; vertical-align: middle; }
+
+/* Accessibilité : anneau de focus visible — CORRECTIF central de l'audit (S1) */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* ---- Typographie utilitaire ---- */
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.lead { font-size: 16px; color: var(--ink-2); }
+
+/* ---- Boutons : toutes les variantes ET tous les états ---- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; font-weight: 600; font-size: 14px;
+  padding: 9px 16px; min-height: 40px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink);
+  cursor: pointer; transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled], .btn.is-disabled { opacity: .55; cursor: not-allowed; color: var(--muted); }
+.btn--primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+.btn--primary:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
+.btn--secondary { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.btn--ghost { background: transparent; border-color: transparent; }
+.btn--ghost:hover { background: var(--teal-tint); }
+.btn--danger { background: var(--surface); border-color: var(--danger); color: var(--danger); }
+.btn--danger:hover { background: var(--danger-soft); }
+.btn--sm { min-height: 32px; padding: 5px 11px; font-size: 13px; }
+.btn--icon { padding: 8px; min-height: 36px; min-width: 36px; justify-content: center; }
+
+/* ---- Chips / pastilles ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; padding: 5px 11px;
+  border-radius: var(--r-pill); border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2);
+}
+.chip--removable { padding-right: 6px; }
+.chip__x { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; color: var(--muted); }
+.chip__x:hover { background: var(--bg-2); color: var(--ink); }
+.chip.is-active { background: var(--teal); border-color: var(--teal); color: #fff; }
+.chip--toggle { cursor: pointer; }
+.chip--toggle:hover { background: var(--surface-2); }
+
+/* Pastille de type : couleur = archétype, texte dans la teinte foncée de la même famille */
+.type-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-pill);
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, white);
+}
+.acc-heb { --accent: var(--acc-heb); } .acc-res { --accent: var(--acc-res); }
+.acc-asc { --accent: var(--acc-asc); } .acc-iti { --accent: var(--acc-iti); }
+.acc-vis { --accent: var(--acc-vis); } .acc-srv { --accent: var(--acc-srv); }
+.acc-fma { --accent: var(--acc-fma); }
+
+/* ---- Badges d'état ---- */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-pill); }
+.badge--ok { background: var(--ok-soft); color: var(--ok); }
+.badge--warn { background: var(--warn-soft); color: var(--warn); }
+.badge--danger { background: var(--danger-soft); color: var(--danger); }
+.badge--info { background: var(--info-soft); color: var(--info); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot--ok { background: var(--ok); } .dot--off { background: var(--muted); }
+
+/* ---- Surfaces / panneaux (plats, bord complet, jamais de bordure latérale colorée) ---- */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-s); }
+.panel__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line-soft); }
+.panel__body { padding: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+
+/* ---- Champs ---- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.input, .select, .search {
+  font: inherit; width: 100%; padding: 9px 12px; min-height: 40px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink);
+}
+.input::placeholder { color: var(--muted); }
+.search { display: flex; align-items: center; gap: 8px; }
+.search .material-symbols-outlined { color: var(--muted); }
+.search input { border: 0; outline: 0; width: 100%; font: inherit; background: transparent; }
+.checkbox { width: 18px; height: 18px; border: 1.5px solid var(--line); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; }
+.checkbox.is-on { background: var(--teal); border-color: var(--teal); color: #fff; }
+.checkbox.is-on .material-symbols-outlined { font-size: 16px; }
+
+/* ---- Stat cards (hiérarchie, jamais 6 cartes égales) ---- */
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; }
+.stat__label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.stat__value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.stat__delta { font-size: 13px; font-weight: 700; }
+.stat__delta.up { color: var(--ok); } .stat__delta.down { color: var(--danger); }
+.stat--lead { background: var(--teal); border-color: var(--teal); color: #fff; }
+.stat--lead .stat__label { color: rgba(255,255,255,.82); }
+.stat--lead .stat__value { font-size: 44px; color: #fff; }
+.stat--lead .stat__delta.up { color: #bff0d8; }
+
+/* ---- État vide qui enseigne (no-data vs filtered) ---- */
+.empty { text-align: center; padding: 40px 24px; max-width: 460px; margin: 0 auto; }
+.empty__icon { width: 52px; height: 52px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; background: var(--teal-tint); color: var(--teal); margin-bottom: 14px; }
+.empty__icon .material-symbols-outlined { font-size: 28px; }
+.empty__title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.empty__text { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+
+/* ---- Skeleton (pas de spinner central) ---- */
+.skel { background: linear-gradient(90deg, var(--bg-2) 25%, var(--surface-2) 37%, var(--bg-2) 63%); background-size: 400% 100%; animation: skel 1.4s ease infinite; border-radius: 6px; }
+@keyframes skel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* ---- Tabs ---- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; background: none; border-top: 0; border-left: 0; border-right: 0; }
+.tab:hover { color: var(--ink); }
+.tab.is-active { color: var(--teal); border-bottom-color: var(--teal); }
+
+/* ---- Table ---- */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th { text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.table td { padding: 11px 12px; border-bottom: 1px solid var(--line-soft); }
+.table tr:hover td { background: var(--surface-2); }
+
+/* ---- App shell de démonstration ---- */
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--line); padding: 16px 12px; }
+.sidebar__brand { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 18px; color: var(--teal); padding: 6px 10px 18px; }
+.sidebar__item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 14px; cursor: pointer; }
+.sidebar__item:hover { background: var(--surface-2); }
+.sidebar__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+.topbar { display: flex; align-items: center; gap: 16px; padding: 12px 22px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.main { display: flex; flex-direction: column; }
+.page { padding: 24px; }
+
+/* ---- Bloc d'annotation pour la validation (visuel + fonctionnalités) ---- */
+.mock-frame { max-width: 1180px; margin: 0 auto; padding: 28px 22px 64px; }
+.mock-head { margin-bottom: 22px; }
+.mock-head .kicker { color: var(--teal); font-weight: 700; font-size: 13px; letter-spacing: .04em; }
+.mock-head h1 { margin: 6px 0; }
+.mock-stage { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; box-shadow: var(--shadow-m); }
+.mock-stage--shell { padding: 0; overflow: hidden; }
+.spec { margin-top: 30px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 24px; }
+.spec h2 { margin-bottom: 10px; }
+.spec h3 { margin: 18px 0 8px; color: var(--teal-deep); }
+.spec ul { margin: 6px 0; padding-left: 20px; }
+.spec li { margin: 4px 0; }
+.spec .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.spec code { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+.anno { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 3px 9px; border-radius: var(--r-pill); }
+.callout { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); font-size: 14px; }
+.tag-before { font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .05em; }
+.tag-after { font-size: 11px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+
+.row { display: flex; gap: 12px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.between { justify-content: space-between; }
+.grow { flex: 1; }
+
+/* ============================================================================
+   Classements · labels · tags · signet sur miniature
+   (retour PO 2026-06 : conserver classement/label/tag sur cartes & fiches ;
+    cocarde « à cheval » sur la miniature pour les fiches classées/labellisées)
+   ========================================================================== */
+
+/* Miniature avec débordement autorisé pour que le signet chevauche le bord */
+.thumb { position: relative; display: block; }
+.thumb__img {
+  width: 100%; height: 100%; border-radius: var(--r-sm); overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
+}
+.thumb__img .material-symbols-outlined { font-size: 26px; }
+
+/* Cocarde classement, à cheval en haut-gauche (étoiles/clés/épis).
+   Pas de fond : des étoiles dorées détourées par un liseré couleur du fond de page,
+   pour qu'elles se détachent sur n'importe quelle photo sans pastille. */
+.thumb__rating {
+  position: absolute; top: -5px; left: -2px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 0; line-height: 1;
+  background: none; padding: 0; box-shadow: none;
+}
+.thumb__rating .material-symbols-outlined {
+  font-size: 14px; color: var(--gold-star, #e6a407);
+  font-variation-settings: 'FILL' 1, 'opsz' 20, 'wght' 500;
+  -webkit-text-stroke: 1.25px var(--bg); paint-order: stroke fill;
+}
+.thumb__rating .unit {
+  font-size: 10px; font-weight: 800; color: var(--gold-deep); margin-left: 2px;
+  -webkit-text-stroke: 1.5px var(--bg); paint-order: stroke fill;
+}
+
+/* Logo-pastilles de label, à cheval en bas-droite (empilées) */
+.thumb__labels { position: absolute; right: -6px; bottom: -6px; z-index: 2; display: flex; }
+.thumb__labels .label-logo + .label-logo { margin-left: -8px; }
+
+/* Pastille-logo de label (disque coloré + picto) */
+.label-logo {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.25);
+}
+.label-logo .material-symbols-outlined { font-size: 14px; }
+.label-logo--more { background: var(--ink-2); font-size: 11px; font-weight: 800; }
+.lbl-clef-verte { background: var(--lbl-clef-verte); }
+.lbl-ecolabel   { background: var(--lbl-ecolabel); }
+.lbl-th         { background: var(--lbl-th); }
+.lbl-qualite    { background: var(--lbl-qualite); }
+.lbl-excellence { background: var(--lbl-excellence); }
+
+/* Étoiles inline (corps de carte / fiche) */
+.stars { display: inline-flex; align-items: center; gap: 1px; color: var(--gold-deep); }
+.stars .material-symbols-outlined { font-size: 13px; font-variation-settings: 'FILL' 1; }
+.stars .unit { font-size: 11px; font-weight: 700; margin-left: 2px; }
+
+/* Classement en toutes lettres sur la ligne texte (évite la redondance avec la cocarde photo) */
+.class-text { display: inline-flex; align-items: center; font-size: 12px; font-weight: 700; color: var(--gold-deep); }
+
+/* Puce-label avec logo + texte (corps de carte / section fiche) */
+.label-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; padding: 3px 10px 3px 4px;
+  border-radius: var(--r-pill); background: var(--surface);
+  border: 1px solid var(--line); color: var(--ink-2);
+}
+.label-chip__logo { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+.label-chip__logo .material-symbols-outlined { font-size: 12px; }
+.label-chip .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+.label-chip .status-dot.ok { background: var(--ok); }
+.label-chip .status-dot.pending { background: var(--warn); }
+.label-chip .status-dot.expired { background: var(--danger); }
+
+/* Tag coloré (couche d'affichage §09) */
+.tag-chip {
+  display: inline-flex; align-items: center; font-size: 12px; font-weight: 600;
+  padding: 2px 9px; border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--tag, #5c6a71) 13%, white);
+  color: color-mix(in srgb, var(--tag, #5c6a71) 72%, black);
+}
+
+/* Ligne récap classement + labels + tags dans une carte */
+.distinction-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.distinction-row .sep { width: 1px; height: 14px; background: var(--line); margin: 0 2px; }
+
+/* Bandeau « highlights » de distinctions (fiche) */
+.distinction-highlights { display: flex; gap: 10px; flex-wrap: wrap; }
+.distinction-highlight {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface);
+}
+.distinction-highlight__icon { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+.distinction-highlight__kicker { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.distinction-highlight__label { font-weight: 700; font-size: 14px; }

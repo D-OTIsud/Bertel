@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.2 · Barre de filtres actifs &amp; recherche · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  /* Layout propre à la fonctionnalité · le reste vient de bertel-ui.css */
+  .filterbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px 16px; }
+  .filterbar__label { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-right:2px; }
+  .filterbar__chips { display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1; }
+  .chip--search { background:var(--teal-tint); border-color:transparent; color:var(--teal-deep); }
+  .chip--more { background:var(--surface-2); color:var(--muted); cursor:pointer; }
+
+  .cols { display:grid; grid-template-columns: 1fr 1.15fr; gap:18px; margin-top:18px; }
+  @media (max-width: 760px) { .cols { grid-template-columns:1fr; } }
+
+  /* Popover communes */
+  .city-list { display:flex; flex-direction:column; }
+  .city-row { display:flex; align-items:center; gap:10px; padding:9px 6px; border-radius:var(--r-sm); cursor:pointer; }
+  .city-row:hover { background:var(--surface-2); }
+  .city-row.is-cursor { background:var(--teal-tint); outline:2px solid var(--ring); outline-offset:-2px; }
+  .city-row__name { font-size:14px; font-weight:600; color:var(--ink); }
+  .city-row__name.is-on { color:var(--teal-deep); }
+  .city-foot { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; }
+
+  /* Sous-types par bucket */
+  .bucket-block { padding:14px 16px; border:1px solid var(--line-soft); border-radius:var(--r-md); background:var(--surface-2); margin-bottom:12px; }
+  .bucket-block:last-child { margin-bottom:0; }
+  .bucket-head { display:flex; align-items:center; gap:10px; margin-bottom:11px; }
+  .bucket-pill { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; padding:5px 12px; border-radius:var(--r-pill); color:#fff; background:var(--accent); }
+  .subchips { display:flex; flex-wrap:wrap; gap:8px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 3 · Implémentation 3.2</span>
+    <h1>Barre de filtres actifs &amp; recherche</h1>
+    <p class="lead">Chaque condition active de l'Explorateur devient une pastille retirable, terme de recherche compris. Les communes deviennent un multi-select cherchable au clavier, et les familles fourre-tout (Services, Site &amp; visite) gagnent enfin des sous-types.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- BARRE DE FILTRES ACTIFS -->
+    <div class="panel">
+      <div class="filterbar">
+        <span class="filterbar__label">Filtres actifs</span>
+        <div class="filterbar__chips">
+          <span class="chip chip--removable chip--search">
+            <span class="material-symbols-outlined" style="font-size:15px">search</span>
+            Recherche · tamarins
+            <span class="chip__x" role="button" aria-label="Retirer la recherche"><span class="material-symbols-outlined" style="font-size:15px">close</span></span>
+          </span>
+          <span class="chip chip--removable">
+            Ville · Saint-Paul
+            <span class="chip__x" role="button" aria-label="Retirer le filtre ville Saint-Paul"><span class="material-symbols-outlined" style="font-size:15px">close</span></span>
+          </span>
+          <span class="chip chip--removable">
+            Label · Clef verte
+            <span class="chip__x" role="button" aria-label="Retirer le filtre label Clef verte"><span class="material-symbols-outlined" style="font-size:15px">close</span></span>
+          </span>
+          <span class="chip chip--removable">
+            Itinéraire · difficulté ≤ 2
+            <span class="chip__x" role="button" aria-label="Retirer le filtre difficulté"><span class="material-symbols-outlined" style="font-size:15px">close</span></span>
+          </span>
+          <span class="chip chip--more" role="button" aria-label="Afficher 2 filtres de plus">+2 filtres</span>
+        </div>
+        <button class="btn btn--ghost btn--sm" style="color:var(--muted)">
+          <span class="material-symbols-outlined" style="font-size:18px">backspace</span> Tout effacer
+        </button>
+      </div>
+    </div>
+
+    <p class="callout" style="margin-top:14px">
+      <span class="material-symbols-outlined" style="color:var(--info)">info</span>
+      <span>Le terme de recherche global est désormais une pastille <b>visible et retirable</b> comme n'importe quel filtre : plus de filtre invisible « collé » à la barre de recherche.</span>
+    </p>
+
+    <div class="cols">
+
+      <!-- GAUCHE : popover communes cherchable -->
+      <div class="panel">
+        <div class="panel__head">
+          <h3>Communes desservies</h3>
+          <span class="badge badge--info">Multi-select</span>
+        </div>
+        <div class="panel__body">
+          <div class="search" style="margin-bottom:12px" role="combobox" aria-expanded="true" aria-haspopup="listbox" aria-owns="city-listbox">
+            <span class="material-symbols-outlined">search</span>
+            <input placeholder="Rechercher une commune" value="Sa" aria-controls="city-listbox" aria-activedescendant="city-salazie">
+          </div>
+          <div class="city-list" id="city-listbox" role="listbox" aria-multiselectable="true" aria-label="Communes">
+            <div class="city-row" role="option" aria-selected="true" id="city-saint-paul">
+              <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+              <span class="city-row__name is-on">Saint-Paul</span>
+            </div>
+            <div class="city-row" role="option" aria-selected="false" id="city-saint-pierre">
+              <span class="checkbox"></span>
+              <span class="city-row__name">Saint-Pierre</span>
+            </div>
+            <div class="city-row" role="option" aria-selected="false" id="city-le-tampon">
+              <span class="checkbox"></span>
+              <span class="city-row__name">Le Tampon</span>
+            </div>
+            <div class="city-row is-cursor" role="option" aria-selected="true" id="city-salazie">
+              <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+              <span class="city-row__name is-on">Salazie</span>
+            </div>
+            <div class="city-row" role="option" aria-selected="false" id="city-saint-andre">
+              <span class="checkbox"></span>
+              <span class="city-row__name">Saint-André</span>
+            </div>
+          </div>
+          <div class="city-foot">
+            <span class="muted">12 communes sélectionnées</span>
+            <button class="btn btn--ghost btn--sm">Réinitialiser</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DROITE : sous-types par bucket -->
+      <div class="panel">
+        <div class="panel__head">
+          <h3>Sous-types par famille</h3>
+          <span class="badge badge--ok">Nouveau</span>
+        </div>
+        <div class="panel__body">
+
+          <div class="bucket-block acc-vis">
+            <div class="bucket-head">
+              <span class="bucket-pill"><span class="material-symbols-outlined" style="font-size:16px">temple_buddhist</span> Site &amp; visite</span>
+              <span class="muted small">famille sélectionnée</span>
+            </div>
+            <div class="subchips">
+              <span class="chip chip--toggle is-active">Patrimoine</span>
+              <span class="chip chip--toggle">Site naturel</span>
+              <span class="chip chip--toggle">Producteur</span>
+              <span class="chip chip--toggle">Loisir</span>
+            </div>
+          </div>
+
+          <div class="bucket-block acc-srv">
+            <div class="bucket-head">
+              <span class="bucket-pill"><span class="material-symbols-outlined" style="font-size:16px">storefront</span> Services</span>
+              <span class="muted small">famille sélectionnée</span>
+            </div>
+            <div class="subchips">
+              <span class="chip chip--toggle">Commerce</span>
+              <span class="chip chip--toggle is-active">Service public</span>
+              <span class="chip chip--toggle">Office de tourisme</span>
+            </div>
+          </div>
+
+          <p class="muted small" style="margin-top:12px">Les familles SRV et VIS étaient « plates » : impossible de distinguer un office de tourisme d'un commerce, ou un site naturel d'un site patrimonial.</p>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Le résumé des filtres actifs est <b>dérivé du store Explorateur</b> : une pastille retirable par condition active, y compris le terme de recherche.</li>
+          <li>Chaque <code>chip__x</code> ne retire que <b>son</b> filtre ; « Tout effacer » remet le store à l'état vide.</li>
+          <li>Au-delà de 4 pastilles, un repli <code>+N filtres</code> déplie le reste (pas de barre qui déborde).</li>
+          <li>Multi-select communes = listbox clavier : <b>↑/↓</b> déplace le curseur, <b>Entrée</b> coche/décoche, <b>Échap</b> ferme, avec <code>aria-activedescendant</code>.</li>
+          <li>Les familles SRV et VIS, jusqu'ici plates, se filtrent par sous-type via des <code>chip--toggle</code>.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Chaque pastille retire uniquement son filtre ; la liste de résultats se recalcule.</li>
+          <li>Le filtre communes est cherchable et navigable entièrement au clavier.</li>
+          <li>SRV et VIS sont filtrables par sous-type.</li>
+          <li>Le terme de recherche apparaît comme une pastille retirable.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/components/explorer/FiltersPanel.tsx</code> : intègre la barre de filtres actifs et les sous-types de bucket.</li>
+          <li>Nouveau composant <code>ActiveFilters</code> : projette les conditions du store en pastilles retirables (terme de recherche inclus).</li>
+          <li><code>src/components/dashboard/FilterDropdown.tsx</code> : version cherchable + navigation clavier (listbox, <code>aria-activedescendant</code>).</li>
+          <li>Sélecteurs de store : <code>activeFilterChips</code> (libellé + clé + valeur), <code>removeFilter(key)</code>, <code>clearFilters()</code>.</li>
+          <li>Sous-types SRV/VIS issus de la taxonomie existante (mêmes codes que les cartes 3.1).</li>
+        </ul>
+        <h3>Notes</h3>
+        <ul>
+          <li>Libellés de pastille résolus depuis les catalogues (pas de codes bruts à l'écran).</li>
+          <li>État partageable : les filtres restent reflétés dans l'URL (search params).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

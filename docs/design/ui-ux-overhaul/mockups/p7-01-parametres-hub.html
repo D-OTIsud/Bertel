@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.1 · Paramètres : hub à rail &amp; Mon compte · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .stage-block { margin-bottom: 30px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .block-kick { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 10px; }
+
+  /* AVANT : pile de cartes égales */
+  .before-stack { display: flex; flex-direction: column; gap: 14px; max-width: 540px; }
+  .before-card { background: var(--surface); border: 1px solid var(--line); border-radius: 32px; padding: 18px 20px; }
+  .before-card h4 { font-size: 15px; margin-bottom: 4px; }
+  .before-card .ph { height: 9px; border-radius: 5px; background: var(--bg-2); margin-top: 8px; }
+  .before-card .ph.s { width: 60%; } .before-card .ph.m { width: 85%; }
+
+  /* APRÈS : le hub à rail */
+  .set { display: grid; grid-template-columns: 244px 1fr; min-height: 520px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-s); }
+  .set__rail { background: var(--surface-2); border-right: 1px solid var(--line); padding: 16px 12px; }
+  .set__railhead { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); padding: 4px 10px 14px; }
+  .set__group { margin-bottom: 14px; }
+  .set__grouphead { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; }
+  .set__grouphead .scope { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .set__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .set__item:hover { background: var(--bg-2); }
+  .set__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .set__item .material-symbols-outlined { font-size: 19px; color: var(--muted); }
+  .set__item.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .set__pane { padding: 22px 24px; min-width: 0; }
+  .set__panehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+  .set__panehead h2 { font-size: 19px; }
+  .set__panehead p { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+  .pref { display: flex; flex-direction: column; gap: 22px; max-width: 640px; }
+  .pref__block { }
+  .pref__label { font-size: 13px; font-weight: 700; color: var(--ink-2); margin-bottom: 8px; }
+  .pref__hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+  /* Carte d'état Session & rôle (remplace le dump Runtime debug) */
+  .state { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; max-width: 640px; }
+  .state__row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+  .state__row:last-child { border-bottom: 0; }
+  .state__k { color: var(--muted); width: 150px; flex-shrink: 0; font-weight: 600; font-size: 13px; }
+  .state__v { font-weight: 600; }
+  details.diag { margin-top: 14px; max-width: 640px; }
+  details.diag summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+  details.diag summary .material-symbols-outlined { font-size: 18px; color: var(--muted); }
+  .diag__body { margin-top: 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); padding: 12px 14px; font-size: 12.5px; }
+  .diag__body .mono { color: var(--ink-2); }
+  .diag__line { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+
+  .tag-before { font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .05em; }
+  .tag-after { font-size: 11px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+  .gate { font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: var(--r-pill); }
+  .new { font-size: 10px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 7 · Implémentation 7.1</span>
+    <h1>Paramètres : hub à rail &amp; « Mon compte »</h1>
+    <p class="lead">Fondation de la refonte des Paramètres. <code>/settings</code> n'est plus un défilement plat de 7 cartes identiques (rayon 32px) mélangeant 3 publics : c'est une <b>console à rail de sections groupées par périmètre</b>, un seul panneau visible à la fois, chaque groupe affiché selon le rôle. Cette implémentation pose le shell + le groupe <b>Mon compte</b> (préférences de langue, carte d'état Session &amp; rôle qui remplace le dump « Runtime » de debug). Les autres modules s'y branchent (7.2 → 7.5).</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- A · Avant / Après structure -->
+    <div class="stage-block">
+      <div class="block-kick">A · Le problème de structure</div>
+      <div class="row" style="align-items:flex-start; gap:34px; flex-wrap:wrap">
+        <div style="flex:1; min-width:300px">
+          <div style="margin-bottom:10px"><span class="tag-before">Avant</span> <span class="muted small">7 cartes égales, rayon 32px, 3 publics mélangés, ~80 contrôles d'un coup</span></div>
+          <div class="before-stack">
+            <div class="before-card"><h4>Rôle actif</h4><div class="ph s"></div></div>
+            <div class="before-card"><h4>White-label theme</h4><div class="ph m"></div><div class="ph m"></div><div class="ph s"></div></div>
+            <div class="before-card"><h4>Markers carte</h4><div class="ph m"></div><div class="ph m"></div></div>
+            <div class="before-card"><h4>Langues</h4><div class="ph s"></div></div>
+            <div class="before-card"><h4>Runtime <span class="muted small" style="font-weight:500">(debug)</span></h4><div class="ph m"></div></div>
+          </div>
+        </div>
+        <div style="flex:1.3; min-width:360px">
+          <div style="margin-bottom:10px"><span class="tag-after">Après</span> <span class="muted small">rail groupé par périmètre, un panneau à la fois, gated par rôle</span></div>
+          <!-- le hub, panneau Préférences actif -->
+          <div class="set">
+            <nav class="set__rail" aria-label="Sections des paramètres">
+              <div class="set__railhead">Paramètres</div>
+              <div class="set__group">
+                <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+                <div class="set__item is-active"><span class="material-symbols-outlined">tune</span> Préférences</div>
+                <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+              </div>
+              <div class="set__group">
+                <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+                <div class="set__item"><span class="material-symbols-outlined">groups</span> Équipe</div>
+              </div>
+              <div class="set__group">
+                <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+                <div class="set__item"><span class="material-symbols-outlined">palette</span> Apparence</div>
+                <div class="set__item"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+                <div class="set__item"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels <span class="badge badge--ok new">Nouveau</span></div>
+                <div class="set__item"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+                <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+              </div>
+            </nav>
+            <section class="set__pane">
+              <div class="set__panehead">
+                <div><h2>Préférences</h2><p>Vos réglages personnels d'interface.</p></div>
+              </div>
+              <div class="pref">
+                <div class="pref__block">
+                  <div class="pref__label">Langue de l'interface</div>
+                  <div class="wrap">
+                    <span class="chip is-active">Français</span>
+                    <span class="chip chip--toggle">English</span>
+                    <span class="chip chip--toggle">Deutsch</span>
+                  </div>
+                  <div class="pref__hint">Au moins une langue reste active. Enregistré sur votre profil.</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B · Session & rôle : carte d'état lisible (remplace le dump debug) -->
+    <div class="stage-block">
+      <div class="block-kick">B · « Session &amp; rôle » · une carte d'état lisible, plus un dump de debug</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">panneau « Runtime » : « Mode demo explicite », « Supabase URL », « Source logo: storage / URL publique »</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+      <div class="state">
+        <div class="state__row"><span class="state__k">Rôle</span><span class="state__v"><span class="badge badge--info">Super-administrateur</span></span></div>
+        <div class="state__row"><span class="state__k">Organisation</span><span class="state__v">OTI du Sud</span></div>
+        <div class="state__row"><span class="state__k">Session</span><span class="state__v"><span class="dot dot--ok"></span> Active</span></div>
+        <div class="state__row"><span class="state__k">Marque active</span><span class="state__v">Bertel · OTI Sud</span></div>
+      </div>
+      <details class="diag">
+        <summary><span class="material-symbols-outlined">expand_more</span> Diagnostic technique</summary>
+        <div class="diag__body">
+          <div class="diag__line"><span class="muted">Environnement Supabase</span><span class="mono">otisud.supabase.co</span></div>
+          <div class="diag__line"><span class="muted">Source du logo</span><span class="mono">stockage hébergé</span></div>
+          <div class="diag__line"><span class="muted">Mode démonstration</span><span class="mono">non</span></div>
+        </div>
+      </details>
+      <p class="muted small" style="margin-top:12px;max-width:640px">Les informations d'environnement quittent la surface principale : repliées dans « Diagnostic », libellées en clair, et plus jamais affichées comme des « fonctionnalités ».</p>
+    </div>
+
+  </div>
+
+  <!-- Spécifications -->
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Transforme <code>/settings</code> en console à rail (un panneau à la fois, groupes gated par rôle) et livre le groupe « Mon compte ». Corrige les lacunes IA, jargon/debug, accents et échelle de rayon de l'audit.</p>
+    <div class="spec grid2" style="border:0;padding:0;margin-top:6px">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Rail de 3 groupes : <b>Mon compte</b> (tout le monde) · <b>Mon organisation</b> (admin ORG) · <b>Plateforme</b> (super-admin). Un seul panneau rendu à la fois (divulgation progressive).</li>
+          <li>Un groupe n'apparaît que si le rôle le permet : un lecteur ne voit que « Mon compte » · fin du mur de ~60 contrôles désactivés.</li>
+          <li><b>Préférences</b> : langue d'interface (FR/EN/DE), au moins une active, persistée sur <code>app_user_profile.lang_prefs</code>.</li>
+          <li><b>Session &amp; rôle</b> : carte d'état lisible (rôle en libellé FR, organisation, état de session, marque). Le contenu env/debug est replié dans « Diagnostic ».</li>
+          <li>Rayon ramené à l'échelle <code>--r-md</code>/<code>--r-sm</code> (fini le 32px) ; surfaces plates ; <code>:focus-visible</code> sur le rail, chips, résumés <code>details</code>.</li>
+          <li>« Paramètres » accentué partout (sidebar, topbar, drawer) · retrait du libellé « Settings ».</li>
+        </ul>
+        <h3>État (rôles)</h3>
+        <ul>
+          <li><b>Lecteur / éditeur</b> : voit « Mon compte » uniquement.</li>
+          <li><b>Admin d'ORG</b> (rang ≥ 10) : ajoute « Mon organisation ».</li>
+          <li><b>Super-admin</b> : ajoute « Plateforme ».</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/views/SettingsPage.tsx</code> : passage carte-pile → shell rail + routeur de panneaux (état d'onglet en URL : <code>/settings?section=preferences</code>).</li>
+          <li>Nouveaux <code>features/settings/SettingsRail.tsx</code> + <code>panes/AccountPreferences.tsx</code> + <code>panes/SessionRolePane.tsx</code>.</li>
+          <li>Langue : <code>updateCurrentUserProfile({ lang_prefs })</code> (existant).</li>
+          <li><code>Sidebar.tsx</code> / <code>TopBar.tsx</code> / <code>ProfileDrawer.tsx</code> : libellé « Paramètres » accentué unique.</li>
+          <li>Panneau « Runtime » supprimé ; <code>env</code> migré vers le <code>details</code> Diagnostic.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Un seul panneau visible ; navigation au rail reflétée dans l'URL ; retour navigateur fonctionne.</li>
+          <li>Groupes rendus selon le rôle ; aucun mur de contrôles désactivés pour un lecteur.</li>
+          <li>Aucune chaîne de debug runtime sur la surface principale ; tous les libellés FR accentués.</li>
+          <li>Rayon = échelle de tokens ; <code>:focus-visible</code> visible au clavier sur rail/chips/détails.</li>
+          <li>La préférence de langue persiste et se recharge.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">dashboard</span>
+          <span>7.1 est le socle : 7.2 (Apparence+Marqueurs), 7.3 (Fournisseurs IA), 7.4 (Équipe) et 7.5 (Référentiels) se branchent comme panneaux dans ce même rail.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

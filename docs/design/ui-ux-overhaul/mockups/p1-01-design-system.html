@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1.1 · Design system & fondations · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .swatch { border-radius: var(--r-sm); height: 56px; border: 1px solid var(--line); display:flex; align-items:flex-end; padding:6px 8px; font-size:11px; font-weight:700; }
+  .swatches { display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; }
+  .typerow { display:flex; align-items:baseline; gap:14px; padding:8px 0; border-bottom:1px solid var(--line-soft); }
+  .section { margin-bottom: 26px; }
+  .section > h3 { margin-bottom:12px; }
+  .grid3 { display:grid; grid-template-columns: 2fr 1fr 1fr; gap:14px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 1 · Implémentation 1.1</span>
+    <h1>Design system &amp; fondations</h1>
+    <p class="lead">La fondation partagée par toutes les surfaces : tokens consolidés, contraste AA, anneau de focus visible, mouvement maîtrisé. Valider cette page = valider la base de tout le reste.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="section">
+      <h3>Marque &amp; archétypes</h3>
+      <div class="swatches">
+        <div class="swatch" style="background:var(--teal);color:#fff">Teal · marque</div>
+        <div class="swatch" style="background:var(--orange);color:#5a2f17">Orange · accent</div>
+        <div class="swatch" style="background:var(--ink);color:#fff">Ink · texte</div>
+        <div class="swatch" style="background:var(--bg)">Fond</div>
+        <div class="swatch" style="background:var(--surface)">Surface</div>
+        <div class="swatch" style="background:var(--surface-2)">Surface 2</div>
+      </div>
+      <div class="wrap" style="margin-top:12px">
+        <span class="type-pill acc-heb"><span class="material-symbols-outlined">hotel</span> Hébergement</span>
+        <span class="type-pill acc-res"><span class="material-symbols-outlined">restaurant</span> Restauration</span>
+        <span class="type-pill acc-asc"><span class="material-symbols-outlined">sports_handball</span> Activité</span>
+        <span class="type-pill acc-iti"><span class="material-symbols-outlined">route</span> Itinéraire</span>
+        <span class="type-pill acc-vis"><span class="material-symbols-outlined">temple_buddhist</span> Site &amp; visite</span>
+        <span class="type-pill acc-srv"><span class="material-symbols-outlined">storefront</span> Service</span>
+        <span class="type-pill acc-fma"><span class="material-symbols-outlined">festival</span> Événement</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Échelle typographique (Manrope, ratio ≥ 1.25)</h3>
+      <div class="typerow"><h1>Aa 26/800</h1><span class="muted small">Titre de page</span></div>
+      <div class="typerow"><h2>Aa 19/700</h2><span class="muted small">Titre de section</span></div>
+      <div class="typerow"><h3>Aa 15/700</h3><span class="muted small">Sous-titre</span></div>
+      <div class="typerow"><span style="font-size:15px">Aa 15/400</span><span class="muted small">Corps</span></div>
+      <div class="typerow"><span class="muted small">Aa 13/400 muted (#5c6a71 · 5.1:1 AA)</span><span class="muted small">Texte secondaire corrigé</span></div>
+    </div>
+
+    <div class="section">
+      <h3>Boutons · toutes les variantes, tous les états</h3>
+      <div class="wrap" style="align-items:center">
+        <button class="btn btn--primary">Enregistrer</button>
+        <button class="btn btn--secondary">Annuler</button>
+        <button class="btn btn--ghost"><span class="material-symbols-outlined">add</span> Ajouter</button>
+        <button class="btn btn--danger"><span class="material-symbols-outlined">delete</span> Supprimer</button>
+        <button class="btn" disabled>Désactivé</button>
+        <button class="btn btn--primary" style="outline:2px solid var(--ring);outline-offset:2px">Focus visible</button>
+      </div>
+      <p class="muted small" style="margin-top:8px">Le dernier bouton montre l'anneau <code>:focus-visible</code> appliqué globalement (correctif S1, aujourd'hui absent partout sauf la sidebar).</p>
+    </div>
+
+    <div class="section">
+      <h3>Chips, badges, champs</h3>
+      <div class="wrap" style="margin-bottom:12px">
+        <span class="chip is-active">Sélectionné</span>
+        <span class="chip chip--removable chip--toggle">Filtre actif <span class="chip__x"><span class="material-symbols-outlined" style="font-size:16px">close</span></span></span>
+        <span class="badge badge--ok"><span class="dot dot--ok"></span> Publié</span>
+        <span class="badge badge--warn">Brouillon</span>
+        <span class="badge badge--danger">Expiré</span>
+        <span class="badge badge--info">3 modifs locales</span>
+      </div>
+      <div class="grid3">
+        <div class="field"><label>Nom de la fiche</label><input class="input" value="Hôtel Les Tamarins"></div>
+        <div class="field"><label>Statut</label><select class="select"><option>Publié</option><option>Brouillon</option></select></div>
+        <div class="field"><label>Recherche</label><div class="search"><span class="material-symbols-outlined">search</span><input placeholder="Rechercher…"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Cartes statistiques · hiérarchie (jamais 6 cartes égales)</h3>
+      <div class="grid3">
+        <div class="stat stat--lead"><div class="stat__label">Inscrits SIT</div><div class="stat__value">840</div><div class="stat__delta up">+14 ce mois</div></div>
+        <div class="stat"><div class="stat__label">Complétude</div><div class="stat__value">92%</div></div>
+        <div class="stat"><div class="stat__label">Classés (T&amp;H)</div><div class="stat__value">194</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Tabs &amp; tableau</h3>
+      <div class="tabs" style="margin-bottom:10px">
+        <button class="tab is-active">Vue d'ensemble</button>
+        <button class="tab">Qualité</button>
+        <button class="tab">Activité</button>
+      </div>
+      <div class="panel"><table class="table">
+        <thead><tr><th>Fiche</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>
+          <tr><td>Hôtel Les Tamarins</td><td><span class="type-pill acc-heb">Hébergement</span></td><td><span class="badge badge--ok">Publié</span></td></tr>
+          <tr><td>Boucle du Piton Rouge</td><td><span class="type-pill acc-iti">Itinéraire</span></td><td><span class="badge badge--warn">Brouillon</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="section">
+      <h3>Classements, labels &amp; signet sur miniature</h3>
+      <p class="muted small" style="margin-bottom:14px">Retour PO : le classement (étoiles / clés / épis), les labels (Clef Verte, Écolabel UE, Tourisme &amp; Handicap, Qualité Tourisme, Destination Excellence) et les tags restent visibles sur les cartes et les fiches. Une cocarde « à cheval » chevauche le coin de la miniature des fiches classées ou labellisées.</p>
+
+      <div class="grid3" style="align-items:start">
+        <div>
+          <span class="eyebrow">Signet sur miniature</span>
+          <div class="row" style="margin-top:10px;align-items:flex-start">
+            <div class="thumb acc-heb" style="width:92px;height:70px">
+              <div class="thumb__img"><span class="material-symbols-outlined">hotel</span></div>
+              <span class="thumb__rating" aria-label="Classé 3 étoiles">
+                <span class="material-symbols-outlined">star</span>
+                <span class="material-symbols-outlined">star</span>
+                <span class="material-symbols-outlined">star</span>
+              </span>
+              <span class="thumb__labels">
+                <span class="label-logo lbl-clef-verte" title="Clef Verte"><span class="material-symbols-outlined">eco</span></span>
+                <span class="label-logo lbl-th" title="Tourisme &amp; Handicap"><span class="material-symbols-outlined">accessible</span></span>
+              </span>
+            </div>
+            <p class="muted small" style="margin:0">Hôtel Les Tamarins (Saint-Gilles) : cocarde 3 étoiles en haut-gauche, pastilles Clef Verte + Tourisme &amp; Handicap empilées en bas-droite, toutes à cheval sur le bord.</p>
+          </div>
+        </div>
+
+        <div>
+          <span class="eyebrow">Classement (texte, dans le corps)</span>
+          <div class="col" style="margin-top:10px;gap:8px">
+            <span class="class-text">3 étoiles</span>
+            <span class="class-text">3 clés</span>
+            <span class="class-text">3 épis</span>
+          </div>
+          <p class="muted small" style="margin-top:8px">Dans le corps de carte le classement s'écrit en toutes lettres (les étoiles ne vivent qu'en cocarde sur la photo, pour éviter la redondance). Seuls les HEB sont classés (étoiles / clés / épis) ; pas de classement sur RES / ASC / ITI / VIS / FMA.</p>
+        </div>
+
+        <div>
+          <span class="eyebrow">Tags colorés (§09)</span>
+          <div class="wrap" style="margin-top:10px">
+            <span class="tag-chip" style="--tag:#2f8f4e">Nature</span>
+            <span class="tag-chip" style="--tag:#2f6fb0">Vue mer</span>
+            <span class="tag-chip" style="--tag:#c98a1e">Famille</span>
+            <span class="tag-chip" style="--tag:#7d5aa6">Bien-être</span>
+            <span class="tag-chip" style="--tag:#d8602f">Coup de cœur</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <span class="eyebrow">Labels (logo + couleur officielle)</span>
+        <div class="wrap" style="margin-top:10px">
+          <span class="label-chip"><span class="label-chip__logo lbl-clef-verte"><span class="material-symbols-outlined">eco</span></span> Clef Verte</span>
+          <span class="label-chip"><span class="label-chip__logo lbl-ecolabel"><span class="material-symbols-outlined">local_florist</span></span> Écolabel UE</span>
+          <span class="label-chip"><span class="label-chip__logo lbl-th"><span class="material-symbols-outlined">accessible</span></span> Tourisme &amp; Handicap</span>
+          <span class="label-chip"><span class="label-chip__logo lbl-qualite"><span class="material-symbols-outlined">verified</span></span> Qualité Tourisme</span>
+          <span class="label-chip"><span class="label-chip__logo lbl-excellence"><span class="material-symbols-outlined">workspace_premium</span></span> Destination Excellence</span>
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <span class="eyebrow">Mise en avant d'une distinction (fiche)</span>
+        <div class="distinction-highlights" style="margin-top:10px">
+          <div class="distinction-highlight">
+            <span class="distinction-highlight__icon lbl-clef-verte"><span class="material-symbols-outlined">eco</span></span>
+            <span class="col" style="gap:1px">
+              <span class="distinction-highlight__kicker">Label environnemental</span>
+              <span class="distinction-highlight__label">Clef Verte</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Implémentation surtout CSS/config, sans changement de données. Lève d'un coup la dette transverse a11y / perf / thème.</p>
+    <div class="grid2">
+      <div>
+        <h3>Ce que ça corrige</h3>
+        <ul>
+          <li><b>S1 Focus</b> : règle globale <code>:focus-visible {outline:2px solid var(--ring)}</code> + suppression des <code>outline:none</code> non remplacés.</li>
+          <li><b>S7 Contraste</b> : <code>--muted</code> #66767d → #5c6a71 (5.1:1) ; retrait de #94a1a8 sur texte.</li>
+          <li><b>S8 Mouvement</b> : garde-fou <code>@media (prefers-reduced-motion: reduce)</code> ; easing ease-out-expo (fin du bounce).</li>
+          <li><b>S5 Perf</b> : migration vers <code>next/font</code> (fin du <code>@import</code> bloquant) ; fond dégradé non <code>fixed</code>.</li>
+          <li><b>S6 Thème</b> : une seule famille de tokens (suppression des doublons <code>--orange-soft/--accent-soft</code>, des 2 échelles radius/ombre).</li>
+          <li><b>Distinctions (retour PO)</b> : cocarde de classement <code>.thumb__rating</code> (étoiles, ÷2, à cheval sur la photo) + classement en toutes lettres <code>.class-text</code> dans le corps (pas d'icônes étoiles redondantes), labels <code>.label-logo</code> / <code>.label-chip</code> (sans pastille d'état ; un label non valide n'est pas affiché), tags <code>.tag-chip</code> (couleur via <code>--tag</code>), et le signet <code>.thumb__labels</code> à cheval sur la miniature. Classement / labels / tags conservés sur cartes et fiches.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Fichiers impactés</h3>
+        <ul>
+          <li><code>src/styles.css</code> (:root tokens, focus, motion, contraste)</li>
+          <li><code>src/features/object-editor/object-editor.css</code> (focus/motion/tokens locaux)</li>
+          <li><code>src/app/layout.tsx</code> (<code>next/font/google</code>)</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Tab au clavier : anneau visible sur boutons, chips, nav, champs.</li>
+          <li>Lighthouse a11y ≥ 95 ; contraste AA sur muted/labels.</li>
+          <li>OS « réduire les animations » → aucune transition &gt; 0.</li>
+          <li>Aucun token dupliqué ; build sans Google Fonts externe.</li>
+          <li>Classement / labels / tags restent visibles sur cartes et fiches ; la miniature des fiches classées ou labellisées porte un signet à cheval (cocarde de classement + pastilles de label).</li>
+          <li>Seuls les HEB portent un classement (étoiles / clés / épis), montré en cocarde sur la photo et en toutes lettres dans le corps. Le statut d'un label vit dans l'éditeur §08 ; côté public, seuls les labels valides s'affichent, sans pastille d'état.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

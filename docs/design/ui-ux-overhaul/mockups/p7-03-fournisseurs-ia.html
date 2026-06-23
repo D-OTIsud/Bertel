@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.3 · Paramètres : Fournisseurs IA · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .stage-block { margin-bottom: 30px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .block-kick { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 10px; }
+
+  /* AVANT : le rendu cassé · boutons natifs nus.
+     On neutralise volontairement tout style maison sur ce bloc pour montrer le P0. */
+  .raw-demo { max-width: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; }
+  .raw-demo .raw-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .raw-demo .raw-row:first-of-type { border-top: 0; }
+  .raw-demo .raw-grow { flex: 1; min-width: 220px; }
+  .raw-demo .raw-meta { font-size: 12px; color: var(--muted); }
+  /* « actif » non stylé : exactement ce qui s'affiche aujourd'hui (.pill-mini n'existe pas hors .crm-app) */
+  .raw-demo .raw-active { font-size: 13px; }
+  /* Les <button> ci-dessous n'ont AUCUNE classe : ils tombent sur le rendu natif du navigateur. */
+
+  /* APRÈS : le hub à rail (repris de 7.1) */
+  .set { display: grid; grid-template-columns: 244px 1fr; min-height: 540px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-s); }
+  .set__rail { background: var(--surface-2); border-right: 1px solid var(--line); padding: 16px 12px; }
+  .set__railhead { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); padding: 4px 10px 14px; }
+  .set__group { margin-bottom: 14px; }
+  .set__grouphead { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; }
+  .set__grouphead .scope { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .set__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .set__item:hover { background: var(--bg-2); }
+  .set__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .set__item .material-symbols-outlined { font-size: 19px; color: var(--muted); }
+  .set__item.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .set__pane { padding: 22px 24px; min-width: 0; }
+  .set__panehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+  .set__panehead h2 { font-size: 19px; }
+  .set__panehead p { color: var(--muted); font-size: 13px; margin-top: 3px; max-width: 520px; }
+
+  .gate { font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: var(--r-pill); }
+
+  /* Table fournisseurs : cellules denses, base URL mono */
+  .prov-table td .label { font-weight: 700; }
+  .prov-table td .kind { font-size: 12px; color: var(--muted); }
+  .prov-table td.actions { text-align: right; white-space: nowrap; }
+  .prov-table td.actions .btn { margin-left: 4px; }
+  .prov-table .mono { font-size: 12.5px; color: var(--ink-2); }
+  .prov-table .model { font-weight: 600; }
+
+  /* Formulaire d'édition */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .form-grid .span-2 { grid-column: 1 / -1; }
+  .form-foot { display: flex; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+  .field .hint { font-size: 12px; color: var(--muted); }
+
+  /* Carte de confirmation dangereuse (motif ConfirmDialog repris de 5.3) */
+  .confirm { max-width: 440px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-m); padding: 20px; }
+  .confirm__top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .confirm__ic { width: 38px; height: 38px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); display: flex; align-items: center; justify-content: center; }
+  .confirm__title { font-weight: 800; }
+  .confirm__txt { font-size: 14px; color: var(--ink-2); margin: 6px 0 16px; }
+  .confirm__bar { display: flex; gap: 10px; justify-content: flex-end; }
+
+  .ann-note { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); font-size: 13px; color: var(--ink-2); margin-top: 14px; max-width: 640px; }
+  .ann-note .material-symbols-outlined { color: var(--info); }
+
+  .tag-before { font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .05em; }
+  .tag-after { font-size: 11px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 7 · Implémentation 7.3</span>
+    <h1>Paramètres : « Fournisseurs IA »</h1>
+    <p class="lead">La section <code>AiProviderSettings</code> est aujourd'hui stylée avec des objets <code>style={{}}</code> en ligne et référence des classes <code>.btn</code> / <code>.btn primary</code> / <code>.pill-mini</code> qui n'existent que sous le scope <code>.crm-app</code>. Sur <code>/settings</code> elle rend donc des <b>boutons natifs nus</b> et une étiquette « actif » sans style. 7.3 porte toute la section sur le vocabulaire maison (<code>.panel</code> / <code>.btn</code> / <code>.badge</code> / <code>.table</code>) et la branche comme panneau du hub à rail.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- A · AVANT : boutons natifs nus (le P0) -->
+    <div class="stage-block">
+      <div class="block-kick">A · Le P0 · la section rendue avec des boutons natifs nus</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small"><code>.btn</code> / <code>.pill-mini</code> absents hors <code>.crm-app</code> · rendu navigateur brut</span></span>
+      </div>
+      <div class="raw-demo">
+        <div class="raw-row">
+          <div class="raw-grow">
+            <strong>OpenAI prod</strong> <span class="raw-active">actif</span>
+            <div class="raw-meta">gpt-4o-mini · https://api.openai.com/v1 · clé configurée ✓</div>
+          </div>
+          <!-- AUCUNE classe : rendu natif du navigateur, exactement le bug -->
+          <button>Activer</button>
+          <button>Modifier</button>
+          <button>Supprimer</button>
+        </div>
+        <div class="raw-row">
+          <div class="raw-grow">
+            <strong>OpenRouter (secours)</strong>
+            <div class="raw-meta">openai/gpt-4o-mini · https://openrouter.ai/api/v1 · sans clé</div>
+          </div>
+          <button>Activer</button>
+          <button>Modifier</button>
+          <button>Supprimer</button>
+        </div>
+      </div>
+      <div class="ann-note">
+        <span class="material-symbols-outlined">bug_report</span>
+        <span>Les boutons et l'étiquette « actif » n'héritent d'aucun token maison : ils sont gris système, sans focus visible, sans hiérarchie. C'est la régression visuelle que 7.3 corrige.</span>
+      </div>
+    </div>
+
+    <!-- B · APRÈS : porté sur le vocabulaire maison, dans le hub à rail -->
+    <div class="stage-block">
+      <div class="block-kick">B · Après · porté sur le vocabulaire maison, dans le hub à rail</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-after">Après</span> <span class="muted small">panneau « Fournisseurs IA » actif · <code>.panel</code> / <code>.btn</code> / <code>.badge</code> / <code>.table</code></span></span>
+      </div>
+
+      <div class="set">
+        <nav class="set__rail" aria-label="Sections des paramètres">
+          <div class="set__railhead">Paramètres</div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+            <div class="set__item"><span class="material-symbols-outlined">tune</span> Préférences</div>
+            <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">groups</span> Équipe</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">palette</span> Apparence</div>
+            <div class="set__item"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+            <div class="set__item"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels</div>
+            <div class="set__item is-active"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+            <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+          </div>
+        </nav>
+
+        <section class="set__pane" aria-labelledby="ai-pane-heading">
+          <div class="set__panehead">
+            <div>
+              <h2 id="ai-pane-heading">Fournisseurs IA</h2>
+              <p>Modèles d'extraction de carte (menus). La clé reste côté serveur (chiffrée) et n'est jamais renvoyée. Un seul fournisseur actif à la fois.</p>
+            </div>
+            <span class="badge badge--info"><span class="material-symbols-outlined" style="font-size:15px">shield_person</span> Super-admin</span>
+          </div>
+
+          <!-- Liste des fournisseurs -->
+          <div class="panel" style="margin-bottom:18px">
+            <div class="panel__head">
+              <h3>Fournisseurs configurés</h3>
+              <button class="btn btn--secondary btn--sm"><span class="material-symbols-outlined">add</span> Nouveau</button>
+            </div>
+            <table class="table prov-table">
+              <thead>
+                <tr>
+                  <th>Fournisseur</th>
+                  <th>Base URL</th>
+                  <th>Modèle</th>
+                  <th>Clé</th>
+                  <th>État</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="label">OpenAI prod</div>
+                    <div class="kind">OpenAI-compatible</div>
+                  </td>
+                  <td><span class="mono">https://api.openai.com/v1</span></td>
+                  <td><span class="model">gpt-4o-mini</span></td>
+                  <td><span class="badge badge--ok"><span class="material-symbols-outlined" style="font-size:14px">lock</span> Clé configurée</span></td>
+                  <td><span class="badge badge--ok"><span class="dot dot--ok"></span> Actif</span></td>
+                  <td class="actions">
+                    <button class="btn btn--secondary btn--sm">Modifier</button>
+                    <button class="btn btn--danger btn--sm"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Supprimer</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="label">OpenRouter (secours)</div>
+                    <div class="kind">OpenAI-compatible</div>
+                  </td>
+                  <td><span class="mono">https://openrouter.ai/api/v1</span></td>
+                  <td><span class="model">openai/gpt-4o-mini</span></td>
+                  <td><span class="badge badge--ok"><span class="material-symbols-outlined" style="font-size:14px">lock</span> Clé configurée</span></td>
+                  <td><span class="muted small"><span class="dot dot--off"></span> Inactif</span></td>
+                  <td class="actions">
+                    <button class="btn btn--secondary btn--sm">Activer</button>
+                    <button class="btn btn--secondary btn--sm">Modifier</button>
+                    <button class="btn btn--danger btn--sm"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Supprimer</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="label">Ollama local</div>
+                    <div class="kind">OpenAI-compatible</div>
+                  </td>
+                  <td><span class="mono">http://localhost:11434/v1</span></td>
+                  <td><span class="model">llava:13b</span></td>
+                  <td><span class="muted small">Sans clé</span></td>
+                  <td><span class="muted small"><span class="dot dot--off"></span> Inactif</span></td>
+                  <td class="actions">
+                    <button class="btn btn--secondary btn--sm">Activer</button>
+                    <button class="btn btn--secondary btn--sm">Modifier</button>
+                    <button class="btn btn--danger btn--sm"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Supprimer</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Formulaire d'édition -->
+          <form class="panel" onsubmit="return false">
+            <div class="panel__head">
+              <h3>Modifier le fournisseur</h3>
+              <span class="muted small">OpenAI prod</span>
+            </div>
+            <div class="panel__body">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="ai-label">Libellé</label>
+                  <input id="ai-label" class="input" type="text" value="OpenAI prod">
+                </div>
+                <div class="field">
+                  <label for="ai-kind">Type d'API</label>
+                  <select id="ai-kind" class="select">
+                    <option selected>OpenAI-compatible (OpenAI, OpenRouter, Groq, Ollama, vLLM, Kimi…)</option>
+                    <option>Anthropic (API native · bientôt)</option>
+                  </select>
+                </div>
+                <div class="field span-2">
+                  <label for="ai-url">Base URL</label>
+                  <input id="ai-url" class="input mono" type="url" value="https://api.openai.com/v1">
+                </div>
+                <div class="field">
+                  <label for="ai-model">Modèle</label>
+                  <input id="ai-model" class="input" type="text" value="gpt-4o-mini">
+                </div>
+                <div class="field">
+                  <label for="ai-tokens">Max tokens (sortie)</label>
+                  <input id="ai-tokens" class="input" type="number" value="4096" min="256" max="32768">
+                </div>
+                <div class="field span-2">
+                  <label for="ai-key">Clé API <span class="badge badge--ok" style="margin-left:4px"><span class="material-symbols-outlined" style="font-size:13px">lock</span> chiffrée</span></label>
+                  <input id="ai-key" class="input" type="password" placeholder="•••• conservée" autocomplete="off">
+                  <span class="hint">Laisser vide pour conserver la clé actuelle ; jamais réaffichée.</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel__body form-foot" style="padding-top:0">
+              <button type="submit" class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer</button>
+              <button type="button" class="btn btn--secondary"><span class="material-symbols-outlined">add</span> Nouveau</button>
+              <button type="button" class="btn btn--secondary"><span class="material-symbols-outlined">bolt</span> Tester la connexion</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <!-- C · Confirmation des actions destructives -->
+    <div class="stage-block">
+      <div class="block-kick">C · Confirmation des actions destructives</div>
+      <div class="row between" style="margin-bottom:10px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">Supprimer / Activer agissaient au clic, sans confirmation</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+      <div class="confirm" role="alertdialog" aria-label="Confirmer la suppression">
+        <div class="confirm__top">
+          <span class="confirm__ic"><span class="material-symbols-outlined">warning</span></span>
+          <span class="confirm__title">Supprimer le fournisseur « OpenAI prod »&nbsp;?</span>
+        </div>
+        <p class="confirm__txt">Ce fournisseur est actuellement actif. Sa suppression peut interrompre l'extraction de carte des menus (§06) jusqu'à ce qu'un autre fournisseur soit activé. La clé chiffrée associée est définitivement effacée.</p>
+        <div class="confirm__bar">
+          <button class="btn btn--secondary">Annuler</button>
+          <button class="btn btn--danger"><span class="material-symbols-outlined">delete</span> Supprimer</button>
+        </div>
+      </div>
+      <div class="ann-note">
+        <span class="material-symbols-outlined">swap_horiz</span>
+        <span>Le changement de fournisseur actif (« Activer ») passe aussi par un <code>ConfirmDialog</code> : il modifie le fournisseur IA en service pour toute la plateforme.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Spécifications -->
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Porte <code>AiProviderSettings</code> des objets <code>style={{}}</code> en ligne et des classes hors-scope (<code>.btn</code> / <code>.pill-mini</code>) vers le vocabulaire maison, et la branche comme panneau « Fournisseurs IA » du hub à rail (7.1).</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Lister / créer-modifier (<code>upsert</code>) / activer (<code>setActive</code>) / supprimer les fournisseurs IA.</li>
+          <li>Clé API <b>en écriture seule</b> : jamais relue ni réaffichée ; champ vide = on conserve la clé existante.</li>
+          <li>« Tester la connexion » vérifie le fournisseur actif via une requête serveur.</li>
+          <li>Les actions destructives <b>Supprimer</b> et <b>Activer</b> passent par le <code>ConfirmDialog</code> maison (bouton <code>.btn--danger</code> pour la suppression).</li>
+          <li>Un seul fournisseur actif à la fois ; état rendu via <code>.badge--ok</code> + <code>.dot--ok</code>.</li>
+        </ul>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/settings/AiProviderSettings.tsx</code> : porté de <code>style={{}}</code> + <code>.btn</code>/<code>.pill-mini</code> vers <code>.panel</code> / <code>.btn</code> / <code>.badge</code> / <code>.table</code> maison.</li>
+          <li><code>services/ai-provider</code> : <code>listAiProviders</code> / <code>upsertAiProvider</code> / <code>setActiveAiProvider</code> / <code>deleteAiProvider</code> / <code>testAiConnection</code> (inchangés).</li>
+          <li><code>POST /api/admin/ai-config/test</code> : vérifie <code>is_platform_superuser</code> côté serveur.</li>
+          <li>Rendu comme panneau « Fournisseurs IA » dans le rail du hub des Paramètres (7.1).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Plus aucun bouton natif nu nulle part : un seul vocabulaire visuel.</li>
+          <li>La clé API n'est jamais affichée ; le champ vide conserve la clé.</li>
+          <li><code>ConfirmDialog</code> sur <b>Supprimer</b> et sur <b>Activer</b> (changement de fournisseur en service).</li>
+          <li><code>:focus-visible</code> visible au clavier sur tous les contrôles (table, boutons, champs, select).</li>
+          <li>Gating super-admin appliqué côté serveur, pas seulement masqué dans l'UI.</li>
+          <li>Tous les libellés FR correctement accentués (« Clé API », « Tester la connexion », « chiffrée », « Modèle »).</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">priority_high</span>
+          <span>Corrige le P0 de l'audit : <code>.btn</code> et <code>.pill-mini</code> n'existaient qu'au scope <code>.crm-app</code>, d'où des boutons non stylés sur <code>/settings</code>.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

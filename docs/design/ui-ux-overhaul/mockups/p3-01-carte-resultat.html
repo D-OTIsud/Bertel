@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.1 · Carte résultat type-aware · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .results { max-width: 560px; display:flex; flex-direction:column; gap:12px; }
+  .rcard { display:grid; grid-template-columns: 92px 1fr 32px; gap:14px; padding:13px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--shadow-s); transition:border-color .15s ease, transform .12s ease; cursor:pointer; }
+  .rcard:hover { border-color:var(--teal); transform:translateY(-1px); }
+  .rcard__media { width:92px; height:70px; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line-soft); display:flex; align-items:center; justify-content:center; color:var(--accent); }
+  .rcard__media > .material-symbols-outlined { font-size:26px; }
+  /* La miniature porte le signet « à cheval » : le wrapper remplit la boîte média et autorise le débordement */
+  .rcard__media { overflow:visible; position:relative; }
+  .rcard__media .thumb { width:100%; height:100%; }
+  .rcard__media .thumb__img { width:100%; height:100%; background:var(--surface-2); border:none; }
+  .rcard__title { font-weight:700; font-size:15px; }
+  .rcard__meta { color:var(--ink-2); font-size:13px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:3px; }
+  .rcard__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rcard__typeline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:5px; }
+  .rcard__typeline .rcard__meta { margin-top:0; }
+  .rcard__sep { color:var(--line-strong, #b9c2c6); }
+  .rcard__star { color:var(--muted); display:flex; align-items:flex-start; justify-content:center; }
+  .rcard__star:hover { color:var(--orange); }
+  .before-card { display:grid; grid-template-columns: 92px 1fr 32px; gap:14px; padding:13px; background:var(--surface); border:1px dashed var(--danger); border-radius:var(--r-md); max-width:560px; opacity:.9; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 3 · Implémentation 3.1</span>
+    <h1>Carte résultat type-aware</h1>
+    <p class="lead">Un même gabarit de carte dont la ligne « méta » et la pastille de statut s'adaptent à l'archétype. La donnée existe déjà (les filtres la prouvent), elle est enfin affichée.</p>
+  </div>
+
+  <div class="mock-stage">
+    <div style="margin-bottom:18px">
+      <span class="tag-before">Avant</span>
+      <p class="muted small" style="margin:6px 0 10px">Mêmes champs pour tous : un itinéraire, un événement et des toilettes ressemblent à un hôtel sans capacité. La carte laissait aussi tomber le classement (étoiles), les labels (Clef Verte, Tourisme &amp; Handicap, Qualité Tourisme) et les tags : aucune distinction visible.</p>
+      <div class="before-card">
+        <div class="rcard__media acc-iti"><span class="material-symbols-outlined">image</span></div>
+        <div>
+          <div class="rcard__title">Boucle du Piton Rouge</div>
+          <div class="rcard__meta"><span class="dot dot--off"></span> Fermé · Activités · Saint-Paul · sans classement ni label</div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+    </div>
+
+    <span class="tag-after">Après</span>
+    <p class="muted small" style="margin:6px 0 12px">Couleur = famille de type · pastille verte uniquement quand le statut « ouvert » a du sens.</p>
+    <div class="results">
+
+      <div class="rcard acc-heb">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">hotel</span></div>
+            <span class="thumb__rating" title="Hôtel 3 étoiles"><span class="material-symbols-outlined">star</span><span class="material-symbols-outlined">star</span><span class="material-symbols-outlined">star</span></span>
+            <span class="thumb__labels">
+              <span class="label-logo lbl-clef-verte" title="Clef Verte"><span class="material-symbols-outlined">eco</span></span>
+              <span class="label-logo lbl-th" title="Tourisme &amp; Handicap"><span class="material-symbols-outlined">accessible</span></span>
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Hôtel Les Tamarins</span><span class="badge badge--ok"><span class="dot dot--ok"></span> Ouvert</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-heb">Hébergement</span><span class="rcard__meta">42 chambres <span class="rcard__sep">·</span> 110 pers <span class="rcard__sep">·</span> €€</span></div>
+          <div class="distinction-row">
+            <span class="class-text">3 étoiles</span>
+            <span class="label-chip"><span class="label-chip__logo lbl-clef-verte"><span class="material-symbols-outlined">eco</span></span> Clef Verte</span>
+            <span class="tag-chip" style="--tag:#2f6fb0">Piscine</span>
+            <span class="tag-chip" style="--tag:#176b6a">Vue mer</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+      <div class="rcard acc-iti">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">route</span></div>
+            <span class="thumb__labels">
+              <span class="label-logo lbl-th" title="Tourisme &amp; Handicap (tronçon accessible)"><span class="material-symbols-outlined">accessible</span></span>
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Boucle du Piton Rouge</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-iti">Itinéraire</span><span class="rcard__meta">12 km <span class="rcard__sep">·</span> D+ 450 m <span class="rcard__sep">·</span> 4 h <span class="rcard__sep">·</span> Boucle <span class="rcard__sep">·</span> Difficile</span></div>
+          <div class="distinction-row">
+            <span class="tag-chip" style="--tag:#2f8f4e">Randonnée</span>
+            <span class="tag-chip" style="--tag:#d8602f">VTT</span>
+            <span class="tag-chip" style="--tag:#7d5aa6">Boucle</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+      <div class="rcard acc-fma">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">festival</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Fête de la vanille</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-fma">Événement</span><span class="rcard__meta"><span class="material-symbols-outlined" style="font-size:16px">calendar_month</span> 14 au 18 juil <span class="rcard__sep">·</span> Bras-Panon <span class="rcard__sep">·</span> Billetterie</span></div>
+          <div class="distinction-row">
+            <span class="tag-chip" style="--tag:#c98a1e">Famille</span>
+            <span class="tag-chip" style="--tag:#d8602f">Marché</span>
+            <span class="tag-chip" style="--tag:#2f8f4e">Vanille</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+      <div class="rcard acc-res">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">restaurant</span></div>
+            <span class="thumb__labels">
+              <span class="label-logo lbl-qualite" title="Qualité Tourisme"><span class="material-symbols-outlined">verified</span></span>
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Le Vieux Domaine</span><span class="badge badge--ok"><span class="dot dot--ok"></span> Ouvert</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-res">Restaurant</span><span class="rcard__meta">Créole <span class="rcard__sep">·</span> 60 couverts <span class="rcard__sep">·</span> €€</span></div>
+          <div class="distinction-row">
+            <span class="label-chip"><span class="label-chip__logo lbl-qualite"><span class="material-symbols-outlined">verified</span></span> Qualité Tourisme</span>
+            <span class="tag-chip" style="--tag:#d8602f">Fait maison</span>
+            <span class="tag-chip" style="--tag:#8a6b4f">Terroir</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+      <div class="rcard acc-vis">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">temple_buddhist</span></div>
+            <span class="thumb__labels">
+              <span class="label-logo lbl-th" title="Tourisme &amp; Handicap (belvédère accessible)"><span class="material-symbols-outlined">accessible</span></span>
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Cascade Niagara</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-vis">Site naturel</span><span class="rcard__meta"><span class="material-symbols-outlined" style="font-size:16px">terrain</span> Accès libre <span class="rcard__sep">·</span> Point de vue <span class="rcard__sep">·</span> Sainte-Suzanne</span></div>
+          <div class="distinction-row">
+            <span class="tag-chip" style="--tag:#7d5aa6">Point de vue</span>
+            <span class="tag-chip" style="--tag:#2f6fb0">Cascade</span>
+            <span class="tag-chip" style="--tag:#5c6a71">+2</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+      <div class="rcard acc-srv">
+        <div class="rcard__media">
+          <div class="thumb">
+            <div class="thumb__img"><span class="material-symbols-outlined">wc</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Toilettes publiques Ermitage</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-srv">Service public</span><span class="rcard__meta">Accès libre <span class="rcard__sep">·</span> 24h/24 <span class="rcard__sep">·</span> PMR</span></div>
+          <div class="distinction-row">
+            <span class="tag-chip" style="--tag:#0a6cb0">PMR</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <div class="grid2">
+      <div>
+        <h3>Comportement par type (créneau méta)</h3>
+        <ul>
+          <li><b>HEB</b> : statut ouvert · chambres · capacité · gamme prix</li>
+          <li><b>ITI</b> : distance · D+ · durée · forme · difficulté (pas de pastille ouvert)</li>
+          <li><b>FMA</b> : prochaine/plage de dates · commune · billetterie</li>
+          <li><b>RES</b> : statut ouvert · cuisine · couverts · gamme prix</li>
+          <li><b>VIS</b> : accès · nature du site · commune</li>
+          <li><b>SRV/SPU</b> : accès · horaires · PMR</li>
+        </ul>
+        <h3>Règles</h3>
+        <ul>
+          <li>La pastille « ouvert/fermé » ne s'affiche que pour HEB/RES/SRV (sens horaire) ; jamais pour ITI/FMA/VIS.</li>
+          <li>Couleur de la pastille de type = palette d'archétype unique (impl. 2.1).</li>
+          <li>États : hover (relief), focus (anneau), sélection (★), squelette au chargement.</li>
+        </ul>
+        <h3>Classement · labels · tags (retour PO)</h3>
+        <ul>
+          <li>La carte <b>conserve</b> le classement, les labels et les tags : ils restent visibles dans le corps via <code>.distinction-row</code> (étoiles <code>.stars</code>, puces <code>.label-chip</code> avec pastille de statut accordé/en cours/expiré, tags colorés <code>.tag-chip</code> + chip « +N » de débordement).</li>
+          <li>La miniature porte un <b>signet à cheval</b> : cocarde de classement (<code>.thumb__rating</code>) en haut-gauche, <b>pour HEB uniquement</b> (étoiles · clés · épis) ; logos-pastilles de label (<code>.thumb__labels .label-logo</code>) en bas-droite pour les objets labellisés.</li>
+          <li>Pas d'étoiles de classement sur RES/ASC/ITI/VIS/FMA/SRV ; seul l'hébergement est classé par étoiles.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>ResultCardView.tsx</code> : remplacer le bloc méta fixe par un rendu par archétype.</li>
+          <li><code>utils/explorer-card.ts</code> : projeter les champs méta selon le type (déjà présents côté filtres).</li>
+          <li>Pastille via <code>type-pill acc-*</code> de 2.1 ; statut ouvert via <code>open_now</code> conditionné par type.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Chaque type affiche sa ligne méta dédiée (snapshot par type).</li>
+          <li>Aucune pastille ouvert sur ITI/FMA/VIS.</li>
+          <li>Carte cliquable au clavier, anneau de focus visible.</li>
+          <li>Le classement, les labels et les tags d'un objet sont préservés sur la carte (jamais supprimés à la projection).</li>
+          <li>Une miniature d'objet classé ou labellisé porte un signet à cheval : cocarde d'étoiles (HEB seul) et/ou logos-pastilles de label, sans rogner le bord de la carte.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1.2 · États vides &amp; squelettes · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .section { margin-bottom: 26px; }
+  .section > h3 { margin-bottom: 12px; }
+  /* Trois états vides côte à côte, chacun dans son propre panneau */
+  .empties { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .empty-cell { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-s); display: flex; align-items: center; min-height: 280px; }
+  .empty-cell .empty { padding: 28px 20px; }
+  /* Variantes d'icône d'état vide (le mode pilote la couleur) */
+  .empty__icon--muted { background: var(--bg-2); color: var(--muted); }
+  .empty__icon--soon { background: var(--info-soft); color: var(--info); }
+  .empty__icon--err { background: var(--danger-soft); color: var(--danger); }
+  .mode-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .mode-tag code { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 6px; font-size: 11px; }
+  /* Liste de squelettes : reprend la grille 92px/1fr/32px de la carte p3-01 */
+  .skel-list { max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
+  .skel-card { display: grid; grid-template-columns: 92px 1fr 32px; gap: 14px; padding: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-s); }
+  .skel-card__media { width: 92px; height: 70px; border-radius: var(--r-sm); }
+  .skel-lines { display: flex; flex-direction: column; gap: 9px; padding-top: 3px; }
+  .skel-line { height: 12px; }
+  .skel-pill { height: 18px; width: 96px; border-radius: var(--r-pill); }
+  .skel-star { height: 22px; width: 22px; border-radius: 6px; margin: 4px auto 0; }
+  /* Bandeau d'erreur : garde le reste de la page utilisable */
+  .error-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--danger); background: var(--danger-soft); border-radius: var(--r-md); }
+  .error-row__icon { width: 40px; height: 40px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface); color: var(--danger); flex: 0 0 auto; }
+  .stale-note { margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 1 · Implémentation 1.2</span>
+    <h1>États vides &amp; squelettes</h1>
+    <p class="lead">Un même composant <code>EmptyState</code> qui enseigne au lieu de constater : il distingue « aucune donnée » de « aucun résultat pour ces filtres », annonce les modules à venir, et remplace les spinners centraux par des squelettes. Le chargement et l'erreur ne bloquent plus la page.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="section">
+      <h3>Composant <code>EmptyState</code> · un seul composant, quatre modes</h3>
+      <div class="empties">
+
+        <!-- (a) Mode no-data : aucune donnée saisie, on propose de créer -->
+        <div class="empty-cell">
+          <div class="empty">
+            <span class="mode-tag">Mode <code>no-data</code></span>
+            <div class="empty__icon"><span class="material-symbols-outlined">person_add</span></div>
+            <div class="empty__title">Aucun acteur dans votre annuaire</div>
+            <p class="empty__text">Créez un premier acteur (prestataire, gérant, guide, contact) pour démarrer votre suivi relationnel.</p>
+            <button class="btn btn--primary"><span class="material-symbols-outlined">add</span> Créer un acteur</button>
+          </div>
+        </div>
+
+        <!-- (b) Mode filtered : il y a des données, mais les filtres masquent tout -->
+        <div class="empty-cell">
+          <div class="empty">
+            <span class="mode-tag">Mode <code>filtered</code></span>
+            <div class="empty__icon empty__icon--muted"><span class="material-symbols-outlined">filter_alt_off</span></div>
+            <div class="empty__title">Aucun résultat pour ces filtres</div>
+            <p class="empty__text">Vos critères sont trop restrictifs. Des acteurs existent, ils ne correspondent simplement pas à cette combinaison.</p>
+            <button class="btn btn--secondary"><span class="material-symbols-outlined">restart_alt</span> Réinitialiser les filtres</button>
+          </div>
+        </div>
+
+        <!-- (c) Mode coming-soon : module pas encore livré, ton sourd, pas de CTA -->
+        <div class="empty-cell">
+          <div class="empty">
+            <span class="mode-tag">Mode <code>coming-soon</code></span>
+            <div class="empty__icon empty__icon--soon"><span class="material-symbols-outlined">schedule</span></div>
+            <div class="empty__title">Module disponible au lot 4</div>
+            <p class="empty__text">Le suivi des demandes et le tableau Kanban arriveront avec le lot 4. Rien à faire pour l'instant.</p>
+            <span class="badge badge--info">Bientôt</span>
+          </div>
+        </div>
+
+      </div>
+      <p class="muted small" style="margin-top:10px">La couleur de l'icône et la présence d'un CTA dépendent du <code>mode</code> : action positive (teal) pour <code>no-data</code>, neutre pour <code>filtered</code>, information (bleu) pour <code>coming-soon</code>.</p>
+    </div>
+
+    <div class="section">
+      <h3>Chargement initial · squelettes, pas de spinner central</h3>
+      <div class="skel-list" aria-hidden="true">
+
+        <div class="skel-card">
+          <div class="skel skel-card__media"></div>
+          <div class="skel-lines">
+            <div class="skel skel-line" style="width:62%"></div>
+            <div class="skel skel-pill"></div>
+            <div class="skel skel-line" style="width:84%"></div>
+          </div>
+          <div class="skel skel-star"></div>
+        </div>
+
+        <div class="skel-card">
+          <div class="skel skel-card__media"></div>
+          <div class="skel-lines">
+            <div class="skel skel-line" style="width:54%"></div>
+            <div class="skel skel-pill" style="width:80px"></div>
+            <div class="skel skel-line" style="width:72%"></div>
+          </div>
+          <div class="skel skel-star"></div>
+        </div>
+
+        <div class="skel-card">
+          <div class="skel skel-card__media"></div>
+          <div class="skel-lines">
+            <div class="skel skel-line" style="width:70%"></div>
+            <div class="skel skel-pill" style="width:104px"></div>
+            <div class="skel skel-line" style="width:60%"></div>
+          </div>
+          <div class="skel skel-star"></div>
+        </div>
+
+      </div>
+      <p class="muted small" style="margin-top:10px">Le squelette épouse la grille réelle de la carte résultat (média 92px, méta 1fr, étoile 32px) : la mise en page ne saute pas quand la donnée arrive (pas de décalage CLS).</p>
+    </div>
+
+    <div class="section">
+      <h3>Erreur de chargement · la page reste utilisable</h3>
+      <div class="error-row">
+        <span class="error-row__icon"><span class="material-symbols-outlined">cloud_off</span></span>
+        <div class="grow">
+          <div style="font-weight:700">Impossible de charger les fiches</div>
+          <p class="muted small" style="margin-top:2px">Le service n'a pas répondu. Les dernières fiches affichées restent visibles, les filtres et la recherche fonctionnent toujours.</p>
+        </div>
+        <button class="btn btn--secondary"><span class="material-symbols-outlined">refresh</span> Réessayer</button>
+      </div>
+      <div class="callout stale-note">
+        <span class="material-symbols-outlined" style="color:var(--info)">info</span>
+        <div>En cas d'erreur partielle, on conserve la dernière donnée valide (« last-good ») : on n'efface jamais une liste déjà chargée pour afficher une page d'erreur plein écran.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Un composant transverse qui remplace, partout, les « Aucun X » nus et les spinners centraux. Surtout du frontend, sans changement de données.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Composant unique <code>EmptyState</code> avec une prop <code>mode</code> : <code>no-data</code> | <code>filtered</code> | <code>coming-soon</code> | <code>error</code>.</li>
+          <li><code>no-data</code> : icône d'action + CTA primaire (créer). <code>filtered</code> : icône neutre + CTA secondaire (réinitialiser). <code>coming-soon</code> : icône info, ton sourd, aucun CTA. <code>error</code> : ligne dédiée + bouton « Réessayer ».</li>
+          <li>Au premier chargement : squelettes calqués sur la grille de la carte (92px / 1fr / 32px), jamais de spinner centré.</li>
+          <li>En erreur : on garde la dernière donnée valide ; le reste de la page (filtres, recherche, nav) reste interactif.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Chaque liste distingue « aucune donnée » de « aucun résultat pour ces filtres ».</li>
+          <li>Squelette visible pendant le chargement initial de chaque liste.</li>
+          <li>Une erreur ne remplace jamais une liste déjà chargée (last-good conservé).</li>
+          <li>Plus aucun « Aucun X » nu ni spinner central dans l'application.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers impactés</h3>
+        <ul>
+          <li>Nouveau : <code>src/components/common/EmptyState.tsx</code> (composant + prop <code>mode</code>).</li>
+          <li>Nouveau : <code>src/components/common/WidgetFrame.tsx</code> (cadre : titre, états chargement / vide / erreur).</li>
+          <li>Listes CRM : <code>CrmAnnuaire.tsx</code>, <code>CrmTaches.tsx</code> (annuaire et tâches).</li>
+          <li>Explorateur : <code>ResultsList.tsx</code> (squelettes + vides filtrés vs no-data).</li>
+          <li>Pages stub des modules non livrés : passage en <code>mode="coming-soon"</code>.</li>
+        </ul>
+        <h3>Notes</h3>
+        <ul>
+          <li>Les classes <code>.empty</code>, <code>.empty__icon</code>, <code>.skel</code> existent déjà dans <code>bertel-ui.css</code> (1.1) : pas de nouveau token.</li>
+          <li>Le squelette reprend exactement la grille de <code>ResultCardView</code> (impl. 3.1) pour éviter tout décalage de mise en page.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.3 · Carte géo type-aware &amp; reprise d'erreur · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  /* Layout propre à la fonctionnalité · le reste vient de bertel-ui.css */
+  .map { position:relative; height:360px; border-radius:var(--r-md); overflow:hidden;
+         background:
+           linear-gradient(0deg, rgba(24,49,59,.04) 1px, transparent 1px) 0 0 / 100% 36px,
+           linear-gradient(90deg, rgba(24,49,59,.04) 1px, transparent 1px) 0 0 / 36px 100%,
+           var(--surface-2);
+         border:1px solid var(--line); }
+
+  /* Marqueurs type-aware */
+  .pin { position:absolute; width:30px; height:30px; border-radius:50% 50% 50% 2px;
+         transform:rotate(45deg); background:var(--accent); border:2px solid #fff;
+         box-shadow:var(--shadow-s); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .pin .material-symbols-outlined { transform:rotate(-45deg); color:#fff; font-size:16px; }
+  .pin:hover { filter:brightness(1.06); }
+
+  /* Cluster : anneau multi-couleurs hintant la composition */
+  .cluster { position:absolute; width:46px; height:46px; border-radius:50%; cursor:pointer;
+             display:flex; align-items:center; justify-content:center;
+             background:conic-gradient(var(--acc-heb) 0 25%, var(--acc-iti) 25% 45%, var(--acc-res) 45% 62%,
+                                       var(--acc-fma) 62% 78%, var(--acc-vis) 78% 90%, var(--acc-srv) 90% 100%);
+             box-shadow:var(--shadow-m); }
+  .cluster__inner { width:34px; height:34px; border-radius:50%; background:var(--surface);
+                    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:var(--ink); }
+
+  /* Popup type-aware ancrée sur un marqueur */
+  .map-pop { position:absolute; width:230px; background:var(--surface); border:1px solid var(--line);
+             border-radius:var(--r-md); box-shadow:var(--shadow-m); padding:12px 13px; }
+  .map-pop__title { font-weight:700; font-size:14px; }
+  .map-pop__meta { color:var(--ink-2); font-size:13px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:5px; }
+  .map-pop__tail { position:absolute; left:24px; bottom:-7px; width:13px; height:13px; background:var(--surface);
+                   border-right:1px solid var(--line); border-bottom:1px solid var(--line); transform:rotate(45deg); }
+
+  /* Légende docked bas-gauche */
+  .legend { position:absolute; left:12px; bottom:12px; padding:10px 12px; width:178px; }
+  .legend__title { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .legend__row { display:flex; align-items:center; gap:9px; padding:3px 0; font-size:13px; font-weight:600; color:var(--ink-2); }
+  .legend__dot { width:18px; height:18px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .legend__dot .material-symbols-outlined { color:#fff; font-size:12px; }
+
+  /* Bandeau de reprise d'erreur (inline, au-dessus des résultats conservés) */
+  .err-banner { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-md);
+                background:var(--danger-soft); border:1px solid var(--danger); margin:16px 0 12px; }
+  .err-banner__icon { color:var(--danger); display:flex; }
+  .err-banner__txt { flex:1; font-size:14px; }
+  .err-banner__txt b { color:var(--danger); }
+
+  .results { display:flex; flex-direction:column; gap:12px; max-width:560px; }
+  .rcard { display:grid; grid-template-columns: 92px 1fr 32px; gap:14px; padding:13px; background:var(--surface);
+           border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--shadow-s); }
+  .rcard__media { width:92px; height:70px; border-radius:var(--r-sm); background:var(--surface-2);
+                  border:1px solid var(--line-soft); display:flex; align-items:center; justify-content:center; color:var(--accent); }
+  .rcard__media > .material-symbols-outlined { font-size:26px; }
+  .rcard__title { font-weight:700; font-size:15px; }
+  .rcard__meta { color:var(--ink-2); font-size:13px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-top:3px; }
+  .rcard__head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rcard__typeline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:5px; }
+  .rcard__typeline .rcard__meta { margin-top:0; }
+  .rcard__sep { color:#b9c2c6; }
+  .rcard__star { color:var(--muted); display:flex; align-items:flex-start; justify-content:center; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 3 · Implémentation 3.3</span>
+    <h1>Carte géo type-aware &amp; reprise d'erreur</h1>
+    <p class="lead">Les marqueurs prennent la couleur et l'icône de leur archétype, les clusters trahissent leur composition, et une légende décode le tout. Surtout : une requête en échec n'efface plus tout l'Explorateur · un bandeau inline propose de réessayer pendant que les derniers résultats restent affichés.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- CARTE -->
+    <div class="panel" style="padding:0; overflow:hidden">
+      <div class="map">
+
+        <!-- Marqueurs type-aware -->
+        <div class="pin acc-heb" style="left:140px; top:70px" aria-label="Hébergement"><span class="material-symbols-outlined">hotel</span></div>
+        <div class="pin acc-iti" style="left:300px; top:130px" aria-label="Itinéraire"><span class="material-symbols-outlined">route</span></div>
+        <div class="pin acc-fma" style="left:470px; top:90px" aria-label="Événement"><span class="material-symbols-outlined">festival</span></div>
+        <div class="pin acc-res" style="left:560px; top:210px" aria-label="Restaurant"><span class="material-symbols-outlined">restaurant</span></div>
+        <div class="pin acc-srv" style="left:230px; top:250px" aria-label="Service public"><span class="material-symbols-outlined">wc</span></div>
+        <div class="pin acc-vis" style="left:660px; top:150px" aria-label="Site naturel"><span class="material-symbols-outlined">terrain</span></div>
+
+        <!-- Cluster avec anneau de composition -->
+        <div class="cluster" style="left:380px; top:240px" aria-label="12 fiches groupées">
+          <div class="cluster__inner">12</div>
+        </div>
+
+        <!-- Popup type-aware ancrée sur le marqueur hébergement -->
+        <div class="map-pop" style="left:120px; top:108px">
+          <div class="row between" style="align-items:flex-start">
+            <span class="map-pop__title">Hôtel Les Tamarins</span>
+          </div>
+          <span class="type-pill acc-heb" style="margin-top:6px"><span class="material-symbols-outlined" style="font-size:14px">hotel</span> Hébergement</span>
+          <div class="map-pop__meta"><span class="dot dot--ok"></span> Ouvert <span class="rcard__sep">·</span> 42 chambres <span class="rcard__sep">·</span> Saint-Paul</div>
+          <!-- Distinctions : classement (HEB classé 3 étoiles) + label + tags -->
+          <div class="distinction-row">
+            <span class="stars" aria-label="Classé 3 étoiles">
+              <span class="material-symbols-outlined">star</span>
+              <span class="material-symbols-outlined">star</span>
+              <span class="material-symbols-outlined">star</span>
+            </span>
+            <span class="sep"></span>
+            <span class="label-chip">
+              <span class="label-chip__logo lbl-clef-verte"><span class="material-symbols-outlined">eco</span></span>
+              Clef Verte
+            </span>
+            <span class="tag-chip" style="--tag:#176b6a">Vue lagon</span>
+            <span class="tag-chip" style="--tag:#d8602f">Spa</span>
+          </div>
+          <span class="map-pop__tail"></span>
+        </div>
+
+        <!-- Légende docked -->
+        <div class="panel legend">
+          <div class="legend__title">Légende des types</div>
+          <div class="legend__row acc-heb"><span class="legend__dot"><span class="material-symbols-outlined">hotel</span></span> Hébergement</div>
+          <div class="legend__row acc-res"><span class="legend__dot"><span class="material-symbols-outlined">restaurant</span></span> Restauration</div>
+          <div class="legend__row acc-asc"><span class="legend__dot"><span class="material-symbols-outlined">sports_handball</span></span> Activité</div>
+          <div class="legend__row acc-iti"><span class="legend__dot"><span class="material-symbols-outlined">route</span></span> Itinéraire</div>
+          <div class="legend__row acc-vis"><span class="legend__dot"><span class="material-symbols-outlined">terrain</span></span> Site &amp; visite</div>
+          <div class="legend__row acc-srv"><span class="legend__dot"><span class="material-symbols-outlined">storefront</span></span> Service</div>
+          <div class="legend__row acc-fma"><span class="legend__dot"><span class="material-symbols-outlined">festival</span></span> Événement</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- REPRISE D'ERREUR : bandeau inline AU-DESSUS de résultats toujours rendus -->
+    <div class="err-banner" role="alert">
+      <span class="err-banner__icon material-symbols-outlined">cloud_off</span>
+      <div class="err-banner__txt"><b>Carte indisponible</b> · le chargement des marqueurs a échoué. Les résultats ci-dessous restent affichés.</div>
+      <button class="btn btn--danger btn--sm"><span class="material-symbols-outlined" style="font-size:18px">refresh</span> Réessayer</button>
+    </div>
+
+    <p class="muted small" style="margin:0 0 12px">Avant : une seule requête en échec remplaçait toute la page par un écran d'erreur. Après : la carte signale son échec localement, l'Explorateur reste utilisable.</p>
+
+    <div class="results">
+      <div class="rcard acc-heb">
+        <div class="rcard__media" style="overflow:visible;background:none;border:0">
+          <div class="thumb" style="width:100%;height:100%">
+            <div class="thumb__img"><span class="material-symbols-outlined">hotel</span></div>
+            <span class="thumb__rating" title="Hôtel 3 étoiles"><span class="material-symbols-outlined">star</span><span class="material-symbols-outlined">star</span><span class="material-symbols-outlined">star</span></span>
+            <span class="thumb__labels"><span class="label-logo lbl-clef-verte" title="Clef Verte"><span class="material-symbols-outlined">eco</span></span></span>
+          </div>
+        </div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Hôtel Les Tamarins</span><span class="badge badge--ok"><span class="dot dot--ok"></span> Ouvert</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-heb">Hébergement</span><span class="rcard__meta">42 chambres <span class="rcard__sep">·</span> Saint-Paul <span class="rcard__sep">·</span> €€</span></div>
+          <div class="distinction-row">
+            <span class="class-text">3 étoiles</span>
+            <span class="label-chip"><span class="label-chip__logo lbl-clef-verte"><span class="material-symbols-outlined">eco</span></span> Clef Verte</span>
+            <span class="tag-chip" style="--tag:#176b6a">Vue lagon</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+      <div class="rcard acc-iti">
+        <div class="rcard__media"><span class="material-symbols-outlined">route</span></div>
+        <div>
+          <div class="rcard__head"><span class="rcard__title">Boucle du Piton Rouge</span></div>
+          <div class="rcard__typeline"><span class="type-pill acc-iti">Itinéraire</span><span class="rcard__meta">12 km <span class="rcard__sep">·</span> D+ 450 m <span class="rcard__sep">·</span> 4 h <span class="rcard__sep">·</span> Boucle</span></div>
+          <div class="distinction-row">
+            <span class="tag-chip" style="--tag:#2f8f4e">Randonnée</span>
+            <span class="tag-chip" style="--tag:#7d5aa6">Panorama</span>
+          </div>
+        </div>
+        <div class="rcard__star"><span class="material-symbols-outlined">star</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <div class="grid2">
+      <div>
+        <h3>Carte type-aware</h3>
+        <ul>
+          <li>Couleur + icône du marqueur dérivées de l'archétype (même palette que les cartes 3.1 et les pastilles 2.1).</li>
+          <li>Pin de cluster teinté par <b>composition</b> (anneau multi-couleurs proportionnel aux types groupés), plus un compteur · fini le vert uniforme.</li>
+          <li>Popup au survol adaptée au type (titre + pastille de type + méta dédiée), comme la ligne méta des cartes.</li>
+          <li><b>Distinctions conservées dans la popup</b> : le classement (étoiles pour un HEB classé, ex. 3 étoiles ; clés/épis pour les autres hébergements), la puce-label avec son logo et son point d'état (accordé / en cours / expiré) et 1 à 2 tags colorés y restent visibles, alignés sur les cartes et la fiche. Les types non hébergement (RES, ASC, ITI, VIS, FMA) n'affichent pas d'étoiles mais conservent label et tags.</li>
+          <li>Légende ancrée bas-gauche décodant les 7 archétypes (absente aujourd'hui).</li>
+        </ul>
+        <h3>Reprise d'erreur</h3>
+        <ul>
+          <li>Remplace le remplacement plein-écran (<code>views/ExplorerPage.tsx:61-67</code>) par un bandeau inline + « Réessayer ».</li>
+          <li>La dernière donnée valide reste affichée : une requête carte/références en échec ne vide plus tout l'Explorateur.</li>
+          <li>Le « Réessayer » relance uniquement la requête fautive (carte), sans recharger la liste.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/components/explorer/MapPanel.tsx</code> : rendu des marqueurs/clusters/popup type-aware + état d'erreur local.</li>
+          <li><code>src/config/map-markers.ts</code> : table archétype → couleur + icône (source unique partagée avec les cartes).</li>
+          <li><code>views/ExplorerPage.tsx</code> : retirer le remplacement plein-écran ; isoler l'erreur carte du reste.</li>
+          <li>CSS de cluster (anneau de composition + compteur) dans <code>styles.css</code>.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Marqueurs et clusters distinguent visuellement le type.</li>
+          <li>La légende est présente et décode les 7 archétypes.</li>
+          <li>La popup au survol surface le classement (étoiles pour un HEB classé), la puce-label avec son état et les tags ; pas d'étoiles sur les types non hébergement.</li>
+          <li>Une erreur de requête références/cartes s'affiche inline ; l'Explorateur reste utilisable.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

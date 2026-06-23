@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6.1 · Barre d'enregistrement re-priorisée · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .savebar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 18px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    box-shadow: var(--shadow-s);
+  }
+  .savebar__id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .savebar__title { font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+  .savebar__state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .savebar__time { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .savebar__time .material-symbols-outlined { font-size: 16px; }
+  .savebar__actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .stage-block { margin-bottom: 26px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .stage-block__head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .stage-block__note { color: var(--muted); font-size: 13px; }
+  .blockers-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; padding: 6px 12px;
+    border-radius: var(--r-pill); border: 1px solid var(--warn);
+    background: var(--warn-soft); color: var(--warn); cursor: pointer;
+  }
+  .blockers-chip .material-symbols-outlined { font-size: 18px; }
+  .pub-callout { margin-top: 14px; max-width: 640px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 6 · Implémentation 6.1</span>
+    <h1>Barre d'enregistrement re-priorisée</h1>
+    <p class="lead">La barre supérieure de l'éditeur fait aujourd'hui de « Publier » l'action principale et grise « Enregistrer » dès que la fiche est propre. On rétablit l'enregistrement du brouillon comme geste primaire et on fait de la publication un acte délibéré et secondaire.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="stage-block">
+      <div class="stage-block__head">
+        <span class="tag-before">Avant</span>
+        <span class="stage-block__note">« Publier » en teal capte l'attention ; « Enregistrer » est grisé sur fiche propre, donc on publie pour ne rien perdre.</span>
+      </div>
+      <div class="savebar">
+        <div class="savebar__id">
+          <span class="savebar__title">Hôtel Les Tamarins</span>
+          <span class="savebar__state"><span class="badge badge--warn">Brouillon</span></span>
+        </div>
+        <div class="savebar__actions">
+          <button class="btn btn--secondary" disabled>Enregistrer</button>
+          <button class="btn btn--primary"><span class="material-symbols-outlined">publish</span> Publier</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-block">
+      <div class="stage-block__head">
+        <span class="tag-after">Après</span>
+        <span class="stage-block__note">« Enregistrer » redevient le bouton primaire (teal + anneau de focus) ; « Publier » est un acte secondaire et distinct. La pastille de modifs et l'horodatage relatif restent visibles.</span>
+      </div>
+      <div class="savebar">
+        <div class="savebar__id">
+          <span class="savebar__title">Hôtel Les Tamarins</span>
+          <span class="savebar__state">
+            <span class="badge badge--warn">Brouillon</span>
+            <span class="badge badge--info"><span class="material-symbols-outlined" style="font-size:14px">edit_note</span> 3 modifs locales</span>
+            <span class="savebar__time"><span class="material-symbols-outlined">schedule</span> Enregistré il y a 4 min</span>
+          </span>
+        </div>
+        <div class="savebar__actions">
+          <button class="btn btn--secondary"><span class="material-symbols-outlined">publish</span> Publier</button>
+          <button class="btn btn--primary" style="outline:2px solid var(--ring);outline-offset:2px">
+            <span class="material-symbols-outlined">save</span> Enregistrer
+          </button>
+        </div>
+      </div>
+
+      <div class="callout pub-callout">
+        <span class="material-symbols-outlined" style="color:var(--warn)">info</span>
+        <div>
+          <b>Avec des bloqueurs de publication</b>, la barre « Après » expose un état d'avertissement et conserve l'enregistrement primaire :
+          <div class="savebar" style="margin-top:10px">
+            <div class="savebar__id">
+              <span class="savebar__title">Boucle du Piton Rouge</span>
+              <span class="savebar__state">
+                <span class="badge badge--warn">Brouillon</span>
+                <button class="blockers-chip"><span class="material-symbols-outlined">error</span> 2 bloqueurs avant publication</button>
+              </span>
+            </div>
+            <div class="savebar__actions">
+              <button class="btn btn--secondary" disabled><span class="material-symbols-outlined">publish</span> Publier</button>
+              <button class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-block">
+      <div class="stage-block__head">
+        <span class="tag-after">États du bouton</span>
+        <span class="stage-block__note">Chaque action a son état occupé, désactivé et focus distinct.</span>
+      </div>
+      <div class="wrap" style="align-items:center">
+        <button class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer</button>
+        <button class="btn btn--primary" disabled><span class="material-symbols-outlined">progress_activity</span> Enregistrement…</button>
+        <button class="btn btn--secondary"><span class="material-symbols-outlined">publish</span> Publier</button>
+        <button class="btn btn--secondary" disabled><span class="material-symbols-outlined">progress_activity</span> Publication…</button>
+        <button class="btn btn--primary" style="outline:2px solid var(--ring);outline-offset:2px"><span class="material-symbols-outlined">save</span> Focus visible</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Modification purement front, sans changement du contrat de mutation. On inverse la hiérarchie visuelle des deux actions et on fiabilise leurs états.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>« Enregistrer » (brouillon) devient l'action <b>visuellement primaire</b> (<code>btn--primary</code> teal) ; « Publier » passe en <b>secondaire</b> distinct (<code>btn--secondary</code>).</li>
+          <li>La pastille de modifs locales (<code>badge--info</code> « 3 modifs locales ») et l'horodatage relatif « Enregistré il y a 4 min » restent affichés.</li>
+          <li>Publier conserve son libellé occupé propre (« Publication… ») distinct de « Enregistrement… ».</li>
+          <li>En présence de bloqueurs, « Publier » est désactivé et un chip explicatif s'affiche ; « Enregistrer » reste actif.</li>
+          <li>Anneau <code>:focus-visible</code> sur les deux boutons ; états désactivé / occupé explicites.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/object-editor/shell/EditorTopbar.tsx</code> : intervertir les variantes (Enregistrer → primaire, Publier → secondaire).</li>
+          <li>Conserver le <code>dirty</code> chip et le timestamp relatif déjà calculés dans le shell.</li>
+          <li>Ajouter / renommer la copie occupée « Publication… » distincte de « Enregistrement… ».</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>L'enregistrement est l'affordance primaire de la barre.</li>
+          <li>La publication est un acte délibéré, visuellement secondaire.</li>
+          <li>Les deux actions ont des états occupé / désactivé / focus corrects.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

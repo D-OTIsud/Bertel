@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.1 · Taxonomie unifiée &amp; libellés · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .section { margin-bottom: 26px; }
+  .section > h3 { margin-bottom: 12px; }
+  .code-cell { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 700; font-size: 13px; color: var(--ink); }
+  .arch-cell { display: flex; align-items: center; gap: 8px; }
+  /* Pastille de couleur d'archétype dans la colonne « couleur » */
+  .swatch-dot { width: 16px; height: 16px; border-radius: 5px; border: 1px solid var(--line); display: inline-block; flex: 0 0 auto; }
+  .hex { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+  .group-head td { background: var(--surface-2); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); padding: 8px 12px; }
+  .group-head .group-accent { font-weight: 800; }
+  /* Avant / après côte à côte */
+  .ba-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: stretch; }
+  .ba-col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
+  .ba-col--before { border: 1px dashed var(--danger); }
+  .ba-arrow { display: flex; align-items: center; color: var(--muted); }
+  .raw-chip { display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
+  .ba-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+  .ba-row:last-child { border-bottom: 0; }
+  .ba-row__label { font-size: 12px; font-weight: 700; color: var(--muted); width: 86px; flex: 0 0 auto; }
+  .pills-row { display: flex; flex-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 2 · Implémentation 2.1</span>
+    <h1>Taxonomie unifiée &amp; libellés</h1>
+    <p class="lead">Une seule carte type vers famille et un seul résolveur de libellés, partagés par l'explorateur, l'éditeur et le tiroir. Fin des deux taxonomies divergentes et fin des codes bruts affichés tels quels à l'utilisateur.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="section">
+      <h3>Carte canonique : 19 types vers 7 archétypes</h3>
+      <div class="panel">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:84px">Code</th>
+              <th>Libellé FR</th>
+              <th style="width:200px">Archétype</th>
+              <th style="width:150px">Couleur</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <!-- HEB · teal -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-heb)">Hébergement</span> · acc-heb · 4 types</td></tr>
+            <tr><td class="code-cell">HOT</td><td>Hôtel</td><td><span class="arch-cell"><span class="type-pill acc-heb">Hébergement</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-heb)"></span><span class="hex">#176b6a</span></span></td></tr>
+            <tr><td class="code-cell">HPA</td><td>Hôtellerie de plein air</td><td><span class="arch-cell"><span class="type-pill acc-heb">Hébergement</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-heb)"></span><span class="hex">#176b6a</span></span></td></tr>
+            <tr><td class="code-cell">HLO</td><td>Hébergement locatif</td><td><span class="arch-cell"><span class="type-pill acc-heb">Hébergement</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-heb)"></span><span class="hex">#176b6a</span></span></td></tr>
+            <tr><td class="code-cell">CAMP</td><td>Camping</td><td><span class="arch-cell"><span class="type-pill acc-heb">Hébergement</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-heb)"></span><span class="hex">#176b6a</span></span></td></tr>
+
+            <!-- RES · corail -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-res)">Restauration</span> · acc-res · 2 types</td></tr>
+            <tr><td class="code-cell">RVA</td><td>Restaurant et vente à emporter</td><td><span class="arch-cell"><span class="type-pill acc-res">Restauration</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-res)"></span><span class="hex">#d8602f</span></span></td></tr>
+            <tr><td class="code-cell">RES</td><td>Restaurant</td><td><span class="arch-cell"><span class="type-pill acc-res">Restauration</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-res)"></span><span class="hex">#d8602f</span></span></td></tr>
+
+            <!-- ASC · bleu -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-asc)">Activité</span> · acc-asc · 2 types</td></tr>
+            <tr><td class="code-cell">ASC</td><td>Activité sportive et culturelle</td><td><span class="arch-cell"><span class="type-pill acc-asc">Activité</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-asc)"></span><span class="hex">#2f6fb0</span></span></td></tr>
+            <tr><td class="code-cell">ACT</td><td>Prestation encadrée</td><td><span class="arch-cell"><span class="type-pill acc-asc">Activité</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-asc)"></span><span class="hex">#2f6fb0</span></span></td></tr>
+
+            <!-- ITI · vert -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-iti)">Itinéraire</span> · acc-iti · 1 type</td></tr>
+            <tr><td class="code-cell">ITI</td><td>Itinéraire</td><td><span class="arch-cell"><span class="type-pill acc-iti">Itinéraire</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-iti)"></span><span class="hex">#2f8f4e</span></span></td></tr>
+
+            <!-- VIS · prune -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-vis)">Site &amp; visite</span> · acc-vis · 4 types</td></tr>
+            <tr><td class="code-cell">LOI</td><td>Lieu de loisirs</td><td><span class="arch-cell"><span class="type-pill acc-vis">Site &amp; visite</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-vis)"></span><span class="hex">#7d5aa6</span></span></td></tr>
+            <tr><td class="code-cell">PCU</td><td>Patrimoine culturel</td><td><span class="arch-cell"><span class="type-pill acc-vis">Site &amp; visite</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-vis)"></span><span class="hex">#7d5aa6</span></span></td></tr>
+            <tr><td class="code-cell">PNA</td><td>Patrimoine naturel</td><td><span class="arch-cell"><span class="type-pill acc-vis">Site &amp; visite</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-vis)"></span><span class="hex">#7d5aa6</span></span></td></tr>
+            <tr><td class="code-cell">PRD</td><td>Produit du terroir</td><td><span class="arch-cell"><span class="type-pill acc-vis">Site &amp; visite</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-vis)"></span><span class="hex">#7d5aa6</span></span></td></tr>
+
+            <!-- SRV · rouille -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-srv)">Service</span> · acc-srv · 4 types</td></tr>
+            <tr><td class="code-cell">PSV</td><td>Prestataire de services</td><td><span class="arch-cell"><span class="type-pill acc-srv">Service</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-srv)"></span><span class="hex">#8a6b4f</span></span></td></tr>
+            <tr><td class="code-cell">VIL</td><td>Ville et village</td><td><span class="arch-cell"><span class="type-pill acc-srv">Service</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-srv)"></span><span class="hex">#8a6b4f</span></span></td></tr>
+            <tr><td class="code-cell">COM</td><td>Commerce</td><td><span class="arch-cell"><span class="type-pill acc-srv">Service</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-srv)"></span><span class="hex">#8a6b4f</span></span></td></tr>
+            <tr><td class="code-cell">SPU</td><td>Service public</td><td><span class="arch-cell"><span class="type-pill acc-srv">Service</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-srv)"></span><span class="hex">#8a6b4f</span></span></td></tr>
+
+            <!-- FMA · ambre -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--acc-fma)">Événement</span> · acc-fma · 1 type</td></tr>
+            <tr><td class="code-cell">FMA</td><td>Fête et manifestation</td><td><span class="arch-cell"><span class="type-pill acc-fma">Événement</span></span></td><td><span class="arch-cell"><span class="swatch-dot" style="background:var(--acc-fma)"></span><span class="hex">#c98a1e</span></span></td></tr>
+
+            <!-- ORG · hors éditeur -->
+            <tr class="group-head"><td colspan="4"><span class="group-accent" style="color:var(--muted)">Hors éditeur</span> · organisation · 1 type</td></tr>
+            <tr><td class="code-cell">ORG</td><td>Organisation</td><td><span class="arch-cell"><span class="badge badge--info">Hors éditeur</span></span></td><td><span class="muted small">Pas d'archétype objet</span></td></tr>
+
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small" style="margin-top:10px">Le tri et le regroupement suivent l'archétype : c'est la seule clé de couleur. ORG est une structure institutionnelle (éditeur SIT), pas une fiche d'objet, et n'entre pas dans l'éditeur.</p>
+    </div>
+
+    <div class="section">
+      <h3>Avant / après : plus jamais de code brut comme libellé</h3>
+      <div class="ba-grid">
+
+        <div class="ba-col ba-col--before">
+          <span class="tag-before">Avant</span>
+          <p class="muted small" style="margin:6px 0 10px">Codes techniques exposés tels quels dans les chips et badges.</p>
+          <div class="ba-row"><span class="ba-row__label">Type</span><span class="raw-chip">HOT</span></div>
+          <div class="ba-row"><span class="ba-row__label">Rôle</span><span class="raw-chip">org_admin</span></div>
+          <div class="ba-row"><span class="ba-row__label">Distinction</span><span class="raw-chip">GREEN_KEY · granted</span></div>
+        </div>
+
+        <div class="ba-arrow"><span class="material-symbols-outlined" style="font-size:28px">arrow_forward</span></div>
+
+        <div class="ba-col">
+          <span class="tag-after">Après</span>
+          <p class="muted small" style="margin:6px 0 10px">Libellés FR résolus par le résolveur unique, pastilles couleur d'archétype.</p>
+          <div class="ba-row"><span class="ba-row__label">Type</span><span class="type-pill acc-heb"><span class="material-symbols-outlined">hotel</span> Hébergement</span></div>
+          <div class="ba-row"><span class="ba-row__label">Rôle</span><span class="chip">Admin d'organisation</span></div>
+          <div class="ba-row"><span class="ba-row__label">Distinction</span><span class="badge badge--ok"><span class="dot dot--ok"></span> Clef verte · obtenu</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Les 7 pastilles d'archétype (source unique de couleur)</h3>
+      <div class="pills-row">
+        <span class="type-pill acc-heb"><span class="material-symbols-outlined">hotel</span> Hébergement</span>
+        <span class="type-pill acc-res"><span class="material-symbols-outlined">restaurant</span> Restauration</span>
+        <span class="type-pill acc-asc"><span class="material-symbols-outlined">sports_handball</span> Activité</span>
+        <span class="type-pill acc-iti"><span class="material-symbols-outlined">route</span> Itinéraire</span>
+        <span class="type-pill acc-vis"><span class="material-symbols-outlined">temple_buddhist</span> Site &amp; visite</span>
+        <span class="type-pill acc-srv"><span class="material-symbols-outlined">storefront</span> Service</span>
+        <span class="type-pill acc-fma"><span class="material-symbols-outlined">festival</span> Événement</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Une carte type vers famille et un résolveur de libellés canoniques, source de vérité unique partagée par l'explorateur, l'éditeur et le tiroir. Corrige le défaut d'audit des deux taxonomies divergentes.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Une seule carte canonique type vers archétype : 19 types DB regroupés en 7 familles (HEB, RES, ASC, ITI, VIS, SRV, FMA), ORG restant hors éditeur.</li>
+          <li>Quatre résolveurs : <code>resolveTypeLabel</code>, <code>resolveArchetype</code>, <code>resolveRoleLabel</code>, <code>resolveSchemeLabel</code>.</li>
+          <li>La couleur de pastille vient toujours de l'archétype (classe <code>acc-*</code>), jamais d'une couleur posée à la main.</li>
+          <li>Corrige le défaut : aujourd'hui <code>utils/facets.ts:24-32</code> range <code>LOI</code> dans « Activités », <code>ASC</code> sous « Services », <code>VIL</code> sous « Visites », en contradiction avec <code>archetypes.ts</code>.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Aucun code brut affiché comme libellé nulle part (type, rôle, schéma de distinction).</li>
+          <li>Le groupe d'explorateur d'un type est identique à son archétype d'éditeur.</li>
+          <li>Une même couleur de pastille pour un type dans l'explorateur, l'éditeur et le tiroir.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers impactés</h3>
+        <ul>
+          <li>Nouveau : <code>src/utils/labels.ts</code> (ou extension de <code>archetypes.ts</code>) avec les 4 résolveurs.</li>
+          <li>Alignement : <code>utils/facets.ts</code> · recaler les buckets sur les archétypes (LOI, ASC, VIL).</li>
+          <li>Branchement transverse : <code>ActiveFilterStrip.tsx</code>, <code>ActualisationTable.tsx</code>, <code>CompletenessTable.tsx</code>, <code>MembersTable.tsx</code>, <code>crm-primitives.tsx</code>.</li>
+        </ul>
+        <h3>Notes</h3>
+        <ul>
+          <li>Les 7 accents <code>--acc-*</code> et les classes <code>type-pill acc-*</code> viennent de <code>bertel-ui.css</code> (impl. 1.1) : aucune nouvelle couleur.</li>
+          <li>Les libellés FR sont la couche d'affichage ; les codes DB restent inchangés en base.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

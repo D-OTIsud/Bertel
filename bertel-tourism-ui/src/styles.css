@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
+/* audit S5 : polices chargées via next/font (voir src/app/layout.tsx) — plus de
+   `@import` Google Fonts bloquant. Familles exposées en variables CSS :
+   --font-sans (Manrope), --font-display (Sora), --font-mono (IBM Plex Mono). */
 
 @tailwind base;
 @tailwind components;
@@ -24,7 +26,7 @@
   --surface-soft: #edf5f4;
   --line: rgba(24, 49, 59, 0.10);
   --text: #18313b;
-  --text-muted: #66767d;
+  --text-muted: #5c6a71;     /* audit S7 : était #66767d (4.44:1) -> 5.1:1 sur blanc */
   --accent-soft: #fbe7dc;
   --accent-brand: #f28b54;
   --accent-brand-strong: #c96d3b;
@@ -67,8 +69,8 @@
   --line-strong: rgba(24, 49, 59, 0.18);
   --ink: var(--text);
   --ink-2: #3a525c;
-  --ink-3: #6a7a82;
-  --ink-4: #94a1a8;
+  --ink-3: #586770;          /* audit S7 : était #6a7a82 (4.27:1) -> ~4.9:1 */
+  --ink-4: #5f6d74;          /* audit S7 : était #94a1a8 (2.97:1, retiré du texte) -> ~5.0:1 */
   --teal-soft: #e2efee;
   --teal-tint: rgba(23, 107, 106, 0.08);
   --orange-soft: #fbe7dc;
@@ -84,6 +86,29 @@
   --shadow-s: 0 1px 0 rgba(24, 49, 59, 0.04), 0 6px 16px -8px rgba(24, 49, 59, 0.10);
   --shadow-m: 0 1px 0 rgba(24, 49, 59, 0.04), 0 14px 30px -16px rgba(24, 49, 59, 0.18);
   --shadow-l: 0 24px 60px -20px rgba(24, 49, 59, 0.30);
+
+  /* Accents par archétype — source unique consommée par les pastilles de type,
+     les cartes Explorer, la carte géo et les fiches drawer (refonte UI/UX 2026-06). */
+  --acc-heb: #176b6a;   /* Hébergement   teal   */
+  --acc-res: #d8602f;   /* Restauration  corail */
+  --acc-asc: #2f6fb0;   /* Activité      bleu   */
+  --acc-iti: #2f8f4e;   /* Itinéraire    vert   */
+  --acc-vis: #7d5aa6;   /* Site & visite prune  */
+  --acc-srv: #8a6b4f;   /* Service       rouille*/
+  --acc-fma: #c98a1e;   /* Événement     ambre  */
+
+  /* Classement (étoiles / clés / épis) — cocarde dorée */
+  --gold: #c79a3a;
+  --gold-deep: #6f5410;
+  --gold-star: #e6a407;
+
+  /* Couleurs officielles des labels (pour la pastille-logo) */
+  --lbl-clef-verte: #2e8b57;
+  --lbl-ecolabel:   #1c7f6b;
+  --lbl-th:         #0a6cb0;
+  --lbl-qualite:    #b3373b;
+  --lbl-excellence: #b9892f;
+  --orange-soft: var(--accent-soft);   /* audit S6 : doublon exact de --accent-soft, aliasé */
 }
 
 * {
@@ -98,7 +123,7 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   color: var(--text);
   /* Brand mesh — subtle radial glows (teal top-left, orange top-right,
      blue bottom-right) over a cool off-white base (de-creamed 2026-06-08). */
@@ -107,7 +132,8 @@ body {
     radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242, 139, 84, 0.1), transparent 55%),
     radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50, 112, 144, 0.08), transparent 55%),
     linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 100%);
-  background-attachment: fixed;
+  /* audit S5 : retrait de `background-attachment: fixed` (repaint du mesh 4 couches au scroll). */
+  background-attachment: scroll;
 }
 
 button,
@@ -137,6 +163,289 @@ input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
 }
+
+/* ============================================================================
+   Fondations refonte UI/UX 2026-06 (audit S1/S8 + primitives de distinction).
+   - Anneau de focus visible universel (S1) : seule la sidebar en avait un.
+   - Garde-fou mouvement global (S8) : respecte « réduire les animations » de l'OS.
+   - Pastilles de type + primitives classement/labels/tags partagées par les
+     cartes Explorer (3.1), la carte géo (3.3) et les fiches drawer (4.x).
+   Les icônes sont fournies par lucide-react côté TSX (pas de police d'icônes).
+   ========================================================================== */
+
+/* Anneau de focus visible — correctif central de l'audit (S1). */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Mouvement : garde-fou global (S8). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Pastille de type : couleur = archétype (une seule source via --acc-*). */
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  color: var(--accent-type, var(--teal));
+  background: color-mix(in srgb, var(--accent-type, var(--teal)) 12%, white);
+}
+.type-pill svg { width: 13px; height: 13px; }
+.acc-heb { --accent-type: var(--acc-heb); }
+.acc-res { --accent-type: var(--acc-res); }
+.acc-asc { --accent-type: var(--acc-asc); }
+.acc-iti { --accent-type: var(--acc-iti); }
+.acc-vis { --accent-type: var(--acc-vis); }
+.acc-srv { --accent-type: var(--acc-srv); }
+.acc-fma { --accent-type: var(--acc-fma); }
+
+/* Miniature avec débordement autorisé pour que le signet chevauche le bord. */
+.thumb { position: relative; display: block; }
+
+/* Cocarde classement, à cheval en haut-gauche (étoiles/clés/épis).
+   Pas de fond : pictos dorés détourés par un liseré couleur du fond de page. */
+.thumb__rating {
+  position: absolute;
+  top: -5px;
+  left: -2px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  line-height: 1;
+}
+.thumb__rating svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--gold-star);
+  stroke: var(--bg);
+  stroke-width: 1.25px;
+  paint-order: stroke fill;
+}
+.thumb__rating .unit {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gold-deep);
+  margin-left: 2px;
+  -webkit-text-stroke: 1.5px var(--bg);
+  paint-order: stroke fill;
+}
+
+/* Logo-pastilles de label, à cheval en bas-droite (empilées). */
+.thumb__labels { position: absolute; right: -6px; bottom: -6px; z-index: 2; display: flex; }
+.thumb__labels .label-logo + .label-logo { margin-left: -8px; }
+
+/* Pastille-logo de label (disque coloré + picto). */
+.label-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.25);
+}
+.label-logo svg { width: 14px; height: 14px; }
+.label-logo--more { background: var(--ink-2); font-size: 11px; font-weight: 800; }
+.lbl-clef-verte { background: var(--lbl-clef-verte); }
+.lbl-ecolabel   { background: var(--lbl-ecolabel); }
+.lbl-th         { background: var(--lbl-th); }
+.lbl-qualite    { background: var(--lbl-qualite); }
+.lbl-excellence { background: var(--lbl-excellence); }
+
+/* Classement en toutes lettres sur la ligne texte (pas d'icônes étoiles). */
+.class-text {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+
+/* Puce-label avec logo + texte (corps de carte / section fiche). Sans indicateur d'état. */
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px 3px 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.label-chip__logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+}
+.label-chip__logo svg { width: 12px; height: 12px; }
+
+/* Tag coloré (couche d'affichage §09). */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--tag, #5c6a71) 13%, white);
+  color: color-mix(in srgb, var(--tag, #5c6a71) 72%, black);
+}
+
+/* Ligne récap classement + labels + tags dans une carte. */
+.distinction-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.distinction-row .sep { width: 1px; height: 14px; background: var(--line); margin: 0 2px; }
+
+/* Bandeau « highlights » de distinctions (fiche). */
+.distinction-highlights { display: flex; gap: 10px; flex-wrap: wrap; }
+.distinction-highlight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.distinction-highlight__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+}
+.distinction-highlight__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.distinction-highlight__label { font-weight: 700; font-size: 14px; }
+
+/* ---- Badges d'état (refonte UI/UX 2026-06) ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+.badge--ok { background: var(--brand-green-soft); color: #1a6b48; }
+.badge--warn { background: rgba(214, 147, 58, 0.16); color: #8a5a12; }
+.badge--danger { background: rgba(200, 92, 72, 0.14); color: #9a3322; }
+.badge--info { background: rgba(45, 111, 176, 0.12); color: #1d5f8a; }
+
+/* ---- État vide qui enseigne (EmptyState : no-data / filtered / coming-soon) ---- */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px;
+  max-width: 460px;
+  margin: 0 auto;
+  gap: 6px;
+}
+.ui-empty__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--teal-tint);
+  color: var(--teal);
+  margin-bottom: 8px;
+}
+.ui-empty__icon svg { width: 26px; height: 26px; }
+.ui-empty--filtered .ui-empty__icon { background: var(--surface-2); color: var(--text-muted); }
+.ui-empty--coming-soon .ui-empty__icon { background: rgba(45, 111, 176, 0.12); color: #1d5f8a; }
+.ui-empty__title { font-size: 16px; font-weight: 700; }
+.ui-empty__text { color: var(--text-muted); font-size: 14px; margin-bottom: 8px; max-width: 42ch; }
+.ui-empty .primary-button,
+.ui-empty .ghost-button { margin-top: 4px; }
+
+/* ---- Bannière d'erreur (EmptyState mode=error) : garde le reste de la page utilisable ---- */
+.ui-empty-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--brand-red);
+  background: rgba(200, 92, 72, 0.1);
+  border-radius: var(--radius-md);
+}
+.ui-empty-banner__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--brand-red);
+}
+.ui-empty-banner__icon svg { width: 20px; height: 20px; }
+.ui-empty-banner__body { flex: 1 1 auto; min-width: 0; }
+.ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
+.ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
+
+/* ---- Squelettes : pas de spinner central, calqués sur la grille de la carte (impl. 3.1) ---- */
+.skel {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--bg-tint) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skel-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+@keyframes skel-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+.skel-card {
+  display: grid;
+  grid-template-columns: 92px 1fr 32px;
+  gap: 14px;
+  padding: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-s);
+}
+.skel-card__media { width: 92px; height: 70px; border-radius: var(--radius-sm); }
+.skel-lines { display: flex; flex-direction: column; gap: 9px; padding-top: 3px; }
+.skel-line { height: 12px; }
+.skel-pill { height: 18px; width: 96px; border-radius: var(--radius-pill); }
+.skel-star { height: 22px; width: 22px; border-radius: 6px; margin: 4px auto 0; }
 
 input[type='checkbox'] {
   width: 20px;
@@ -193,7 +502,7 @@ a {
 .drawer-header h2,
 .object-drawer-nav__item strong {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
 }
 
 .hero-panel p,
@@ -332,7 +641,7 @@ a {
 .dashboard-brand-card__logo--fallback {
   display: grid;
   place-items: center;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--theme-primary);
@@ -340,7 +649,7 @@ a {
 
 .sidebar-brand h1 {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1.1rem;
 }
 
@@ -524,7 +833,7 @@ a {
   border-radius: 999px;
   background: var(--theme-primary);
   color: #fffdf8;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 700;
 }
 
@@ -1378,7 +1687,7 @@ a {
 }
 
 .map-hover-card__name {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.875rem;
   line-height: 1.25;
   font-weight: 700;
@@ -2521,7 +2830,7 @@ a {
   margin-left: auto;
   flex: none;
   color: var(--ink-4);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.6563rem;
   letter-spacing: 0.04em;
 }
@@ -2777,7 +3086,7 @@ a {
 
 .detail-rooms-table tbody td strong {
   display: block;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.82rem;
   color: var(--ink);
   font-weight: 600;
@@ -2785,7 +3094,7 @@ a {
 }
 
 .detail-rooms-table__num {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -2818,7 +3127,7 @@ a {
 
 .detail-mice__name {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--ink);
@@ -2830,7 +3139,7 @@ a {
   gap: 0.2rem 0.7rem;
   font-size: 0.72rem;
   color: var(--ink-3);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
 }
 
 .detail-mice__caps span strong {
@@ -2878,7 +3187,7 @@ a {
 }
 
 .detail-tariff-row__amount {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.96rem;
   font-weight: 700;
   color: var(--ink);
@@ -2886,7 +3195,7 @@ a {
 }
 
 .detail-tariff-row__amount small {
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-sans), sans-serif;
   font-weight: 500;
   font-size: 0.72rem;
   color: var(--ink-3);
@@ -2940,7 +3249,7 @@ a {
 }
 
 .detail-week-grid__slot {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.72rem;
   color: var(--ink);
   letter-spacing: 0.02em;
@@ -3001,7 +3310,7 @@ a {
   color: var(--accent-deep, var(--theme-primary));
   display: grid;
   place-items: center;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 700;
   font-size: 0.75rem;
   z-index: 1;
@@ -3012,7 +3321,7 @@ a {
 }
 
 .detail-waypoint__name {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
   font-size: 0.84rem;
   color: var(--ink);
@@ -3020,7 +3329,7 @@ a {
 }
 
 .detail-waypoint__meta {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.66rem;
   letter-spacing: 0.04em;
   color: var(--ink-3);
@@ -3038,7 +3347,7 @@ a {
 }
 
 .detail-kpi__value {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1.375rem;
   font-weight: 700;
   line-height: 1;
@@ -3447,7 +3756,7 @@ a {
 
 .detail-hero__caption {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: clamp(1.35rem, 2.2vw, 1.9rem);
   font-weight: 700;
   line-height: 1.08;
@@ -3567,7 +3876,7 @@ a {
 
 .detail-overview__title {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -3664,7 +3973,7 @@ a {
 
 .detail-section__title {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -3757,7 +4066,7 @@ a {
 }
 
 .detail-tooltip__stack strong {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text);
@@ -3867,7 +4176,7 @@ a {
 }
 
 .detail-distinction-highlight__copy strong {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.96rem;
   line-height: 1.28;
   color: var(--text);
@@ -4004,7 +4313,7 @@ a {
 }
 
 .detail-stat__value {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text);
@@ -4115,7 +4424,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 1rem;
   font-weight: 800;
   color: #17393e;
@@ -4216,7 +4525,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.68rem;
   color: #31535d;
 }
@@ -4369,7 +4678,7 @@ a {
 }
 
 .detail-price-amount {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.94rem;
   font-weight: 700;
   color: var(--text);
@@ -4574,6 +4883,12 @@ a {
   background: transparent;
   color: var(--text-muted);
   cursor: help;
+}
+
+.workspace-tooltip__trigger:focus-visible {
+  /* audit S1 : anneau visible au clavier (le bloc combiné ci-dessous retire l'outline). */
+  box-shadow: 0 0 0 2px var(--teal-tint);
+  border-radius: 4px;
 }
 
 .workspace-tooltip__trigger:hover,
@@ -4958,7 +5273,7 @@ a {
 }
 
 .detail-gallery-modal__meta strong {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.98rem;
 }
 
@@ -5658,7 +5973,7 @@ a {
 
 .detail-team-note-dialog__author {
   margin: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text);
@@ -6002,7 +6317,7 @@ a {
 .profile-drawer__avatar {
   display: grid;
   place-items: center;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 700;
   color: var(--theme-primary);
 }
@@ -6015,7 +6330,7 @@ a {
 
 .topbar-brand__copy strong {
   display: block;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   white-space: nowrap;
 }
 
@@ -6078,7 +6393,7 @@ a {
   border-radius: 999px;
   background: var(--theme-primary);
   color: #fffdf8;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 700;
 }
 
@@ -6188,7 +6503,7 @@ a {
 }
 
 .profile-drawer__header h2 {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-display), sans-serif;
   margin: 0;
 }
 
@@ -7813,6 +8128,11 @@ a {
   border-color: var(--teal);
 }
 
+.dashboard-filters-bar__input:focus-visible {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+
 .dashboard-filters-bar__input[type="text"] {
   width: 10rem;
 }
@@ -7975,6 +8295,12 @@ a {
 
 .dashboard-filter-input:focus {
   border-color: var(--teal);
+}
+
+.dashboard-filter-input:focus-visible {
+  /* audit S1 : la base pose `outline: none` ; anneau au clavier restauré. */
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-tint);
 }
 
 .dashboard-filter-date-grid {
@@ -8424,6 +8750,11 @@ a {
   outline: none;
 }
 
+.taxo__search input:focus-visible {
+  box-shadow: 0 0 0 2px var(--teal-tint);
+  border-radius: 6px;
+}
+
 .taxo__rows {
   display: flex;
   flex-direction: column;
@@ -8657,9 +8988,9 @@ a {
   /* Tokens absents de la feuille globale (même convention que .object-editor). */
   --r-md: 12px;
   --r-lg: 16px;
-  --font-display: 'Sora', 'Manrope', system-ui, sans-serif;
-  --font-sans: 'Manrope', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-display: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, 'SFMono-Regular', monospace;
   --accent: var(--teal);
   --accent-deep: #0d4f4e;
   --accent-tint: var(--teal-tint);
@@ -10478,7 +10809,7 @@ a {
   background: var(--surface-2);
   overflow: hidden;
   color: var(--teal);
-  font-family: 'Sora', system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
   font-size: 15px;
 }
@@ -10551,7 +10882,7 @@ a {
   opacity: 0;
   transform: translateX(-6px);
   transition: opacity 150ms ease, transform 150ms ease;
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.2;
@@ -10611,7 +10942,7 @@ a {
   color: #fff;
   display: grid;
   place-items: center;
-  font-family: 'Sora', system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
   font-size: 13px;
 }

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5.2 · Éditeur acteur en drawer · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  /* Conteneur de scène : flux relatif, le drawer est ancré dedans (PAS position:fixed) */
+  .scene { position:relative; min-height:560px; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--line); background:var(--surface); }
+
+  /* Page derrière, atténuée */
+  .behind { padding:20px; filter:saturate(.92); }
+  .behind::after { content:""; position:absolute; inset:0; background:rgba(16,30,36,.34); }
+  .behind__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .dir-row { display:grid; grid-template-columns: 40px 1fr auto; gap:14px; align-items:center; padding:13px; border:1px solid var(--line); border-radius:var(--r-md); background:var(--surface); margin-bottom:10px; }
+  .avatar { width:40px; height:40px; border-radius:50%; background:var(--teal-soft); color:var(--teal-deep); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+  .avatar--lg { width:56px; height:56px; font-size:20px; }
+  .dir-name { font-weight:700; }
+  .dir-meta { font-size:13px; color:var(--muted); }
+
+  /* Drawer ancré à droite dans le flux de la scène */
+  .drawer {
+    position:absolute; top:0; right:0; bottom:0; width:440px;
+    background:var(--surface); border-left:1px solid var(--line);
+    box-shadow: -24px 0 48px -28px rgba(16,30,36,.5);
+    display:flex; flex-direction:column; z-index:2;
+  }
+  .drawer__head { display:flex; align-items:center; gap:13px; padding:16px 18px; border-bottom:1px solid var(--line-soft); }
+  .drawer__title { font-size:16px; font-weight:800; }
+  .drawer__sub { font-size:13px; color:var(--muted); }
+  .drawer__close { margin-left:auto; }
+  .drawer__body { flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:20px; }
+  .drawer__bar { display:flex; gap:10px; justify-content:flex-end; padding:14px 18px; border-top:1px solid var(--line); background:var(--surface-2); position:sticky; bottom:0; }
+
+  .dsec__title { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-2); margin-bottom:10px; display:flex; align-items:center; gap:7px; }
+  .dsec__title .material-symbols-outlined { font-size:17px; color:var(--teal); }
+  .twocol { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .repeat-row { display:grid; grid-template-columns: 116px 1fr 36px; gap:8px; align-items:center; margin-bottom:8px; }
+  .upload {
+    border:1.5px dashed var(--line); border-radius:var(--r-md); padding:18px; text-align:center;
+    color:var(--muted); background:var(--surface-2); display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .upload .material-symbols-outlined { font-size:28px; color:var(--teal); }
+  .hint { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--info); background:var(--info-soft); padding:6px 10px; border-radius:var(--r-sm); margin-top:8px; }
+  .hint .material-symbols-outlined { font-size:16px; }
+
+  .stage-block { margin-bottom:22px; } .stage-block:last-child { margin-bottom:0; }
+  @media (max-width: 760px){ .drawer{ width:100%; } }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 5 · Implémentation 5.2</span>
+    <h1>Éditeur acteur en drawer (dé-modalisation)</h1>
+    <p class="lead">Le CRM entasse aujourd'hui l'édition complète d'un acteur (identité + N canaux + N adresses + portrait) dans une modale de 560px, avec un formulaire de relance imbriqué dans la modale d'interaction. On sort l'édition acteur dans un tiroir latéral à droite qui respire, avec une barre d'enregistrement collante.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="stage-block">
+      <span class="tag-after">Après</span>
+      <p class="muted small" style="margin:6px 0 14px">Annuaire CRM atténué en arrière-plan, tiroir « Modifier l'acteur » ancré à droite (pleine hauteur), barre d'enregistrement collante en bas du tiroir.</p>
+
+      <div class="scene">
+        <!-- Page derrière (annuaire), atténuée -->
+        <div class="behind">
+          <div class="behind__head">
+            <div>
+              <h2>Annuaire des acteurs</h2>
+              <p class="micro muted" style="margin-top:2px">696 acteurs · OTI du Sud</p>
+            </div>
+            <div class="search" style="width:240px"><span class="material-symbols-outlined">search</span><input placeholder="Rechercher un acteur…"></div>
+          </div>
+
+          <div class="dir-row">
+            <span class="avatar">MR</span>
+            <div>
+              <div class="dir-name">Marie Robert</div>
+              <div class="dir-meta">Gérante · Hôtel Les Tamarins · 0692 12 34 56</div>
+            </div>
+            <span class="badge badge--info">2 interactions</span>
+          </div>
+          <div class="dir-row">
+            <span class="avatar">JP</span>
+            <div>
+              <div class="dir-name">Jean-Paul Hoarau</div>
+              <div class="dir-meta">Guide · Boucle du Piton Rouge · jp.hoarau@rando974.re</div>
+            </div>
+            <span class="badge badge--warn">1 relance prévue</span>
+          </div>
+          <div class="dir-row">
+            <span class="avatar">SF</span>
+            <div>
+              <div class="dir-name">Sylvie Fontaine</div>
+              <div class="dir-meta">Restauratrice · Le Vieux Domaine · 0262 33 44 55</div>
+            </div>
+            <span class="badge badge--ok">À jour</span>
+          </div>
+        </div>
+
+        <!-- Tiroir latéral droit -->
+        <aside class="drawer" role="dialog" aria-label="Modifier l'acteur">
+          <div class="drawer__head">
+            <span class="avatar avatar--lg" style="width:44px;height:44px;font-size:16px">MR</span>
+            <div>
+              <div class="drawer__title">Modifier l'acteur</div>
+              <div class="drawer__sub">Marie Robert</div>
+            </div>
+            <button class="btn btn--icon btn--ghost drawer__close" aria-label="Fermer"><span class="material-symbols-outlined">close</span></button>
+          </div>
+
+          <div class="drawer__body">
+
+            <section>
+              <div class="dsec__title"><span class="material-symbols-outlined">person</span> Identité</div>
+              <div class="field" style="margin-bottom:10px"><label>Nom complet</label><input class="input" value="Marie Robert"></div>
+              <div class="twocol">
+                <div class="field"><label>Genre</label><select class="select"><option>Madame</option><option>Monsieur</option><option>Non précisé</option></select></div>
+                <div class="field"><label>E-mail principal</label><input class="input" value="m.robert@tamarins.re"></div>
+              </div>
+            </section>
+
+            <section>
+              <div class="dsec__title"><span class="material-symbols-outlined">contacts</span> Coordonnées</div>
+              <div class="repeat-row">
+                <select class="select"><option>Téléphone</option><option>E-mail</option></select>
+                <input class="input" value="0692 12 34 56">
+                <button class="btn btn--icon btn--ghost" aria-label="Retirer"><span class="material-symbols-outlined">delete</span></button>
+              </div>
+              <div class="repeat-row">
+                <select class="select"><option>E-mail</option><option>Téléphone</option></select>
+                <input class="input" value="m.robert@tamarins.re">
+                <button class="btn btn--icon btn--ghost" aria-label="Retirer"><span class="material-symbols-outlined">delete</span></button>
+              </div>
+              <button class="btn btn--ghost btn--sm"><span class="material-symbols-outlined">add</span> Ajouter un canal</button>
+            </section>
+
+            <section>
+              <div class="dsec__title"><span class="material-symbols-outlined">location_on</span> Adresses</div>
+              <div class="field"><label>Adresse postale</label><input class="input" value="12 chemin des Tamarins, 97434 Saint-Gilles"></div>
+              <div class="hint"><span class="material-symbols-outlined">auto_awesome</span> Suggérer depuis l'objet : Hôtel Les Tamarins</div>
+            </section>
+
+            <section>
+              <div class="dsec__title"><span class="material-symbols-outlined">photo_camera</span> Portrait</div>
+              <div class="upload">
+                <span class="material-symbols-outlined">cloud_upload</span>
+                <div style="font-weight:700;color:var(--ink-2)">Déposer une photo ou cliquer pour parcourir</div>
+                <div class="micro">JPG ou PNG · 2 Mo max · recadrée en carré</div>
+              </div>
+            </section>
+
+          </div>
+
+          <div class="drawer__bar">
+            <button class="btn btn--secondary">Annuler</button>
+            <button class="btn btn--primary"><span class="material-symbols-outlined">check</span> Enregistrer</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="stage-block">
+      <p class="muted small" style="margin:0 0 10px">L'état vide d'annuaire enseigne le motif « aucune donnée » (pas un état filtré) avec une action claire.</p>
+      <div class="panel" style="max-width:560px">
+        <div class="panel__body">
+          <div class="empty">
+            <span class="empty__icon"><span class="material-symbols-outlined">group_off</span></span>
+            <div class="empty__title">Aucun acteur</div>
+            <div class="empty__text">Cet annuaire CRM se remplit à mesure que vous rattachez des prestataires aux fiches ou enregistrez des interactions.</div>
+            <button class="btn btn--primary"><span class="material-symbols-outlined">person_add</span> Ajouter un acteur</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">On déplace la création/édition d'un acteur de la modale vers un tiroir latéral (réemploi du motif Sheet déjà utilisé par Team). La modale d'interaction abandonne son formulaire de relance imbriqué au profit d'une affordance « + Ajouter une relance » après enregistrement.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Édition acteur = tiroir latéral droit (~440px, pleine hauteur), plus une modale étroite de 560px.</li>
+          <li>Sections aérées : Identité, Coordonnées (canaux répétables avec « Ajouter un canal »), Adresses (avec « Suggérer depuis l'objet »), Portrait (zone d'upload).</li>
+          <li>Barre d'enregistrement collante en bas du tiroir : Annuler + Enregistrer (primaire) toujours visibles au scroll.</li>
+          <li>Plus de formulaire-dans-formulaire-dans-modale : la relance se crée après l'enregistrement de l'interaction via « + Ajouter une relance ».</li>
+          <li>État vide d'annuaire de type « aucune donnée » (pas filtré) avec CTA « Ajouter un acteur ».</li>
+        </ul>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/crm/CrmActorModals.tsx</code> → tiroir (réemploi du Sheet de Team).</li>
+          <li><code>src/features/crm/CrmInteractionModal.tsx</code> : retirer le formulaire de relance imbriqué ; affordance après enregistrement.</li>
+          <li><code>src/features/crm/CrmAnnuaire.tsx</code> : états vides (aucune donnée vs filtré).</li>
+          <li>Contrat d'écriture inchangé (RPCs CRM gated existants) ; refonte UI seulement.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Plus aucun formulaire imbriqué dans un formulaire dans une modale.</li>
+          <li>L'édition acteur respire (largeur tiroir, sections espacées, scroll propre).</li>
+          <li>Barre d'enregistrement collante visible à tout moment dans le tiroir.</li>
+          <li>Le tiroir s'ancre dans le flux (sheet latéral), pas un débordement de modale.</li>
+          <li>État vide « aucun acteur » distinct d'un état filtré, avec CTA.</li>
+          <li>Tab clavier : focus visible sur champs, boutons répétables, barre d'action.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">dock_to_right</span>
+          <span>Même motif que le tiroir d'administration de Team : une seule mécanique de panneau latéral réutilisée dans toute l'app.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

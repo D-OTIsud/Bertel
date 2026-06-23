@@ -1,5 +1,6 @@
 'use client';
 import type { OrgMember } from '@/services/rbac';
+import { resolveRoleLabel } from '@/utils/labels';
 
 /** Shape returned by the `children` render-prop — controls both role cells. */
 export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
@@ -29,8 +30,8 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
                 <div className="font-medium">{m.displayName ?? '—'}</div>
                 <div className="text-xs text-muted-foreground">{m.email ?? m.userId}</div>
               </td>
-              <td>{cells ? cells.business : m.businessRoleCode}</td>
-              <td>{cells ? cells.admin : (m.adminRoleCode ?? '—')}</td>
+              <td>{cells ? cells.business : (m.businessRoleCode ? resolveRoleLabel(m.businessRoleCode) : '—')}</td>
+              <td>{cells ? cells.admin : (m.adminRoleCode ? resolveRoleLabel(m.adminRoleCode) : '—')}</td>
               <td>
                 <button className="underline" onClick={() => onManagePermissions(m)} disabled={isSelf}
                   title={isSelf ? "Vous ne pouvez pas modifier vos propres permissions" : undefined}>

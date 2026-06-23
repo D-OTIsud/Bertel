@@ -2,6 +2,7 @@
 
 import type { DashboardTypeBreakdown } from '../../types/dashboard';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { resolveTypeLabel } from '../../utils/labels';
 
 interface Props {
   data: DashboardTypeBreakdown;
@@ -36,12 +37,12 @@ export function TypeBreakdown({ data }: Props) {
             <button
               key={row.type}
               type="button"
-              title={`Filtrer : ${row.type}`}
+              title={`Filtrer : ${resolveTypeLabel(row.type)}`}
               className={`type-breakdown__row type-breakdown__row--clickable${isActive ? ' type-breakdown__row--active' : ''}`}
               onClick={() => handleType(row.type)}
               aria-pressed={isActive}
             >
-              <span className="type-breakdown__label">{row.type}</span>
+              <span className="type-breakdown__label">{resolveTypeLabel(row.type)}</span>
               <div className="type-breakdown__bar-wrap">
                 <div
                   className="type-breakdown__bar"

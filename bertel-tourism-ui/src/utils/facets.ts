@@ -10,6 +10,7 @@ import type {
   ObjectCard,
   ObjectTypeCode,
 } from '../types/domain';
+import { buildExplorerTypeFamilies } from './labels';
 
 export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: string }> = [
   { code: 'HOT', label: 'Hebergements' },
@@ -21,15 +22,15 @@ export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: st
   { code: 'SRV', label: 'Services' },
 ];
 
-export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTypeCode[]> = {
-  HOT: ['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'],
-  RES: ['RES'],
-  ACT: ['ACT', 'LOI'],
-  ITI: ['ITI'],
-  EVT: ['FMA'],
-  VIS: ['PCU', 'PNA', 'VIL', 'PRD'],
-  SRV: ['COM', 'PSV', 'ASC', 'SPU'],
-};
+/**
+ * Familles de bucket de l'Explorer — DÉRIVÉES de la table canonique type→archétype
+ * (`buildExplorerTypeFamilies`, cf. utils/labels.ts). Le bucket d'un type ==
+ * son archétype éditeur, par construction : Explorer et éditeur ne peuvent plus
+ * diverger (fin du défaut-racine §2a : LOI sous Visites, ASC sous Activités,
+ * VIL sous Services).
+ */
+export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTypeCode[]> =
+  buildExplorerTypeFamilies();
 
 export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];
 export const DEFAULT_HOT_SUBTYPES: BackendObjectTypeCode[] = [...HOT_BUCKET_TYPES];

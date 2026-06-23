@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, CornerDownRight, Mail, MapPin, Pencil, Phone, RotateCcw, StickyNote, Trash2 } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
+import { resolveTypeLabel } from '../../utils/labels';
 import {
   CRM_SENTIMENT_OPTIONS,
   formatShort,
@@ -76,13 +77,13 @@ export function Pav({ name, tintKey, lg, photoUrl }: { name: string; tintKey: st
   );
 }
 
-/** Pastille code type d'objet (HOT, RES, HLO…), teintée par type. */
+/** Pastille type d'objet (libellé FR « Hôtel », « Restaurant »…), teintée par type. */
 export function TypeTag({ objectType }: { objectType: string }) {
   if (!objectType) return null;
   const tint = pavTintOf(objectType);
   return (
-    <span className="type-tag" style={{ background: tint.bg, color: tint.fg }}>
-      {objectType}
+    <span className="type-tag" style={{ background: tint.bg, color: tint.fg }} title={objectType}>
+      {resolveTypeLabel(objectType)}
     </span>
   );
 }

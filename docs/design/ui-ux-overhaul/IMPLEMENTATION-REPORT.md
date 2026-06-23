@@ -142,7 +142,10 @@ Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** 
 - **Fiche Restaurant (4.2)** : bloc cuisine + menu structuré — le modèle §104 existe ; la donnée (cuisine/menu/régimes) n'est pas sur le payload drawer actuel ⇒ extension du parser/RPC + bloc. Passe ciblée.
 - **Fiche Activité (ASC) / Itinéraire réel (4.3)** : `object_act` non surfacé ; étapes ITI réelles (au lieu d'interpolées) ⇒ extension parser + blocs.
 - **Vue config-driven (ARCHETYPE_SECTIONS) remplaçant les 6 clones** : refactor architectural d'un fichier de 3588 lignes, fort risque sur une surface très utilisée ⇒ passe dédiée spec→plan→impl. La consolidation `DRAWER_TYPE_LABELS`/`CLASSIFICATION_SCHEME_LABELS` sur `labels.ts` en fait partie.
-- **Retrait des contrôles dead-end** (Modifier/Voir versions sur surface read-only) : passe de nettoyage.
+- ~~**Retrait des contrôles dead-end** (Modifier/Voir versions sur surface read-only)~~ ✅ **FAIT** (S12) : retrait du « Voir versions » désactivé-en-permanence (Description) + du « Modifier > » sans handler (Horaires) du drawer (view-only) ; param `parsed` inutilisé nettoyé (7 call-sites). Côté Explorer : faux bouton « Trier » → label honnête « Trié par pertinence » ; « Envoyer » trompeur → désactivé-avec-raison visible.
+
+### Note — tiret cadratin (goal #7)
+L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non renseigné », etc.). Le balayage des **74** `'—'` placeholders **existants** (dont un asservi à un test) est différé : large, risqué (assertions), valeur marginale (le `—` « vide » est une convention lisible) — à faire en passe i18n/copy dédiée.
 
 ---
 

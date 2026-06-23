@@ -470,6 +470,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   mode="multi"
                   placeholder="Toutes les communes"
                   allLabel="Toutes les communes"
+                  searchable
+                  searchPlaceholder="Rechercher une commune"
                   options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
                   selected={cities}
                   onChange={(vals) => setCities(vals)}
@@ -871,6 +873,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   mode="multi"
                   placeholder="Toutes les communes"
                   allLabel="Toutes les communes"
+                  searchable
+                  searchPlaceholder="Rechercher une commune"
                   options={(references?.cities ?? []).map((c) => ({ code: c, label: c }))}
                   selected={cities}
                   onChange={(vals) => setCities(vals)}

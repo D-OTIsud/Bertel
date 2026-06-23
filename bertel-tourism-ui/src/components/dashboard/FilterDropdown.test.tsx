@@ -269,6 +269,42 @@ describe('portal', () => {
   });
 });
 
+// ── Searchable (impl. 3.2 communes cherchables) ────────────────────────────
+
+describe('searchable', () => {
+  it('affiche un champ de recherche quand searchable et ouvert', () => {
+    render(
+      <FilterDropdown options={OPTIONS} selected={[]} onChange={() => {}} mode="multi" placeholder="Toutes les communes" searchable />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.getByPlaceholderText(/rechercher/i)).toBeInTheDocument();
+  });
+
+  it('filtre les options selon la saisie (accent-insensible)', () => {
+    render(<FilterDropdown options={OPTIONS} selected={[]} onChange={() => {}} mode="multi" placeholder="x" searchable />);
+    fireEvent.click(screen.getByRole('button'));
+    fireEvent.change(screen.getByPlaceholderText(/rechercher/i), { target: { value: 'hot' } });
+    expect(document.body.querySelector('[data-code="HOT"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-code="RES"]')).toBeNull();
+  });
+
+  it('ArrowDown puis Entrée coche l’option surlignée', () => {
+    const onChange = jest.fn();
+    render(<FilterDropdown options={OPTIONS} selected={[]} onChange={onChange} mode="multi" placeholder="x" searchable />);
+    fireEvent.click(screen.getByRole('button'));
+    const input = screen.getByPlaceholderText(/rechercher/i);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith(['HOT']);
+  });
+
+  it('non searchable : aucun champ de recherche', () => {
+    render(<FilterDropdown options={OPTIONS} selected={[]} onChange={() => {}} mode="multi" placeholder="x" />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.queryByPlaceholderText(/rechercher/i)).toBeNull();
+  });
+});
+
 // ── Load error ─────────────────────────────────────────────────────────────
 
 describe('loadError', () => {

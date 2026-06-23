@@ -13,14 +13,12 @@ import {
   ShieldCheck,
   UserX,
   Users,
-  UsersRound,
 } from 'lucide-react';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import type { UserRole } from '../../types/domain';
 import { isDemoOnlyModule } from '../../utils/features';
 import { cn } from '@/lib/utils';
-import { canAdministerTeam } from '@/store/session-selectors';
 
 const allItems: Array<{
   to: string;
@@ -35,7 +33,7 @@ const allItems: Array<{
   { to: '/moderation', label: 'Moderation', caption: 'Validation editoriale', roles: ['super_admin', 'tourism_agent'], icon: ShieldCheck },
   { to: '/audits', label: 'Audits', caption: 'Terrain et incidents', roles: ['super_admin', 'tourism_agent'], icon: ClipboardList },
   { to: '/publications', label: 'Publications', caption: 'Exports et mises en page', roles: ['super_admin', 'tourism_agent'], icon: Files },
-  { to: '/team', label: 'Équipe', caption: 'Membres et permissions', roles: ['owner', 'super_admin', 'tourism_agent'], icon: UsersRound },
+  // 7.4 — Équipe emménage dans Paramètres → Mon organisation (plus d'entrée /team au sidebar).
   { to: '/rgpd', label: 'RGPD', caption: 'Effacement & droits des personnes', roles: ['owner', 'super_admin'], icon: UserX },
   { to: '/settings', label: 'Paramètres', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
 ];
@@ -64,7 +62,6 @@ interface SidebarProps {
 export function Sidebar({ onOpenProfile }: SidebarProps) {
   const pathname = usePathname();
   const role = useSessionStore((state) => state.role);
-  const adminRank = useSessionStore((state) => state.adminRank);
   const demoMode = useSessionStore((state) => state.demoMode);
   const userName = useSessionStore((state) => state.userName);
   const brandName = useThemeStore((state) => state.theme.brandName);
@@ -72,10 +69,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
   const items = role
     ? allItems.filter((item) => item.roles.includes(role) && (demoMode || !isDemoOnlyModule(item.to)))
     : [];
-  const teamVisible = canAdministerTeam({ role, adminRank });
-  const navItems = items
-    .filter((item) => item.to !== '/settings')
-    .filter((item) => item.to !== '/team' || teamVisible);
+  const navItems = items.filter((item) => item.to !== '/settings');
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
   const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Paramètres';

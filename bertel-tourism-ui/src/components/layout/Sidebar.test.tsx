@@ -34,16 +34,14 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /Explorer/i })).not.toHaveAttribute('aria-current');
   });
 
-  it('shows the Équipe item for a team administrator', () => {
+  // 7.4 — l'Équipe a quitté le sidebar pour Paramètres → Mon organisation (route /team
+  // redirigée). Plus aucune entrée « Équipe » dans le sidebar, quel que soit le rôle.
+  it('n’affiche plus d’entrée « Équipe » dans le sidebar (déplacée dans Paramètres)', () => {
     useSessionStore.setState({ role: 'super_admin' } as never);
     render(<Sidebar onOpenProfile={() => {}} />);
-    expect(screen.getByText('Équipe')).toBeInTheDocument();
-  });
-
-  it('hides the Équipe item for a non-admin role', () => {
-    useSessionStore.setState({ role: 'tourism_agent', adminRank: null } as never);
-    render(<Sidebar onOpenProfile={() => {}} />);
     expect(screen.queryByText('Équipe')).not.toBeInTheDocument();
+    // … mais l'accès aux Paramètres reste présent.
+    expect(screen.getByText('Paramètres')).toBeInTheDocument();
   });
 
   it('calls onOpenProfile when the profile button is clicked', () => {

@@ -165,7 +165,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 
 ---
 
-## Phase 5 — Dashboard / CRM / secondaires ⏳ (5.1/5.3 ✅, 5.2 A+C ✅, 2026-06-23)
+## Phase 5 — Dashboard / CRM / secondaires ✅ (2026-06-23)
 
 ### 5.3 — Nettoyage du login ✅ (partiel)
 - **Retrait du texte de debug public** (`Supabase URL: …` + « Mode demo ») sur la page de connexion (fuite d'info + aspect cassé) ; import `env` retiré. Accents FR rétablis (h1, lead, note, panneau démo).
@@ -182,10 +182,15 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **États vides qui enseignent** : `CrmAnnuaire` état « aucune donnée » (annuaire vide) → `EmptyState` qui enseigne + CTA « Ajouter un acteur » (gated `canWrite`, no-write-trap), **distinct** de l'état « filtré » (sans CTA ; phrase « aucun acteur ne correspond » préservée).
 - TDD : +5 specs ; **CRM 234/234** ; `next build` 0 ; tsc sans nouvelle erreur. Vérif navigateur : classes + styles calculés (overlay `place-items: stretch end`, footer `position: sticky`, `role=dialog`, `aria-label`) confirmés ; capture pixel bloquée par le renderer headless (window.innerWidth=0 + timeout).
 
+### 5.2 — Part B : modale d'interaction en 2 temps ✅ (`f06f67e`, 2026-06-23)
+- **Fin du formulaire-dans-formulaire** : la case « Créer une tâche de suivi liée » imbriquée est retirée. Flux en **deux temps** : (1) Consigner l'interaction → état de confirmation « Interaction enregistrée », (2) affordance « + Ajouter une relance » qui révèle les champs (titre/échéance/assigné), enregistrée **séparément**. « Terminer » ferme sans relance.
+- **Deux mutations distinctes** (interaction / tâche) ⇒ **idempotence naturelle** : un échec de relance ne re-crée jamais l'interaction (retry = tâche seule) ; contrat `saveCrmTask(relatedInteractionId)` inchangé. Pas de write-trap (relance désactivée-avec-raison si titre vide).
+- **Tension documentée** : le §66 (décision PO 1) avait **choisi** la tâche liée imbriquée ; la maquette 5.2 la remplace par le flux 2-temps — option la plus conforme à la maquette, invariant write-path préservé.
+- TDD : 13 specs (5 « établissement requis » inchangées + 8 réécrites) + `CrmActorFiche` réaligné (le modal reste ouvert, « Terminer » ferme). **CRM 235/235** ; build 0 ; tsc sans nouvelle erreur.
+
 ### Restant (différé avec raison)
-- **5.2 Part B — modale d'interaction** : retrait du formulaire de relance **imbriqué** (checkbox « Créer une tâche de suivi liée ») au profit d'une affordance « + Ajouter une relance » **après** enregistrement (flux 2-phases). Tension à documenter : le §66 (décision PO 1) avait **choisi** la tâche liée imbriquée ; la maquette 5.2 la remplace. Refonte 2-phases + réécriture des 6 specs §66 couplées ⇒ passe ciblée (logique `createdInteractionRef`/`saveCrmTask(relatedInteractionId)` réutilisable telle quelle).
 - **Unification Team/RGPD sur le vocabulaire maison** : absorbée par la Phase 7.4 (Team) ; RGPD reste.
-- **Pages stub honnêtes** (`EmptyState mode=coming-soon`) : `EmptyState` est livré (Phase 1.2) ; Moderation/Audits/Publications déjà câblés (S12) ; reste éventuel à vérifier.
+- **Pages stub honnêtes** (`EmptyState mode=coming-soon`) : Moderation/Audits/Publications déjà câblés (S12).
 
 ---
 
@@ -211,7 +216,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Phase 2** ✅ (taxonomie unifiée + résolveurs de libellés)
 - **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur)
 - **Phase 4** ✅ **complète** (4.1 Événement/dates · 4.2 Restaurant/cuisine+menu · 4.3 Itinéraire/étapes réelles + Activité/object_act · **4.4 vue config-driven** remplaçant les 7 gabarits clonés + onglets = sections rendues) + dead-ends retirés (S12). Reste cosmétique : de-dup `DRAWER_TYPE_LABELS` sur `labels.ts`.
-- **Phase 5** ✅ majoritaire (5.1 hiérarchie dashboard · **5.2 A+C** dé-modalisation acteur en tiroir + états vides enseignants · 5.3 login + pages stub honnêtes · anti-pattern side-stripe) ; reste 5.2 Part B (modale interaction 2-phases)
+- **Phase 5** ✅ **complète** (5.1 hiérarchie dashboard · **5.2 A+B+C** dé-modalisation acteur en tiroir + modale interaction 2-temps + états vides enseignants · 5.3 login + pages stub honnêtes · anti-pattern side-stripe)
 - **Phase 6** ✅ cœur + **§16 disclosures complétées** (6.1 barre save · 6.2 clobber BlockASC + divulgation progressive §07/§16 **complète** : sous-lieux, capacité, **étapes ITI, communes desservies** via primitive `Disclosure`)
 - **Phase 7** partiel (7.3 P0 boutons IA · 7.1 libellé « Paramètres » + carte Diagnostic)
 - **Transverse** : fausses affordances Explorer honnêtes, `.muted` ajouté, ~28 commits.
@@ -220,7 +225,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Correctif de cohérence `master`** (`917ed23`) : 3 fichiers de test du dashboard (`ActualisationTable`/`CompletenessTable`/`TypeBreakdown`) étaient restés **non commités** au commit Phase 2 — les composants commités rendaient déjà le libellé FR (`resolveTypeLabel`) mais les assertions de drill-down cliquaient encore le code brut (`'HOT'`/`'HLO'`). `master` portait donc des tests dashboard en échec ; commit des hunks orphelins (assertions → `'Hotel'`/`'Hebergement loisir'`), suite verte. *Aléa « shared-file hunks » : un consommateur commité sans la mise à jour de son test.*
 - **§16 disclosures complétées** (`bf5fe8f`, cf. Phase 6 ci-dessus).
 - **Phase 4 complétée** (`bf6b795`) : vue drawer config-driven (7 clones → 1 `ConfigDrivenDetailView` + `ARCHETYPE_SECTIONS`) + onglets = sections rendues. Behaviour-preserving (23 tests existants verts) ; cf. §4.4 ci-dessus.
-- **Phase 5.2 A+C** (`af9415c`) : édition acteur en tiroir latéral (`CrmModal variant="drawer"`, vocabulaire maison) + états vides CRM enseignants ; cf. §5.2 ci-dessus. Reste Part B (modale interaction 2-phases).
+- **Phase 5 complétée** (`af9415c` A+C + `f06f67e` Part B) : édition acteur en tiroir latéral (`CrmModal variant="drawer"`, vocabulaire maison) + états vides CRM enseignants + modale interaction en 2 temps (fin du formulaire imbriqué) ; cf. §5.2 ci-dessus.
 - **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.

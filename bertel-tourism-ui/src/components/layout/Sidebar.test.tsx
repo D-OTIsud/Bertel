@@ -55,6 +55,6 @@ describe('Sidebar', () => {
 
   it('renders the settings link', () => {
     render(<Sidebar onOpenProfile={() => {}} />);
-    expect(screen.getByRole('link', { name: /Settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Param[eè]tres/i })).toBeInTheDocument();
   });
 });

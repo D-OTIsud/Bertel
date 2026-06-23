@@ -37,7 +37,7 @@ const allItems: Array<{
   { to: '/publications', label: 'Publications', caption: 'Exports et mises en page', roles: ['super_admin', 'tourism_agent'], icon: Files },
   { to: '/team', label: 'Équipe', caption: 'Membres et permissions', roles: ['owner', 'super_admin', 'tourism_agent'], icon: UsersRound },
   { to: '/rgpd', label: 'RGPD', caption: 'Effacement & droits des personnes', roles: ['owner', 'super_admin'], icon: UserX },
-  { to: '/settings', label: 'Settings', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
+  { to: '/settings', label: 'Paramètres', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
 ];
 
 function isActivePath(pathname: string | null, target: string): boolean {
@@ -78,7 +78,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
     .filter((item) => item.to !== '/team' || teamVisible);
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
-  const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Parametres';
+  const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Paramètres';
 
   return (
     <aside className="app-sidebar" aria-label="Navigation principale">
@@ -115,7 +115,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
 
         <Link
           href="/settings"
-          title="Parametres"
+          title="Paramètres"
           aria-current={isActivePath(pathname, '/settings') ? 'page' : undefined}
           className={cn('app-sidebar__item', isActivePath(pathname, '/settings') && 'app-sidebar__item--active')}
         >

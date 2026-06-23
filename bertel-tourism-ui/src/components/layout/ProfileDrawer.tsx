@@ -85,7 +85,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
           <div className="profile-drawer__actions">
             <Link href="/settings" className="ghost-button" onClick={() => onOpenChange(false)}>
               <Settings2 className="h-4 w-4" />
-              Parametres
+              Paramètres
             </Link>
             <Link href="/crm" className="ghost-button" onClick={() => onOpenChange(false)}>
               <Users className="h-4 w-4" />

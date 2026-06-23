@@ -502,6 +502,24 @@ textarea::placeholder {
   align-self: center;
 }
 
+/* ---- Bloc « Prochaines dates » d'un événement (impl. 4.1) ---- */
+.detail-event-list { display: flex; flex-direction: column; gap: 8px; }
+.detail-event-list__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.detail-event-list__icon { color: var(--acc-fma); flex: none; }
+.detail-event-list__state { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--brand-red); }
+.detail-event-list__row--cancelled .detail-event-list__date { text-decoration: line-through; color: var(--text-muted); }
+
 input[type='checkbox'] {
   width: 20px;
   height: 20px;

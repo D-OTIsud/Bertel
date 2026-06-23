@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Archive,
   Award,
+  CalendarDays,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -34,6 +35,7 @@ import {
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { buildEventOccurrenceRows } from './event-occurrences';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
@@ -3519,6 +3521,31 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
   );
 }
 
+/**
+ * Bloc « Prochaines dates » d'un événement (impl. 4.1). Rendu UNIQUEMENT quand des
+ * occurrences existent (FMA) — donc null pour les autres types qui partagent
+ * GenericDetailView. Comble « un événement sans dates nulle part » (audit FMA).
+ */
+function EventOccurrencesSection({ occurrences }: { occurrences: Array<Record<string, unknown>> }) {
+  const rows = useMemo(() => buildEventOccurrenceRows(occurrences), [occurrences]);
+  if (rows.length === 0) {
+    return null;
+  }
+  return (
+    <Section id="detail-section-events" title="Prochaines dates" kicker="Quand">
+      <ul className="detail-event-list">
+        {rows.map((row) => (
+          <li key={row.key} className={cn('detail-event-list__row', row.cancelled && 'detail-event-list__row--cancelled')}>
+            <CalendarDays size={15} className="detail-event-list__icon" aria-hidden />
+            <span className="detail-event-list__date">{row.label}</span>
+            {row.cancelled ? <span className="detail-event-list__state">Annulé</span> : null}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 function GenericDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
@@ -3537,6 +3564,8 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
       preview={preview}
       tabItems={tabItems}
       mainSections={[
+        // 4.1 : un événement (FMA) mène par ses dates ; null pour les autres types.
+        <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />,
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
           <OverviewSection preview={preview} parsed={parsed} />

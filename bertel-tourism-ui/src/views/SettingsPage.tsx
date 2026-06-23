@@ -14,6 +14,8 @@ import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
+import TeamAdminPage from './TeamAdminPage';
+import { canAdministerTeam } from '@/store/session-selectors';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
@@ -57,13 +59,15 @@ export default function SettingsPage() {
   // 7.1 — console à rail : un seul panneau visible à la fois, section active synchronisée à
   // l'URL (?section=). Le rail est gated par rôle (buildSettingsNav). Si le rôle change (switch
   // démo) et rend la section courante inaccessible, on retombe sur le défaut.
-  const settingsNav = useMemo(() => buildSettingsNav(role), [role]);
+  const adminRank = useSessionStore((state) => state.adminRank);
+  const canManageTeam = canAdministerTeam({ role, adminRank });
+  const settingsNav = useMemo(() => buildSettingsNav(role, { canManageTeam }), [role, canManageTeam]);
   const [activeSection, setActiveSection] = useState<string>(() =>
-    resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section')),
+    resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section'), { canManageTeam }),
   );
   useEffect(() => {
-    setActiveSection((current) => resolveSettingsSection(role, current));
-  }, [role]);
+    setActiveSection((current) => resolveSettingsSection(role, current, { canManageTeam }));
+  }, [role, canManageTeam]);
   function selectSection(id: string) {
     setActiveSection(id);
     if (typeof window !== 'undefined') {
@@ -626,6 +630,10 @@ export default function SettingsPage() {
           <AiProviderSettings />
         </article>
       )}
+
+      {/* 7.4 — Équipe (Mon organisation) : Team emménage ici depuis /team (retiré du sidebar).
+          TeamAdminPage porte son propre gating + chargement + contrôles serveur (vraie frontière). */}
+      {activeSection === 'team' && canManageTeam && <TeamAdminPage />}
 
         </div>
       </div>

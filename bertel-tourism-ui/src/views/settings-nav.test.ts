@@ -25,6 +25,24 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     expect(settingsSectionIds('owner')).toEqual(['preferences', 'session']);
   });
 
+  // 7.4 — « Mon organisation » (Équipe) apparaît quand canManageTeam, entre « Mon compte »
+  // et « Plateforme ».
+  it('canManageTeam ⇒ groupe « Mon organisation » (Équipe) inséré entre compte et plateforme', () => {
+    const superGroups = buildSettingsNav('super_admin', { canManageTeam: true });
+    expect(superGroups.map((g) => g.id)).toEqual(['account', 'org', 'platform']);
+    const org = superGroups.find((g) => g.id === 'org');
+    expect(org?.sections.map((s) => s.id)).toEqual(['team']);
+    // un admin d'ORG non super-admin : compte + organisation, PAS plateforme
+    const orgAdmin = buildSettingsNav('tourism_agent', { canManageTeam: true });
+    expect(orgAdmin.map((g) => g.id)).toEqual(['account', 'org']);
+  });
+
+  it('sans canManageTeam : pas de groupe « Mon organisation »', () => {
+    expect(buildSettingsNav('tourism_agent').map((g) => g.id)).toEqual(['account']);
+    expect(settingsSectionIds('tourism_agent')).not.toContain('team');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).toContain('team');
+  });
+
   it('resolveSettingsSection : honore un ?section accessible, sinon retombe sur le défaut', () => {
     expect(resolveSettingsSection('super_admin', 'markers')).toBe('markers');
     expect(resolveSettingsSection('super_admin', null)).toBe(DEFAULT_SETTINGS_SECTION);

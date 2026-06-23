@@ -25,6 +25,15 @@ const ACCOUNT_GROUP: SettingsNavGroup = {
   ],
 };
 
+// 7.4 — « Mon organisation » : Équipe (gated org-admin ≥ 10 via canAdministerTeam). Team
+// emménage ici depuis la route /team (retirée du sidebar). Le gating fin (inviter / défauts
+// ORG ≥ 30) + les contrôles serveur restent dans TeamAdminPage = la vraie frontière.
+const ORG_GROUP: SettingsNavGroup = {
+  id: 'org',
+  label: 'Mon organisation',
+  sections: [{ id: 'team', label: 'Équipe' }],
+};
+
 const PLATFORM_GROUP: SettingsNavGroup = {
   id: 'platform',
   label: 'Plateforme',
@@ -36,25 +45,37 @@ const PLATFORM_GROUP: SettingsNavGroup = {
   ],
 };
 
-/** Groupes du rail visibles pour ce rôle (gating périmètre). */
-export function buildSettingsNav(role: UserRole | null | undefined): SettingsNavGroup[] {
+export interface SettingsNavOptions {
+  /** L'utilisateur peut administrer l'équipe de son ORG (canAdministerTeam) ⇒ groupe « Mon organisation ». */
+  canManageTeam?: boolean;
+}
+
+/** Groupes du rail visibles pour ce rôle + périmètre (gating). Ordre : compte → organisation → plateforme. */
+export function buildSettingsNav(role: UserRole | null | undefined, options: SettingsNavOptions = {}): SettingsNavGroup[] {
   const groups: SettingsNavGroup[] = [ACCOUNT_GROUP];
+  if (options.canManageTeam) {
+    groups.push(ORG_GROUP);
+  }
   if (role === 'super_admin') {
     groups.push(PLATFORM_GROUP);
   }
   return groups;
 }
 
-/** Liste plate des ids de section accessibles à ce rôle (pour valider le `?section=` d'URL). */
-export function settingsSectionIds(role: UserRole | null | undefined): string[] {
-  return buildSettingsNav(role).flatMap((group) => group.sections.map((section) => section.id));
+/** Liste plate des ids de section accessibles (pour valider le `?section=` d'URL). */
+export function settingsSectionIds(role: UserRole | null | undefined, options: SettingsNavOptions = {}): string[] {
+  return buildSettingsNav(role, options).flatMap((group) => group.sections.map((section) => section.id));
 }
 
 /** Section par défaut (premier panneau de « Mon compte »). */
 export const DEFAULT_SETTINGS_SECTION = 'preferences';
 
 /** Résout la section active : le `?section=` demandé s'il est accessible, sinon le défaut. */
-export function resolveSettingsSection(role: UserRole | null | undefined, requested: string | null | undefined): string {
-  const available = settingsSectionIds(role);
+export function resolveSettingsSection(
+  role: UserRole | null | undefined,
+  requested: string | null | undefined,
+  options: SettingsNavOptions = {},
+): string {
+  const available = settingsSectionIds(role, options);
   return requested && available.includes(requested) ? requested : DEFAULT_SETTINGS_SECTION;
 }

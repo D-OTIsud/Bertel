@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Download, Mail, Printer, ShoppingBag, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import { exportSelectedObjectsCsv } from '@/services/selection-export';
@@ -143,19 +142,16 @@ export function SelectionBar() {
 
       <span className="h-[18px] w-px bg-white/15" aria-hidden />
 
+      {/* S12 : « Envoyer » n'a pas de back-end — plus de faux bouton activé qui ne fait
+          qu'un toast. Désactivé-avec-raison VISIBLE (pattern §46) en attendant la feature. */}
       <button
         type="button"
-        disabled={empty}
-        onClick={() => {
-          if (!empty) toast.info('Envoi par mail : bientôt disponible.');
-        }}
-        className={cn(
-          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold text-white transition',
-          empty ? 'cursor-not-allowed bg-orange/40' : 'bg-orange hover:bg-orange-2',
-        )}
+        disabled
+        title="Envoi par e-mail de la sélection — bientôt disponible"
+        className="inline-flex h-[30px] shrink-0 cursor-not-allowed items-center gap-1.5 rounded-[9px] bg-orange/30 px-3 text-[12.5px] font-semibold text-white/70"
       >
         <Mail className="h-3.5 w-3.5 shrink-0" />
-        Envoyer
+        Envoyer · bientôt
       </button>
     </div>
   );

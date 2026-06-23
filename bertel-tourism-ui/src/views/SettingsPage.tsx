@@ -12,6 +12,8 @@ import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl,
 import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
+import { SettingsRail } from './SettingsRail';
+import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
@@ -51,6 +53,25 @@ export default function SettingsPage() {
 
   const canManageBrandTheme = role === 'super_admin';
   const canManageCustomIcons = role === 'super_admin';
+
+  // 7.1 — console à rail : un seul panneau visible à la fois, section active synchronisée à
+  // l'URL (?section=). Le rail est gated par rôle (buildSettingsNav). Si le rôle change (switch
+  // démo) et rend la section courante inaccessible, on retombe sur le défaut.
+  const settingsNav = useMemo(() => buildSettingsNav(role), [role]);
+  const [activeSection, setActiveSection] = useState<string>(() =>
+    resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section')),
+  );
+  useEffect(() => {
+    setActiveSection((current) => resolveSettingsSection(role, current));
+  }, [role]);
+  function selectSection(id: string) {
+    setActiveSection(id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('section', id);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }
   const customSvgSignature = useMemo(
     () => objectTypeOptions.map(({ code }) => `${code}:${markerStyles[code].mode}:${markerStyles[code].customSvg ?? ''}`).join('|'),
     [markerStyles],
@@ -243,6 +264,11 @@ export default function SettingsPage() {
         </p>
       </article>
 
+      <div className="settings-console">
+        <SettingsRail groups={settingsNav} activeSection={activeSection} onSelect={selectSection} />
+        <div className="settings-panel">
+
+      {activeSection === 'session' && (
       <article className="panel-card panel-card--wide">
         <div className="panel-heading">
           <h2>Rôle actif</h2>
@@ -264,6 +290,9 @@ export default function SettingsPage() {
         )}
       </article>
 
+      )}
+
+      {activeSection === 'appearance' && (
       <article className="panel-card panel-card--wide">
         <div className="panel-heading">
           <div>
@@ -385,6 +414,9 @@ export default function SettingsPage() {
         </div>
       </article>
 
+      )}
+
+      {activeSection === 'markers' && (
       <article className="panel-card panel-card--wide">
         <div className="panel-heading">
           <div>
@@ -523,6 +555,9 @@ export default function SettingsPage() {
         </div>
       </article>
 
+      )}
+
+      {activeSection === 'preferences' && (
       <article className="panel-card">
         <div className="panel-heading">
           <h2>Langues</h2>
@@ -541,8 +576,11 @@ export default function SettingsPage() {
         </div>
       </article>
 
+      )}
+
       {/* 7.1 : carte d'état lisible « Diagnostic » à la place du dump « Runtime » de
           debug — l'URL Supabase brute n'est plus exposée (juste configurée/non). */}
+      {activeSection === 'diagnostic' && (
       <article className="panel-card">
         <div className="panel-heading">
           <h2>Diagnostic</h2>
@@ -555,11 +593,16 @@ export default function SettingsPage() {
         </div>
       </article>
 
-      {role === 'super_admin' && (
+      )}
+
+      {activeSection === 'ai' && role === 'super_admin' && (
         <article className="panel-card">
           <AiProviderSettings />
         </article>
       )}
+
+        </div>
+      </div>
     </section>
   );
 }

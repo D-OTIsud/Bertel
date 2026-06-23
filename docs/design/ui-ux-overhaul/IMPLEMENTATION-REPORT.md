@@ -108,8 +108,10 @@
 ### Vérifié (phase)
 Jest 255/1779 verts · `next build` exit 0 · typecheck sans nouvelle erreur · navigateur (mode démo) pour 3.1/3.2/3.3 · revue adversariale Phase 2 couvrait les helpers partagés.
 
+### 3.2 (complément) — Sous-types SRV/VIS ✅
+- Les buckets fourre-tout VIS et SRV se filtrent désormais par sous-type (fin du « plat ») : `ExplorerFilters.vis/srv = { subtypes }` (mirroir HOT), filtrage **client** (pas de changement RPC), toggles store, persistance URL (`visSubtypes`/`srvSubtypes`), chips FR dans `FiltersPanel`. TDD (facets) + vérifié navigateur (VIS → Loisir/Patrimoine/Site naturel/Producteur).
+
 ### Restant (différé avec raison)
-- **Sous-types SRV/VIS** (3.2) : nécessitent des champs de store (`vis.subtypes`/`srv.subtypes`) + filtrage RPC par sous-type calqué sur `hot.subtypes` + UI → passe ciblée.
 - **Méta riches par type sur la carte** (3.1) : distance/dates/cuisine absentes du payload carte → projection backend (RPC `list_objects`/`get_object_cards_batch`).
 - **Anneau de composition des clusters + distinctions dans la popup carte** (3.3) : enrichissements (le cluster actuel est une bulle de densité ; la popup a déjà des chips). Valeur moindre.
 

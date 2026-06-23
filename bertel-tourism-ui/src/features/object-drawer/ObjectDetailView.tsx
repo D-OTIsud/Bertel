@@ -1193,7 +1193,7 @@ function GalleryLightbox({
   );
 }
 
-function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: ParsedObjectDetail }) {
+function OverviewSection({ preview }: { preview: PreviewData }) {
   const [expanded, setExpanded] = useState(false);
   const summary = preview.summary || preview.description || preview.adaptedDescription;
   const fullText = preview.description || summary;
@@ -1209,24 +1209,9 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
   const hasOverview = Boolean(summary || alternateText);
   const showExtendedText = expanded && canRevealFull;
 
-  const descriptionLanguages = useMemo(() => {
-    const codes = new Set<string>();
-    for (const entry of parsed.text.descriptions) {
-      if (entry.language?.trim()) {
-        codes.add(entry.language.trim().toUpperCase());
-      }
-    }
-    return [...codes];
-  }, [parsed.text.descriptions]);
-
-  const versionsLink =
-    descriptionLanguages.length > 1 ? (
-      <button type="button" className="detail-section__link" disabled title="Bientot disponible">
-        Voir versions · {descriptionLanguages.slice(0, 3).join(' / ')}
-        {' '}
-        &gt;
-      </button>
-    ) : null;
+  // S12 : plus de contrôle « Voir versions » désactivé-en-permanence (fausse
+  // affordance) sur la surface read-only — l'historique des versions vit dans
+  // l'éditeur (§98), pas dans le drawer.
 
   if (!hasOverview) {
     return null;
@@ -1241,7 +1226,7 @@ function OverviewSection({ preview, parsed }: { preview: PreviewData; parsed: Pa
       : <p className={className}>{text}</p>;
 
   return (
-    <Section title="Description" headerExtra={versionsLink}>
+    <Section title="Description">
       <div className="detail-overview">
         <div className="detail-overview__copy">
           {summary && renderCopy(
@@ -2681,15 +2666,7 @@ function OpeningsAsideSection({ openings, openNow }: { openings: OpeningItem[]; 
   }
 
   return (
-    <Section
-      title="Horaires"
-      aside
-      headerExtra={(
-        <button type="button" className="detail-section__link" aria-label="Modifier les périodes d'ouverture">
-          Modifier &gt;
-        </button>
-      )}
-    >
+    <Section title="Horaires" aside>
       <OpeningPeriodsCard openings={openings} openNow={openNow} />
     </Section>
   );
@@ -3313,7 +3290,7 @@ function AccommodationDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
@@ -3352,7 +3329,7 @@ function RestaurantDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
@@ -3390,7 +3367,7 @@ function ItineraryDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <ItineraryStatsSection itinerary={preview.itinerary} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <WaypointListSection key="waypoints" itinerary={preview.itinerary} />,
@@ -3429,7 +3406,7 @@ function ActivityDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
@@ -3466,7 +3443,7 @@ function VisitableDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
@@ -3504,7 +3481,7 @@ function NaturalSiteDetailView({ data, raw }: DetailViewProps) {
       mainSections={[
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
@@ -3568,7 +3545,7 @@ function GenericDetailView({ data, raw }: DetailViewProps) {
         <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />,
         <ApercuRegion key="apercu">
           <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-          <OverviewSection preview={preview} parsed={parsed} />
+          <OverviewSection preview={preview} />
           <TaxonomySection groups={taxonomyGroups} />
         </ApercuRegion>,
         <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,

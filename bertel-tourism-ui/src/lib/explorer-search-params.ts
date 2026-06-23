@@ -63,6 +63,8 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       .map((item) => item.trim().toLowerCase())
       .filter((item): item is ExplorerStatusFilter => (EXPLORER_STATUS_VALUES as readonly string[]).includes(item)) ?? undefined;
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  const visSubtypes = searchParams.get('visSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  const srvSubtypes = searchParams.get('srvSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const hotTaxonomy = (searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))?.split(',').filter(Boolean).flatMap((value) => {
     const [domain = '', code = ''] = value.split(':');
     if (!domain || !code) {
@@ -164,6 +166,8 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
         ...itiPatch,
       },
     }),
+    ...(visSubtypes !== undefined && { vis: { subtypes: visSubtypes as ExplorerFilters['vis']['subtypes'] } }),
+    ...(srvSubtypes !== undefined && { srv: { subtypes: srvSubtypes as ExplorerFilters['srv']['subtypes'] } }),
   };
 }
 
@@ -227,6 +231,19 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.hot.subtypes.length > 0) {
     p.set('hotSubtypes', normalizedFilters.hot.subtypes.join(','));
+  }
+  // 3.2 — ne sérialiser VIS/SRV que sur une SOUS-sélection réelle (pas le défaut « tous »).
+  if (
+    normalizedFilters.vis.subtypes.length > 0 &&
+    normalizedFilters.vis.subtypes.length < DEFAULT_EXPLORER_FILTERS.vis.subtypes.length
+  ) {
+    p.set('visSubtypes', normalizedFilters.vis.subtypes.join(','));
+  }
+  if (
+    normalizedFilters.srv.subtypes.length > 0 &&
+    normalizedFilters.srv.subtypes.length < DEFAULT_EXPLORER_FILTERS.srv.subtypes.length
+  ) {
+    p.set('srvSubtypes', normalizedFilters.srv.subtypes.join(','));
   }
   if (normalizedFilters.hot.taxonomy.length > 0) {
     p.set('hotTaxonomy', normalizedFilters.hot.taxonomy.map((item) => `${item.domain}:${item.code}`).join(','));

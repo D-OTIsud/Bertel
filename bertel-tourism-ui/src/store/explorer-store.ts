@@ -11,7 +11,7 @@ import type {
   MeetingRoomFilter,
 } from '../types/domain';
 import { mergeSelectedObjectIds } from '../utils/explorer-selection';
-import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES, normalizeExplorerFilters } from '../utils/facets';
+import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES, DEFAULT_SRV_SUBTYPES, DEFAULT_VIS_SUBTYPES, normalizeExplorerFilters } from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
@@ -53,6 +53,8 @@ interface ExplorerState extends ExplorerFilters {
   clearSelectedCard: () => void;
 
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
+  toggleVisSubtype: (type: BackendObjectTypeCode) => void;
+  toggleSrvSubtype: (type: BackendObjectTypeCode) => void;
   toggleHotTaxonomy: (domain: string, code: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
   setResCapacityFilter: (code: string, min?: number, max?: number) => void;
@@ -122,8 +124,16 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
       ...partial.act,
       environmentTagsAny: partial.act?.environmentTagsAny ?? currentBase.act.environmentTagsAny,
     },
-    vis: currentBase.vis,
-    srv: currentBase.srv,
+    vis: {
+      ...currentBase.vis,
+      ...partial.vis,
+      subtypes: partial.vis?.subtypes ?? currentBase.vis.subtypes,
+    },
+    srv: {
+      ...currentBase.srv,
+      ...partial.srv,
+      subtypes: partial.srv?.subtypes ?? currentBase.srv.subtypes,
+    },
   });
 }
 
@@ -289,6 +299,18 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
           subtypes: nextSubtypes.length > 0 ? nextSubtypes : [...DEFAULT_HOT_SUBTYPES],
         },
       };
+    }),
+  toggleVisSubtype: (type) =>
+    set((state) => {
+      const subtypes = state.vis.subtypes ?? [...DEFAULT_VIS_SUBTYPES];
+      const next = subtypes.includes(type) ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return { vis: { ...state.vis, subtypes: next.length > 0 ? next : [...DEFAULT_VIS_SUBTYPES] } };
+    }),
+  toggleSrvSubtype: (type) =>
+    set((state) => {
+      const subtypes = state.srv.subtypes ?? [...DEFAULT_SRV_SUBTYPES];
+      const next = subtypes.includes(type) ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return { srv: { ...state.srv, subtypes: next.length > 0 ? next : [...DEFAULT_SRV_SUBTYPES] } };
     }),
   toggleHotTaxonomy: (domain, code) =>
     set((state) => {

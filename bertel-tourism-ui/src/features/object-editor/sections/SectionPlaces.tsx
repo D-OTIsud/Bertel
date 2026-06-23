@@ -28,9 +28,9 @@ function StageList({
 }) {
   if (stages.length === 0) return null;
   const STAGE_COLS = '14px 28px 1fr 1fr 80px auto';
+  // The « Étapes d'itinéraire » label now lives on the Disclosure head (6.2).
   return (
     <>
-      <div className="chip-group__label">Étapes d'itinéraire</div>
       <div className="repeater wp-rep">
         {stages.map((stage, index) => (
           <div key={stage.recordId ?? index} className="rep-row" style={{ gridTemplateColumns: STAGE_COLS }}>
@@ -175,19 +175,25 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
           the notice instead when the module is unavailable for this object type. The
           sub-places repeater and the zones multi-select are different modules
           (descriptions / location) and are NOT affected by this gate. */}
-      {itinerary.unavailableReason
-        ? <ModuleUnavailableNotice reason={itinerary.unavailableReason} />
-        : <StageList stages={itinerary.stages} updateStage={updateStage} />
-      }
+      {itinerary.unavailableReason && <ModuleUnavailableNotice reason={itinerary.unavailableReason} />}
+      {/* 6.2 : divulgation progressive — les étapes ITI se replient (titre porté par la tête). */}
+      {!itinerary.unavailableReason && itinerary.stages.length > 0 && (
+        <Disclosure
+          title="Étapes d'itinéraire"
+          summary={`${itinerary.stages.length} étape(s)`}
+          defaultOpen
+        >
+          <StageList stages={itinerary.stages} updateStage={updateStage} />
+        </Disclosure>
+      )}
 
+      {/* 6.2 : divulgation progressive — les communes desservies se replient. */}
       {location.zoneOptions.length > 0 && (
-        <>
-          <div className="chip-group__label" style={{ marginTop: 18 }}>
-            Communes desservies
-            <span style={{ color: 'var(--ink-4)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-              {' '}· zone d’intervention (filtre Explorer)
-            </span>
-          </div>
+        <Disclosure
+          title="Communes desservies"
+          summary={`${location.zoneCodes.length} / ${location.zoneOptions.length} · zone d’intervention (filtre Explorer)`}
+          defaultOpen={location.zoneCodes.length > 0}
+        >
           <ChipSet>
             {location.zoneOptions.map((option) => (
               <Chip
@@ -198,7 +204,7 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
               />
             ))}
           </ChipSet>
-        </>
+        </Disclosure>
       )}
     </Fs>
   );

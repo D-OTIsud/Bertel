@@ -82,6 +82,35 @@ describe('SectionPlaces — honest controls (T1b)', () => {
   });
 });
 
+// 6.2 — divulgation progressive §16 : les deux blocs denses restants (étapes ITI +
+// communes desservies) se replient via la primitive Disclosure, comme les sous-lieux.
+describe('SectionPlaces — divulgation progressive §16 (6.2)', () => {
+  it('wraps the itinerary stages in an « Étapes d itinéraire » disclosure, open when stages exist', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    const head = screen.getByRole('button', { name: /Étapes d.itinéraire/ });
+    expect(head).toHaveAttribute('aria-expanded', 'true');
+    // the real stage-name input (fixture stage[0].name = 'Belvédère du Maïdo') stays visible when open
+    expect(screen.getByDisplayValue('Belvédère du Maïdo')).toBeInTheDocument();
+  });
+
+  it('wraps the communes-desservies block in a « Communes desservies » disclosure, open when zones selected', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    const head = screen.getByRole('button', { name: /Communes desservies/ });
+    expect(head).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Le Tampon' })).toBeInTheDocument();
+  });
+
+  it('collapsing the communes disclosure drops the commune chips from the accessibility tree', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Communes desservies/ })); });
+    // body becomes [hidden] → chips leave the a11y tree (getByRole excludes hidden)
+    expect(screen.queryByRole('button', { name: 'Le Tampon' })).not.toBeInTheDocument();
+  });
+});
+
 describe('SectionPlaces — §46 gated itinerary module (§48)', () => {
   it('hides the stage editor and shows the notice when the itinerary module is gated', () => {
     const modules = fullModulesFixture();

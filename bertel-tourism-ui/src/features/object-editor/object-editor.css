@@ -2620,12 +2620,13 @@
   gap: 12px;
   padding: 13px 16px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--ink-4);
   border-radius: 12px;
   background: var(--surface-2);
 }
-.object-editor .lifecycle-state--ok { border-left-color: #1a6b48; background: var(--green-soft); }
-.object-editor .lifecycle-state--warn { border-left-color: #b9802f; background: rgba(214, 147, 58, 0.10); }
+/* anti-pattern banni : pas de bordure latérale colorée — l'accent est porté par
+   le fond teinté + la pastille `lifecycle-state__dot`. */
+.object-editor .lifecycle-state--ok { background: var(--green-soft); }
+.object-editor .lifecycle-state--warn { background: rgba(214, 147, 58, 0.10); }
 .object-editor .lifecycle-state__dot {
   width: 10px; height: 10px; margin-top: 5px;
   border-radius: 999px; flex: none;

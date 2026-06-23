@@ -83,3 +83,32 @@
 ### Restant
 - Carte résultat Explorer affiche encore le code de bucket brut (« VIS ») → **Phase 3.1** (carte résultat type-aware).
 - Consolider `DRAWER_TYPE_LABELS` / `CLASSIFICATION_SCHEME_LABELS` (drawer) sur les résolveurs `labels.ts` → **Phase 4**.
+
+---
+
+## Phase 3 — Découverte type-aware (Explorer) ✅ (2026-06-23)
+
+### 3.1 — Carte résultat type-aware (`28b75bd`)
+- Pastille de type = libellé FR + accent d'archétype (`utils/labels`) ; **corrige le bug** de double-normalisation qui affichait le code de bucket brut (« VIS »).
+- Pastille « ouvert/fermé » conditionnée **HEB/RES uniquement** (jamais ITI/FMA/VIS), après le nom.
+- Signet « à cheval » : cocarde de classement (étoiles, **réservée aux HEB**) + pastilles-logo de label reconnus. Nouveau `utils/explorer-card-display.ts` (helpers purs, 9 tests TDD).
+- **Jamais de donnée fabriquée** : les méta riches (distance ITI, dates FMA, cuisine RES) ne sont pas sur le payload carte → **projection backend documentée comme bloquant** (pas d'invention). Retrait du tiret cadratin proscrit.
+- **Vérifié navigateur** : libellés FR par archétype, open seulement sur les 7 cartes HEB/RES (sur 11), 0 code brut.
+
+### 3.3 — Carte géo : légende + reprise d'erreur (`6e3465b`)
+- **Reprise d'erreur (audit S10)** : une requête en échec ne remplace PLUS tout l'Explorateur ; bannière inline (`EmptyState` mode=error) + Réessayer ne relançant que la requête fautive ; dernière donnée valide conservée (cache local des cards). Logique pure TDD (`views/explorer-error.ts`).
+- **Légende** (`MapLegend`) ancrée bas-gauche, 7 familles, pastilles colorées depuis `defaultMarkerStyles` (= couleur réelle des marqueurs). Marqueurs déjà type-aware (confirmé).
+- **Vérifié navigateur** : légende rendue (7 familles) + marqueurs colorés sur la vue Carte.
+
+### 3.2 — Barre de filtres actifs + communes cherchables (`<ce commit>`)
+- `ExplorerActiveFilters` : une pastille retirable par condition active (**terme de recherche compris**) + « Tout effacer » ; libellés FR ; dérivation pure TDD (`explorer-active-chips.ts`), retrait par groupe via le store.
+- `FilterDropdown` : prop opt-in `searchable` (recherche accent-insensible + nav clavier flèches/Entrée), câblé sur le multi-select communes.
+- **Vérifié navigateur** : barre + retrait au clic OK ; communes cherchables (« sai » filtre 6→5).
+
+### Vérifié (phase)
+Jest 255/1779 verts · `next build` exit 0 · typecheck sans nouvelle erreur · navigateur (mode démo) pour 3.1/3.2/3.3 · revue adversariale Phase 2 couvrait les helpers partagés.
+
+### Restant (différé avec raison)
+- **Sous-types SRV/VIS** (3.2) : nécessitent des champs de store (`vis.subtypes`/`srv.subtypes`) + filtrage RPC par sous-type calqué sur `hot.subtypes` + UI → passe ciblée.
+- **Méta riches par type sur la carte** (3.1) : distance/dates/cuisine absentes du payload carte → projection backend (RPC `list_objects`/`get_object_cards_batch`).
+- **Anneau de composition des clusters + distinctions dans la popup carte** (3.3) : enrichissements (le cluster actuel est une bulle de densité ; la popup a déjà des chips). Valeur moindre.

@@ -1,5 +1,4 @@
 'use client';
-import { Select } from '@/components/ui/select';
 import type { RefRole } from '@/services/rbac';
 
 /**
@@ -21,9 +20,9 @@ export function RoleSelect({ value, options, callerRank, disabled, includeNone, 
 }) {
   const assignable = filterAssignableRoles(options, callerRank);
   return (
-    <Select value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value || null)}>
+    <select className="select" value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value || null)}>
       {includeNone && <option value="">— aucun —</option>}
       {assignable.map((o) => <option key={o.code} value={o.code}>{o.name}</option>)}
-    </Select>
+    </select>
   );
 }

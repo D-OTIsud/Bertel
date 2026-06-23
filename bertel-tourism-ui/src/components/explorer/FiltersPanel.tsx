@@ -13,10 +13,12 @@ import type {
 import {
   ACCESSIBILITY_DISABILITY_TYPE_OPTIONS,
   EXPLORER_BUCKET_OPTIONS,
+  EXPLORER_BUCKET_TYPE_MAP,
   DEFAULT_HOT_SUBTYPES,
   HOT_BUCKET_TYPES,
   resolveExplorerStatuses,
 } from '../../utils/facets';
+import { resolveTypeLabel } from '../../utils/labels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
@@ -186,6 +188,10 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const toggleTag = useExplorerStore((state) => state.toggleTag);
   const clearTags = useExplorerStore((state) => state.clearTags);
   const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
+  const toggleVisSubtype = useExplorerStore((state) => state.toggleVisSubtype);
+  const toggleSrvSubtype = useExplorerStore((state) => state.toggleSrvSubtype);
+  const vis = useExplorerStore((state) => state.vis);
+  const srv = useExplorerStore((state) => state.srv);
   const toggleHotTaxonomy = useExplorerStore((state) => state.toggleHotTaxonomy);
   const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
   const setResCapacityFilter = useExplorerStore((state) => state.setResCapacityFilter);
@@ -201,6 +207,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
   const showIti = isBucketSelected(selectedBuckets, 'ITI');
+  const showVis = isBucketSelected(selectedBuckets, 'VIS');
+  const showSrv = isBucketSelected(selectedBuckets, 'SRV');
   const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
 
   const activeFilterCount = useExplorerStore((s) => {
@@ -696,6 +704,44 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                     />
                   </div>
                 </div>
+              </div>
+            </FilterColumnGroup>
+          ) : null}
+
+          {/* 3.2 — sous-types des buckets fourre-tout (fin du « plat » : un site naturel
+              ≠ un site patrimonial ; un office de tourisme ≠ un commerce). */}
+          {showVis ? (
+            <FilterColumnGroup label="Site & visite">
+              <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types de site</span>
+              <div className="flex flex-wrap gap-2">
+                {EXPLORER_BUCKET_TYPE_MAP.VIS.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={vis.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
+                    onClick={() => toggleVisSubtype(type)}
+                  >
+                    {resolveTypeLabel(type)}
+                  </button>
+                ))}
+              </div>
+            </FilterColumnGroup>
+          ) : null}
+
+          {showSrv ? (
+            <FilterColumnGroup label="Services">
+              <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types de service</span>
+              <div className="flex flex-wrap gap-2">
+                {EXPLORER_BUCKET_TYPE_MAP.SRV.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={srv.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
+                    onClick={() => toggleSrvSubtype(type)}
+                  >
+                    {resolveTypeLabel(type)}
+                  </button>
+                ))}
               </div>
             </FilterColumnGroup>
           ) : null}

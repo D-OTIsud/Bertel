@@ -94,6 +94,26 @@ function makeCard(input: Partial<ObjectCard> & Pick<ObjectCard, 'id' | 'type' | 
 }
 
 describe('applyClientPreviewFilters', () => {
+  it('filtre les cartes VIS par sous-type (3.2)', () => {
+    const cards = [
+      makeCard({ id: 'loi', type: 'LOI', name: 'Loisir' }),
+      makeCard({ id: 'pna', type: 'PNA', name: 'Site naturel' }),
+    ];
+    const filters = buildFilters({ selectedBuckets: ['VIS'], vis: { subtypes: ['PNA'] } });
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['pna']);
+  });
+
+  it('filtre les cartes SRV par sous-type (3.2)', () => {
+    const cards = [
+      makeCard({ id: 'com', type: 'COM', name: 'Commerce' }),
+      makeCard({ id: 'spu', type: 'SPU', name: 'Service public' }),
+    ];
+    const filters = buildFilters({ selectedBuckets: ['SRV'], srv: { subtypes: ['SPU'] } });
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['spu']);
+  });
+
   it('filters by selected bucket', () => {
     const cards = [
       makeCard({ id: 'hot-1', type: 'HOT', name: 'Hotel' }),

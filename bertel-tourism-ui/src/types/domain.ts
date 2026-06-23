@@ -200,6 +200,14 @@ export interface ActBucketFilters {
   environmentTagsAny: string[];
 }
 
+/** Sous-types des buckets fourre-tout (impl. 3.2) : filtre client par type DB. */
+export interface VisBucketFilters {
+  subtypes: BackendObjectTypeCode[];
+}
+export interface SrvBucketFilters {
+  subtypes: BackendObjectTypeCode[];
+}
+
 export interface ObjectCard {
   id: string;
   type: BackendObjectTypeCode | string;
@@ -249,8 +257,8 @@ export interface ExplorerFilters {
   res: ResBucketFilters;
   iti: ItiBucketFilters;
   act: ActBucketFilters;
-  vis: Record<string, never>;
-  srv: Record<string, never>;
+  vis: VisBucketFilters;
+  srv: SrvBucketFilters;
 }
 
 export interface ExplorerReferenceOption {

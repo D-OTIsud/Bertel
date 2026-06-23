@@ -34,6 +34,9 @@ export const EXPLORER_TYPE_CODE_FAMILIES: Record<ObjectTypeCode, BackendObjectTy
 
 export const HOT_BUCKET_TYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.HOT];
 export const DEFAULT_HOT_SUBTYPES: BackendObjectTypeCode[] = [...HOT_BUCKET_TYPES];
+// 3.2 — sous-types des buckets fourre-tout VIS/SRV (défaut = tous les types du bucket).
+export const DEFAULT_VIS_SUBTYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.VIS];
+export const DEFAULT_SRV_SUBTYPES: BackendObjectTypeCode[] = [...EXPLORER_TYPE_CODE_FAMILIES.SRV];
 
 export const ACCESSIBILITY_DISABILITY_TYPE_OPTIONS: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> = [
   { code: 'motor', label: 'Moteur' },
@@ -93,8 +96,12 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
   act: {
     environmentTagsAny: [],
   },
-  vis: {},
-  srv: {},
+  vis: {
+    subtypes: [...DEFAULT_VIS_SUBTYPES],
+  },
+  srv: {
+    subtypes: [...DEFAULT_SRV_SUBTYPES],
+  },
 };
 
 /**
@@ -144,8 +151,16 @@ export function normalizeExplorerFilters(
       ...act,
       environmentTagsAny: act.environmentTagsAny ?? [],
     },
-    vis: { ...base.vis, ...filters.vis },
-    srv: { ...base.srv, ...filters.srv },
+    vis: {
+      ...base.vis,
+      ...filters.vis,
+      subtypes: filters.vis?.subtypes ?? base.vis.subtypes,
+    },
+    srv: {
+      ...base.srv,
+      ...filters.srv,
+      subtypes: filters.srv?.subtypes ?? base.srv.subtypes,
+    },
   };
 }
 
@@ -434,6 +449,10 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
   const normalizedFilters = normalizeExplorerFilters(filters);
   const effectiveHotSubtypes = normalizedFilters.hot.subtypes.length > 0 ? normalizedFilters.hot.subtypes : DEFAULT_HOT_SUBTYPES;
   const allowedHotSubtypes = new Set(effectiveHotSubtypes);
+  const effectiveVisSubtypes = normalizedFilters.vis.subtypes.length > 0 ? normalizedFilters.vis.subtypes : DEFAULT_VIS_SUBTYPES;
+  const allowedVisSubtypes = new Set(effectiveVisSubtypes);
+  const effectiveSrvSubtypes = normalizedFilters.srv.subtypes.length > 0 ? normalizedFilters.srv.subtypes : DEFAULT_SRV_SUBTYPES;
+  const allowedSrvSubtypes = new Set(effectiveSrvSubtypes);
   const labelNeedles = normalizedFilters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
   const requireLabelMatch = labelNeedles.length > 0;
   // When the caller resolves statuses (cf. resolveExplorerStatuses) the array
@@ -452,10 +471,18 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
         return false;
       }
     }
-    if (normalizeExplorerObjectType(card.type) !== 'HOT') {
-      return true;
+    const bucket = normalizeExplorerObjectType(card.type);
+    const upperType = String(card.type).toUpperCase() as BackendObjectTypeCode;
+    if (bucket === 'HOT') {
+      return allowedHotSubtypes.has(upperType);
     }
-    return allowedHotSubtypes.has(String(card.type).toUpperCase() as BackendObjectTypeCode);
+    if (bucket === 'VIS') {
+      return allowedVisSubtypes.has(upperType);
+    }
+    if (bucket === 'SRV') {
+      return allowedSrvSubtypes.has(upperType);
+    }
+    return true;
   });
 }
 

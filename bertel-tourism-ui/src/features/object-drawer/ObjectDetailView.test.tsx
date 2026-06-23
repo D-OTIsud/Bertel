@@ -148,6 +148,59 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('de 2 à 6')).toBeInTheDocument();
   });
 
+  // Phase 4 — vue pilotée par configuration (ARCHETYPE_SECTIONS) : la dispatch est dérivée
+  // de l'archétype (TYPE_ARCHETYPES), et chaque archétype ne rend QUE ses sections. Un type
+  // VIS (LOI) ne doit jamais rendre les blocs spécifiques d'un autre archétype (menu RES,
+  // faits ASC, dates FMA) — même quand la donnée est présente dans `raw` (la config exclut
+  // ces sections). Verrouille les exclusions de l'archétype VIS (chemin sans test avant 4.x).
+  it('un objet VIS (LOI) rend l’aperçu mais aucun bloc spécifique menu/activité/dates', () => {
+    const data: ObjectDetail = {
+      id: 'loi-1',
+      name: 'Jardin des Parfums',
+      type: 'LOI',
+      raw: {
+        fma_occurrences: [{ id: 'o1', start_at: '2026-07-14', end_at: '2026-07-18', state: 'scheduled' }],
+        activity: { duration_min: '60' },
+        cuisine_types: [{ code: 'creole', name: 'Créole' }],
+        menus: [{ name: 'Carte', items: [{ name: 'Cari', price: '10', section: { name: 'Plats', position: 1 } }] }],
+      },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(document.getElementById('detail-section-overview')).not.toBeNull();
+    expect(screen.queryByText('Cuisine & carte')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fiche activité')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prochaines dates')).not.toBeInTheDocument();
+  });
+
+  // Un type SRV (générique) : aperçu présent, aucun bloc spécifique de type même si raw en porte.
+  it('un objet SRV rend l’aperçu sans bloc spécifique de type', () => {
+    const data: ObjectDetail = {
+      id: 'srv-1',
+      name: 'Office de tourisme',
+      type: 'SRV',
+      raw: {
+        activity: { duration_min: '60' },
+        cuisine_types: [{ code: 'creole', name: 'Créole' }],
+      },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(document.getElementById('detail-section-overview')).not.toBeNull();
+    expect(screen.queryByText('Cuisine & carte')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fiche activité')).not.toBeInTheDocument();
+  });
+
+  // Phase 4 — onglets = sections réellement rendues : un objet sans tarifs/équipements/médias/
+  // légal/notes ne doit afficher QUE l'onglet « Aperçu » (fini les onglets « Tarifs (0) » qui
+  // mentent et défilent vers une ancre inexistante).
+  it('omet les onglets vides : un objet sans donnée ne montre que « Aperçu »', () => {
+    const data: ObjectDetail = { id: 'srv-empty', name: 'Bureau d’information', type: 'SRV', raw: {} } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.getByRole('button', { name: 'Aperçu' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tarifs & horaires/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Équipements/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Médias/ })).not.toBeInTheDocument();
+  });
+
   it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',

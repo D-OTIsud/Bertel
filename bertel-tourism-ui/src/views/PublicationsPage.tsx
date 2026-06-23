@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { listPublicationBoard } from '../services/rpc';
+import { EmptyState } from '../components/common/EmptyState';
 
 const lanes = ['brief', 'layout', 'ready'] as const;
 const labels = {
@@ -14,11 +15,32 @@ export default function PublicationsPage() {
   const query = useQuery({ queryKey: ['publication-board'], queryFn: listPublicationBoard });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide m-4">Chargement des publications...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement des publications…</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="error"
+          title="Publications indisponibles"
+          description={(query.error as Error).message}
+          action={{ label: 'Réessayer', onClick: () => query.refetch() }}
+        />
+      </section>
+    );
+  }
+
+  if ((query.data ?? []).length === 0) {
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="coming-soon"
+          title="Chemin de fer publications à venir"
+          description="Le workflow de relecture, mise en page et export InDesign / CSV arrivera avec un prochain lot."
+        />
+      </section>
+    );
   }
 
   return (

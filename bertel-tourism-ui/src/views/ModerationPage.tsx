@@ -2,16 +2,39 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { listPendingChanges } from '../services/rpc';
+import { EmptyState } from '../components/common/EmptyState';
 
 export default function ModerationPage() {
   const query = useQuery({ queryKey: ['pending-changes'], queryFn: listPendingChanges });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide m-4">Chargement de la moderation...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement de la modération…</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="error"
+          title="Modération indisponible"
+          description={(query.error as Error).message}
+          action={{ label: 'Réessayer', onClick: () => query.refetch() }}
+        />
+      </section>
+    );
+  }
+
+  // Page honnête : pas de hero sur une liste vide à boutons inertes (audit stubs).
+  if ((query.data ?? []).length === 0) {
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="coming-soon"
+          title="Modération à venir"
+          description="La validation des suggestions terrain (vue avant / après) arrivera avec un prochain lot. Rien à faire pour l’instant."
+        />
+      </section>
+    );
   }
 
   return (

@@ -7847,8 +7847,17 @@ a {
 
 .scorecard-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  /* S9 : contraste d'échelle — la métrique meneuse domine (colonne plus large),
+     fini les 6 cartes identiques. Repli responsive plus bas. */
+  grid-template-columns: 1.6fr repeat(5, 1fr);
   gap: 1rem;
+}
+@media (max-width: 1200px) {
+  .scorecard-strip { grid-template-columns: repeat(3, 1fr); }
+  .scorecard-card--highlight { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .scorecard-strip { grid-template-columns: 1fr 1fr; }
 }
 
 .scorecard-card {
@@ -7863,9 +7872,13 @@ a {
 }
 
 .scorecard-card--highlight {
-  background: var(--surface-soft);
+  background: var(--teal);
   border-color: var(--teal);
+  color: #fff;
+  justify-content: center;
 }
+.scorecard-card--highlight .scorecard-card__label { color: rgba(255, 255, 255, 0.82); }
+.scorecard-card--highlight .scorecard-card__value { color: #fff; font-size: 2.8rem; }
 
 .scorecard-card--warning {
   border-color: var(--warning);

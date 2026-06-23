@@ -15,6 +15,7 @@ import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
 import TeamAdminPage from './TeamAdminPage';
+import { RefCodeEditor } from './RefCodeEditor';
 import { canAdministerTeam } from '@/store/session-selectors';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
@@ -623,6 +624,19 @@ export default function SettingsPage() {
         </div>
       </article>
 
+      )}
+
+      {/* 7.5 — Listes & référentiels (ref_code) : éditeur maître/détail super-admin. */}
+      {activeSection === 'referentiels' && role === 'super_admin' && (
+        <article className="panel-card panel-card--wide">
+          <div className="panel-heading">
+            <div>
+              <h2>Listes & référentiels</h2>
+              <p>Vocabulaires plats (ref_code) : libellé, ordre et activation. Les taxonomies et listes structurelles restent en lecture seule.</p>
+            </div>
+          </div>
+          <RefCodeEditor />
+        </article>
       )}
 
       {activeSection === 'ai' && role === 'super_admin' && (

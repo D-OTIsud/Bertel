@@ -2871,6 +2871,70 @@ a {
   .settings-rail { position: static; flex-direction: row; flex-wrap: wrap; }
 }
 
+/* Phase 7.5 — éditeur de référentiels (ref_code) : maître (domaines) / détail (valeurs). */
+.refcode-editor {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.refcode-master {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+.refcode-master__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.refcode-master__item:hover { background: var(--surface-2); color: var(--ink); }
+.refcode-master__item.is-active { background: var(--teal-soft); color: var(--teal-deep); }
+.refcode-master__count { font-size: 11px; color: var(--ink-4); font-weight: 600; }
+.refcode-detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.refcode-rows { display: flex; flex-direction: column; gap: 6px; }
+.refcode-row {
+  display: grid;
+  grid-template-columns: 56px 130px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.refcode-row.is-inactive { opacity: 0.55; }
+.refcode-row__order { display: flex; gap: 2px; }
+.refcode-icon-btn { padding: 4px 6px; }
+.refcode-row__code, .refcode-row__code-input { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+.refcode-row__name { width: 100%; }
+.refcode-active.is-on { color: var(--teal-deep); border-color: var(--teal); }
+.refcode-create {
+  display: grid;
+  grid-template-columns: auto 130px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+.refcode-create__title { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.refcode-note { font-size: 12px; }
+@media (max-width: 860px) {
+  .refcode-editor { grid-template-columns: 1fr; }
+  .refcode-master { flex-direction: row; flex-wrap: wrap; max-height: none; }
+}
+
 .drawer-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

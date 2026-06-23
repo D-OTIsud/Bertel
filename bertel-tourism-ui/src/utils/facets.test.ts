@@ -29,21 +29,22 @@ describe('normalizeExplorerFilters', () => {
 });
 
 describe('explorer type families', () => {
-  it('keeps backend-to-family correspondence explicit', () => {
+  it('keeps backend-to-family correspondence explicit (aligned on archetypes, §2a)', () => {
     expect(EXPLORER_TYPE_CODE_FAMILIES.HOT).toEqual(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
-    expect(EXPLORER_TYPE_CODE_FAMILIES.ACT).toEqual(['ACT', 'LOI']);
-    expect(EXPLORER_TYPE_CODE_FAMILIES.VIS).toEqual(['PCU', 'PNA', 'VIL', 'PRD']);
-    expect(EXPLORER_TYPE_CODE_FAMILIES.SRV).toEqual(['COM', 'PSV', 'ASC', 'SPU']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.ACT).toEqual(['ASC', 'ACT']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.VIS).toEqual(['LOI', 'PCU', 'PNA', 'PRD']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.SRV).toEqual(['PSV', 'VIL', 'COM', 'SPU']);
   });
 
-  it('maps backend codes to the right explorer family', () => {
+  it('maps backend codes to the right explorer family (== editor archetype)', () => {
     expect(normalizeExplorerObjectType('HOT')).toBe('HOT');
     expect(normalizeExplorerObjectType('HLO')).toBe('HOT');
     expect(normalizeExplorerObjectType('ACT')).toBe('ACT');
-    expect(normalizeExplorerObjectType('LOI')).toBe('ACT');
+    expect(normalizeExplorerObjectType('LOI')).toBe('VIS'); // §2a : Loisir = archétype VIS
     expect(normalizeExplorerObjectType('FMA')).toBe('EVT');
     expect(normalizeExplorerObjectType('PCU')).toBe('VIS');
-    expect(normalizeExplorerObjectType('ASC')).toBe('SRV');
+    expect(normalizeExplorerObjectType('ASC')).toBe('ACT'); // §2a : ASC sous Activités
+    expect(normalizeExplorerObjectType('VIL')).toBe('SRV'); // §2a : Ville = archétype SRV
   });
 
   it('keeps the explorer bucket map aligned with the backend type families', () => {
@@ -322,21 +323,21 @@ describe('buildBucketRpcFilters', () => {
     const filters = buildFilters({
       common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi' },
     });
-    expect(buildBucketRpcFilters(filters, 'all').search_mode).toBe('global');
+    expect(buildBucketRpcFilters(filters, 'VIS').search_mode).toBe('global');
   });
 
   it('does NOT broaden when searchScope=name (editor object pickers)', () => {
     const filters = buildFilters({
       common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi', searchScope: 'name' },
     });
-    expect(buildBucketRpcFilters(filters, 'all')).not.toHaveProperty('search_mode');
+    expect(buildBucketRpcFilters(filters, 'VIS')).not.toHaveProperty('search_mode');
   });
 
   it('does not emit search_mode when there is no search term', () => {
     const filters = buildFilters({
       common: { ...DEFAULT_EXPLORER_FILTERS.common, search: '   ' },
     });
-    expect(buildBucketRpcFilters(filters, 'all')).not.toHaveProperty('search_mode');
+    expect(buildBucketRpcFilters(filters, 'VIS')).not.toHaveProperty('search_mode');
   });
 
   it('uses the canonical accessibility family for broad PMR filtering', () => {

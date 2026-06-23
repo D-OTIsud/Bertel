@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { mapDashboardFiltersToExplorerUrl } from '../../lib/dashboard-to-explorer';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { resolveSchemeLabel, resolveTypeLabel } from '../../utils/labels';
 
 const STATUS_LABELS: Record<string, string> = {
   published: 'Publié',
@@ -33,7 +34,7 @@ export function ActiveFilterStrip() {
   // ── Types ────────────────────────────────────────────────────────────────
   (filters.types ?? []).forEach((t) =>
     chips.push({
-      label: `Type : ${t}`,
+      label: `Type : ${resolveTypeLabel(t)}`,
       onRemove: () => setFilters({ types: without(filters.types, (v) => v === t) }),
     }),
   );
@@ -99,7 +100,7 @@ export function ActiveFilterStrip() {
   // ── Classifications / distinctions ────────────────────────────────────────
   (filters.classificationsAny ?? []).forEach((c) =>
     chips.push({
-      label: `Distinction : ${c.schemeCode} ${c.valueCode}`,
+      label: `Distinction : ${resolveSchemeLabel(c.schemeCode)} ${c.valueCode}`,
       onRemove: () =>
         setFilters({
           classificationsAny: without(

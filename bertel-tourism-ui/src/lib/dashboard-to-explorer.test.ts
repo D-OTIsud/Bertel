@@ -64,10 +64,10 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
     expect(url).toBe('/explorer');
   });
 
-  it("signale l'élargissement de bucket pour un type partiel (LOI → bucket ACT)", () => {
+  it("signale l'élargissement de bucket pour un type partiel (LOI → bucket VIS, §2a)", () => {
     const { url, dropped } = mapDashboardFiltersToExplorerUrl({ types: ['LOI'] });
     const params = new URLSearchParams(url.split('?')[1]);
-    expect(params.get('buckets')).toBe('ACT');
+    expect(params.get('buckets')).toBe('VIS'); // §2a : Loisir = archétype VIS
     expect(dropped).toEqual(
       expect.arrayContaining([expect.stringContaining('LOI')]),
     );
@@ -75,7 +75,7 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
 
   it("ne signale rien quand la famille du bucket est couverte en entier", () => {
     const { dropped } = mapDashboardFiltersToExplorerUrl({
-      types: ['COM', 'PSV', 'ASC', 'SPU'],
+      types: ['PSV', 'VIL', 'COM', 'SPU'], // §2a : famille SRV complète (VIL dedans, ASC sorti)
     });
     expect(dropped).toEqual([]);
   });

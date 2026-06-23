@@ -28,7 +28,7 @@ describe('ActiveFilterStrip — chips', () => {
     render(<ActiveFilterStrip />);
     expect(screen.getByText(/Lieu-dit : La Plaine des Cafres/)).toBeInTheDocument();
     expect(screen.getByText(/hotel/)).toBeInTheDocument();
-    expect(screen.getByText(/Distinction : hot_stars 4/)).toBeInTheDocument();
+    expect(screen.getByText(/Distinction : Classement hôtelier 4/)).toBeInTheDocument();
     expect(screen.getByText(/Langue : en/)).toBeInTheDocument();
     expect(screen.getByText(/Famille : wellness/)).toBeInTheDocument();
     expect(screen.getByText(/Tag : famille-plus/)).toBeInTheDocument();

@@ -50,3 +50,36 @@
 - `EmptyState` à câbler dans `ResultsList` (Phase 3), CRM/stubs/`WidgetFrame` (Phase 5).
 - Primitives de distinction consommées par les cartes (3.1), la carte géo (3.3), les fiches (4.x).
 - Consolidation profonde des tokens (5 familles, ~234 hex) : hors-scope d'une passe sans-régression ; de-dup ciblé fait (`--orange-soft`).
+
+---
+
+## Phase 2 — Taxonomie unifiée & libellés ✅ (2026-06-23)
+
+### Changements
+**2.1 — Taxonomie unifiée & résolveur de libellés**
+- **Nouveau `src/utils/labels.ts`** (TDD, 16 tests) — source unique des libellés FR et de la couleur de type :
+  - `resolveTypeLabel` (TYPE_LABEL ?? `humanizeCode`), `resolveArchetype`, `resolveArchetypeLabel`,
+  - `resolveArchetypeAccentClass` → `acc-<archétype>` (acc-heb…acc-fma, tokens Phase 1 ; même couleur sur les 3 surfaces),
+  - `resolveRoleLabel` (catalogue ref_* prioritaire, sinon humanise), `resolveSchemeLabel` (V5 `LBL_*` + codes de classement historiques `hot_stars`/`green_key`… → libellés FR ; humanise le reste), `humanizeCode`.
+  - `buildExplorerTypeFamilies()` — **dérive** les familles de bucket Explorer de `TYPE_ARCHETYPES` ⇒ Explorer et éditeur **ne peuvent plus diverger** (fin du défaut-racine §2a).
+- **`src/utils/facets.ts`** : `EXPLORER_TYPE_CODE_FAMILIES = buildExplorerTypeFamilies()` (était un littéral). Effet : **LOI** ACT→VIS, **ASC** SRV→ACT, **VIL** VIS→SRV ⇒ le bucket d'un type == son archétype éditeur.
+- **Codes bruts éliminés** (résolveur câblé) : `ActiveFilterStrip` (chips Type + Distinction), `ActualisationTable`, `CompletenessTable`, `TypeBreakdown` (tables dashboard), `crm-primitives` `TypeTag`, `team/MembersTable` (fallback rôle).
+
+### Fichiers
+`src/utils/labels.ts` (nouveau), `src/utils/labels.test.ts` (nouveau), `src/utils/facets.ts`, `src/utils/facets.test.ts`, `src/components/dashboard/{ActiveFilterStrip,ActualisationTable,CompletenessTable,TypeBreakdown}.tsx` (+ tests ActiveFilterStrip), `src/features/crm/crm-primitives.tsx` (+ CrmObjectView.test), `src/features/team/MembersTable.tsx`, `src/lib/dashboard-to-explorer.test.ts`.
+
+### Vérifié
+- **Jest** : 250 suites / 1749 tests verts. Tests d'invariant : « le bucket Explorer de chaque type == son archétype », familles alignées, dérivation 18 types / 0 doublon / 0 bucket vide.
+- **Build** : `next build` exit 0.
+- **tsc** : aucune nouvelle erreur ; **3 erreurs préexistantes corrigées** (`facets.test.ts` `'all'` → `'VIS'`).
+- **Navigateur** (mode démo `NEXT_PUBLIC_ENABLE_DEMO_MODE=true`, login auto « Marie D. ») : dashboard « Par type d'objet » + actualisation rendent les libellés FR (Hotel/Restaurant/Loisir/Camping/Fete-manifestation/Itineraire/Hebergement…), `hasRawCode = false` ; le déplacement de bucket est visible (Canyoning/LOI désormais sous VIS).
+- **Revue adversariale** (sous-agent) : pas de cycle d'import, dérivation arithmétiquement correcte, classes `acc-*` présentes, pas de régression d'état URL. MEDIUM (libellés de scheme incomplets) **corrigé** (codes de classement historiques ajoutés). LOWs notés pour Phase 4 (doublon `DRAWER_TYPE_LABELS`, `ObjectDetailView` related_objects).
+
+### Décisions
+- Source unique = `TYPE_ARCHETYPES` (archetypes.ts, établi §46/§48) ; `labels.ts` (utils) en dérive ; `facets.ts` importe `labels.ts` (le seul bord utils→features est centralisé dans labels.ts ; pas de cycle).
+- Couleur de type sur les 3 surfaces = `acc-<archétype>` (système de tokens Phase 1), distinct de l'accent de section éditeur (`acc-teal…rust`) qui reste un concept séparé.
+- Rôles/schemes dynamiques : fallback `humanizeCode` (jamais de SNAKE_CASE brut) + maps connues.
+
+### Restant
+- Carte résultat Explorer affiche encore le code de bucket brut (« VIS ») → **Phase 3.1** (carte résultat type-aware).
+- Consolider `DRAWER_TYPE_LABELS` / `CLASSIFICATION_SCHEME_LABELS` (drawer) sur les résolveurs `labels.ts` → **Phase 4**.

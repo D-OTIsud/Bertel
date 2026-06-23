@@ -2,6 +2,7 @@
 
 import type { DashboardCompleteness } from '../../types/dashboard';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { resolveTypeLabel } from '../../utils/labels';
 
 interface Props {
   data: DashboardCompleteness;
@@ -73,11 +74,11 @@ export function CompletenessTable({ data }: Props) {
                   <button
                     type="button"
                     className={`actualisation-table__type-btn${activeTypes.includes(row.type) ? ' actualisation-table__type-btn--active' : ''}`}
-                    title={`Filtrer : ${row.type}`}
+                    title={`Filtrer : ${resolveTypeLabel(row.type)}`}
                     onClick={() => handleType(row.type)}
                     aria-pressed={activeTypes.includes(row.type)}
                   >
-                    {row.type}
+                    {resolveTypeLabel(row.type)}
                   </button>
                 </td>
                 <td>{row.total}</td>

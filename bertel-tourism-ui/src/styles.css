@@ -10519,6 +10519,36 @@ a {
   padding: 12px 20px;
   border-top: 1px solid var(--line-soft);
 }
+/* Phase 5.2 — variante tiroir latéral droit (dé-modalisation de l'édition acteur).
+   Même primitive CrmModal (role=dialog, focus-trap, footer) ; le chrome s'ancre à
+   droite pleine hauteur et la barre de save devient collante. Vocabulaire maison
+   (pas de Sheet shadcn) → un seul design system. */
+.crm-app .crm-modal-overlay--drawer {
+  place-items: stretch end;
+  padding: 0;
+}
+.crm-app .crm-modal--drawer {
+  width: 440px;
+  max-width: 440px;
+  height: 100%;
+  max-height: 100vh;
+  border: 0;
+  border-left: 1px solid var(--line-soft);
+  border-radius: 0;
+  box-shadow: -24px 0 48px -28px rgba(16, 30, 36, 0.5);
+}
+.crm-app .crm-modal--drawer .crm-modal__body {
+  flex: 1;
+  gap: 18px;
+}
+.crm-app .crm-modal--drawer .crm-modal__foot {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-2);
+}
+@media (max-width: 760px) {
+  .crm-app .crm-modal--drawer { width: 100%; max-width: 100%; }
+}
 .crm-app .crm-field {
   display: flex;
   flex-direction: column;

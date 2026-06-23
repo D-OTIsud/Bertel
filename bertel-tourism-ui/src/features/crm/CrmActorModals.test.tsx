@@ -54,6 +54,13 @@ async function addAddressRow() {
 }
 
 describe('CrmActorEditModal — §19 adresses prestataire', () => {
+  // Phase 5.2 — l'édition acteur s'ouvre en tiroir latéral (dé-modalisation) et non plus
+  // dans une modale centrée de 560px : la barre de save collante respire au scroll.
+  it('s’ouvre en tiroir latéral (crm-modal--drawer), pas en modale centrée', () => {
+    renderModal();
+    expect(screen.getByRole('dialog', { name: "Modifier l'acteur" })).toHaveClass('crm-modal--drawer');
+  });
+
   it('adds an address row via "Ajouter une adresse"', async () => {
     renderModal();
     await addAddressRow();

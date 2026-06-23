@@ -32,7 +32,7 @@ describe('SectionPlaces — honest controls (T1b)', () => {
     modules.descriptions.places[0].visibility = '';
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(screen.getByDisplayValue('— Visibilité non définie —')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Visibilité non définie')).toBeInTheDocument();
   });
 
   it('keeps the sub-place label editable and marks descriptions dirty', () => {

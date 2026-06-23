@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.4 · Paramètres : Équipe (admin d'ORG) · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .stage-block { margin-bottom: 32px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .block-kick { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; }
+
+  /* ---- Le hub à rail (réutilisé de 7.1) ---- */
+  .set { display: grid; grid-template-columns: 244px 1fr; min-height: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-s); }
+  .set__rail { background: var(--surface-2); border-right: 1px solid var(--line); padding: 16px 12px; }
+  .set__railhead { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); padding: 4px 10px 14px; }
+  .set__group { margin-bottom: 14px; }
+  .set__grouphead { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; }
+  .set__grouphead .scope { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .set__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .set__item:hover { background: var(--bg-2); }
+  .set__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .set__item .material-symbols-outlined { font-size: 19px; color: var(--muted); }
+  .set__item.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .set__pane { padding: 22px 24px; min-width: 0; }
+  .set__panehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+  .set__panehead h2 { font-size: 19px; }
+  .set__panehead p { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .set__paneactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .gate { font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: var(--r-pill); white-space: nowrap; }
+
+  /* ---- Table équipe : contrôles dans les cellules ---- */
+  .members .table td { vertical-align: middle; }
+  .member-name { font-weight: 700; }
+  .member-mail { font-size: 12.5px; color: var(--muted); }
+  .self-tag { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--bg-2); padding: 2px 7px; border-radius: var(--r-pill); margin-left: 6px; }
+
+  /* Sélecteur compact « façon select » dans une cellule */
+  .cell-select {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 34px;
+    padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--r-sm);
+    background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; font-size: 13.5px;
+    cursor: pointer; max-width: 220px;
+  }
+  .cell-select:hover { background: var(--surface-2); }
+  .cell-select .material-symbols-outlined { font-size: 18px; color: var(--muted); margin-left: auto; }
+  .cell-select.is-disabled { opacity: .6; cursor: not-allowed; background: var(--surface-2); }
+  .cell-select .none { color: var(--muted); font-weight: 600; }
+
+  .perm-btn {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
+    padding: 4px 11px; border: 1px solid var(--line); border-radius: var(--r-pill);
+    background: var(--surface); color: var(--ink-2); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+  }
+  .perm-btn:hover { background: var(--teal-tint); color: var(--teal-deep); border-color: var(--teal-tint); }
+  .perm-btn .material-symbols-outlined { font-size: 17px; }
+  .perm-btn.is-muted { color: var(--muted); }
+
+  .actions-cell { display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* ---- Carte de confirmation dangereuse (ConfirmDialog) · repris de 5.3 ---- */
+  .confirm { max-width: 430px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-m); padding: 20px; }
+  .confirm__top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .confirm__ic { width: 38px; height: 38px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); display: flex; align-items: center; justify-content: center; }
+  .confirm__title { font-weight: 800; }
+  .confirm__txt { font-size: 14px; color: var(--ink-2); margin: 6px 0 16px; }
+  .confirm__bar { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ---- Modale centrée (Inviter) ---- */
+  .modal { max-width: 460px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-m); overflow: hidden; }
+  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line-soft); }
+  .modal__head h3 { font-size: 17px; font-weight: 800; }
+  .modal__body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .modal__foot { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px 18px; border-top: 1px solid var(--line-soft); }
+  .modal__close { width: 30px; height: 30px; border-radius: var(--r-sm); border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .modal__close:hover { background: var(--surface-2); color: var(--ink); }
+
+  .success-line { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; color: var(--ok); }
+  .success-line .material-symbols-outlined { color: var(--ok); }
+  .pwd-row { display: flex; align-items: center; gap: 8px; }
+  .pwd-code { flex: 1; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px; letter-spacing: .02em; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; color: var(--ink); word-break: break-all; }
+
+  .modal-caption { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+  .modal-pair { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .modal-pair > div { flex: 1; min-width: 320px; }
+
+  /* ---- Tiroir Permissions (sheet ancré à droite, ~440px) ---- */
+  .drawer { width: 440px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-m); overflow: hidden; }
+  .drawer__head { padding: 18px 20px 14px; border-bottom: 1px solid var(--line-soft); }
+  .drawer__head h3 { font-size: 17px; font-weight: 800; }
+  .drawer__head p { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .drawer__body { padding: 16px 20px 20px; }
+  .perm-group { margin-bottom: 18px; }
+  .perm-group:last-child { margin-bottom: 0; }
+  .perm-group__head { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 9px; }
+  .perm-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; cursor: pointer; }
+  .perm-row label { font-size: 14px; color: var(--ink); line-height: 1.4; cursor: pointer; }
+  .inherit-chip { font-size: 10.5px; font-weight: 700; color: var(--muted); background: var(--bg-2); padding: 1px 7px; border-radius: var(--r-pill); margin-left: 6px; vertical-align: middle; }
+  .drawer__divider { height: 1px; background: var(--line); margin: 20px 0 18px; }
+  .drawer__defaults-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .drawer__defaults-head h4 { font-size: 14px; font-weight: 800; }
+  .drawer__defaults-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+
+  .tag-before { font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .05em; }
+  .tag-after { font-size: 11px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+  .surface-pad { padding: 22px; background: var(--bg-2); border-radius: var(--r-md); display: flex; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 7 · Implémentation 7.4</span>
+    <h1>Paramètres : « Équipe » dans Mon organisation</h1>
+    <p class="lead">Aujourd'hui la gestion d'équipe vit sur une route séparée <code>/team</code> (entrée de barre latérale dédiée) bâtie en Tailwind/shadcn étranger : elle « ressemble à un autre produit ». 7.4 la <b>replie dans Paramètres → Mon organisation → Équipe</b> et la porte au vocabulaire maison (<code>.panel .table .btn .badge .chip .checkbox</code>). Le portage Team de la phase 5.3 (S3) atterrit ici, dans sa maison définitive. Le gating est préservé et appliqué côté serveur.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- A · Table des membres dans le rail -->
+    <div class="stage-block">
+      <div class="block-kick">A · La table des membres, dans le hub à rail</div>
+      <div class="row between" style="margin-bottom:12px">
+        <span><span class="tag-before">Avant</span> <span class="muted small">route <code>/team</code> + entrée de barre latérale, composants shadcn importés</span></span>
+        <span class="tag-after">Après</span>
+      </div>
+
+      <div class="set">
+        <nav class="set__rail" aria-label="Sections des paramètres">
+          <div class="set__railhead">Paramètres</div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+            <div class="set__item"><span class="material-symbols-outlined">tune</span> Préférences</div>
+            <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+            <div class="set__item is-active"><span class="material-symbols-outlined">groups</span> Équipe</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">palette</span> Apparence</div>
+            <div class="set__item"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+            <div class="set__item"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels</div>
+            <div class="set__item"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+            <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+          </div>
+        </nav>
+
+        <section class="set__pane members">
+          <div class="set__panehead">
+            <div>
+              <h2>Équipe</h2>
+              <p>Membres de votre organisation, rôles et permissions.</p>
+            </div>
+            <div class="set__paneactions">
+              <span class="gate" title="L'invitation requiert un rang admin ≥ 30">rang ≥ 30</span>
+              <button class="btn btn--primary"><span class="material-symbols-outlined">person_add</span> Inviter</button>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Membre</th>
+                <th>Rôle métier</th>
+                <th>Rôle admin</th>
+                <th>Permissions</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Ligne « vous-même » : super-admin / propriétaire, sélecteurs désactivés -->
+              <tr>
+                <td>
+                  <div class="member-name">Marie Robert <span class="self-tag">vous-même</span></div>
+                  <div class="member-mail">m.robert@otisud.re</div>
+                </td>
+                <td>
+                  <span class="cell-select is-disabled" aria-disabled="true" title="Vous ne pouvez pas modifier votre propre rôle">
+                    Éditeur <span class="material-symbols-outlined">lock</span>
+                  </span>
+                </td>
+                <td>
+                  <span class="cell-select is-disabled" aria-disabled="true" title="Vous ne pouvez pas modifier votre propre rôle">
+                    Administratrice d'ORG <span class="material-symbols-outlined">lock</span>
+                  </span>
+                </td>
+                <td>
+                  <button class="perm-btn is-muted" disabled title="Vous ne pouvez pas modifier vos propres permissions">
+                    <span class="material-symbols-outlined">shield_person</span> 9 permissions
+                  </button>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <span class="muted small"> · </span>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Éditeur + Administratrice d'ORG -->
+              <tr>
+                <td>
+                  <div class="member-name">Jean-Paul Hoarau</div>
+                  <div class="member-mail">jp.hoarau@otisud.re</div>
+                </td>
+                <td>
+                  <button class="cell-select">Éditeur <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="cell-select">Administratrice d'ORG <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="perm-btn"><span class="material-symbols-outlined">shield_person</span> 3 permissions</button>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger">Désactiver</button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Contributeur, aucun rôle admin -->
+              <tr>
+                <td>
+                  <div class="member-name">Sylvie Fontaine</div>
+                  <div class="member-mail">s.fontaine@otisud.re</div>
+                </td>
+                <td>
+                  <button class="cell-select">Contributeur <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="cell-select"><span class="none"> · aucun · </span> <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="perm-btn"><span class="material-symbols-outlined">shield_person</span> 7 permissions</button>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger">Désactiver</button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Lecteur, aucune permission -->
+              <tr>
+                <td>
+                  <div class="member-name">Thomas Payet</div>
+                  <div class="member-mail">t.payet@otisud.re</div>
+                </td>
+                <td>
+                  <button class="cell-select">Lecteur <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="cell-select"><span class="none"> · aucun · </span> <span class="material-symbols-outlined">unfold_more</span></button>
+                </td>
+                <td>
+                  <button class="perm-btn is-muted"><span class="material-symbols-outlined">shield_person</span> 0 permission</button>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger">Désactiver</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="muted small" style="margin-top:14px">
+            Les rôles s'affichent en libellés français (« Administratrice d'ORG », « Éditeur », « Lecteur »), jamais en codes bruts. Un sélecteur ne propose que les rôles d'un rang strictement inférieur à celui de l'appelant ; votre propre ligne est verrouillée.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <!-- B · Modale Inviter (deux états) -->
+    <div class="stage-block">
+      <div class="block-kick">B · Modale « Inviter un membre » · formulaire puis révélation du mot de passe</div>
+      <div class="modal-pair">
+        <div>
+          <div class="modal-caption">Formulaire</div>
+          <div class="modal" role="dialog" aria-label="Inviter un membre">
+            <div class="modal__head">
+              <h3>Inviter un membre</h3>
+              <button class="modal__close" aria-label="Fermer"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal__body">
+              <div class="field">
+                <label for="inv-email">Adresse e-mail</label>
+                <input id="inv-email" class="input" type="email" placeholder="prenom.nom@otisud.re">
+              </div>
+              <div class="field">
+                <label for="inv-role">Rôle métier</label>
+                <select id="inv-role" class="select">
+                  <option>Lecteur</option>
+                  <option selected>Contributeur</option>
+                  <option>Éditeur</option>
+                </select>
+                <p class="muted small" style="margin-top:2px">Le préréglage de permissions du rôle est appliqué automatiquement (additif).</p>
+              </div>
+            </div>
+            <div class="modal__foot">
+              <button class="btn btn--secondary">Annuler</button>
+              <button class="btn btn--primary">Inviter</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="modal-caption">Après invitation d'un nouvel utilisateur</div>
+          <div class="modal" role="dialog" aria-label="Invitation créée">
+            <div class="modal__head">
+              <h3>Inviter un membre</h3>
+              <button class="modal__close" aria-label="Fermer"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="modal__body">
+              <div class="success-line">
+                <span class="material-symbols-outlined">check_circle</span> Invitation créée.
+              </div>
+              <p class="muted small" style="margin:-4px 0 0">
+                Communiquez ce mot de passe temporaire au nouveau membre ; il pourra le changer après connexion. Il ne sera plus affiché.
+              </p>
+              <div class="pwd-row">
+                <code class="pwd-code">tЗ9-Vakú-Lm7p-Qe2</code>
+                <button class="btn btn--secondary"><span class="material-symbols-outlined">content_copy</span> Copier</button>
+              </div>
+            </div>
+            <div class="modal__foot">
+              <button class="btn btn--primary">Fermer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C · Tiroir Permissions -->
+    <div class="stage-block">
+      <div class="block-kick">C · Tiroir « Permissions » · par catégorie + défauts de l'ORG</div>
+      <div class="surface-pad">
+        <aside class="drawer" role="dialog" aria-label="Permissions du membre">
+          <div class="drawer__head">
+            <h3>Permissions de Jean-Paul Hoarau</h3>
+            <p>Permissions individuelles de ce membre. Rôle métier : Éditeur.</p>
+          </div>
+          <div class="drawer__body">
+            <button class="btn btn--secondary btn--sm" style="margin-bottom:18px">
+              <span class="material-symbols-outlined">auto_fix_high</span> Appliquer le préréglage Éditeur
+            </button>
+
+            <!-- Contenu -->
+            <div class="perm-group">
+              <div class="perm-group__head">Contenu</div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Créer une fiche</label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Éditer le canonique (publisher) <span class="inherit-chip">héritée de l'ORG</span></label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Éditer l'enrichissement d'organisation</label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox"></span>
+                <label>Publier une fiche</label>
+              </div>
+            </div>
+
+            <!-- CRM -->
+            <div class="perm-group">
+              <div class="perm-group__head">CRM</div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Écrire des notes CRM</label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox"></span>
+                <label>Gérer les demandes</label>
+              </div>
+            </div>
+
+            <!-- Équipe -->
+            <div class="perm-group">
+              <div class="perm-group__head">Équipe</div>
+              <div class="perm-row">
+                <span class="checkbox"></span>
+                <label>Gérer les messages d'équipe</label>
+              </div>
+            </div>
+
+            <!-- Médias -->
+            <div class="perm-group">
+              <div class="perm-group__head">Médias</div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Gérer la galerie <span class="inherit-chip">héritée de l'ORG</span></label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox"></span>
+                <label>Joindre des documents</label>
+              </div>
+            </div>
+
+            <div class="drawer__divider"></div>
+
+            <!-- Défauts de l'ORG -->
+            <div class="drawer__defaults-head">
+              <h4>Permissions par défaut de l'ORG</h4>
+              <span class="gate" title="La gestion des défauts d'organisation requiert un rang admin ≥ 30">rang ≥ 30</span>
+            </div>
+            <p class="drawer__defaults-sub">Héritées par tous les membres de l'organisation.</p>
+
+            <div class="perm-group">
+              <div class="perm-group__head">Contenu</div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Éditer le canonique (publisher)</label>
+              </div>
+              <div class="perm-row">
+                <span class="checkbox"></span>
+                <label>Publier une fiche</label>
+              </div>
+            </div>
+            <div class="perm-group">
+              <div class="perm-group__head">Médias</div>
+              <div class="perm-row">
+                <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+                <label>Gérer la galerie</label>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- D · Confirmation de désactivation -->
+    <div class="stage-block">
+      <div class="block-kick">D · Confirmation de désactivation (ConfirmDialog)</div>
+      <div class="confirm" role="alertdialog" aria-label="Confirmer la désactivation">
+        <div class="confirm__top">
+          <span class="confirm__ic"><span class="material-symbols-outlined">warning</span></span>
+          <span class="confirm__title">Désactiver Sylvie Fontaine&nbsp;?</span>
+        </div>
+        <p class="confirm__txt">Elle perdra immédiatement l'accès à la plateforme. Cette action est réversible en la réinvitant.</p>
+        <div class="confirm__bar">
+          <button class="btn btn--secondary">Annuler</button>
+          <button class="btn btn--danger"><span class="material-symbols-outlined">person_remove</span> Désactiver</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Spécifications -->
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Replie la gestion d'équipe dans le hub Paramètres et la porte au vocabulaire maison. La route <code>/team</code> et son entrée de barre latérale disparaissent ; le gating est conservé et appliqué côté serveur.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>L'équipe vit dans <b>Paramètres → Mon organisation → Équipe</b> ; la route <code>/team</code> et l'entrée de barre latérale sont retirées.</li>
+          <li>Table des membres avec sélecteurs de rôle en ligne (rôle métier + rôle admin), libellés FR.</li>
+          <li><b>Inviter</b> : e-mail + rôle métier ; le mot de passe temporaire est révélé une seule fois après création.</li>
+          <li>Tiroir de permissions par utilisateur, groupé par catégorie (Contenu, CRM, Équipe, Médias) + permissions par défaut de l'ORG.</li>
+          <li>Rôles affichés en libellés français, jamais en codes ; actions destructrices via <code>ConfirmDialog</code>.</li>
+        </ul>
+        <h3>État &amp; gating</h3>
+        <ul>
+          <li>Le groupe de sections n'apparaît qu'à partir de <b>rang admin ≥ 10</b> (gestion des rôles/permissions).</li>
+          <li><b>Inviter</b> et les permissions par défaut de l'ORG exigent un <b>rang ≥ 30</b>.</li>
+          <li>Les sélecteurs de rôle de votre propre ligne sont désactivés (« vous-même »).</li>
+          <li>La route serveur <code>/api/admin/invite</code> impose <code>is_platform_superuser</code> OU rang ≥ 30 (la vraie frontière).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/views/TeamAdminPage.tsx</code> + <code>features/team/*</code> (<code>MembersTable</code>, <code>RoleSelect</code>, <code>InviteMemberDialog</code>, <code>MemberPermissionsDrawer</code>) portés de Tailwind/shadcn vers <code>.panel/.table/.btn/.badge/.chip/.checkbox</code>.</li>
+          <li><code>src/services/rbac.ts</code> : RPCs <code>rpc_list_org_members</code>, <code>rpc_set_business_role</code>, <code>rpc_set_admin_role</code>, <code>rpc_grant/revoke_user_permission</code>, <code>rpc_grant/revoke_org_permission</code>.</li>
+          <li>Retrait de <code>/team</code> de <code>Sidebar.tsx</code> ; la section se branche comme panneau du rail Paramètres.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>L'équipe est gérable sans la route <code>/team</code>.</li>
+          <li>Un seul vocabulaire visuel (plus de look « autre produit »).</li>
+          <li>Rôles en libellés FR, pas des codes.</li>
+          <li>Gating préservé et appliqué côté serveur.</li>
+          <li><code>:focus-visible</code> sur table, sélecteurs et cases à cocher.</li>
+          <li><code>ConfirmDialog</code> sur « Désactiver ».</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">move_to_inbox</span>
+          <span>Absorbe le portage Team de la Phase 5.3 (S3), livré dans sa maison définitive.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

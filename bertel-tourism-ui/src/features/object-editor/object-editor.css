@@ -31,9 +31,9 @@
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
-  --font-display: 'Sora', 'Manrope', system-ui, sans-serif;
-  --font-sans: 'Manrope', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* audit S5 : --font-sans/--font-display/--font-mono sont fournis par next/font
+     sur <html> (mêmes noms de variables) et hérités ici — la redéfinition locale
+     (devenue cyclique après la migration) a été retirée. */
 }
 
 /* ---------- Sticky top action bar ---------- */

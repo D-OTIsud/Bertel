@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<title>7.2 · Apparence (white-label) &amp; Marqueurs carte · Bertel</title>
+<style>
+  .stage-block { margin-bottom: 30px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .block-kick { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 10px; }
+
+  .tag-before { font-size: 11px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .05em; }
+  .tag-after { font-size: 11px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+  .gate { font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: var(--r-pill); }
+
+  /* ---- Hub à rail (repris de 7.1) ---- */
+  .set { display: grid; grid-template-columns: 244px 1fr; min-height: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-s); }
+  .set__rail { background: var(--surface-2); border-right: 1px solid var(--line); padding: 16px 12px; }
+  .set__railhead { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); padding: 4px 10px 14px; }
+  .set__group { margin-bottom: 14px; }
+  .set__grouphead { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; }
+  .set__grouphead .scope { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .set__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .set__item:hover { background: var(--bg-2); }
+  .set__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .set__item .material-symbols-outlined { font-size: 19px; color: var(--muted); }
+  .set__item.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .set__pane { padding: 22px 24px; min-width: 0; }
+  .set__panehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+  .set__panehead h2 { font-size: 19px; }
+  .set__panehead .panehead-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .set__paneactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  /* ---- Apparence : 2 colonnes preview / formulaire ---- */
+  .brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+
+  .brand-preview { display: flex; flex-direction: column; gap: 14px; }
+  .preview-card { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); box-shadow: var(--shadow-s); }
+  .preview-hero { background: linear-gradient(135deg, var(--teal), var(--orange)); padding: 22px 20px; display: flex; align-items: center; gap: 14px; color: #fff; }
+  .preview-logo { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); display: flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 26px; color: #fff; flex-shrink: 0; }
+  .preview-brandname { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; line-height: 1.1; }
+  .preview-brandedit { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; margin-top: 6px; padding: 2px 9px; border-radius: var(--r-pill); background: rgba(255,255,255,.22); }
+  .preview-brandedit .material-symbols-outlined { font-size: 14px; }
+  .preview-swatches { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line-soft); }
+  .preview-swatch { background: var(--surface); padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .preview-swatch:last-child { grid-column: 1 / -1; }
+  .sw-chip { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); flex-shrink: 0; }
+  .sw-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .sw-label { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .sw-hex { font-size: 11.5px; }
+  .preview-note { display: flex; gap: 8px; font-size: 12.5px; color: var(--muted); align-items: flex-start; }
+  .preview-note .material-symbols-outlined { font-size: 17px; color: var(--info); flex-shrink: 0; }
+
+  .brand-form { display: flex; flex-direction: column; gap: 18px; }
+  .logo-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .logo-thumb { width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, var(--teal), var(--orange)); display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 22px; flex-shrink: 0; }
+  .color-fields { display: flex; flex-direction: column; gap: 13px; }
+  .color-field { display: flex; flex-direction: column; gap: 6px; }
+  .color-field > label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .color-row { display: flex; gap: 10px; align-items: center; }
+  .color-swatch { width: 40px; height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); flex-shrink: 0; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); }
+  .color-swatch:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .color-hex { width: 130px; }
+
+  /* ---- Marqueurs : master / detail ---- */
+  .mk-grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
+  .mk-list { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .mk-list-head { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 11px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+  .mk-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+  .mk-row:last-child { border-bottom: 0; }
+  .mk-row:hover { background: var(--surface-2); }
+  .mk-row.is-active { background: var(--teal-tint); }
+  .mk-row.is-active .mk-name { color: var(--teal-deep); }
+  .mk-row__meta { min-width: 0; flex: 1; }
+  .mk-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .mk-codes { font-size: 11.5px; color: var(--muted); }
+  .mk-row__chev { color: var(--muted); }
+  .mk-row.is-active .mk-row__chev { color: var(--teal-deep); }
+
+  /* Marqueur épingle (teardrop) */
+  .pin { position: relative; width: 30px; height: 38px; flex-shrink: 0; }
+  .pin__teardrop { position: absolute; inset: 0; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent, var(--teal)); box-shadow: var(--shadow-s); }
+  .pin__icon { position: absolute; top: 4px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; height: 22px; color: #fff; }
+  .pin__icon .material-symbols-outlined { font-size: 16px; }
+  .pin--lg { width: 40px; height: 50px; }
+  .pin--lg .pin__teardrop { width: 40px; height: 40px; }
+  .pin--lg .pin__icon { top: 6px; height: 28px; }
+  .pin--lg .pin__icon .material-symbols-outlined { font-size: 22px; }
+
+  /* Detail pane (édition d'un seul type) */
+  .mk-edit { border: 1px solid var(--line); border-radius: var(--r-md); padding: 20px; }
+  .mk-edit__head { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
+  .mk-edit__head h3 { font-size: 16px; }
+  .mk-edit__head .mk-codes { margin-top: 2px; }
+  .mk-edit__block { margin-bottom: 20px; }
+  .mk-edit__label { font-size: 13px; font-weight: 700; color: var(--ink-2); margin-bottom: 9px; }
+
+  .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .icon-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 6px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; color: var(--ink-2); transition: background .15s ease, border-color .15s ease; }
+  .icon-tile:hover { background: var(--surface-2); }
+  .icon-tile .material-symbols-outlined { font-size: 24px; color: var(--ink); }
+  .icon-tile span.lbl { font-size: 11px; font-weight: 600; }
+  .icon-tile.is-active { border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal-tint); background: var(--teal-tint); color: var(--teal-deep); }
+  .icon-tile.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .icon-tile:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  details.svg-adv { border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+  details.svg-adv > summary { cursor: pointer; list-style: none; padding: 12px 14px; font-size: 13.5px; font-weight: 700; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+  details.svg-adv > summary::-webkit-details-marker { display: none; }
+  details.svg-adv > summary .material-symbols-outlined { font-size: 18px; color: var(--muted); transition: transform .15s ease; }
+  details.svg-adv[open] > summary .material-symbols-outlined { transform: rotate(180deg); }
+  details.svg-adv > summary .adv-tag { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .svg-adv__body { padding: 0 14px 14px; }
+  .svg-adv__body textarea { width: 100%; min-height: 92px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; resize: vertical; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); }
+  .svg-adv__body textarea::placeholder { color: var(--muted); }
+  .svg-adv__bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .svg-adv__safe { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .svg-adv__safe .material-symbols-outlined { font-size: 16px; color: var(--ok); flex-shrink: 0; }
+
+  /* before/after tags row */
+  .ba-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .ba-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 5px 11px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); color: var(--ink-2); }
+
+  @media (max-width: 880px) {
+    .brand-grid, .mk-grid { grid-template-columns: 1fr; }
+    .set { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 7 · Implémentation 7.2</span>
+    <h1>Apparence (white-label) &amp; Marqueurs carte</h1>
+    <p class="lead">Deux panneaux « Plateforme » du hub 7.1, réservés au super-admin. <b>Apparence</b> édite la marque (palette, logo, aperçu en direct appliqué globalement via les tokens de thème). <b>Marqueurs carte</b> remplace les 7 cartes de type toutes déployées d'un coup (environ 50 contrôles à l'écran) par une liste maître plus un panneau d'édition unique : un seul type à la fois, le SVG personnalisé replié derrière « Avancé ».</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- ============ STAGE A · APPARENCE ============ -->
+    <div class="stage-block">
+      <div class="block-kick">A · Apparence (white-label) · éditeur de marque super-admin</div>
+      <div class="set">
+        <nav class="set__rail" aria-label="Sections des paramètres">
+          <div class="set__railhead">Paramètres</div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+            <div class="set__item"><span class="material-symbols-outlined">tune</span> Préférences</div>
+            <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">groups</span> Équipe</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+            <div class="set__item is-active"><span class="material-symbols-outlined">palette</span> Apparence</div>
+            <div class="set__item"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+            <div class="set__item"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels</div>
+            <div class="set__item"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+            <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+          </div>
+        </nav>
+
+        <section class="set__pane">
+          <div class="set__panehead">
+            <div>
+              <h2>Apparence</h2>
+              <p class="panehead-sub">Marque, palette et logo appliqués à toute la plateforme.</p>
+            </div>
+            <div class="set__paneactions">
+              <span class="badge badge--info"><span class="material-symbols-outlined" style="font-size:15px">shield_person</span> Super-admin</span>
+              <button class="btn btn--ghost">Réinitialiser</button>
+              <button class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer le branding</button>
+            </div>
+          </div>
+
+          <div class="brand-grid">
+
+            <!-- Colonne gauche : aperçu en direct -->
+            <div class="brand-preview">
+              <div class="preview-card">
+                <div class="preview-hero">
+                  <div class="preview-logo">B</div>
+                  <div>
+                    <div class="preview-brandname">Bertel · OTI Sud</div>
+                    <span class="preview-brandedit"><span class="material-symbols-outlined">edit</span> Édition admin active</span>
+                  </div>
+                </div>
+                <div class="preview-swatches">
+                  <div class="preview-swatch">
+                    <span class="sw-chip" style="background:#176b6a"></span>
+                    <span class="sw-meta"><span class="sw-label">Primaire</span><code class="sw-hex">#176B6A</code></span>
+                  </div>
+                  <div class="preview-swatch">
+                    <span class="sw-chip" style="background:#f28b54"></span>
+                    <span class="sw-meta"><span class="sw-label">Accent</span><code class="sw-hex">#F28B54</code></span>
+                  </div>
+                  <div class="preview-swatch">
+                    <span class="sw-chip" style="background:#18313b"></span>
+                    <span class="sw-meta"><span class="sw-label">Texte</span><code class="sw-hex">#18313B</code></span>
+                  </div>
+                  <div class="preview-swatch">
+                    <span class="sw-chip" style="background:#eef1f4"></span>
+                    <span class="sw-meta"><span class="sw-label">Fond</span><code class="sw-hex">#EEF1F4</code></span>
+                  </div>
+                  <div class="preview-swatch">
+                    <span class="sw-chip" style="background:#ffffff"></span>
+                    <span class="sw-meta"><span class="sw-label">Surface</span><code class="sw-hex">#FFFFFF</code></span>
+                  </div>
+                </div>
+              </div>
+              <p class="preview-note"><span class="material-symbols-outlined">visibility</span> Aperçu en direct : l'en-tête et les pastilles reflètent la palette ci-contre. Les modifications s'appliquent globalement via les tokens de thème une fois enregistrées.</p>
+            </div>
+
+            <!-- Colonne droite : formulaire -->
+            <div class="brand-form">
+              <div class="field">
+                <label for="brandname">Nom de marque</label>
+                <input class="input" id="brandname" type="text" value="Bertel · OTI Sud">
+              </div>
+
+              <div class="field">
+                <label>Logo</label>
+                <div class="logo-controls">
+                  <span class="logo-thumb">B</span>
+                  <button class="btn btn--secondary"><span class="material-symbols-outlined">upload</span> Importer un logo</button>
+                  <button class="btn btn--ghost">Enlever le logo</button>
+                </div>
+                <p class="pref__hint muted small" style="margin-top:2px">PNG ou SVG, fond transparent recommandé. À défaut, l'initiale « B » est affichée.</p>
+              </div>
+
+              <div class="color-fields">
+                <div class="color-field">
+                  <label>Couleur primaire</label>
+                  <div class="color-row">
+                    <span class="color-swatch" style="background:#176b6a" tabindex="0" role="button" aria-label="Choisir la couleur primaire"></span>
+                    <input class="input color-hex" type="text" value="#176B6A" aria-label="Couleur primaire (hex)">
+                  </div>
+                </div>
+                <div class="color-field">
+                  <label>Couleur d'accent</label>
+                  <div class="color-row">
+                    <span class="color-swatch" style="background:#f28b54" tabindex="0" role="button" aria-label="Choisir la couleur d'accent"></span>
+                    <input class="input color-hex" type="text" value="#F28B54" aria-label="Couleur d'accent (hex)">
+                  </div>
+                </div>
+                <div class="color-field">
+                  <label>Couleur de texte</label>
+                  <div class="color-row">
+                    <span class="color-swatch" style="background:#18313b" tabindex="0" role="button" aria-label="Choisir la couleur de texte"></span>
+                    <input class="input color-hex" type="text" value="#18313B" aria-label="Couleur de texte (hex)">
+                  </div>
+                </div>
+                <div class="color-field">
+                  <label>Couleur de fond</label>
+                  <div class="color-row">
+                    <span class="color-swatch" style="background:#eef1f4" tabindex="0" role="button" aria-label="Choisir la couleur de fond"></span>
+                    <input class="input color-hex" type="text" value="#EEF1F4" aria-label="Couleur de fond (hex)">
+                  </div>
+                </div>
+                <div class="color-field">
+                  <label>Couleur de surface</label>
+                  <div class="color-row">
+                    <span class="color-swatch" style="background:#ffffff" tabindex="0" role="button" aria-label="Choisir la couleur de surface"></span>
+                    <input class="input color-hex" type="text" value="#FFFFFF" aria-label="Couleur de surface (hex)">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ============ STAGE B · MARQUEURS CARTE ============ -->
+    <div class="stage-block">
+      <div class="block-kick">B · Marqueurs carte · divulgation progressive (liste maître + panneau unique)</div>
+      <div class="ba-row">
+        <span class="ba-pill"><span class="tag-before">Avant</span> 7 cartes toutes déployées (environ 50 contrôles)</span>
+        <span class="material-symbols-outlined muted">arrow_forward</span>
+        <span class="ba-pill"><span class="tag-after">Après</span> liste des types + un seul panneau d'édition</span>
+      </div>
+
+      <div class="set">
+        <nav class="set__rail" aria-label="Sections des paramètres">
+          <div class="set__railhead">Paramètres</div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+            <div class="set__item"><span class="material-symbols-outlined">tune</span> Préférences</div>
+            <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">groups</span> Équipe</div>
+          </div>
+          <div class="set__group">
+            <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+            <div class="set__item"><span class="material-symbols-outlined">palette</span> Apparence</div>
+            <div class="set__item is-active"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+            <div class="set__item"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels</div>
+            <div class="set__item"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+            <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+          </div>
+        </nav>
+
+        <section class="set__pane">
+          <div class="set__panehead">
+            <div>
+              <h2>Marqueurs carte</h2>
+              <p class="panehead-sub">Couleur et icône de chaque type d'objet sur la carte. Choisissez un type, modifiez son marqueur.</p>
+            </div>
+            <div class="set__paneactions">
+              <span class="badge badge--info"><span class="material-symbols-outlined" style="font-size:15px">shield_person</span> Super-admin</span>
+              <button class="btn btn--ghost">Réinitialiser</button>
+              <button class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer</button>
+            </div>
+          </div>
+
+          <div class="mk-grid">
+
+            <!-- Maître : liste des 7 types -->
+            <div class="mk-list">
+              <div class="mk-list-head">Type d'objet</div>
+
+              <div class="mk-row">
+                <span class="pin acc-heb">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">hotel</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Hébergement</span>
+                  <div class="mk-codes">HEB, HLO, HPA, RVA</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row is-active" aria-current="true">
+                <span class="pin acc-res">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">restaurant</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Restaurant</span>
+                  <div class="mk-codes">RES</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row">
+                <span class="pin acc-asc">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">hiking</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Activité</span>
+                  <div class="mk-codes">ASC, ACT</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row">
+                <span class="pin acc-iti">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">route</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Itinéraire</span>
+                  <div class="mk-codes">ITI</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row">
+                <span class="pin acc-fma">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">celebration</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Événement</span>
+                  <div class="mk-codes">FMA</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row">
+                <span class="pin acc-vis">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">photo_camera</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Visite</span>
+                  <div class="mk-codes">VIS, PCU, PNA, VIL</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+
+              <div class="mk-row">
+                <span class="pin acc-srv">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">home_repair_service</span></span>
+                </span>
+                <span class="mk-row__meta">
+                  <span class="mk-name">Service</span>
+                  <div class="mk-codes">SRV, SPU, COM</div>
+                </span>
+                <span class="material-symbols-outlined mk-row__chev">chevron_right</span>
+              </div>
+            </div>
+
+            <!-- Détail : édition du type actif (Restaurant) -->
+            <div class="mk-edit">
+              <div class="mk-edit__head">
+                <span class="pin pin--lg acc-res">
+                  <span class="pin__teardrop"></span>
+                  <span class="pin__icon"><span class="material-symbols-outlined">restaurant</span></span>
+                </span>
+                <div>
+                  <h3>Restaurant</h3>
+                  <div class="mk-codes">Code backend : RES</div>
+                </div>
+              </div>
+
+              <div class="mk-edit__block">
+                <div class="mk-edit__label">Couleur</div>
+                <div class="color-row">
+                  <span class="color-swatch" style="background:#d8602f" tabindex="0" role="button" aria-label="Choisir la couleur du marqueur Restaurant"></span>
+                  <input class="input color-hex" type="text" value="#D8602F" aria-label="Couleur du marqueur (hex)">
+                </div>
+              </div>
+
+              <div class="mk-edit__block">
+                <div class="mk-edit__label">Icône preset</div>
+                <div class="icon-grid">
+                  <button class="icon-tile is-active" aria-pressed="true"><span class="material-symbols-outlined">restaurant</span><span class="lbl">Couvert</span></button>
+                  <button class="icon-tile" aria-pressed="false"><span class="material-symbols-outlined">lunch_dining</span><span class="lbl">Plat</span></button>
+                  <button class="icon-tile" aria-pressed="false"><span class="material-symbols-outlined">local_cafe</span><span class="lbl">Café</span></button>
+                  <button class="icon-tile" aria-pressed="false"><span class="material-symbols-outlined">local_bar</span><span class="lbl">Bar</span></button>
+                  <button class="icon-tile" aria-pressed="false"><span class="material-symbols-outlined">bakery_dining</span><span class="lbl">Boulangerie</span></button>
+                </div>
+              </div>
+
+              <div class="mk-edit__block" style="margin-bottom:0">
+                <details class="svg-adv">
+                  <summary>
+                    <span class="material-symbols-outlined">code</span>
+                    Avancé : SVG personnalisé
+                    <span class="adv-tag">optionnel</span>
+                    <span class="material-symbols-outlined" style="margin-left:0">expand_more</span>
+                  </summary>
+                  <div class="svg-adv__body">
+                    <textarea placeholder="Collez un SVG simple avec une balise &lt;svg&gt;..."></textarea>
+                    <div class="svg-adv__bar">
+                      <button class="btn btn--secondary btn--sm"><span class="material-symbols-outlined">upload</span> Importer un SVG</button>
+                      <button class="btn btn--primary btn--sm">Appliquer</button>
+                      <button class="btn btn--ghost btn--sm">Effacer</button>
+                    </div>
+                    <p class="svg-adv__safe"><span class="material-symbols-outlined">verified_user</span> Le SVG est assaini : liste blanche de balises, aucun script ni contenu externe accepté.</p>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ SPÉCIFICATIONS ============ -->
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">7.2 livre deux panneaux « Plateforme » du hub 7.1. <b>Apparence</b> édite la marque white-label (palette + logo + aperçu en direct, appliqués globalement via les tokens de thème). <b>Marqueurs carte</b> passe d'une pile de 7 cartes toutes déployées (environ 50 contrôles à l'écran) à une liste maître plus un panneau d'édition unique, avec le SVG personnalisé replié derrière « Avancé ».</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li><b>Apparence</b> : palette (primaire, accent, texte, fond, surface) + logo, avec aperçu en direct, appliqués globalement via les tokens de thème. Réinitialiser restaure les valeurs par défaut.</li>
+          <li><b>Marqueurs</b> : liste des 7 types à gauche, panneau d'édition d'un seul type à droite (couleur + icône preset). Un type modifié à la fois, plus de mur de contrôles.</li>
+          <li><b>SVG personnalisé</b> derrière une divulgation « Avancé » (<code>&lt;details&gt;</code>) : import ou collage, puis « Appliquer ». Assaini par liste blanche, sans script ni contenu externe.</li>
+          <li>Les deux panneaux sont <b>gated super-admin</b> : les non-admins voient un aperçu en lecture seule plus la raison du verrouillage.</li>
+          <li>Branding et marqueurs sont enregistrés ensemble depuis ce panneau.</li>
+        </ul>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/views/SettingsPage.tsx</code> : la section marqueurs passe à un agencement maître/détail.</li>
+          <li><code>src/config/map-markers.ts</code> : <code>objectTypeOptions</code>, <code>sanitizeCustomMarkerSvg</code>, <code>buildMarkerDataUri</code>.</li>
+          <li><code>src/services/branding.ts</code> : <code>saveBrandingSettings</code>.</li>
+          <li>Theme store (palette/logo) + ui store (<code>markerStyles</code>).</li>
+          <li>Branding et marqueurs sont persistés ensemble à l'enregistrement.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Un seul type de marqueur est édité à la fois (liste maître + panneau unique).</li>
+          <li>La zone de texte SVG est masquée derrière la divulgation « Avancé ».</li>
+          <li>L'aperçu en direct reflète la palette (en-tête en dégradé, pastilles, hex).</li>
+          <li>La réinitialisation fonctionne (palette et marqueurs reviennent aux valeurs par défaut).</li>
+          <li><code>:focus-visible</code> visible au clavier sur les pastilles de couleur, les tuiles d'icône et les résumés <code>details</code>.</li>
+          <li>Gating super-admin appliqué ; état lecture seule plus raison pour les autres rôles.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">dashboard</span>
+          <span>Ce panneau vit à l'intérieur du rail du hub 7.1, sous le groupe « Plateforme » (réservé au super-admin), aux côtés de « Listes &amp; référentiels », « Fournisseurs IA » et « Diagnostic ».</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

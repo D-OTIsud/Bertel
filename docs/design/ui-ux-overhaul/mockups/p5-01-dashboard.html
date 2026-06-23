@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5.1 · Bandeau résumé dashboard · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  /* Bandeau résumé : une métrique meneuse + secondaires + alerte (hiérarchie, pas 6 cartes égales) */
+  .summary { display:grid; grid-template-columns: 1.7fr 1fr 1fr 1.2fr; gap:14px; align-items:stretch; }
+  .summary .stat { display:flex; flex-direction:column; justify-content:center; gap:4px; }
+  .attn {
+    display:flex; flex-direction:column; gap:10px; justify-content:center;
+    background:var(--warn-soft); border:1px solid color-mix(in srgb, var(--warn) 28%, white);
+    border-radius:var(--r-md); padding:16px 18px; color:var(--warn);
+  }
+  .attn__top { display:flex; align-items:center; gap:8px; font-weight:800; font-size:13px; letter-spacing:.02em; text-transform:uppercase; }
+  .attn__big { font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--warn); line-height:1; }
+  .attn__txt { font-size:13px; font-weight:600; color:var(--warn); }
+  .attn .btn { align-self:flex-start; background:var(--surface); border-color:color-mix(in srgb, var(--warn) 32%, white); color:var(--warn); }
+  .attn .btn:hover { background:#fff; }
+
+  /* Barre empilée « corpus par type » */
+  .stack { display:flex; height:34px; border-radius:var(--r-pill); overflow:hidden; border:1px solid var(--line); }
+  .stack__seg { display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:12px; min-width:30px; }
+  .stack__seg--light { color:#3a2a14; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px 22px; margin-top:14px; }
+  .legend__item { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--ink-2); }
+  .legend__dot { width:11px; height:11px; border-radius:3px; }
+
+  .bar-heb { background:var(--acc-heb); } .bar-vis { background:var(--acc-vis); }
+  .bar-srv { background:var(--acc-srv); } .bar-res { background:var(--acc-res); }
+  .bar-iti { background:var(--acc-iti); } .bar-fma { background:var(--acc-fma); }
+
+  .micro { font-size:13px; color:var(--muted); }
+  .meter { width:120px; height:8px; border-radius:var(--r-pill); background:var(--bg-2); overflow:hidden; display:inline-block; vertical-align:middle; }
+  .meter__fill { height:100%; border-radius:var(--r-pill); background:var(--teal); }
+  .pct { font-weight:700; font-size:13px; }
+  .stage-block { margin-bottom:22px; }
+  .stage-block:last-child { margin-bottom:0; }
+  .block-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .block-head h3 { color:var(--ink); }
+  @media (max-width: 860px) { .summary { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 5 · Implémentation 5.1</span>
+    <h1>Bandeau résumé dashboard</h1>
+    <p class="lead">Le tableau de bord ouvre aujourd'hui sur six grosses cartes-chiffres identiques, sans hiérarchie ni conscience du type. On le remplace par un bandeau qui hiérarchise (une métrique meneuse), une alerte d'attention, et la répartition du corpus par type.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <div class="stage-block">
+      <span class="tag-before">Avant</span>
+      <p class="muted small" style="margin:6px 0 0">Six cartes au poids visuel identique (gabarit hero-metric) : rien ne ressort, aucune lecture de priorité, aucune répartition par type.</p>
+    </div>
+
+    <div class="stage-block">
+      <span class="tag-after">Après</span>
+      <p class="muted small" style="margin:6px 0 14px">Tabs de scope, puis une métrique meneuse + deux secondaires + une carte d'attention actionnable.</p>
+
+      <div class="tabs" style="margin-bottom:18px">
+        <button class="tab is-active">Vue d'ensemble</button>
+        <button class="tab">Qualité</button>
+        <button class="tab">Offre</button>
+        <button class="tab">Activité</button>
+      </div>
+
+      <div class="summary">
+        <div class="stat stat--lead">
+          <div class="stat__label">Inscrits SIT</div>
+          <div class="stat__value">840</div>
+          <div class="stat__delta up">+14 ce mois</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Complétude moyenne</div>
+          <div class="stat__value">92%</div>
+          <div class="stat__delta up">+3 pts</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Classés T&amp;H</div>
+          <div class="stat__value">194</div>
+          <div class="micro" style="margin-top:2px">23% du corpus</div>
+        </div>
+        <div class="attn" role="region" aria-label="Demandes à traiter">
+          <div class="attn__top"><span class="material-symbols-outlined" style="font-size:18px">notifications_active</span> À traiter</div>
+          <div class="row" style="gap:10px; align-items:baseline">
+            <span class="attn__big">3</span>
+            <span class="attn__txt">demandes en cours</span>
+          </div>
+          <button class="btn btn--sm">Ouvrir le suivi CRM</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-block">
+      <div class="panel">
+        <div class="panel__head">
+          <div>
+            <h2>Corpus par type</h2>
+            <p class="micro" style="margin-top:2px">885 fiches réparties par archétype</p>
+          </div>
+          <span class="badge badge--info">6 familles</span>
+        </div>
+        <div class="panel__body">
+          <div class="stack" role="img" aria-label="Répartition : Hébergement 320, Site et visite 210, Service 150, Restauration 120, Itinéraire 60, Événement 25">
+            <div class="stack__seg bar-heb" style="flex:320" title="Hébergement 320">320</div>
+            <div class="stack__seg bar-vis" style="flex:210" title="Site et visite 210">210</div>
+            <div class="stack__seg bar-srv" style="flex:150" title="Service 150">150</div>
+            <div class="stack__seg bar-res" style="flex:120" title="Restauration 120">120</div>
+            <div class="stack__seg bar-iti" style="flex:60" title="Itinéraire 60">60</div>
+            <div class="stack__seg bar-fma stack__seg--light" style="flex:25" title="Événement 25">25</div>
+          </div>
+          <div class="legend">
+            <span class="legend__item"><span class="legend__dot bar-heb"></span> Hébergement <span class="muted">320</span></span>
+            <span class="legend__item"><span class="legend__dot bar-vis"></span> Site &amp; visite <span class="muted">210</span></span>
+            <span class="legend__item"><span class="legend__dot bar-srv"></span> Service <span class="muted">150</span></span>
+            <span class="legend__item"><span class="legend__dot bar-res"></span> Restauration <span class="muted">120</span></span>
+            <span class="legend__item"><span class="legend__dot bar-iti"></span> Itinéraire <span class="muted">60</span></span>
+            <span class="legend__item"><span class="legend__dot bar-fma"></span> Événement <span class="muted">25</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-block">
+      <div class="panel">
+        <div class="panel__head">
+          <h2>Complétude par type</h2>
+          <span class="micro">Champ manquant le plus fréquent par famille</span>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Type</th><th>Fiches</th><th style="width:230px">Complétude</th><th>Champ manquant n°1</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="type-pill acc-heb"><span class="material-symbols-outlined" style="font-size:15px">hotel</span> Hébergement</span></td>
+              <td>320</td>
+              <td><span class="meter"><span class="meter__fill" style="width:94%"></span></span> <span class="pct">94%</span></td>
+              <td class="micro">Photos (min. 4)</td>
+            </tr>
+            <tr>
+              <td><span class="type-pill acc-vis"><span class="material-symbols-outlined" style="font-size:15px">temple_buddhist</span> Site &amp; visite</span></td>
+              <td>210</td>
+              <td><span class="meter"><span class="meter__fill" style="width:88%"></span></span> <span class="pct">88%</span></td>
+              <td class="micro">Accroche</td>
+            </tr>
+            <tr>
+              <td><span class="type-pill acc-res"><span class="material-symbols-outlined" style="font-size:15px">restaurant</span> Restauration</span></td>
+              <td>120</td>
+              <td><span class="meter"><span class="meter__fill" style="width:81%"></span></span> <span class="pct">81%</span></td>
+              <td class="micro">Carte / menu</td>
+            </tr>
+            <tr>
+              <td><span class="type-pill acc-iti"><span class="material-symbols-outlined" style="font-size:15px">route</span> Itinéraire</span></td>
+              <td>60</td>
+              <td><span class="meter"><span class="meter__fill" style="width:67%"></span></span> <span class="pct">67%</span></td>
+              <td class="micro">Trace GPX</td>
+            </tr>
+            <tr>
+              <td><span class="type-pill acc-fma"><span class="material-symbols-outlined" style="font-size:15px">festival</span> Événement</span></td>
+              <td>25</td>
+              <td><span class="meter"><span class="meter__fill" style="width:72%"></span></span> <span class="pct">72%</span></td>
+              <td class="micro">Dates / billetterie</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">On remplace la grille de six cartes-chiffres au poids égal par un bandeau hiérarchisé et type-aware. Aucune nouvelle donnée requise : les comptes par type existent déjà côté actualisation.</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Une seule métrique meneuse (<code>.stat--lead</code> « Inscrits SIT » 840) ; les autres en secondaires plus petits → contraste d'échelle.</li>
+          <li>Carte d'attention dédiée aux <b>demandes en cours</b> (orange <code>warn</code>) avec CTA direct vers le CRM, jamais noyée dans une 6e carte neutre.</li>
+          <li>Barre empilée « Corpus par type » : un segment coloré par archétype, libellé en clair, largeur = part du corpus.</li>
+          <li>Tableau « Complétude par type » : pastille de type, nombre de fiches, jauge de complétude, premier champ manquant.</li>
+          <li>Header conscient du type : les libellés sont des noms FR d'archétype, pas des codes bruts (<code>HEB</code>, <code>VIS</code>…).</li>
+        </ul>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/components/dashboard/ScorecardStrip.tsx</code> : remplacer la grille 6-up par bandeau meneur + secondaires + carte d'attention.</li>
+          <li><code>src/components/dashboard/TypeBreakdown.tsx</code> (nouveau) : barre empilée + tableau de complétude par archétype.</li>
+          <li><code>src/views/DashboardPage.tsx</code> : composer le bandeau et le nouveau bloc ; conserver les tabs de scope existants.</li>
+          <li>Source : comptes par type déjà calculés (aujourd'hui seul <code>ActualisationTable</code> segmente par type, avec des codes bruts).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Contraste d'échelle visible : une métrique domine (≈44px) face aux secondaires (≈28px).</li>
+          <li>Le corpus est visiblement scindé par type (barre empilée colorée + légende).</li>
+          <li>Plus aucune grille de 6 cartes au poids identique.</li>
+          <li>Tous les libellés de type sont des noms FR, jamais des codes (<code>HEB</code>/<code>VIS</code>/<code>FMA</code>).</li>
+          <li>La carte d'attention n'apparaît qu'avec ≥ 1 demande en cours et mène au CRM.</li>
+          <li>Tab clavier : anneau de focus visible sur tabs, carte d'attention, CTA.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">insights</span>
+          <span>Le bandeau est la première chose vue à l'ouverture : il doit répondre à « combien, quelle qualité, quoi traiter » en un coup d'œil.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

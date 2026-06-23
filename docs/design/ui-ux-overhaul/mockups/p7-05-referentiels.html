@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.5 · Listes &amp; référentiels : éditeur des vocabulaires ref_code · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .stage-block { margin-bottom: 30px; }
+  .stage-block:last-child { margin-bottom: 0; }
+  .block-kick { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 10px; }
+
+  /* ---- Le hub à rail (repris de 7.1) ---- */
+  .set { display: grid; grid-template-columns: 244px 1fr; min-height: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-s); }
+  .set__rail { background: var(--surface-2); border-right: 1px solid var(--line); padding: 16px 12px; }
+  .set__railhead { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); padding: 4px 10px 14px; }
+  .set__group { margin-bottom: 14px; }
+  .set__grouphead { display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; }
+  .set__grouphead .scope { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  .set__item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .set__item:hover { background: var(--bg-2); }
+  .set__item.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .set__item .material-symbols-outlined { font-size: 19px; color: var(--muted); }
+  .set__item.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .gate { font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: var(--r-pill); }
+
+  .set__pane { padding: 0; min-width: 0; display: flex; flex-direction: column; }
+  .set__panehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px 24px 16px; border-bottom: 1px solid var(--line-soft); }
+  .set__panehead h2 { font-size: 19px; display: flex; align-items: center; gap: 10px; }
+  .set__panehead p { color: var(--muted); font-size: 13px; margin-top: 5px; max-width: 540px; }
+
+  /* ---- Master / detail : la liste des domaines + la table des valeurs ---- */
+  .ref { display: grid; grid-template-columns: 230px 1fr; min-height: 440px; }
+  .ref__list { border-right: 1px solid var(--line-soft); padding: 14px 12px; background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }
+  .ref__search { margin-bottom: 8px; }
+  .ref__grouphead { font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 12px 8px 4px; }
+  .ref__dom { display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: var(--r-sm); color: var(--ink-2); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .ref__dom:hover { background: var(--bg-2); }
+  .ref__dom.is-active { background: var(--teal-tint); color: var(--teal-deep); }
+  .ref__dom .material-symbols-outlined { font-size: 18px; color: var(--muted); }
+  .ref__dom.is-active .material-symbols-outlined { color: var(--teal-deep); }
+  .ref__dom .count { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .ref__dom.is-locked .count { color: var(--warn); display: inline-flex; align-items: center; }
+  .ref__dom.is-locked .material-symbols-outlined.lock { color: var(--warn); }
+
+  .ref__detail { padding: 18px 22px 22px; min-width: 0; display: flex; flex-direction: column; }
+  .ref__detailhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .ref__detailhead h3 { font-size: 17px; font-weight: 700; }
+  .ref__detailhead .dom-code { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+  /* ---- Table des valeurs ---- */
+  .ref__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ref__table th { text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .ref__table td { padding: 11px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  .ref__table tr:hover td { background: var(--surface-2); }
+  .ref__table tr.is-off td { opacity: .62; }
+  .ref__table tr.is-off:hover td { opacity: .78; }
+  .th-c { text-align: center; }
+  .td-c { text-align: center; }
+  .td-r { text-align: right; }
+
+  .drag { color: var(--muted); cursor: grab; display: inline-flex; }
+  .drag .material-symbols-outlined { font-size: 18px; }
+  .code-cell { font-size: 12.5px; color: var(--muted); }
+  .label-cell { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+  .i18n-chip { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill); background: var(--info-soft); color: var(--info); border: 0; }
+  .usage-cell { color: var(--ink-2); font-weight: 600; }
+  .usage-cell.zero { color: var(--muted); font-weight: 500; }
+
+  /* ---- Toggle switch réel ---- */
+  .switch { position: relative; display: inline-flex; align-items: center; width: 40px; height: 23px; border-radius: 999px; background: var(--line); cursor: pointer; transition: background .15s ease; border: 0; padding: 0; flex-shrink: 0; }
+  .switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(24,49,59,.3); transition: transform .15s ease; }
+  .switch.is-on { background: var(--teal); }
+  .switch.is-on::after { transform: translateX(17px); }
+  .switch:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  .row-actions { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+
+  .ref__foot { margin-top: 14px; }
+
+  /* ---- État structurel lecture seule ---- */
+  .lock-callout { display: flex; gap: 12px; padding: 14px 16px; border: 1px solid var(--warn-soft); border-radius: var(--r-md); background: var(--warn-soft); margin-bottom: 16px; }
+  .lock-callout .material-symbols-outlined { color: var(--warn); font-size: 22px; flex-shrink: 0; }
+  .lock-callout b { color: var(--ink); }
+  .lock-callout p { font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+  .ro-table th, .ro-table td { color: var(--ink-2); }
+  .ro-tag { font-size: 11px; font-weight: 700; color: var(--warn); display: inline-flex; align-items: center; gap: 4px; }
+
+  /* ---- Modale ajout / édition ---- */
+  .modal-scrim { position: relative; background: rgba(24,49,59,.10); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 34px 24px; display: flex; justify-content: center; }
+  .modal { width: 100%; max-width: 460px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-m); overflow: hidden; }
+  .modal__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--line-soft); }
+  .modal__head h3 { font-size: 17px; font-weight: 700; }
+  .modal__head .x { color: var(--muted); cursor: pointer; display: inline-flex; }
+  .modal__body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .modal__foot { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--line-soft); background: var(--surface-2); }
+  .field-row { display: grid; grid-template-columns: 1fr 110px; gap: 14px; }
+  .i18n-btn { align-self: flex-start; }
+  .code-preview { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 11px 13px; border: 1px dashed var(--line); border-radius: var(--r-sm); background: var(--surface-2); font-size: 13px; color: var(--ink-2); }
+  .code-preview code { background: var(--surface); }
+  .code-avail { display: inline-flex; align-items: center; gap: 3px; color: var(--ok); font-weight: 700; font-size: 12.5px; }
+  .check-line { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+
+  .active-on { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* annotations spec */
+  .new { font-size: 10px; padding: 1px 6px; }
+  .spec code { word-break: break-word; }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 7 · Implémentation 7.5</span>
+    <h1>Listes &amp; référentiels · éditeur des vocabulaires <span class="mono" style="font-size:.7em;font-weight:700">ref_code</span></h1>
+    <p class="lead">Le premier endroit où un super-administrateur édite directement les <b>vocabulaires partagés</b> de la plateforme (régimes alimentaires, allergènes, moyens de paiement, types de lit, sujets de demande…). Nouveauté la plus novatrice de la refonte : ces listes sont en base sous RLS stricte <code>service_role/admin</code> uniquement, donc <b>aucune écriture directe possible depuis le navigateur</b>. L'éditeur deux-panneaux s'appuie sur de nouveaux RPC <code>SECURITY DEFINER</code> gated <code>api.is_platform_superuser()</code>, et applique les garde-fous : code verrouillé après création, désactiver-plutôt-que-supprimer, domaines structurels en lecture seule.</p>
+  </div>
+
+  <div class="mock-stage mock-stage--shell">
+
+    <!-- ====================================================================
+         STAGE A · Master/detail : l'éditeur dans le hub à rail
+    ===================================================================== -->
+    <div class="set">
+      <!-- rail du hub Paramètres, "Listes & référentiels" actif sous Plateforme -->
+      <nav class="set__rail" aria-label="Sections des paramètres">
+        <div class="set__railhead">Paramètres</div>
+        <div class="set__group">
+          <div class="set__grouphead">Mon compte <span class="scope muted">tout le monde</span></div>
+          <div class="set__item"><span class="material-symbols-outlined">tune</span> Préférences</div>
+          <div class="set__item"><span class="material-symbols-outlined">badge</span> Session &amp; rôle</div>
+        </div>
+        <div class="set__group">
+          <div class="set__grouphead">Mon organisation <span class="scope"><span class="gate">admin ORG</span></span></div>
+          <div class="set__item"><span class="material-symbols-outlined">groups</span> Équipe</div>
+        </div>
+        <div class="set__group">
+          <div class="set__grouphead">Plateforme <span class="scope"><span class="gate">super-admin</span></span></div>
+          <div class="set__item"><span class="material-symbols-outlined">palette</span> Apparence</div>
+          <div class="set__item"><span class="material-symbols-outlined">location_on</span> Marqueurs carte</div>
+          <div class="set__item is-active"><span class="material-symbols-outlined">format_list_bulleted</span> Listes &amp; référentiels</div>
+          <div class="set__item"><span class="material-symbols-outlined">smart_toy</span> Fournisseurs IA</div>
+          <div class="set__item"><span class="material-symbols-outlined">monitor_heart</span> Diagnostic</div>
+        </div>
+      </nav>
+
+      <!-- panneau "Listes & référentiels" -->
+      <section class="set__pane">
+        <div class="set__panehead">
+          <div>
+            <h2><span class="material-symbols-outlined" style="color:var(--teal)">format_list_bulleted</span> Listes &amp; référentiels</h2>
+            <p>Vocabulaires partagés par toute la plateforme. Une valeur désactivée disparaît des nouveaux choix sans casser les fiches existantes.</p>
+          </div>
+          <span class="badge badge--info"><span class="material-symbols-outlined" style="font-size:15px">shield_person</span> Super-admin</span>
+        </div>
+
+        <div class="ref">
+          <!-- LEFT : la liste des domaines (les "listes" éditables) -->
+          <div class="ref__list" role="navigation" aria-label="Listes disponibles">
+            <div class="search ref__search">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" placeholder="Rechercher une liste..." aria-label="Rechercher une liste">
+            </div>
+
+            <div class="ref__grouphead">Restauration</div>
+            <div class="ref__dom is-active"><span class="material-symbols-outlined">restaurant</span> Régimes alimentaires <span class="count">9</span></div>
+            <div class="ref__dom"><span class="material-symbols-outlined">warning</span> Allergènes <span class="count">14</span></div>
+            <div class="ref__dom"><span class="material-symbols-outlined">soup_kitchen</span> Types de cuisine <span class="count">23</span></div>
+
+            <div class="ref__grouphead">Éditeur d'objet</div>
+            <div class="ref__dom"><span class="material-symbols-outlined">credit_card</span> Moyens de paiement <span class="count">11</span></div>
+            <div class="ref__dom"><span class="material-symbols-outlined">bed</span> Types de lit <span class="count">7</span></div>
+
+            <div class="ref__grouphead">CRM</div>
+            <div class="ref__dom"><span class="material-symbols-outlined">forum</span> Sujets de demande <span class="count">20</span></div>
+
+            <div class="ref__grouphead">Structurel</div>
+            <div class="ref__dom is-locked"><span class="material-symbols-outlined">account_tree</span> Applicabilité des facettes <span class="count"><span class="material-symbols-outlined lock" style="font-size:16px">lock</span></span></div>
+          </div>
+
+          <!-- RIGHT : la table des valeurs du domaine actif -->
+          <div class="ref__detail">
+            <div class="ref__detailhead">
+              <div>
+                <h3>Régimes alimentaires</h3>
+                <div class="dom-code">domaine <span class="mono">dietary_tag</span></div>
+              </div>
+              <button class="btn btn--primary btn--sm"><span class="material-symbols-outlined">add</span> Ajouter une valeur</button>
+            </div>
+
+            <table class="ref__table">
+              <thead>
+                <tr>
+                  <th style="width:28px"></th>
+                  <th>Code</th>
+                  <th>Libellé (FR)</th>
+                  <th>Utilisé par</th>
+                  <th class="th-c">Actif</th>
+                  <th class="td-r">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="drag" title="Glisser pour réordonner"><span class="material-symbols-outlined">drag_indicator</span></span></td>
+                  <td class="code-cell mono">vegetarian</td>
+                  <td><span class="label-cell">Végétarien <span class="i18n-chip">+2 langues</span></span></td>
+                  <td><span class="usage-cell">148 fiches</span></td>
+                  <td class="td-c"><button class="switch is-on" role="switch" aria-checked="true" aria-label="Actif"></button></td>
+                  <td class="td-r"><div class="row-actions">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger" disabled title="0 référence requise">Supprimer</button>
+                  </div></td>
+                </tr>
+                <tr>
+                  <td><span class="drag" title="Glisser pour réordonner"><span class="material-symbols-outlined">drag_indicator</span></span></td>
+                  <td class="code-cell mono">vegan</td>
+                  <td><span class="label-cell">Végan <span class="i18n-chip">+2 langues</span></span></td>
+                  <td><span class="usage-cell">73 fiches</span></td>
+                  <td class="td-c"><button class="switch is-on" role="switch" aria-checked="true" aria-label="Actif"></button></td>
+                  <td class="td-r"><div class="row-actions">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger" disabled title="0 référence requise">Supprimer</button>
+                  </div></td>
+                </tr>
+                <tr>
+                  <td><span class="drag" title="Glisser pour réordonner"><span class="material-symbols-outlined">drag_indicator</span></span></td>
+                  <td class="code-cell mono">gluten_free</td>
+                  <td><span class="label-cell">Sans gluten <span class="i18n-chip">+2 langues</span></span></td>
+                  <td><span class="usage-cell">61 fiches</span></td>
+                  <td class="td-c"><button class="switch is-on" role="switch" aria-checked="true" aria-label="Actif"></button></td>
+                  <td class="td-r"><div class="row-actions">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger" disabled title="0 référence requise">Supprimer</button>
+                  </div></td>
+                </tr>
+                <tr class="is-off">
+                  <td><span class="drag" title="Glisser pour réordonner"><span class="material-symbols-outlined">drag_indicator</span></span></td>
+                  <td class="code-cell mono">halal</td>
+                  <td><span class="label-cell">Halal <span class="badge badge--warn" style="font-size:10.5px">désactivé</span></span></td>
+                  <td><span class="usage-cell zero">0 fiche</span></td>
+                  <td class="td-c"><button class="switch" role="switch" aria-checked="false" aria-label="Inactif"></button></td>
+                  <td class="td-r"><div class="row-actions">
+                    <button class="btn btn--sm btn--secondary">Modifier</button>
+                    <button class="btn btn--sm btn--danger" title="0 référence : suppression définitive possible">Supprimer</button>
+                  </div></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="callout ref__foot">
+              <span class="material-symbols-outlined" style="color:var(--info)">info</span>
+              <span><b>Désactiver par défaut.</b> Une valeur reste référencée par des fiches existantes&nbsp;: la désactiver (bascule) la retire des nouveaux choix sans rien casser. La <b>suppression définitive</b> n'est possible qu'à <b>0 référence</b> (le RPC la refuse sinon).</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       STAGE B · La modale ajout / édition
+  ===================================================================== -->
+  <div class="stage-block" style="margin-top:30px">
+    <div class="block-kick">B · Ajouter / modifier une valeur · code généré puis verrouillé</div>
+    <div class="modal-scrim">
+      <div class="modal" role="dialog" aria-label="Ajouter une valeur">
+        <div class="modal__head">
+          <h3>Ajouter une valeur</h3>
+          <span class="x material-symbols-outlined" role="button" aria-label="Fermer">close</span>
+        </div>
+        <div class="modal__body">
+          <div class="field-row">
+            <div class="field">
+              <label for="lbl">Libellé (FR)</label>
+              <input id="lbl" class="input" type="text" value="Sans lactose">
+            </div>
+            <div class="field">
+              <label for="pos">Position</label>
+              <input id="pos" class="input" type="number" value="5" min="1">
+            </div>
+          </div>
+
+          <button class="btn btn--secondary btn--sm i18n-btn"><span class="material-symbols-outlined">translate</span> Traductions&nbsp;: EN · DE</button>
+
+          <div class="code-preview">
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--muted)">lock</span>
+            Code généré (verrouillé après création)&nbsp;:
+            <code class="mono">lactose_free</code>
+            <span class="code-avail"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> disponible</span>
+          </div>
+
+          <label class="check-line">
+            <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+            <span class="active-on">Actif dès la création</span>
+          </label>
+        </div>
+        <div class="modal__foot">
+          <button class="btn btn--secondary">Annuler</button>
+          <button class="btn btn--primary"><span class="material-symbols-outlined">save</span> Enregistrer</button>
+        </div>
+      </div>
+    </div>
+    <p class="muted small" style="margin-top:12px;max-width:680px">Le formulaire prend un <b>libellé</b> et propose un <b>code slugifié</b> (vérifié unique côté RPC). Après création le code est <b>en lecture seule</b>&nbsp;: <code class="mono">name_normalized</code> est une colonne générée et le code est la clé FK référencée par les fiches. Les traductions <span class="mono">name_i18n</span> / <span class="mono">description_i18n</span> (FR primaire + EN/DE) s'éditent dans le sous-panneau «&nbsp;Traductions&nbsp;».</p>
+  </div>
+
+  <!-- ====================================================================
+       STAGE C · Domaine structurel en lecture seule
+  ===================================================================== -->
+  <div class="stage-block">
+    <div class="block-kick">C · Domaine structurel «&nbsp;Applicabilité des facettes&nbsp;» · lecture seule</div>
+    <div class="panel">
+      <div class="panel__body">
+        <div class="ref__detailhead" style="margin-bottom:12px">
+          <div>
+            <h3 style="font-size:17px;font-weight:700">Applicabilité des facettes <span class="ro-tag"><span class="material-symbols-outlined" style="font-size:15px">lock</span> lecture seule</span></h3>
+            <div class="dom-code muted small" style="margin-top:3px">domaine <span class="mono">ref_facet_registry</span> · <span class="mono">ref_facet_applicability</span></div>
+          </div>
+          <!-- pas de bouton "Ajouter" -->
+        </div>
+
+        <div class="lock-callout">
+          <span class="material-symbols-outlined">lock</span>
+          <div>
+            <b>Domaine structurel, en lecture seule.</b>
+            <p>Ce vocabulaire est gouverné par des déclencheurs (registre des facettes, couplage <span class="mono">object_type</span>, fermeture taxonomique). Le modifier ici casserait l'applicabilité type→facette. Toute évolution passe par une migration revue, pas par cet écran. Les domaines hiérarchiques / taxonomiques (<span class="mono">is_taxonomy</span>, <span class="mono">is_hierarchical</span>) suivent la même règle.</p>
+          </div>
+        </div>
+
+        <table class="ref__table ro-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé (FR)</th>
+              <th>Gouverné par</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="code-cell mono">object_iti</td>
+              <td>Itinéraire · étapes &amp; tracé</td>
+              <td class="muted small"><span class="material-symbols-outlined" style="font-size:15px;color:var(--warn)">bolt</span> trg_assert_facet_applicable</td>
+            </tr>
+            <tr>
+              <td class="code-cell mono">object_room_type</td>
+              <td>Types de chambre (HEB)</td>
+              <td class="muted small"><span class="material-symbols-outlined" style="font-size:15px;color:var(--warn)">bolt</span> trg_assert_facet_applicable</td>
+            </tr>
+            <tr>
+              <td class="code-cell mono">object_menu</td>
+              <td>Carte &amp; menus (RES)</td>
+              <td class="muted small"><span class="material-symbols-outlined" style="font-size:15px;color:var(--warn)">bolt</span> trg_assert_facet_applicable</td>
+            </tr>
+            <tr>
+              <td class="code-cell mono">object_act</td>
+              <td>Activité (ACT / ASC)</td>
+              <td class="muted small"><span class="material-symbols-outlined" style="font-size:15px;color:var(--warn)">bolt</span> trg_guard_object_type_change</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="muted small" style="margin-top:12px">Les valeurs s'affichent sans bascule ni actions&nbsp;: aucune ligne n'est éditable, aucun bouton «&nbsp;Ajouter&nbsp;».</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       SPÉCIFICATIONS
+  ===================================================================== -->
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Premier éditeur des vocabulaires <code>ref_code</code> (≈ 50 domaines indexés par <code>ref_code_domain_registry</code>). Master/detail&nbsp;: une «&nbsp;liste&nbsp;» (= un domaine) à gauche, ses valeurs éditables à droite. Le point dur est entièrement back-end&nbsp;: les écritures <code>ref_*</code> sont impossibles depuis le navigateur.</p>
+    <div class="spec grid2" style="border:0;padding:0;margin-top:6px">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Master/detail&nbsp;: domaines (groupés Restauration / Éditeur d'objet / CRM / Structurel) → valeurs du domaine sélectionné.</li>
+          <li>Par valeur&nbsp;: <code>code</code> (mono, <b>verrouillé après création</b>) / libellé FR + i18n (EN/DE) / <code>position</code> (glisser pour réordonner) / <b>actif</b> (bascule) / «&nbsp;utilisé par N fiches&nbsp;».</li>
+          <li><b>Désactiver, pas supprimer</b>, par défaut&nbsp;: une valeur référencée se désactive (<code>is_active=false</code>) · elle quitte les nouveaux choix sans casser les fiches.</li>
+          <li>Suppression définitive <b>uniquement à 0 référence</b> (bouton <code>.btn--danger</code> activé seulement sur une ligne à 0 usage).</li>
+          <li>Domaines <b>structurels en lecture seule</b> (facettes / taxonomies / couplage <code>object_type</code>)&nbsp;: pas de bascule, pas d'actions, pas d'«&nbsp;Ajouter&nbsp;».</li>
+          <li>Ajout&nbsp;: le formulaire prend un <b>libellé</b>, slugifie un code proposé (vérifié unique), puis le code devient immuable.</li>
+        </ul>
+        <h3>Données &amp; back-end <span class="muted" style="font-weight:600">(le point dur)</span></h3>
+        <ul>
+          <li>Écritures <code>ref_*</code> <b>impossibles directement</b>&nbsp;: chaque write policy = <code>auth.role() IN ('service_role','admin')</code> (<code>rls_policies.sql:1649</code>). Le client anon/authenticated ne peut <b>jamais</b> écrire une ligne <code>ref</code>.</li>
+          <li>⇒ <b>Nouveaux RPC <code>SECURITY DEFINER</code></b> gated <code>api.is_platform_superuser()</code>&nbsp;: <code>rpc_upsert_ref_code</code> · <code>rpc_set_ref_code_active</code> · <code>rpc_reorder_ref_code</code> · <code>rpc_delete_ref_code</code> (<b>refuse si references &gt; 0</b>).</li>
+          <li>Lectures <b>directes</b> off <code>ref_code_domain_registry</code> + <code>ref_code</code>. «&nbsp;Utilisé par N fiches&nbsp;» = comptage RPC.</li>
+          <li>Précédent&nbsp;: <code>api.create_tag</code> / <code>api.set_tag_color</code> (même motif gated-DEFINER).</li>
+          <li>Respecter la normalisation du code (<code>name_normalized</code> générée), <code>name_i18n</code>, <code>position</code>, <code>parent_id</code>.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Fichiers</h3>
+        <ul>
+          <li>Nouveaux <code>src/features/settings/ReferenceLists/*</code>&nbsp;: <code>DomainList</code>, <code>CodesTable</code>, <code>CodeEditModal</code>.</li>
+          <li><code>src/services/reference-data.ts</code>&nbsp;: lectures directes + appels des 4 RPC.</li>
+          <li><b>Une migration SQL</b>&nbsp;: les 4 RPC + grants RLS-safe (EXECUTE pour le rôle qui appelle, P0.3) + un test CI.</li>
+          <li>Rendu comme panneau «&nbsp;Listes &amp; référentiels&nbsp;» dans le hub Paramètres (7.1).</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Un super-admin crée / désactive / réordonne une valeur <code>ref_code</code>.</li>
+          <li>Impossible de supprimer une valeur référencée (le RPC refuse, le bouton est désactivé).</li>
+          <li>Domaines structurels en lecture seule (aucun contrôle d'écriture rendu).</li>
+          <li>Code auto-généré puis <b>verrouillé</b> après création&nbsp;; i18n éditable.</li>
+          <li><code>:focus-visible</code> sur la liste, la table, les bascules et la modale.</li>
+          <li><b>Toutes les écritures via RPC DEFINER</b> · aucune écriture PostgREST directe.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--teal)">stairs</span>
+          <span><b>Séquence&nbsp;:</b> les RPC back-end + les tests CI <b>d'abord</b> (dépendance bloquante), puis l'éditeur deux-panneaux. v1 = domaines plats non structurels, désactiver-pas-supprimer.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

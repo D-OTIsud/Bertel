@@ -461,6 +461,7 @@ export function CrmActorEditModal({
   return (
     <CrmModal
       title="Modifier l'acteur"
+      variant="drawer"
       onClose={onClose}
       footer={
         <>
@@ -802,6 +803,7 @@ export function CrmActorNewModal({
   return (
     <CrmModal
       title="Nouvel acteur"
+      variant="drawer"
       onClose={onClose}
       footer={
         <>

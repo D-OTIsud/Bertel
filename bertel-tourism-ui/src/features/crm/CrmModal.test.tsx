@@ -40,6 +40,30 @@ describe('CrmModal', () => {
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 
+  // Phase 5.2 — variante tiroir latéral (dé-modalisation de l'édition acteur). Même primitive,
+  // même rôle dialog + footer collant ; seules des classes modificatrices changent le chrome
+  // (ancrage droit pleine hauteur). Pas de second design system (réemploi maison, pas shadcn).
+  it('variant="drawer" applique les classes modificatrices en restant un dialog nommé', () => {
+    const { container } = render(
+      <CrmModal title="Modifier l'acteur" variant="drawer" onClose={jest.fn()} footer={<button type="button">Enregistrer</button>}>
+        <input aria-label="Champ" />
+      </CrmModal>,
+    );
+    const dialog = screen.getByRole('dialog', { name: "Modifier l'acteur" });
+    expect(dialog).toHaveClass('crm-modal--drawer');
+    expect(container.querySelector('.crm-modal-overlay')).toHaveClass('crm-modal-overlay--drawer');
+  });
+
+  it('variant par défaut = modal centré (aucune classe drawer)', () => {
+    const { container } = render(
+      <CrmModal title="X" onClose={jest.fn()}>
+        <input aria-label="C" />
+      </CrmModal>,
+    );
+    expect(screen.getByRole('dialog', { name: 'X' })).not.toHaveClass('crm-modal--drawer');
+    expect(container.querySelector('.crm-modal-overlay')).not.toHaveClass('crm-modal-overlay--drawer');
+  });
+
   it('Tab boucle à l intérieur du dialogue (trap léger)', () => {
     render(
       <CrmModal title="Test modal" onClose={jest.fn()} footer={<button type="button">Valider</button>}>

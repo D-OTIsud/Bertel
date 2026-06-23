@@ -22,6 +22,7 @@ import {
   type StatusItem,
 } from './CrmFilterBar';
 import { CrmActorNewModal } from './CrmActorModals';
+import { EmptyState } from '../../components/common/EmptyState';
 import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf, topicTintOf } from './crm-view-utils';
 
 function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
@@ -230,11 +231,26 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
           );
         })}
         {rows.length === 0 && (
-          <div className="crm-list__empty">
-            {entries.length === 0 && !hasFilters && !search.trim()
-              ? 'Aucun acteur dans l’annuaire CRM.'
-              : 'Aucun acteur ne correspond à ces filtres.'}
-          </div>
+          // Phase 5.2 — états vides qui enseignent : « aucune donnée » (annuaire vide, CTA
+          // « Ajouter un acteur » si droit d'écriture) distinct de l'état « filtré » (pas de CTA).
+          entries.length === 0 && !hasFilters && !search.trim() ? (
+            <EmptyState
+              mode="no-data"
+              title="Aucun acteur"
+              description="Cet annuaire CRM se remplit à mesure que vous rattachez des prestataires aux fiches ou enregistrez des interactions."
+              action={
+                canWrite
+                  ? { label: 'Ajouter un acteur', onClick: () => setNewActorOpen(true), icon: <UserPlus size={15} aria-hidden /> }
+                  : undefined
+              }
+            />
+          ) : (
+            <EmptyState
+              mode="filtered"
+              title="Aucun acteur pour ces filtres"
+              description="Aucun acteur ne correspond à ces filtres. Élargissez la recherche ou changez les critères."
+            />
+          )
         )}
       </div>
 

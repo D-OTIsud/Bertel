@@ -17,11 +17,18 @@ export function CrmModal({
   onClose,
   children,
   footer,
+  variant = 'modal',
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * 'modal' (défaut) = carte centrée 560px. 'drawer' (Phase 5.2) = tiroir latéral
+   * droit pleine hauteur avec footer collant — même primitive/role/focus-trap, seul
+   * le chrome change (classes modificatrices). Pas de second design system.
+   */
+  variant?: 'modal' | 'drawer';
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -58,12 +65,19 @@ export function CrmModal({
 
   return (
     <div
-      className="crm-modal-overlay"
+      className={variant === 'drawer' ? 'crm-modal-overlay crm-modal-overlay--drawer' : 'crm-modal-overlay'}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div ref={cardRef} className="crm-modal" role="dialog" aria-modal="true" aria-label={title} onKeyDown={handleKeyDown}>
+      <div
+        ref={cardRef}
+        className={variant === 'drawer' ? 'crm-modal crm-modal--drawer' : 'crm-modal'}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onKeyDown={handleKeyDown}
+      >
         <div className="crm-modal__head">
           <h3>{title}</h3>
           <button type="button" className="crm-modal__close" aria-label="Fermer" onClick={onClose}>

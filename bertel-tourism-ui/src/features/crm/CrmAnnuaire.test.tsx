@@ -160,6 +160,23 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(onOpenActor).toHaveBeenCalledWith('actor-3');
   });
 
+  // Phase 5.2 — l'état vide « aucune donnée » (annuaire vide, sans filtre) ENSEIGNE le motif
+  // et offre un CTA « Ajouter un acteur » (distinct de l'état filtré). Cf. maquette p5-02.
+  it('état vide « aucune donnée » : enseigne + CTA « Ajouter un acteur » (ouvre le modal)', async () => {
+    crmMock.listCrmDirectory.mockResolvedValue([]);
+    renderAnnuaire();
+    const cta = await screen.findByRole('button', { name: /ajouter un acteur/i });
+    fireEvent.click(cta);
+    expect(await screen.findByRole('dialog', { name: 'Nouvel acteur' })).toBeInTheDocument();
+  });
+
+  it('état vide « aucune donnée » sans permission : pas de CTA (no-write-trap)', async () => {
+    crmMock.listCrmDirectory.mockResolvedValue([]);
+    renderAnnuaire(jest.fn(), false);
+    await screen.findByText(/aucun acteur/i);
+    expect(screen.queryByRole('button', { name: /ajouter un acteur/i })).not.toBeInTheDocument();
+  });
+
   it('état vide quand aucun acteur ne correspond aux filtres', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');

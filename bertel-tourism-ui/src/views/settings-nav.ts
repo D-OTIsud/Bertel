@@ -40,6 +40,7 @@ const PLATFORM_GROUP: SettingsNavGroup = {
   sections: [
     { id: 'appearance', label: 'Apparence' },
     { id: 'markers', label: 'Marqueurs' },
+    { id: 'referentiels', label: 'Listes & référentiels' },
     { id: 'ai', label: 'Fournisseurs IA' },
     { id: 'diagnostic', label: 'Diagnostic' },
   ],

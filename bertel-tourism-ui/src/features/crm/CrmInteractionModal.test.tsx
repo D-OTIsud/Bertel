@@ -89,35 +89,52 @@ describe('CrmInteractionModal — établissement requis (§66 décision 1)', () 
   });
 });
 
-describe('CrmInteractionModal — tâche de suivi liée (§66 décision 1)', () => {
-  it('case « Créer une tâche de suivi liée » révèle titre / échéance / Attribuer à', async () => {
+describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisation)', () => {
+  // Plus de formulaire-dans-formulaire : aucun champ de relance avant d'avoir consigné.
+  it('pas de champ de relance avant consignation (plus de formulaire imbriqué)', () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
+    expect(screen.queryByLabelText('Titre de la tâche')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ajouter une relance/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/créer une tâche de suivi/i)).not.toBeInTheDocument();
+  });
+
+  it('après consignation : confirmation + « Ajouter une relance » révèle titre / échéance / Attribuer à', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    expect(await screen.findByText(/interaction enregistrée/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /ajouter une relance/i }));
     expect(screen.getByLabelText('Titre de la tâche')).toBeInTheDocument();
     expect(screen.getByLabelText('Échéance')).toBeInTheDocument();
     await screen.findByLabelText('Attribuer à');
   });
 
-  it('titre de tâche pré-rempli depuis le sujet sélectionné (éditable)', () => {
+  it('titre de relance pré-rempli depuis le sujet sélectionné (éditable)', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     pickFromCombobox('Sujet normalisé', 'Demande de visite');
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     expect((screen.getByLabelText('Titre de la tâche') as HTMLInputElement).value).toBe('Demande de visite');
   });
 
-  it('soumission séquentielle : saveCrmInteraction PUIS saveCrmTask avec relatedInteractionId = id renvoyé', async () => {
+  it('flux séquentiel : Consigner (saveCrmInteraction) PUIS relance (saveCrmTask, relatedInteractionId = id renvoyé)', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' }, actorOptions: [{ actorId: 'a1', displayName: 'Mme Hoarau' }] });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
     pickFromCombobox('Acteur', 'Mme Hoarau');
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
+    // À ce stade, AUCUNE tâche : la relance est une étape distincte, après coup.
+    expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Rappeler le directeur' } });
     fireEvent.change(screen.getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
 
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalled());
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1);
-    // saveCrmTask reçoit l'objet de l'interaction + l'acteur ancré + le lien = id renvoyé.
     expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
       expect.objectContaining({
         objectId: 'o1',
@@ -128,23 +145,22 @@ describe('CrmInteractionModal — tâche de suivi liée (§66 décision 1)', () 
         relatedInteractionId: 'int-new',
       }),
     );
-    // L'interaction est créée AVANT la tâche.
     const interactionOrder = crmMock.saveCrmInteraction.mock.invocationCallOrder[0];
     const taskOrder = crmMock.saveCrmTask.mock.invocationCallOrder[0];
     expect(interactionOrder).toBeLessThan(taskOrder);
   });
 
-  it('case cochée mais titre vide : Consigner bloqué avec raison visible', () => {
+  it('relance : titre vidé ⇒ « Enregistrer la relance » bloqué avec raison visible', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
-    // Titre vidé (le sujet n'est pas choisi → pré-remplissage par défaut éditable ; on le vide).
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: '   ' } });
-    expect(screen.getByRole('button', { name: /consigner/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /enregistrer la relance/i })).toBeDisabled();
     expect(screen.getByText(/Renseignez un titre de tâche/i)).toBeInTheDocument();
   });
 
-  it('case décochée : aucune tâche créée (seule l interaction)', async () => {
+  it('Consigner sans relance : onSaved appelé, aucune tâche créée', async () => {
     const props = renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
     fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
@@ -152,34 +168,34 @@ describe('CrmInteractionModal — tâche de suivi liée (§66 décision 1)', () 
     expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
   });
 
-  // Échec partiel : interaction OK, tâche KO. Le retry NE RE-CRÉE PAS l'interaction (ref idempotente).
-  it('échec partiel (tâche KO) : retry ne re-crée pas l interaction, ne rejoue que la tâche', async () => {
+  // Mutations SÉPARÉES : un échec de relance ne re-crée jamais l'interaction (retry = tâche seule).
+  it('échec de relance : retry ne re-crée pas l interaction, ne rejoue que la tâche', async () => {
     crmMock.saveCrmTask.mockRejectedValueOnce(new Error('refus tâche')).mockResolvedValueOnce('task-new');
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
 
-    // 1er essai : interaction créée, tâche en échec → erreur visible, modal ouvert.
     expect(await screen.findByText(/refus tâche/i)).toBeInTheDocument();
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1);
 
-    // Retry : la tâche est rejouée, l'interaction n'est PAS re-créée.
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledTimes(2));
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1);
   });
 
-  it('succès avec tâche : onSaved puis onClose appelés', async () => {
+  it('succès avec relance : onSaved puis onClose appelés', async () => {
     const props = renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByLabelText(/créer une tâche de suivi/i));
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
-    await waitFor(() => expect(props.onSaved).toHaveBeenCalled());
-    expect(props.onClose).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+    expect(props.onSaved).toHaveBeenCalled();
   });
 });

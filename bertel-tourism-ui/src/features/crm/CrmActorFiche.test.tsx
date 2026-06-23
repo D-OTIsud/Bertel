@@ -291,8 +291,11 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         sentimentCode: 'positif',
       }),
     );
-    // Refresh après écriture : la fiche est rechargée depuis le RPC, et le modal se ferme.
+    // Refresh après écriture : la fiche est rechargée depuis le RPC. Phase 5.2 — le modal
+    // RESTE ouvert (état de confirmation + « Ajouter une relance ») ; « Terminer » le ferme.
     await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
+    expect(await within(dialog).findByText(/interaction enregistrée/i)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /terminer/i }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 

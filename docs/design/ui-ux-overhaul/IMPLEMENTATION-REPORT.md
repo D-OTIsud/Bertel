@@ -206,8 +206,13 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Déjà fait** (passes antérieures) : label « Paramètres » accentué partout ; carte « Diagnostic » (plus de dump Runtime) ; 7.3 boutons IA portés sur le vocabulaire maison.
 - TDD : settings-nav 5 specs + SettingsRail 2 specs. **Vérif navigateur** (mode démo) : rail « Mon compte » seul (non super-admin) ; un panneau à la fois ; `?section=session/markers` en URL ; bascule super-admin ⇒ groupe « Plateforme » révélé ; clic Marqueurs ⇒ panneau marqueurs. Build 0 ; tsc sans nouvelle erreur ; vues 25/25.
 
+### 7.2 — Marqueurs maître/détail ✅ (`4bc1362`, 2026-06-23)
+- Le panneau **Marqueurs** passe du **mur de 7 cartes** déployées à un **maître/détail** : liste des 7 types (gauche, sélectionnable, aperçu + libellé `role=tab`/`aria-selected`) → **UN** éditeur (droite) pour le type sélectionné. Réutilise l'éditeur existant (couleur/icône/SVG) via un IIFE sur le type courant ; handlers + état (drafts/erreurs) inchangés au niveau page.
+- **SVG personnalisé derrière `<details>` « Avancé »** + note de sanitisation (`sanitizeCustomMarkerSvg` déjà en place).
+- Vérif navigateur (super-admin) : 1 seul éditeur dans le détail (plus 7) ; clic « Restaurant » bascule l'éditeur ; SVG sous « Avancé ». Build 0 ; tsc sans nouvelle erreur. Refonte présentationnelle (état trivial de sélection, vérifiée écran).
+- **Apparence (white-label)** : déjà présente (panneau thème du rail) — palette + logo + preview live, gated super-admin.
+
 ### Restant (différé avec raison)
-- **7.2 Apparence/Marqueurs** (maître-détail : passer du mur de 7 cartes marqueurs à une liste → un panneau d'édition ; SVG perso derrière « Avancé ») — les panneaux sont déjà dans le rail (7.1), reste la refonte interne maître-détail.
 - **7.4 Team intégré** (portage shadcn→maison + retrait route `/team` ; se branche comme panneau « Équipe » du groupe « Mon organisation »).
 - **7.5 Listes & référentiels** : nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` (`rpc_upsert/set_active/reorder/delete_ref_code`) + UI maître-détail. **Exige du nouveau back-end** (RPC + RLS + test CI d'abord). Sa propre passe spec→plan→impl.
 

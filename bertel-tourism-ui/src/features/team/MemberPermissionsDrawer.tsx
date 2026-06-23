@@ -1,8 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/common/Modal';
 import {
   grantUserPermission,
   revokeUserPermission,
@@ -58,9 +57,9 @@ export function MemberPermissionsDrawer({
   onClose,
   onChanged,
 }: MemberPermissionsDrawerProps) {
-  // Guard: render closed Sheet when no member is selected.
+  // Guard: nothing to render when no member is selected (the Modal mounts only when open).
   if (!member) {
-    return <Sheet open={false} onOpenChange={() => {}} />;
+    return null;
   }
 
   const groups = groupByCategory(catalog);
@@ -110,27 +109,23 @@ export function MemberPermissionsDrawer({
   }
 
   return (
-    <Sheet open={member !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="w-full max-w-[440px] sm:max-w-[440px] overflow-y-auto">
-        <SheetHeader className="mb-4">
-          <SheetTitle>{displayName}</SheetTitle>
-          <SheetDescription>
-            Permissions individuelles de ce membre.
-            {member.businessRoleCode ? ` Rôle métier : ${member.businessRoleCode}.` : ''}
-          </SheetDescription>
-        </SheetHeader>
+    <Modal variant="drawer" title={displayName} onClose={onClose}>
+        <p className="text-sm text-muted-foreground">
+          Permissions individuelles de ce membre.
+          {member.businessRoleCode ? ` Rôle métier : ${member.businessRoleCode}.` : ''}
+        </p>
 
         {/* Preset button */}
         <div className="mb-6">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
+            className="ghost-button"
             disabled={!member.businessRoleCode}
             onClick={() => void applyPreset()}
             title={!member.businessRoleCode ? 'Aucun rôle métier défini pour ce membre' : undefined}
           >
             Appliquer le préréglage {member.businessRoleCode ?? '(aucun rôle)'}
-          </Button>
+          </button>
           <p className="text-xs text-muted-foreground mt-1">
             Accorde les permissions standard pour ce rôle (additif — ne révoque rien).
           </p>
@@ -209,7 +204,6 @@ export function MemberPermissionsDrawer({
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+    </Modal>
   );
 }

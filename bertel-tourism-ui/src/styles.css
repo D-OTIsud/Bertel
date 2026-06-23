@@ -366,6 +366,10 @@ textarea::placeholder {
 .badge--warn { background: rgba(214, 147, 58, 0.16); color: #8a5a12; }
 .badge--danger { background: rgba(200, 92, 72, 0.14); color: #9a3322; }
 .badge--info { background: rgba(45, 111, 176, 0.12); color: #1d5f8a; }
+/* État neutre (ex. « Fermé ») : gris lisible. NE PAS utiliser la classe Tailwind
+   `text-muted` ici — elle mappe sur --muted (un fond quasi-blanc), d'où le texte
+   illisible corrigé en 2026-06-23. Le texte muet lisible = --text-muted (#5c6a71, 4.76:1). */
+.badge--muted { background: var(--surface-2); color: var(--text-muted); }
 
 /* ---- État vide qui enseigne (EmptyState : no-data / filtered / coming-soon) ---- */
 .ui-empty {
@@ -2933,6 +2937,97 @@ a {
 @media (max-width: 860px) {
   .refcode-editor { grid-template-columns: 1fr; }
   .refcode-master { flex-direction: row; flex-wrap: wrap; max-height: none; }
+}
+
+/* Modal/drawer MAISON générique (remplace les primitives shadcn Dialog/Sheet — unification
+   S3). Même mécanique visuelle que .crm-modal mais hors scope .crm-app (settings/team…). */
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(24, 49, 59, 0.38);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.app-modal {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-m);
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.app-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.app-modal__head h3 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.app-modal__close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.app-modal__close:hover { background: var(--surface-2); color: var(--ink); }
+.app-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.app-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.app-modal-overlay--drawer { place-items: stretch end; padding: 0; }
+.app-modal--drawer {
+  width: 440px;
+  max-width: 440px;
+  height: 100%;
+  max-height: 100vh;
+  border: 0;
+  border-left: 1px solid var(--line-soft);
+  border-radius: 0;
+  box-shadow: -24px 0 48px -28px rgba(16, 30, 36, 0.5);
+}
+.app-modal--drawer .app-modal__body { flex: 1; gap: 18px; }
+.app-modal--drawer .app-modal__foot { position: sticky; bottom: 0; background: var(--surface-2); }
+@media (max-width: 760px) {
+  .app-modal--drawer { width: 100%; max-width: 100%; }
+}
+/* 7.4 — révélation du mot de passe temporaire d'invitation (vocabulaire maison). */
+.invite-temp-row { display: flex; align-items: center; gap: 8px; }
+.invite-temp-code {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
 }
 
 .drawer-grid {

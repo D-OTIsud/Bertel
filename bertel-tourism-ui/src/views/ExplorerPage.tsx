@@ -7,6 +7,8 @@ import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useE
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { EmptyState } from '../components/common/EmptyState';
+import { buildExplorerErrorBanner } from './explorer-error';
 
 const MapPanel = lazy(async () => ({ default: (await import('../components/explorer/MapPanel')).MapPanel }));
 
@@ -58,13 +60,15 @@ export default function ExplorerPage() {
     };
   }, [clearSelection]);
 
-  if (cardsQuery.isError) {
-    return <section className="panel-card panel-card--wide m-4">{(cardsQuery.error as Error).message}</section>;
-  }
-
-  if (referencesQuery.isError) {
-    return <section className="panel-card panel-card--wide m-4">{(referencesQuery.error as Error).message}</section>;
-  }
+  // Audit S10 : une requête en échec ne remplace PLUS tout l'Explorateur. On
+  // affiche un bandeau inline et on conserve la dernière donnée valide (les cards
+  // viennent d'un cache local, cf. useExplorerCardsQuery) ; « Réessayer » ne
+  // relance que la requête fautive.
+  const errorBanner = buildExplorerErrorBanner(cardsQuery.isError, referencesQuery.isError);
+  const retryFailedQueries = () => {
+    if (cardsQuery.isError) void cardsQuery.refetch();
+    if (referencesQuery.isError) void referencesQuery.refetch();
+  };
 
   const renderMobilePanel = (panel: ExplorerPanelKey) => {
     if (panel === 'filters') {
@@ -89,6 +93,16 @@ export default function ExplorerPage() {
 
   return (
     <section className="explorer-workspace flex h-full min-h-0 w-full min-w-0 flex-col">
+      {errorBanner ? (
+        <div className="flex-none px-4 pt-3">
+          <EmptyState
+            mode="error"
+            title={errorBanner.title}
+            description={errorBanner.description}
+            action={{ label: 'Réessayer', onClick: retryFailedQueries }}
+          />
+        </div>
+      ) : null}
       <Sheet
         open={mobileSheetOpen}
         onOpenChange={(open) => {

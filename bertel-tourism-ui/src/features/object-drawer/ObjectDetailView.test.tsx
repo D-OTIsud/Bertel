@@ -116,6 +116,38 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Cuisine & carte')).not.toBeInTheDocument();
   });
 
+  it('4.3 : affiche les étapes RÉELLES d’un itinéraire (object_iti_stage)', () => {
+    const data: ObjectDetail = {
+      id: 'iti-1',
+      name: 'Boucle du Piton',
+      type: 'ITI',
+      raw: { itinerary_details: { stages: [{ id: 's1', name: 'Cascade Niagara', description: 'Belvédère', extra: { kind: 'viewpoint' } }] } },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.getByText("Étapes de l'itinéraire")).toBeInTheDocument();
+    expect(screen.getByText('Cascade Niagara')).toBeInTheDocument();
+    expect(screen.getByText('Belvédère')).toBeInTheDocument();
+  });
+
+  it('4.3 : aucune étape fabriquée pour un ITI sans étapes réelles', () => {
+    const data: ObjectDetail = { id: 'iti-2', name: 'Sentier', type: 'ITI', raw: {} } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
+  });
+
+  it('4.3 : affiche les faits d’une activité encadrée (ASC, object_act)', () => {
+    const data: ObjectDetail = {
+      id: 'asc-1',
+      name: 'Canyoning Fleurs Jaunes',
+      type: 'ASC',
+      raw: { activity: { duration_min: '180', min_participants: '2', max_participants: '6', guide_required: true } },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.getByText('Fiche activité')).toBeInTheDocument();
+    expect(screen.getByText('180 min')).toBeInTheDocument();
+    expect(screen.getByText('de 2 à 6')).toBeInTheDocument();
+  });
+
   it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',

@@ -152,8 +152,14 @@ Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** 
 - **Retrait du texte de debug public** (`Supabase URL: …` + « Mode demo ») sur la page de connexion (fuite d'info + aspect cassé) ; import `env` retiré. Accents FR rétablis (h1, lead, note, panneau démo).
 - Ajout de `.muted` (top-level) : la classe était **utilisée app-wide mais non définie** (texte non atténué partout) — corrige aussi de nombreux composants.
 
+### 5.1 — Hiérarchie du bandeau dashboard ✅ (S9)
+- `scorecard-strip` : fin des 6 cartes identiques (`repeat(6,1fr)`) → contraste d'échelle (métrique meneuse en colonne 1.6fr, teal pleine, valeur 2.8rem ; secondaires calmes) + repli responsive (3 cols <1200px lead pleine largeur, 2 cols <640px). Vérifié navigateur (lead 486px vs 235px).
+
+### Anti-pattern banni — side-stripe
+- `.lifecycle-state` (éditeur §21) : retrait de la bordure latérale colorée (anti-pattern banni) ; l'accent reste porté par le fond teinté + la pastille `__dot`. Les KPI side-stripes du CRM sont un **choix PO délibéré** (commentaire « Peps PO point 1 ») → laissés.
+
 ### Restant (différé avec raison)
-- **5.1 Bandeau dashboard hiérarchisé** (remplacer la grille hero-metric 6×) + **5.2 dé-modalisation CRM** (acteur en drawer) : refontes de composants volumineux ; valeur de hiérarchie/UX. Passe ciblée.
+- **5.2 dé-modalisation CRM** (acteur en drawer) : refonte de composant volumineux. Passe ciblée.
 - **Unification Team/RGPD sur le vocabulaire maison** : absorbée par la Phase 7.4 (Team) ; RGPD reste.
 - **Pages stub honnêtes** (`EmptyState mode=coming-soon`) : `EmptyState` est livré (Phase 1.2) et prêt à câbler.
 

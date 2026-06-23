@@ -93,6 +93,29 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Prochaines dates')).not.toBeInTheDocument();
   });
 
+  it('4.2 : affiche le bloc « Cuisine & carte » d’un restaurant (RES)', () => {
+    const data: ObjectDetail = {
+      id: 'res-1',
+      name: 'Le Vieux Domaine',
+      type: 'RES',
+      raw: {
+        cuisine_types: [{ code: 'creole', name: 'Créole' }],
+        menus: [{ name: 'Carte', items: [{ name: 'Cari poulet', price: '14', section: { name: 'Plats', position: 2 } }] }],
+      },
+    } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.getByText('Cuisine & carte')).toBeInTheDocument();
+    expect(screen.getByText('Créole')).toBeInTheDocument();
+    expect(screen.getByText('Cari poulet')).toBeInTheDocument();
+    expect(screen.getByText('14 €')).toBeInTheDocument();
+  });
+
+  it('4.2 : pas de bloc menu pour un restaurant sans carte', () => {
+    const data: ObjectDetail = { id: 'res-2', name: 'Snack', type: 'RES', raw: {} } as ObjectDetail;
+    renderDetail(data);
+    expect(screen.queryByText('Cuisine & carte')).not.toBeInTheDocument();
+  });
+
   it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',

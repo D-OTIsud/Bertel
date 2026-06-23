@@ -523,6 +523,36 @@ textarea::placeholder {
 .detail-event-list__state { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--brand-red); }
 .detail-event-list__row--cancelled .detail-event-list__date { text-decoration: line-through; color: var(--text-muted); }
 
+/* ---- Bloc « Cuisine & carte » d'un restaurant (impl. 4.2) ---- */
+.detail-cuisine-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.detail-cuisine-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--acc-res) 12%, white);
+  color: var(--acc-res);
+}
+.detail-menu { margin-bottom: 14px; }
+.detail-menu__title { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+.detail-menu__section { margin-bottom: 10px; }
+.detail-menu__section-name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.detail-menu__dishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.detail-menu__dish { display: flex; align-items: baseline; gap: 8px; }
+.detail-menu__dish-name { font-size: 14px; color: var(--ink); }
+.detail-menu__dish-diet { font-size: 11px; color: var(--acc-iti); font-weight: 600; }
+.detail-menu__dish-price { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+
 input[type='checkbox'] {
   width: 20px;
   height: 20px;

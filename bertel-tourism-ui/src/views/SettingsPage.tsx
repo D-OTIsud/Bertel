@@ -78,6 +78,8 @@ export default function SettingsPage() {
   );
   const [customSvgDrafts, setCustomSvgDrafts] = useState<Record<ObjectTypeCode, string>>(() => buildDrafts(markerStyles));
   const [customSvgErrors, setCustomSvgErrors] = useState<Partial<Record<ObjectTypeCode, string>>>({});
+  // 7.2 — marqueurs en maître/détail : un seul type édité à la fois (fin du mur de 7 cartes).
+  const [selectedMarkerType, setSelectedMarkerType] = useState<ObjectTypeCode>(() => objectTypeOptions[0].code);
   const [themeBusy, setThemeBusy] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
@@ -427,12 +429,32 @@ export default function SettingsPage() {
             Reinitialiser
           </button>
         </div>
-        <div className="marker-settings-grid">
-          {objectTypeOptions.map((typeOption) => {
-            const marker = markerStyles[typeOption.code] ?? defaultMarkerStyles[typeOption.code];
-
-            return (
-              <article key={typeOption.code} className="panel-card panel-card--nested marker-settings-card">
+        <div className="marker-master-detail">
+          <div className="marker-master" role="tablist" aria-label="Types de marqueur">
+            {objectTypeOptions.map((option) => {
+              const optionMarker = markerStyles[option.code] ?? defaultMarkerStyles[option.code];
+              const isSelected = option.code === selectedMarkerType;
+              return (
+                <button
+                  key={option.code}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  className={isSelected ? 'marker-master__item is-active' : 'marker-master__item'}
+                  onClick={() => setSelectedMarkerType(option.code)}
+                >
+                  <img src={buildMarkerDataUri(optionMarker)} alt="" aria-hidden className="marker-master__preview" />
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="marker-detail">
+            {(() => {
+              const typeOption = objectTypeOptions.find((option) => option.code === selectedMarkerType) ?? objectTypeOptions[0];
+              const marker = markerStyles[typeOption.code] ?? defaultMarkerStyles[typeOption.code];
+              return (
+              <article className="panel-card panel-card--nested marker-settings-card">
                 <div className="marker-settings-card__header">
                   <div>
                     <strong>{typeOption.label}</strong>
@@ -508,8 +530,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="field-block">
-                  <span>SVG personnalise</span>
+                <details className="marker-advanced">
+                  <summary>Avancé — SVG personnalisé</summary>
+                  <p className="marker-advanced__note">
+                    Le SVG est nettoyé (sanitisé) avant application : balises et attributs dangereux retirés.
+                  </p>
                   {canManageCustomIcons ? (
                     <>
                       <textarea
@@ -548,10 +573,11 @@ export default function SettingsPage() {
                   ) : (
                     <p>Seuls les super-admins peuvent charger un SVG personnalise. Les autres profils voient simplement le rendu applique.</p>
                   )}
-                </div>
+                </details>
               </article>
-            );
-          })}
+              );
+            })()}
+          </div>
         </div>
       </article>
 

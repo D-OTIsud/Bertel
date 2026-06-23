@@ -194,7 +194,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 
 ---
 
-## Phase 7 — Paramètres (console admin) ⏳ (7.1 socle ✅ + 7.3 ✅, 2026-06-23)
+## Phase 7 — Paramètres (console admin) ⏳ (7.1 ✅ · 7.2 ✅ · 7.3 ✅ · 7.4 structurel ✅, 2026-06-23)
 
 ### 7.3 — Fournisseurs IA : correction du P0 boutons nus ✅
 - `AiProviderSettings` utilisait `.btn`/`.pill-mini`, classes définies **uniquement** sous `.crm-app` ⇒ boutons natifs nus sur `/settings`. Portage sur le vocabulaire de l'app principale : `.primary-button` (Enregistrer), `.ghost-button` (Activer/Modifier/Supprimer/Nouveau/Tester), `.badge badge--ok` (pastille « actif »). Test composant vert (5).
@@ -212,9 +212,14 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - Vérif navigateur (super-admin) : 1 seul éditeur dans le détail (plus 7) ; clic « Restaurant » bascule l'éditeur ; SVG sous « Avancé ». Build 0 ; tsc sans nouvelle erreur. Refonte présentationnelle (état trivial de sélection, vérifiée écran).
 - **Apparence (white-label)** : déjà présente (panneau thème du rail) — palette + logo + preview live, gated super-admin.
 
+### 7.4 — Équipe intégrée (Mon organisation) ✅ structurel (`27b734b`, 2026-06-23)
+- **Team emménage dans la console** : nouveau groupe **Mon organisation → Équipe** dans `settings-nav`, gated `canManageTeam` (= `canAdministerTeam` : org-admin ≥ 10 OU owner/super-admin), inséré entre « Mon compte » et « Plateforme ». Panneau `team` rend `<TeamAdminPage />` (gating fin inviter/défauts ORG ≥ 30 + contrôles serveur **inchangés** = vraie frontière).
+- **Route `/team` retirée du sidebar** + **redirigée** vers `/settings?section=team` (signets préservés) ; imports/gating morts nettoyés.
+- TDD : settings-nav +2 specs (groupe org gated) ; Sidebar test réaligné (plus d'« Équipe » au sidebar). Vérif navigateur (super-admin) : 3 groupes (compte/organisation/plateforme), clic Équipe ⇒ `?section=team` + TeamAdminPage rendu. Build 0 ; tsc sans nouvelle erreur ; vues+layout 32/32.
+
 ### Restant (différé avec raison)
-- **7.4 Team intégré** (portage shadcn→maison + retrait route `/team` ; se branche comme panneau « Équipe » du groupe « Mon organisation »).
-- **7.5 Listes & référentiels** : nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` (`rpc_upsert/set_active/reorder/delete_ref_code`) + UI maître-détail. **Exige du nouveau back-end** (RPC + RLS + test CI d'abord). Sa propre passe spec→plan→impl.
+- **7.4 portage shadcn→maison** des 3 composants Team (`InviteMemberDialog`, `MemberPermissionsDrawer`, `RoleSelect`) : unification S3 (boutons/inputs/dialog/table sur le vocabulaire maison). L'intégration structurelle est faite ; ce portage est un polish interne séparé (les composants fonctionnent, vocabulaire mixte).
+- **7.5 Listes & référentiels** : nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` (`rpc_upsert/set_active/reorder/delete_ref_code`) + UI maître-détail. **Exige du nouveau back-end** (RPC + RLS + test CI **avant** l'UI), appliqué via la discipline de déploiement du projet (pas de DDL PROD-only ; foldé `schema_unified`/runbook ; gate fresh-apply). Sa propre passe spec→plan→impl.
 
 ---
 
@@ -235,7 +240,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **§16 disclosures complétées** (`bf5fe8f`, cf. Phase 6 ci-dessus).
 - **Phase 4 complétée** (`bf6b795`) : vue drawer config-driven (7 clones → 1 `ConfigDrivenDetailView` + `ARCHETYPE_SECTIONS`) + onglets = sections rendues. Behaviour-preserving (23 tests existants verts) ; cf. §4.4 ci-dessus.
 - **Phase 5 complétée** (`af9415c` A+C + `f06f67e` Part B) : édition acteur en tiroir latéral (`CrmModal variant="drawer"`, vocabulaire maison) + états vides CRM enseignants + modale interaction en 2 temps (fin du formulaire imbriqué) ; cf. §5.2 ci-dessus.
-- **Phase 7.1 socle** (`a672069`) : `/settings` en console à rail (un panneau à la fois, groupes gated par rôle, `?section=` en URL) ; cf. §7.1. Reste Phase 7 : 7.2 Marqueurs maître-détail, 7.4 Team, 7.5 référentiels (back-end).
+- **Phase 7 — 4 modules sur 5 livrés** : 7.1 socle rail (`a672069`) · 7.2 Marqueurs maître/détail (`4bc1362`) · 7.3 boutons IA (antérieur) · 7.4 Équipe intégrée + route /team retirée (`27b734b`). Reste : 7.4 portage shadcn (polish), 7.5 référentiels (**back-end** : RPC `SECURITY DEFINER` + RLS + test, sa propre passe).
 - **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.

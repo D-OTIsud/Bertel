@@ -2,16 +2,38 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { listAuditTemplate } from '../services/rpc';
+import { EmptyState } from '../components/common/EmptyState';
 
 export default function AuditsPage() {
   const query = useQuery({ queryKey: ['audit-template'], queryFn: listAuditTemplate });
 
   if (query.isLoading) {
-    return <section className="panel-card panel-card--wide m-4">Chargement du modele d audit...</section>;
+    return <section className="panel-card panel-card--wide m-4">Chargement du modèle d’audit…</section>;
   }
 
   if (query.isError) {
-    return <section className="panel-card panel-card--warning panel-card--wide m-4">{(query.error as Error).message}</section>;
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="error"
+          title="Audits indisponibles"
+          description={(query.error as Error).message}
+          action={{ label: 'Réessayer', onClick: () => query.refetch() }}
+        />
+      </section>
+    );
+  }
+
+  if ((query.data ?? []).length === 0) {
+    return (
+      <section className="p-4">
+        <EmptyState
+          mode="coming-soon"
+          title="Audits & incidents à venir"
+          description="La checklist tactile, la prise de note et le signalement géolocalisé arriveront avec un prochain lot."
+        />
+      </section>
+    );
   }
 
   return (

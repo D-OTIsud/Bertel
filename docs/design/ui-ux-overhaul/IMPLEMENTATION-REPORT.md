@@ -194,18 +194,22 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 
 ---
 
-## Phase 7 — Paramètres (console admin) ⏳ (7.3 P0 livré, 2026-06-23)
+## Phase 7 — Paramètres (console admin) ⏳ (7.1 socle ✅ + 7.3 ✅, 2026-06-23)
 
 ### 7.3 — Fournisseurs IA : correction du P0 boutons nus ✅
 - `AiProviderSettings` utilisait `.btn`/`.pill-mini`, classes définies **uniquement** sous `.crm-app` ⇒ boutons natifs nus sur `/settings`. Portage sur le vocabulaire de l'app principale : `.primary-button` (Enregistrer), `.ghost-button` (Activer/Modifier/Supprimer/Nouveau/Tester), `.badge badge--ok` (pastille « actif »). Test composant vert (5).
 
-### 7.1 — Socle (label + diagnostic) ✅ (partiel)
-- **Fin du split EN/FR** : libellé de nav « Settings » → « Paramètres » (FR accentué) ; TopBar/ProfileDrawer accentués (vérifié navigateur). 
-- **Carte « Diagnostic »** remplace le dump debug « Runtime » : l'URL Supabase brute n'est plus exposée (configurée/à renseigner) ; accents FR de la section session/rôle.
+### 7.1 — Hub à rail & « Mon compte » ✅ (`a672069`, 2026-06-23)
+- **Console à rail** (maquette p7-01) : fin du défilement plat de 7 cartes. `/settings` est désormais un rail groupé par périmètre avec **un seul panneau visible à la fois**.
+- **Modèle de nav unique** `settings-nav.ts` : groupe **Mon compte** (Préférences · Session & rôle) pour tous ; groupe **Plateforme** (Apparence · Marqueurs · Fournisseurs IA · Diagnostic) **gated super-admin**. `SettingsRail` présentationnel (`aria-current=page`).
+- **État d'onglet en URL** (`?section=`) : section active synchronisée via `history.replaceState` ; repli sur le défaut si le rôle rend la section inaccessible (switch démo). Les blocs existants (rôle/thème/marqueurs/langues/diagnostic/IA) sont gated par section — l'état (`useForm`, drafts marqueurs) reste au niveau page ⇒ **aucune perte au changement de panneau**.
+- **Déjà fait** (passes antérieures) : label « Paramètres » accentué partout ; carte « Diagnostic » (plus de dump Runtime) ; 7.3 boutons IA portés sur le vocabulaire maison.
+- TDD : settings-nav 5 specs + SettingsRail 2 specs. **Vérif navigateur** (mode démo) : rail « Mon compte » seul (non super-admin) ; un panneau à la fois ; `?section=session/markers` en URL ; bascule super-admin ⇒ groupe « Plateforme » révélé ; clic Marqueurs ⇒ panneau marqueurs. Build 0 ; tsc sans nouvelle erreur ; vues 25/25.
 
 ### Restant (différé avec raison)
-- **7.1 Hub à rail complet** (`/settings` en console à panneaux par périmètre, état d'onglet en URL) : restructuration d'une page de 565 lignes, sections super-admin-gated peu vérifiables au navigateur ⇒ passe ciblée. Le label + le diagnostic (les P0/P2 visibles) sont faits.
-- **7.2 Apparence/Marqueurs** (maître-détail) + **7.4 Team intégré** (portage shadcn→maison + retrait route `/team`) + **7.5 Listes & référentiels** (nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` + UI) : modules volumineux ; 7.5 exige du **nouveau back-end**. Chaque module = sa propre passe spec→plan→impl (cf. phase-7-parametres.md).
+- **7.2 Apparence/Marqueurs** (maître-détail : passer du mur de 7 cartes marqueurs à une liste → un panneau d'édition ; SVG perso derrière « Avancé ») — les panneaux sont déjà dans le rail (7.1), reste la refonte interne maître-détail.
+- **7.4 Team intégré** (portage shadcn→maison + retrait route `/team` ; se branche comme panneau « Équipe » du groupe « Mon organisation »).
+- **7.5 Listes & référentiels** : nouveaux RPC `SECURITY DEFINER` gated `is_platform_superuser` (`rpc_upsert/set_active/reorder/delete_ref_code`) + UI maître-détail. **Exige du nouveau back-end** (RPC + RLS + test CI d'abord). Sa propre passe spec→plan→impl.
 
 ---
 
@@ -226,6 +230,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **§16 disclosures complétées** (`bf5fe8f`, cf. Phase 6 ci-dessus).
 - **Phase 4 complétée** (`bf6b795`) : vue drawer config-driven (7 clones → 1 `ConfigDrivenDetailView` + `ARCHETYPE_SECTIONS`) + onglets = sections rendues. Behaviour-preserving (23 tests existants verts) ; cf. §4.4 ci-dessus.
 - **Phase 5 complétée** (`af9415c` A+C + `f06f67e` Part B) : édition acteur en tiroir latéral (`CrmModal variant="drawer"`, vocabulaire maison) + états vides CRM enseignants + modale interaction en 2 temps (fin du formulaire imbriqué) ; cf. §5.2 ci-dessus.
+- **Phase 7.1 socle** (`a672069`) : `/settings` en console à rail (un panneau à la fois, groupes gated par rôle, `?section=` en URL) ; cf. §7.1. Reste Phase 7 : 7.2 Marqueurs maître-détail, 7.4 Team, 7.5 référentiels (back-end).
 - **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.

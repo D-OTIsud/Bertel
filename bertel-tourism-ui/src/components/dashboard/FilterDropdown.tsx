@@ -15,6 +15,14 @@ interface FilterDropdownProps<T extends string> {
   /** When provided, adds a "select all / reset" item at the top of the menu.
    *  It shows as active when selected is empty. Clicking it calls onChange([]) and closes. */
   allLabel?: string;
+  /** Adds a search input filtering the options + ArrowUp/Down/Enter keyboard nav (impl. 3.2). */
+  searchable?: boolean;
+  /** Placeholder of the search input (default "Rechercher"). */
+  searchPlaceholder?: string;
+}
+
+function normalizeNeedle(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -41,9 +49,13 @@ export function FilterDropdown<T extends string>({
   placeholder,
   loadError,
   allLabel,
+  searchable = false,
+  searchPlaceholder = 'Rechercher',
 }: FilterDropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [query, setQuery] = useState('');
+  const [highlight, setHighlight] = useState(-1);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -118,6 +130,33 @@ export function FilterDropdown<T extends string>({
     }
   }
 
+  // Reset the search state whenever the menu closes.
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setHighlight(-1);
+    }
+  }, [open]);
+
+  const filteredOptions =
+    searchable && query.trim()
+      ? options.filter((o) => normalizeNeedle(o.label).includes(normalizeNeedle(query)))
+      : options;
+
+  function handleSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlight((h) => Math.min(filteredOptions.length - 1, h + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(0, h - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const opt = filteredOptions[highlight];
+      if (opt) handleItem(opt.code);
+    }
+  }
+
   const label = getTriggerLabel(options, selected, placeholder);
   const hasSelection = selected.length > 0;
 
@@ -148,7 +187,24 @@ export function FilterDropdown<T extends string>({
           className="filter-dropdown__menu"
           style={menuStyle}
         >
-          {allLabel && (
+          {searchable && (
+            <li className="filter-dropdown__search-row" role="presentation">
+              <input
+                className="filter-dropdown__search"
+                type="text"
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setHighlight(-1);
+                }}
+                onKeyDown={handleSearchKey}
+                autoFocus
+              />
+            </li>
+          )}
+          {allLabel && !query.trim() && (
             <li
               role="option"
               aria-selected={selected.length === 0}
@@ -163,17 +219,25 @@ export function FilterDropdown<T extends string>({
               {allLabel}
             </li>
           )}
-          {options.map((opt) => {
+          {filteredOptions.length === 0 && (
+            <li className="filter-dropdown__item filter-dropdown__empty" role="presentation">
+              Aucune correspondance
+            </li>
+          )}
+          {filteredOptions.map((opt, idx) => {
             const isSelected = selected.includes(opt.code);
+            const isHighlighted = idx === highlight;
             return (
               <li
                 key={opt.code}
                 role="option"
                 aria-selected={isSelected}
                 data-code={opt.code}
-                className={isSelected
-                  ? 'filter-dropdown__item filter-dropdown__item--selected'
-                  : 'filter-dropdown__item'}
+                className={[
+                  'filter-dropdown__item',
+                  isSelected ? 'filter-dropdown__item--selected' : '',
+                  isHighlighted ? 'filter-dropdown__item--highlight' : '',
+                ].filter(Boolean).join(' ')}
                 onClick={() => handleItem(opt.code)}
               >
                 <span className="filter-dropdown__icon" aria-hidden>

@@ -8,6 +8,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { EmptyState } from '../components/common/EmptyState';
+import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
 import { buildExplorerErrorBanner } from './explorer-error';
 
 const MapPanel = lazy(async () => ({ default: (await import('../components/explorer/MapPanel')).MapPanel }));
@@ -103,6 +104,7 @@ export default function ExplorerPage() {
           />
         </div>
       ) : null}
+      <ExplorerActiveFilters />
       <Sheet
         open={mobileSheetOpen}
         onOpenChange={(open) => {

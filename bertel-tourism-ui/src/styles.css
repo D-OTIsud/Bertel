@@ -485,6 +485,23 @@ textarea::placeholder {
 }
 .map-legend__dot svg { width: 12px; height: 12px; }
 
+/* ---- Barre de filtres actifs de l'Explorateur (impl. 3.2) ---- */
+.explorer-active-filters {
+  flex: none;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.explorer-active-filters__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: 4px;
+  align-self: center;
+}
+
 input[type='checkbox'] {
   width: 20px;
   height: 20px;
@@ -8443,6 +8460,41 @@ a {
 .filter-dropdown__item--selected {
   color: var(--teal);
   font-weight: 600;
+}
+
+/* Recherche dans un dropdown (impl. 3.2 communes cherchables) */
+.filter-dropdown__search-row {
+  position: sticky;
+  top: 0;
+  padding: 6px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line-soft);
+}
+.filter-dropdown__search {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+}
+.filter-dropdown__search:focus-visible {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+.filter-dropdown__item--highlight {
+  background: var(--teal-tint);
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.filter-dropdown__empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: default;
 }
 
 .filter-dropdown__icon {

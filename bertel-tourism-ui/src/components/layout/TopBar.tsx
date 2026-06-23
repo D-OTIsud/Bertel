@@ -20,7 +20,7 @@ function pageLabelFromPath(pathname: string | null): string {
     moderation: 'Moderation',
     audits: 'Audits',
     publications: 'Publications',
-    settings: 'Parametres',
+    settings: 'Paramètres',
     login: 'Connexion',
   };
   return map[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);

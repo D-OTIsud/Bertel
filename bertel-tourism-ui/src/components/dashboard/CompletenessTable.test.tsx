@@ -38,7 +38,7 @@ describe('CompletenessTable', () => {
 
   it('clic sur la cellule type filtre sur ce type (drill-down toggle)', () => {
     render(<CompletenessTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'HLO' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hebergement loisir' }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HLO']);
   });
 });

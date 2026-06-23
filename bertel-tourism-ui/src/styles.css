@@ -10549,6 +10549,19 @@ a {
 @media (max-width: 760px) {
   .crm-app .crm-modal--drawer { width: 100%; max-width: 100%; }
 }
+/* Phase 5.2 — bandeau de confirmation « interaction enregistrée » (état 2-temps de la
+   modale d'interaction, avant l'affordance « + Ajouter une relance »). */
+.crm-app .crm-saved-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+  font-size: 13px;
+  font-weight: 600;
+}
 .crm-app .crm-field {
   display: flex;
   flex-direction: column;

@@ -1,11 +1,21 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { MapPin, Star } from 'lucide-react';
-import type { BackendObjectTypeCode, ExplorerBucketKey, ExplorerTagFilter, ObjectCard } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerObjectType } from '../../utils/facets';
+import { Accessibility, Award, BadgeCheck, Leaf, MapPin, Star } from 'lucide-react';
+import type { ExplorerTagFilter, ObjectCard } from '../../types/domain';
 import { tagChipStyle } from '../../utils/explorer-card';
+import { cardClassementStars, cardLabelLogos, cardTypeDisplay } from '../../utils/explorer-card-display';
 import { cn } from '@/lib/utils';
+
+/** Pictos lucide des pastilles-logo de label (impl. 3.1, primitives Phase 1). */
+const LABEL_LOGO_ICON: Record<string, ComponentType<{ 'aria-hidden'?: boolean }>> = {
+  'lbl-clef-verte': Leaf,
+  'lbl-ecolabel': Leaf,
+  'lbl-th': Accessibility,
+  'lbl-qualite': BadgeCheck,
+  'lbl-excellence': Award,
+};
 
 /**
  * Pure presentational Explorer result card (116px tall, grows on demand). Single source of truth
@@ -20,30 +30,6 @@ import { cn } from '@/lib/utils';
  */
 
 type DisplayChip = { key: string; label: string; color?: string; tagSlug?: string };
-
-function bucketForCardType(type: string): ExplorerBucketKey | null {
-  const code = normalizeExplorerObjectType(type) as BackendObjectTypeCode;
-  for (const [bucket, types] of Object.entries(EXPLORER_BUCKET_TYPE_MAP) as [ExplorerBucketKey, BackendObjectTypeCode[]][]) {
-    if (types.includes(code)) {
-      return bucket;
-    }
-  }
-  return null;
-}
-
-function categoryTagClasses(bucket: ExplorerBucketKey | null): string {
-  if (bucket === 'HOT') return 'bg-teal-soft text-teal-2';
-  if (bucket === 'ACT') return 'bg-orange-soft text-orange-2';
-  return 'border border-line bg-surface2 text-ink-2';
-}
-
-function categoryTagLabel(bucket: ExplorerBucketKey | null, typeLabel: string): string {
-  if (bucket) {
-    const opt = EXPLORER_BUCKET_OPTIONS.find((o) => o.code === bucket);
-    if (opt) return opt.label;
-  }
-  return typeLabel;
-}
 
 function pickTaxonomyLabel(card: ObjectCard): string | null {
   const first = card.taxonomy?.[0];
@@ -242,10 +228,10 @@ export function ResultCardView({
 }: ResultCardViewProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const typeLabel = normalizeExplorerObjectType(card.type);
-  const bucket = bucketForCardType(card.type);
-  const categoryLabel = categoryTagLabel(bucket, typeLabel);
-  const city = card.location?.city ?? '—';
+  const display = cardTypeDisplay(card);
+  const stars = cardClassementStars(card);
+  const labelLogos = cardLabelLogos(card);
+  const city = card.location?.city?.trim() || 'Lieu non renseigné';
   const taxonomyLabel = pickTaxonomyLabel(card);
   const isOpen = Boolean(card.open_now);
   const capacityLine = card.render?.capacity?.trim();
@@ -287,10 +273,33 @@ export function ResultCardView({
         isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
       )}
     >
-      <div
-        className="h-24 w-24 flex-none overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
-        style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
-      />
+      {/* Miniature + signet « à cheval » (impl. 3.1) : cocarde de classement (HEB) en
+          haut-gauche, pastilles-logo de label en bas-droite. Le wrapper autorise le débordement. */}
+      <div className="thumb relative h-24 w-24 flex-none">
+        <div
+          className="h-full w-full overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
+          style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
+        />
+        {stars != null ? (
+          <span className="thumb__rating" title={`${display.typeLabel} ${stars} étoile${stars > 1 ? 's' : ''}`} aria-hidden>
+            {Array.from({ length: stars }).map((_, i) => (
+              <Star key={i} />
+            ))}
+          </span>
+        ) : null}
+        {labelLogos.length > 0 ? (
+          <span className="thumb__labels">
+            {labelLogos.slice(0, 3).map((logo) => {
+              const Icon = LABEL_LOGO_ICON[logo.logoClass] ?? BadgeCheck;
+              return (
+                <span key={logo.key} className={`label-logo ${logo.logoClass}`} title={logo.title}>
+                  <Icon aria-hidden />
+                </span>
+              );
+            })}
+          </span>
+        ) : null}
+      </div>
 
       <div
         className={cn(
@@ -302,28 +311,27 @@ export function ResultCardView({
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <span
-            className={cn(
-              'h-2 w-2 shrink-0 rounded-full',
-              isOpen
-                ? 'bg-brand-green shadow-[0_0_0_3px_rgba(44,163,111,0.16)]'
-                : 'bg-brand-red shadow-[0_0_0_3px_rgba(200,92,72,0.14)]',
-            )}
-            title={isOpen ? 'Ouvert' : 'Fermeture'}
-          />
           <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
             {card.name}
           </h3>
+          {/* Pastille « ouvert/fermé » : statut horaire UNIQUEMENT pour HEB/RES (jamais ITI/FMA/VIS). */}
+          {display.showOpenStatus ? (
+            isOpen ? (
+              <span className="badge badge--ok shrink-0" title="Ouvert">
+                <span className="dot dot--ok" />
+                Ouvert
+              </span>
+            ) : (
+              <span className="badge shrink-0 bg-surface2 text-muted" title="Fermé">
+                <span className="dot dot--off" />
+                Fermé
+              </span>
+            )
+          ) : null}
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
-          <span
-            className={cn(
-              'inline-flex h-5 max-w-[9rem] shrink-0 items-center truncate rounded-[5px] px-1.5 text-[11px] font-semibold tracking-wide',
-              categoryTagClasses(bucket),
-            )}
-            title={categoryLabel}
-          >
-            {categoryLabel}
+          <span className={cn('type-pill shrink-0', display.accentClass)} title={display.typeLabel}>
+            {display.typeLabel}
           </span>
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />

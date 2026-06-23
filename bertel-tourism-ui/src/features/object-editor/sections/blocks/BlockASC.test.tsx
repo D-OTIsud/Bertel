@@ -57,6 +57,26 @@ describe('BlockASC — prestations & équipements (§48)', () => {
   });
 });
 
+describe('BlockASC — un seul contrôle par champ (6.2, fin du clobber)', () => {
+  it('ne rend plus les contrôles dupliqués durée/équipement', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockASC editor={result.current} permissions={allowAll} />);
+    expect(screen.queryByText('Durée affichée')).not.toBeInTheDocument();
+    expect(screen.queryByText('Équipement fourni (détail)')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Durée minimale')).toHaveLength(1);
+    expect(screen.getAllByText('Équipement fourni')).toHaveLength(1);
+  });
+
+  it('édite equipmentProvided via l’unique champ texte et persiste', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const view = render(<BlockASC editor={result.current} permissions={allowAll} />);
+    act(() => { fireEvent.change(screen.getByPlaceholderText(/casque/i), { target: { value: 'casque fourni' } }); });
+    view.rerender(<BlockASC editor={result.current} permissions={allowAll} />);
+    expect(result.current.dirtySections.activity).toBe(true);
+    expect(result.current.draft.activity.equipmentProvided).toBe('casque fourni');
+  });
+});
+
 describe('BlockASC — single-owner surfaces (§48)', () => {
   it('no longer edits pricing formulas in §05 (owned by §13)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));

@@ -120,24 +120,26 @@ export function EditorTopbar({
         <button type="button" className="btn" onClick={onCancel}>
           Annuler
         </button>
+        {/* 6.1 : « Publier » devient un acte secondaire distinct (libellé occupé « Publication… »)… */}
+        <button
+          type="button"
+          className="btn"
+          disabled={publishDisabled || publishing || saving}
+          onClick={onPublish}
+        >
+          {publishing ? 'Publication…' : 'Publier'}
+        </button>
+        {/* …et « Enregistrer » redevient l'action primaire (teal + anneau de focus global). */}
         {onSaveDraft && (
           <button
             type="button"
-            className="btn"
+            className="btn primary"
             disabled={savingDraft || saving || publishing || dirtyCount === 0}
             onClick={onSaveDraft}
           >
             {savingDraft ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         )}
-        <button
-          type="button"
-          className="btn primary"
-          disabled={publishDisabled || publishing || saving}
-          onClick={onPublish}
-        >
-          {publishing || saving ? 'Enregistrement…' : 'Publier'}
-        </button>
       </div>
     </div>
   );

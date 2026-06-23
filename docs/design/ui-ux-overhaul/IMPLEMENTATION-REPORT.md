@@ -194,7 +194,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 
 ---
 
-## Phase 7 — Paramètres (console admin) ✅ (7.1–7.5 livrés ; reste 7.4 portage shadcn, 2026-06-23)
+## Phase 7 — Paramètres (console admin) ✅ COMPLÈTE (7.1–7.5 + portage shadcn, 2026-06-23)
 
 ### 7.3 — Fournisseurs IA : correction du P0 boutons nus ✅
 - `AiProviderSettings` utilisait `.btn`/`.pill-mini`, classes définies **uniquement** sous `.crm-app` ⇒ boutons natifs nus sur `/settings`. Portage sur le vocabulaire de l'app principale : `.primary-button` (Enregistrer), `.ghost-button` (Activer/Modifier/Supprimer/Nouveau/Tester), `.badge badge--ok` (pastille « actif »). Test composant vert (5).
@@ -224,8 +224,12 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Front** : `services/ref-codes.ts` (RPC + lecture directe `ref_code`) ; `RefCodeEditor` maître (domaines éditables + compteurs) / détail (valeurs : libellé éditable, actif bascule, monter/descendre, création code+libellé) ; section « Listes & référentiels » du groupe Plateforme (rail 7.1).
 - TDD : `moveItem` 3 + `RefCodeEditor` 6 + settings-nav. **Full suite 264/1842** ; build 0 ; tsc sans nouvelle erreur. Vérif navigateur : section dans le rail super-admin + panneau rendu (`?section=referentiels`). v1 = **désactiver-pas-supprimer** ; différé v2 : suppression à 0 référence, i18n par valeur, « utilisé par N », drag-and-drop.
 
-### Restant (différé avec raison)
-- **7.4 portage shadcn→maison** des 3 composants Team (`InviteMemberDialog`, `MemberPermissionsDrawer`, `RoleSelect`) : unification S3 (boutons/inputs/dialog sur le vocabulaire maison). L'intégration structurelle est faite ; ce portage est un polish interne séparé (les composants fonctionnent, vocabulaire mixte).
+### 7.4 — Portage shadcn→maison ✅ (`f0b864b`, 2026-06-23)
+- **Dernier fil S3 fermé** : les 3 composants Team n'importent plus `@/components/ui/*` (shadcn/Radix). Nouvelle primitive **maison** `components/common/Modal` (overlay + carte `role=dialog`, Escape/overlay/✕, focus-trap léger ; `variant="drawer"` = tiroir latéral droit + footer collant ; CSS `.app-modal*`). `RoleSelect` → `<select>` natif ; `InviteMemberDialog` → `Modal` + `<select>` + `.primary-button`/`.ghost-button` ; `MemberPermissionsDrawer` → `Modal variant="drawer"` + boutons maison.
+- TDD `Modal` 3 specs ; team+views 47 verts ; build 0 ; tsc clean. Vérif navigateur (super-admin → Équipe → Inviter) : Modal maison `.app-modal`, **aucun dialog Radix** (`[data-state]` absent). ⇒ **un seul design system app-wide**.
+
+### Restant
+- _(aucun)_ — Phase 7 intégralement livrée (7.1–7.5 + portage shadcn). Toute la refonte UI/UX est implémentée et vérifiée.
 
 ---
 
@@ -247,7 +251,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Phase 4 complétée** (`bf6b795`) : vue drawer config-driven (7 clones → 1 `ConfigDrivenDetailView` + `ARCHETYPE_SECTIONS`) + onglets = sections rendues. Behaviour-preserving (23 tests existants verts) ; cf. §4.4 ci-dessus.
 - **Phase 5 complétée** (`af9415c` A+C + `f06f67e` Part B) : édition acteur en tiroir latéral (`CrmModal variant="drawer"`, vocabulaire maison) + états vides CRM enseignants + modale interaction en 2 temps (fin du formulaire imbriqué) ; cf. §5.2 ci-dessus.
 - **Phase 7 — 5 modules livrés** : 7.1 socle rail (`a672069`) · 7.2 Marqueurs maître/détail (`4bc1362`) · 7.3 boutons IA (antérieur) · 7.4 Équipe intégrée + route /team retirée (`27b734b`) · **7.5 éditeur de référentiels ref_code** (`aa894d2`, back-end RPC `SECURITY DEFINER` LIVE + UI maître/détail). Reste : 7.4 portage shadcn des 3 composants Team (polish S3 interne).
-- **Bilan FIN** : les 7 phases sont implémentées et conformes aux maquettes. tsc (0 nouvelle erreur) + `next build` 0 + suite Jest **264 suites / 1842 verts**. Écrans modifiés vérifiés au navigateur (mode démo) ; back-end 7.5 vérifié LIVE (transaction-local + ROLLBACK). Tout committé sur `master` (sans push). Seul reste un **polish interne** (portage shadcn→maison de 3 composants Team — l'intégration structurelle 7.4 est faite).
+- **Bilan FIN — refonte INTÉGRALE** : les 7 phases sont implémentées et conformes aux maquettes, **sans reste**. Phase 7 complète (7.1 rail · 7.2 marqueurs · 7.3 IA · 7.4 Équipe intégrée **+ portage shadcn→maison** · 7.5 éditeur de référentiels back-end+front). tsc (0 nouvelle erreur) + `next build` 0 + suite Jest verte. Écrans vérifiés au navigateur ; back-end 7.5 vérifié LIVE (transaction-local + ROLLBACK, fail-closed). **Un seul design system app-wide** (plus aucun import shadcn `@/components/ui/*` hors de leur dossier d'origine côté surfaces refondues). Tout committé sur `master` (sans push).
 - **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.

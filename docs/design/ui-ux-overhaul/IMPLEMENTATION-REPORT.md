@@ -138,7 +138,7 @@ Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** 
 
 ---
 
-## Phase 4 — Présentation type-aware (Drawer) ⏳ (4.1 livré, 2026-06-23)
+## Phase 4 — Présentation type-aware (Drawer) ✅ (2026-06-23)
 
 ### 4.1 — Fiche Événement : bloc « Prochaines dates » ✅
 - Comble « un événement (FMA) sans dates nulle part » (audit P0 §2b) : `EventOccurrencesSection` rend les occurrences **réelles** (`parsed.itinerary.fmaOccurrences`, champs `start_at`/`end_at`/`state`) en tête de la fiche → l'événement mène par le quand. Logique pure TDD (`event-occurrences.ts`, 6 tests) ; format FR, plage « Du … au … », occurrence annulée ; **jamais de date fabriquée**. Injecté dans `GenericDetailView` (que FMA utilise) → null pour les autres types. Intégration vérifiée (drawer FMA vs SRV).
@@ -150,8 +150,14 @@ Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** 
 - **Étapes ITI réelles** : `WaypointListSection` ne **fabrique plus** les étapes (interpolation de distances + noms factices « Étape N ») — lit `object_iti_stage` réel (nom/type/description) via `itinerary-stages.ts` (3 tests). Tiret cadratin retiré.
 - **Faits d'activité ASC** : `ActivityFactsSection` (durée/participants/âge/niveau/encadrement/équipement) depuis `raw.activity` (object_act, émis par l'RPC §101) via `activity-facts.ts` (3 tests). Intégrations drawer vérifiées (RES/ITI/ASC avec et sans donnée).
 
+### 4.4 — Vue config-driven (ARCHETYPE_SECTIONS) ✅ (`bf6b795`, 2026-06-23)
+- Les **7 gabarits clonés** (Accommodation/Restaurant/Itinerary/Activity/Visitable/NaturalSite/Generic — quasi-identiques, ne différant que par leur liste `mainSections`) sont remplacés par **une** `ConfigDrivenDetailView` + une table `ARCHETYPE_SECTIONS: Record<ArchetypeCode, DrawerSectionKind[]>` keyée par **archétype** (registre unique `TYPE_ARCHETYPES`). L'aside (`buildAsideSections`) et la chaîne de hooks/memos sont factorisés ; la dispatch n'utilise plus de `Set<string>` hardcodés (−184 lignes ; fichier 3650 → 3466).
+- **Onglets = sections réellement rendues** : `buildDetailTabItems` filtre les onglets dont le compteur est 0 (« Aperçu » toujours présent) ⇒ fin de l'onglet « Tarifs (0) » qui défilait vers une ancre inexistante.
+- **Alignements registre** (déjà actés §48/§57) : ACT→archétype ASC (disposition Activité), PNA→archétype VIS (gagne un `WeekScheduleSection` data-gated). Comportement **identique** pour HOT/RES/ITI/ASC/FMA/SRV (les 23 tests existants restent verts sans modification).
+- TDD : +3 specs (VIS/SRV n'exposent pas les blocs d'un autre archétype même avec la donnée présente dans `raw` ; onglets vides omis) ; suite drawer **24/24** ; `next build` 0 ; tsc sans nouvelle erreur. Revue adversariale : config keyée sur `data.type` = parité exacte avec l'ancienne dispatch ; `FALLBACK_DRAWER_SECTIONS` (= SRV) pour type inconnu = sortie identique à l'ancien Generic (events null).
+
 ### Restant (différé avec raison)
-- **Vue config-driven (ARCHETYPE_SECTIONS) remplaçant les 6 clones** : refactor architectural d'un fichier de 3588 lignes, fort risque sur une surface très utilisée ⇒ passe dédiée spec→plan→impl. Les 3 blocs type-spécifiques (FMA/RES/ASC-ITI) sont désormais livrés ; la consolidation des 6 clones reste. La consolidation `DRAWER_TYPE_LABELS`/`CLASSIFICATION_SCHEME_LABELS` sur `labels.ts` en fait partie.
+- Consolidation `DRAWER_TYPE_LABELS`/`CLASSIFICATION_SCHEME_LABELS` (drawer) sur les résolveurs `labels.ts` — nettoyage cosmétique de dé-duplication, non bloquant (les libellés sont déjà corrects) ; passe de de-dup dédiée.
 - ~~**Retrait des contrôles dead-end** (Modifier/Voir versions sur surface read-only)~~ ✅ **FAIT** (S12) : retrait du « Voir versions » désactivé-en-permanence (Description) + du « Modifier > » sans handler (Horaires) du drawer (view-only) ; param `parsed` inutilisé nettoyé (7 call-sites). Côté Explorer : faux bouton « Trier » → label honnête « Trié par pertinence » ; « Envoyer » trompeur → désactivé-avec-raison visible.
 
 ### Note — tiret cadratin (goal #7)
@@ -199,7 +205,7 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Phase 1** ✅ (fondations a11y/perf/thème + EmptyState)
 - **Phase 2** ✅ (taxonomie unifiée + résolveurs de libellés)
 - **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur)
-- **Phase 4** ✅ blocs type-spécifiques **complets** (4.1 Événement/dates · 4.2 Restaurant/cuisine+menu · 4.3 Itinéraire/étapes réelles + Activité/object_act) + dead-ends retirés (S12). Reste : consolidation des 6 clones (refactor).
+- **Phase 4** ✅ **complète** (4.1 Événement/dates · 4.2 Restaurant/cuisine+menu · 4.3 Itinéraire/étapes réelles + Activité/object_act · **4.4 vue config-driven** remplaçant les 7 gabarits clonés + onglets = sections rendues) + dead-ends retirés (S12). Reste cosmétique : de-dup `DRAWER_TYPE_LABELS` sur `labels.ts`.
 - **Phase 5** ✅ partiel (5.1 hiérarchie dashboard · 5.3 login + pages stub honnêtes · anti-pattern side-stripe)
 - **Phase 6** ✅ cœur + **§16 disclosures complétées** (6.1 barre save · 6.2 clobber BlockASC + divulgation progressive §07/§16 **complète** : sous-lieux, capacité, **étapes ITI, communes desservies** via primitive `Disclosure`)
 - **Phase 7** partiel (7.3 P0 boutons IA · 7.1 libellé « Paramètres » + carte Diagnostic)
@@ -208,10 +214,11 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 ### Reprise de session (2026-06-23, après compaction)
 - **Correctif de cohérence `master`** (`917ed23`) : 3 fichiers de test du dashboard (`ActualisationTable`/`CompletenessTable`/`TypeBreakdown`) étaient restés **non commités** au commit Phase 2 — les composants commités rendaient déjà le libellé FR (`resolveTypeLabel`) mais les assertions de drill-down cliquaient encore le code brut (`'HOT'`/`'HLO'`). `master` portait donc des tests dashboard en échec ; commit des hunks orphelins (assertions → `'Hotel'`/`'Hebergement loisir'`), suite verte. *Aléa « shared-file hunks » : un consommateur commité sans la mise à jour de son test.*
 - **§16 disclosures complétées** (`bf5fe8f`, cf. Phase 6 ci-dessus).
+- **Phase 4 complétée** (`bf6b795`) : vue drawer config-driven (7 clones → 1 `ConfigDrivenDetailView` + `ARCHETYPE_SECTIONS`) + onglets = sections rendues. Behaviour-preserving (23 tests existants verts) ; cf. §4.4 ci-dessus.
 - **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.
 
-**Différés (passes dédiées spec→plan→impl)** : **vue drawer config-driven** (consolidation des 6 clones, 3588 l.) ; **CRM dé-modalisation** (985 l.) ; **console settings rail 7.1 + 7.2 Marqueurs + 7.4 Team + 7.5 éditeur de référentiels** (7.5 = nouveaux RPC back-end) ; méta riche carte (distance/dates/cuisine — projection RPC) ; nav-roving/44px généralisé ; balayage des `—` existants. Volumineux ou nécessitant du nouveau back-end — les bâcler violerait « vérification avant assertion » et « aucune régression ». Mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) activable pour la vérif navigateur des suites.
+**Différés (passes dédiées spec→plan→impl)** : **CRM dé-modalisation** (985 l.) ; **console settings rail 7.1 + 7.2 Marqueurs + 7.4 Team + 7.5 éditeur de référentiels** (7.5 = nouveaux RPC back-end) ; méta riche carte (distance/dates/cuisine — projection RPC) ; nav-roving/44px généralisé ; balayage des `—` existants ; de-dup `DRAWER_TYPE_LABELS`. Volumineux ou nécessitant du nouveau back-end — les bâcler violerait « vérification avant assertion » et « aucune régression ». Mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) activable pour la vérif navigateur des suites.
 
 > Note : les sous-types SRV/VIS (3.2) et la suppression des 10 `Object*Panel.tsx` morts sont **faits** (commités) — retirés de la liste des différés ci-dessus.

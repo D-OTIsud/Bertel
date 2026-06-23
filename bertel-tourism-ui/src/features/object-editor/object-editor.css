@@ -2627,6 +2627,36 @@
    le fond teinté + la pastille `lifecycle-state__dot`. */
 .object-editor .lifecycle-state--ok { background: var(--green-soft); }
 .object-editor .lifecycle-state--warn { background: rgba(214, 147, 58, 0.10); }
+
+/* Section repliable (impl. 6.2 — divulgation progressive §07/§16) */
+.object-editor .disclosure {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+.object-editor .disclosure__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+}
+.object-editor .disclosure__head:hover { background: var(--surface-2); }
+.object-editor .disclosure__chevron { color: var(--ink-3); font-size: 11px; flex: none; width: 12px; }
+.object-editor .disclosure__title { flex: 1; }
+.object-editor .disclosure__summary { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+.object-editor .disclosure__body { padding: 0 12px 12px; }
 .object-editor .lifecycle-state__dot {
   width: 10px; height: 10px; margin-top: 5px;
   border-radius: 999px; flex: none;

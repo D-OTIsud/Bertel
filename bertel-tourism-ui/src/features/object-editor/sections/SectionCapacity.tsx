@@ -1,4 +1,4 @@
-import { Fs, Input, Repeater, Select, StatCard } from '../primitives';
+import { Disclosure, Fs, Input, Repeater, Select, StatCard } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceCapacityItem } from '../../../services/object-workspace-parser';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
@@ -111,9 +111,13 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         </div>
       )}
 
-      <div className="chip-group__label" style={{ marginTop: 0 }}>
-        Métriques détaillées
-      </div>
+      {/* 6.2 : divulgation progressive — les StatCards restent le résumé visible,
+          le détail éditable (lignes de métriques) se replie. */}
+      <Disclosure
+        title="Détails de capacité"
+        summary={`${capacity.capacityItems.length} métrique(s)`}
+        defaultOpen={capacity.capacityItems.length > 0}
+      >
       {repHeader(CAP_COLS, ['', 'Métrique', 'Valeur', 'Unité', 'Depuis', "Jusqu'au", ''])}
       <Repeater
         items={capacity.capacityItems}
@@ -154,8 +158,9 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
         )}
       />
       <p style={{ fontSize: 11, color: 'var(--ink-4)', margin: '4px 0 0' }}>
-        Les dates de validité sont internes (non publiées) — utiles pour préparer une saison.
+        Les dates de validité sont internes (non publiées), utiles pour préparer une saison.
       </p>
+      </Disclosure>
 
       {/* Cadre/environnement + Groupes + Animaux : composants partagés (§07 ici, §06 pour HEB).
           La source d'état reste editor.draft.characteristics / .capacityPolicies. */}

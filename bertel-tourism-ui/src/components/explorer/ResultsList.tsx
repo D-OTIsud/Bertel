@@ -105,14 +105,15 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {headerActions}
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-[9px] border border-line bg-surface px-2 py-1 text-[11px] font-semibold text-ink-3 hover:bg-surface2"
-            disabled
-            title="Tri : bientot disponible"
+          {/* S12 : plus de faux bouton « Trier » désactivé-en-permanence — un label
+              honnête de l'ordre courant (les résultats SONT triés par pertinence :
+              label_match puis ordre alphabétique, cf. sortExplorerCards). */}
+          <span
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-3"
+            title="Tri par pertinence (correspondance de label puis ordre alphabétique)"
           >
-            Trier · Pertinence
-          </button>
+            Trié par pertinence
+          </span>
         </div>
       </div>
 

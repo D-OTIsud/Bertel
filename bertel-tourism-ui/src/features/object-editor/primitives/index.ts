@@ -19,3 +19,4 @@ export { SortableList } from './SortableList';
 export { SortableGrid } from './SortableGrid';
 export { EditorModal } from './EditorModal';
 export { ConfirmDialog } from './ConfirmDialog';
+export { Disclosure } from './Disclosure';

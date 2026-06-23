@@ -128,11 +128,11 @@ Jest 255/1779 verts · `next build` exit 0 · typecheck sans nouvelle erreur · 
 ### Vérifié
 Jest 255/1783 verts. Le **focus-visible de la nav éditeur est déjà assuré** par la règle globale de Phase 1 (object-editor.css ne l'override pas).
 
-### 6.2 — Divulgation progressive §07/§16 ✅
+### 6.2 — Divulgation progressive §07/§16 ✅ (complétée 2026-06-23, `bf5fe8f`)
 - Nouvelle primitive **`Disclosure`** (repliable accessible : aria-expanded/aria-controls, defaultOpen ; head ≥44px) — TDD 4 tests, réutilisable. §07 Capacité (détail des métriques replié, StatCards en résumé) + §16 sous-lieux (répéteur replié). Tirets cadratins de ces sections retirés au passage.
+- **§16 complété** : les 2 blocs §16 restants (**Étapes d'itinéraire** + **Communes desservies**) se replient désormais via la même primitive ; titre + compteur d'état sur la tête (44px, AA). Le titre interne redondant de `StageList` est retiré ; la notice §46 (module gated) reste hors disclosure. TDD +3 specs (tête présente · `aria-expanded` · repli masque les chips) ; suite `SectionPlaces` 12/12 ; éditeur 570/570.
 
 ### Restant (différé avec raison)
-- **§16 Étapes ITI + Communes en disclosures** (6.2) : les 2 autres blocs §16 sont conditionnels (notice/StageList, zones) — primitive `Disclosure` désormais dispo, à appliquer dans une passe ciblée.
 - **Nav contiguë libellée + roving tabindex** (6.3) : réécriture d'`EditorNav` ; le focus-visible est déjà couvert (Phase 1). 
 - **Cibles tactiles 44px généralisées** (6.3) : bump risqué dans un layout desktop dense — le nouveau head de Disclosure est déjà à 44px ; le responsive a ses media queries (1120/760 px).
 
@@ -201,10 +201,17 @@ L'UI **ajoutée/redessinée** est sans tiret cadratin (fallbacks « Lieu non ren
 - **Phase 3** ✅ cœur (3.1 carte type-aware · 3.2 filtres actifs + communes cherchables · 3.3 légende + reprise d'erreur)
 - **Phase 4** ✅ blocs type-spécifiques **complets** (4.1 Événement/dates · 4.2 Restaurant/cuisine+menu · 4.3 Itinéraire/étapes réelles + Activité/object_act) + dead-ends retirés (S12). Reste : consolidation des 6 clones (refactor).
 - **Phase 5** ✅ partiel (5.1 hiérarchie dashboard · 5.3 login + pages stub honnêtes · anti-pattern side-stripe)
-- **Phase 6** ✅ cœur (6.1 barre save · 6.2 clobber BlockASC + divulgation progressive §07/§16 via primitive `Disclosure`)
+- **Phase 6** ✅ cœur + **§16 disclosures complétées** (6.1 barre save · 6.2 clobber BlockASC + divulgation progressive §07/§16 **complète** : sous-lieux, capacité, **étapes ITI, communes desservies** via primitive `Disclosure`)
 - **Phase 7** partiel (7.3 P0 boutons IA · 7.1 libellé « Paramètres » + carte Diagnostic)
-- **Transverse** : fausses affordances Explorer honnêtes, `.muted` ajouté, ~24 commits.
+- **Transverse** : fausses affordances Explorer honnêtes, `.muted` ajouté, ~28 commits.
+
+### Reprise de session (2026-06-23, après compaction)
+- **Correctif de cohérence `master`** (`917ed23`) : 3 fichiers de test du dashboard (`ActualisationTable`/`CompletenessTable`/`TypeBreakdown`) étaient restés **non commités** au commit Phase 2 — les composants commités rendaient déjà le libellé FR (`resolveTypeLabel`) mais les assertions de drill-down cliquaient encore le code brut (`'HOT'`/`'HLO'`). `master` portait donc des tests dashboard en échec ; commit des hunks orphelins (assertions → `'Hotel'`/`'Hebergement loisir'`), suite verte. *Aléa « shared-file hunks » : un consommateur commité sans la mise à jour de son test.*
+- **§16 disclosures complétées** (`bf5fe8f`, cf. Phase 6 ci-dessus).
+- **Vérif navigateur §16-avec-données** : non atteignable en mode démo (la navigation dure ré-amorce la session démo → atterrit sur `/explorer` ; le flux « Créer une fiche » donne un objet vide → blocs conditionnels masqués ; le loader démo ne sert pas d'étapes/zones). Changement **purement structurel** (mêmes primitive + CSS `.disclosure` déjà vérifiés au navigateur en Phase 6 pour les sous-lieux de cette même section §16) et **intégralement couvert au DOM** par les 3 specs + les 9 existantes. Précédent de session pour les surfaces limitées par la donnée démo (blocs FMA/RES éditeur) : vérification par tests d'intégration + documentation honnête.
 
 **Principes tenus** : TDD (≈+115 tests ajoutés, 0 régression) ; aucune donnée fabriquée (méta absente du payload → documentée comme bloquant back-end, jamais inventée — les blocs FMA/RES/ASC/ITI lisent la donnée RÉELLE) ; aucun write-trap introduit (6.2 en corrige un) ; un seul registre type→facette ; aucun tiret cadratin dans l'UI ajoutée ; commits par hunks sur `master` sans push, sans trailer co-author.
 
-**Différés (passes dédiées spec→plan→impl)** : **vue drawer config-driven** (consolidation des 6 clones, 3588 l.) ; **CRM dé-modalisation** (985 l.) ; **console settings rail 7.1 + 7.2 Marqueurs + 7.4 Team + 7.5 éditeur de référentiels** (7.5 = nouveaux RPC back-end) ; sous-types SRV/VIS + méta carte (RPC) ; nav-roving/44px généralisé ; balayage des `—` existants ; suppression des 10 `Object*Panel.tsx` morts. Volumineux ou nécessitant du nouveau back-end — les bâcler violerait « vérification avant assertion » et « aucune régression ». Mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) activable pour la vérif navigateur des suites.
+**Différés (passes dédiées spec→plan→impl)** : **vue drawer config-driven** (consolidation des 6 clones, 3588 l.) ; **CRM dé-modalisation** (985 l.) ; **console settings rail 7.1 + 7.2 Marqueurs + 7.4 Team + 7.5 éditeur de référentiels** (7.5 = nouveaux RPC back-end) ; méta riche carte (distance/dates/cuisine — projection RPC) ; nav-roving/44px généralisé ; balayage des `—` existants. Volumineux ou nécessitant du nouveau back-end — les bâcler violerait « vérification avant assertion » et « aucune régression ». Mode démo (`NEXT_PUBLIC_ENABLE_DEMO_MODE`, gitignoré) activable pour la vérif navigateur des suites.
+
+> Note : les sous-types SRV/VIS (3.2) et la suppression des 10 `Object*Panel.tsx` morts sont **faits** (commités) — retirés de la liste des différés ci-dessus.

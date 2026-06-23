@@ -16,14 +16,14 @@ describe('ActualisationTable — drill-down', () => {
 
   it('clic sur la cellule type filtre sur ce type', () => {
     render(<ActualisationTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'HOT' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hotel' }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HOT']);
   });
 
   it('re-clic retire le type (toggle off)', () => {
     useDashboardFilterStore.setState({ filters: { status: ['published'], types: ['HOT'] }, activeTab: 'quality', sidebarCollapsed: false });
     render(<ActualisationTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'HOT' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hotel' }));
     expect(useDashboardFilterStore.getState().filters.types).toBeUndefined();
   });
 });

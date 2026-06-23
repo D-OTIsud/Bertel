@@ -17,14 +17,14 @@ describe('TypeBreakdown — drill-down', () => {
 
   it('clic sur une ligne ajoute le type au filtre (toggle on)', () => {
     render(<TypeBreakdown data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: /HOT/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Hotel/ }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HOT']);
   });
 
   it('re-clic retire le type (toggle off)', () => {
     useDashboardFilterStore.setState({ filters: { status: ['published'], types: ['HOT'] }, activeTab: 'quality', sidebarCollapsed: false });
     render(<TypeBreakdown data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: /HOT/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Hotel/ }));
     expect(useDashboardFilterStore.getState().filters.types).toBeUndefined();
   });
 });

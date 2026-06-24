@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
   CircleHelp,
@@ -14,6 +15,7 @@ import {
   UserX,
   Users,
 } from 'lucide-react';
+import { listPendingChanges } from '../../services/rpc';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import type { UserRole } from '../../types/domain';
@@ -70,6 +72,21 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
     ? allItems.filter((item) => item.roles.includes(role) && (demoMode || !isDemoOnlyModule(item.to)))
     : [];
   const navItems = items.filter((item) => item.to !== '/settings');
+
+  // §120 — badge de modération : compte des suggestions en attente que l'appelant peut
+  // modérer. Même clé de cache que ModerationPage (invalidée par approve/reject) ⇒ le badge
+  // se met à jour après chaque action. Le RPC est auto-autorisé : un non-modérateur reçoit []
+  // (badge invisible). Requête désactivée si l'entrée Modération n'est pas visible pour le rôle.
+  const isModerationVisible = navItems.some((item) => item.to === '/moderation');
+  const pendingModerationQuery = useQuery({
+    queryKey: ['pending-changes', 'pending'],
+    queryFn: () => listPendingChanges('pending'),
+    enabled: isModerationVisible,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+  const pendingModerationCount = pendingModerationQuery.data?.length ?? 0;
+
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
   const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Paramètres';
@@ -98,6 +115,14 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
               >
                 <span className="app-sidebar__iconbox">
                   <Icon className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+                  {item.to === '/moderation' && pendingModerationCount > 0 && (
+                    <span
+                      className="app-sidebar__badge"
+                      aria-label={`${pendingModerationCount} suggestion${pendingModerationCount > 1 ? 's' : ''} en attente de modération`}
+                    >
+                      {pendingModerationCount > 99 ? '99+' : pendingModerationCount}
+                    </span>
+                  )}
                 </span>
                 <span className="app-sidebar__label">{item.label}</span>
               </Link>

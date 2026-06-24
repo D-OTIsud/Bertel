@@ -427,6 +427,16 @@ export interface PendingChangeItem {
   before: string;
   after: string;
   submittedAt: string;
+  // --- P2.1 modération (§120) : enrichi par api.list_pending_changes. Optionnels pour rester
+  // compatible avec les fixtures démo (mockPendingChanges) qui n'expriment que la forme historique.
+  status?: string;
+  targetTable?: string;
+  targetPk?: string | null;
+  action?: string;
+  reviewerLabel?: string | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  appliedAt?: string | null;
 }
 
 export interface AuditQuestion {

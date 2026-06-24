@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 343,
   "view_count": 11,
-  "function_count": 300,
+  "function_count": 308,
   "policy_count": 517,
   "trigger_count": 540,
   "enum_count": 9,
-  "edge_count": 3064
+  "edge_count": 3077
  },
  "nodes": [
   {
@@ -44538,6 +44538,81 @@
    }
   },
   {
+   "id": "api.ref_code_usage_count(p_domain text, p_id uuid)",
+   "kind": "function",
+   "label": "ref_code_usage_count",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Phase 7.5 — nombre de références d'UNE valeur ref_code (super-admin). Garde de suppression.",
+   "props": {
+    "signature": "ref_code_usage_count(p_domain text, p_id uuid)",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+      "line": 294
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+     "line": 294
+    }
+   }
+  },
+  {
+   "id": "api.ref_code_usage_counts(p_domain text)",
+   "kind": "function",
+   "label": "ref_code_usage_counts",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Phase 7.5 — carte {ref_code.id -> N références} d'un domaine (super-admin). Scan catalogue-dirigé des colonnes uuid *_id non-FK-ailleurs ; correct par unicité UUID. Alimente « utilisé par N fiches » + la garde delete-at-0.",
+   "props": {
+    "signature": "ref_code_usage_counts(p_domain text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+      "line": 225
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+     "line": 225
+    }
+   }
+  },
+  {
+   "id": "api.rpc_delete_ref_code(p_domain text, p_id uuid)",
+   "kind": "function",
+   "label": "rpc_delete_ref_code",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed).",
+   "props": {
+    "signature": "rpc_delete_ref_code(p_domain text, p_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+      "line": 309
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_ref_code_admin_rpcs.sql",
+     "line": 309
+    }
+   }
+  },
+  {
    "id": "api.get_actor_data(p_object_id text)",
    "kind": "function",
    "label": "get_actor_data",
@@ -44628,6 +44703,31 @@
    }
   },
   {
+   "id": "api.user_can_moderate_object(p_object_id text)",
+   "kind": "function",
+   "label": "user_can_moderate_object",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 — TRUE si l'appelant peut modérer les suggestions de cet objet (superuser OU validate_changes + membre ORG publisher).",
+   "props": {
+    "signature": "user_can_moderate_object(p_object_id text)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 43
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+     "line": 43
+    }
+   }
+  },
+  {
    "id": "api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)",
    "kind": "function",
    "label": "rollback_staging_batch_compensate",
@@ -44688,6 +44788,31 @@
    }
   },
   {
+   "id": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+   "kind": "function",
+   "label": "submit_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 — Dépose une suggestion (pending). Large : authentifié + objet lisible. submitted_by=auth.uid().",
+   "props": {
+    "signature": "submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 58
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+     "line": 58
+    }
+   }
+  },
+  {
    "id": "api.resource_block_legal(p_payload jsonb)",
    "kind": "function",
    "label": "resource_block_legal",
@@ -44709,6 +44834,81 @@
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
      "line": 2517
+    }
+   }
+  },
+  {
+   "id": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "kind": "function",
+   "label": "list_pending_changes",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement.",
+   "props": {
+    "signature": "list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+    "returns": "TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 111
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+     "line": 111
+    }
+   }
+  },
+  {
+   "id": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "approve_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 — Approuve : re-dispatch vers le writer structuré (metadata->>'rpc', whitelisté) puis status=applied.",
+   "props": {
+    "signature": "approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 192
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+     "line": 192
+    }
+   }
+  },
+  {
+   "id": "api.reject_pending_change(p_id uuid, p_review_note text)",
+   "kind": "function",
+   "label": "reject_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 — Refuse une suggestion (note obligatoire). Aucun re-dispatch.",
+   "props": {
+    "signature": "reject_pending_change(p_id uuid, p_review_note text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 252
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+     "line": 252
     }
    }
   },
@@ -47066,31 +47266,6 @@
    }
   },
   {
-   "id": "api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
-   "kind": "function",
-   "label": "get_dashboard_scorecards",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Dashboard §1: hero scorecard aggregates for the filtered object pool.\r\nReturns total/published counts, pending_change count (scoped to same pool),\r\n30-day creation delta vs the prior 30 days, and average processing delay\r\n(COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.\r\navg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C.\r\nORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.",
-   "props": {
-    "signature": "get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9135
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9135
-    }
-   }
-  },
-  {
    "id": "api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)",
    "kind": "function",
    "label": "get_dashboard_actualisation",
@@ -47112,6 +47287,31 @@
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
      "line": 9403
+    }
+   }
+  },
+  {
+   "id": "api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
+   "kind": "function",
+   "label": "get_dashboard_scorecards",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Dashboard §1: hero scorecard aggregates for the filtered object pool.\nReturns total/published counts, pending_change count (scoped to same pool),\n30-day creation delta vs the prior 30 days, and average processing delay\n(COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.\navg_completeness = weighted mean of api.get_dashboard_completeness avg_score per type\n(single source of truth for the 8-essential formula; NULL when the pool is empty).\ndistinctions / distinctions_pct = objects holding >=1 granted official classement/label\n(ref_classification_scheme.is_distinction), scoped to the same dated pool.\nORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.",
+   "props": {
+    "signature": "get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 9135
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 9135
     }
    }
   },
@@ -80829,6 +81029,42 @@
    }
   },
   {
+   "source": "api.ref_code_usage_counts(p_domain text)",
+   "target": "public.ref_code",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_ref_code(p_domain text, p_id uuid)",
+   "target": "public.ref_code",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_ref_code(p_domain text, p_id uuid)",
+   "target": "public.ref_code",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.ref_code"
+    }
+   }
+  },
+  {
    "source": "api.get_actor_data(p_object_id text)",
    "target": "public.actor",
    "kind": "reads",
@@ -81137,6 +81373,102 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE staging.media_temp"
+    }
+   }
+  },
+  {
+   "source": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.reject_pending_change(p_id uuid, p_review_note text)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.reject_pending_change(p_id uuid, p_review_note text)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE pending_change"
     }
    }
   },
@@ -83961,6 +84293,18 @@
    }
   },
   {
+   "source": "api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM   object"
+    }
+   }
+  },
+  {
    "source": "api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
    "target": "public.object",
    "kind": "reads",
@@ -83985,14 +84329,26 @@
    }
   },
   {
-   "source": "api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)",
-   "target": "public.object",
+   "source": "api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
+   "target": "public.object_classification",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM   object"
+     "evidence": "FROM   object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN   ref_classification_scheme"
     }
    }
   },

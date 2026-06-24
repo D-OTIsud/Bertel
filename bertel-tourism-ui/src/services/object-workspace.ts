@@ -327,55 +327,32 @@ function readStringList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function readPendingChangeFieldValues(payload: unknown, metadata: unknown) {
-  const metadataRecord = readRecord(metadata);
-  const payloadRecord = readRecord(payload);
-  const field = readString(metadataRecord.field, readString(payloadRecord.field));
-  const beforeValue = readString(
-    metadataRecord.before,
-    readString(payloadRecord.before, readString(payloadRecord.old_value, readString(payloadRecord.old))),
-  );
-  const afterValue = readString(
-    metadataRecord.after,
-    readString(payloadRecord.after, readString(payloadRecord.new_value, readString(payloadRecord.new))),
-  );
-  const submittedByLabel = readString(
-    metadataRecord.author,
-    readString(metadataRecord.who, readString(payloadRecord.author, readString(payloadRecord.submitted_by_label))),
-  );
-  return { field, beforeValue, afterValue, submittedByLabel };
-}
-
+// P2.1 (§120) — résumé lisible d'une suggestion à partir des colonnes dérivées par
+// api.list_pending_changes (field_label / before_value / after_value), plus de payload/metadata bruts ici.
 function normalizePendingChangeSummary(input: {
   targetTable: string;
   action: string;
-  payload: unknown;
-  metadata: unknown;
   field: string;
   beforeValue: string;
   afterValue: string;
 }): string {
-  const label = readString(readRecord(input.metadata).label, readString(readRecord(input.payload).label));
-
-  if (label) {
-    return label;
-  }
-
   if (input.field && (input.beforeValue || input.afterValue)) {
     return `${input.field} · ${input.beforeValue} -> ${input.afterValue}`;
   }
-
   if (input.field) {
     return `${input.action} · ${input.field}`;
   }
-
   return `${input.action} · ${input.targetTable}`;
 }
 
 function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspaceModerationItem {
   const targetTable = readString(row.target_table);
   const action = readString(row.action);
-  const { field, beforeValue, afterValue, submittedByLabel } = readPendingChangeFieldValues(row.payload, row.metadata);
+  // Colonnes dérivées par api.list_pending_changes (§120).
+  const field = readString(row.field_label);
+  const beforeValue = readString(row.before_value);
+  const afterValue = readString(row.after_value);
+  const submittedByLabel = readString(row.submitter_label);
 
   return {
     id: readString(row.id),
@@ -390,15 +367,7 @@ function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspa
     beforeValue,
     afterValue,
     submittedByLabel,
-    summary: normalizePendingChangeSummary({
-      targetTable,
-      action,
-      payload: row.payload,
-      metadata: row.metadata,
-      field,
-      beforeValue,
-      afterValue,
-    }),
+    summary: normalizePendingChangeSummary({ targetTable, action, field, beforeValue, afterValue }),
   };
 }
 
@@ -3342,13 +3311,9 @@ async function getObjectWorkspacePublicationModule(
   }
 
   const [pendingResult, publicationResult] = await Promise.allSettled([
-    client
-      .from('pending_change')
-      .select('id, target_table, target_pk, action, status, submitted_at, reviewed_at, review_note, applied_at, payload, metadata')
-      .eq('object_id', objectId)
-      .eq('status', 'pending')
-      .order('submitted_at', { ascending: false })
-      .limit(10),
+    // P2.1 (§120) — pending_change est admin-only en RLS : on passe par l'RPC DEFINER
+    // auto-autorisée (la file n'est visible que d'un modérateur de l'objet), jamais en direct.
+    client.schema('api').rpc('list_pending_changes', { p_object_id: objectId, p_status: 'pending', p_limit: 10, p_offset: 0 }),
     client
       .from('publication_object')
       .select('publication_id, workflow_status, page_number, custom_print_text, proof_sent_at, validated_bat_at, publication:publication_id(code, name, year, status)')
@@ -3362,7 +3327,9 @@ async function getObjectWorkspacePublicationModule(
           availability: 'available' as const,
           pendingCount: (pendingResult.value.data ?? []).length,
           unavailableReason: null,
-          items: (pendingResult.value.data ?? []).map((row) => normalizePendingChangeItem(row as Record<string, unknown>)),
+          items: (((pendingResult.value.data as unknown[] | null) ?? [])).map((row) =>
+            normalizePendingChangeItem(row as Record<string, unknown>),
+          ),
         }
       : {
           availability: 'unavailable' as const,

@@ -155,6 +155,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 16a    migration_ai_provider_config.sql  (AI provider config for §06 carte extraction: app_ai_provider_config table + Vault-backed key + super-admin RPCs upsert/list/set_active/delete + service_role-only get_active_ai_provider_secret; needs api.is_platform_superuser + supabase_vault; self-contained, CREATE TABLE IF NOT EXISTS idempotent) =='
 \ir migration_ai_provider_config.sql
 
+\echo '== 16c    migration_moderation_rpcs.sql  (P2.1 §120 Moderation: user_can_moderate_object + submit/list/approve/reject_pending_change DEFINER authorize-once; approve re-dispatches the whitelisted section writer (Option A); pending_change table already in schema_unified; needs rls_policies helpers + object_workspace_*_rpcs writers) =='
+\ir migration_moderation_rpcs.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

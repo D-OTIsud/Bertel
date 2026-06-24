@@ -1,7 +1,7 @@
-import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPendingChanges, mockPublicationCards } from '../data/mock';
+import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPublicationCards } from '../data/mock';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import type { AuditQuestion, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PendingChangeItem, PublicationCard, RpcPageResponse } from '../types/domain';
+import type { AuditQuestion, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
 import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
@@ -443,11 +443,9 @@ export async function deleteObjectPrivateNote(noteId: string): Promise<void> {
   }
 }
 
-// TODO: wire to real backend RPC when available
-export async function listPendingChanges(): Promise<PendingChangeItem[]> {
-  if (useSessionStore.getState().demoMode) return mockPendingChanges;
-  return [];
-}
+// Modération P2.1 (§120) : implémentations réelles dans services/moderation.ts (RPC-only —
+// api.list/submit/approve/reject_pending_change ; la table pending_change est admin-only en RLS).
+export { listPendingChanges, submitPendingChange, approvePendingChange, rejectPendingChange } from './moderation';
 
 // CRM (§61) : implémentations réelles dans services/crm.ts (RPC-only — voir la spec).
 export { listCrmTasks, listCrmTimeline } from './crm';

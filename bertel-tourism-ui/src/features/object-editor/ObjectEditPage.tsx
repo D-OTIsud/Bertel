@@ -156,6 +156,12 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
+  // P1.3 — contributor fork: a user without direct canonical write proposes changes through the
+  // moderation queue instead of writing directly. The canonical-write capability is uniform across
+  // every content section (canDirectCanonical == canWriteSafeWorkspaceRpc), so generalInfo is a
+  // faithful page-level signal. The backend gate stays the real security; this is ergonomic only.
+  const canWriteCanonicalDirect = resource.permissions.generalInfo.canDirectWrite;
+  const contributorMode = !canWriteCanonicalDirect;
   const publishObject = usePublishObjectWorkspaceMutation(objectId);
   const [mode, setMode] = useState<EditorMode>('complet');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -339,12 +345,20 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return { ok: true, saveErrors: [] };
     }
 
-    const result = await save(dirty, resource.permissions, editor.draft);
+    const result = await save(dirty, resource.permissions, editor.draft, {
+      canWriteCanonicalDirect,
+      baseline: editor.baseline,
+    });
+    // Both direct saves and submitted proposals fold back into the baseline so the editor reads
+    // clean (a contributor's submitted section is no longer dirty — it is pending moderation).
     editor.commitModules(
-      result.saved.flatMap((m) => (m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]])),
+      [...result.saved, ...result.submitted].flatMap((m) =>
+        m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]],
+      ),
     );
 
-    // Tell the other editors of this fiche so they can reload before clobbering.
+    // Tell the other editors of this fiche so they can reload before clobbering. Only direct saves
+    // changed the DB — submitted proposals are pending and must not signal a peer reload.
     if (result.saved.length > 0) {
       presence.broadcastSaved(result.saved);
     }
@@ -373,7 +387,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       const { ok, saveErrors: errors } = await persistDirtyModules();
       if (ok) {
         setSaveErrors([]);
-        setStatusMessage('Brouillon enregistré.');
+        setStatusMessage(contributorMode ? 'Modification soumise pour validation.' : 'Brouillon enregistré.');
       } else {
         setSaveErrors(errors);
         setModalContext('save');
@@ -463,6 +477,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         publishing={publishObject.isPending}
         saving={saving}
         savingDraft={savingDraft}
+        contributorMode={contributorMode}
         statusMessage={statusMessage}
         roster={presence.roster}
         onModeChange={setMode}

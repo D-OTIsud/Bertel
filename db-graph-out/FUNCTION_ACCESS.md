@@ -16,6 +16,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Function to add a legal record_
 
+### `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)` _(DEFINER, dyn-SQL)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/approve_pending_change`
+- **object types served:** **all object types**
+- _P2.1 §120 — Approuve : re-dispatch vers le writer structuré (metadata->>'rpc', whitelisté) puis status=applied._
+
 ### `api.assert_facet_applicable()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
@@ -885,6 +891,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at._
 
+### `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)` _(DEFINER)_
+- **returns:** `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_pending_changes`
+- **object types served:** **all object types**
+- _P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement._
+
 ### `api.list_ref_code_domains()`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ref_code_domains`
@@ -968,6 +980,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Un domaine ref_code est-il éditable par l'admin (non structurel) ?_
 
+### `api.ref_code_usage_count(p_domain text, p_id uuid)` _(DEFINER)_
+- **returns:** `integer`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/ref_code_usage_count`
+- **object types served:** —
+- _Phase 7.5 — nombre de références d'UNE valeur ref_code (super-admin). Garde de suppression._
+
+### `api.ref_code_usage_counts(p_domain text)` _(DEFINER, dyn-SQL)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/ref_code_usage_counts`
+- **object types served:** —
+- _Phase 7.5 — carte {ref_code.id -> N références} d'un domaine (super-admin). Scan catalogue-dirigé des colonnes uuid *_id non-FK-ailleurs ; correct par unicité UUID. Alimente « utilisé par N fiches » + la garde delete-at-0._
+
 ### `api.refresh_object_filter_caches(p_object_id text)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/refresh_object_filter_caches`
@@ -989,6 +1013,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/refresh_ref_code_taxonomy_closure`
 - **object types served:** —
+
+### `api.reject_pending_change(p_id uuid, p_review_note text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/reject_pending_change`
+- **object types served:** **all object types**
+- _P2.1 §120 — Refuse une suggestion (note obligatoire). Aucun re-dispatch._
 
 ### `api.render_format_currency(p_amount numeric, p_currency text, p_locale text)`
 - **returns:** `text`
@@ -1115,6 +1145,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_delete_object_external_id`
 - **object types served:** **all object types**
 - _3. Delete one external identifier owned by the current user's ORG (admin-only, non-canonical)._
+
+### `api.rpc_delete_ref_code(p_domain text, p_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_delete_ref_code`
+- **object types served:** —
+- _Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed)._
 
 ### `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1343,6 +1379,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Plain-text derivation for Markdown-canonical description columns (manifest 14w)._
 
+### `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/submit_pending_change`
+- **object types served:** **all object types**
+- _P2.1 §120 — Dépose une suggestion (pending). Large : authentifié + objet lisible. submitted_by=auth.uid()._
+
 ### `api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT '{}'::jsonb, p_raw_app_meta_data jsonb DEFAULT '{}'::jsonb)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/sync_app_user_profile_from_auth_user`
@@ -1421,6 +1463,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_create_object`
 - **object types served:** —
 - _Phase 5 — api.user_can_create_object()_
+
+### `api.user_can_moderate_object(p_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_moderate_object`
+- **object types served:** —
+- _P2.1 §120 — TRUE si l'appelant peut modérer les suggestions de cet objet (superuser OU validate_changes + membre ORG publisher)._
 
 ### `api.user_can_publish_object(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`

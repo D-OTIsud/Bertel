@@ -18,6 +18,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to add a legal record
 > =====================================================
 
+## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.pending_change` _(high)_
+- writes `public.pending_change` _(high)_
+
+> P2.1 §120 — Approuve : re-dispatch vers le writer structuré (metadata->>'rpc', whitelisté) puis status=applied.
+
 ## `api.assert_facet_applicable()`
 - returns: `trigger`
 - reads `public.object` _(high)_
@@ -633,13 +640,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
 - reads `public.pending_change` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
 
-> Dashboard §1: hero scorecard aggregates for the filtered object pool.
-> Returns total/published counts, pending_change count (scoped to same pool),
-> 30-day creation delta vs the prior 30 days, and average processing delay
-> (COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.
-> avg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C.
+> Dashboard §1: hero scorecard aggregates for the filtered object pool.
+> Returns total/published counts, pending_change count (scoped to same pool),
+> 30-day creation delta vs the prior 30 days, and average processing delay
+> (COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.
+> avg_completeness = weighted mean of api.get_dashboard_completeness avg_score per type
+> (single source of truth for the 8-essential formula; NULL when the pool is empty).
+> distinctions / distinctions_pct = objects holding >=1 granted official classement/label
+> (ref_classification_scheme.is_distinction), scoped to the same dated pool.
 > ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
 
 ## `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
@@ -1484,6 +1496,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at.
 
+## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+
+> P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement.
+
 ## `api.list_ref_code_domains()`
 - returns: `jsonb`
 - reads `public.ref_code` _(high)_
@@ -1564,6 +1584,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Un domaine ref_code est-il éditable par l'admin (non structurel) ?
 
+## `api.ref_code_usage_count(p_domain text, p_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+
+> Phase 7.5 — nombre de références d'UNE valeur ref_code (super-admin). Garde de suppression.
+
+## `api.ref_code_usage_counts(p_domain text)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.ref_code` _(high)_
+
+> Phase 7.5 — carte {ref_code.id -> N références} d'un domaine (super-admin). Scan catalogue-dirigé des colonnes uuid *_id non-FK-ailleurs ; correct par unicité UUID. Alimente « utilisé par N fiches » + la garde delete-at-0.
+
 ## `api.refresh_object_filter_caches(p_object_id text)`
 - returns: `void` — SECURITY DEFINER
 - reads `public.object_amenity` _(high)_
@@ -1621,6 +1652,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code` _(high)_
 - reads `public.ref_code_taxonomy_closure` _(high)_
 - writes `public.ref_code_taxonomy_closure` _(high)_
+
+## `api.reject_pending_change(p_id uuid, p_review_note text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.pending_change` _(high)_
+- writes `public.pending_change` _(high)_
+
+> P2.1 §120 — Refuse une suggestion (note obligatoire). Aucun re-dispatch.
 
 ## `api.render_format_currency(p_amount numeric, p_currency text, p_locale text)`
 - returns: `text`
@@ -1757,6 +1795,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_external_id` _(high)_
 
 > 3. Delete one external identifier owned by the current user's ORG (admin-only, non-canonical).
+
+## `api.rpc_delete_ref_code(p_domain text, p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code` _(high)_
+- writes `public.ref_code` _(high)_
+
+> Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed).
 
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2234,6 +2279,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > get_object_with_deep_data, ranked_label_search snippet.
 > Order is load-bearing: must be defined before get_object_card (~line 2006) in this file.
 
+## `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)`
+- returns: `uuid` — SECURITY DEFINER
+- writes `public.pending_change` _(high)_
+
+> P2.1 §120 — Dépose une suggestion (pending). Large : authentifié + objet lisible. submitted_by=auth.uid().
+
 ## `api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT '{}'::jsonb, p_raw_app_meta_data jsonb DEFAULT '{}'::jsonb)`
 - returns: `void` — SECURITY DEFINER
 - writes `public.app_user_profile` _(high)_
@@ -2320,6 +2371,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > d'exécution SQL : la policy INSERT référence la fonction, elle doit
 > exister au moment du CREATE POLICY.
 > -------------------------------------------------------
+
+## `api.user_can_moderate_object(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> P2.1 §120 — TRUE si l'appelant peut modérer les suggestions de cet objet (superuser OU validate_changes + membre ORG publisher).
 
 ## `api.user_can_publish_object(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER

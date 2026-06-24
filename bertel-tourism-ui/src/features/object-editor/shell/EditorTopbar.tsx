@@ -19,6 +19,8 @@ interface EditorTopbarProps {
   saving?: boolean;
   savingDraft?: boolean;
   publishDisabled?: boolean;
+  /** P1.3 — contributor (no direct canonical write): the save action submits a moderation proposal. */
+  contributorMode?: boolean;
   statusMessage?: string | null;
   /** Live presence roster (everyone on the fiche) for the save-bar band. */
   roster?: RosterEntry[];
@@ -43,6 +45,7 @@ export function EditorTopbar({
   saving = false,
   savingDraft = false,
   publishDisabled = false,
+  contributorMode = false,
   statusMessage = null,
   roster = [],
   onModeChange,
@@ -137,7 +140,13 @@ export function EditorTopbar({
             disabled={savingDraft || saving || publishing || dirtyCount === 0}
             onClick={onSaveDraft}
           >
-            {savingDraft ? 'Enregistrement…' : 'Enregistrer'}
+            {contributorMode
+              ? savingDraft
+                ? 'Soumission…'
+                : 'Proposer une modification'
+              : savingDraft
+                ? 'Enregistrement…'
+                : 'Enregistrer'}
           </button>
         )}
       </div>

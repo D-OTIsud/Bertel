@@ -4311,20 +4311,10 @@ export async function saveObjectWorkspaceDistinctions(objectId: string, input: O
   }
 }
 
-export async function saveObjectWorkspaceCharacteristics(objectId: string, input: ObjectWorkspaceCharacteristicsModule): Promise<void> {
-  const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-
-  // §07 review no-clobber guard: saving the degraded parser-fallback module would
-  // rewrite object_language with the parser's empty level_ids (language levels
-  // wiped) and reset the other three legs from partial data.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
-
-  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+/** Pure builder for the api.save_object_commercial characteristics arm (P1.3 contributor fork
+ *  reuses this so a proposal carries the exact RPC payload the moderator re-dispatches). */
+export function buildCharacteristicsRpcPayload(input: ObjectWorkspaceCharacteristicsModule): Record<string, unknown> {
+  return {
     languages: input.selectedLanguages.map((item) => ({
       language_id: toRpcUuid(item.languageId),
       language_code: item.code || null,
@@ -4340,7 +4330,28 @@ export async function saveObjectWorkspaceCharacteristics(objectId: string, input
     amenities: Array.from(new Set(input.selectedAmenityCodes)).map((code) => ({
       amenity_code: code,
     })),
-  }, 'Impossible d enregistrer les caracteristiques.');
+  };
+}
+
+export async function saveObjectWorkspaceCharacteristics(objectId: string, input: ObjectWorkspaceCharacteristicsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  // §07 review no-clobber guard: saving the degraded parser-fallback module would
+  // rewrite object_language with the parser's empty level_ids (language levels
+  // wiped) and reset the other three legs from partial data.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_commercial',
+    objectId,
+    buildCharacteristicsRpcPayload(input),
+    'Impossible d enregistrer les caracteristiques.',
+  );
 }
 
 export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<void> {
@@ -4527,16 +4538,9 @@ export async function saveObjectWorkspaceOpenings(objectId: string, input: Objec
   );
 }
 
-export async function saveObjectWorkspaceSustainability(
-  objectId: string,
-  input: ObjectWorkspaceSustainabilityModule,
-): Promise<void> {
-  const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-
-  await callObjectWorkspaceRpc('save_object_workspace_sustainability', objectId, {
+/** Pure builder for the api.save_object_workspace_sustainability payload (P1.3 contributor fork). */
+export function buildSustainabilityRpcPayload(input: ObjectWorkspaceSustainabilityModule): Record<string, unknown> {
+  return {
     actions: input.categories.flatMap((category) =>
       category.actions
         .filter((action) => action.selected)
@@ -4548,7 +4552,37 @@ export async function saveObjectWorkspaceSustainability(
           document_id: toRpcUuid(action.documentId),
         })),
     ),
-  }, 'Impossible d enregistrer la demarche durable.');
+  };
+}
+
+export async function saveObjectWorkspaceSustainability(
+  objectId: string,
+  input: ObjectWorkspaceSustainabilityModule,
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_workspace_sustainability',
+    objectId,
+    buildSustainabilityRpcPayload(input),
+    'Impossible d enregistrer la demarche durable.',
+  );
+}
+
+/** Pure builder for the api.save_object_workspace_tags payload (P1.3 contributor fork).
+ *  Per-object save persists ONLY which tags are displayed + their order (tag_link rows +
+ *  position). Color is GLOBAL per tag (ref_tag.color) and is written by api.set_tag_color,
+ *  not here. Label is read from ref_tag at load time (never persisted per-object). */
+export function buildTagsRpcPayload(input: ObjectWorkspaceTagsModule): Record<string, unknown> {
+  return {
+    tags: input.displayed.map((tag) => ({
+      tag_id: toRpcUuid(tag.tagId),
+      slug: tag.slug,
+    })),
+  };
 }
 
 export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWorkspaceTagsModule): Promise<void> {
@@ -4557,15 +4591,12 @@ export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWor
     return;
   }
 
-  await callObjectWorkspaceRpc('save_object_workspace_tags', objectId, {
-    // Per-object save persists ONLY which tags are displayed + their order (tag_link rows +
-    // position). Color is GLOBAL per tag (ref_tag.color) and is written by api.set_tag_color,
-    // not here. Label is read from ref_tag at load time (never persisted per-object).
-    tags: input.displayed.map((tag) => ({
-      tag_id: toRpcUuid(tag.tagId),
-      slug: tag.slug,
-    })),
-  }, 'Impossible d enregistrer les tags.');
+  await callObjectWorkspaceRpc(
+    'save_object_workspace_tags',
+    objectId,
+    buildTagsRpcPayload(input),
+    'Impossible d enregistrer les tags.',
+  );
 }
 
 /**

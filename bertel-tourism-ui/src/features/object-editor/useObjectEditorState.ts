@@ -13,6 +13,8 @@ export interface ObjectEditorState {
   /** Canonical object id this editor edits (for per-object routes like uploads). */
   objectId: string;
   draft: ObjectWorkspaceModules;
+  /** Last-saved snapshot (P1.3 — source of the before/after diff on contributor proposals). */
+  baseline: ObjectWorkspaceModules;
   dirtySections: Partial<Record<WorkspaceModuleId, boolean>>;
   isDirty: boolean;
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
@@ -83,5 +85,5 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
   const dirtySections = useMemo(() => getDirtySections(snapshot), [snapshot]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
 }
